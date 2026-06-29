@@ -163,6 +163,107 @@ test("review-report format source is left unchanged when no sourceLookup is supp
   assert.equal(rewriteRows.length, 0);
 });
 
+// USLCI mega regression: the public canonical ILCD-format source (a97a0155) shipped by a
+// package with a NON-format classification ("Publications and communications") + a real
+// citation is still recognized as format_support_source BY UUID — so it is reused
+// (referenced at the canonical version) instead of minted at the package version (which
+// would trip the source-identity prewrite gate and version_outdated the canonical).
+function canonicalFormatSourceWithPublicationClassification(uuid = CANONICAL_FORMAT_ID) {
+  return {
+    sourceDataSet: {
+      sourceInformation: {
+        dataSetInformation: {
+          "common:UUID": uuid,
+          "common:shortName": { "@xml:lang": "en", "#text": "ILCD format" },
+          sourceCitation:
+            "European Commission, Joint Research Centre (2009): International Reference Life Cycle Data System (ILCD) data set format.",
+          classificationInformation: {
+            "common:classification": {
+              "common:class": {
+                "@level": "0",
+                "@classId": "0",
+                "#text": "Publications and communications",
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
+test("canonical ILCD-format source is recognized as format support BY UUID despite a publication classification", () => {
+  const utils = makeUtils();
+  const summary = utils.sourceSemanticSummary(
+    canonicalFormatSourceWithPublicationClassification(),
+    "support.jsonl",
+  );
+  assert.equal(
+    summary.kind,
+    "format_support_source",
+    "the canonical UUID overrides the converted publication classification",
+  );
+
+  // UUID-specificity (BAFU-safe): an identical payload at a NON-canonical UUID is NOT
+  // forced to format support — it falls through to the citation-based true_source path.
+  const nonCanonical = utils.sourceSemanticSummary(
+    canonicalFormatSourceWithPublicationClassification(TRUE_SOURCE_ID),
+    "support.jsonl",
+  );
+  assert.notEqual(
+    nonCanonical.kind,
+    "format_support_source",
+    "only the known canonical support UUIDs get the override",
+  );
+});
+
+// End-to-end: a process listing the canonical ILCD-format source under referenceToDataSource
+// (the USLCI mega blocker shape) is rewritten to the canonical @03.00.003 rather than left at
+// the package's @00.00.001 — driven entirely by the UUID-based kind recognition above.
+test("canonical format source on a referenceToDataSource slot is rewritten to canonical", () => {
+  const utils = makeUtils();
+  const summary = utils.sourceSemanticSummary(
+    canonicalFormatSourceWithPublicationClassification(),
+    "support.jsonl",
+  );
+  const sourceLookup = new Map([[summary.dataset_id, summary]]);
+  const payload = {
+    processDataSet: {
+      processInformation: {
+        dataSetInformation: { "common:UUID": "0247a4ba-9f1d-427f-b003-2718472154da" },
+      },
+      modellingAndValidation: {
+        dataSourcesTreatmentAndRepresentativeness: {
+          referenceToDataSource: {
+            "@type": "source data set",
+            "@refObjectId": CANONICAL_FORMAT_ID,
+            "@version": "00.00.001",
+            "@uri": `../sources/${CANONICAL_FORMAT_ID}_00.00.001.xml`,
+            "common:shortDescription": { "@xml:lang": "en", "#text": "ILCD format" },
+          },
+        },
+      },
+    },
+  };
+  const stats = { source_reference_rewrites: 0 };
+  const rewriteRows = [];
+  utils.rewriteCanonicalSourceReferences(payload, {
+    datasetType: "process",
+    sourceFile: "processes.jsonl",
+    stats,
+    rewriteRows,
+    datasetIdentityCache: datasetIdentity(payload, "process"),
+    sourceLookup,
+  });
+  const ref =
+    payload.processDataSet.modellingAndValidation.dataSourcesTreatmentAndRepresentativeness
+      .referenceToDataSource;
+  assert.equal(ref["@refObjectId"], CANONICAL_FORMAT_ID);
+  assert.equal(ref["@version"], CANONICAL_FORMAT_VERSION, "package @00.00.001 lifted to canonical");
+  assert.equal(stats.source_reference_rewrites, 1);
+  assert.equal(rewriteRows[0].relation, "format_support_source");
+});
+
 // A true source on the review-report path is NEVER rewritten — only format/compliance
 // support kinds have a kind-based canonical target.
 test("review-report true source is never rewritten by the kind-based canonical mapping", () => {

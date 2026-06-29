@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { sha256Json } from "./import-curation/internal/hash-utils.mjs";
@@ -359,6 +360,178 @@ export function createPostAuthoringFinalizeUtils({
     };
   }
 
+  // Mega-scope speedup (opt-in via IDENTITY_PREFLIGHT_CONCURRENCY): the per-flow identity
+  // preflight remote search is independent per flow and the remote scales with concurrency,
+  // but the in-process run loop is serial — the dominant cost on ~2000-flow mega-scopes. When
+  // enabled, pre-populate the per-flow identity-decision.json artifacts by running N shard
+  // processes of the SAME index over disjoint --offset/--limit slices in parallel; the
+  // subsequent in-process run (onlyPending) then sees those flows as completed and skips their
+  // remote search. Any shard that fails simply leaves its flows pending, so the in-process run
+  // completes them serially — this is a best-effort accelerator that NEVER changes the result.
+  // Default 1 → no sharding → the existing serial path runs unchanged (BAFU byte-identical).
+  // Applies to every profile (BAFU/USLCI/future) whenever the env var is set.
+  function runIdentityPreflightShardsInParallel({ index, outDir, options }) {
+    const concurrency = Math.max(
+      1,
+      Number.parseInt(
+        process.env.IDENTITY_PREFLIGHT_CONCURRENCY ??
+          String(options.identityPreflightConcurrency ?? "1"),
+        10,
+      ) || 1,
+    );
+    if (concurrency <= 1 || !index || !fileExists(index)) {
+      return { sharded: false, concurrency: 1 };
+    }
+    const total = countRowsFile(index);
+    if (!total || total <= concurrency) {
+      return { sharded: false, concurrency, total: total ?? 0 };
+    }
+    const chunk = Math.ceil(total / concurrency);
+    const foundry = resolveRepoPath("scripts/foundry.mjs");
+    const repoRoot = path.dirname(resolveRepoPath("package.json"));
+    const timeoutMs =
+      options.identityPreflightTimeoutMs ||
+      options.identityPreflightTimeout ||
+      options.timeoutMs ||
+      options.timeout;
+    const maxAttempts =
+      options.identityPreflightMaxAttempts || options.identityPreflightRetryAttempts || 3;
+    const commands = [];
+    for (let i = 0; i < concurrency; i += 1) {
+      const offset = i * chunk;
+      if (offset >= total) break;
+      const args = [
+        foundry,
+        "dataset-identity-preflight-run",
+        "--index",
+        index,
+        "--out-dir",
+        path.join(outDir, "identity-preflight-run-parallel", `shard-${i}`),
+        "--offset",
+        String(offset),
+        "--limit",
+        String(chunk),
+        "--only-pending",
+      ];
+      if (timeoutMs) args.push("--timeout-ms", String(timeoutMs));
+      if (maxAttempts) args.push("--max-attempts", String(maxAttempts));
+      commands.push([process.execPath, ...args]);
+    }
+    const listFile = path.join(outDir, "identity-preflight-run-parallel", "shard-commands.json");
+    fs.mkdirSync(path.dirname(listFile), { recursive: true });
+    fs.writeFileSync(listFile, JSON.stringify(commands));
+    // Spawn all shards concurrently from a one-shot node worker (args passed as arrays, no
+    // shell quoting), wait for every shard, and surface a non-zero exit if any shard failed.
+    const worker =
+      "const fs=require('fs'),cp=require('child_process');" +
+      "const cmds=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));let fail=0;" +
+      "Promise.all(cmds.map(c=>new Promise(r=>{" +
+      `const p=cp.spawn(c[0],c.slice(1),{cwd:${JSON.stringify(repoRoot)},env:process.env,stdio:"ignore"});` +
+      "p.on('close',code=>{if(code!==0)fail=1;r();});p.on('error',()=>{fail=1;r();});" +
+      "}))).then(()=>process.exit(fail));";
+    const result = spawnSync(process.execPath, ["-e", worker, listFile], {
+      cwd: repoRoot,
+      env: process.env,
+      encoding: "utf8",
+    });
+    return {
+      sharded: true,
+      concurrency,
+      shards: commands.length,
+      total,
+      chunk,
+      exit_code: typeof result.status === "number" ? result.status : null,
+    };
+  }
+
+  // Resolution-reuse seed (opt-in via IDENTITY_PREFLIGHT_REUSE_MAP pointing at the library
+  // resolution's exchange-reference-rewrites.jsonl): for every flow the resolution ALREADY
+  // PROVES reuses a canonical, synthesize the block_duplicate/stop_duplicate identity-decision
+  // directly (the gate reads the decision file + the refresh-built request sha; it never re-runs
+  // the remote search to produce it). This collapses a mega-scope's per-flow remote hybrid search
+  // — the remote caps concurrency at ~2x — to only the genuinely-new flows. Writes only where no
+  // real decision exists, so it never clobbers fresh evidence; a flow with no resolution proof is
+  // left pending and searched normally. A flow's canonical is process-independent, so the map is
+  // keyed by source_flow_id. Unset env → no seeding → byte-identical (BAFU and any non-resolution
+  // run). Runs BEFORE the run/shard stage so onlyPending then skips the seeded flows.
+  function preseedResolutionReuseDecisions({ index }) {
+    const mapFile = resolveRepoPath(process.env.IDENTITY_PREFLIGHT_REUSE_MAP);
+    if (!mapFile || !fileExists(mapFile) || !index || !fileExists(index)) {
+      return { enabled: false, seeded: 0 };
+    }
+    const reuse = new Map();
+    for (const row of readRowsFile(mapFile)) {
+      const src = asText(row?.source_flow_id);
+      const cid = asText(row?.canonical_flow_id);
+      if (!src || !cid || reuse.has(src)) continue;
+      reuse.set(src, { id: cid, version: asText(row?.canonical_flow_version) || "00.00.001" });
+    }
+    if (reuse.size === 0) return { enabled: true, seeded: 0 };
+    let seeded = 0;
+    for (const row of readRowsFile(index)) {
+      if (asText(row?.dataset_type ?? row?.type) !== "flow") continue;
+      const id = asText(row?.dataset_id ?? row?.id);
+      const canonical = id ? reuse.get(id) : null;
+      if (!canonical) continue;
+      const reportRel =
+        row?.expected_report_file ||
+        row?.identity_decision_file ||
+        row?.identityDecisionFile ||
+        row?.report_file ||
+        row?.reportFile;
+      const reportFile = reportRel ? resolveRepoPath(reportRel) : null;
+      if (!reportFile || fileExists(reportFile)) continue;
+      let target = null;
+      const reqFile = row?.request_file ? resolveRepoPath(row.request_file) : null;
+      if (reqFile && fileExists(reqFile)) {
+        try {
+          target = JSON.parse(fs.readFileSync(reqFile, "utf8")).target ?? null;
+        } catch {
+          target = null;
+        }
+      }
+      const version = asText(row?.dataset_version ?? row?.version) || "00.00.001";
+      const decision = {
+        schema_version: 1,
+        kind: "flow",
+        status: "blocked",
+        decision: "block_duplicate",
+        confidence: "high",
+        next_action: "stop_duplicate",
+        target: target ?? { id, version },
+        candidates: [
+          {
+            index: 0,
+            id: canonical.id,
+            version: canonical.version,
+            state_code: null,
+            names: target?.names ?? null,
+            fields: target?.fields ?? null,
+            exchange_signature: [],
+            match_score: 1,
+            match_reasons: ["library_resolution_proven_reuse"],
+            decision_hint: "reuse",
+          },
+        ],
+        candidate_sources: [{ kind: "library_resolution", endpoint: "library-resolution" }],
+        findings: [],
+        blockers: [
+          {
+            code: "flow_duplicate_candidate",
+            severity: "blocker",
+            message: `Library resolution proves reuse of canonical ${canonical.id}@${canonical.version}; remote identity search skipped.`,
+            candidate_index: 0,
+          },
+        ],
+        files: null,
+      };
+      fs.mkdirSync(path.dirname(reportFile), { recursive: true });
+      fs.writeFileSync(reportFile, JSON.stringify(decision));
+      seeded += 1;
+    }
+    return { enabled: true, seeded, reuse_map_size: reuse.size };
+  }
+
   function runFinalizeIdentityPreflightStage({ rowsFile, outDir, options }) {
     if (!booleanOption(options.runIdentityPreflight)) {
       return {
@@ -443,6 +616,18 @@ export function createPostAuthoringFinalizeUtils({
         merge_report_file: repoRelativeMaybe(resolveRepoPath(mergeReport.files?.report)),
       };
     }
+    // Resolution-reuse seed (opt-in): synthesize block_duplicate decisions for flows the library
+    // resolution already proves reusable, so the run/shards below skip their remote search via
+    // onlyPending. No-op when IDENTITY_PREFLIGHT_REUSE_MAP is unset (BAFU/non-resolution unchanged).
+    const reuseSeed = preseedResolutionReuseDecisions({ index: indexPath });
+    // Best-effort parallel pre-pass (opt-in): populate the REMAINING per-flow decisions concurrently
+    // so the in-process run below skips them via onlyPending. No-op when IDENTITY_PREFLIGHT_CONCURRENCY
+    // is unset/1, so BAFU and any non-opted run are byte-identical to before.
+    const parallelShards = runIdentityPreflightShardsInParallel({
+      index: indexPath,
+      outDir,
+      options,
+    });
     const report = identityPreflightCommands.runDatasetIdentityPreflightRun({
       index: indexPath,
       outDir: path.join(outDir, "identity-preflight-run"),
@@ -475,6 +660,8 @@ export function createPostAuthoringFinalizeUtils({
       merge_report_file: repoRelativeMaybe(resolveRepoPath(mergeReport?.files?.report)),
       refresh_report: refreshReport,
       merge_report: mergeReport,
+      parallel_shards: parallelShards,
+      reuse_seed: reuseSeed,
     };
   }
 

@@ -237,6 +237,19 @@ export function createSourceSemanticUtils({
   }
 
   function sourceSemanticKind(payload) {
+    // A reference to a known public canonical support source — the ILCD format spec
+    // (a97a0155) or the ILCD Data Network compliance system (d92a1a12) — IS that canonical
+    // dataset by identity, regardless of how a converted package classifies or names it.
+    // Some packages (e.g. USLCI) ship "ILCD format" classified as "Publications and
+    // communications" or list it under referenceToDataSource; without this it reads as a
+    // placeholder/true_source and is minted at the package version instead of reused, which
+    // trips the source-identity prewrite gate and would version_outdated against the
+    // published canonical. Recognize it by UUID so the canonical reference rewrite and the
+    // reference-only write exclusion both fire (matching its classified-as-format peers).
+    const canonicalSupportKind = canonicalSupportSourceKindForId(
+      datasetIdentity(payload, "source")?.id,
+    );
+    if (canonicalSupportKind) return canonicalSupportKind;
     const classificationPath = bundleClassificationPath(payload, "source");
     const classification = classificationPath.toLowerCase();
     const citation = sourceCitationText(payload);
@@ -557,6 +570,21 @@ export function createSourceSemanticUtils({
   function canonicalSourceReferenceForSourceKind(kind) {
     const relation = canonicalSourceReferenceByKind[asText(kind)];
     return relation ? canonicalSourceReferenceForRelation(relation) : null;
+  }
+
+  // Inverse of canonicalSourceReferenceByKind + canonicalSourceReferences: map a source's
+  // own UUID to its canonical support KIND, so a public canonical support source is
+  // recognized by identity even when its converted classification/shortName would not
+  // otherwise resolve to format_support_source / compliance_support_source.
+  function canonicalSupportSourceKindForId(refObjectId) {
+    const id = asText(refObjectId);
+    if (!id) return null;
+    for (const [kind, relation] of Object.entries(canonicalSourceReferenceByKind)) {
+      if (asText(canonicalSourceReferences[relation]?.["@refObjectId"]) === id) {
+        return kind;
+      }
+    }
+    return null;
   }
 
   function sourceReferenceSnapshot(reference) {
