@@ -209,6 +209,39 @@
       "notes": "Machine-readable input schema for foundry-execution-capsule-stage.v1."
     },
     {
+      "id": "final-delivery-promotion-contract",
+      "status": "active",
+      "classification": "offline-final-delivery-promotion-contract",
+      "current_path": "docs/final-delivery-promotion-contract.md",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "README.md",
+        "WORKFLOW.md",
+        "docs/foundry-command-surface.md",
+        "scripts/commands/final-delivery-promotion.mjs"
+      ],
+      "sensitivity": "non-sensitive local delivery gate contract; no credentials or private payloads",
+      "tracked": true,
+      "notes": "Defines the reusable manifest-bound artifact, algebra, workbook, redaction, independent-review, and detached-seal promotion gate."
+    },
+    {
+      "id": "final-delivery-manifest-schema",
+      "status": "active",
+      "classification": "machine-readable-final-delivery-schema",
+      "current_path": "specs/schemas/final-delivery-manifest.schema.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/final-delivery-promotion-contract.md",
+        "scripts/commands/final-delivery-promotion.mjs",
+        "test/commands/final-delivery-promotion.test.mjs"
+      ],
+      "sensitivity": "non-sensitive schema; no credentials or private payloads",
+      "tracked": true,
+      "notes": "Machine-readable input schema for foundry-final-delivery-manifest.v1."
+    },
+    {
       "id": "uslci-source-package",
       "status": "active",
       "classification": "external-source-package",

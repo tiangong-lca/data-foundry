@@ -18,6 +18,7 @@ checkPaths:
   - docs/architecture.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
+  - docs/final-delivery-promotion-contract.md
   - docs/runtime-skill-management.md
   - docs/foundry-task-contracts.md
   - specs/automated-lca-capability-registry.json
@@ -188,3 +189,5 @@ Foundry tests are organized by behavior layer, not by historical incident number
 - `test/fixtures/` for shared Foundry row, report, command, and workflow-specific fixture helpers split by behavior surface.
 
 Use `npm test` for the full suite, or `npm run test:unit`, `npm run test:commands`, and `npm run test:scenarios` for targeted checks. New tests should be named after the behavior they protect rather than `full-context-gate-N`.
+
+For a completed reviewer-facing delivery package, run `final-delivery-promote` with a `foundry-final-delivery-manifest.v1` file and a fresh output directory. Treat the resulting detached seal as offline local evidence only; it does not authorize publication, deployment, or remote mutation. The exact contract is `docs/final-delivery-promotion-contract.md`.

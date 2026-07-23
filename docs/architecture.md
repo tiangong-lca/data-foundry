@@ -15,6 +15,7 @@ checkPaths:
   - docs/architecture.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
+  - docs/final-delivery-promotion-contract.md
   - AGENTS.md
   - README.md
   - WORKFLOW.md
@@ -80,6 +81,7 @@ profiles
    - verify artifacts point to the same rows scope
    - accept identity/classification/location evidence across deterministic row transforms such as source/contact rewrites, canonical support rewrites, identity reference rewrites, unresolved-exchange externalization, and cleanup
    - reconcile deterministic source-only-output exchange proofs from cleanup against final-row `sourceExchangeCompleteness` traces
+   - validate completed delivery packages against manifest-bound content, row algebra, workbook, redaction, and independent-review contracts, then emit an offline detached seal only when every finding is zero
    - generate completion reports
 
 6. Whole-library scope orchestration

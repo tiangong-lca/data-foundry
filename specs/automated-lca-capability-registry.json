@@ -1,7 +1,7 @@
 {
   "$schema": "schemas/capability-registry.schema.json",
   "schema_version": 2,
-  "updated_at_utc": "2026-06-05T00:00:00Z",
+  "updated_at_utc": "2026-07-23T00:00:00Z",
   "purpose": "Machine-readable registry for generic external dataset import capabilities that Foundry may route without owning shared CLI, SDK, converter, or database business logic.",
   "capabilities": [
     {
@@ -14,6 +14,24 @@
       "remote_write_mode": "read-only",
       "verification_gate": "status must be routed before autonomous adapter execution.",
       "source_manifest_requirements": ["task id", "kind", "dataset type", "capability registry"]
+    },
+    {
+      "id": "foundry.final-delivery.promote",
+      "class": "offline-final-delivery-promotion-gate",
+      "owner_project": "tiangong-lca-data-foundry",
+      "entrypoint": "node scripts/foundry.mjs final-delivery-promote",
+      "input_contract": "foundry-final-delivery-manifest.v1 plus content-bound local artifacts, declarative row/algebra/workbook/redaction policies, and independent reviewer reports.",
+      "output_contract": "Immutable manifest snapshot, promotion ledger, reader-facing report, and a detached promotion seal only when every check passes with P0=P1=0.",
+      "remote_write_mode": "read-only",
+      "verification_gate": "Manifest/file SHA and byte bindings, row counts, algebra, exact workbook policy, redaction, reviewer coverage, and no-overwrite checks must all pass before the detached seal exists.",
+      "source_manifest_requirements": [
+        "final-delivery manifest",
+        "artifact SHA/byte/schema/row descriptors",
+        "declarative algebra",
+        "workbook sheet and proof-column contract",
+        "redaction policy",
+        "independent reviewer reports"
+      ]
     },
     {
       "id": "foundry.skill.tidas-import",
