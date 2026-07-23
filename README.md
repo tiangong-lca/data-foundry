@@ -18,6 +18,7 @@ checkPaths:
   - docs/architecture.md
   - docs/runtime-skill-management.md
   - docs/foundry-task-contracts.md
+  - docs/final-delivery-promotion-contract.md
   - specs/import-profiles.json
 lastReviewedAt: 2026-07-12
 lastReviewedCommit: f7c2758cfc5b585bde43f112237e6047527c1a39
@@ -59,6 +60,16 @@ npm run task:route -- --kind source-evidence-dataset-development --dataset-type 
 npm run skills:source-evidence:use:document
 npm run skills:source-evidence:use:sci
 ```
+
+Promote a completed local delivery package through the reusable offline reviewer gate:
+
+```bash
+node scripts/foundry.mjs final-delivery-promote \
+  --manifest .foundry/workspaces/<task-id>/final-delivery/final-delivery-manifest.json \
+  --out-dir .foundry/workspaces/<task-id>/final-delivery-promotion/revision-0001
+```
+
+The command checks exact content hashes and bytes, row algebra, workbook structure, redaction, and independent-review coverage. It writes a detached seal only when every check passes with `P0=0` and `P1=0`; it never grants production authority or dispatches network, database, or write commands. See `docs/final-delivery-promotion-contract.md`.
 
 Tests are organized by behavior layer in `test/README.md`. Use `npm test` for the full suite and `npm run test:unit|test:commands|test:scenarios` for targeted checks; old incident-numbered test aliases are not part of the maintained surface.
 
@@ -186,6 +197,7 @@ Installed shared runtime skills such as `.agents/skills/tiangong-kb-sci-search/`
 - `specs/import-profiles.json`: data-driven import profiles.
 - `docs/foundry-task-contracts.md`: minimal task, source, seed, checkpoint, and artifact ledger contracts.
 - `docs/execution-capsule-contract.md`: reusable offline stage, exact predecessor lineage, content-addressed boundary admission, CAS evidence, and immutable seal contract.
+- `docs/final-delivery-promotion-contract.md`: reusable final-delivery content, algebra, workbook, redaction, independent-review, and detached-seal contract.
 - `docs/runtime-skill-management.md`: `npx skills` runtime dependency contract.
 - `docs/import-profiles/bafu/`: BAFU profile context and constraints.
 - `tasks/`: lightweight task queue and task templates.

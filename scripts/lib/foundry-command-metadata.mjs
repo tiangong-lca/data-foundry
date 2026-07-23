@@ -212,6 +212,29 @@ export const commandMetadata = {
       ),
     ],
   }),
+  "final-delivery-promote": metadata({
+    category: "workflow-internal",
+    ownerModule: "scripts/commands/final-delivery-promotion.mjs",
+    ownerExport: "createFinalDeliveryPromotionCommands().runFinalDeliveryPromote",
+    inputs: [
+      "foundry-final-delivery-manifest.v1",
+      "content-bound local delivery artifacts",
+      "declarative algebra and workbook policies",
+      "independent reviewer reports",
+    ],
+    outputs: [
+      "final-delivery-manifest-snapshot.json",
+      "final-delivery-promotion-ledger.jsonl",
+      "final-delivery-promotion-report.json",
+      "final-delivery-promotion-seal.json when all checks pass",
+    ],
+    keyTests: [
+      nodeTest(
+        "test/commands/final-delivery-promotion.test.mjs",
+        "final delivery promotion validates exact content, rows, algebra, workbook, redaction, review, and immutable seal behavior",
+      ),
+    ],
+  }),
   "dataset-curation-queue-build": metadata({
     category: "cli-wrapper",
     ownerModule: "scripts/commands/cli-wrappers.mjs",

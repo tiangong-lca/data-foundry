@@ -17,6 +17,7 @@ checkPaths:
   - docs/workspace-project-map.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
+  - docs/final-delivery-promotion-contract.md
   - test/README.md
   - specs/capability-ownership-rules.json
   - specs/automated-lca-capability-registry.json
@@ -44,6 +45,7 @@ Foundry owns:
 - remote-write policy checks, execution policy records, blocked-scope ledgers and reports, and commit/readback handoff aggregation;
 - support dependency finalize/handoff aggregation for profile-generated writable contact/source rows, without directly mutating the database;
 - acceptance checks and Stop-hook feedback loops;
+- offline final-delivery promotion that checks only Foundry-owned local artifacts, package-declared algebra/workbook/redaction policies, and content-bound independent-review evidence;
 - local test structure for Foundry-owned metadata, command contracts, scenario orchestration, and shared fixtures;
 - thin adapters that call existing CLI or skill entrypoints.
 
@@ -90,6 +92,8 @@ Treat a capability as foundry-specific when all of these are true:
 - it does not duplicate CLI, skill, database, Edge, converter, SDK, or schema behavior.
 
 Foundry tests follow the same boundary. Unit tests cover local metadata and helpers, command tests cover Foundry command artifacts, scenario tests cover multi-command orchestration, and fixtures remain local harness data rather than fake implementations of sibling project ownership.
+
+Final-delivery promotion follows this boundary as well. Foundry may aggregate and seal local evidence, but the seal cannot authorize publication, deployment, remote writes, owner sessions, or database behavior. Those actions remain with their owning CLI, release, and database surfaces.
 
 Deletion follows the same ownership rule. Remove Foundry-local aliases, empty categories, draft docs, or helpers only after command metadata, import references, tests, docs, and docpact show no remaining Foundry-owned consumer. If the surface is a shared CLI/skill/database concern, route the cleanup to the owning project instead of deleting local evidence first.
 

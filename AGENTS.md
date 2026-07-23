@@ -21,6 +21,7 @@ checkPaths:
   - docs/runtime-skill-management.md
   - docs/foundry-task-contracts.md
   - docs/execution-capsule-contract.md
+  - docs/final-delivery-promotion-contract.md
   - docs/import-profiles/bafu/leaf-process-classification-authoring.md
   - package.json
   - scripts/foundry.mjs
@@ -43,6 +44,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - Do not store API keys, tokens, `.env`, database dumps, or full private payload exports in git.
 - Runtime state belongs under ignored `.foundry/`.
 - Foundry owns task routing, local manifests, import profiles, curation packages, cleanup reports, and policy checks.
+- Foundry may promote completed local delivery packages through manifest-bound content, algebra, workbook, redaction, and independent-review checks, but the detached seal is offline evidence and never production authority.
 - Foundry does not own TIDAS schemas/YAML, package converters, dataset validators, deterministic QA engines, reusable skills, or remote write semantics.
 - `.agents/skills` is the single project-visible skill root. Foundry-owned local skills listed in `.agents/shared-skills.json` are tracked with this repository. Shared/runtime skills listed in the same config may also be installed there, but their directories and `skills-lock.json` stay untracked unless a task explicitly changes to a pinned reproducibility policy.
 - External source-evidence and document-extraction skills, including `tiangong-kb-sci-search` and `document-granular-decompose`, are installed or read through the npm `skills` package (`npx --yes skills@latest ...`) at runtime before use. Do not copy their retrieval or extraction logic into Foundry.
@@ -74,7 +76,8 @@ npx --yes @tiangong-lca/cli@latest dataset context-pack \
 11. Use `$foundry-tidas-import` as the Foundry-local orchestration entrypoint for external package or source-document imports. Use `$foundry-tidas-authoring` only after curation-gate authoring tasks, classification decision tasks, or location decision tasks exist and only to produce structured evidence-backed decisions or patches for curation blockers. Apply classification decisions with `dataset-classification-decisions-apply`, apply location decisions with `dataset-location-decisions-apply`, collect field patches with `dataset-authoring-patch-collect`, then after deterministic apply rerun SDK validation, deterministic QA, and the Foundry curation gate on the final rows before mutation manifest.
 12. Run `node scripts/foundry.mjs dataset-curation-cleanup` after source trace has been captured in authoring packages and before remote write planning.
 13. Remote commit is policy-gated rather than manually supervised by default. A task may allow automated batch commit for scopes whose finalize report, mutation manifest, commit handoff, and post-write verification all pass; human input is required for policy changes, exceptional waivers, or unresolved reference closure. Missing public canonical unit groups, flow properties, or elementary flows remain blockers unless the frozen import profile explicitly authorizes an account-local `state_code=0` candidate path with owner, unit-scale, closure, audit, and readback gates.
-14. Do not treat historical `.foundry` artifacts as proof for a current task.
+14. For a completed reviewer-facing delivery, run `final-delivery-promote` with a package-owned `foundry-final-delivery-manifest.v1` and a fresh output directory. Do not treat the detached seal as publication, deployment, or remote-write authority.
+15. Do not treat historical `.foundry` artifacts as proof for a current task.
 
 `annualSupplyOrProductionVolume` is schema-required. If source data does not provide a real annual volume, Foundry must use the deterministic `9999 missing-data-sentinel/year` placeholder, not `common:other` deferral. The sentinel is deliberately non-physical and searchable; database-side curation owns replacing it later.
 

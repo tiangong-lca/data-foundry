@@ -15,6 +15,7 @@ whenToUpdate:
 checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
+  - docs/final-delivery-promotion-contract.md
   - test/README.md
   - scripts/foundry.mjs
   - scripts/lib/foundry-cli.mjs
@@ -49,6 +50,8 @@ The checked source of truth for command ownership is `scripts/lib/foundry-comman
 - key tests
 
 `test/unit/foundry-command-metadata.test.mjs` enforces that the metadata covers all registered commands and that public commands remain reachable within two jumps from `scripts/foundry.mjs`.
+
+For completed delivery packages, navigate directly from `final-delivery-promote` to `scripts/commands/final-delivery-promotion.mjs` and `docs/final-delivery-promotion-contract.md`. This is a local gate aggregator: package-specific counts, sheets, proof columns, and reviewer coverage belong in `foundry-final-delivery-manifest.v1`, not in the command implementation.
 
 ## Import-Curation Modules
 

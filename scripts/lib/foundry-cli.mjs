@@ -24,6 +24,7 @@ async function runFoundryCliMain({ argv, commandDeps, decisionDeps, runtime }) {
     commitHandoffCommands,
     coreCommands,
     executionCapsuleCommands,
+    finalDeliveryPromotionCommands,
     identityDecisionCommands,
     identityDecisionTaskCommands,
     identityPreflightCommands,
@@ -66,6 +67,8 @@ async function runFoundryCliMain({ argv, commandDeps, decisionDeps, runtime }) {
     "task-complete": (options) => taskCommands.runTaskComplete(options),
     "execution-capsule-admit": (options) =>
       executionCapsuleCommands.runExecutionCapsuleAdmit(options),
+    "final-delivery-promote": (options) =>
+      finalDeliveryPromotionCommands.runFinalDeliveryPromote(options),
     "dataset-curation-queue-build": (options) =>
       cliWrapperCommands.runDatasetCurationQueueBuild(options),
     "dataset-curation-gate": (options) => runDatasetCurationGate({ repoRoot, options }),

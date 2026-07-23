@@ -17,6 +17,7 @@ checkPaths:
   - docs/capability-ownership-policy.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
+  - docs/final-delivery-promotion-contract.md
   - test/README.md
   - specs/capability-ownership-rules.json
   - specs/workspace-capability-adapters.md
@@ -39,6 +40,7 @@ Foundry should route reusable work to the owning repository instead of copying i
 | Schema validation and QA gates | `tiangong-lca-cli` | `npx --yes @tiangong-lca/cli@latest dataset validate`, `npx --yes @tiangong-lca/cli@latest qa` |
 | Remote commit, readback, and publish prep | `tiangong-lca-cli`, Edge Functions, database | `dataset-post-authoring-finalize` and source/contact support handoff artifacts, published CLI commit commands, `npx --yes @tiangong-lca/cli@latest dataset verify-remote`, `publish run`, Edge verification |
 | Foundry task routing and manifests | `tiangong-lca-data-foundry` | `scripts/foundry.mjs route-task` |
+| Offline final-delivery promotion and reviewer gate | `tiangong-lca-data-foundry` | `scripts/foundry.mjs final-delivery-promote`, `foundry-final-delivery-manifest.v1`, immutable promotion ledger/report, detached non-production seal |
 | Write/execution policy and blocked-scope ledgers/reports | `tiangong-lca-data-foundry` | `foundry-job.json`, library entity indexes, index-relative process-scope projections, deterministic transform evidence reconciliation, source-only-output exchange proof reconciliation, checkpoints, `blocked-scope-ledger.jsonl`, `blocked-scope-report.json`, mutation manifest aggregation, closeout reports |
 | Foundry test structure and command navigation checks | `tiangong-lca-data-foundry` | `test/README.md`, `test/unit`, `test/commands`, `test/scenarios`, `test/fixtures`, `scripts/lib/foundry-command-metadata.mjs` |
 | Foundry-local surface cleanup | `tiangong-lca-data-foundry` | remove old aliases, empty command categories, and orphaned draft docs only after metadata, tests, docs, and docpact show no remaining consumer |

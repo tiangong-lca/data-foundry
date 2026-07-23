@@ -11,6 +11,7 @@ import { createCliWrapperCommands } from "./commands/cli-wrappers.mjs";
 import { createCommitHandoffCommands } from "./commands/commit-handoff.mjs";
 import { createCoreCommands } from "./commands/core.mjs";
 import { createExecutionCapsuleCommands } from "./commands/execution-capsule.mjs";
+import { createFinalDeliveryPromotionCommands } from "./commands/final-delivery-promotion.mjs";
 import { createIdentityDecisionTaskCommands } from "./commands/identity-decision-task.mjs";
 import { createIdentityDecisionCommands } from "./commands/identity-decisions.mjs";
 import { createIdentityPreflightRunCommands } from "./commands/identity-preflight-run.mjs";
@@ -295,6 +296,7 @@ const taskCommands = createTaskCommands({
 });
 
 const executionCapsuleCommands = createExecutionCapsuleCommands({ repoRoot });
+const finalDeliveryPromotionCommands = createFinalDeliveryPromotionCommands({ repoRoot });
 
 const cliWrapperCommands = createCliWrapperCommands({
   appendOption,
@@ -893,6 +895,7 @@ runFoundryCli({
     commitHandoffCommands,
     coreCommands,
     executionCapsuleCommands,
+    finalDeliveryPromotionCommands,
     identityDecisionCommands,
     identityDecisionTaskCommands,
     identityPreflightCommands,

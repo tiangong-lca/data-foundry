@@ -21,6 +21,7 @@ catalog:
         - docs/safety-policy.md
         - docs/foundry-ai-navigation.md
         - docs/foundry-command-surface.md
+        - docs/final-delivery-promotion-contract.md
       workspaceIntegrationRequired: true
 
 ownership:
@@ -153,6 +154,7 @@ docInventory:
     - docs/foundry-ai-navigation.md
     - docs/foundry-command-surface.md
     - docs/execution-capsule-contract.md
+    - docs/final-delivery-promotion-contract.md
     - test/README.md
     - docs/account-context-policy.md
     - docs/countable-product-functional-unit-design.md
@@ -270,6 +272,22 @@ rules:
       - path: docs/execution-capsule-contract.md
         mode: review_or_update
     reason: Execution capsule lineage, boundary, schema, and admission behavior must remain synchronized with the authoritative contract.
+  - id: foundry-final-delivery-promotion-contract
+    scope: repo
+    repo: data-foundry
+    triggers:
+      - path: docs/final-delivery-promotion-contract.md
+        kind: final-delivery-promotion-contract
+      - path: specs/schemas/final-delivery-manifest.schema.json
+        kind: final-delivery-manifest-schema
+      - path: scripts/commands/final-delivery-promotion.mjs
+        kind: final-delivery-promotion-command
+      - path: test/commands/final-delivery-promotion.test.mjs
+        kind: final-delivery-promotion-command-test
+    requiredDocs:
+      - path: docs/final-delivery-promotion-contract.md
+        mode: review_or_update
+    reason: Final-delivery content binding, algebra, workbook, redaction, independent-review, and detached-seal behavior must remain synchronized with the authoritative contract.
   - id: foundry-test-layout-contract
     scope: repo
     repo: data-foundry

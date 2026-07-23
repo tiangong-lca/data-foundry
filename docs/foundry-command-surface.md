@@ -18,6 +18,7 @@ checkPaths:
   - scripts/lib/foundry-command-registry.mjs
   - scripts/lib/foundry-command-metadata.mjs
   - test/unit/foundry-command-metadata.test.mjs
+  - docs/final-delivery-promotion-contract.md
 lastReviewedAt: 2026-07-23
 lastReviewedCommit: 2f1e80b02173fc20231f01ac9e6da62c16d63109
 ---
@@ -40,6 +41,8 @@ The metadata module must cover every command returned by `node scripts/foundry.m
 Every command must have `workflowEntry.status: "active"` and at least one key behavior check, so unused surface area cannot hide as an unreviewed command. `surface-audit` is the read-only guard for hidden command aliases, empty metadata categories, unregistered orphan docs, and script modules with no inbound imports; `doctor` and `acceptance-check` include it.
 
 `execution-capsule-admit` is a `workflow-internal` offline evidence gate. Its contract lives in `docs/execution-capsule-contract.md`; it may snapshot, validate, report, and seal local evidence, but it cannot execute the consumer or grant production authority.
+
+`final-delivery-promote` is a `workflow-internal` offline delivery gate. Its contract lives in `docs/final-delivery-promotion-contract.md`; it validates manifest-bound artifacts, row algebra, workbook layout, redaction, and independent-review coverage, then emits a detached seal only on an all-PASS result. It cannot mutate delivery inputs, dispatch remote work, or grant production authority.
 
 ## Navigation Contract
 
