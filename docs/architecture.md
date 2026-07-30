@@ -24,8 +24,8 @@ checkPaths:
   - specs/capability-ownership-rules.json
   - specs/automated-lca-capability-registry.json
   - docs/incremental-change-set-contract.md
-lastReviewedAt: 2026-07-24
-lastReviewedCommit: a6354830ae4369ce2c959878865ebfe6791bab57
+lastReviewedAt: 2026-07-30
+lastReviewedCommit: 7b9cebaaab2f8f35fce7aed48d3a76513d205496
 ---
 
 # Architecture
@@ -141,7 +141,7 @@ The foundry should call the owning workspace surface instead of absorbing implem
 - `tiangong-lca-cli`: default command surface for contract context, source authoring, QA/curation, remote data operations, and handoff
 - `tiangong-lca-skills`: agent-facing wrappers over CLI commands
 - `tiangong-ai/skills`: runtime-only source-evidence and document extraction skills such as `document-granular-decompose` and `tiangong-kb-sci-search`
-- `tiangong-lca-edge-functions`: Edge Function runtime, including hybrid search and embedding jobs
+- `tiangong-lca-edge-functions`: Edge Function runtime, including Hybrid Search request orchestration and `embedding_ft` jobs; Foundry forwards one `lexical_weight` and one `semantic_weight`
 - `database-engine`: database RPCs, triggers, vector indexes, and schema governance
 - `tidas`: TIDAS specification
 - `tidas-sdk`: compatibility SDK and context APIs

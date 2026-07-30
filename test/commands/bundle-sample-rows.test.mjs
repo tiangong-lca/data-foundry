@@ -690,12 +690,11 @@ test("dataset-bundle-sample-rows writes executable identity preflight requests f
   assert.equal(request.remote_candidate_search.data_source, "tg");
   assert.equal(request.remote_candidate_search.limit, 80);
   assert.equal(request.remote_candidate_search.match_threshold, 0.15);
-  assert.equal(request.remote_candidate_search.full_text_weight, 0.45);
-  assert.equal(request.remote_candidate_search.extracted_text_weight, 0.35);
+  assert.equal(request.remote_candidate_search.lexical_weight, 0.8);
   assert.equal(request.remote_candidate_search.semantic_weight, 0.2);
   assert.equal(request.remote_candidate_search.rrf_k, 30);
   assert.equal(elementaryQueue[0].remote_search.edge_request.body.match_threshold, 0.15);
-  assert.equal(elementaryQueue[0].remote_search.edge_request.body.full_text_weight, 0.45);
+  assert.equal(elementaryQueue[0].remote_search.edge_request.body.lexical_weight, 0.8);
   assert.equal("profile_hints" in elementaryQueue[0].remote_search.edge_request.body, false);
   assert.equal(request.remote_candidate_search.profile_hints.type_of_dataset, "Elementary flow");
   assert.equal(request.remote_candidate_search.profile_hints.flow_property[0], "Mass");

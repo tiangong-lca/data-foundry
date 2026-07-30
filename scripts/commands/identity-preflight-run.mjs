@@ -943,10 +943,7 @@ export function createIdentityPreflightRunCommands({
         ...(request.limit ? { match_count: request.limit, page_size: request.limit } : {}),
         ...(request.data_source ? { data_source: request.data_source } : {}),
         ...(request.match_threshold ? { match_threshold: request.match_threshold } : {}),
-        ...(request.full_text_weight ? { full_text_weight: request.full_text_weight } : {}),
-        ...(request.extracted_text_weight
-          ? { extracted_text_weight: request.extracted_text_weight }
-          : {}),
+        ...(request.lexical_weight ? { lexical_weight: request.lexical_weight } : {}),
         ...(request.semantic_weight ? { semantic_weight: request.semantic_weight } : {}),
         ...(request.rrf_k ? { rrf_k: request.rrf_k } : {}),
       };

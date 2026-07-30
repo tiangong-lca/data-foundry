@@ -21,8 +21,8 @@ checkPaths:
   - specs/capability-ownership-rules.json
   - specs/workspace-capability-adapters.md
   - docs/incremental-change-set-contract.md
-lastReviewedAt: 2026-07-24
-lastReviewedCommit: a6354830ae4369ce2c959878865ebfe6791bab57
+lastReviewedAt: 2026-07-30
+lastReviewedCommit: 7b9cebaaab2f8f35fce7aed48d3a76513d205496
 ---
 
 # Workspace Project Map
@@ -39,6 +39,7 @@ Foundry should route reusable work to the owning repository instead of copying i
 | Agent workflow instructions | `tiangong-lca-skills` | `$tidas-contract-context`, `$tidas-data-import` |
 | Schema validation | Rust `tidas` (`tidas-tools`) | `node scripts/foundry.mjs dataset-tidas-validate` → `tidas validate` |
 | Deterministic QA and curation gates | `tiangong-lca-cli` | `npx --yes @tiangong-lca/cli@latest qa`, `dataset curation-queue build/next/verify` |
+| Identity-preflight candidate search | Edge Functions for request orchestration; `database-engine` for `extracted_md` lexical and `embedding_ft` semantic execution | Foundry forwards one `lexical_weight` and one `semantic_weight` through `dataset-identity-preflight-run` |
 | Remote commit, readback, and publish prep | `tiangong-lca-cli`, Edge Functions, database | `dataset-post-authoring-finalize` and source/contact support handoff artifacts, published CLI commit commands, `npx --yes @tiangong-lca/cli@latest dataset verify-remote`, `publish run`, Edge verification |
 | Foundry task routing and manifests | `tiangong-lca-data-foundry` | `scripts/foundry.mjs route-task` |
 | Write/execution policy and blocked-scope ledgers/reports | `tiangong-lca-data-foundry` | `foundry-job.json`, library entity indexes, index-relative process-scope projections, deterministic transform evidence reconciliation, source-only-output exchange proof reconciliation, checkpoints, `blocked-scope-ledger.jsonl`, `blocked-scope-report.json`, mutation manifest aggregation, closeout reports |

@@ -21,8 +21,8 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - docs/topology-convergence-contract.md
   - specs/import-profiles.json
-lastReviewedAt: 2026-07-24
-lastReviewedCommit: a6354830ae4369ce2c959878865ebfe6791bab57
+lastReviewedAt: 2026-07-30
+lastReviewedCommit: 7b9cebaaab2f8f35fce7aed48d3a76513d205496
 ---
 
 # TianGong LCA Data Foundry
@@ -30,6 +30,8 @@ lastReviewedCommit: a6354830ae4369ce2c959878865ebfe6791bab57
 Control plane for turning external source material into validated, import-ready TIDAS data.
 
 Foundry is intentionally thin. It owns task routing, local workspaces, import profiles, curation packages, cleanup reports, stable owner-command adapters, and policy checks. Deterministic package import/conversion/schema validation belongs to unified Rust `tidas`; contract context, QA, curation, skills, and database behavior belongs in `tiangong-lca-cli`, `tidas-sdk`, `tiangong-lca-skills`, Edge Functions, or database projects.
+
+Identity-preflight candidate requests use the current Hybrid Search contract: one `lexical_weight` for the database `extracted_md` branch and one `semantic_weight` for `embedding_ft`.
 
 ## Import Lanes
 

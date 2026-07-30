@@ -23,8 +23,8 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - docs/safety-policy.md
   - docs/incremental-change-set-contract.md
-lastReviewedAt: 2026-07-24
-lastReviewedCommit: a6354830ae4369ce2c959878865ebfe6791bab57
+lastReviewedAt: 2026-07-30
+lastReviewedCommit: 7b9cebaaab2f8f35fce7aed48d3a76513d205496
 ---
 
 # Capability Ownership Policy
@@ -43,6 +43,7 @@ Foundry owns:
 - deterministic row-transform evidence reconciliation across source/contact rewrites, canonical support rewrites, identity reference rewrites, unresolved-exchange externalization, and cleanup;
 - deterministic source-only-output exchange proof from explicit source rows when the final process row preserves the non-flow-reference exchange signature;
 - remote-write policy checks, execution policy records, blocked-scope ledgers and reports, and commit/readback handoff aggregation;
+- projection of the current identity-preflight request contract, including one lexical and one semantic weight, without owning database search semantics;
 - support dependency finalize/handoff aggregation for profile-generated writable contact/source rows, without directly mutating the database;
 - offline old/candidate/current change-set composition, strict machine validation, entity/path/value/evidence-bound preservation, stable-identity array handling, absent-dependency isolation, immutable artifact manifests, and per-conversion terminal logs, without remote dispatch;
 - offline candidate-topology convergence composition, including fresh-census binding, owner/public/foreign target classification, process-local occurrence mapping, approved multilingual preservation, phased F/P/D artifacts, and zero-inbound delete candidates, without remote dispatch or delete authority;

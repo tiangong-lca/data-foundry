@@ -367,8 +367,7 @@ export function createIdentityPreflightArtifactUtils({
   function identityPreflightHybridSearchOptions() {
     return {
       match_threshold: 0.15,
-      full_text_weight: 0.45,
-      extracted_text_weight: 0.35,
+      lexical_weight: 0.8,
       semantic_weight: 0.2,
       rrf_k: 30,
     };

@@ -4,8 +4,9 @@ layout: repo
 # Review note, 2026-07-23: Issue #42 adds the generic offline incremental change-set composer, exact per-conversion event ledger, and CLI candidate contract. Strict Draft 2020-12 validation uses the exact Ajv 8.20.0 runtime dependency; evidence-bound entity/path/value rules, stable-identity array handling, snapshot receipts, terminal pairs, and non-root field allowlists add no remote access or mutation authority.
 # Review note, 2026-07-24: Issue #47 adds the offline topology-convergence F/P/D composer. Candidate topology, fresh owner/public/foreign census, audited classifications, occurrence-keyed multilingual preservation, fixed CLI fingerprint, zero-inbound delete candidates, and hash-chained logs remain local planning evidence with no DML authority.
 # Review note, 2026-07-27: Issue #50's Rust tidas cutover adds an explicit self-governance rule for retained Python-era import plans so they cannot silently regain executable authority.
-lastReviewedAt: "2026-07-27"
-lastReviewedCommit: "d29e522562245956d5a146e582a26ddf2a68613e"
+# Review note, 2026-07-30: Issue #54 aligns identity-preflight requests to one lexical_weight plus semantic_weight without changing Foundry ownership or remote mutation authority.
+lastReviewedAt: "2026-07-30"
+lastReviewedCommit: "7b9cebaaab2f8f35fce7aed48d3a76513d205496"
 
 catalog:
   repos:

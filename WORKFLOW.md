@@ -24,8 +24,8 @@ checkPaths:
   - specs/automated-lca-capability-registry.json
   - specs/capability-ownership-rules.json
   - test/README.md
-lastReviewedAt: 2026-07-24
-lastReviewedCommit: a6354830ae4369ce2c959878865ebfe6791bab57
+lastReviewedAt: 2026-07-30
+lastReviewedCommit: 7b9cebaaab2f8f35fce7aed48d3a76513d205496
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -98,6 +98,8 @@ After build, workers should call `npx --yes @tiangong-lca/cli@latest dataset cur
 Batch runners may execute multiple ready tasks in parallel only when queue locks and `depends_on` checkpoints prove independence. The task workspace must record configured `max_parallelism` and the runner identity for each claimed task. A blocked task must write its blocker artifact and release unrelated work; it must not stop independent ready tasks from completing, committing, and passing readback when their exact scopes have no blockers. Any workflow stage that defers scopes must write a complete `blocked-scope-ledger.jsonl` plus a reader-facing `blocked-scope-report.json` that names the concrete reasons, affected process scopes, blocking dependency types or examples, required human action, and rerun command.
 
 Before AI curation for process/flow imports, audit and then run the generated identity-preflight request index. The audit checks the exact `flow_hybrid_search` / `process_hybrid_search` Edge request body before any remote call: Edge only parses `query`, `filter`/`filter_condition`, match/page options, and `data_source`, so complete identity and source evidence must be present in the compact fielded `query`. Foundry may include `remote_candidate_search.profile_hints` in the request for source-derived facts such as elementary categories, flow property, reference unit, geography, reference flow names, technology, and system boundary; the CLI uses those hints only for local target profiling and candidate scoring, not as Edge Function request fields.
+
+The remote search contract has one lexical branch over database-owned `extracted_md`. Foundry therefore emits one `lexical_weight` (default `0.8`) plus `semantic_weight` (default `0.2`) and forwards no second lexical control.
 
 ```bash
 node scripts/foundry.mjs dataset-identity-preflight-query-audit \
