@@ -39,7 +39,6 @@ const FORBIDDEN_CLIENT_MODULES = new Set([
   "postgres",
   "postgres.js",
 ]);
-const CHILD_PROCESS_CALLS = new Set(["exec", "execFile", "execFileSync", "spawn", "spawnSync"]);
 const CLI_CALLS = new Set([
   "resolveTiangongLcaCliCommand",
   "runJsonCli",
@@ -303,7 +302,7 @@ function dynamicSubprocess(file, source, node) {
   });
 }
 
-function deriveJavascript(file, source) {
+export function deriveJavascript(file, source) {
   let ast;
   try {
     ast = parsers.babel.parse(source, { filepath: file });
@@ -312,6 +311,15 @@ function deriveJavascript(file, source) {
   }
   const occurrences = [];
   const forbidden = [];
+  const childProcessBindings = new Set(
+    (ast.program?.body ?? ast.body ?? [])
+      .filter(
+        (node) => node.type === "ImportDeclaration" && node.source?.value === "node:child_process",
+      )
+      .flatMap((node) => node.specifiers ?? [])
+      .map((specifier) => specifier.local?.name)
+      .filter(Boolean),
+  );
   walk(ast, null, (node, parent) => {
     if (node.type === "ImportDeclaration" && FORBIDDEN_CLIENT_MODULES.has(node.source?.value)) {
       forbidden.push(`${file}:${lineFor(source, node.start)} imports ${node.source.value}`);
@@ -331,7 +339,7 @@ function deriveJavascript(file, source) {
     }
     if (node.type === "CallExpression") {
       const name = calleeName(node);
-      if (CHILD_PROCESS_CALLS.has(name)) occurrences.push(dynamicSubprocess(file, source, node));
+      if (childProcessBindings.has(name)) occurrences.push(dynamicSubprocess(file, source, node));
       if (CLI_CALLS.has(name)) {
         const object = node.arguments?.[0] ? sourceFragment(source, node.arguments[0]) : name;
         occurrences.push(

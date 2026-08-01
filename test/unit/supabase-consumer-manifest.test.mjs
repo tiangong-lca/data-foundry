@@ -12,6 +12,7 @@ import {
   assertDeliveryTreeEqual,
   assertExactOccurrenceSet,
   canonicalGithubRepository,
+  deriveJavascript,
   readNoFollowRegular,
   verifyManifest,
 } from "../../scripts/audit-supabase-consumers.mjs";
@@ -49,6 +50,26 @@ test("bidirectional/global exactly-once rejects omission, duplication, and deriv
     () =>
       assertExactOccurrenceSet(rows, [...rows, { ...rows[0], id: "occ-000000000000000000000000" }]),
     /bidirectionally exact/u,
+  );
+});
+
+test("subprocess derivation binds imported child-process symbols and ignores RegExp.exec", () => {
+  const regexOnly = deriveJavascript(
+    "scripts/regex.mjs",
+    'const matcher = /public\\.x/u; matcher.exec("public.x");\n',
+  );
+  assert.equal(
+    regexOnly.filter((row) => row.detector === "javascript-ast-child-process").length,
+    0,
+  );
+
+  const subprocess = deriveJavascript(
+    "scripts/subprocess.mjs",
+    'import { spawnSync as run } from "node:child_process"; run(command, args);\n',
+  );
+  assert.equal(
+    subprocess.filter((row) => row.detector === "javascript-ast-child-process").length,
+    1,
   );
 });
 
