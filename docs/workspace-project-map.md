@@ -47,5 +47,6 @@ Foundry should route reusable work to the owning repository instead of copying i
 | Flow-topology convergence and physical retirement | `tiangong-lca-data-foundry` for offline F/P/D composition; `tiangong-lca-cli` for protected execution/readback | `dataset-topology-convergence-compose`, occurrence-keyed conversion logs, F/P contracts, post-P zero-inbound D candidates, then fixed-fingerprint `dataset maintenance apply` |
 | Foundry test structure and command navigation checks | `tiangong-lca-data-foundry` | `test/README.md`, `test/unit`, `test/commands`, `test/scenarios`, `test/fixtures`, `scripts/lib/foundry-command-metadata.mjs` |
 | Foundry-local surface cleanup | `tiangong-lca-data-foundry` | remove old aliases, empty command categories, and orphaned draft docs only after metadata, tests, docs, and docpact show no remaining consumer |
+| Supabase consumer candidate evidence | `tiangong-lca-data-foundry` for exact local occurrence derivation; `database-engine` and sibling runtime owners for external verification | `contracts/supabase-consumer-manifest.v3.json`, `node scripts/audit-supabase-consumers.mjs --verify`; candidate/non-authorizing only |
 
 Before implementing a missing capability, classify it with `docs/capability-ownership-policy.md` and `specs/capability-ownership-rules.json`.

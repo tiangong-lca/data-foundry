@@ -217,3 +217,12 @@ Foundry tests are organized by behavior layer, not by historical incident number
 - `test/fixtures/` for shared Foundry row, report, command, and workflow-specific fixture helpers split by behavior surface.
 
 Use `npm test` for the full suite, or `npm run test:unit`, `npm run test:commands`, and `npm run test:scenarios` for targeted checks. New tests should be named after the behavior they protect rather than `full-context-gate-N`.
+
+Supabase-facing changes also require:
+
+```bash
+node scripts/audit-supabase-consumers.mjs --verify
+node --test test/unit/supabase-consumer-manifest.test.mjs
+```
+
+The verifier is static and local: it must not authenticate, contact hosted Supabase, mutate a database, or run a Foundry workflow. It reads exact Git blobs, independently derives every direct database/Auth/HTTP and indirect CLI/subprocess occurrence, and rejects unclassified dynamic bypasses. The checked-in result remains a candidate until database-engine, CLI/Edge/Worker/Release, hosted lifecycle, and workspace integration blockers close externally.

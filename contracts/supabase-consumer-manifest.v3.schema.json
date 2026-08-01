@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tiangong-lca/data-foundry/contracts/supabase-consumer-manifest.v3.schema.json",
+  "title": "TianGong Data Foundry Supabase consumer candidate manifest v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "version",
+    "repository",
+    "manifestSchema",
+    "sourceSnapshot",
+    "delivery",
+    "authority",
+    "occurrences",
+    "upstreams",
+    "publicResidue",
+    "pending",
+    "absenceProofs",
+    "summary"
+  ],
+  "properties": {
+    "$schema": { "const": "./supabase-consumer-manifest.v3.schema.json" },
+    "schema": { "const": "tiangong.supabase-consumer-manifest.v3" },
+    "version": { "const": 3 },
+    "repository": {
+      "const": {
+        "slug": "tiangong-lca/data-foundry",
+        "canonicalOrigin": "git@github.com:tiangong-lca/data-foundry.git"
+      }
+    },
+    "manifestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "const": "contracts/supabase-consumer-manifest.v3.schema.json" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "sourceSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "derivation",
+        "sourceTreeCommit",
+        "filteredGitTreeSha256",
+        "pathPatterns",
+        "exactExemptions",
+        "governedFileCount",
+        "symlinkPolicy",
+        "nonRegularFilePolicy",
+        "setEquality"
+      ],
+      "properties": {
+        "derivation": { "const": "prettier-babel-ast+structured-json-env-v3" },
+        "sourceTreeCommit": { "$ref": "#/$defs/commit" },
+        "filteredGitTreeSha256": { "$ref": "#/$defs/sha256" },
+        "pathPatterns": {
+          "const": [
+            ".agents/skills/**/*.md",
+            ".env.example",
+            "package.json",
+            "scripts/**/*.mjs",
+            "specs/**/*.json"
+          ]
+        },
+        "exactExemptions": { "const": ["scripts/audit-supabase-consumers.mjs"] },
+        "governedFileCount": { "type": "integer", "minimum": 1 },
+        "symlinkPolicy": { "const": "reject" },
+        "nonRegularFilePolicy": { "const": "reject" },
+        "setEquality": { "const": "bidirectional-global-exactly-once" }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetBranch",
+        "deliveryCommit",
+        "deliveryCommitAuthority",
+        "headResolution",
+        "filteredGitTreeSha256",
+        "governedSourcePolicy"
+      ],
+      "properties": {
+        "targetBranch": { "const": "main" },
+        "deliveryCommit": { "type": "null" },
+        "deliveryCommitAuthority": { "const": "external-verifier-binds-actual-head" },
+        "headResolution": { "const": "scan-actual-git-head" },
+        "filteredGitTreeSha256": { "$ref": "#/$defs/sha256" },
+        "governedSourcePolicy": { "const": "exact-tree-entries-equal-except-audit-tool" }
+      }
+    },
+    "authority": {
+      "const": {
+        "status": "candidate",
+        "authorizesConsumerZero": false,
+        "authorizesDatabaseFreeze": false,
+        "authorizesDatabaseMigration": false,
+        "authorizesHostedMutation": false,
+        "authorizesProductionMutation": false
+      }
+    },
+    "occurrences": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/occurrence" }
+    },
+    "upstreams": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "relationship", "contract", "lifecycle"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "relationship": { "enum": ["direct", "indirect"] },
+          "contract": { "type": "string", "minLength": 1 },
+          "lifecycle": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "publicResidue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relations", "routines", "dynamicSchemaSelectors"],
+      "properties": {
+        "relations": { "$ref": "#/$defs/stringSet" },
+        "routines": { "const": [] },
+        "dynamicSchemaSelectors": { "const": [] }
+      }
+    },
+    "pending": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "blocker"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "blocker": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "absenceProofs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["surface", "result", "enforcement"],
+        "properties": {
+          "surface": { "type": "string", "minLength": 1 },
+          "result": { "const": "absent" },
+          "enforcement": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "occurrences",
+        "upstreams",
+        "byRelationship",
+        "byTransport",
+        "byCredential",
+        "bySchema"
+      ],
+      "properties": {
+        "occurrences": { "type": "integer", "minimum": 0 },
+        "upstreams": { "type": "integer", "minimum": 0 },
+        "byRelationship": { "$ref": "#/$defs/countMap" },
+        "byTransport": { "$ref": "#/$defs/countMap" },
+        "byCredential": { "$ref": "#/$defs/countMap" },
+        "bySchema": { "$ref": "#/$defs/countMap" }
+      }
+    }
+  },
+  "$defs": {
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "stringSet": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "countMap": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 1 }
+    },
+    "occurrence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "file",
+        "line",
+        "span",
+        "detector",
+        "capability",
+        "relationship",
+        "upstream",
+        "transport",
+        "credential",
+        "role",
+        "schema",
+        "object",
+        "signature",
+        "acl",
+        "semantics",
+        "sourceClass"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^occ-[0-9a-f]{24}$" },
+        "file": { "type": "string", "minLength": 1 },
+        "line": { "type": "integer", "minimum": 1 },
+        "span": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["startOffset", "endOffset", "sha256"],
+          "properties": {
+            "startOffset": { "type": "integer", "minimum": 0 },
+            "endOffset": { "type": "integer", "minimum": 1 },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "detector": {
+          "enum": [
+            "javascript-ast-child-process",
+            "javascript-ast-cli-control",
+            "javascript-ast-http",
+            "javascript-ast-postgrest-target",
+            "javascript-ast-route-literal",
+            "javascript-ast-supabase-request",
+            "structured-agent-command-parser",
+            "structured-env-parser",
+            "structured-package-json-parser"
+          ]
+        },
+        "capability": { "type": "string", "minLength": 1 },
+        "relationship": {
+          "enum": [
+            "configuration",
+            "direct-database-consumer",
+            "direct-supabase",
+            "indirect-upstream"
+          ]
+        },
+        "upstream": { "type": "string", "minLength": 1 },
+        "transport": { "type": "string", "minLength": 1 },
+        "credential": { "type": "string", "minLength": 1 },
+        "role": { "type": "string", "minLength": 1 },
+        "schema": { "type": "string", "minLength": 1 },
+        "object": { "type": "string", "minLength": 1 },
+        "signature": { "type": "string", "minLength": 1 },
+        "acl": { "type": "string", "minLength": 1 },
+        "semantics": { "type": "string", "minLength": 1 },
+        "sourceClass": { "enum": ["runtime", "versioned-config"] }
+      }
+    }
+  }
+}

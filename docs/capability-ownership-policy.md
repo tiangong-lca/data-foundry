@@ -118,3 +118,9 @@ Every missing shared capability follow-up must include:
 - `done_criteria`
 
 The machine-readable rules live in `specs/capability-ownership-rules.json`.
+
+## Supabase Consumer Evidence Ownership
+
+Foundry owns discovery and exact evidence for calls present in this repository. It does not own the downstream schema, RPC, Edge, Worker, Release, Storage, or published CLI behavior those calls reach. Therefore the v3 consumer candidate records direct database consumers separately from indirect upstream contracts and leaves cross-repository runtime qualification pending.
+
+The evidence verifier must reject omitted or repeated occurrences, dynamic helper bypasses, upstream/transport/signature substitutions, non-canonical origins, non-regular Git objects, canonical-schema drift, and source-to-delivery governed-byte drift. Passing this local gate never authorizes database freeze, hosted mutation, merge, or deploy.

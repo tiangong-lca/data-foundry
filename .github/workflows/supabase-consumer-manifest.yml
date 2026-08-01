@@ -1,0 +1,38 @@
+name: Supabase consumer manifest
+
+on:
+  pull_request:
+    paths:
+      - ".agents/skills/**"
+      - ".env.example"
+      - ".github/workflows/supabase-consumer-manifest.yml"
+      - "contracts/supabase-consumer-manifest.v3.json"
+      - "contracts/supabase-consumer-manifest.v3.schema.json"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/**"
+      - "specs/**"
+      - "test/unit/supabase-consumer-manifest.test.mjs"
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Verify immutable candidate manifest
+        run: node scripts/audit-supabase-consumers.mjs --verify
+      - name: Run adversarial manifest tests
+        run: node --test test/unit/supabase-consumer-manifest.test.mjs

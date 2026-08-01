@@ -84,6 +84,8 @@ coverage:
     - .docpact/config.yaml
     - .gitignore
     - package.json
+    - contracts/**
+    - .github/workflows/supabase-consumer-manifest.yml
     - scripts/**
     - test/**
     - specs/**
@@ -246,6 +248,34 @@ rules:
       - path: specs/capability-ownership-rules.json
         mode: must_exist
     reason: Command wrappers, route plans, and capability ownership changes must preserve Foundry as task/workspace/profile/gate control.
+  - id: foundry-supabase-consumer-candidate
+    scope: repo
+    repo: data-foundry
+    triggers:
+      - path: contracts/supabase-consumer-manifest.v3.json
+        kind: consumer-candidate
+      - path: contracts/supabase-consumer-manifest.v3.schema.json
+        kind: consumer-schema
+      - path: scripts/audit-supabase-consumers.mjs
+        kind: exact-verifier
+      - path: test/unit/supabase-consumer-manifest.test.mjs
+        kind: verifier-test
+      - path: .github/workflows/supabase-consumer-manifest.yml
+        kind: ci-gate
+    requiredDocs:
+      - path: AGENTS.md
+        mode: review_or_update
+      - path: README.md
+        mode: review_or_update
+      - path: WORKFLOW.md
+        mode: review_or_update
+      - path: docs/architecture.md
+        mode: review_or_update
+      - path: docs/capability-ownership-policy.md
+        mode: review_or_update
+      - path: docs/workspace-project-map.md
+        mode: review_or_update
+    reason: Candidate consumer evidence must stay exact, non-authorizing, and aligned with Foundry ownership and validation guidance.
   - id: foundry-import-profile-contract
     scope: repo
     repo: data-foundry

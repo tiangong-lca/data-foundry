@@ -211,4 +211,15 @@ Installed shared runtime skills such as `.agents/skills/tiangong-kb-sci-search/`
 - `tasks/`: lightweight task queue and task templates.
 - `.foundry/`: ignored runtime state and generated workspaces.
 
+## Supabase Consumer Candidate
+
+`contracts/supabase-consumer-manifest.v3.json` is a machine-derived, permanently non-authorizing inventory of Foundry's direct Supabase and indirect upstream control-plane occurrences. The verifier reads immutable regular Git blobs from `sourceTreeCommit`, derives JavaScript calls with the locked Prettier Babel parser plus structured JSON/env parsers, and requires global bidirectional exactly-once equality with the manifest. It also binds the actual delivery `HEAD` to the same filtered Git-tree digest; only `scripts/audit-supabase-consumers.mjs` is exempt.
+
+```bash
+node scripts/audit-supabase-consumers.mjs --verify
+node --test test/unit/supabase-consumer-manifest.test.mjs
+```
+
+The candidate records the current direct authenticated Auth/PostgREST reads separately from indirect `tiangong-lca-cli` and generic subprocess control. It explicitly retains unresolved database-engine exact verification, cross-repository hosted lifecycle qualification, and workspace merge/deploy decisions as blockers. It does not authorize database or hosted mutation.
+
 Remote writes are never ungated. A task must pass schema, QA, curation, cleanup, dry-run, mutation-manifest/reference-closure, commit handoff, and post-write verification gates before any database mutation. When deterministic source/contact rewrites create a writable shared contact or source dependency, Foundry may prepare a separate support finalize/handoff artifact, but dependent process/flow/lifecyclemodel scopes remain blocked until that support row is committed through the published CLI and verified. When the task write policy permits automated batch commit, ready scopes may commit without per-row human approval; human input is reserved for policy changes, exceptional waivers, and support gaps not already covered by a frozen profile's explicit account-local policy.

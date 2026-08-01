@@ -147,3 +147,12 @@ The foundry should call the owning workspace surface instead of absorbing implem
 - `tidas-sdk`: compatibility SDK and context APIs
 
 See `docs/workspace-project-map.md` and `specs/workspace-capability-adapters.md` for the routing contract.
+
+## Supabase Consumer Boundary Evidence
+
+Foundry has two different Supabase relationships and they must not be collapsed:
+
+- direct, read-only/authenticated runtime calls for account guards and the canonical Flow Property/Unit Group support cache;
+- indirect owner contracts reached through the published CLI or a bounded subprocess control surface, which can transit Edge, Database, Storage, Worker, or Release-owned behavior.
+
+The v3 candidate manifest binds both classes to exact source spans/hashes and a filtered immutable Git tree. Direct rows name their actual Auth/PostgREST schema/object and ACL semantics. Indirect rows name the owning upstream contract rather than pretending Foundry directly owns its database object. Public residue is explicit and limited to the retained core relations; absence and pending evidence are first-class. The manifest is evidence only and cannot become an authorization receipt.
