@@ -15,7 +15,7 @@ related:
 
 # HiQLCD Import Governance Proposal
 
-> Historical tool-path note: Python `tidas-tools` modules and the old CLI import wrapper named below describe the capability state when this proposal was written. New deterministic import/conversion/schema-validation work routes to Rust `tidas` 0.1.x; the underlying data-package governance findings remain applicable.
+> Historical tool-path note: Python `tidas-tools` modules and the old CLI import wrapper named below describe the capability state when this proposal was written. New deterministic import/conversion/schema-validation work routes to Rust `tidas` 0.2.x; the underlying data-package governance findings remain applicable.
 
 Current judgment: HiQLCD's problem is not simply "ILCD cannot be parsed." The delivered package has three separable data problems: reference delivery is incomplete, TIDAS import/governance-required metadata is missing, and some source fields are incorrectly labeled or not normalized, especially Chinese text stored under `xml:lang="en"`. Separately, there are toolchain capability gaps such as writer multilingual output, classification passthrough, and a possible ILCD adapter. Those toolchain items should not be mixed into the data-package issue list.
 

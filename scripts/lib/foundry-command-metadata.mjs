@@ -168,9 +168,9 @@ export const commandMetadata = {
     ownerModule: tidasOwner,
     ownerExport: "createTidasWorkflowCommands().runTidasHandshake",
     inputs: ["Rust tidas executable", "optional TIDAS_CONFIG"],
-    outputs: ["compatible 0.1.x binary and tidas.operation-report.v1 handshake"],
+    outputs: ["compatible 0.2.x binary and tidas.operation-report.v1 handshake"],
     keyTests: [
-      nodeTest("test/unit/tidas-adapter.test.mjs", "0.1.x version and operation-report handshake"),
+      nodeTest("test/unit/tidas-adapter.test.mjs", "0.2.x version and operation-report handshake"),
     ],
   }),
   "dataset-tidas-import": metadata({

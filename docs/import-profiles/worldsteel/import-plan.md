@@ -20,7 +20,7 @@ related:
 input_package: inputs/CUP2025-2_2022b_v10_worldsteel_products_Tiangong_v1 EF3.1 2026_01_27
 ---
 
-> **2026-07-27 Rust cutover note:** Python `tidas-tools` source paths, virtualenv flags, package-release prerequisites, and legacy CLI conversion commands in this plan are frozen implementation history. They are not current blockers or TODOs. Active ILCD import and schema validation use the Foundry `dataset-tidas-import` / `dataset-tidas-validate` adapters over a compatible Rust `tidas` 0.1.x binary; CLI remains responsible for QA/curation, attachments, and remote handoff.
+> **Rust cutover note:** Python `tidas-tools` source paths, virtualenv flags, package-release prerequisites, and legacy CLI conversion commands in this plan are frozen implementation history. They are not current blockers or TODOs. Active ILCD import and schema validation use the Foundry `dataset-tidas-import` / `dataset-tidas-validate` adapters over a compatible Rust `tidas` 0.2.x binary; CLI remains responsible for QA/curation, attachments, and remote handoff.
 
 # worldsteel EF3.1 ILCD Import Plan
 

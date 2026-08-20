@@ -53,7 +53,7 @@
       "input_contract": "Target TIDAS dataset type plus requested schema, methodology YAML, ruleset, and AI context artifacts.",
       "output_contract": "contract-report.json, contract-manifest.json, schema.json, methodology.yaml, runtime-ruleset.json, ai-context.json, and ai-context.md when available.",
       "remote_write_mode": "read-only",
-      "verification_gate": "contract manifest must include artifact hashes before AI authoring consumes the context. For schema validation, the context assets must describe the same stable tidas contract advertised by `tidas validate --describe`; the executable handshake accepts compatible 0.1.x releases rather than one patch.",
+      "verification_gate": "contract manifest must include artifact hashes before AI authoring consumes the context. For schema validation, the context assets must describe the same stable tidas contract advertised by `tidas validate --describe`; the executable handshake accepts compatible 0.2.x releases rather than one patch.",
       "source_manifest_requirements": [
         "target TIDAS type",
         "CLI command record",
@@ -70,7 +70,7 @@
       "input_contract": "Supported external LCA source package, explicit output directory, optional source format, and optional native tidas config.",
       "output_contract": "Stable `tidas.operation-report.v1` import-report.json, issues.jsonl, process-bundles/index.json with one dependency subdirectory per converted process, mapping.csv when generated, and converted TIDAS/ILCD package outputs.",
       "remote_write_mode": "read-only",
-      "verification_gate": "Foundry must complete the native 0.1.x handshake, preserve the Rust exit classification, require a complete operation report, and pass generated TIDAS rows through downstream schema/QA/curation gates.",
+      "verification_gate": "Foundry must complete the native 0.2.x handshake, preserve the Rust exit classification, require a complete operation report, and pass generated TIDAS rows through downstream schema/QA/curation gates.",
       "source_manifest_requirements": [
         "source package path",
         "native tidas version/contract handshake",

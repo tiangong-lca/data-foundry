@@ -362,7 +362,7 @@ export function createCoreCommands({
         tidas: {
           executable: process.env.TIDAS_BIN || "tidas",
           source: process.env.TIDAS_BIN ? "TIDAS_BIN" : "PATH",
-          compatible_version: "0.1.x",
+          compatible_version: "0.2.x",
           config_source: process.env.TIDAS_CONFIG ? "TIDAS_CONFIG" : "none",
         },
       },

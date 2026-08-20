@@ -1,6 +1,6 @@
 # USLCI Database Public — source package manifest
 
-> Historical implementation evidence below may name the retired Python `tidas-tools` checkout and old CLI wrapper. It is retained to explain the received package and the 2026-06 observations, not as an executable command or current dependency. Active conversion/validation uses the Foundry adapter over Rust `tidas` 0.1.x.
+> Historical implementation evidence below may name the retired Python `tidas-tools` checkout and old CLI wrapper. It is retained to explain the received package and the 2026-06 observations, not as an executable command or current dependency. Active conversion/validation uses the Foundry adapter over Rust `tidas` 0.2.x.
 
 - registry id: `uslci-source-package` (see `docs/file-location-registry.json`)
 - package dir (untracked): `inputs/National_Renewable_Energy_Laboratory-USLCI_Database_Public/`

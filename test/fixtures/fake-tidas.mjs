@@ -49,7 +49,7 @@ function baseReport(commandName, status = "succeeded", exitClass = "success") {
 if (command === "version") {
   const report = baseReport("version");
   report.summary = {
-    binary_version: process.env.FAKE_TIDAS_VERSION || "0.1.7",
+    binary_version: process.env.FAKE_TIDAS_VERSION || "0.2.7",
     operation_report_schema: "tidas.operation-report.v1",
   };
   process.stdout.write(`${JSON.stringify(report)}\n`);
@@ -60,7 +60,7 @@ if (command === "validate" && args.includes("--describe")) {
   const report = baseReport("validate");
   report.summary.validation_describe = {
     schema_version: "tidas.validation-describe.v1",
-    package: { name: "tidas", version: process.env.FAKE_TIDAS_VERSION || "0.1.7" },
+    package: { name: "tidas", version: process.env.FAKE_TIDAS_VERSION || "0.2.7" },
     protocols: ["document-validation-batch.v1"],
     profiles: ["tidas-document-conformance.v1"],
     report_schema_versions: ["tidas.validation-report.v1"],

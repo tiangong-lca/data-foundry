@@ -9,7 +9,7 @@ export const TIDAS_IMPORT_REPORT_SCHEMA = "tidas.import-execution-report.v1";
 export const TIDAS_VALIDATION_SUMMARY_SCHEMA = "tidas.validation-summary.v1";
 export const TIDAS_VALIDATION_DESCRIBE_SCHEMA = "tidas.validation-describe.v1";
 export const TIDAS_VALIDATION_BATCH_FINAL_SCHEMA = "tidas.validation-final-event.v1";
-export const TIDAS_SUPPORTED_VERSION_LINE = "0.1";
+export const TIDAS_SUPPORTED_VERSION_LINE = "0.2";
 
 const EXIT_CODES = new Map([
   ["success", 0],
