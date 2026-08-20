@@ -21,8 +21,8 @@ checkPaths:
   - specs/capability-ownership-rules.json
   - specs/workspace-capability-adapters.md
   - docs/incremental-change-set-contract.md
-lastReviewedAt: 2026-07-30
-lastReviewedCommit: 7b9cebaaab2f8f35fce7aed48d3a76513d205496
+lastReviewedAt: 2026-08-20
+lastReviewedCommit: c3c74555b71e1ba33ee80a5c5919630a27ba79df
 ---
 
 # Workspace Project Map

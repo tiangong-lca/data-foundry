@@ -25,7 +25,7 @@ related:
 
 # USLCI 导入完整方案（USLCI Import Plan — complete）
 
-> **2026-07-27 Rust cutover note:** 本文中的 Python checkout、PyPI/SDK 版本、`--python`、`--tidas-tools-dir`、`import_lca` 与旧 CLI conversion/validation 命令仅是 2026-06 批次的历史重现记录，不再是 active contract。新执行必须使用 Foundry 的 `dataset-tidas-import` / `dataset-tidas-validate` 适配器调用兼容 0.1.x 的 Rust `tidas`。
+> **Rust cutover note:** 本文中的 Python checkout、PyPI/SDK 版本、`--python`、`--tidas-tools-dir`、`import_lca` 与旧 CLI conversion/validation 命令仅是 2026-06 批次的历史重现记录，不再是 active contract。新执行必须使用 Foundry 的 `dataset-tidas-import` / `dataset-tidas-validate` 适配器调用兼容 0.2.x 的 Rust `tidas`。
 >
 > 版本：2026-06-25 · 基座：2026-06 ILCD-alignment 发布（tidas-tools 0.0.34 / tidas-sdk 0.1.45(npm)·0.2.14(PyPI) / @tiangong-lca/cli 0.0.19）+ P1b ref-unit 修复 + foundry USLCI runner。
 >

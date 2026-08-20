@@ -74,18 +74,18 @@ test("executable/config precedence is option, environment, then PATH", () => {
   assert.equal(resolveTidasInvocation({}, {}).executable_source, "PATH");
 });
 
-test("handshake accepts compatible 0.1.x and rejects another minor line", () => {
+test("handshake accepts compatible 0.2.x and rejects another minor line", () => {
   const { root, bin } = isolatedFixture();
   try {
-    const accepted = withEnvironment({ TIDAS_BIN: bin, FAKE_TIDAS_VERSION: "0.1.99" }, () =>
+    const accepted = withEnvironment({ TIDAS_BIN: bin, FAKE_TIDAS_VERSION: "0.2.99" }, () =>
       runTidasHandshake({ repoRoot: root }),
     );
-    assert.equal(accepted.binary_version, "0.1.99");
+    assert.equal(accepted.binary_version, "0.2.99");
     assert.equal(accepted.validation_describe.schema_version, "tidas.validation-describe.v1");
     assert.ok(accepted.validation_describe.protocols.includes("document-validation-batch.v1"));
     assert.throws(
       () =>
-        withEnvironment({ TIDAS_BIN: bin, FAKE_TIDAS_VERSION: "0.2.0" }, () =>
+        withEnvironment({ TIDAS_BIN: bin, FAKE_TIDAS_VERSION: "0.1.0" }, () =>
           runTidasHandshake({ repoRoot: root }),
         ),
       /tidas_version_unsupported/u,
@@ -130,7 +130,7 @@ test("native import preserves the Rust report and default process-bundle contrac
       }),
     );
     assert.equal(result.exit_code, 0);
-    assert.equal(result.binary_version, "0.1.7");
+    assert.equal(result.binary_version, "0.2.7");
     assert.equal(result.report.schema_version, "tidas.operation-report.v1");
     assert.equal(result.report.summary.import.schema_version, "tidas.import-execution-report.v1");
     assert.ok(fs.existsSync(path.join(output, "process-bundles", "index.json")));

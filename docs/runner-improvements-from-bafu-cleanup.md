@@ -25,7 +25,7 @@ related:
 
 # Runner improvements distilled from the BAFU post-import cleanup debt
 
-> **Historical converter references:** Python `tidas-tools` module/file references below document the 2026-06 root-cause evidence only. Current deterministic import/conversion/schema validation runs through the Foundry adapter over Rust `tidas` 0.1.x; any reusable defect now routes to that Rust owner rather than a Foundry-local patch.
+> **Historical converter references:** Python `tidas-tools` module/file references below document the 2026-06 root-cause evidence only. Current deterministic import/conversion/schema validation runs through the Foundry adapter over Rust `tidas` 0.2.x; any reusable defect now routes to that Rust owner rather than a Foundry-local patch.
 >
 > Source evidence (read-only, not executed by any runner): `inputs/BAFU-2025 Version 2 - TIDAS 2026-03-09/BAFU-需要确认事项.xlsx` (81 owner-confirmation flow decisions) and `inputs/BAFU-2025 Version 2 - TIDAS 2026-03-09/BAFU-AI清洗执行任务.xlsx` (10 FP/UG actions + 224 elementary flow remaps + validation).
 >

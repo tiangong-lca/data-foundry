@@ -25,7 +25,7 @@ related:
 
 # USLCI 导入运行手册（goal 入口文档）
 
-> **2026-07-27 Rust cutover note:** 本文保留 2026-06 Python `tidas-tools`、PyPI/SDK 版本与旧 CLI wrapper 命令作为历史证据；这些路径不再是可执行入口，也不得用于新任务。当前确定性转换/校验统一使用 `node scripts/foundry.mjs dataset-tidas-import|dataset-tidas-validate` → Rust `tidas` 0.1.x；AI curation、QA、remote handoff 继续使用 Foundry/CLI。
+> **Rust cutover note:** 本文保留 2026-06 Python `tidas-tools`、PyPI/SDK 版本与旧 CLI wrapper 命令作为历史证据；这些路径不再是可执行入口，也不得用于新任务。当前确定性转换/校验统一使用 `node scripts/foundry.mjs dataset-tidas-import|dataset-tidas-validate` → Rust `tidas` 0.2.x；AI curation、QA、remote handoff 继续使用 Foundry/CLI。
 >
 > **完整方案见 [`docs/uslci-import-plan.md`](uslci-import-plan.md)（自包含、端到端的权威计划）。本文是逐会话的操作日志/快照入口（§6 当前状态、§R 摘要、分诊表）。**
 >
