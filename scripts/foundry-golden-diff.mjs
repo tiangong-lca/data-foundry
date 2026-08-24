@@ -443,6 +443,21 @@ function installPortableBaselineProcessAdapters() {
   }
 }
 
+function normalizeBaselineLineEndings() {
+  if (process.platform !== "win32") return;
+  const tracked = run("git", ["ls-files", "-z"], { cwd: beforeRoot })
+    .stdout.split("\0")
+    .filter(Boolean);
+  for (const relativePath of tracked) {
+    const filePath = path.join(beforeRoot, relativePath);
+    if (!existsSync(filePath)) continue;
+    const bytes = readFileSync(filePath);
+    if (bytes.includes(0)) continue;
+    const text = bytes.toString("utf8");
+    if (text.includes("\r\n")) writeFileSync(filePath, text.replaceAll("\r\n", "\n"));
+  }
+}
+
 function foundryCommand(root, args, outFile, env = {}, expectedStatus = 0) {
   const result = run(process.execPath, ["scripts/foundry.mjs", ...args], {
     cwd: root,
@@ -600,7 +615,7 @@ function normalize(value) {
     );
   }
   if (typeof value !== "string") return value;
-  let output = value.replaceAll("\\", "/");
+  let output = collapseNestedShellQuotes(value).replaceAll("\\", "/");
   output = replacePathVariants(output, pathVariants(beforeOut), "<side-output>");
   output = replacePathVariants(output, pathVariants(afterOut), "<side-output>");
   output = replacePathVariants(output, pathVariants(beforeRoot), "<repo-root>");
@@ -623,9 +638,18 @@ function normalize(value) {
     )
     .replace(skillsPackageCommandPattern, "<skills-runtime>")
     .replace(skillsCommandReferencePattern, "<skills-runtime>")
+    .replace(/'([A-Za-z0-9_./:@%+=,<>-]+)'/gu, "$1")
     .replace(/\.tidas-validate-stage-[A-Za-z0-9._-]+/gu, ".tidas-validate-stage-<id>")
     .replace(/(?:\.\.\/)+(?:private\/)?tmp\/foundry-golden-diff-[A-Za-z0-9._/-]+/gu, "<temp-path>")
     .replace(/foundry-golden-diff-[A-Za-z0-9._-]+/gu, "foundry-golden-diff-<id>");
+}
+
+function collapseNestedShellQuotes(value) {
+  const escapedQuote = `'\\''`;
+  const collapsed = value.replaceAll(escapedQuote, "'");
+  return collapsed.startsWith("''") && collapsed.endsWith("''")
+    ? collapsed.slice(1, -1)
+    : collapsed;
 }
 
 function normalizeJsonFile(inputFile, outputFile) {
@@ -750,6 +774,7 @@ try {
   run("git", ["worktree", "add", "--detach", "--quiet", beforeRoot, goldenBase.commit], {
     cwd: repoRoot,
   });
+  normalizeBaselineLineEndings();
   installPortableBaselineProcessAdapters();
   linkLegacyInstalledCliAssets();
   linkInstalledDependencies(beforeRoot);
