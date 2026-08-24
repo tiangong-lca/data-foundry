@@ -25,7 +25,7 @@ checkPaths:
   - specs/capability-ownership-rules.json
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 15ad060abf30580e5ff3aaec420bba29197c53c6
+lastReviewedCommit: 6d3a50a49ae091f5fd0a050c217dc56cb26f6d6a
 lastReviewedNote: "Reviewed for Issue #63: pnpm-only TS7 execution, CLI 0.1.0 pinning, typed-spine TDD, and clean arbitrary-worktree validation."
 tracker:
   kind: filesystem
