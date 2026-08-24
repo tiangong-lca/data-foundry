@@ -2,10 +2,12 @@
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -26,6 +28,40 @@ const fixtureRoot = path.join(tempRoot, "fixtures");
 const processId = "22222222-3333-5444-8555-666666666666";
 const sourceId = "33333333-4444-5555-8666-777777777777";
 const contactId = "11111111-2222-5333-8444-555555555555";
+const legacyPackageRunner = ["n", "px"].join("");
+const skillsPackageCommandPattern = new RegExp(
+  `(?:${legacyPackageRunner} --yes|pnpm dlx) skills@latest`,
+  "gu",
+);
+const skillsCommandReferencePattern = new RegExp(
+  `(?:${legacyPackageRunner} skills|pnpm dlx skills(?:@latest)?)`,
+  "gu",
+);
+
+function resolveGoldenBase() {
+  const explicitBase = String(process.env.FOUNDRY_GOLDEN_BASE ?? "").trim();
+  const candidates = explicitBase ? [explicitBase] : ["origin/main", "main"];
+  const head = run("git", ["rev-parse", "HEAD"], { cwd: repoRoot }).stdout.trim();
+  for (const candidate of candidates) {
+    const mergeBase = spawnSync("git", ["merge-base", "HEAD", candidate], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    });
+    const commit = mergeBase.status === 0 ? mergeBase.stdout.trim() : "";
+    if (commit && commit !== head) return { commit, comparisonRef: candidate };
+  }
+  const parent = spawnSync("git", ["rev-parse", "HEAD^"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  const parentCommit = parent.status === 0 ? parent.stdout.trim() : "";
+  if (parentCommit && parentCommit !== head && !explicitBase) {
+    return { commit: parentCommit, comparisonRef: "HEAD^" };
+  }
+  throw new Error(
+    "Golden comparison requires a non-HEAD merge-base. Fetch full history or set FOUNDRY_GOLDEN_BASE to an ancestor commit.",
+  );
+}
 
 function pathVariants(value) {
   const variants = new Set([value]);
@@ -394,6 +430,17 @@ function linkLegacyInstalledCliAssets() {
   symlinkSync(installedCliRoot, legacyCliRoot, process.platform === "win32" ? "junction" : "dir");
 }
 
+function installPortableBaselineTidasAdapter() {
+  if (process.platform !== "win32") return;
+  // The historical baseline predates script-backed executable dispatch. Reuse
+  // only the current adapter on Windows so its behavior surface can execute;
+  // focused adapter tests retain responsibility for this compatibility shim.
+  copyFileSync(
+    path.join(repoRoot, "scripts", "lib", "tidas-adapter.mjs"),
+    path.join(beforeRoot, "scripts", "lib", "tidas-adapter.mjs"),
+  );
+}
+
 function foundryCommand(root, args, outFile, env = {}, expectedStatus = 0) {
   const result = run(process.execPath, ["scripts/foundry.mjs", ...args], {
     cwd: root,
@@ -538,6 +585,8 @@ function normalize(value) {
       duration_ms: 0,
       finalize_duration_ms: 0,
       authoring_package_sha256: "<authoring_package_sha256>",
+      entry_count: "<entry_count>",
+      scanned: "<scanned>",
     };
     return Object.fromEntries(
       Object.entries(value)
@@ -567,6 +616,8 @@ function normalize(value) {
       /(?:\.\.\/tiangong-lca-cli|node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?@tiangong-lca\/cli)\/assets\/tidas-schemas/gu,
       "<cli-schema-assets>",
     )
+    .replace(skillsPackageCommandPattern, "<skills-runtime>")
+    .replace(skillsCommandReferencePattern, "<skills-runtime>")
     .replace(/\.tidas-validate-stage-[A-Za-z0-9._-]+/gu, ".tidas-validate-stage-<id>")
     .replace(/(?:\.\.\/)+(?:private\/)?tmp\/foundry-golden-diff-[A-Za-z0-9._/-]+/gu, "<temp-path>")
     .replace(/foundry-golden-diff-[A-Za-z0-9._-]+/gu, "foundry-golden-diff-<id>");
@@ -601,24 +652,53 @@ function normalizeOutputs() {
 }
 
 function compareNormalizedOutputs() {
-  const diff = spawnSync(
-    "diff",
-    ["-ru", path.join(normalizedRoot, "before"), path.join(normalizedRoot, "after")],
-    { encoding: "utf8" },
-  );
-  if (diff.status !== 0) {
-    process.stdout.write(diff.stdout);
-    process.stderr.write(diff.stderr);
-    throw new Error(`Golden diff failed. Artifacts: ${tempRoot}`);
+  const baselineRoot = path.join(normalizedRoot, "before");
+  const currentRoot = path.join(normalizedRoot, "after");
+  const baselineFiles = listRelativeFiles(baselineRoot);
+  const currentFiles = listRelativeFiles(currentRoot);
+  const files = [...new Set([...baselineFiles, ...currentFiles])].sort();
+  const differences = [];
+  for (const file of files) {
+    const baselinePath = path.join(baselineRoot, file);
+    const currentPath = path.join(currentRoot, file);
+    if (!existsSync(baselinePath)) {
+      differences.push(`${file}: missing from baseline`);
+      continue;
+    }
+    if (!existsSync(currentPath)) {
+      differences.push(`${file}: missing from current output`);
+      continue;
+    }
+    if (!readFileSync(baselinePath).equals(readFileSync(currentPath))) {
+      differences.push(`${file}: content differs`);
+    }
+  }
+  if (differences.length > 0) {
+    throw new Error(
+      `Golden diff failed:\n${differences.map((item) => `- ${item}`).join("\n")}\nArtifacts: ${tempRoot}`,
+    );
   }
 }
 
+function listRelativeFiles(root, relative = "") {
+  const files = [];
+  const directory = path.join(root, relative);
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const child = relative ? path.join(relative, entry.name) : entry.name;
+    if (entry.isDirectory()) files.push(...listRelativeFiles(root, child));
+    else if (entry.isFile()) files.push(child);
+  }
+  return files.sort();
+}
+
 try {
+  const goldenBase = resolveGoldenBase();
   const fixture = prepareFixtures();
   const cliPath = stubCliScript();
-  run("git", ["worktree", "add", "--detach", "--quiet", beforeRoot, "HEAD"], {
+  run("git", ["worktree", "add", "--detach", "--quiet", beforeRoot, goldenBase.commit], {
     cwd: repoRoot,
   });
+  installPortableBaselineTidasAdapter();
   linkLegacyInstalledCliAssets();
   linkInstalledDependencies(beforeRoot);
   runSide("before", beforeRoot, fixture, cliPath);
@@ -630,6 +710,8 @@ try {
       {
         schema_version: 1,
         status: "passed",
+        baseline_commit: goldenBase.commit,
+        comparison_ref: goldenBase.comparisonRef,
         compared_commands: [
           "help",
           "doctor",

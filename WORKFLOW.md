@@ -69,6 +69,8 @@ Use Node.js 24 and the repository-pinned `pnpm@11.23.0`. TypeScript `7.0.2` is t
 
 Issue #63 is the typed-spine foundation, not a declaration that the 160 tracked JavaScript artifacts are already TypeScript. Keep `specs/typescript-migration-inventory.json` synchronized, migrate one characterized boundary or command family at a time, and drive each slice with focused tests plus a realistic case. Toolchain changes must also pass from a clean arbitrary worktree after `pnpm install --frozen-lockfile`, without credentials, ignored `.foundry` artifacts, a sibling checkout, or another worktree's dependencies.
 
+`pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries.
+
 Use the exact installed project dependency as `pnpm exec tiangong-lca ...`. Foundry runtime adapters resolve that same `@tiangong-lca/cli@0.1.0` manifest and bin directly; only the external `skills@latest` source-evidence resolver remains intentionally floating, with the resolved ref recorded in task artifacts.
 
 ## Required Order

@@ -106,6 +106,19 @@ export function resolveTidasInvocation(options = {}, env = process.env) {
   };
 }
 
+export function resolveTidasProcessCommand(executable) {
+  if (/\.(?:cjs|js|mjs)$/iu.test(executable)) {
+    return {
+      command: process.execPath,
+      prefixArgs: [executable],
+    };
+  }
+  return {
+    command: executable,
+    prefixArgs: [],
+  };
+}
+
 function globalArgs(invocation, options = {}) {
   const args = ["--format", "json", "--progress", "never"];
   if (invocation.config) args.push("--config", invocation.config);
@@ -121,7 +134,8 @@ function globalArgs(invocation, options = {}) {
 }
 
 function runProcess(invocation, args, cwd, maxBuffer = 512 * 1024 * 1024) {
-  const result = spawnSync(invocation.executable, args, {
+  const processCommand = resolveTidasProcessCommand(invocation.executable);
+  const result = spawnSync(processCommand.command, [...processCommand.prefixArgs, ...args], {
     cwd,
     env: process.env,
     encoding: "utf8",

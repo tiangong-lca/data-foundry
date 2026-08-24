@@ -77,15 +77,11 @@ test("executable/config precedence is option, environment, then PATH", () => {
 
 test("script-backed TIDAS commands execute through Node on every platform", () => {
   const script = path.join(repoRoot, "test", "fixtures", "fake-tidas.mjs");
-  assert.deepEqual(resolveTidasProcessCommand(script, "win32"), {
+  assert.deepEqual(resolveTidasProcessCommand(script), {
     command: process.execPath,
     prefixArgs: [script],
   });
-  assert.deepEqual(resolveTidasProcessCommand(script, "linux"), {
-    command: process.execPath,
-    prefixArgs: [script],
-  });
-  assert.deepEqual(resolveTidasProcessCommand("tidas", "win32"), {
+  assert.deepEqual(resolveTidasProcessCommand("tidas"), {
     command: "tidas",
     prefixArgs: [],
   });
