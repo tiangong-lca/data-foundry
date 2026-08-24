@@ -29,7 +29,7 @@ const ids = {
 };
 
 function rel(filePath) {
-  return path.relative(repoRoot, filePath);
+  return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
 function ml(text) {

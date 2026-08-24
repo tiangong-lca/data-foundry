@@ -10,7 +10,7 @@ const fixtureRoot = path.join(repoRoot, "tmp", "authoring-task-context-test");
 const processId = "aaaaaaaa-bbbb-5ccc-8ddd-eeeeeeeeeeee";
 
 function rel(filePath) {
-  return path.relative(repoRoot, filePath);
+  return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
 function writeJson(filePath, value) {

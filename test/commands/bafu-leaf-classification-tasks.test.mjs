@@ -9,7 +9,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const fixtureRoot = path.join(repoRoot, "tmp", "bafu-leaf-classification-tasks-test");
 
 function rel(filePath) {
-  return path.relative(repoRoot, filePath);
+  return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
 function writeJson(filePath, value) {

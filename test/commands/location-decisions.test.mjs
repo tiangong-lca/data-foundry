@@ -12,7 +12,7 @@ const locationPath =
   "processDataSet.processInformation.geography.locationOfOperationSupplyOrProduction.@location";
 
 function rel(filePath) {
-  return path.relative(repoRoot, filePath);
+  return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
 function ml(text) {

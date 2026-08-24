@@ -11,7 +11,7 @@ const processId = "11111111-2222-5333-8444-555555555555";
 const flowId = "22222222-3333-5444-8555-666666666666";
 
 function rel(filePath) {
-  return path.relative(repoRoot, filePath);
+  return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
 function ml(text) {
