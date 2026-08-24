@@ -64,7 +64,7 @@ function resolveGoldenBase() {
 }
 
 function pathVariants(value) {
-  const variants = new Set([value]);
+  const variants = new Set([value, value.replaceAll("\\", "/")]);
   if (value.startsWith("/var/")) variants.add(`/private${value}`);
   if (value.startsWith("/private/var/")) variants.add(value.replace(/^\/private/u, ""));
   return [...variants].sort((a, b) => b.length - a.length);
@@ -600,7 +600,7 @@ function normalize(value) {
     );
   }
   if (typeof value !== "string") return value;
-  let output = value;
+  let output = value.replaceAll("\\", "/");
   output = replacePathVariants(output, pathVariants(beforeOut), "<side-output>");
   output = replacePathVariants(output, pathVariants(afterOut), "<side-output>");
   output = replacePathVariants(output, pathVariants(beforeRoot), "<repo-root>");
