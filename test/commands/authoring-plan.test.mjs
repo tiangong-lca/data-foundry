@@ -77,15 +77,15 @@ function writeCurationGateReport() {
         { kind: "ruleset", path: "context/process/runtime-ruleset.json" },
         {
           kind: "classification_schema",
-          path: "../tiangong-lca-cli/assets/tidas-schemas/tidas_processes_category.json",
+          path: "node_modules/@tiangong-lca/cli/assets/tidas-schemas/tidas_processes_category.json",
         },
         {
           kind: "classification_schema",
-          path: "../tiangong-lca-cli/assets/tidas-schemas/tidas_flows_product_category.json",
+          path: "node_modules/@tiangong-lca/cli/assets/tidas-schemas/tidas_flows_product_category.json",
         },
         {
           kind: "location_schema",
-          path: "../tiangong-lca-cli/assets/tidas-schemas/tidas_locations_category.json",
+          path: "node_modules/@tiangong-lca/cli/assets/tidas-schemas/tidas_locations_category.json",
         },
       ],
     },

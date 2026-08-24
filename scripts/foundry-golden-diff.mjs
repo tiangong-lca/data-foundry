@@ -378,18 +378,20 @@ if (args[0] === "dataset" && args[1] === "validate") {
   return cliPath;
 }
 
-function linkWorkspaceSiblings() {
-  const cliRoot = path.resolve(repoRoot, "..", "tiangong-lca-cli");
-  const linkedCliRoot = path.join(tempRoot, "tiangong-lca-cli");
-  if (!existsSync(cliRoot) || existsSync(linkedCliRoot)) return;
-  symlinkSync(cliRoot, linkedCliRoot, "dir");
-}
-
 function linkInstalledDependencies(root) {
   const installed = path.join(repoRoot, "node_modules");
   const target = path.join(root, "node_modules");
   if (!existsSync(installed) || existsSync(target)) return;
-  symlinkSync(installed, target, "dir");
+  symlinkSync(installed, target, process.platform === "win32" ? "junction" : "dir");
+}
+
+function linkLegacyInstalledCliAssets() {
+  const installedCliRoot = path.join(repoRoot, "node_modules", "@tiangong-lca", "cli");
+  const legacyCliRoot = path.join(tempRoot, "tiangong-lca-cli");
+  if (!existsSync(installedCliRoot) || existsSync(legacyCliRoot)) return;
+  // HEAD may predate the installed-package resolver. Supply only the pinned package
+  // layout needed to characterize that baseline; never depend on a sibling checkout.
+  symlinkSync(installedCliRoot, legacyCliRoot, process.platform === "win32" ? "junction" : "dir");
 }
 
 function foundryCommand(root, args, outFile, env = {}, expectedStatus = 0) {
@@ -407,7 +409,10 @@ function runSide(label, root, fixture, cliPath) {
   const commandOut = path.join(sideOut, "commands");
   mkdirSync(commandOut, { recursive: true });
   foundryCommand(root, ["init"], path.join(commandOut, "setup-init.json"));
-  const commonEnv = { TIANGONG_LCA_CLI_BIN: cliPath };
+  const commonEnv = {
+    TIANGONG_LCA_CLI_BIN: cliPath,
+    TIDAS_BIN: path.join(root, "test", "fixtures", "fake-tidas.mjs"),
+  };
   foundryCommand(root, ["help"], path.join(commandOut, "help.json"), commonEnv);
   foundryCommand(root, ["doctor"], path.join(commandOut, "doctor.json"), commonEnv, 1);
   foundryCommand(root, ["profiles-list"], path.join(commandOut, "profiles-list.json"), commonEnv);
@@ -535,10 +540,12 @@ function normalize(value) {
       authoring_package_sha256: "<authoring_package_sha256>",
     };
     return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [
-        key,
-        Object.hasOwn(volatileValues, key) ? volatileValues[key] : normalize(item),
-      ]),
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [
+          key,
+          Object.hasOwn(volatileValues, key) ? volatileValues[key] : normalize(item),
+        ]),
     );
   }
   if (typeof value !== "string") return value;
@@ -556,6 +563,11 @@ function normalize(value) {
     .replace(/<temp-root>\/before-output/gu, "<side-output>")
     .replace(/<temp-root>\/after-output/gu, "<side-output>")
     .replace(/<temp-root>\/before-worktree/gu, "<repo-root>")
+    .replace(
+      /(?:\.\.\/tiangong-lca-cli|node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?@tiangong-lca\/cli)\/assets\/tidas-schemas/gu,
+      "<cli-schema-assets>",
+    )
+    .replace(/\.tidas-validate-stage-[A-Za-z0-9._-]+/gu, ".tidas-validate-stage-<id>")
     .replace(/(?:\.\.\/)+(?:private\/)?tmp\/foundry-golden-diff-[A-Za-z0-9._/-]+/gu, "<temp-path>")
     .replace(/foundry-golden-diff-[A-Za-z0-9._-]+/gu, "foundry-golden-diff-<id>");
 }
@@ -607,7 +619,7 @@ try {
   run("git", ["worktree", "add", "--detach", "--quiet", beforeRoot, "HEAD"], {
     cwd: repoRoot,
   });
-  linkWorkspaceSiblings();
+  linkLegacyInstalledCliAssets();
   linkInstalledDependencies(beforeRoot);
   runSide("before", beforeRoot, fixture, cliPath);
   runSide("after", repoRoot, fixture, cliPath);

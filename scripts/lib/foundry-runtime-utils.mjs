@@ -1,8 +1,116 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
+
+const require = createRequire(import.meta.url);
+const tiangongLcaCliPackageName = "@tiangong-lca/cli";
+const tiangongLcaCliPackageVersion = "0.1.0";
+const tiangongLcaCliBinName = "tiangong-lca";
+const foundryRepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+export function resolveInstalledTiangongLcaCliPackage() {
+  const logicalPackageJsonPath = path.join(
+    foundryRepoRoot,
+    "node_modules",
+    "@tiangong-lca",
+    "cli",
+    "package.json",
+  );
+  let packageJsonPath = logicalPackageJsonPath;
+  if (!fs.existsSync(packageJsonPath)) {
+    try {
+      packageJsonPath = require.resolve(`${tiangongLcaCliPackageName}/package.json`);
+    } catch (error) {
+      throw new Error(
+        `Unable to resolve installed ${tiangongLcaCliPackageName}@${tiangongLcaCliPackageVersion}; run pnpm install --frozen-lockfile.`,
+        { cause: error },
+      );
+    }
+  }
+
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+  if (
+    packageJson.name !== tiangongLcaCliPackageName ||
+    packageJson.version !== tiangongLcaCliPackageVersion
+  ) {
+    throw new Error(
+      `Expected installed ${tiangongLcaCliPackageName}@${tiangongLcaCliPackageVersion}, received ${packageJson.name ?? "unknown"}@${packageJson.version ?? "unknown"}.`,
+    );
+  }
+
+  const binEntry =
+    typeof packageJson.bin === "string"
+      ? packageJson.bin
+      : packageJson.bin?.[tiangongLcaCliBinName];
+  if (typeof binEntry !== "string" || binEntry.trim() === "") {
+    throw new Error(
+      `Installed ${tiangongLcaCliPackageName}@${tiangongLcaCliPackageVersion} does not expose the '${tiangongLcaCliBinName}' package bin.`,
+    );
+  }
+
+  const packageRoot = path.dirname(packageJsonPath);
+  const binPath = path.resolve(packageRoot, binEntry);
+  const schemaDir = path.join(packageRoot, "assets", "tidas-schemas");
+  if (!fs.existsSync(binPath) || !fs.statSync(binPath).isFile()) {
+    throw new Error(`Installed ${tiangongLcaCliPackageName} bin is missing at ${binPath}.`);
+  }
+  if (!fs.existsSync(schemaDir) || !fs.statSync(schemaDir).isDirectory()) {
+    throw new Error(
+      `Installed ${tiangongLcaCliPackageName} schema assets are missing at ${schemaDir}.`,
+    );
+  }
+
+  return {
+    packageName: packageJson.name,
+    packageVersion: packageJson.version,
+    packageSpec: `${packageJson.name}@${packageJson.version}`,
+    packageJsonPath,
+    packageRoot,
+    binName: tiangongLcaCliBinName,
+    binPath,
+    schemaDir,
+  };
+}
+
+function shellQuoteCommandToken(value) {
+  const text = String(value ?? "");
+  if (/^[A-Za-z0-9_./:@%+=,-]+$/u.test(text)) return text;
+  return `'${text.replace(/'/gu, `'\\''`)}'`;
+}
+
+export function resolveTiangongLcaCliRuntimeCommand(env = process.env) {
+  if (env.TIANGONG_LCA_CLI_BIN) {
+    const binPath = env.TIANGONG_LCA_CLI_BIN;
+    const isNodeScript = process.platform === "win32" && /\.(?:cjs|mjs|js)$/iu.test(binPath);
+    const command = isNodeScript ? process.execPath : binPath;
+    const args = isNodeScript ? [binPath] : [];
+    return {
+      command,
+      args,
+      display: [command, ...args].map(shellQuoteCommandToken).join(" "),
+      source: "TIANGONG_LCA_CLI_BIN",
+      package: null,
+      package_version: null,
+      bin_path: binPath,
+    };
+  }
+
+  const installed = resolveInstalledTiangongLcaCliPackage();
+  return {
+    command: process.execPath,
+    args: [installed.binPath],
+    display: [process.execPath, installed.binPath].map(shellQuoteCommandToken).join(" "),
+    source: "installed_package",
+    package: installed.packageSpec,
+    package_version: installed.packageVersion,
+    package_root: installed.packageRoot,
+    bin_path: installed.binPath,
+  };
+}
 
 export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
   function nowIso() {
@@ -19,27 +127,16 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
   }
 
   function resolveTiangongLcaCliCommand() {
-    if (process.env.TIANGONG_LCA_CLI_BIN) {
-      const command = process.env.TIANGONG_LCA_CLI_BIN;
-      return {
-        command,
-        args: [],
-        display: command,
-        source: "TIANGONG_LCA_CLI_BIN",
-        package: null,
-      };
-    }
-    return {
-      command: "npx",
-      args: ["--yes", "@tiangong-lca/cli@latest"],
-      display: "npx --yes @tiangong-lca/cli@latest",
-      source: "published_npm_package",
-      package: "@tiangong-lca/cli@latest",
-    };
+    return resolveTiangongLcaCliRuntimeCommand(process.env);
   }
 
   function resolveTiangongLcaCliBin() {
     return resolveTiangongLcaCliCommand().display;
+  }
+
+  function resolveTiangongLcaCliCommandPrefix() {
+    const cli = resolveTiangongLcaCliCommand();
+    return [cli.command, ...cli.args];
   }
 
   function tiangongLcaCliInvocation(args = []) {
@@ -530,6 +627,7 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
     repoRelativePath,
     resolveRepoPath,
     resolveTiangongLcaCliCommand,
+    resolveTiangongLcaCliCommandPrefix,
     resolveTiangongLcaCliBin,
     runTiangongJsonStage,
     sameResolvedPath,

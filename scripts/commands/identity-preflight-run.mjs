@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { readOnlyStageContract } from "../lib/stage-contract.mjs";
+import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
 // Run-level identity-preflight RESULT cache (env-gated; off unless
 // BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE points at a directory). The remote
@@ -91,6 +91,7 @@ export function createIdentityPreflightRunCommands({
   repoRoot,
   resolveRepoPath,
   resolveTiangongLcaCliCommand,
+  resolveTiangongLcaCliCommandPrefix,
   resolveTiangongLcaCliBin,
   safeFileToken,
   sha256Text,
@@ -793,7 +794,9 @@ export function createIdentityPreflightRunCommands({
       options.outDir ||
         path.join(path.dirname(path.dirname(rowsFile)), "identity-preflight-refresh"),
     );
-    const cliBin = resolveTiangongLcaCliBin();
+    const cliBin = resolveTiangongLcaCliCommandPrefix
+      ? resolveTiangongLcaCliCommandPrefix()
+      : [resolveTiangongLcaCliBin()];
     const rows = readRowsFile(rowsFile);
     const sourceIndexPaths = identityPreflightSourceIndexPaths(options);
     const sourceContext = loadIdentityPreflightSourceFileMap(sourceIndexPaths);

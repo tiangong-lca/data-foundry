@@ -579,6 +579,7 @@ export function createIdentityPreflightArtifactUtils({
   }
 
   function buildIdentityPreflightArtifacts({ rowsByType, sourceByType, outDir, cliBin }) {
+    const cliPrefix = Array.isArray(cliBin) ? cliBin : [cliBin];
     const requestsRoot = path.join(outDir, "identity-preflight-requests");
     const indexRows = [];
     const byIdentity = new Map();
@@ -612,7 +613,7 @@ export function createIdentityPreflightArtifactUtils({
           "identity-candidate-sources.json",
         );
         const command = [
-          cliBin,
+          ...cliPrefix,
           type,
           "identity-preflight",
           "--input",

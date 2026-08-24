@@ -1,5 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import { resolveInstalledTiangongLcaCliPackage } from "./foundry-runtime-utils.mjs";
+
+function cliCommandPrefix(cliBin) {
+  return Array.isArray(cliBin) ? cliBin : [cliBin];
+}
 
 export function createLocationQualityUtils({
   asText,
@@ -12,7 +17,6 @@ export function createLocationQualityUtils({
   readJson,
   repoRelativeMaybe,
   repoRelativePath,
-  repoRoot,
   shellQuote,
 }) {
   function classificationAuthoringCommands({ cliBin, outDir, rowsDir, type, rowType = type }) {
@@ -21,7 +25,7 @@ export function createLocationQualityUtils({
     const outputFile = path.join(rowsDir, `${bundleRowTypes[rowType].plural}.classified.jsonl`);
     return {
       children_root: [
-        cliBin,
+        ...cliCommandPrefix(cliBin),
         "dataset",
         "classification",
         "children",
@@ -34,7 +38,7 @@ export function createLocationQualityUtils({
         .map(shellQuote)
         .join(" "),
       children_next_template: `${[
-        cliBin,
+        ...cliCommandPrefix(cliBin),
         "dataset",
         "classification",
         "children",
@@ -46,13 +50,21 @@ export function createLocationQualityUtils({
         .join(
           " ",
         )} <parent-code> ${["--out-dir", path.join(outDir, "classification", type), "--json"].map(shellQuote).join(" ")}`,
-      path_template: `${[cliBin, "dataset", "classification", "path", "--type", type, "--code"]
+      path_template: `${[
+        ...cliCommandPrefix(cliBin),
+        "dataset",
+        "classification",
+        "path",
+        "--type",
+        type,
+        "--code",
+      ]
         .map(shellQuote)
         .join(
           " ",
         )} <selected-code> ${["--out-dir", path.join(outDir, "classification", type), "--json"].map(shellQuote).join(" ")}`,
       apply: [
-        cliBin,
+        ...cliCommandPrefix(cliBin),
         "dataset",
         "classification",
         "apply",
@@ -82,7 +94,7 @@ export function createLocationQualityUtils({
     const outputFile = path.join(rowsDir, `${bundleRowTypes[type].plural}.located.jsonl`);
     return {
       audit: [
-        cliBin,
+        ...cliCommandPrefix(cliBin),
         "dataset",
         "classification",
         "audit",
@@ -97,7 +109,7 @@ export function createLocationQualityUtils({
         .map(shellQuote)
         .join(" "),
       children_root: [
-        cliBin,
+        ...cliCommandPrefix(cliBin),
         "dataset",
         "classification",
         "children",
@@ -110,7 +122,7 @@ export function createLocationQualityUtils({
         .map(shellQuote)
         .join(" "),
       path_template: `${[
-        cliBin,
+        ...cliCommandPrefix(cliBin),
         "dataset",
         "classification",
         "path",
@@ -123,7 +135,7 @@ export function createLocationQualityUtils({
           " ",
         )} <selected-location-code> ${["--out-dir", path.join(outDir, "classification", "location", type), "--json"].map(shellQuote).join(" ")}`,
       apply: [
-        cliBin,
+        ...cliCommandPrefix(cliBin),
         "dataset",
         "classification",
         "apply",
@@ -148,18 +160,11 @@ export function createLocationQualityUtils({
   }
 
   function loadTidasLocationCodeMap() {
-    const candidates = [
-      path.resolve(
-        repoRoot,
-        "..",
-        "tiangong-lca-cli",
-        "assets",
-        "tidas-schemas",
-        "tidas_locations_category.json",
-      ),
-    ];
-    const schemaPath = candidates.find(fileExists);
-    if (!schemaPath) return new Map();
+    const schemaPath = path.join(
+      resolveInstalledTiangongLcaCliPackage().schemaDir,
+      "tidas_locations_category.json",
+    );
+    if (!fileExists(schemaPath)) return new Map();
     const schema = readJson(schemaPath);
     return new Map(
       ensureArray(schema.oneOf)
@@ -183,9 +188,7 @@ export function createLocationQualityUtils({
   let cachedLocationTargetKeys = null;
 
   function tidasSchemaDirs() {
-    return [path.resolve(repoRoot, "..", "tiangong-lca-cli", "assets", "tidas-schemas")].filter(
-      directoryExists,
-    );
+    return [resolveInstalledTiangongLcaCliPackage().schemaDir].filter(directoryExists);
   }
 
   function lastSchemaPropertyName(schemaPathSegments) {

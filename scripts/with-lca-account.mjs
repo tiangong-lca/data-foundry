@@ -13,7 +13,7 @@ function usage() {
 
 Examples:
   node scripts/with-lca-account.mjs example-account -- node scripts/foundry.mjs env-check
-  node scripts/with-lca-account.mjs bafu -- node ../tiangong-lca-cli/bin/tiangong-lca.js process list --state-code 0 --limit 1 --json
+  node scripts/with-lca-account.mjs bafu -- node node_modules/@tiangong-lca/cli/bin/tiangong-lca.js process list --state-code 0 --limit 1 --json
 `;
 }
 

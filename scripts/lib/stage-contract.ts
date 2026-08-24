@@ -1,4 +1,16 @@
-export function stageContract(stages) {
+export type StageContractInput = {
+  stage: string;
+  phase?: string;
+  purpose?: string;
+  inputs?: unknown[];
+  outputs?: unknown[];
+  blockers?: unknown[];
+  artifacts?: unknown[];
+  side_effects?: unknown[];
+  report_contract?: Record<string, unknown>;
+};
+
+export function stageContract(stages: readonly StageContractInput[]) {
   return stages.map((stage) => ({
     stage: stage.stage,
     phase: stage.phase ?? stage.stage,
@@ -18,7 +30,7 @@ export function stageContract(stages) {
   }));
 }
 
-export function readOnlyStageContract(stages) {
+export function readOnlyStageContract(stages: readonly StageContractInput[]) {
   return {
     remote_write_mode: "read-only",
     stage_pipeline: stageContract(stages),

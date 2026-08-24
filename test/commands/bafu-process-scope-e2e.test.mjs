@@ -402,9 +402,10 @@ test("BAFU process scope helper resumes ready handoff without executing remote c
     },
     commit_handoff: {
       status: "ready_for_explicit_commit",
-      command: "npx --yes @tiangong-lca/cli@latest process save-draft --input rows.jsonl",
+      command:
+        "node node_modules/@tiangong-lca/cli/bin/tiangong-lca.js process save-draft --input rows.jsonl",
       post_write_verify_command:
-        "npx --yes @tiangong-lca/cli@latest dataset verify-remote --input rows.jsonl",
+        "node node_modules/@tiangong-lca/cli/bin/tiangong-lca.js dataset verify-remote --input rows.jsonl",
       blockers: [],
     },
     blockers: [],

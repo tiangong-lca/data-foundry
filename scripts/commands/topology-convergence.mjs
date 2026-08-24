@@ -2,7 +2,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { readOnlyStageContract } from "../lib/stage-contract.mjs";
+import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
 const REQUEST_SCHEMA = "foundry-topology-convergence-request.v1";
 const CANDIDATE_ROW_SCHEMA = "foundry-topology-candidate-index-row.v1";

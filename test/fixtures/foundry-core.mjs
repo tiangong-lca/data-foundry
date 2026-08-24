@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveInstalledTiangongLcaCliPackage } from "../../scripts/lib/foundry-runtime-utils.mjs";
 
 export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const testRunId = process.env.FOUNDRY_FULL_CONTEXT_TEST_RUN_ID || process.pid;
@@ -11,7 +12,6 @@ export const testRunId = process.env.FOUNDRY_FULL_CONTEXT_TEST_RUN_ID || process
 export function testTmpRoot(name) {
   return path.join(repoRoot, "tmp", `${name}-${testRunId}`);
 }
-export const siblingCliRoot = path.resolve(repoRoot, "..", "tiangong-lca-cli");
 export const fakeTidasBin = path.join(repoRoot, "test", "fixtures", "fake-tidas.mjs");
 export const targetUserId = "00000000-0000-4000-8000-000000000001";
 export const fullContextKinds = [
@@ -69,10 +69,6 @@ export function readJsonLines(filePath) {
   return text ? text.split(/\r?\n/u).map((line) => JSON.parse(line)) : [];
 }
 
-export function siblingCliBuildAvailable() {
-  return fs.existsSync(path.join(siblingCliRoot, "dist", "src", "main.js"));
-}
-
 export function runFoundry(args, options = {}) {
   const result = spawnSync(process.execPath, ["scripts/foundry.mjs", ...args], {
     cwd: repoRoot,
@@ -121,7 +117,7 @@ export function contextTextByPathSuffix(authoringPackage, suffix) {
 
 export function bundledCategorySchemaNames() {
   return fs
-    .readdirSync(path.resolve(repoRoot, "..", "tiangong-lca-cli", "assets", "tidas-schemas"))
+    .readdirSync(resolveInstalledTiangongLcaCliPackage().schemaDir)
     .filter((name) => /^tidas_.*_category\.json$/u.test(name))
     .sort();
 }
