@@ -675,7 +675,12 @@ function compareNormalizedOutputs() {
       continue;
     }
     if (!readFileSync(baselinePath).equals(readFileSync(currentPath))) {
-      differences.push(`${file}: content differs`);
+      const details = summarizeJsonDifferences(baselinePath, currentPath);
+      differences.push(
+        details.length > 0
+          ? `${file}:\n${details.map((detail) => `    ${detail}`).join("\n")}`
+          : `${file}: content differs`,
+      );
     }
   }
   if (differences.length > 0) {
@@ -683,6 +688,48 @@ function compareNormalizedOutputs() {
       `Golden diff failed:\n${differences.map((item) => `- ${item}`).join("\n")}\nArtifacts: ${tempRoot}`,
     );
   }
+}
+
+function summarizeJsonDifferences(baselinePath, currentPath) {
+  try {
+    const baseline = JSON.parse(readFileSync(baselinePath, "utf8"));
+    const current = JSON.parse(readFileSync(currentPath, "utf8"));
+    const differences = [];
+    collectJsonDifferences(baseline, current, "", differences, 8);
+    return differences;
+  } catch {
+    return [];
+  }
+}
+
+function collectJsonDifferences(baseline, current, pointer, differences, limit) {
+  if (differences.length >= limit || Object.is(baseline, current)) return;
+  const baselineRecord = baseline && typeof baseline === "object";
+  const currentRecord = current && typeof current === "object";
+  if (!baselineRecord || !currentRecord || Array.isArray(baseline) !== Array.isArray(current)) {
+    differences.push(
+      `${pointer || "/"}: ${compactJsonValue(baseline)} -> ${compactJsonValue(current)}`,
+    );
+    return;
+  }
+  const keys = [...new Set([...Object.keys(baseline), ...Object.keys(current)])].sort();
+  for (const key of keys) {
+    if (differences.length >= limit) return;
+    const escapedKey = key.replaceAll("~", "~0").replaceAll("/", "~1");
+    collectJsonDifferences(
+      baseline[key],
+      current[key],
+      `${pointer}/${escapedKey}`,
+      differences,
+      limit,
+    );
+  }
+}
+
+function compactJsonValue(value) {
+  const text = JSON.stringify(value);
+  if (text === undefined) return "<missing>";
+  return text.length <= 240 ? text : `${text.slice(0, 237)}...`;
 }
 
 function listRelativeFiles(root, relative = "") {
