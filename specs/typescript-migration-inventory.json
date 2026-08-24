@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "scope": "data-foundry-tracked-javascript-migration",
+  "baseline_commit": "c996633832ea23bf7883c7b219f524bf28e6ce7e",
+  "baseline_count": 160,
+  "remaining_count": 160,
+  "canonical_path_list_sha256": "ac424319452a956dacee79a5a8ce83f2b2cf090a10b6cd1dc8c224d7aaacd904",
+  "path_contract": "git ls-files '*.mjs' '*.cjs' | LC_ALL=C sort, joined with one LF per path",
+  "allowed_final_javascript": [],
+  "policy": "Every later TypeScript slice must update this reviewed digest and monotonically reduce remaining_count. New tracked JavaScript is forbidden."
+}
