@@ -44,6 +44,8 @@ node scripts/foundry.mjs dataset-incremental-change-set-compose \
 
 Only `--request`, `--out-dir`, and `--help` are supported. The output directory must be inside the repository and must not exist. The command creates it with mode `0700` and artifacts with mode `0600`; it never overwrites an earlier composition.
 
+Those numeric mode bits are enforced and tested on POSIX filesystems. Windows retains the same fresh-path, exclusive-create, immutable-output, hash, and manifest guarantees even though it does not expose POSIX permission bits through `stat.mode`.
+
 ## SHA-Bound Request
 
 The request uses `foundry-incremental-change-set-request.v1` and binds:

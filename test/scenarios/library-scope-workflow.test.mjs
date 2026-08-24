@@ -812,7 +812,7 @@ test("identity preflight retry dry-run selects only failed rows and records publ
   assert.equal(report.counts.selected_rows, 1);
   assert.equal(report.results[0].dataset_id, ids.ef2);
   assert.match(
-    report.results[0].command,
+    report.results[0].command.replaceAll("\\", "/"),
     /node_modules\/@tiangong-lca\/cli\/bin\/tiangong-lca\.js/u,
   );
 });
@@ -832,7 +832,10 @@ test("published CLI resolver binds the installed 0.1.0 package bin through Node"
     assert.equal(cli.package, "@tiangong-lca/cli@0.1.0");
     assert.equal(cli.package_version, "0.1.0");
     assert.equal(cli.bin_path, installed.binPath);
-    assert.match(cli.display, /node_modules\/@tiangong-lca\/cli\/bin\/tiangong-lca\.js/u);
+    assert.match(
+      cli.display.replaceAll("\\", "/"),
+      /node_modules\/@tiangong-lca\/cli\/bin\/tiangong-lca\.js/u,
+    );
   } finally {
     if (previous === undefined) {
       delete process.env.TIANGONG_LCA_CLI_BIN;

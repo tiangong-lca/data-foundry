@@ -158,6 +158,16 @@ function shellTokens(command) {
       quote = char;
       continue;
     }
+    if (char === "\\" && index + 1 < text.length) {
+      const next = text[index + 1];
+      if (/\s/u.test(next) || next === "\\" || next === "'" || next === '"') {
+        index += 1;
+        current += next;
+      } else {
+        current += char;
+      }
+      continue;
+    }
     if (/\s/u.test(char)) {
       if (current) {
         tokens.push(current);

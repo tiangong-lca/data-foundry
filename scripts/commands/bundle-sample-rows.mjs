@@ -436,7 +436,7 @@ export function createBundleSampleRowsCommands({
   }
 
   function processIdFromBundleRef(value) {
-    const text = asText(value);
+    const text = asText(value).replaceAll("\\", "/");
     if (!text) return "";
     const match = text.match(/(?:^|\/)process-bundles\/([^/]+)/u);
     return match?.[1] ?? "";

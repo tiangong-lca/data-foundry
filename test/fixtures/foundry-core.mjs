@@ -36,7 +36,7 @@ export const fullContextPatterns = [
   "tidas_locations_category.json",
 ];
 export function rel(filePath) {
-  return path.relative(repoRoot, filePath);
+  return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
 export function writeJson(filePath, value) {

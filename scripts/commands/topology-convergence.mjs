@@ -214,9 +214,9 @@ class ConversionEventWriter extends JsonlWriter {
 }
 
 function writeJson(filePath, value) {
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, { flag: "wx", mode: 0o600 });
-  const fd = fs.openSync(filePath, "r");
+  const fd = fs.openSync(filePath, "wx", 0o600);
   try {
+    fs.writeFileSync(fd, `${JSON.stringify(value, null, 2)}\n`);
     fs.fsyncSync(fd);
   } finally {
     fs.closeSync(fd);

@@ -72,6 +72,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - Issue #63 establishes the pnpm/TS7 toolchain and the typed spine. Migrate entrypoints, command registry/metadata, argument and runtime I/O contracts, artifact/receipt primitives, then command families and tests. Existing `.mjs` modules remain executable until their typed replacements have equivalent characterization and case coverage; the final migration gate is zero untyped business-runtime modules, not a bulk extension rename.
 - Toolchain and migration tests must pass from a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. They must not depend on the superproject checkout, another worktree's `node_modules`, absolute developer paths, ignored `.foundry` state, or credentials.
 - The Golden gate must compare against a non-`HEAD` merge-base with full Git history and a Node-native comparator. Cross-platform fixtures use executable-plus-argv dispatch; a `.js`/`.mjs`/`.cjs` test script must run through `process.execPath`, not OS executable-bit behavior. `.gitattributes` keeps repository text at LF on every runner; only Windows launcher files may opt into CRLF.
+- Foundry artifact-to-scope matching and transitional command parsers must accept both path separators. Durable JSON/JSONL writers flush the writable descriptor they opened; POSIX permission-bit assertions are not imposed on Windows filesystems.
 
 ## Default Operating Order
 

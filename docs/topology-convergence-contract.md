@@ -46,6 +46,8 @@ node scripts/foundry.mjs dataset-topology-convergence-compose \
 
 The output directory must be fresh and inside the repository. The command creates it with mode `0700` and files with mode `0600`; prior evidence is never overwritten.
 
+Durable JSON artifacts are written through one exclusive writable descriptor and fsynced before close, which preserves the contract on Windows as well as POSIX systems. Numeric `0700`/`0600` assertions apply where the filesystem exposes POSIX permission bits; Windows still enforces fresh-path and no-overwrite semantics.
+
 ## Bound inputs
 
 The strict `foundry-topology-convergence-request.v1` schema binds:

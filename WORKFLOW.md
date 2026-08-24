@@ -71,6 +71,8 @@ Issue #63 is the typed-spine foundation, not a declaration that the 160 tracked 
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 
+Do not parse materialized command strings with separator-specific assumptions. Until argv arrays replace every legacy display string, command-option readers must preserve Windows backslashes and artifact-to-scope matching must normalize separators. Durable writers fsync writable file descriptors, not read-only reopened handles.
+
 Use the exact installed project dependency as `pnpm exec tiangong-lca ...`. Foundry runtime adapters resolve that same `@tiangong-lca/cli@0.1.0` manifest and bin directly; only the external `skills@latest` source-evidence resolver remains intentionally floating, with the resolved ref recorded in task artifacts.
 
 ## Required Order

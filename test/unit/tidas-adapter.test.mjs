@@ -16,7 +16,7 @@ const fixture = path.join(repoRoot, "test", "fixtures", "fake-tidas.mjs");
 
 function isolatedFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-tidas-adapter-"));
-  const bin = path.join(root, "tidas");
+  const bin = path.join(root, "fake-tidas.mjs");
   fs.copyFileSync(fixture, bin);
   fs.chmodSync(bin, 0o755);
   return { root, bin };

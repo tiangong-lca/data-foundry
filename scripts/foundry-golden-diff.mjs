@@ -605,18 +605,18 @@ function normalize(value) {
   output = replacePathVariants(output, pathVariants(repoRoot), "<repo-root>");
   output = replacePathVariants(output, pathVariants(tempRoot), "<temp-root>");
   return output
-    .replace(/(?:\.\.\/)+before-output/gu, "<side-output>")
-    .replace(/(?:\.\.\/)+after-output/gu, "<side-output>")
-    .replace(/(?:\.\.\/)+fixtures/gu, "<temp-root>/fixtures")
-    .replace(/(?:\.\.\/)*\.*<side-output>/gu, "<side-output>")
-    .replace(/(?:\.\.\/)*\.*<temp-root>/gu, "<temp-root>")
+    .replace(/(?:\.\.[\\/])+before-output/gu, "<side-output>")
+    .replace(/(?:\.\.[\\/])+after-output/gu, "<side-output>")
+    .replace(/(?:\.\.[\\/])+fixtures/gu, "<temp-root>/fixtures")
+    .replace(/(?:\.\.[\\/])*\.*<side-output>/gu, "<side-output>")
+    .replace(/(?:\.\.[\\/])*\.*<temp-root>/gu, "<temp-root>")
     .replace(/\/private<repo-root>/gu, "<repo-root>")
     .replace(/\/private<temp-root>/gu, "<temp-root>")
-    .replace(/<temp-root>\/before-output/gu, "<side-output>")
-    .replace(/<temp-root>\/after-output/gu, "<side-output>")
-    .replace(/<temp-root>\/before-worktree/gu, "<repo-root>")
+    .replace(/<temp-root>[\\/]before-output/gu, "<side-output>")
+    .replace(/<temp-root>[\\/]after-output/gu, "<side-output>")
+    .replace(/<temp-root>[\\/]before-worktree/gu, "<repo-root>")
     .replace(
-      /(?:\.\.\/tiangong-lca-cli|node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?@tiangong-lca\/cli)\/assets\/tidas-schemas/gu,
+      /(?:\.\.[\\/]tiangong-lca-cli|node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?@tiangong-lca[\\/]cli)[\\/]assets[\\/]tidas-schemas/gu,
       "<cli-schema-assets>",
     )
     .replace(skillsPackageCommandPattern, "<skills-runtime>")
