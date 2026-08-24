@@ -86,7 +86,7 @@ The latest checked-out `tiangong-lca-skills` already has reusable skills that sh
 | `tiangong-lca-remote-ops` | Process-focused remote maintenance and verification wrapper. Use only where process-specific remote maintenance is required. |
 | `flow-hybrid-search`, `process-hybrid-search`, `lifecyclemodel-hybrid-search` | Retrieval helpers only. They produce candidates; they do not decide authoring or mapping. |
 
-External source-evidence skills can also be used, but they are a different dependency class. They are resolved through `npx skills` at runtime and should not be copied into Foundry:
+External source-evidence skills can also be used, but they are a different dependency class. They are resolved through `pnpm dlx skills@latest` at runtime and should not be copied into Foundry:
 
 | Skill | Source | Current role in this architecture |
 | --- | --- | --- |
@@ -179,7 +179,7 @@ The top-level skill must not hand-edit entity rows directly. It prepares structu
 Full structured imports must use entity-level queues rather than one package-sized curation batch. The top-level skill builds the queue after Conversion QA and before support/flow/process authoring:
 
 ```bash
-npx --yes @tiangong-lca/cli@latest dataset curation-queue build \
+pnpm exec tiangong-lca dataset curation-queue build \
   --processes /abs/path/rows/processes.normalized.jsonl \
   --flows /abs/path/rows/flows.normalized.jsonl \
   --support /abs/path/rows/sources.normalized.jsonl \
@@ -226,7 +226,7 @@ Default stages:
 
 This skill should reuse the same child skills as `external-dataset-curated-import`, with `mode=evidence_development`.
 
-For document fulltext extraction, resolve the latest `document-granular-decompose` with `npx skills` and record the upstream ref under the task workspace before parsing. For SCI literature evidence, resolve `tiangong-kb-sci-search` the same way before retrieval. This keeps fast-moving evidence capability outside Foundry while preserving run-level auditability.
+For document fulltext extraction, resolve the latest `document-granular-decompose` with `pnpm dlx skills@latest` and record the upstream ref under the task workspace before parsing. For SCI literature evidence, resolve `tiangong-kb-sci-search` the same way before retrieval. This keeps fast-moving evidence capability outside Foundry while preserving run-level auditability.
 
 ## Child Skill Responsibilities
 
@@ -307,7 +307,7 @@ On restart, the top-level skill resumes from the first missing, failed, stale, o
 3. Foundry routes structured import and source-evidence tasks to those skills and CLI commands instead of expanding its public `dataset:*` command surface.
 4. Existing child skills remain the first reuse targets: `tidas-contract-context`, `tidas-data-import`, `flow-governance-review`, `process-automated-builder`, and `lca-publish-executor`.
 5. New child aliases should be added only where naming or scope blocks clear composition.
-6. Source-evidence extraction and research dependencies use `.agents/shared-skills.json` plus the npm `skills` package and runtime `npx skills` resolution records instead of committing external skill repositories as Foundry-owned code.
+6. Source-evidence extraction and research dependencies use `.agents/shared-skills.json` plus runtime `pnpm dlx skills@latest` resolution records instead of committing external skill repositories as Foundry-owned code.
 7. Remaining Foundry-local dataset wrappers are migration shims until equivalent CLI/skill owner surfaces exist.
 
 ## Retired Local-Adapter Assumption

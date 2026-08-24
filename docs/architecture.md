@@ -23,9 +23,17 @@ checkPaths:
   - docs/workspace-project-map.md
   - specs/capability-ownership-rules.json
   - specs/automated-lca-capability-registry.json
+  - specs/typescript-migration-inventory.json
+  - .prettierignore
+  - package.json
+  - pnpm-lock.yaml
+  - pnpm-workspace.yaml
+  - prettier.config.cjs
+  - tsconfig*.json
   - docs/incremental-change-set-contract.md
-lastReviewedAt: 2026-08-20
-lastReviewedCommit: c3c74555b71e1ba33ee80a5c5919630a27ba79df
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
+lastReviewedNote: "Reviewed for Issue #63: pnpm/TS7 typed-spine architecture, migration inventory, clean-worktree isolation, and CLI 0.1.0 ownership routing."
 ---
 
 # Architecture
@@ -49,11 +57,29 @@ tiangong-lca-skills
   = top-level workflows + child semantic authoring skills
 
 tiangong-ai/skills
-  = floating source-evidence and document-extraction runtime skills resolved with npx skills
+  = floating source-evidence and document-extraction runtime skills resolved with pnpm dlx skills
 
 profiles
   = generic / bafu / uslci constraints
 ```
+
+## Toolchain And Typed-Spine Boundary
+
+Foundry's Node runtime is standardized on Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2`, Oxlint, and Prettier. pnpm is the sole dependency manager and owns the only root workspace and lockfile. The compiler graph must contain TypeScript 7.0.2 only; TypeScript 5/6 aliases, `@typescript-eslint`, and formatting plugins that load the TypeScript compiler API are not compatibility paths.
+
+At the Issue #63 baseline, the estate is still 160 tracked JavaScript artifacts: 95 `.mjs` runtime files (59,692 lines), 64 `.mjs` test files (30,273 lines), and one Prettier `.cjs` config. That inventory is explicit in `specs/typescript-migration-inventory.json`. The typed spine is introduced in dependency order:
+
+```text
+entrypoint + args
+  -> command registry + metadata
+  -> runtime I/O + artifact/receipt contracts
+  -> semantic command families
+  -> scenario and real-case fixtures
+```
+
+This boundary avoids a misleading bulk rename. Each module remains in the inventory until a TypeScript replacement preserves its command, artifact, stdout, exit, and safety behavior under focused tests. Completion means no untyped business-runtime modules remain and the full case-driven suite is green.
+
+Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 
 ## Foundry-Owned Layers
 
@@ -120,8 +146,8 @@ The v0 runtime is intentionally small:
 - no direct database commit from Foundry code; remote commit is allowed only through official CLI/platform commands when profile gates, write policy, commit handoff, and post-write verification are satisfied
 - profile-authorized owner-draft support maintenance remains a CLI/database responsibility: Foundry freezes the candidate registry and complete-plan evidence, while the CLI submits one database-atomic plan and records its audit/readback proof; Foundry must not split that plan into independently committed dimension batches
 - generated source/contact support rows may get Foundry-prepared finalize and commit-handoff artifacts, but dependent process/flow/lifecyclemodel scopes must wait for the CLI commit and readback verification of those support rows
-- published CLI invocation is the default command path: `npx --yes @tiangong-lca/cli@latest ...`
-- test execution is local and layered: `npm test` runs all behavior layers, while `npm run test:unit`, `npm run test:commands`, and `npm run test:scenarios` target specific Foundry-owned surfaces
+- the exact installed CLI dependency is the default command path: `pnpm exec tiangong-lca ...`
+- test execution is local and layered: `pnpm test` runs all behavior layers, while `pnpm test:unit`, `pnpm test:commands`, and `pnpm test:scenarios` target specific Foundry-owned surfaces; `pnpm test:toolchain` protects the pnpm/TS7 graph and migration inventory
 
 ## Retired v1 Daemon Direction
 
@@ -140,7 +166,7 @@ The foundry should call the owning workspace surface instead of absorbing implem
 - `tidas-tools`: unified Rust `tidas` owner for deterministic format detection, package import/conversion, schema validation, stable machine reports/exits, cancellation, and atomic publication
 - `tiangong-lca-cli`: default command surface for contract context, source authoring, QA/curation, remote data operations, and handoff
 - `tiangong-lca-skills`: agent-facing wrappers over CLI commands
-- `tiangong-ai/skills`: runtime-only source-evidence and document extraction skills such as `document-granular-decompose` and `tiangong-kb-sci-search`
+- `tiangong-ai/skills`: runtime-only source-evidence and document extraction skills such as `document-granular-decompose` and `tiangong-kb-sci-search`, resolved through `pnpm dlx skills@latest`
 - `tiangong-lca-edge-functions`: Edge Function runtime, including Hybrid Search request orchestration and `embedding_ft` jobs; Foundry forwards one `lexical_weight` and one `semantic_weight`
 - `database-engine`: database RPCs, triggers, vector indexes, and schema governance
 - `tidas`: TIDAS specification

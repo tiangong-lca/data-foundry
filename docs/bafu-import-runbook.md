@@ -35,7 +35,7 @@ export RUN=.foundry/workspaces/bafu-full-import-20260607T080646Z
 2. **v12、v46、v47、v48 不是 canonical 成功来源**，只能用于 forensic 分析。v12 时代的远端写入已不可信（见 §7-9 stale support identity 事故）。
 3. **candidate ≠ authoritative**：classification / location / identity / authoring 的 AI 输出必须带 task bundle 证据（`authoring_context.context_bundle_sha256`）并经 deterministic apply / projection 进库；规则推导的 repair 只是 candidate 行。
 4. **当前 canonical classification decisions 文件**：`$RUN/decisions-v11-direct-process-leaf/classification-decisions.jsonl`（23,521 行 = v10 的 23,478 + 43 条 direct process 决策；v51 批次用它，运行中的 v50 批次仍显式沿用 decisions-v9 的 21,007 行——v11 是其超集，不要中途给在跑批次换文件）。⚠️ batch run 的默认值仍指向旧的 `decisions-v4-leaf-category-map`，**每次必须显式传** `--library-classification-decisions`（见 §7-2）。 **identity decisions**：全部 `decisions*` 目录的 `identity-decisions.jsonl` 已统一替换为 `identity-decisions-from-preflight-final-20260611/` 的 2,463 行隔间修正版（2026-06-10/11；旧 1,493 行备份在各目录 `identity-decisions.pre-compartment-fix.jsonl`，其中 828 行隔间错配）。runner 按 `/^decisions(-|$)/` 合并所有目录且 canonical 冲突即删键——**新决策目录必须与现存目录一致或全量替换**。
-5. `--parallel N` 的 scope 独立性由 runner 的 `family-master-first` 排序 + 内部 family 锁保证（与 N 无关，不要绕过）。N 上限 **20**（代码 cap，2026-06-11 从 12 上调）；v51 实测 parallel 20 ≈ 3 scope/min 稳态（+170-180/小时）。⚠️ 高并行必须 `export TIANGONG_LCA_CLI_BIN=<repo>/node_modules/.bin/tiangong-lca`（先 `npm install --no-save @tiangong-lca/cli@latest`），否则 npx 并发风暴会造成 CLI exit 1 假性 blocked。若 retry/blocked 率上升（远端限流征兆），降回 10。
+5. `--parallel N` 的 scope 独立性由 runner 的 `family-master-first` 排序 + 内部 family 锁保证（与 N 无关，不要绕过）。N 上限 **20**（代码 cap，2026-06-11 从 12 上调）；v51 实测 parallel 20 ≈ 3 scope/min 稳态（+170-180/小时）。高并发前先 `pnpm install --frozen-lockfile`；Foundry 默认直接解析项目固定依赖 `@tiangong-lca/cli@0.1.0`，不再启动浮动的按次包解析。若 retry/blocked 率上升（远端限流征兆），降回 10。
 6. 每个新批次：独立 `--out-dir`、独立 report / run-manifest / preflight plan / ledger；coverage 报告显式列出使用的 ledger sources。
 
 ---
@@ -43,9 +43,9 @@ export RUN=.foundry/workspaces/bafu-full-import-20260607T080646Z
 ## 2. 目录地图
 
 | 路径 | 是什么 |
-| --- | --- | --- |
+| --- | --- |
 | `inputs/BAFU-2025 Version 2 - TIDAS 2026-03-09/process-bundles/` | 11,747 个 bundle（每个含 manifest + tidas 子树），`index.json` 是 universe 契约 |
-| `inputs/.../tidas/processes | flows/` | 扁平 TIDAS 数据集（11,747 process / 15,120 flow 依赖） |
+| `inputs/.../tidas/processes \| flows/` | 扁平 TIDAS 数据集（11,747 process / 15,120 flow 依赖） |
 | `$RUN/library-index/` | `library-entity-index.jsonl`、`scope-projection.jsonl`（resolution 的输入） |
 | `$RUN/decisions-v9-pending-ready-leaf/` | v50 批次使用的决策（classification + identity + canonical-support-mappings）；**v51 起 canonical = `decisions-v11-direct-process-leaf/`** |
 | `$RUN/decisions-v8-pending-ready-authoring/` | v9 的投影源（v7 + 1,031 条 authored flow 决策） |
@@ -278,7 +278,7 @@ node scripts/foundry.mjs dataset-bafu-universe-coverage-report \
 
 **Coverage v7 终版（`$RUN/universe-coverage-v7-final/`，8 ledger sources + non-importable 登记）**
 
-- **5,575 verified + 6,172 non-importable = 11,747（gap=0）**；active human-review / retry / pending_ready 全部为 **0**。npm test 186/186、doctor passed。
+- **5,575 verified + 6,172 non-importable = 11,747（gap=0）**；active human-review / retry / pending_ready 全部为 **0**。Historical baseline: npm test 186/186、doctor passed。
 - 登记文件：`$RUN/non-importable-scopes-v1.jsonl`（+ `.report.json`）——每行带 blocker reasons、阻塞依赖清单（**截断于 40 条**，完整依赖以 ledger/scopes.csv 为准 + 计数字段）、依赖级证据（identity manual-review 类别 / 2026-06-12 authoring 轮拒绝原因）。三类签名：4,802 仅缺 elementary、1,236 elementary+FP/UG、134 仅 FP/UG（5 对）。
 - **人工评审包**：`$RUN/non-importable-review-v1/`——README.md 专家手册 + `data/`（elementary-flows.csv 747 行评审队列 / fp-ug-pairs.csv / scopes.csv 6,172 行 / review-data.json）+ `index.html` 零网络依赖评审仪表盘（判定 localStorage 持久化、导出/导入 verdicts）。评审单元是 747 个缺失 elementary flow + 5 对 FP/UG（非逐 scope）；判定四选一 upstream_add / remap_existing / keep_non_importable / unsure，导出后走 decisions-v13 路径回流。
 - batch ledger 链：v35/v41/v42/v45/v49（canonical 前代）+ v50 2,675 + v51 2,840 + **v52 19/19**（elementary 多候选解锁批，blocked=0）。
@@ -347,4 +347,4 @@ node scripts/foundry.mjs dataset-bafu-universe-coverage-report \
 2. 最终 canonical coverage 报告中，11,747 个 process scope 全部为 verified 或明确 non-importable；non-importable 必须落档：整理 `non-importable-scopes.jsonl`（含 reason/evidence），通过 `dataset-bafu-universe-coverage-report --non-importable-scopes-file <file>` 显式登记（可重复传多个），不允许"默认缺席"。
 3. canonical `ok.scopes.verified` 覆盖全部可导入 process scopes；canonical `ok.flows.verified` 覆盖全部需写入的 product flows。
 4. 最终批次/coverage 报告：`blocked=0`、`failed_retryable=0`、`human_review_rows=0`、`retry_rows=0`、selected pending `0`。
-5. `npm test` 与 `npm run doctor` 通过；跑 `dataset-import-completion-report` 作为收尾工件；保存最终 batch report、canonical ledger、coverage report 路径。
+5. `pnpm test` 与 `pnpm doctor` 通过；跑 `dataset-import-completion-report` 作为收尾工件；保存最终 batch report、canonical ledger、coverage report 路径。

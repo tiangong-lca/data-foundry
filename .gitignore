@@ -33,4 +33,5 @@ inputs/*
 inputs/source-packages/*
 !/inputs/source-packages/*.md
 *.local
-tasks/
+tasks/*
+!tasks/README.md

@@ -8,4 +8,4 @@ Tracked files here document the runtime contract. Runtime state, logs, and per-t
 - `.foundry/workspaces/`
 - `.foundry/state/`
 
-Run `npm run init:runtime` after cloning to create those ignored directories.
+Run `pnpm init:runtime` after cloning to create those ignored directories.

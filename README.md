@@ -13,7 +13,14 @@ whenToUpdate:
   - when Foundry public commands, lane names, runtime skill policy, or repository layout change
 checkPaths:
   - README.md
+  - .nvmrc
+  - .oxlintrc.json
+  - .prettierignore
   - package.json
+  - pnpm-lock.yaml
+  - pnpm-workspace.yaml
+  - prettier.config.cjs
+  - tsconfig*.json
   - scripts/foundry.mjs
   - docs/architecture.md
   - docs/runtime-skill-management.md
@@ -21,8 +28,10 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - docs/topology-convergence-contract.md
   - specs/import-profiles.json
-lastReviewedAt: 2026-08-20
-lastReviewedCommit: c3c74555b71e1ba33ee80a5c5919630a27ba79df
+  - specs/typescript-migration-inventory.json
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
+lastReviewedNote: "Reviewed for Issue #63: pnpm-only TS7 foundation, staged JavaScript migration inventory, clean-worktree gates, and CLI 0.1.0 examples."
 ---
 
 # TianGong LCA Data Foundry
@@ -32,6 +41,14 @@ Control plane for turning external source material into validated, import-ready 
 Foundry is intentionally thin. It owns task routing, local workspaces, import profiles, curation packages, cleanup reports, stable owner-command adapters, and policy checks. Deterministic package import/conversion/schema validation belongs to unified Rust `tidas`; contract context, QA, curation, skills, and database behavior belongs in `tiangong-lca-cli`, `tidas-sdk`, `tiangong-lca-skills`, Edge Functions, or database projects.
 
 Identity-preflight candidate requests use the current Hybrid Search contract: one `lexical_weight` for the database `extracted_md` branch and one `semantic_weight` for `embedding_ft`.
+
+## Toolchain And Typed Spine
+
+Foundry is a pnpm-only Node.js 24 project. The reproducible toolchain is `pnpm@11.23.0`, TypeScript `7.0.2` as the only compiler anywhere in the dependency graph, Oxlint for linting, and Prettier for formatting. The repository keeps one root `pnpm-workspace.yaml` and `pnpm-lock.yaml`; npm/Yarn lockfiles, TypeScript 5/6 aliases, `@typescript-eslint`, and TypeScript-compiler-backed formatting plugins are outside the supported graph.
+
+Issue #63 starts the typed spine without pretending that the existing JavaScript estate is already migrated. At the baseline commit, 160 tracked JavaScript artifacts comprise 95 runtime `.mjs` files (59,692 lines), 64 `.mjs` tests (30,273 lines), and one Prettier `.cjs` config. `specs/typescript-migration-inventory.json` records that boundary. Entrypoints, command metadata/registry, runtime I/O, and artifact/receipt contracts migrate first; command families and tests follow under characterization and real-case TDD. A module leaves the inventory only when its typed replacement and behavior evidence pass.
+
+Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 
 ## Import Lanes
 
@@ -47,31 +64,35 @@ When the release changes flow identities or ordered process exchanges, use `data
 ## Core Commands
 
 ```bash
-npm run init:runtime
-npm run doctor
-npm run workflow:check
-npm run storage:check
-npm run surface:audit
-npm run acceptance:check
-npm test
-npm run test:unit
-npm run test:commands
-npm run test:scenarios
-npm run skills:install:shared
-npm run skills:list
-npm run workspace:map
-npm run capabilities:list -- --class tidas-contract-context
-npm run profiles:list
+pnpm init:runtime
+pnpm doctor
+pnpm workflow:check
+pnpm storage:check
+pnpm surface:audit
+pnpm acceptance:check
+pnpm lint
+pnpm typecheck
+pnpm build
+pnpm test
+pnpm test:toolchain
+pnpm test:unit
+pnpm test:commands
+pnpm test:scenarios
+pnpm skills:install:shared
+pnpm skills:list
+pnpm workspace:map
+pnpm capabilities:list -- --class tidas-contract-context
+pnpm profiles:list
 node scripts/foundry.mjs tidas-handshake
-npm run task:route -- --kind external-dataset-curated-import --dataset-type process --required-gates contract,schema,qa,curation
-npm run task:route -- --kind source-evidence-dataset-development --dataset-type process --required-gates context,schema,qa,curation
-npm run skills:source-evidence:use:document
-npm run skills:source-evidence:use:sci
+pnpm task:route -- --kind external-dataset-curated-import --dataset-type process --required-gates contract,schema,qa,curation
+pnpm task:route -- --kind source-evidence-dataset-development --dataset-type process --required-gates context,schema,qa,curation
+pnpm skills:source-evidence:use:document
+pnpm skills:source-evidence:use:sci
 node scripts/foundry.mjs dataset-incremental-change-set-compose --request <request.json> --out-dir <fresh-output-dir>
 node scripts/foundry.mjs dataset-topology-convergence-compose --request <request.json> --out-dir <fresh-output-dir>
 ```
 
-Tests are organized by behavior layer in `test/README.md`. Use `npm test` for the full suite and `npm run test:unit|test:commands|test:scenarios` for targeted checks; old incident-numbered test aliases are not part of the maintained surface.
+Tests are organized by behavior layer in `test/README.md`. Use `pnpm test` for the full suite and `pnpm test:unit|test:commands|test:scenarios` for targeted checks; `pnpm test:toolchain` protects the pnpm/TS7 contract. Old incident-numbered test aliases are not part of the maintained surface.
 
 Use owner-routed execution commands for dataset work:
 
@@ -85,17 +106,17 @@ node scripts/foundry.mjs dataset-tidas-validate \
   --type process \
   --out-dir ./schema
 
-npx --yes @tiangong-lca/cli@latest dataset curation-queue build \
+pnpm exec tiangong-lca dataset curation-queue build \
   --processes ./rows/processes.jsonl \
   --flows ./rows/flows.jsonl \
   --support ./rows/sources.jsonl \
   --out-dir ./curation-queue
 
-npx --yes @tiangong-lca/cli@latest dataset curation-queue next \
+pnpm exec tiangong-lca dataset curation-queue next \
   --queue-dir ./curation-queue \
   --json
 
-npx --yes @tiangong-lca/cli@latest dataset curation-queue verify \
+pnpm exec tiangong-lca dataset curation-queue verify \
   --queue-dir ./curation-queue \
   --type process \
   --json
@@ -115,7 +136,7 @@ node scripts/foundry.mjs dataset-curation-gate \
   --profile bafu
 ```
 
-Foundry does not expose dataset npm script aliases. Queue state belongs to `npx --yes @tiangong-lca/cli@latest dataset curation-queue build/next/verify`; conversion, validation, QA, remote write/delete/redo, and readback verification belong to CLI-owned commands and checked-in skills. Foundry-local dataset commands are policy and artifact helpers only: curation packages, mutation manifests, commit handoff plans, closeout checks, and task completion reports.
+Foundry does not expose dataset package-script aliases. Queue state belongs to the exact installed CLI via `pnpm exec tiangong-lca dataset curation-queue build/next/verify`; conversion, validation, QA, remote write/delete/redo, and readback verification belong to CLI-owned commands and checked-in skills. Foundry-local dataset commands are policy and artifact helpers only: curation packages, mutation manifests, commit handoff plans, closeout checks, and task completion reports.
 
 `process-bundles/index.json` is a generic packaged-import contract, not a BAFU-only path. Bundle `manifest` and `tidas_dir` entries may be relative to the index directory; Foundry resolves them before scope projection. A batch runner may process independent bundle/entity tasks in parallel when the queue lock and dependency checks allow it. The configured parallelism belongs in the task workspace policy, and completed scopes should continue through commit and readback automatically when all hard gates pass. Missing public canonical unit groups, flow properties, or elementary flows are blocked by default; a frozen profile may instead authorize an account-local `state_code=0` candidate path that keeps private support outside the public cache and proves owner, unit-scale, closure, audit, and readback. Schema/QA blockers and unresolved reference closure always stay out of executable commit scopes. Each run that defers scopes writes both `blocked-scope-ledger.jsonl` for complete row-level blocker facts and `blocked-scope-report.json` for reason, affected-scope, dependency, human-action, and rerun summaries.
 
@@ -160,24 +181,24 @@ For process rows whose source exchange list is truly output-only, pass the origi
 
 `.agents/skills` is the single project-visible skill root. Foundry-local skills are tracked there by git; shared/runtime skills are also installed there when needed, but their names are managed by `.agents/shared-skills.json` and their installed directories remain ignored unless a task explicitly chooses pinned reproducibility.
 
-Use the npm `skills` package before a task needs shared skills:
+Use the `skills` registry package through pnpm before a task needs shared skills:
 
 ```bash
-npm run skills:install:shared
-npm run skills:update
-npm run skills:list
+pnpm skills:install:shared
+pnpm skills:update
+pnpm skills:list
 ```
 
-For deleting, retiring, repairing, or redoing rows from a bad import under current-user RLS, route to the checked-in `tiangong-lca-skills` `$dataset-rls-maintenance` workflow and the CLI-owned `npx --yes @tiangong-lca/cli@latest dataset maintenance plan/apply/verify` surface. Do not add Foundry-local Supabase delete or redo commands.
+For deleting, retiring, repairing, or redoing rows from a bad import under current-user RLS, route to the checked-in `tiangong-lca-skills` `$dataset-rls-maintenance` workflow and the CLI-owned `pnpm exec tiangong-lca dataset maintenance plan/apply/verify` surface. Do not add Foundry-local Supabase delete or redo commands.
 
 For document fulltext extraction and SCI literature evidence, use the latest remote skills from `https://github.com/tiangong-ai/skills`:
 
 ```bash
-npx --yes skills@latest use https://github.com/tiangong-ai/skills \
+pnpm dlx skills@latest use https://github.com/tiangong-ai/skills \
   --skill document-granular-decompose \
   --full-depth
 
-npx --yes skills@latest use https://github.com/tiangong-ai/skills \
+pnpm dlx skills@latest use https://github.com/tiangong-ai/skills \
   --skill tiangong-kb-sci-search \
   --full-depth
 
@@ -187,15 +208,15 @@ git ls-remote https://github.com/tiangong-ai/skills.git refs/heads/main
 Persistent local installs are optional operator state:
 
 ```bash
-npx --yes skills@latest add https://github.com/tiangong-ai/skills \
+pnpm dlx skills@latest add https://github.com/tiangong-ai/skills \
   --skill tiangong-kb-sci-search document-granular-decompose \
   --agent '*' \
   --yes \
   --full-depth
-npm run skills:update
+pnpm skills:update
 ```
 
-Installed shared runtime skills such as `.agents/skills/tiangong-kb-sci-search/`, `.agents/skills/document-granular-decompose/`, `.agents/skills/external-dataset-curated-import/`, and `skills-lock.json` remain ignored by default. Source-evidence tasks should record the resolved upstream ref, `npx skills` command, and evidence artifacts under `.foundry/workspaces/<task-id>/runtime-skills/`.
+Installed shared runtime skills such as `.agents/skills/tiangong-kb-sci-search/`, `.agents/skills/document-granular-decompose/`, `.agents/skills/external-dataset-curated-import/`, and `skills-lock.json` remain ignored by default. Source-evidence tasks should record the resolved upstream ref, `pnpm dlx skills` command, and evidence artifacts under `.foundry/workspaces/<task-id>/runtime-skills/`.
 
 ## Repository Shape
 
@@ -206,7 +227,7 @@ Installed shared runtime skills such as `.agents/skills/tiangong-kb-sci-search/`
 - `specs/import-profiles.json`: data-driven import profiles.
 - `docs/foundry-task-contracts.md`: minimal task, source, seed, checkpoint, and artifact ledger contracts.
 - `docs/execution-capsule-contract.md`: reusable offline stage, exact predecessor lineage, content-addressed boundary admission, CAS evidence, and immutable seal contract.
-- `docs/runtime-skill-management.md`: `npx skills` runtime dependency contract.
+- `docs/runtime-skill-management.md`: `pnpm dlx skills` runtime dependency contract.
 - `docs/import-profiles/bafu/`: BAFU profile context and constraints.
 - `tasks/`: lightweight task queue and task templates.
 - `.foundry/`: ignored runtime state and generated workspaces.

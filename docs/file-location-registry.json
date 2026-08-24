@@ -1,7 +1,7 @@
 {
   "$schema": "../specs/schemas/file-location-registry.schema.json",
   "schema_version": 1,
-  "updated_at_utc": "2026-08-20T00:00:00Z",
+  "updated_at_utc": "2026-08-25T00:00:00Z",
   "policy_doc": "docs/file-organization.md",
   "entries": [
     {
@@ -71,6 +71,24 @@
       "notes": "Routes deterministic import/conversion/schema validation to unified Rust tidas and keeps CLI context, QA/curation, remote operations, and Foundry-owned gates explicit."
     },
     {
+      "id": "typescript-migration-inventory",
+      "status": "active",
+      "classification": "toolchain-migration-ledger",
+      "current_path": "specs/typescript-migration-inventory.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "AGENTS.md",
+        "README.md",
+        "docs/architecture.md",
+        "docs/foundry-ai-navigation.md",
+        "test/README.md"
+      ],
+      "sensitivity": "non-sensitive tracked source/test path inventory; no runtime payloads or credentials",
+      "tracked": true,
+      "notes": "Records the Issue #63 JavaScript baseline and the staged TypeScript 7 migration boundary; update it in the same change that moves a module across the typed spine."
+    },
+    {
       "id": "import-profiles",
       "status": "active",
       "classification": "machine-readable-import-profile-registry",
@@ -120,7 +138,7 @@
       ],
       "sensitivity": "non-sensitive runtime skill dependency policy; contains no credentials and no private evidence payloads",
       "tracked": true,
-      "notes": "Defines how Foundry resolves floating external source-evidence and document-extraction skills with the npm skills package while keeping runtime-installed shared skills untracked by default."
+      "notes": "Defines how Foundry resolves floating external source-evidence and document-extraction skills through pnpm dlx while keeping runtime-installed shared skills untracked by default."
     },
     {
       "id": "shared-skills-config",
@@ -137,7 +155,7 @@
       ],
       "sensitivity": "non-sensitive skill source and update policy config; contains no credentials",
       "tracked": true,
-      "notes": "Lists Foundry-owned tracked orchestration skills, shared/runtime skills that may be installed into the same .agents/skills root, and the direct npm skills package commands used to manage them."
+      "notes": "Lists Foundry-owned tracked orchestration skills, shared/runtime skills that may be installed into the same .agents/skills root, and the pnpm dlx skills package commands used to manage them."
     },
     {
       "id": "foundry-task-contracts",

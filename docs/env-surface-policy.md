@@ -3,10 +3,23 @@ title: Environment Surface Policy
 docType: policy
 scope: runtime-env
 status: active
+authoritative: true
 owner: tiangong-lca-data-foundry
 language: en
-lastReviewedAt: 2026-06-06
-lastReviewedCommit: 631bd2273fc14e55802301d211beaf968646340b
+whenToUse:
+  - when adding, removing, or documenting Foundry environment variables
+  - when changing credential-free toolchain or acceptance-hook environment boundaries
+whenToUpdate:
+  - when .env.example or an executable runtime environment consumer changes
+  - when pnpm, CLI, skill, or account-guard environment ownership changes
+checkPaths:
+  - .env.example
+  - .codex/hooks/run-foundry-acceptance-check.sh
+  - docs/env-surface-policy.md
+  - scripts/foundry.mjs
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
+lastReviewedNote: "Reviewed for Issue #63: pnpm acceptance commands and credential-free clean-worktree toolchain checks."
 ---
 
 # Environment Surface Policy
@@ -55,6 +68,6 @@ When a variable is needed by more than one project, record the owner before docu
 
 ## Automatic Check
 
-`npm run env:check` validates `.env.example` against the allowlist and forbidden-key list in `scripts/foundry.mjs`.
+`pnpm env:check` validates `.env.example` against the allowlist and forbidden-key list in `scripts/foundry.mjs`.
 
-The same env-surface check is included in `npm run acceptance:check`, so the Codex Stop hook can block future automatic runs when an internal variable is accidentally promoted into foundry's public env example.
+The same env-surface check is included in `pnpm acceptance:check`, so the Codex Stop hook can block future automatic runs when an internal variable is accidentally promoted into Foundry's public env example. The clean arbitrary-worktree toolchain gate is offline and must not read `.env`, account profiles, or `.foundry` runtime state.

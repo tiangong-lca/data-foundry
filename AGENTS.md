@@ -24,12 +24,21 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - docs/topology-convergence-contract.md
   - docs/import-profiles/bafu/leaf-process-classification-authoring.md
+  - .nvmrc
+  - .oxlintrc.json
+  - .prettierignore
   - package.json
+  - pnpm-lock.yaml
+  - pnpm-workspace.yaml
+  - prettier.config.cjs
+  - tsconfig*.json
   - scripts/foundry.mjs
   - scripts/lib/foundry-command-metadata.mjs
+  - specs/typescript-migration-inventory.json
   - specs/**
-lastReviewedAt: 2026-07-30
-lastReviewedCommit: 7b9cebaaab2f8f35fce7aed48d3a76513d205496
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
+lastReviewedNote: "Reviewed for Issue #63: pnpm 11.23, Node 24, the TypeScript 7 typed-spine boundary, and the published CLI 0.1.0 invocation contract."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -48,21 +57,31 @@ Receive external LCA packages or source documents, choose the correct import lan
 - Foundry identity-preflight adapters forward the canonical single lexical weight plus semantic weight; database and Edge repositories own search behavior.
 - Foundry does not own TIDAS schemas/YAML, package converters, dataset validators, deterministic QA engines, reusable skills, or remote write semantics.
 - `.agents/skills` is the single project-visible skill root. Foundry-owned local skills listed in `.agents/shared-skills.json` are tracked with this repository. Shared/runtime skills listed in the same config may also be installed there, but their directories and `skills-lock.json` stay untracked unless a task explicitly changes to a pinned reproducibility policy.
-- External source-evidence and document-extraction skills, including `tiangong-kb-sci-search` and `document-granular-decompose`, are installed or read through the npm `skills` package (`npx --yes skills@latest ...`) at runtime before use. Do not copy their retrieval or extraction logic into Foundry.
+- External source-evidence and document-extraction skills, including `tiangong-kb-sci-search` and `document-granular-decompose`, are installed or read from the `skills` registry package through `pnpm dlx skills@latest ...` at runtime before use. Do not copy their retrieval or extraction logic into Foundry.
 - Raw converted rows may preserve source-language text only, but final import/write-ready rows must include `en` for TIDAS-required multilingual fields. When source data is not English, preserve the original language variant and add an evidence-backed English translation from full task context before write planning.
 - Do not implement direct database writes in Foundry.
 - Runtime `.env` files may provide account credentials and command defaults, but they do not replace the task-local `source-manifest.json`, `profile-lock.json`, account/write guard evidence, checkpoints, or artifact ledger. Durable import facts must live in the task workspace.
+
+## Toolchain And TypeScript Migration Contract
+
+- pnpm `11.23.0` is the only package manager for this Node project. The repository has one root `pnpm-workspace.yaml` and one root `pnpm-lock.yaml`; do not add npm, Yarn, a nested lockfile, or a package-manager fallback.
+- Node.js 24 is the runtime line. TypeScript `7.0.2` is the only compiler allowed in the direct or recursive dependency graph: do not add TypeScript 5/6 aliases, `@typescript-eslint`, `typescript-eslint`, or a formatter plugin that loads the TypeScript compiler API.
+- Oxlint owns linting and Prettier owns formatting. Lint and check commands must be read-only; formatting is an explicit write command.
+- The owner CLI is installed as the exact project dependency `@tiangong-lca/cli@0.1.0` and invoked with `pnpm exec tiangong-lca`; Foundry runtime adapters resolve the same installed package manifest and bin directly. Do not use `dlx` or `@latest` for the owner CLI. The external `skills@latest` package remains intentionally floating and its resolved upstream ref must still be recorded in task evidence.
+- The pre-migration inventory at commit `c996633832ea23bf7883c7b219f524bf28e6ce7e` contains 160 tracked JavaScript artifacts: 95 runtime `.mjs` files (59,692 lines), 64 `.mjs` tests (30,273 lines), and one Prettier `.cjs` config, with no TypeScript source. `specs/typescript-migration-inventory.json` is the checked migration ledger; update it when a file crosses the boundary rather than claiming the repository is fully typed.
+- Issue #63 establishes the pnpm/TS7 toolchain and the typed spine. Migrate entrypoints, command registry/metadata, argument and runtime I/O contracts, artifact/receipt primitives, then command families and tests. Existing `.mjs` modules remain executable until their typed replacements have equivalent characterization and case coverage; the final migration gate is zero untyped business-runtime modules, not a bulk extension rename.
+- Toolchain and migration tests must pass from a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. They must not depend on the superproject checkout, another worktree's `node_modules`, absolute developer paths, ignored `.foundry` state, or credentials.
 
 ## Default Operating Order
 
 1. Read this file and `WORKFLOW.md`.
 2. For source-evidence or shared-skill work, read `docs/runtime-skill-management.md` before evidence retrieval.
-3. Run `npm run doctor` before trusting local Foundry commands.
+3. Run `pnpm doctor` before trusting local Foundry commands.
 4. Classify the task as `external-dataset-curated-import` or `source-evidence-dataset-development`.
 5. Get the target TIDAS contract context through the published CLI:
 
 ```bash
-npx --yes @tiangong-lca/cli@latest dataset context-pack \
+pnpm exec tiangong-lca dataset context-pack \
   --type <process|flow|source|contact|unitgroup|flowproperty|lifecyclemodel> \
   --profile ai-import \
   --out-dir .foundry/workspaces/<task-id>/context/<type> \
@@ -70,9 +89,9 @@ npx --yes @tiangong-lca/cli@latest dataset context-pack \
 ```
 
 6. For packaged datasets, run `node scripts/foundry.mjs dataset-tidas-import`, the thin Foundry adapter over unified Rust `tidas import`; do not replace supported converters with AI. Resolve the executable in this order: `--tidas-bin`, `TIDAS_BIN`, then `tidas` on `PATH`; resolve config from `--tidas-config` then `TIDAS_CONFIG`. Require the stable `tidas.operation-report.v1` contract and any compatible 0.2.x binary instead of pinning one patch. Keep per-process bundle generation enabled so `process-bundles/index.json` and one dependency subdirectory per converted process are available for curation. This bundle index is the generic packaged-import entrypoint for process-level dependency closure; dataset profiles may further require a specific converted bundle index. Bundle `manifest` and `tidas_dir` entries may be relative to the index directory and must be resolved before execution.
-7. Before using shared skills, run `npm run skills:install:shared` when configured runtime skills may be missing or stale, and `npm run skills:update` for already installed project skills. For source-document fulltext extraction, read the latest remote skill with `npx --yes skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth`; for SCI literature evidence, read `tiangong-kb-sci-search` the same way. Record the upstream ref from `git ls-remote https://github.com/tiangong-ai/skills.git refs/heads/main`, then capture retrieved document text or papers as evidence candidates before field-level extraction.
-8. Run `node scripts/foundry.mjs dataset-tidas-validate` for deterministic schema validation, then `npx --yes @tiangong-lca/cli@latest qa <type>` for deterministic QA on converted or authored rows.
-9. Build and drive the entity-level queue with `npx --yes @tiangong-lca/cli@latest dataset curation-queue build/next/verify` so support, flow, and process work has stable task, lock, blocker, closure, and run-plan artifacts owned by the CLI state machine. Parallel workers are allowed only across independent queue locks and only at the configured task parallelism; passed tasks continue, blocked tasks are recorded for later support/database repair, and reruns resume from checkpoints.
+7. Before using shared skills, run `pnpm skills:install:shared` when configured runtime skills may be missing or stale, and `pnpm skills:update` for already installed project skills. For source-document fulltext extraction, read the latest remote skill with `pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth`; for SCI literature evidence, read `tiangong-kb-sci-search` the same way. Record the upstream ref from `git ls-remote https://github.com/tiangong-ai/skills.git refs/heads/main`, then capture retrieved document text or papers as evidence candidates before field-level extraction.
+8. Run `node scripts/foundry.mjs dataset-tidas-validate` for deterministic schema validation, then `pnpm exec tiangong-lca qa <type>` for deterministic QA on converted or authored rows.
+9. Build and drive the entity-level queue with `pnpm exec tiangong-lca dataset curation-queue build/next/verify` so support, flow, and process work has stable task, lock, blocker, closure, and run-plan artifacts owned by the CLI state machine. Parallel workers are allowed only across independent queue locks and only at the configured task parallelism; passed tasks continue, blocked tasks are recorded for later support/database repair, and reruns resume from checkpoints.
 10. Run `node scripts/foundry.mjs dataset-curation-gate` with the rows, schema report, QA report, profile, full contract context files, and any generated classification/location authoring queues.
 11. Use `$foundry-tidas-import` as the Foundry-local orchestration entrypoint for external package or source-document imports. Use `$foundry-tidas-authoring` only after curation-gate authoring tasks, classification decision tasks, or location decision tasks exist and only to produce structured evidence-backed decisions or patches for curation blockers. Apply classification decisions with `dataset-classification-decisions-apply`, apply location decisions with `dataset-location-decisions-apply`, collect field patches with `dataset-authoring-patch-collect`, then after deterministic apply rerun Rust tidas validation, deterministic CLI QA, and the Foundry curation gate on the final rows before mutation manifest.
 12. Run `node scripts/foundry.mjs dataset-curation-cleanup` after source trace has been captured in authoring packages and before remote write planning.
@@ -91,7 +110,7 @@ These rules are mandatory for code changes in this repository:
 - Keep Foundry as a deterministic local control plane: it may index, project, package, checkpoint, summarize blockers, aggregate gates, and call published owner commands; it must not absorb CLI, skill, SDK, converter, database, or Edge ownership.
 - Packaged-library imports must make semantic decisions at library scope before projecting to process scopes. Converter-generated classifications are weak hints only; process/flow classification, identity reuse, and canonical support mapping must be backed by AI or human semantic decisions from full row context and then applied through deterministic CLI/Foundry apply reports.
 - BAFU-specific deterministic classification heuristics may only prepare authoring tasks, evidence summaries, or non-authoritative candidate rows. They must not write completed process/flow classification decisions unless the row already carries the exact AI/human decision task `authoring_context.context_bundle_sha256` required by the classification apply contract. Name-plan heuristics that write patches must remain source-context/evidence backed; default-only guesses should stay blocked for AI/human authoring.
-- TIDAS location-like machine fields must use valid TIDAS/ILCD location category codes. For example, `locationOfOperationSupplyOrProduction.@location`, flow `locationOfSupply`, lifecycle model connection locations, and exchange `location` values must be selected from `tidas_locations_category.json` and pass `npx --yes @tiangong-lca/cli@latest dataset classification audit --type location`; natural-language geography evidence belongs in description fields such as `descriptionOfRestrictions`, source trace, or name-plan mix/location text. AI authoring must inspect schema/YAML/context and fill provable location codes proactively; uncertain locations must go through `dataset-location-decision-task-build` and `dataset-location-decisions-apply`, not ad-hoc patches to code fields.
+- TIDAS location-like machine fields must use valid TIDAS/ILCD location category codes. For example, `locationOfOperationSupplyOrProduction.@location`, flow `locationOfSupply`, lifecycle model connection locations, and exchange `location` values must be selected from `tidas_locations_category.json` and pass `pnpm exec tiangong-lca dataset classification audit --type location`; natural-language geography evidence belongs in description fields such as `descriptionOfRestrictions`, source trace, or name-plan mix/location text. AI authoring must inspect schema/YAML/context and fill provable location codes proactively; uncertain locations must go through `dataset-location-decision-task-build` and `dataset-location-decisions-apply`, not ad-hoc patches to code fields.
 - For packaged process-bundle imports, process geography and exchange location evidence that identifies a referenced product/waste flow supply location must be projected into the flow authoring evidence before flow curation. Flow `locationOfSupply` saturation must consider `name.mixAndLocationTypes`, process `locationOfOperationSupplyOrProduction.@location`, exchange `location`, and source trace together; provable codes are filled through AI/location decisions before write planning, while conflicts remain blocked.
 - Full-context AI completion requires content-field saturation before write planning. For BAFU and any profile that requires full-context AI completion, curation gate must block rows when schema/YAML/source trace/context show provable values for formal TIDAS fields that remain empty, placeholder-like, or underdescribed. Typical saturation targets include process `common:synonyms`, percentage supply/production covered, uncertainty adjustments, flow `locationOfSupply`, flow name quantitative properties, source bibliographic descriptions, and official contact fields. AI should resolve these in one evidence-backed patch pass per authoring package whenever possible.
 - Name-plan quality is a hard content-saturation gate. `baseName` must not retain unsplit source full-name fragments such as `production mix`, `production OM`, `at freight ship`, `at plant`, `at sawmill`, braced geography codes, or quantitative qualifiers such as `wet, measured as dry mass`; `treatmentStandardsRoutes` must not contain generated placeholders like `source-described route`; `mixAndLocationTypes` must not be only a bare location code when the source gives an availability/mix/location-type phrase. These rows require AI name-plan patch evidence before write planning.
@@ -106,6 +125,7 @@ These rules are mandatory for code changes in this repository:
 - Every new or changed Foundry command must keep its stage contract, command metadata, output artifact list, tests, and governed docs in sync with the runtime behavior.
 - Do not retain empty compatibility or deprecation scaffolding. Remove old aliases, unused command categories, and orphaned draft docs once command metadata, tests, docs, and docpact show no remaining consumer.
 - Tests must follow the repository test layout in `test/README.md`: pure logic in `test/unit`, command contracts in `test/commands`, multi-command workflows in `test/scenarios`, and shared row/report/command helpers in `test/fixtures`. Do not add numbered regression buckets such as `full-context-gate-07.test.mjs`; name scenario files after the behavior surface they cover.
+- Development is test-driven. Start with a failing behavior or real-case characterization, make the smallest typed change, and rerun the focused test before the full `pnpm test` and toolchain gates. A rename-only TypeScript migration without stronger boundary assertions is not complete.
 - Every command that can block or defer scopes must write both a complete machine ledger and a reader-facing run report. The ledger is the row-level source of truth; the report must summarize concrete blocker reasons, affected scopes, blocking dependency types or examples, required human action, and the rerun path.
 - Incremental imports must not fall back to full owner-draft rewrites. The composer may preserve current values only through entity/path/value/evidence-bound policy, must hold unstable arrays and absent dependencies, must emit no delete or empty CLI contract, and must log every schema-valid input conversion exactly once with input hashes, evidence, outcome, duration, and output row binding.
 - `dataset-bundle-sample-rows` row files are authoring inputs, not commit-ready payloads. Its report must make the stage order explicit: raw context/validate/QA/curation gate first, then AI/deterministic apply, then `dataset-curation-cleanup`, final validation, dry-run, commit, and readback. Generated dry-run/commit commands must point to cleanup output rows, not raw materialized rows.

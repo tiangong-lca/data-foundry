@@ -26,19 +26,19 @@ The local `$foundry-tidas-import` skill is the Foundry orchestration entrypoint 
 ## Route Examples
 
 ```bash
-npm run capabilities:list -- --class tidas-contract-context
-npm run capabilities:list -- --class external-lca-package-conversion
-npm run capabilities:list -- --class source-document-authoring
-npm run capabilities:list -- --class source-evidence-runtime-skill
-npm run task:route -- --kind external-dataset-curated-import --dataset-type process --required-gates contract,schema,qa,curation
+pnpm capabilities:list -- --class tidas-contract-context
+pnpm capabilities:list -- --class external-lca-package-conversion
+pnpm capabilities:list -- --class source-document-authoring
+pnpm capabilities:list -- --class source-evidence-runtime-skill
+pnpm task:route -- --kind external-dataset-curated-import --dataset-type process --required-gates contract,schema,qa,curation
 node scripts/foundry.mjs tidas-handshake
 node scripts/foundry.mjs dataset-tidas-import --input ./source-package --output ./conversion
 node scripts/foundry.mjs dataset-tidas-validate --rows-file ./rows/processes.jsonl --type process --out-dir ./schema
-npx --yes skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth
-npx --yes skills@latest use https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search --full-depth
-tiangong-lca dataset curation-queue build --processes ./rows/processes.jsonl --flows ./rows/flows.jsonl --support ./rows/sources.jsonl --out-dir ./curation-queue
-tiangong-lca dataset curation-queue next --queue-dir ./curation-queue --json
-tiangong-lca dataset curation-queue verify --queue-dir ./curation-queue --type process --json
+pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth
+pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search --full-depth
+pnpm exec tiangong-lca dataset curation-queue build --processes ./rows/processes.jsonl --flows ./rows/flows.jsonl --support ./rows/sources.jsonl --out-dir ./curation-queue
+pnpm exec tiangong-lca dataset curation-queue next --queue-dir ./curation-queue --json
+pnpm exec tiangong-lca dataset curation-queue verify --queue-dir ./curation-queue --type process --json
 node scripts/foundry.mjs dataset-curation-gate --type process --rows-file ./rows/processes.jsonl --schema-report ./schema/report.json --qa-report ./qa/process-qa-report.json --schema-file ./contract/schema.json --yaml-file ./contract/methodology.yaml --profile bafu --queue-dir ./curation-queue --classification-queue ./classification-authoring-queue.jsonl --location-queue ./location-authoring-queue.jsonl
 node scripts/foundry.mjs dataset-authoring-task-build --curation-gate-report ./curation-gate/dataset-curation-gate-report.json --out-dir ./authoring-tasks
 node scripts/foundry.mjs dataset-authoring-patch-collect --task-manifest ./authoring-tasks/authoring-task-manifest.json
@@ -47,12 +47,12 @@ node scripts/foundry.mjs dataset-post-authoring-finalize --type <process|flow|li
 node scripts/foundry.mjs dataset-commit-handoff-plan --finalize-report ./post-authoring-finalize/dataset-post-authoring-finalize-report.json --state-code <expected-state-code>
 node scripts/foundry.mjs dataset-post-write-closeout --handoff-plan ./post-authoring-finalize/commit-handoff/dataset-commit-handoff-plan.json --commit-report ./post-authoring-finalize/commit/<type-command>/<summary-or-report>.json --post-write-verify-report ./post-authoring-finalize/commit-handoff/post-write-verify/outputs/remote-verification-report.json --out-dir ./post-write-closeout
 node scripts/foundry.mjs dataset-import-completion-report --task-dir . --require-type process --out-dir ./import-completion
-npm run task:route -- --kind source-evidence-dataset-development --dataset-type process --required-gates context,schema,qa,curation
+pnpm task:route -- --kind source-evidence-dataset-development --dataset-type process --required-gates context,schema,qa,curation
 ```
 
 Missing classes must be resolved in the owning project. Add Foundry-local code only for task routing, manifests, reports, and policy checks.
 
-Runtime source-evidence skills are resolved through the npm `skills` package and treated as external evidence channels. Foundry may install them under `.agents/skills` for local agent access and record their resolution and outputs, but should not commit their `SKILL.md`, scripts, or lockfile unless a task explicitly chooses pinned reproducibility over latest-source behavior.
+Runtime source-evidence skills are resolved through `pnpm dlx skills@latest` and treated as external evidence channels. Foundry may install them under `.agents/skills` for local agent access and record their resolution and outputs, but should not commit their `SKILL.md`, scripts, or lockfile unless a task explicitly chooses pinned reproducibility over latest-source behavior.
 
 Import lanes may keep raw converted rows in the source language, but final import/write-ready rows must include English for TIDAS-required multilingual fields while preserving non-English source-language variants. Use contract context, schema, QA, curation, cleanup, reference, dry-run, and verification gates to prove that required translations were completed from full task context before write planning.
 

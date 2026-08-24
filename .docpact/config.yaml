@@ -5,8 +5,9 @@ layout: repo
 # Review note, 2026-07-24: Issue #47 adds the offline topology-convergence F/P/D composer. Candidate topology, fresh owner/public/foreign census, audited classifications, occurrence-keyed multilingual preservation, fixed CLI fingerprint, zero-inbound delete candidates, and hash-chained logs remain local planning evidence with no DML authority.
 # Review note, 2026-07-27: Issue #50's Rust tidas cutover adds an explicit self-governance rule for retained Python-era import plans so they cannot silently regain executable authority.
 # Review note, 2026-07-30: Issue #54 aligns identity-preflight requests to one lexical_weight plus semantic_weight without changing Foundry ownership or remote mutation authority.
-lastReviewedAt: "2026-07-30"
-lastReviewedCommit: "7b9cebaaab2f8f35fce7aed48d3a76513d205496"
+# Review note, 2026-08-25: Issue #63 establishes the pnpm 11.23 / Node 24 / TypeScript 7.0.2 typed spine, explicit JavaScript migration inventory, Oxlint boundary, CLI 0.1.0 command pin, and clean arbitrary-worktree validation. Existing ownership and routing semantics are unchanged.
+lastReviewedAt: "2026-08-25"
+lastReviewedCommit: "c996633832ea23bf7883c7b219f524bf28e6ce7e"
 
 catalog:
   repos:
@@ -44,14 +45,27 @@ ownership:
     - id: foundry-control-plane
       paths:
         include:
+          - .codex/hooks/**
+          - .codex/hooks.json
+          - .env.example
+          - .github/workflows/**
+          - .husky/**
+          - .nvmrc
+          - .oxlintrc.json
+          - .prettierignore
           - package.json
+          - pnpm-lock.yaml
+          - pnpm-workspace.yaml
+          - prettier.config.cjs
           - scripts/**
           - specs/automated-lca-capability-registry.json
           - specs/canonical-support/**
           - specs/capability-ownership-rules.json
           - specs/data-foundry-service.md
           - specs/schemas/**
+          - specs/typescript-migration-inventory.json
           - specs/workspace-capability-adapters.md
+          - tsconfig*.json
       ownerRepo: data-foundry
     - id: foundry-test-harness
       paths:
@@ -83,10 +97,19 @@ coverage:
     - WORKFLOW.md
     - .docpact/config.yaml
     - .gitignore
+    - .github/workflows/**
+    - .husky/**
+    - .nvmrc
+    - .oxlintrc.json
+    - .prettierignore
     - package.json
+    - pnpm-lock.yaml
+    - pnpm-workspace.yaml
+    - prettier.config.cjs
     - scripts/**
     - test/**
     - specs/**
+    - tsconfig*.json
     - docs/**
     - .agents/shared-skills.json
     - .agents/skills/**
@@ -115,14 +138,24 @@ routing:
         - docs/**/*.md
     control-plane:
       paths:
+        - .github/workflows/**
+        - .husky/**
+        - .nvmrc
+        - .oxlintrc.json
+        - .prettierignore
         - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - prettier.config.cjs
         - scripts/**
         - specs/automated-lca-capability-registry.json
         - specs/canonical-support/**
         - specs/capability-ownership-rules.json
         - specs/data-foundry-service.md
         - specs/schemas/**
+        - specs/typescript-migration-inventory.json
         - specs/workspace-capability-adapters.md
+        - tsconfig*.json
     import-profile:
       paths:
         - specs/import-profiles.json
@@ -164,6 +197,8 @@ docInventory:
     - test/README.md
     - docs/account-context-policy.md
     - docs/countable-product-functional-unit-design.md
+    - docs/codex-stop-hook.md
+    - docs/file-organization.md
     - docs/workspace-project-map.md
     - docs/agent-harness-cli-comparison.md
     - docs/data-governance-loop.md
@@ -210,8 +245,30 @@ rules:
     scope: repo
     repo: data-foundry
     triggers:
+      - path: .codex/hooks/**
+        kind: agent-acceptance-hook
+      - path: .codex/hooks.json
+        kind: agent-hook-config
+      - path: .env.example
+        kind: runtime-env-surface
+      - path: .github/workflows/**
+        kind: continuous-integration
+      - path: .husky/**
+        kind: local-delivery-gate
+      - path: .nvmrc
+        kind: node-runtime-contract
+      - path: .oxlintrc.json
+        kind: lint-contract
+      - path: .prettierignore
+        kind: formatter-ignore-contract
       - path: package.json
         kind: command-surface
+      - path: pnpm-lock.yaml
+        kind: dependency-lock
+      - path: pnpm-workspace.yaml
+        kind: package-workspace-contract
+      - path: prettier.config.cjs
+        kind: formatter-contract
       - path: scripts/**
         kind: local-runtime
       - path: specs/automated-lca-capability-registry.json
@@ -224,8 +281,12 @@ rules:
         kind: service-contract
       - path: specs/schemas/**
         kind: artifact-schema-contract
+      - path: specs/typescript-migration-inventory.json
+        kind: typed-migration-ledger
       - path: specs/workspace-capability-adapters.md
         kind: adapter-contract
+      - path: tsconfig*.json
+        kind: typescript-build-contract
       - path: docs/safety-policy.md
         kind: remote-write-safety-policy
       - path: docs/foundry-ai-navigation.md
@@ -243,6 +304,10 @@ rules:
         mode: review_or_update
       - path: docs/workspace-project-map.md
         mode: review_or_update
+      - path: docs/codex-stop-hook.md
+        mode: must_exist
+      - path: docs/env-surface-policy.md
+        mode: must_exist
       - path: specs/capability-ownership-rules.json
         mode: must_exist
     reason: Command wrappers, route plans, and capability ownership changes must preserve Foundry as task/workspace/profile/gate control.
@@ -254,6 +319,8 @@ rules:
         kind: import-profile-index
       - path: docs/import-profiles/**
         kind: import-profile-doc
+      - path: docs/bafu-import-runbook.md
+        kind: bafu-import-runbook
     requiredDocs:
       - path: specs/import-profiles.json
         mode: review_or_update
@@ -350,6 +417,8 @@ rules:
     scope: repo
     repo: data-foundry
     triggers:
+      - path: .env.example
+        kind: runtime-env-surface
       - path: .agents/shared-skills.json
         kind: runtime-skill-config
       - path: .agents/skills/**
@@ -372,12 +441,24 @@ rules:
     scope: repo
     repo: data-foundry
     triggers:
+      - path: .codex/hooks/**
+        kind: executable-acceptance-hook
+      - path: .codex/hooks.json
+        kind: acceptance-hook-config
       - path: docs/agent-harness-cli-comparison.md
         kind: reference-doc
+      - path: docs/codex-stop-hook.md
+        kind: acceptance-hook-runbook
+      - path: docs/file-organization.md
+        kind: repository-placement-policy
     requiredDocs:
       - path: docs/agent-harness-cli-comparison.md
         mode: review_or_update
-    reason: Acceptance-loop notes are retained reference material and should remain explicitly self-governed when edited.
+      - path: docs/codex-stop-hook.md
+        mode: must_exist
+      - path: docs/file-organization.md
+        mode: must_exist
+    reason: Acceptance-loop notes, the Stop-hook runbook, and repository placement policy must stay aligned with the executable acceptance surface.
   - id: foundry-account-context-policy
     scope: repo
     repo: data-foundry

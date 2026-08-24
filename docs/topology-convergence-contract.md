@@ -21,8 +21,9 @@ checkPaths:
   - test/commands/topology-convergence.test.mjs
   - test/scenarios/topology-convergence-handoff.test.mjs
   - docs/execution-capsule-contract.md
-lastReviewedAt: 2026-07-24
+lastReviewedAt: 2026-08-25
 lastReviewedCommit: 669ca59a21b0c637c7cb36530643945e255b137a
+lastReviewedNote: "Reviewed for Issue #63: the stage-contract module moved to TypeScript without changing topology composition semantics or artifacts."
 ---
 
 # Topology Convergence Contract

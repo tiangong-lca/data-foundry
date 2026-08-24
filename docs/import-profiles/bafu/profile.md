@@ -37,7 +37,7 @@ For unstructured-only inputs, use an upstream source-evidence and draft-dataset 
 After the curation queue exists, every worker must ask the CLI for the next action before changing rows:
 
 ```bash
-npx --yes @tiangong-lca/cli@latest dataset curation-queue next \
+pnpm exec tiangong-lca dataset curation-queue next \
   --queue-dir .foundry/workspaces/<task-id>/curation-queue \
   --entity-type <support|flow|process> \
   --limit 1 \
@@ -78,7 +78,7 @@ When a BAFU import attempt exposes a reusable defect in Rust tidas, the CLI/SDK 
 
 1. Fix the defect in the owning repository and rebuild the affected local tool before invoking it from Foundry.
 2. Start a fresh downstream workspace from this BAFU profile, the current source manifest, and the selected converted `process-bundles/index.json`.
-3. Build a fresh entity queue with `npx --yes @tiangong-lca/cli@latest dataset curation-queue build`, using the current support, flow, process, external-flow-ref, and packaged bundle closure files.
+3. Build a fresh entity queue with `pnpm exec tiangong-lca dataset curation-queue build`, using the current support, flow, process, external-flow-ref, and packaged bundle closure files.
 4. Run `curation-queue next` through support, flow, and process scopes until the requested scope returns `complete`; multiple workers may claim independent tasks up to the task `max_parallelism`.
 5. If a task is blocked, report the exact entity task, command, input artifact, output artifact, validation report, owning repository defect or missing canonical database support, and affected dependency closure. Keep unrelated runnable tasks moving instead of summarizing a prewrite gate with remaining runnable `next` actions as the final blocker.
 6. For scopes that are not blocked, run prewrite verify, policy-gated formal BAFU account write, and readback verify.
@@ -111,7 +111,7 @@ Allowed checkpoint statuses are `pending`, `running`, `passed`, `failed`, and `w
 Before stage 8 may commit anything to the BAFU account, Foundry must run:
 
 ```bash
-npx --yes @tiangong-lca/cli@latest dataset curation-queue verify \
+pnpm exec tiangong-lca dataset curation-queue verify \
   --queue-dir .foundry/workspaces/<task-id>/curation-queue \
   --out-dir .foundry/workspaces/<task-id>/prewrite-evidence-gate
 ```
@@ -172,7 +172,7 @@ Remote writes must use the approved account context and official CLI/platform wr
 
 ### 9. Readback Verify
 
-The workflow is not complete when the write command succeeds. It is complete only after remote readback confirms that all intended rows exist in the BAFU account and match the final curated payloads or an explicitly documented accepted difference. Use `npx --yes @tiangong-lca/cli@latest dataset verify-remote --compare-root-payload --target-user-id <bafu-user-id> --state-code <expected-code>` for the committed root rows and retain its `remote-verification-report.json`.
+The workflow is not complete when the write command succeeds. It is complete only after remote readback confirms that all intended rows exist in the BAFU account and match the final curated payloads or an explicitly documented accepted difference. Use `pnpm exec tiangong-lca dataset verify-remote --compare-root-payload --target-user-id <bafu-user-id> --state-code <expected-code>` for the committed root rows and retain its `remote-verification-report.json`.
 
 For large BAFU resumes, the ready-scope batch runner should use the resumable controls instead of restarting from the original ready order: `--pending-only`, `--selection-order estimated-weight-asc`, a fresh `--pause-file`, and an operator-chosen `--stop-after-blocked` threshold. `--preflight-only` is the read-only way to inspect the next selected scopes and the active skip/blocker state before opening the writer. The batch support identity cache (`import-ledger/verified-support-identities.jsonl`) is part of the run ledger: once a support contact/source closeout is verified, later scopes may reuse that identity and skip duplicate support handoff while preserving the process/flow commit and post-write verification requirements.
 
