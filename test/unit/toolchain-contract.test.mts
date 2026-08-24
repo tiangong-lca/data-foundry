@@ -17,7 +17,9 @@ type PackageJson = {
   devDependencies?: Record<string, string>;
 };
 type MigrationInventory = {
+  baseline_commit: string;
   baseline_count: number;
+  baseline_path_list_sha256: string;
   baseline_paths: string[];
   remaining_count: number;
   canonical_path_list_sha256: string;
@@ -34,6 +36,8 @@ const inventory = readJson<MigrationInventory>("specs/typescript-migration-inven
 const packageManager = "pnpm@11.23.0";
 const packageManagerVersion = "11.23.0";
 const typescriptVersion = "7.0.2";
+const baselineCommit = "c996633832ea23bf7883c7b219f524bf28e6ce7e";
+const baselinePathListSha256 = "ac424319452a956dacee79a5a8ce83f2b2cf090a10b6cd1dc8c224d7aaacd904";
 const contractPath = "test/unit/toolchain-contract.test.mts";
 const extensionlessPackageCommandFiles = new Set([
   ".env.example",
@@ -170,7 +174,23 @@ test("the exact tracked JavaScript migration inventory cannot grow or drift sile
   const digest = createHash("sha256").update(canonical).digest("hex");
   const baselinePaths = [...inventory.baseline_paths].sort();
   const baselineSet = new Set(baselinePaths);
+  const committedBaselinePaths = execFileSync(
+    "git",
+    ["ls-tree", "-r", "--name-only", baselineCommit],
+    commandOptions(),
+  )
+    .split(/\r?\n/u)
+    .filter((file) => /\.(?:cjs|mjs)$/u.test(file))
+    .sort();
+  const committedBaselineCanonical = committedBaselinePaths.map((file) => `${file}\n`).join("");
 
+  assert.equal(inventory.baseline_commit, baselineCommit);
+  assert.equal(inventory.baseline_path_list_sha256, baselinePathListSha256);
+  assert.equal(
+    createHash("sha256").update(committedBaselineCanonical).digest("hex"),
+    baselinePathListSha256,
+  );
+  assert.deepEqual(baselinePaths, committedBaselinePaths);
   assert.equal(new Set(baselinePaths).size, baselinePaths.length);
   assert.equal(baselinePaths.length, inventory.baseline_count);
   assert.ok(inventory.remaining_count <= inventory.baseline_count);
@@ -206,11 +226,20 @@ test("four-platform CI installs only from the frozen pnpm contract", () => {
     "macos-latest",
     "ubuntu-24.04-arm",
     "runtime: node@24",
+    "fetch-depth: 0",
     "pnpm install --frozen-lockfile",
     "pnpm prepush:gate",
   ]) {
     assert.match(workflow, new RegExp(escapeRegExp(expected), "u"));
   }
+});
+
+test("golden comparison is portable and cannot collapse into HEAD self-comparison", () => {
+  const source = readText("scripts/foundry-golden-diff.mjs");
+  assert.match(source, /merge-base/u);
+  assert.match(source, /FOUNDRY_GOLDEN_BASE/u);
+  assert.doesNotMatch(source, /spawnSync\(\s*["']diff["']/u);
+  assert.doesNotMatch(source, /worktree["'],\s*["']add["'].*["']HEAD["']/su);
 });
 
 function trackedFiles(): string[] {

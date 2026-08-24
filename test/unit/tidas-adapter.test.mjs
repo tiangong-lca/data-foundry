@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import {
   resolveTidasInvocation,
+  resolveTidasProcessCommand,
   runTidasHandshake,
   runTidasImport,
   runTidasRowsValidation,
@@ -72,6 +73,22 @@ test("executable/config precedence is option, environment, then PATH", () => {
     "TIDAS_BIN",
   );
   assert.equal(resolveTidasInvocation({}, {}).executable_source, "PATH");
+});
+
+test("script-backed TIDAS commands execute through Node on every platform", () => {
+  const script = path.join(repoRoot, "test", "fixtures", "fake-tidas.mjs");
+  assert.deepEqual(resolveTidasProcessCommand(script, "win32"), {
+    command: process.execPath,
+    prefixArgs: [script],
+  });
+  assert.deepEqual(resolveTidasProcessCommand(script, "linux"), {
+    command: process.execPath,
+    prefixArgs: [script],
+  });
+  assert.deepEqual(resolveTidasProcessCommand("tidas", "win32"), {
+    command: "tidas",
+    prefixArgs: [],
+  });
 });
 
 test("handshake accepts compatible 0.2.x and rejects another minor line", () => {
