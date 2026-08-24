@@ -435,7 +435,7 @@ function installPortableBaselineProcessAdapters() {
   // The historical baseline predates script-backed executable dispatch. Reuse
   // only the two current process adapters on Windows so its behavior surface
   // can execute; focused adapter tests retain responsibility for these shims.
-  for (const fileName of ["foundry-runtime-utils.mjs", "tidas-adapter.mjs"]) {
+  for (const fileName of ["foundry-runtime-utils.mjs", "surface-audit.mjs", "tidas-adapter.mjs"]) {
     copyFileSync(
       path.join(repoRoot, "scripts", "lib", fileName),
       path.join(beforeRoot, "scripts", "lib", fileName),
