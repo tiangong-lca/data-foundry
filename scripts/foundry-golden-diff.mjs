@@ -430,15 +430,17 @@ function linkLegacyInstalledCliAssets() {
   symlinkSync(installedCliRoot, legacyCliRoot, process.platform === "win32" ? "junction" : "dir");
 }
 
-function installPortableBaselineTidasAdapter() {
+function installPortableBaselineProcessAdapters() {
   if (process.platform !== "win32") return;
   // The historical baseline predates script-backed executable dispatch. Reuse
-  // only the current adapter on Windows so its behavior surface can execute;
-  // focused adapter tests retain responsibility for this compatibility shim.
-  copyFileSync(
-    path.join(repoRoot, "scripts", "lib", "tidas-adapter.mjs"),
-    path.join(beforeRoot, "scripts", "lib", "tidas-adapter.mjs"),
-  );
+  // only the two current process adapters on Windows so its behavior surface
+  // can execute; focused adapter tests retain responsibility for these shims.
+  for (const fileName of ["foundry-runtime-utils.mjs", "tidas-adapter.mjs"]) {
+    copyFileSync(
+      path.join(repoRoot, "scripts", "lib", fileName),
+      path.join(beforeRoot, "scripts", "lib", fileName),
+    );
+  }
 }
 
 function foundryCommand(root, args, outFile, env = {}, expectedStatus = 0) {
@@ -701,7 +703,7 @@ try {
   run("git", ["worktree", "add", "--detach", "--quiet", beforeRoot, goldenBase.commit], {
     cwd: repoRoot,
   });
-  installPortableBaselineTidasAdapter();
+  installPortableBaselineProcessAdapters();
   linkLegacyInstalledCliAssets();
   linkInstalledDependencies(beforeRoot);
   runSide("before", beforeRoot, fixture, cliPath);
