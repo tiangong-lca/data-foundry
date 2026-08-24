@@ -55,7 +55,7 @@ function writeJsonLines(filePath, rows) {
 
 function repoRelative(repoRoot, filePath) {
   if (!filePath) return null;
-  return path.relative(repoRoot, filePath);
+  return path.relative(repoRoot, filePath).split(path.sep).join(path.posix.sep);
 }
 
 function asText(value) {

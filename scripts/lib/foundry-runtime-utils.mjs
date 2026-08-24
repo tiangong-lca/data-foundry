@@ -185,7 +185,7 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
   }
 
   function repoRelativePath(filePath) {
-    return path.relative(repoRoot, filePath);
+    return path.relative(repoRoot, filePath).split(path.sep).join(path.posix.sep);
   }
 
   function repoRelativeMaybe(filePath) {

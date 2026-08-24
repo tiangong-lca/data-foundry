@@ -1568,7 +1568,7 @@ export function createTopologyConvergenceCommands({ repoRoot }) {
       return {
         status,
         production_authority: false,
-        out_dir: path.relative(repoRoot, outDir),
+        out_dir: path.relative(repoRoot, outDir).split(path.sep).join(path.posix.sep),
         counts,
         p0,
         p1,
