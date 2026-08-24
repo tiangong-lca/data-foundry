@@ -37,7 +37,7 @@ checkPaths:
   - specs/typescript-migration-inventory.json
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 6d3a50a49ae091f5fd0a050c217dc56cb26f6d6a
+lastReviewedCommit: 604b931b27e79861cdc4b68fc58e4bf95454d23b
 lastReviewedNote: "Reviewed for Issue #63: pnpm 11.23, Node 24, the TypeScript 7 typed-spine boundary, and the published CLI 0.1.0 invocation contract."
 ---
 

@@ -30,7 +30,7 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 6d3a50a49ae091f5fd0a050c217dc56cb26f6d6a
+lastReviewedCommit: 604b931b27e79861cdc4b68fc58e4bf95454d23b
 lastReviewedNote: "Reviewed for Issue #63: pnpm-only TS7 foundation, staged JavaScript migration inventory, clean-worktree gates, and CLI 0.1.0 examples."
 ---
 
