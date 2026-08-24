@@ -48,6 +48,7 @@ ownership:
           - .codex/hooks/**
           - .codex/hooks.json
           - .env.example
+          - .gitattributes
           - .github/workflows/**
           - .husky/**
           - .nvmrc
@@ -251,6 +252,8 @@ rules:
         kind: agent-hook-config
       - path: .env.example
         kind: runtime-env-surface
+      - path: .gitattributes
+        kind: cross-platform-line-endings
       - path: .github/workflows/**
         kind: continuous-integration
       - path: .husky/**

@@ -220,6 +220,7 @@ test("Foundry pins the published CLI runtime and high-risk audit closure", () =>
 
 test("four-platform CI installs only from the frozen pnpm contract", () => {
   const workflow = readText(".github/workflows/quality-gate.yml");
+  assert.match(readText(".gitattributes"), /^\*\s+text=auto\s+eol=lf$/mu);
   for (const expected of [
     "ubuntu-latest",
     "windows-latest",
