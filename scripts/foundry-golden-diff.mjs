@@ -639,6 +639,7 @@ function normalize(value) {
     .replace(skillsPackageCommandPattern, "<skills-runtime>")
     .replace(skillsCommandReferencePattern, "<skills-runtime>")
     .replace(/'([A-Za-z0-9_./:@%+=,<>-]+)'/gu, "$1")
+    .replace(/^'([^'\s]+ [^'\s]+)'(?=\s)/u, "$1")
     .replace(/\.tidas-validate-stage-[A-Za-z0-9._-]+/gu, ".tidas-validate-stage-<id>")
     .replace(/(?:\.\.\/)+(?:private\/)?tmp\/foundry-golden-diff-[A-Za-z0-9._/-]+/gu, "<temp-path>")
     .replace(/foundry-golden-diff-[A-Za-z0-9._-]+/gu, "foundry-golden-diff-<id>");
