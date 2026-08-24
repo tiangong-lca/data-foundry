@@ -20,7 +20,7 @@ checkPaths:
   - test/scenarios/incremental-change-set-handoff.test.mjs
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 849d6ac14d357bd445a9fa75a9c18dc16a2a411a
+lastReviewedCommit: 4d415fac33799011d37094ac79122c1eef3a7855
 lastReviewedNote: "Reviewed for Issue #63: the stage-contract module moved to TypeScript without changing incremental composition semantics or artifacts."
 ---
 
