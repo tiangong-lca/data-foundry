@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Control plane for TianGong LCA external dataset import and TIDAS authoring work.",
+  "packageManager": "pnpm@11.23.0",
   "scripts": {
+    "foundry": "node scripts/foundry.mjs",
     "init:runtime": "node scripts/foundry.mjs init",
     "doctor": "node scripts/foundry.mjs doctor",
     "workspace:map": "node scripts/foundry.mjs workspace-map",
@@ -20,44 +22,59 @@
     "storage:check": "node scripts/foundry.mjs storage-check",
     "surface:audit": "node scripts/foundry.mjs surface-audit",
     "acceptance:check": "node scripts/foundry.mjs acceptance-check",
-    "format": "prettier . --write",
-    "format:check": "prettier . --check",
-    "lint-staged": "lint-staged",
-    "skills:list": "npx --yes skills@latest list --json",
-    "skills:update": "npx --yes skills@latest update --project --yes",
-    "skills:install:shared": "npx --yes skills@latest add ../tiangong-lca-skills --skill external-dataset-curated-import source-evidence-dataset-development dataset-rls-maintenance --agent '*' --yes --full-depth && npx --yes skills@latest add https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search document-granular-decompose --agent '*' --yes --full-depth",
-    "skills:source-evidence:use:sci": "npx --yes skills@latest use https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search --full-depth",
-    "skills:source-evidence:use:document": "npx --yes skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth",
-    "skills:use": "npx --yes skills@latest use",
-    "test": "node --test \"test/**/*.test.mjs\"",
-    "test:unit": "node --test \"test/unit/*.test.mjs\"",
-    "test:commands": "node --test \"test/commands/*.test.mjs\"",
-    "test:scenarios": "node --test \"test/scenarios/*.test.mjs\"",
+    "format": "pnpm exec prettier . --write",
+    "format:check": "pnpm exec prettier . --check",
+    "lint:oxlint": "pnpm exec oxlint --type-aware --format=stylish --deny-warnings ./scripts ./test",
+    "lint:prettier": "pnpm format:check",
+    "lint": "pnpm lint:oxlint && pnpm lint:prettier && pnpm typecheck",
+    "lint-staged": "pnpm exec lint-staged",
+    "typecheck": "pnpm exec tsc --noEmit",
+    "build": "pnpm exec tsc -p tsconfig.build.json",
+    "skills:list": "pnpm dlx skills@latest list --json",
+    "skills:update": "pnpm dlx skills@latest update --project --yes",
+    "skills:install:shared": "pnpm dlx skills@latest add ../tiangong-lca-skills --skill external-dataset-curated-import source-evidence-dataset-development dataset-rls-maintenance --agent '*' --yes --full-depth && pnpm dlx skills@latest add https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search document-granular-decompose --agent '*' --yes --full-depth",
+    "skills:source-evidence:use:sci": "pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search --full-depth",
+    "skills:source-evidence:use:document": "pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth",
+    "skills:use": "pnpm dlx skills@latest use",
+    "test": "node --test \"test/**/*.test.mjs\" \"test/**/*.test.mts\"",
+    "test:unit": "node --test \"test/unit/*.test.mjs\" \"test/unit/*.test.mts\"",
+    "test:commands": "node --test \"test/commands/*.test.mjs\" \"test/commands/*.test.mts\"",
+    "test:scenarios": "node --test \"test/scenarios/*.test.mjs\" \"test/scenarios/*.test.mts\"",
+    "test:toolchain": "node --test test/unit/toolchain-contract.test.mts",
     "golden:diff": "node scripts/foundry-golden-diff.mjs",
-    "ncu": "ncu",
-    "ncu:update": "ncu -u",
+    "ncu": "pnpm exec ncu",
+    "ncu:update": "pnpm exec ncu -u",
     "prepare": "husky",
     "tasks:list": "node scripts/foundry.mjs tasks-list",
     "tasks:check": "node scripts/foundry.mjs tasks-check",
-    "task:complete": "node scripts/foundry.mjs task-complete"
+    "task:complete": "node scripts/foundry.mjs task-complete",
+    "install:frozen": "pnpm install --frozen-lockfile",
+    "audit:high": "pnpm audit --audit-level high",
+    "prepush:gate": "pnpm lint && pnpm test:toolchain && pnpm test && pnpm golden:diff && pnpm surface:audit && pnpm build && pnpm audit:high"
   },
   "engines": {
-    "node": ">=24"
+    "node": ">=24 <25",
+    "pnpm": "11.23.0"
   },
   "license": "MIT",
   "devDependencies": {
-    "husky": "^9.1.7",
-    "lint-staged": "^17.0.7",
-    "npm-check-updates": "^22.2.3",
-    "prettier": "^3.8.3",
-    "prettier-plugin-organize-imports": "^4.3.0"
+    "@types/node": "24.13.3",
+    "husky": "9.1.7",
+    "lint-staged": "17.3.0",
+    "npm-check-updates": "23.1.0",
+    "oxlint": "1.80.0",
+    "oxlint-tsgolint": "7.0.2001",
+    "prettier": "3.9.6",
+    "typescript": "7.0.2"
   },
   "lint-staged": {
-    "*.{js,mjs,cjs,json,md,yml,yaml}": [
+    "*.{js,mjs,cjs,ts,mts,cts}": "oxlint --type-aware --format=stylish --deny-warnings",
+    "*.{js,mjs,cjs,ts,mts,cts,json,md,yml,yaml}": [
       "prettier --write"
     ]
   },
   "dependencies": {
+    "@tiangong-lca/cli": "0.1.0",
     "ajv": "8.20.0"
   }
 }

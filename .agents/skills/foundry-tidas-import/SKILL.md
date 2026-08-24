@@ -12,7 +12,7 @@ Use this skill as the Foundry-local entrypoint for end-to-end external data impo
 - Keep Foundry as the control plane: task routing, manifests, curation packages, cleanup, and policy checks live here.
 - Do not call Supabase directly, parse raw credentials, or add database CRUD code to this skill.
 - Do not copy shared `flow-hybrid-search`, `process-hybrid-search`, `lifecyclemodel-hybrid-search`, remote-ops, schema, YAML, converter, or publish internals into Foundry.
-- Do not vendor external source-evidence research skills into Foundry. Resolve fast-moving Tiangong KB skills with `npx skills` at runtime and record the upstream ref in the task workspace.
+- Do not vendor external source-evidence research skills into Foundry. Resolve fast-moving Tiangong KB skills with `pnpm dlx skills@latest` at runtime and record the upstream ref in the task workspace.
 - Use SDK/CLI artifacts for schema, YAML, rulesets, conversion, validation, deterministic QA, dry-run, commit, and remote verification.
 - Use `$foundry-tidas-authoring` only for AI semantic repair from Foundry authoring tasks. For identity, classification, and location blockers, AI writes structured decision files; for other field gaps, AI writes structured patch files. AI never writes database rows.
 - AI-authored rows can enter the remote-write chain only after AI semantic evidence proves the AI used the full SDK schema, methodology YAML, runtime ruleset, source row, entity payload, profile context, and queue/dependency context. Identity fixes prove this with `identity-decisions-apply`; classification fixes prove this with `classification-decisions-apply`; location fixes prove this with `location-decisions-apply`; other field fixes prove this with authoring patch evidence.
@@ -31,7 +31,7 @@ Use this skill as the Foundry-local entrypoint for end-to-end external data impo
 Use this lane for zipped or directory datasets supported by unified Rust `tidas import`.
 
 ```bash
-tiangong-lca dataset context-pack \
+pnpm exec tiangong-lca dataset context-pack \
   --type process \
   --profile ai-import \
   --include schema,methodology,ruleset \
@@ -56,7 +56,7 @@ For packaged imports, keep the Rust default process bundle generation enabled. T
 Use this lane for PDF, Excel, office exports, screenshots, or free text that must become candidate TIDAS rows. Resolve the latest runtime `$document-granular-decompose` skill from `https://github.com/tiangong-ai/skills` when document fulltext extraction is needed, then use CLI/Foundry authoring commands to materialize candidate rows.
 
 ```bash
-tiangong-lca dataset author \
+pnpm exec tiangong-lca dataset author \
   --input /abs/path/source.pdf \
   --output-dir .foundry/workspaces/<task-id>/authoring \
   --target-types process,flow \
@@ -67,7 +67,7 @@ tiangong-lca dataset author \
 For SCI paper or academic journal evidence, resolve the latest external `tiangong-kb-sci-search` skill before retrieval:
 
 ```bash
-npm run skills:source-evidence:use:sci
+pnpm skills:source-evidence:use:sci
 ```
 
 Then record the resolution in:
@@ -76,7 +76,7 @@ Then record the resolution in:
 .foundry/workspaces/<task-id>/runtime-skills/runtime-skill-resolution.json
 ```
 
-The record must include the `npx skills` command, source repo `https://github.com/tiangong-ai/skills`, resolved `refs/heads/main` commit from `git ls-remote`, skill name, evidence channel `sci`, timestamp, and output artifact paths. `tiangong-kb-sci-search` is single-source SCI retrieval; do not use it as a report, patent, general web, or all-source search wrapper. Retrieved papers are evidence candidates until field-level evidence records, limitations/conflicts, validation, curation, dry-run, and verification gates accept them.
+The record must include the `pnpm dlx skills` command, source repo `https://github.com/tiangong-ai/skills`, resolved `refs/heads/main` commit from `git ls-remote`, skill name, evidence channel `sci`, timestamp, and output artifact paths. `tiangong-kb-sci-search` is single-source SCI retrieval; do not use it as a report, patent, general web, or all-source search wrapper. Retrieved papers are evidence candidates until field-level evidence records, limitations/conflicts, validation, curation, dry-run, and verification gates accept them.
 
 ## Required Import Sequence
 
@@ -98,7 +98,7 @@ Retain the official `document-validation-batch.v1` evidence and the Foundry comp
 6. Run deterministic QA for target rows where available:
 
 ```bash
-tiangong-lca qa process \
+pnpm exec tiangong-lca qa process \
   --rows-file .foundry/workspaces/<task-id>/rows/processes.jsonl \
   --out-dir .foundry/workspaces/<task-id>/qa/process \
   --json
@@ -107,7 +107,7 @@ tiangong-lca qa process \
 7. Build the entity queue before AI repair:
 
 ```bash
-tiangong-lca dataset curation-queue build \
+pnpm exec tiangong-lca dataset curation-queue build \
   --processes .foundry/workspaces/<task-id>/rows/processes.jsonl \
   --flows .foundry/workspaces/<task-id>/rows/flows.jsonl \
   --support .foundry/workspaces/<task-id>/rows/sources.jsonl \
@@ -117,7 +117,7 @@ tiangong-lca dataset curation-queue build \
 Drive the queue through the CLI:
 
 ```bash
-tiangong-lca dataset curation-queue next \
+pnpm exec tiangong-lca dataset curation-queue next \
   --queue-dir .foundry/workspaces/<task-id>/curation-queue \
   --json
 ```
@@ -280,9 +280,9 @@ node scripts/foundry.mjs dataset-patch-apply \
   --require-action-item-closure
 ```
 
-14. For support rows that mutually reference each other, first build one mixed support rows file containing only writable contact/source rows, then run `dataset-post-authoring-finalize --type support`. Flow Properties and Unit Groups are reference-only: refresh `specs/canonical-support/flow-properties-unit-groups.json` and rewrite converted references to existing canonical database rows before flow/process curation. The finalizer reruns cleanup, Rust tidas batch validation through `dataset-tidas-validate`, location audit, generic `tiangong-lca dataset save-draft --type auto --dry-run`, mutation manifest, and commit handoff on one exact writable support scope. The mutation manifest must show no source identity blockers and no account-local unitgroup/flowproperty rows before commit. When task write policy allows automated commit, a batch runner may commit it through the generated `dataset save-draft --type auto --commit` handoff, then must run post-write verify and closeout before dependent flow/process scopes.
+14. For support rows that mutually reference each other, first build one mixed support rows file containing only writable contact/source rows, then run `dataset-post-authoring-finalize --type support`. Flow Properties and Unit Groups are reference-only: refresh `specs/canonical-support/flow-properties-unit-groups.json` and rewrite converted references to existing canonical database rows before flow/process curation. The finalizer reruns cleanup, Rust tidas batch validation through `dataset-tidas-validate`, location audit, generic `pnpm exec tiangong-lca dataset save-draft --type auto --dry-run`, mutation manifest, and commit handoff on one exact writable support scope. The mutation manifest must show no source identity blockers and no account-local unitgroup/flowproperty rows before commit. When task write policy allows automated commit, a batch runner may commit it through the generated `dataset save-draft --type auto --commit` handoff, then must run post-write verify and closeout before dependent flow/process scopes.
 
-15. For process, flow, and lifecyclemodel rows, run the post-AI prewrite finalize command. It reruns cleanup, Rust tidas validation, deterministic CLI QA, `tiangong-lca dataset classification audit --type location` for schema-derived location-code fields against `tidas_locations_category.json`, post-authoring curation gate, type-specific dry-run (`process save-draft --dry-run`, `flow publish-version --dry-run`, or `lifecyclemodel save-draft --dry-run`), optional remote reference verification, and mutation manifest generation on one exact rows-file scope:
+15. For process, flow, and lifecyclemodel rows, run the post-AI prewrite finalize command. It reruns cleanup, Rust tidas validation, deterministic CLI QA, `pnpm exec tiangong-lca dataset classification audit --type location` for schema-derived location-code fields against `tidas_locations_category.json`, post-authoring curation gate, type-specific dry-run (`process save-draft --dry-run`, `flow publish-version --dry-run`, or `lifecyclemodel save-draft --dry-run`), optional remote reference verification, and mutation manifest generation on one exact rows-file scope:
 
 ```bash
 node scripts/foundry.mjs dataset-post-authoring-finalize \
@@ -314,7 +314,7 @@ node scripts/foundry.mjs dataset-commit-handoff-plan \
 ```
 
 17. Commit only when `dataset-post-authoring-finalize-report.json` and its mutation manifest both report `ready_for_remote_write`, `dataset-commit-handoff-plan.json` reports `ready_for_explicit_commit`, `counts.location_audit_blockers` is `0`, reference closure is proven for the exact write scope, and the task write policy allows the commit mode. If the manifest reports `reference_closure_remote_verify_required`, first write and verify the support scope, then rerun finalize for the dependent scope. If the task policy allows automated batch commit, the runner may run the generated command for that exact scope without per-row human approval; otherwise it stops at handoff.
-18. After commit, run the handoff plan's `post_write_verify` command. It must include `tiangong-lca dataset verify-remote --compare-root-payload --target-user-id <uuid> --state-code <code>` on the same final rows file.
+18. After commit, run the handoff plan's `post_write_verify` command. It must include `pnpm exec tiangong-lca dataset verify-remote --compare-root-payload --target-user-id <uuid> --state-code <code>` on the same final rows file.
 19. Close the import only after Foundry verifies the commit and readback artifacts:
 
 ```bash
@@ -341,7 +341,7 @@ node scripts/foundry.mjs dataset-import-completion-report \
 21. Move the task to done only through the gated task command:
 
 ```bash
-npm run task:complete -- \
+pnpm task:complete -- \
   --task <task-id> \
   --completion-report .foundry/workspaces/<task-id>/import-completion/dataset-import-completion-report.json
 ```

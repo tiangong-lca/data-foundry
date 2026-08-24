@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { resolveTiangongLcaCliRuntimeCommand } from "./foundry-runtime-utils.mjs";
 
 const supportedRootTables = new Map([
   ["flows", { command: "flow", payloadKeys: ["flow", "payload"] }],
@@ -54,7 +55,7 @@ function writeJsonLines(filePath, rows) {
 
 function repoRelative(repoRoot, filePath) {
   if (!filePath) return null;
-  return path.relative(repoRoot, filePath);
+  return path.relative(repoRoot, filePath).split(path.sep).join(path.posix.sep);
 }
 
 function asText(value) {
@@ -193,19 +194,10 @@ function defaultCliGet({ table, id, version, outDir, repoRoot }) {
   fs.mkdirSync(outDir, { recursive: true });
   const stdoutLog = path.join(outDir, `${table}-${id}-${version}.stdout.log`);
   const stderrLog = path.join(outDir, `${table}-${id}-${version}.stderr.log`);
-  const argv = [
-    "npx",
-    "--yes",
-    "@tiangong-lca/cli@latest",
-    config.command,
-    "get",
-    "--id",
-    id,
-    "--version",
-    version,
-    "--json",
-  ];
-  const result = spawnSync(argv[0], argv.slice(1), {
+  const cli = resolveTiangongLcaCliRuntimeCommand();
+  const cliArgs = [config.command, "get", "--id", id, "--version", version, "--json"];
+  const spawnArgs = [...cli.args, ...cliArgs];
+  const result = spawnSync(cli.command, spawnArgs, {
     cwd: repoRoot,
     env: process.env,
     encoding: "utf8",
@@ -216,7 +208,9 @@ function defaultCliGet({ table, id, version, outDir, repoRoot }) {
   const payload = extractPayloadFromGet(table, parsed);
   return {
     ok: result.status === 0 && Boolean(payload),
-    command: argv.join(" "),
+    command: [cli.display, ...cliArgs].join(" "),
+    executable: cli.command,
+    cli_package: cli.package,
     exit_code: result.status ?? 1,
     stdout_log: repoRelative(repoRoot, stdoutLog),
     stderr_log: repoRelative(repoRoot, stderrLog),

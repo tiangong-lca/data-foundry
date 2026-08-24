@@ -63,7 +63,7 @@ export function resolveRepoPath(repoRoot, filePath) {
 }
 
 export function repoRelativePath(repoRoot, filePath) {
-  return path.relative(repoRoot, filePath);
+  return path.relative(repoRoot, filePath).split(path.sep).join(path.posix.sep);
 }
 
 export function normalizedArtifactPath(repoRoot, value) {

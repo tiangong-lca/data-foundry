@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.mjs";
 
 const fullContextKinds = [
   "schema",
@@ -1984,29 +1985,18 @@ function loadLocationLabels() {
     ["US", "United States"],
     ["WEU", "Western Europe"],
   ]);
-  const schemaCandidates = [
-    path.resolve(process.cwd(), "../tidas/static/schemas/tidas_locations_category.json"),
-    path.resolve(
-      process.cwd(),
-      "../tiangong-lca-cli/assets/tidas-schemas/tidas_locations_category.json",
-    ),
-    path.resolve(
-      process.cwd(),
-      "../tiangong-lca-cli/node_modules/@tiangong-lca/tidas-sdk/dist/runtime-assets/tidas/schemas/tidas_locations_category.json",
-    ),
-  ];
-  for (const schemaPath of schemaCandidates) {
-    if (!fs.existsSync(schemaPath)) continue;
-    try {
-      const schema = JSON.parse(fs.readFileSync(schemaPath, "utf8"));
-      for (const item of arrayValues(schema.oneOf)) {
-        if (!item?.const || !item?.description) continue;
-        labels.set(String(item.const).toUpperCase(), String(item.description));
-      }
-      break;
-    } catch {
-      // Fallback labels above keep this deterministic when sibling schema repos are unavailable.
+  const schemaPath = path.join(
+    resolveInstalledTiangongLcaCliPackage().schemaDir,
+    "tidas_locations_category.json",
+  );
+  try {
+    const schema = JSON.parse(fs.readFileSync(schemaPath, "utf8"));
+    for (const item of arrayValues(schema.oneOf)) {
+      if (!item?.const || !item?.description) continue;
+      labels.set(String(item.const).toUpperCase(), String(item.description));
     }
+  } catch {
+    // The stable fallback labels keep suggestions deterministic if an asset is malformed.
   }
   labels.set("GLO", "global");
   locationLabelCache = labels;

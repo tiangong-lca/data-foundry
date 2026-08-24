@@ -1,0 +1,66 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "nursery": "off",
+    "pedantic": "off",
+    "perf": "off",
+    "restriction": "off",
+    "style": "off"
+  },
+  "env": {
+    "es2024": true,
+    "node": true
+  },
+  "ignorePatterns": [
+    ".foundry/**",
+    "artifacts/**",
+    "coverage/**",
+    "dist/**",
+    "inputs/**",
+    "node_modules/**",
+    "outputs/**",
+    "reports/**",
+    "tmp/**"
+  ],
+  "options": {
+    "respectEslintDisableDirectives": true,
+    "typeAware": true
+  },
+  "plugins": ["typescript"],
+  "overrides": [
+    {
+      "files": ["test/**/*.{js,mjs,cjs,ts,mts,cts}"],
+      "rules": {
+        "typescript/no-floating-promises": "off",
+        "typescript/no-misused-spread": "off"
+      }
+    },
+    {
+      "files": ["**/*.{ts,mts,cts}"],
+      "rules": {
+        "eslint/no-unused-vars": "error"
+      }
+    }
+  ],
+  "rules": {
+    "eslint/no-unused-vars": "off",
+    "eslint/no-useless-escape": "off",
+    "eslint/preserve-caught-error": "off",
+    "no-console": "off",
+    "no-shadow": "off",
+    "no-underscore-dangle": "off",
+    "typescript/no-deprecated": "error",
+    "typescript/no-base-to-string": "off",
+    "typescript/no-floating-promises": "off",
+    "typescript/no-unnecessary-type-parameters": "off",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/no-unnecessary-type-conversion": "off",
+    "typescript/no-useless-default-assignment": "off",
+    "typescript/require-array-sort-compare": "off",
+    "typescript/restrict-template-expressions": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "unicorn/no-array-sort": "off"
+  }
+}

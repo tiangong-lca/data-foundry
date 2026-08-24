@@ -9,7 +9,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const fixtureRoot = path.join(repoRoot, "tmp", "authoring-plan-test");
 
 function rel(filePath) {
-  return path.relative(repoRoot, filePath);
+  return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
 function writeJson(filePath, value) {
@@ -77,15 +77,15 @@ function writeCurationGateReport() {
         { kind: "ruleset", path: "context/process/runtime-ruleset.json" },
         {
           kind: "classification_schema",
-          path: "../tiangong-lca-cli/assets/tidas-schemas/tidas_processes_category.json",
+          path: "node_modules/@tiangong-lca/cli/assets/tidas-schemas/tidas_processes_category.json",
         },
         {
           kind: "classification_schema",
-          path: "../tiangong-lca-cli/assets/tidas-schemas/tidas_flows_product_category.json",
+          path: "node_modules/@tiangong-lca/cli/assets/tidas-schemas/tidas_flows_product_category.json",
         },
         {
           kind: "location_schema",
-          path: "../tiangong-lca-cli/assets/tidas-schemas/tidas_locations_category.json",
+          path: "node_modules/@tiangong-lca/cli/assets/tidas-schemas/tidas_locations_category.json",
         },
       ],
     },
@@ -155,8 +155,9 @@ test("dataset-authoring-plan aggregates missing AI task builds from curation gat
     /33333333-3333-5333-8333-333333333333/u,
   );
   assert.match(
-    plan.phases.find((phase) => phase.phase === "classification_decisions").commands
-      .apply_decisions,
+    plan.phases
+      .find((phase) => phase.phase === "classification_decisions")
+      .commands.apply_decisions.replaceAll("\\", "/"),
     /classification-authoring-queue\.process\.jsonl/u,
   );
   assert.match(
@@ -225,8 +226,9 @@ test("dataset-authoring-plan detects ready tasks and waits for AI outputs", () =
     ["flow", "process"],
   );
   assert.match(
-    plan.phases.find((phase) => phase.phase === "identity_decisions").commands
-      .apply_decisions_by_type[0].command,
+    plan.phases
+      .find((phase) => phase.phase === "identity_decisions")
+      .commands.apply_decisions_by_type[0].command.replaceAll("\\", "/"),
     /--authoring-package-dir/u,
   );
   assert.match(
@@ -382,14 +384,20 @@ test("dataset-authoring-plan chains classification output through patch and iden
     path.join(fixtureRoot, "identity-decision-apply", "processes.identity-decisions-applied.jsonl"),
   );
   const chainedPatchPhase = plan.phases.find((phase) => phase.phase === "field_patches");
-  assert.match(chainedPatchPhase.commands.apply_patches, new RegExp(rel(classifiedRows), "u"));
-  assert.match(chainedPatchPhase.commands.apply_patches, new RegExp(patchOutput, "u"));
+  assert.match(
+    chainedPatchPhase.commands.apply_patches.replaceAll("\\", "/"),
+    new RegExp(rel(classifiedRows), "u"),
+  );
+  assert.match(
+    chainedPatchPhase.commands.apply_patches.replaceAll("\\", "/"),
+    new RegExp(patchOutput, "u"),
+  );
   assert.doesNotMatch(chainedPatchPhase.commands.apply_patches, /tmp\/old\/processes\.jsonl/u);
 
   const identityPhase = plan.phases.find((phase) => phase.phase === "identity_decisions");
   assert.equal(identityPhase.commands.apply_decisions_by_type[0].rows_file, patchOutput);
   assert.match(
-    identityPhase.commands.apply_decisions_by_type[0].command,
+    identityPhase.commands.apply_decisions_by_type[0].command.replaceAll("\\", "/"),
     new RegExp(patchOutput, "u"),
   );
   assert.equal(plan.rows_chain.status, "needs_deterministic_apply");

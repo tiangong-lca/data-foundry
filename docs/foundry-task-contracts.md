@@ -18,8 +18,9 @@ checkPaths:
   - WORKFLOW.md
   - specs/import-profiles.json
   - tasks/**
-lastReviewedAt: 2026-06-04
-lastReviewedCommit: 0fc91c903b375a013a5d5f912db957132f5fe18f
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
+lastReviewedNote: "Reviewed for Issue #63: pnpm/TS7 toolchain changes do not alter task workspace, checkpoint, artifact, or remote-write evidence contracts."
 related:
   - AGENTS.md
   - WORKFLOW.md

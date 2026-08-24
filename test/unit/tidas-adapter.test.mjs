@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import {
   resolveTidasInvocation,
+  resolveTidasProcessCommand,
   runTidasHandshake,
   runTidasImport,
   runTidasRowsValidation,
@@ -15,7 +16,7 @@ const fixture = path.join(repoRoot, "test", "fixtures", "fake-tidas.mjs");
 
 function isolatedFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-tidas-adapter-"));
-  const bin = path.join(root, "tidas");
+  const bin = path.join(root, "fake-tidas.mjs");
   fs.copyFileSync(fixture, bin);
   fs.chmodSync(bin, 0o755);
   return { root, bin };
@@ -72,6 +73,18 @@ test("executable/config precedence is option, environment, then PATH", () => {
     "TIDAS_BIN",
   );
   assert.equal(resolveTidasInvocation({}, {}).executable_source, "PATH");
+});
+
+test("script-backed TIDAS commands execute through Node on every platform", () => {
+  const script = path.join(repoRoot, "test", "fixtures", "fake-tidas.mjs");
+  assert.deepEqual(resolveTidasProcessCommand(script), {
+    command: process.execPath,
+    prefixArgs: [script],
+  });
+  assert.deepEqual(resolveTidasProcessCommand("tidas"), {
+    command: "tidas",
+    prefixArgs: [],
+  });
 });
 
 test("handshake accepts compatible 0.2.x and rejects another minor line", () => {

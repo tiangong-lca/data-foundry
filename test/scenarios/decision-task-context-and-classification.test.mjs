@@ -289,7 +289,10 @@ test("authoring plan propagates shared context cache to decision chunks", () => 
     );
     const patchPhase = plan.json.phases.find((phase) => phase.phase === "field_patches");
     assert.match(patchPhase.commands.build_task, /--shared-context-cache-dir/u);
-    assert.match(patchPhase.commands.build_task, new RegExp(expectedCacheDir, "u"));
+    assert.match(
+      patchPhase.commands.build_task.replaceAll("\\", "/"),
+      new RegExp(expectedCacheDir, "u"),
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

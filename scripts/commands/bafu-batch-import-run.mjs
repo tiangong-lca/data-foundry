@@ -16,7 +16,8 @@ import {
   acceptTraceHashOnlyRemoteVerificationMismatch,
   acceptTrustedExternalReferenceMissingDataset,
 } from "../lib/remote-verification-accepted-diff.mjs";
-import { stageContract } from "../lib/stage-contract.mjs";
+import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.mjs";
+import { stageContract } from "../lib/stage-contract.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const commandName = "dataset-bafu-batch-import-run";
@@ -473,8 +474,13 @@ function shellTokens(command) {
       continue;
     }
     if (char === "\\" && index + 1 < text.length) {
-      index += 1;
-      current += text[index];
+      const next = text[index + 1];
+      if (/\s/u.test(next) || next === "\\" || next === "'" || next === '"') {
+        index += 1;
+        current += next;
+      } else {
+        current += char;
+      }
       continue;
     }
     if (/\s/u.test(char)) {
@@ -1731,7 +1737,7 @@ function defaultContext(runDir, type) {
 
 function defaultSchemaFiles(options) {
   const schemaRoot = resolveRepoPath(
-    options.tidasSchemaDir || "../tiangong-lca-cli/assets/tidas-schemas",
+    options.tidasSchemaDir || resolveInstalledTiangongLcaCliPackage().schemaDir,
   );
   return {
     processCategory: path.join(schemaRoot, "tidas_processes_category.json"),

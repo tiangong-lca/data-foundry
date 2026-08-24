@@ -18,8 +18,9 @@ checkPaths:
   - package.json
   - scripts/with-lca-account.mjs
   - scripts/commands/commit-handoff.mjs
-lastReviewedAt: 2026-06-06
-lastReviewedCommit: 0c39afc18f1f2d8e01d2b33a39bdc0e21cea3a8f
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
+lastReviewedNote: "Reviewed for Issue #63: pnpm account wrapper usage and clean-worktree toolchain tests remain credential-free."
 ---
 
 # Account Context Policy
@@ -63,10 +64,12 @@ FOUNDRY_EXPECTED_USER_ID=<resolved-user-id>
 Run commands through:
 
 ```bash
-npm run account:run -- <profile> -- <command> [args...]
+pnpm account:run -- <profile> -- <command> [args...]
 ```
 
 The wrapper loads the selected profile into the child process using the same `TIANGONG_LCA_*` names, sets `FOUNDRY_ACCOUNT_PROFILE`, and verifies `FOUNDRY_EXPECTED_USER_ID` before running the command unless `--no-auth-check` is passed. This keeps account selection durable in the command and local task metadata instead of relying on chat memory.
+
+Package installation, lint, typecheck, build, unit tests, and the clean arbitrary-worktree toolchain test are credential-free. They must not read `.env`, account profiles, thread guards, or `.foundry` runtime state. A real remote case enters this policy only when it deliberately invokes the exact installed CLI dependency (`pnpm exec tiangong-lca`, backed by `@tiangong-lca/cli@0.1.0`) through the approved account guard.
 
 ## Codex Thread Guards
 

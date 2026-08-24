@@ -700,7 +700,7 @@ function writeJsonExclusive(filePath, value) {
 }
 
 function relativeToRepo(repoRoot, filePath) {
-  const relative = path.relative(repoRoot, filePath);
+  const relative = path.relative(repoRoot, filePath).split(path.sep).join(path.posix.sep);
   return pathIsInside(repoRoot, filePath) ? relative : filePath;
 }
 

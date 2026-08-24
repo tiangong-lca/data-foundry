@@ -19,8 +19,9 @@ checkPaths:
   - scripts/lib/foundry-command-metadata.mjs
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mjs
-lastReviewedAt: 2026-07-23
-lastReviewedCommit: 849d6ac14d357bd445a9fa75a9c18dc16a2a411a
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
+lastReviewedNote: "Reviewed for Issue #63: pnpm/TS7 command-surface preservation, typed-spine migration, and clean-worktree gates."
 ---
 
 # Foundry Command Surface
@@ -31,6 +32,8 @@ Foundry command governance has two layers:
 - `scripts/lib/foundry-command-metadata.mjs` is the AI-readable navigation and ownership map.
 
 The metadata module must cover every command returned by `node scripts/foundry.mjs help`. It records each command category, owner module, owner export, input artifacts, output artifacts, workflow entry audit state, and key behavior checks.
+
+Issue #63 does not change the public command categories or behavior. It introduces the Node.js 24 / pnpm 11.23 / TypeScript 7.0.2 typed spine underneath the same surface. Migration work must preserve the registered command name, help, stdout, exit code, stage contract, input/output artifacts, and remote-write mode before removing a JavaScript implementation from `specs/typescript-migration-inventory.json`. Use focused characterization and real cases; do not treat an extension rename as command migration.
 
 ## Categories
 
@@ -70,10 +73,14 @@ When a command is added, removed, renamed, moved, or reclassified, update both:
 Then run:
 
 ```bash
-node --test test/unit/foundry-command-metadata.test.mjs
-npm run surface:audit
-npm run test:commands
-npm run golden:diff
+pnpm exec node --test test/unit/foundry-command-metadata.test.mjs
+pnpm surface:audit
+pnpm test:commands
+pnpm golden:diff
+pnpm test:toolchain
+pnpm lint
+pnpm typecheck
+pnpm build
 ```
 
-New command tests belong in `test/commands/` when they exercise one command's report or artifact contract. Multi-command workflow coverage belongs in `test/scenarios/`, and shared setup belongs in `test/fixtures/`.
+New command tests belong in `test/commands/` when they exercise one command's report or artifact contract. Multi-command workflow coverage belongs in `test/scenarios/`, and shared setup belongs in `test/fixtures/`. The same gates must pass after a frozen install in a clean arbitrary worktree, without another checkout's dependencies or ignored runtime artifacts.

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { bundleRowTypeOrder, bundleRowTypes } from "../lib/bundle-row-types.mjs";
-import { readOnlyStageContract } from "../lib/stage-contract.mjs";
+import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
 const bundleSampleStageContract = readOnlyStageContract([
   {
@@ -95,6 +95,7 @@ export function createBundleSampleRowsCommands({
   repoRelativeMaybe,
   repoRelativePath,
   resolveRepoPath,
+  resolveTiangongLcaCliCommandPrefix,
   resolveTiangongLcaCliBin,
   rewriteCanonicalFlowPropertyReferences,
   rewriteCanonicalSourceReferences,
@@ -435,7 +436,7 @@ export function createBundleSampleRowsCommands({
   }
 
   function processIdFromBundleRef(value) {
-    const text = asText(value);
+    const text = asText(value).replaceAll("\\", "/");
     if (!text) return "";
     const match = text.match(/(?:^|\/)process-bundles\/([^/]+)/u);
     return match?.[1] ?? "";
@@ -606,7 +607,9 @@ export function createBundleSampleRowsCommands({
       options.outDir || `.foundry/workspaces/bafu-bundle-sample-rows/${Date.now()}`,
     );
     const rowsDir = path.join(outDir, "rows");
-    const cliBin = resolveTiangongLcaCliBin();
+    const cliBin = resolveTiangongLcaCliCommandPrefix
+      ? resolveTiangongLcaCliCommandPrefix()
+      : [resolveTiangongLcaCliBin()];
     const canonicalSupportCache = loadCanonicalSupportCache(options);
     // The override only applies to an EXPLICITLY selected profile (e.g. --profile bafu,
     // which the orchestrator passes). An unspecified profile defaults to generic so the
@@ -1155,7 +1158,7 @@ export function createBundleSampleRowsCommands({
         .join(" ");
     const contextPackCommand = (type) =>
       [
-        cliBin,
+        ...cliBin,
         "dataset",
         "context-pack",
         "--type",
@@ -1174,7 +1177,7 @@ export function createBundleSampleRowsCommands({
         : path.join(outDir, "qa", type, "process-qa-report.json");
     const qaCommand = (type, inputFile = resolveRepoPath(rowFiles[type])) =>
       [
-        cliBin,
+        ...cliBin,
         "qa",
         type,
         "--rows-file",
@@ -1221,7 +1224,7 @@ export function createBundleSampleRowsCommands({
       const modeFlag = mode === "commit" ? "--commit" : "--dry-run";
       if (type === "lifecyclemodel") {
         return [
-          cliBin,
+          ...cliBin,
           "lifecyclemodel",
           "save-draft",
           "--input",
@@ -1235,7 +1238,7 @@ export function createBundleSampleRowsCommands({
           .join(" ");
       }
       return [
-        cliBin,
+        ...cliBin,
         "dataset",
         "save-draft",
         "--input",
@@ -1299,7 +1302,7 @@ export function createBundleSampleRowsCommands({
       curation_gate: null,
       cleanup: cleanupCommand("support", resolveRepoPath(rowFiles.support)),
       dry_run: [
-        cliBin,
+        ...cliBin,
         "dataset",
         "save-draft",
         "--input",
@@ -1314,7 +1317,7 @@ export function createBundleSampleRowsCommands({
         .map(shellQuote)
         .join(" "),
       commit: [
-        cliBin,
+        ...cliBin,
         "dataset",
         "save-draft",
         "--input",

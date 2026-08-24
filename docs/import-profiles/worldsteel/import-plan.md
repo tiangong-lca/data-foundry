@@ -195,7 +195,7 @@ Input: `inputs/CUP2025-2_2022b_v10_worldsteel_products_Tiangong_v1 EF3.1 2026_01
 Environment for every step:
 
 ```bash
-export TIANGONG_LCA_CLI_BIN="$PWD/node_modules/.bin/tiangong-lca"   # .env value is EMPTY → npx@latest fallback hangs under parallelism
+pnpm install --frozen-lockfile   # installs the exact @tiangong-lca/cli@0.1.0 project dependency
 RUN=".foundry/workspaces/worldsteel-full-import-$(date -u +%Y%m%dT%H%M%SZ)"   # stamp once; the runtime forbids Date.now in workflows but the shell is fine
 TUID="<worldsteel target user id>"   # in zsh, NOT UID (reserved)
 ```
@@ -309,7 +309,7 @@ The vast majority of those exchanges, however, point at EF3.1 **reference** flow
 
 ## 9. Risk register (consolidated gotchas)
 
-- **CLI_BIN export is mandatory** — empty `.env` value → `npx @tiangong-lca/cli@latest` fallback hangs under concurrency → false `finalize_stage_timeout`/blocked.
+- **Use the project-installed CLI** — leave `TIANGONG_LCA_CLI_BIN` blank so Foundry resolves exact `@tiangong-lca/cli@0.1.0`; an override is only for an explicit local test binary.
 - **Don't copy BAFU/USLCI profile wholesale** — they mint reference support at scale; worldsteel reuses by UUID and only mints the capped ≤17 tail (✅ profile authored accordingly).
 - **`databaseFallbackSourceConfig` silently inherits BAFU** for any unknown profile → ✅ worldsteel branch added.
 - **`source_contact_rewrites` gated to bafu/uslci** → ✅ widened to include `worldsteel`.

@@ -11,11 +11,15 @@ const scriptEntrypoints = new Set([
   "scripts/with-lca-account.mjs",
 ]);
 
+function portablePath(filePath) {
+  return filePath.split(path.sep).join(path.posix.sep);
+}
+
 function walkFiles(root, relativeDir, predicate, files = []) {
   const absoluteDir = path.join(root, relativeDir);
   if (!fs.existsSync(absoluteDir)) return files;
   for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
-    const relativePath = path.join(relativeDir, entry.name);
+    const relativePath = portablePath(path.join(relativeDir, entry.name));
     if (entry.isDirectory()) {
       walkFiles(root, relativePath, predicate, files);
     } else if (entry.isFile() && predicate(relativePath)) {
@@ -189,8 +193,13 @@ function importedModulePaths(repoRoot) {
     for (const match of text.matchAll(/(?:from\s+|import\s*\()\s*["']([^"']+)["']/gu)) {
       const specifier = match[1];
       if (!specifier.startsWith(".")) continue;
-      const resolved = path.normalize(
-        path.join(path.dirname(file), specifier.endsWith(".mjs") ? specifier : `${specifier}.mjs`),
+      const resolved = portablePath(
+        path.normalize(
+          path.join(
+            path.dirname(file),
+            specifier.endsWith(".mjs") ? specifier : `${specifier}.mjs`,
+          ),
+        ),
       );
       imported.add(resolved);
     }

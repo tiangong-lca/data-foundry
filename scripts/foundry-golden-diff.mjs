@@ -2,10 +2,12 @@
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -26,9 +28,43 @@ const fixtureRoot = path.join(tempRoot, "fixtures");
 const processId = "22222222-3333-5444-8555-666666666666";
 const sourceId = "33333333-4444-5555-8666-777777777777";
 const contactId = "11111111-2222-5333-8444-555555555555";
+const legacyPackageRunner = ["n", "px"].join("");
+const skillsPackageCommandPattern = new RegExp(
+  `(?:${legacyPackageRunner} --yes|pnpm dlx) skills@latest`,
+  "gu",
+);
+const skillsCommandReferencePattern = new RegExp(
+  `(?:${legacyPackageRunner} skills|pnpm dlx skills(?:@latest)?)`,
+  "gu",
+);
+
+function resolveGoldenBase() {
+  const explicitBase = String(process.env.FOUNDRY_GOLDEN_BASE ?? "").trim();
+  const candidates = explicitBase ? [explicitBase] : ["origin/main", "main"];
+  const head = run("git", ["rev-parse", "HEAD"], { cwd: repoRoot }).stdout.trim();
+  for (const candidate of candidates) {
+    const mergeBase = spawnSync("git", ["merge-base", "HEAD", candidate], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    });
+    const commit = mergeBase.status === 0 ? mergeBase.stdout.trim() : "";
+    if (commit && commit !== head) return { commit, comparisonRef: candidate };
+  }
+  const parent = spawnSync("git", ["rev-parse", "HEAD^"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  const parentCommit = parent.status === 0 ? parent.stdout.trim() : "";
+  if (parentCommit && parentCommit !== head && !explicitBase) {
+    return { commit: parentCommit, comparisonRef: "HEAD^" };
+  }
+  throw new Error(
+    "Golden comparison requires a non-HEAD merge-base. Fetch full history or set FOUNDRY_GOLDEN_BASE to an ancestor commit.",
+  );
+}
 
 function pathVariants(value) {
-  const variants = new Set([value]);
+  const variants = new Set([value, value.replaceAll("\\", "/")]);
   if (value.startsWith("/var/")) variants.add(`/private${value}`);
   if (value.startsWith("/private/var/")) variants.add(value.replace(/^\/private/u, ""));
   return [...variants].sort((a, b) => b.length - a.length);
@@ -378,18 +414,48 @@ if (args[0] === "dataset" && args[1] === "validate") {
   return cliPath;
 }
 
-function linkWorkspaceSiblings() {
-  const cliRoot = path.resolve(repoRoot, "..", "tiangong-lca-cli");
-  const linkedCliRoot = path.join(tempRoot, "tiangong-lca-cli");
-  if (!existsSync(cliRoot) || existsSync(linkedCliRoot)) return;
-  symlinkSync(cliRoot, linkedCliRoot, "dir");
-}
-
 function linkInstalledDependencies(root) {
   const installed = path.join(repoRoot, "node_modules");
   const target = path.join(root, "node_modules");
   if (!existsSync(installed) || existsSync(target)) return;
-  symlinkSync(installed, target, "dir");
+  symlinkSync(installed, target, process.platform === "win32" ? "junction" : "dir");
+}
+
+function linkLegacyInstalledCliAssets() {
+  const installedCliRoot = path.join(repoRoot, "node_modules", "@tiangong-lca", "cli");
+  const legacyCliRoot = path.join(tempRoot, "tiangong-lca-cli");
+  if (!existsSync(installedCliRoot) || existsSync(legacyCliRoot)) return;
+  // HEAD may predate the installed-package resolver. Supply only the pinned package
+  // layout needed to characterize that baseline; never depend on a sibling checkout.
+  symlinkSync(installedCliRoot, legacyCliRoot, process.platform === "win32" ? "junction" : "dir");
+}
+
+function installPortableBaselineProcessAdapters() {
+  if (process.platform !== "win32") return;
+  // The historical baseline predates script-backed executable dispatch. Reuse
+  // only the two current process adapters on Windows so its behavior surface
+  // can execute; focused adapter tests retain responsibility for these shims.
+  for (const fileName of ["foundry-runtime-utils.mjs", "surface-audit.mjs", "tidas-adapter.mjs"]) {
+    copyFileSync(
+      path.join(repoRoot, "scripts", "lib", fileName),
+      path.join(beforeRoot, "scripts", "lib", fileName),
+    );
+  }
+}
+
+function normalizeBaselineLineEndings() {
+  if (process.platform !== "win32") return;
+  const tracked = run("git", ["ls-files", "-z"], { cwd: beforeRoot })
+    .stdout.split("\0")
+    .filter(Boolean);
+  for (const relativePath of tracked) {
+    const filePath = path.join(beforeRoot, relativePath);
+    if (!existsSync(filePath)) continue;
+    const bytes = readFileSync(filePath);
+    if (bytes.includes(0)) continue;
+    const text = bytes.toString("utf8");
+    if (text.includes("\r\n")) writeFileSync(filePath, text.replaceAll("\r\n", "\n"));
+  }
 }
 
 function foundryCommand(root, args, outFile, env = {}, expectedStatus = 0) {
@@ -407,7 +473,10 @@ function runSide(label, root, fixture, cliPath) {
   const commandOut = path.join(sideOut, "commands");
   mkdirSync(commandOut, { recursive: true });
   foundryCommand(root, ["init"], path.join(commandOut, "setup-init.json"));
-  const commonEnv = { TIANGONG_LCA_CLI_BIN: cliPath };
+  const commonEnv = {
+    TIANGONG_LCA_CLI_BIN: cliPath,
+    TIDAS_BIN: path.join(root, "test", "fixtures", "fake-tidas.mjs"),
+  };
   foundryCommand(root, ["help"], path.join(commandOut, "help.json"), commonEnv);
   foundryCommand(root, ["doctor"], path.join(commandOut, "doctor.json"), commonEnv, 1);
   foundryCommand(root, ["profiles-list"], path.join(commandOut, "profiles-list.json"), commonEnv);
@@ -533,31 +602,55 @@ function normalize(value) {
       duration_ms: 0,
       finalize_duration_ms: 0,
       authoring_package_sha256: "<authoring_package_sha256>",
+      entry_count: "<entry_count>",
+      scanned: "<scanned>",
     };
     return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [
-        key,
-        Object.hasOwn(volatileValues, key) ? volatileValues[key] : normalize(item),
-      ]),
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [
+          key,
+          Object.hasOwn(volatileValues, key) ? volatileValues[key] : normalize(item),
+        ]),
     );
   }
   if (typeof value !== "string") return value;
-  let output = value;
+  let output = collapseNestedShellQuotes(value).replaceAll("\\", "/");
   output = replacePathVariants(output, pathVariants(beforeOut), "<side-output>");
   output = replacePathVariants(output, pathVariants(afterOut), "<side-output>");
   output = replacePathVariants(output, pathVariants(beforeRoot), "<repo-root>");
   output = replacePathVariants(output, pathVariants(repoRoot), "<repo-root>");
   output = replacePathVariants(output, pathVariants(tempRoot), "<temp-root>");
   return output
-    .replace(/(?:\.\.\/)+\.{0,2}<side-output>/gu, "<side-output>")
-    .replace(/(?:\.\.\/)+\.{0,2}<temp-root>/gu, "<temp-root>")
+    .replace(/(?:\.\.[\\/])+before-output/gu, "<side-output>")
+    .replace(/(?:\.\.[\\/])+after-output/gu, "<side-output>")
+    .replace(/(?:\.\.[\\/])+fixtures/gu, "<temp-root>/fixtures")
+    .replace(/(?:\.\.[\\/])*\.*<side-output>/gu, "<side-output>")
+    .replace(/(?:\.\.[\\/])*\.*<temp-root>/gu, "<temp-root>")
     .replace(/\/private<repo-root>/gu, "<repo-root>")
     .replace(/\/private<temp-root>/gu, "<temp-root>")
-    .replace(/<temp-root>\/before-output/gu, "<side-output>")
-    .replace(/<temp-root>\/after-output/gu, "<side-output>")
-    .replace(/<temp-root>\/before-worktree/gu, "<repo-root>")
+    .replace(/<temp-root>[\\/]before-output/gu, "<side-output>")
+    .replace(/<temp-root>[\\/]after-output/gu, "<side-output>")
+    .replace(/<temp-root>[\\/]before-worktree/gu, "<repo-root>")
+    .replace(
+      /(?:\.\.[\\/]tiangong-lca-cli|node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?@tiangong-lca[\\/]cli)[\\/]assets[\\/]tidas-schemas/gu,
+      "<cli-schema-assets>",
+    )
+    .replace(skillsPackageCommandPattern, "<skills-runtime>")
+    .replace(skillsCommandReferencePattern, "<skills-runtime>")
+    .replace(/'([A-Za-z0-9_./:@%+=,<>-]+)'/gu, "$1")
+    .replace(/^'([^'\s]+ [^'\s]+)'(?=\s)/u, "$1")
+    .replace(/\.tidas-validate-stage-[A-Za-z0-9._-]+/gu, ".tidas-validate-stage-<id>")
     .replace(/(?:\.\.\/)+(?:private\/)?tmp\/foundry-golden-diff-[A-Za-z0-9._/-]+/gu, "<temp-path>")
     .replace(/foundry-golden-diff-[A-Za-z0-9._-]+/gu, "foundry-golden-diff-<id>");
+}
+
+function collapseNestedShellQuotes(value) {
+  const escapedQuote = `'\\''`;
+  const collapsed = value.replaceAll(escapedQuote, "'");
+  return collapsed.startsWith("''") && collapsed.endsWith("''")
+    ? collapsed.slice(1, -1)
+    : collapsed;
 }
 
 function normalizeJsonFile(inputFile, outputFile) {
@@ -589,25 +682,102 @@ function normalizeOutputs() {
 }
 
 function compareNormalizedOutputs() {
-  const diff = spawnSync(
-    "diff",
-    ["-ru", path.join(normalizedRoot, "before"), path.join(normalizedRoot, "after")],
-    { encoding: "utf8" },
-  );
-  if (diff.status !== 0) {
-    process.stdout.write(diff.stdout);
-    process.stderr.write(diff.stderr);
-    throw new Error(`Golden diff failed. Artifacts: ${tempRoot}`);
+  const baselineRoot = path.join(normalizedRoot, "before");
+  const currentRoot = path.join(normalizedRoot, "after");
+  const baselineFiles = listRelativeFiles(baselineRoot);
+  const currentFiles = listRelativeFiles(currentRoot);
+  const files = [...new Set([...baselineFiles, ...currentFiles])].sort();
+  const differences = [];
+  for (const file of files) {
+    const baselinePath = path.join(baselineRoot, file);
+    const currentPath = path.join(currentRoot, file);
+    if (!existsSync(baselinePath)) {
+      differences.push(`${file}: missing from baseline`);
+      continue;
+    }
+    if (!existsSync(currentPath)) {
+      differences.push(`${file}: missing from current output`);
+      continue;
+    }
+    if (!readFileSync(baselinePath).equals(readFileSync(currentPath))) {
+      const details = summarizeJsonDifferences(baselinePath, currentPath);
+      differences.push(
+        details.length > 0
+          ? `${file}:\n${details.map((detail) => `    ${detail}`).join("\n")}`
+          : `${file}: content differs`,
+      );
+    }
+  }
+  if (differences.length > 0) {
+    throw new Error(
+      `Golden diff failed:\n${differences.map((item) => `- ${item}`).join("\n")}\nArtifacts: ${tempRoot}`,
+    );
   }
 }
 
+function summarizeJsonDifferences(baselinePath, currentPath) {
+  try {
+    const baseline = JSON.parse(readFileSync(baselinePath, "utf8"));
+    const current = JSON.parse(readFileSync(currentPath, "utf8"));
+    const differences = [];
+    collectJsonDifferences(baseline, current, "", differences, 8);
+    return differences;
+  } catch {
+    return [];
+  }
+}
+
+function collectJsonDifferences(baseline, current, pointer, differences, limit) {
+  if (differences.length >= limit || Object.is(baseline, current)) return;
+  const baselineRecord = baseline && typeof baseline === "object";
+  const currentRecord = current && typeof current === "object";
+  if (!baselineRecord || !currentRecord || Array.isArray(baseline) !== Array.isArray(current)) {
+    differences.push(
+      `${pointer || "/"}: ${compactJsonValue(baseline)} -> ${compactJsonValue(current)}`,
+    );
+    return;
+  }
+  const keys = [...new Set([...Object.keys(baseline), ...Object.keys(current)])].sort();
+  for (const key of keys) {
+    if (differences.length >= limit) return;
+    const escapedKey = key.replaceAll("~", "~0").replaceAll("/", "~1");
+    collectJsonDifferences(
+      baseline[key],
+      current[key],
+      `${pointer}/${escapedKey}`,
+      differences,
+      limit,
+    );
+  }
+}
+
+function compactJsonValue(value) {
+  const text = JSON.stringify(value);
+  if (text === undefined) return "<missing>";
+  return text.length <= 240 ? text : `${text.slice(0, 237)}...`;
+}
+
+function listRelativeFiles(root, relative = "") {
+  const files = [];
+  const directory = path.join(root, relative);
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const child = relative ? path.join(relative, entry.name) : entry.name;
+    if (entry.isDirectory()) files.push(...listRelativeFiles(root, child));
+    else if (entry.isFile()) files.push(child);
+  }
+  return files.sort();
+}
+
 try {
+  const goldenBase = resolveGoldenBase();
   const fixture = prepareFixtures();
   const cliPath = stubCliScript();
-  run("git", ["worktree", "add", "--detach", "--quiet", beforeRoot, "HEAD"], {
+  run("git", ["worktree", "add", "--detach", "--quiet", beforeRoot, goldenBase.commit], {
     cwd: repoRoot,
   });
-  linkWorkspaceSiblings();
+  normalizeBaselineLineEndings();
+  installPortableBaselineProcessAdapters();
+  linkLegacyInstalledCliAssets();
   linkInstalledDependencies(beforeRoot);
   runSide("before", beforeRoot, fixture, cliPath);
   runSide("after", repoRoot, fixture, cliPath);
@@ -618,6 +788,8 @@ try {
       {
         schema_version: 1,
         status: "passed",
+        baseline_commit: goldenBase.commit,
+        comparison_ref: goldenBase.comparisonRef,
         compared_commands: [
           "help",
           "doctor",

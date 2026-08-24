@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { readOnlyStageContract } from "../lib/stage-contract.mjs";
+import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
 const libraryScopeStageContract = readOnlyStageContract([
   {
@@ -1363,7 +1363,10 @@ export function createLibraryScopeWorkflowCommands({
       // Chemical-name inversion ("Ethane, 1,1,2,2-tetrachloro-" ↔ "1,1,2,2-tetrachloroethane"):
       // after separating digit locants, some permutation of the target's word tokens
       // concatenates to the candidate's word part and the digit multisets agree.
-      const digitsOf = (value) => [...String(value).replace(/[^0-9]+/gu, "")].sort().join("");
+      const digitsOf = (value) =>
+        Array.from(String(value).replace(/[^0-9]+/gu, ""))
+          .sort()
+          .join("");
       const wordPartOf = (value) => String(value).replace(/[0-9]+/gu, "");
       const permutationCompactEqual = candidateCompacts.some((cn) => {
         const candidateWord = wordPartOf(cn);

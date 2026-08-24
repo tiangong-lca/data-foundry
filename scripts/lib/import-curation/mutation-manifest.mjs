@@ -684,7 +684,6 @@ export function runDatasetMutationManifest({ repoRoot, options = {} } = {}) {
     blocked_write_candidates: repoRelativePath(repoRoot, blockedWriteRowsPath),
     reference_reuse: repoRelativePath(repoRoot, referenceRowsPath),
     unresolved_traces: repoRelativePath(repoRoot, unresolvedTracesPath),
-    unresolved_exchange_traces: repoRelativePath(repoRoot, unresolvedExchangeTracesPath),
     source_exchange_completeness_traces: repoRelativePath(repoRoot, sourceExchangeCompletenessPath),
     source_reference_rewrites: repoRelativePath(repoRoot, sourceReferenceRewritesPath),
     identity_reference_rewrites: repoRelativePath(repoRoot, identityReferenceRewritesPath),

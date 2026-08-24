@@ -145,9 +145,11 @@ test("incremental composer emits one terminal log per conversion and exact CLI a
     "incremental-change-set-manifest.json",
   ];
   assert.deepEqual(fs.readdirSync(fixture.outDir).sort(), expectedFiles.sort());
-  assert.equal(fs.statSync(fixture.outDir).mode & 0o777, 0o700);
-  for (const file of expectedFiles) {
-    assert.equal(fs.statSync(path.join(fixture.outDir, file)).mode & 0o777, 0o600, file);
+  if (process.platform !== "win32") {
+    assert.equal(fs.statSync(fixture.outDir).mode & 0o777, 0o700);
+    for (const file of expectedFiles) {
+      assert.equal(fs.statSync(path.join(fixture.outDir, file)).mode & 0o777, 0o600, file);
+    }
   }
 
   const events = readJsonLines(

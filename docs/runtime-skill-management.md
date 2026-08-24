@@ -19,8 +19,9 @@ checkPaths:
   - package.json
   - .agents/shared-skills.json
   - .agents/skills/**
-lastReviewedAt: 2026-06-04
-lastReviewedCommit: 0fc91c903b375a013a5d5f912db957132f5fe18f
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
+lastReviewedNote: "Reviewed for Issue #63: runtime skills are resolved through pnpm dlx while floating-ref evidence remains unchanged."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -32,14 +33,14 @@ related:
 
 Foundry treats skills as execution surfaces, not as a place to copy reusable business logic.
 
-`.agents/skills` is the single project-visible skill root. Project-owned Foundry skills live there and are tracked by git. Shared or public runtime skills may also be installed into the same directory so agents can read them locally, but installation and update must use the npm `skills` package. `.agents/shared-skills.json` is a command inventory and ownership record, not a custom skill manager. Runtime-installed shared skill directories are ignored by git, and each source-evidence run records the resolved upstream ref as task evidence.
+`.agents/skills` is the single project-visible skill root. Project-owned Foundry skills live there and are tracked by git. Shared or public runtime skills may also be installed into the same directory so agents can read them locally, but installation and update must use the `skills` registry package through pnpm. `.agents/shared-skills.json` is a command inventory and ownership record, not a custom skill manager. Runtime-installed shared skill directories are ignored by git, and each source-evidence run records the resolved upstream ref as task evidence.
 
 ## Skill Classes
 
 | Class | Source | Storage rule | Update rule |
 | --- | --- | --- | --- |
 | Foundry-local orchestration skills | this repository | tracked under `.agents/skills` and listed in `.agents/shared-skills.json` | changed through normal Foundry PRs |
-| TianGong LCA shared skills | sibling `tiangong-lca-skills` | installed into `.agents/skills` by `npx --yes skills@latest add`; ignored in this repo | update the sibling checkout, then run `npm run skills:install:shared` or `npm run skills:update` |
+| TianGong LCA shared skills | sibling `tiangong-lca-skills` | installed into `.agents/skills` by `pnpm dlx skills@latest add`; ignored in this repo | update the sibling checkout, then run `pnpm skills:install:shared` or `pnpm skills:update` |
 | Source-evidence and document-extraction skills | external skill repos such as `tiangong-ai/skills` | installed or read into `.agents/skills` runtime state; ignored in this repo | resolve latest before each source-evidence run |
 
 Runtime skill names must not collide with Foundry-local skill names. The external source-evidence class is intentionally floating. Reproducibility is kept by task artifacts that record the resolved repository ref, command, retrieved evidence, and timestamps, not by committing a copied skill version to Foundry.
@@ -65,35 +66,35 @@ https://github.com/tiangong-ai/skills/tree/main/tiangong-kb-sci-search
 Install or refresh configured shared runtime skills into `.agents/skills`:
 
 ```bash
-npm run skills:install:shared
+pnpm skills:install:shared
 ```
 
 Update locally installed project skills:
 
 ```bash
-npm run skills:update
+pnpm skills:update
 ```
 
 Inspect local project skill state:
 
 ```bash
-npm run skills:list
+pnpm skills:list
 ```
 
 List available remote Tiangong AI skills:
 
 ```bash
-npx --yes skills@latest add https://github.com/tiangong-ai/skills --list --full-depth
+pnpm dlx skills@latest add https://github.com/tiangong-ai/skills --list --full-depth
 ```
 
 Read and use the latest document extraction or SCI skill instructions for the current agent turn:
 
 ```bash
-npx --yes skills@latest use https://github.com/tiangong-ai/skills \
+pnpm dlx skills@latest use https://github.com/tiangong-ai/skills \
   --skill document-granular-decompose \
   --full-depth
 
-npx --yes skills@latest use https://github.com/tiangong-ai/skills \
+pnpm dlx skills@latest use https://github.com/tiangong-ai/skills \
   --skill tiangong-kb-sci-search \
   --full-depth
 ```
@@ -101,7 +102,7 @@ npx --yes skills@latest use https://github.com/tiangong-ai/skills \
 Install only Tiangong AI runtime skills into the local checkout:
 
 ```bash
-npx --yes skills@latest add https://github.com/tiangong-ai/skills \
+pnpm dlx skills@latest add https://github.com/tiangong-ai/skills \
   --skill tiangong-kb-sci-search document-granular-decompose \
   --agent '*' \
   --yes \
@@ -149,8 +150,8 @@ Minimum fields:
   "source_ref": "refs/heads/main",
   "resolved_commit": "<git-ls-remote-sha>",
   "skill_name": "document-granular-decompose",
-  "install_command": "npx --yes skills@latest add https://github.com/tiangong-ai/skills --skill document-granular-decompose --agent '*' --yes --full-depth",
-  "use_command": "npx --yes skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth",
+  "install_command": "pnpm dlx skills@latest add https://github.com/tiangong-ai/skills --skill document-granular-decompose --agent '*' --yes --full-depth",
+  "use_command": "pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth",
   "evidence_channel": "document-fulltext",
   "local_install_path": ".agents/skills/document-granular-decompose",
   "output_artifacts": ["evidence/fulltext.txt", "evidence/source-extract.json"]
@@ -161,8 +162,8 @@ If an operator installs shared/runtime skills locally, `.agents/skills/tiangong-
 
 ## Agent Rules
 
-- Run `npm run skills:install:shared` when configured shared/runtime skills may be missing or stale.
-- Run `npm run skills:update` to refresh already installed project skills.
+- Run `pnpm skills:install:shared` when configured shared/runtime skills may be missing or stale.
+- Run `pnpm skills:update` to refresh already installed project skills.
 - Resolve latest external source-evidence skills before source-document extraction or SCI evidence retrieval.
 - Read the current remote skill instructions in the same session before relying on them.
 - Record the resolved upstream commit and command in the task workspace.

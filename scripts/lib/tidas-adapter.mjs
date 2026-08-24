@@ -106,6 +106,19 @@ export function resolveTidasInvocation(options = {}, env = process.env) {
   };
 }
 
+export function resolveTidasProcessCommand(executable) {
+  if (/\.(?:cjs|js|mjs)$/iu.test(executable)) {
+    return {
+      command: process.execPath,
+      prefixArgs: [executable],
+    };
+  }
+  return {
+    command: executable,
+    prefixArgs: [],
+  };
+}
+
 function globalArgs(invocation, options = {}) {
   const args = ["--format", "json", "--progress", "never"];
   if (invocation.config) args.push("--config", invocation.config);
@@ -120,8 +133,13 @@ function globalArgs(invocation, options = {}) {
   return args;
 }
 
+function portableRelativePath(repoRoot, filePath) {
+  return path.relative(repoRoot, filePath).split(path.sep).join(path.posix.sep);
+}
+
 function runProcess(invocation, args, cwd, maxBuffer = 512 * 1024 * 1024) {
-  const result = spawnSync(invocation.executable, args, {
+  const processCommand = resolveTidasProcessCommand(invocation.executable);
+  const result = spawnSync(processCommand.command, [...processCommand.prefixArgs, ...args], {
     cwd,
     env: process.env,
     encoding: "utf8",
@@ -448,7 +466,7 @@ export function runTidasRowsValidation({ repoRoot, options = {} }) {
     const compatibilityReport = {
       schema_version: 2,
       status: "completed",
-      input_path: path.relative(repoRoot, rowsFile),
+      input_path: portableRelativePath(repoRoot, rowsFile),
       requested_type: String(options.type ?? options.datasetType ?? "auto"),
       dataset_type: String(options.type ?? options.datasetType ?? "auto"),
       engine: "tidas",
@@ -478,12 +496,24 @@ export function runTidasRowsValidation({ repoRoot, options = {} }) {
         validation_describe_schema: TIDAS_VALIDATION_DESCRIBE_SCHEMA,
       },
       files: {
-        report: path.relative(repoRoot, path.join(outDir, "outputs", "validation-report.json")),
-        valid_rows: path.relative(repoRoot, path.join(outDir, "outputs", "valid-rows.jsonl")),
-        invalid_rows: path.relative(repoRoot, path.join(outDir, "outputs", "invalid-rows.jsonl")),
-        events: path.relative(repoRoot, path.join(outDir, "validation-events.jsonl")),
-        manifest: path.relative(repoRoot, path.join(outDir, "input-manifest.jsonl")),
-        operation_report: path.relative(repoRoot, path.join(outDir, "tidas-operation-report.json")),
+        report: portableRelativePath(
+          repoRoot,
+          path.join(outDir, "outputs", "validation-report.json"),
+        ),
+        valid_rows: portableRelativePath(
+          repoRoot,
+          path.join(outDir, "outputs", "valid-rows.jsonl"),
+        ),
+        invalid_rows: portableRelativePath(
+          repoRoot,
+          path.join(outDir, "outputs", "invalid-rows.jsonl"),
+        ),
+        events: portableRelativePath(repoRoot, path.join(outDir, "validation-events.jsonl")),
+        manifest: portableRelativePath(repoRoot, path.join(outDir, "input-manifest.jsonl")),
+        operation_report: portableRelativePath(
+          repoRoot,
+          path.join(outDir, "tidas-operation-report.json"),
+        ),
       },
     };
     writeJson(reportPath, compatibilityReport);

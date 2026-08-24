@@ -96,13 +96,13 @@
     },
     {
       "id": "external-source-evidence-skill",
-      "route_to": "tiangong-ai/skills via npx skills runtime resolution",
+      "route_to": "tiangong-ai/skills via pnpm dlx skills runtime resolution",
       "use_when": [
         "the task needs fast-moving Tiangong AI document extraction or KB research workflows such as source-document fulltext extraction or SCI literature evidence retrieval"
       ],
       "examples": [
-        "npx --yes skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth",
-        "npx --yes skills@latest use https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search --full-depth"
+        "pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth",
+        "pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search --full-depth"
       ]
     },
     {

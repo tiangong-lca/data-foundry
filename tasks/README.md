@@ -12,7 +12,7 @@ The first tracker adapter is filesystem-backed. Tasks describe import work; reus
 Do not move files into `done/` by hand for committed imports. Use:
 
 ```bash
-npm run task:complete -- \
+pnpm task:complete -- \
   --task <task-id> \
   --completion-report .foundry/workspaces/<task-id>/import-completion/dataset-import-completion-report.json
 ```
@@ -30,8 +30,8 @@ Set `profile` explicitly in task frontmatter. `bafu` requires full-context AI se
 ## Routing
 
 ```bash
-npm run task:route -- --kind external-dataset-curated-import --dataset-type process --required-gates contract,schema,qa,curation
-npm run task:route -- --kind source-evidence-dataset-development --dataset-type process --required-gates context,schema,qa,curation
+pnpm task:route -- --kind external-dataset-curated-import --dataset-type process --required-gates contract,schema,qa,curation
+pnpm task:route -- --kind source-evidence-dataset-development --dataset-type process --required-gates context,schema,qa,curation
 ```
 
 Use `templates/capability-development-request.md` when a task needs a missing reusable capability in another workspace project.

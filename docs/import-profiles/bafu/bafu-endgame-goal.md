@@ -1,3 +1,21 @@
+---
+title: Historical BAFU 2025 V2 Closeout Goal
+docType: reference
+scope: import-profile/bafu-history
+status: historical
+authoritative: false
+owner: tiangong-lca-data-foundry
+language: zh
+whenToUse:
+  - when reconstructing the 2026-06 BAFU closeout execution record
+whenToUpdate:
+  - when a current contract changes how this historical record should be interpreted
+related:
+  - docs/import-profiles/bafu/profile.md
+  - docs/import-profiles/bafu/constraints.md
+  - docs/bafu-import-runbook.md
+---
+
 # BAFU 2025 V2 收尾 Goal（历史归档 · v2）
 
 > **已被取代（2026-07-12）**：本文只保留 2026-06 收尾批次的历史状态、数据量和 artifact 路径，不再是 agent 执行入口。当前可执行规则以 `profile.md`、`constraints.md` 和 `specs/import-profiles.json` 为准；其中已明确 public-canonical-first，但允许 profile-authorized、同一 BAFU owner、`state_code=0` 的 account-local FP/UG 和 elementary candidate。本文 §3-C、§5.5、§8 等“必须先建 public canonical / 不得私有 support”的旧规则不得继续执行。

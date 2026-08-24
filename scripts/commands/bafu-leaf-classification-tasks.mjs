@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "..", "..");
@@ -11,25 +12,10 @@ const DEFAULT_SHARD_SIZE = 100;
 const DEFAULT_MAX_EXCHANGE_REFS = 48;
 const DEFAULT_MAX_REFERENCES = 48;
 const DEFAULT_TEXT_LIMIT = 2400;
-const DEFAULT_PROCESS_CATEGORY_SCHEMA = path.resolve(
-  repoRoot,
-  "..",
-  "tidas",
-  "static",
-  "schemas",
-  "tidas_processes_category.json",
-);
-const DEFAULT_FLOW_PRODUCT_CATEGORY_SCHEMA_CANDIDATES = [
-  path.resolve(
-    repoRoot,
-    "..",
-    "tiangong-lca-cli",
-    "assets",
-    "tidas-schemas",
-    "tidas_flows_product_category.json",
-  ),
-  path.resolve(repoRoot, "..", "tidas", "static", "schemas", "tidas_flows_product_category.json"),
-];
+
+function installedCliSchemaPath(fileName) {
+  return path.join(resolveInstalledTiangongLcaCliPackage().schemaDir, fileName);
+}
 
 const bafuLeafRuntimeKeys = [
   "asText",
@@ -323,10 +309,11 @@ function collectCategorySchemaEntries(schema) {
 }
 
 function loadProcessCategorySchema(schemaPath) {
-  const resolved = resolveRepoPath(schemaPath) || DEFAULT_PROCESS_CATEGORY_SCHEMA;
+  const resolved =
+    resolveRepoPath(schemaPath) || installedCliSchemaPath("tidas_processes_category.json");
   if (!resolved || !fs.existsSync(resolved)) {
     throw new Error(
-      "--process-category-schema is required unless ../tidas/static/schemas/tidas_processes_category.json exists.",
+      "--process-category-schema is required unless the installed @tiangong-lca/cli@0.1.0 process category schema exists.",
     );
   }
   const schema = readJson(resolved);
@@ -358,11 +345,10 @@ function loadProcessCategorySchema(schemaPath) {
 
 function loadFlowProductCategorySchema(schemaPath) {
   const resolved =
-    resolveRepoPath(schemaPath) ||
-    DEFAULT_FLOW_PRODUCT_CATEGORY_SCHEMA_CANDIDATES.find((candidate) => fs.existsSync(candidate));
+    resolveRepoPath(schemaPath) || installedCliSchemaPath("tidas_flows_product_category.json");
   if (!resolved || !fs.existsSync(resolved)) {
     throw new Error(
-      "--flow-product-category-schema is required unless the Tiangong CLI or TIDAS flow product category schema exists.",
+      "--flow-product-category-schema is required unless the installed @tiangong-lca/cli@0.1.0 flow product category schema exists.",
     );
   }
   const entries = collectCategorySchemaEntries(readJson(resolved));

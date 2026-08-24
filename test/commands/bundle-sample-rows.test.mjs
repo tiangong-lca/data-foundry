@@ -25,7 +25,7 @@ const canonicalMassFlowPropertyId = "93a60a56-a3c8-11da-a746-0800200b9a66";
 const canonicalMassUnitGroupId = "93a60a57-a4c8-11da-a746-0800200c9a66";
 
 function rel(filePath) {
-  return path.relative(repoRoot, filePath);
+  return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
 function ml(text) {

@@ -21,8 +21,9 @@ checkPaths:
   - test/commands/topology-convergence.test.mjs
   - test/scenarios/topology-convergence-handoff.test.mjs
   - docs/execution-capsule-contract.md
-lastReviewedAt: 2026-07-24
-lastReviewedCommit: 669ca59a21b0c637c7cb36530643945e255b137a
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: 4d415fac33799011d37094ac79122c1eef3a7855
+lastReviewedNote: "Reviewed for Issue #63: the stage-contract module moved to TypeScript without changing topology composition semantics or artifacts."
 ---
 
 # Topology Convergence Contract
@@ -44,6 +45,8 @@ node scripts/foundry.mjs dataset-topology-convergence-compose \
 ```
 
 The output directory must be fresh and inside the repository. The command creates it with mode `0700` and files with mode `0600`; prior evidence is never overwritten.
+
+Durable JSON artifacts are written through one exclusive writable descriptor and fsynced before close, which preserves the contract on Windows as well as POSIX systems. Numeric `0700`/`0600` assertions apply where the filesystem exposes POSIX permission bits; Windows still enforces fresh-path and no-overwrite semantics.
 
 ## Bound inputs
 

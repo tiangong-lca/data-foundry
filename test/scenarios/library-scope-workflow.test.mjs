@@ -4,7 +4,14 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createFoundryRuntimeUtils } from "../../scripts/lib/foundry-runtime-utils.mjs";
+import {
+  createFoundryRuntimeUtils,
+  resolveInstalledTiangongLcaCliPackage,
+} from "../../scripts/lib/foundry-runtime-utils.mjs";
+import {
+  firstTidasSchemaDir,
+  tidasSchemaPath,
+} from "../../scripts/lib/import-curation/internal/context-inputs.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const fixtureRoot = path.join(repoRoot, "tmp", "library-scope-workflow-test");
@@ -22,7 +29,7 @@ const ids = {
 };
 
 function rel(filePath) {
-  return path.relative(repoRoot, filePath);
+  return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
 function ml(text) {
@@ -804,10 +811,13 @@ test("identity preflight retry dry-run selects only failed rows and records publ
   assert.equal(report.counts.retry_failed_input_rows, 1);
   assert.equal(report.counts.selected_rows, 1);
   assert.equal(report.results[0].dataset_id, ids.ef2);
-  assert.match(report.results[0].command, /^npx --yes @tiangong-lca\/cli@latest /u);
+  assert.match(
+    report.results[0].command.replaceAll("\\", "/"),
+    /node_modules\/@tiangong-lca\/cli\/bin\/tiangong-lca\.js/u,
+  );
 });
 
-test("published CLI resolver defaults to npx latest package", () => {
+test("published CLI resolver binds the installed 0.1.0 package bin through Node", () => {
   const previous = process.env.TIANGONG_LCA_CLI_BIN;
   delete process.env.TIANGONG_LCA_CLI_BIN;
   try {
@@ -816,9 +826,16 @@ test("published CLI resolver defaults to npx latest package", () => {
       repoRoot,
     });
     const cli = resolveTiangongLcaCliCommand();
-    assert.equal(cli.command, "npx");
-    assert.deepEqual(cli.args, ["--yes", "@tiangong-lca/cli@latest"]);
-    assert.equal(cli.display, "npx --yes @tiangong-lca/cli@latest");
+    const installed = resolveInstalledTiangongLcaCliPackage();
+    assert.equal(cli.command, process.execPath);
+    assert.deepEqual(cli.args, [installed.binPath]);
+    assert.equal(cli.package, "@tiangong-lca/cli@0.1.0");
+    assert.equal(cli.package_version, "0.1.0");
+    assert.equal(cli.bin_path, installed.binPath);
+    assert.match(
+      cli.display.replaceAll("\\", "/"),
+      /node_modules\/@tiangong-lca\/cli\/bin\/tiangong-lca\.js/u,
+    );
   } finally {
     if (previous === undefined) {
       delete process.env.TIANGONG_LCA_CLI_BIN;
@@ -826,4 +843,25 @@ test("published CLI resolver defaults to npx latest package", () => {
       process.env.TIANGONG_LCA_CLI_BIN = previous;
     }
   }
+});
+
+test("installed CLI schemas resolve independently of cwd and sibling worktrees", () => {
+  const installed = resolveInstalledTiangongLcaCliPackage();
+  const arbitraryWorktree = path.join(fixtureRoot, "arbitrary-worktree-without-siblings");
+  fs.rmSync(arbitraryWorktree, { recursive: true, force: true });
+  fs.mkdirSync(arbitraryWorktree, { recursive: true });
+
+  assert.equal(firstTidasSchemaDir(arbitraryWorktree), installed.schemaDir);
+  assert.equal(
+    tidasSchemaPath(arbitraryWorktree, "tidas_locations_category.json"),
+    path.join(installed.schemaDir, "tidas_locations_category.json"),
+  );
+  assert.equal(fs.existsSync(path.join(arbitraryWorktree, "..", "tiangong-lca-cli")), false);
+
+  const version = spawnSync(process.execPath, [installed.binPath, "--version"], {
+    cwd: arbitraryWorktree,
+    encoding: "utf8",
+  });
+  assert.equal(version.status, 0, version.stderr);
+  assert.equal(version.stdout.trim(), "0.1.0");
 });

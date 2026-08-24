@@ -4,5 +4,4 @@ module.exports = {
   trailingComma: "all",
   proseWrap: "never",
   endOfLine: "lf",
-  plugins: ["prettier-plugin-organize-imports"],
 };

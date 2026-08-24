@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,27 +26,42 @@ const forbidden = [
   /python(?:3)?\s+-m\s+tidas_tools/u,
 ];
 
-function walk(relativePath) {
-  const absolutePath = path.join(repoRoot, relativePath);
-  if (!fs.existsSync(absolutePath)) return [];
-  const stat = fs.statSync(absolutePath);
-  if (stat.isFile()) return [relativePath];
-  return fs
-    .readdirSync(absolutePath, { withFileTypes: true })
-    .flatMap((entry) => walk(path.posix.join(relativePath, entry.name)));
+function trackedAuthoritativeFiles() {
+  const result = spawnSync(
+    "git",
+    [
+      "-C",
+      repoRoot,
+      "ls-files",
+      "--cached",
+      "--others",
+      "--exclude-standard",
+      "-z",
+      "--",
+      "AGENTS.md",
+      "README.md",
+      "WORKFLOW.md",
+      ".env.example",
+      ".agents/skills",
+      "docs",
+      "specs",
+      "scripts",
+    ],
+    { encoding: "utf8" },
+  );
+  if (result.error || result.status !== 0) {
+    throw new Error(
+      `Unable to enumerate tracked Foundry cutover surfaces: ${result.error?.message || result.stderr || `git exited ${result.status}`}`,
+    );
+  }
+  return result.stdout
+    .split("\0")
+    .filter(Boolean)
+    .filter((file) => fs.existsSync(path.join(repoRoot, file)));
 }
 
 export function auditTidasCutover() {
-  const files = [
-    "AGENTS.md",
-    "README.md",
-    "WORKFLOW.md",
-    ".env.example",
-    ...walk(".agents/skills"),
-    ...walk("docs"),
-    ...walk("specs"),
-    ...walk("scripts"),
-  ].filter(
+  const files = trackedAuthoritativeFiles().filter(
     (file) =>
       !historicalDocs.has(file) &&
       file !== "scripts/check-tidas-cutover.mjs" &&

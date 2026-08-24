@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { readOnlyStageContract } from "../lib/stage-contract.mjs";
+import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
 const postAuthoringFinalizeStageContract = readOnlyStageContract([
   {

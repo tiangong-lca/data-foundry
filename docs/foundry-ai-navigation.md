@@ -22,8 +22,9 @@ checkPaths:
   - scripts/commands/incremental-change-set.mjs
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mjs
-lastReviewedAt: 2026-07-23
-lastReviewedCommit: 849d6ac14d357bd445a9fa75a9c18dc16a2a411a
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
+lastReviewedNote: "Reviewed for Issue #63: typed-spine navigation, migration inventory, pnpm/TS7 gates, and clean-worktree validation."
 ---
 
 # Foundry AI Navigation
@@ -52,6 +53,22 @@ The checked source of truth for command ownership is `scripts/lib/foundry-comman
 `test/unit/foundry-command-metadata.test.mjs` enforces that the metadata covers all registered commands and that public commands remain reachable within two jumps from `scripts/foundry.mjs`.
 
 The incremental lane is owned by `scripts/commands/incremental-change-set.mjs`, with its authoritative artifact and activation boundary in `docs/incremental-change-set-contract.md`. It composes Foundry-owned task evidence and stops before the CLI-owned mutation boundary.
+
+## TypeScript Migration Navigation
+
+Do not navigate the migration by extension alone. `specs/typescript-migration-inventory.json` records the Issue #63 baseline of 160 tracked JavaScript artifacts. The typed dependency spine is:
+
+```text
+entrypoint + argument contract
+  -> command registry + command metadata
+  -> runtime I/O + hashing + artifact/receipt contracts
+  -> semantic command owners
+  -> command and scenario fixtures
+```
+
+Migrate downward in that order, starting each slice with a failing characterization or realistic case. Keep the existing `.mjs` implementation until the TypeScript replacement preserves help, stdout, exit, stage, artifact, and safety contracts. Update the inventory in the same change; a typed wrapper around an untyped business module does not complete that module.
+
+The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 
 ## Import-Curation Modules
 
@@ -112,7 +129,7 @@ Dependencies should point downward only. Internal low-level modules must not imp
 
 ## Cleanup Checks
 
-Before deleting a Foundry-local surface, prove the current replacement path and check command metadata, tests, docs, and docpact coverage. Safe deletions include old npm aliases, empty metadata categories, and draft orchestration docs with no remaining consumer. Do not delete runtime skills, task templates, profile docs, or account-safety docs only because they are low-frequency; those may be agent entrypoints rather than code imports. Run `node scripts/foundry.mjs surface-audit` to automate the local scan for hidden command aliases, empty metadata categories, unregistered orphan docs, and script modules without inbound imports.
+Before deleting a Foundry-local surface, prove the current replacement path and check command metadata, tests, docs, and docpact coverage. Safe deletions include old package-script aliases, empty metadata categories, and draft orchestration docs with no remaining consumer. Do not delete runtime skills, task templates, profile docs, or account-safety docs only because they are low-frequency; those may be agent entrypoints rather than code imports. Run `node scripts/foundry.mjs surface-audit` to automate the local scan for hidden command aliases, empty metadata categories, unregistered orphan docs, and script modules without inbound imports.
 
 ## Behavior Freeze
 
@@ -126,10 +143,14 @@ The test tree is split by behavior layer:
 Before and after structural changes, run:
 
 ```bash
-npm run golden:diff
-npm test
+pnpm golden:diff
+pnpm test
+pnpm test:toolchain
+pnpm lint
+pnpm typecheck
+pnpm build
 node scripts/foundry.mjs doctor
 git diff --check
 ```
 
-Golden diff protects CLI JSON compatibility for the key command set. The full test suite protects workflow-specific artifact and proof behavior. Command metadata tests protect AI navigation.
+Golden diff protects CLI JSON compatibility for the key command set. The full test suite protects workflow-specific artifact and proof behavior. Toolchain tests protect the pnpm/TS7 graph and migration ledger. Command metadata tests protect AI navigation.

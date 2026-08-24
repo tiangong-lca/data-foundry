@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { resolveInstalledTiangongLcaCliPackage } from "../../foundry-runtime-utils.mjs";
 import { sha256Text } from "./hash-utils.mjs";
 import {
   asText,
@@ -12,14 +13,12 @@ import {
   resolveRepoPath,
 } from "./runtime-io.mjs";
 
-export const tidasSchemaSearchRoots = [["tiangong-lca-cli", "assets", "tidas-schemas"]];
+export const tidasSchemaSearchRoots = ["@tiangong-lca/cli@0.1.0/assets/tidas-schemas"];
 
 export function tidasSchemaPath(repoRoot, schemaFile) {
-  for (const parts of tidasSchemaSearchRoots) {
-    const candidate = path.resolve(repoRoot, "..", ...parts, schemaFile);
-    if (fileExists(candidate)) return candidate;
-  }
-  return null;
+  void repoRoot;
+  const candidate = path.join(resolveInstalledTiangongLcaCliPackage().schemaDir, schemaFile);
+  return fileExists(candidate) ? candidate : null;
 }
 
 export function loadTidasSchema(repoRoot, schemaFile) {
@@ -50,11 +49,9 @@ export function collectContextDirFiles(repoRoot, contextDir) {
 }
 
 export function firstTidasSchemaDir(repoRoot) {
-  for (const parts of tidasSchemaSearchRoots) {
-    const candidate = path.resolve(repoRoot, "..", ...parts);
-    if (directoryExists(candidate)) return candidate;
-  }
-  return null;
+  void repoRoot;
+  const schemaDir = resolveInstalledTiangongLcaCliPackage().schemaDir;
+  return directoryExists(schemaDir) ? schemaDir : null;
 }
 
 export function bundledCategorySchemaFileNames(repoRoot) {

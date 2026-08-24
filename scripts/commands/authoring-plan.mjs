@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { readOnlyStageContract } from "../lib/stage-contract.mjs";
+import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
 const authoringPlanStageContract = readOnlyStageContract([
   {

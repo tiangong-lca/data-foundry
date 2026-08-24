@@ -23,8 +23,9 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - docs/safety-policy.md
   - docs/incremental-change-set-contract.md
-lastReviewedAt: 2026-07-30
-lastReviewedCommit: 7b9cebaaab2f8f35fce7aed48d3a76513d205496
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: 604b931b27e79861cdc4b68fc58e4bf95454d23b
+lastReviewedNote: "Reviewed for Issue #63: pnpm/TS7 changes remain Foundry-local tooling, while CLI 0.1.0 and runtime skills retain sibling ownership."
 ---
 
 # Capability Ownership Policy
@@ -62,9 +63,15 @@ Foundry does not own:
 - CLI, SDK, database, converter, or Edge behavior reimplemented as local test fixtures;
 - user RLS-scoped dataset delete, retirement, redo, repair execution, or database mutation semantics.
 
-Profile-gated batch commit does not change ownership: Foundry may decide that an exact scope has passed policy and handoff gates, but the actual mutation command remains an official CLI/platform command executed under an account guard. Foundry's default platform invocation is the published CLI package, `npx --yes @tiangong-lca/cli@latest ...`; local CLI binary overrides are only explicit operator/test state, not the workflow contract.
+The TypeScript migration does not change capability ownership. Foundry may type its entrypoint, command registry/metadata, runtime I/O, artifacts, receipts, and local orchestration modules, but it must not use the migration to absorb CLI, SDK, converter, skill, database, or Edge behavior. The migration ledger and clean-worktree toolchain tests are Foundry-owned evidence; the sibling behavior they invoke remains owned by the sibling project.
 
-Deterministic import/conversion/schema validation follows a separate native-tool boundary. Foundry selects the Rust `tidas` executable with `--tidas-bin`, `TIDAS_BIN`, then `PATH`, and optional config with `--tidas-config` then `TIDAS_CONFIG`. It accepts compatible 0.2.x releases only after a `tidas version` handshake proves `tidas.operation-report.v1`; it does not install a Python package, inspect a Python checkout, or pin one patch release. Foundry may materialize the official validation-batch manifest and map the stable Rust report/exit result into its existing validation report, but must not reproduce schema or converter rules.
+Cross-platform Git line-ending and test-harness policy are also Foundry-owned delivery tooling. They may normalize repository text and fixture dispatch, but they do not normalize or redefine any sibling capability output.
+
+Foundry also owns portability of its local artifact paths, command-plan parsing, and durable file writes. Separator normalization and writable-descriptor fsync preserve the same Foundry contract on each OS; they do not move CLI execution or Rust validation semantics into Foundry.
+
+Profile-gated batch commit does not change ownership: Foundry may decide that an exact scope has passed policy and handoff gates, but the actual mutation command remains an official CLI/platform command executed under an account guard. Foundry's default platform invocation is the exact installed CLI package, `pnpm exec tiangong-lca ...`; local CLI binary overrides are only explicit operator/test state, not the workflow contract.
+
+Deterministic import/conversion/schema validation follows a separate native-tool boundary. Foundry selects the Rust `tidas` executable with `--tidas-bin`, `TIDAS_BIN`, then `PATH`, and optional config with `--tidas-config` then `TIDAS_CONFIG`. It accepts compatible 0.2.x releases only after a `tidas version` handshake proves `tidas.operation-report.v1`; it does not install a Python package, inspect a Python checkout, or pin one patch release. A script-backed test override is dispatched through Node plus an argv prefix on every platform; that portability adapter does not move Rust validation behavior into Foundry. Foundry may materialize the official validation-batch manifest and map the stable Rust report/exit result into its existing validation report, but must not reproduce schema or converter rules.
 
 Incremental composition follows the same boundary. Foundry may minimize the write set and emit a syntactically compatible CLI execution contract, but current-state reconciliation, authenticated dispatch, transaction semantics, attempt/no-replay state, and readback remain CLI/database responsibilities.
 
@@ -77,7 +84,7 @@ Use this order before adding code:
 1. If the change only coordinates existing commands or checks foundry task artifacts, implement it in foundry.
 2. If the change is deterministic import, conversion, or schema validation, create a development request for Rust `tidas`; if it is a reusable primitive command with remote access, AI context/curation, or handoff behavior, create a development request for `tiangong-lca-cli`.
 3. If the change is a reusable agent workflow that composes CLI commands, create a development request for `tiangong-lca-skills`.
-4. If the change is a fast-moving external source-evidence extraction or retrieval workflow, consume it as a runtime `npx skills` dependency and record the resolved ref instead of copying it into Foundry.
+4. If the change is a fast-moving external source-evidence extraction or retrieval workflow, consume it as a runtime `pnpm dlx skills@latest` dependency and record the resolved ref instead of copying it into Foundry.
 5. If the change depends on database, Edge Function, Rust tidas, SDK, or schema internals, route it to that owning repo.
 
 Bad-import cleanup and redo must be routed to `tiangong-lca dataset maintenance plan/apply/verify` plus the `$dataset-rls-maintenance` skill. Foundry may store the maintenance scope, plan, and verification reports in the task workspace, but must not own direct delete logic, service-role access, or broad current-account cleanup filters.

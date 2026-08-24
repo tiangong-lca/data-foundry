@@ -2,7 +2,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { readOnlyStageContract } from "../lib/stage-contract.mjs";
+import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
 const REQUEST_SCHEMA = "foundry-topology-convergence-request.v1";
 const CANDIDATE_ROW_SCHEMA = "foundry-topology-candidate-index-row.v1";
@@ -214,9 +214,9 @@ class ConversionEventWriter extends JsonlWriter {
 }
 
 function writeJson(filePath, value) {
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, { flag: "wx", mode: 0o600 });
-  const fd = fs.openSync(filePath, "r");
+  const fd = fs.openSync(filePath, "wx", 0o600);
   try {
+    fs.writeFileSync(fd, `${JSON.stringify(value, null, 2)}\n`);
     fs.fsyncSync(fd);
   } finally {
     fs.closeSync(fd);
@@ -1568,7 +1568,7 @@ export function createTopologyConvergenceCommands({ repoRoot }) {
       return {
         status,
         production_authority: false,
-        out_dir: path.relative(repoRoot, outDir),
+        out_dir: path.relative(repoRoot, outDir).split(path.sep).join(path.posix.sep),
         counts,
         p0,
         p1,

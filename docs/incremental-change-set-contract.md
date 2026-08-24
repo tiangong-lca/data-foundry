@@ -19,8 +19,9 @@ checkPaths:
   - test/commands/incremental-change-set.test.mjs
   - test/scenarios/incremental-change-set-handoff.test.mjs
   - docs/execution-capsule-contract.md
-lastReviewedAt: 2026-07-23
-lastReviewedCommit: 849d6ac14d357bd445a9fa75a9c18dc16a2a411a
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: 4d415fac33799011d37094ac79122c1eef3a7855
+lastReviewedNote: "Reviewed for Issue #63: the stage-contract module moved to TypeScript without changing incremental composition semantics or artifacts."
 ---
 
 # Incremental Change-Set Contract
@@ -42,6 +43,8 @@ node scripts/foundry.mjs dataset-incremental-change-set-compose \
 ```
 
 Only `--request`, `--out-dir`, and `--help` are supported. The output directory must be inside the repository and must not exist. The command creates it with mode `0700` and artifacts with mode `0600`; it never overwrites an earlier composition.
+
+Those numeric mode bits are enforced and tested on POSIX filesystems. Windows retains the same fresh-path, exclusive-create, immutable-output, hash, and manifest guarantees even though it does not expose POSIX permission bits through `stat.mode`.
 
 ## SHA-Bound Request
 
