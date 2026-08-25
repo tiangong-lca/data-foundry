@@ -325,6 +325,23 @@ function assertGitIgnoredCaseOutDir(root: string, outDir: string): void {
   }
 }
 
+function assertPrivateParentInsideRepository(root: string, outDir: string): void {
+  const parent = path.dirname(outDir);
+  const relativeParent = path.relative(root, parent);
+  let current = root;
+  for (const part of relativeParent.split(path.sep).filter(Boolean)) {
+    current = path.join(current, part);
+    if (!existsSync(current)) break;
+    if (lstatSync(current).isSymbolicLink()) {
+      return fail(
+        "Production case output parent must not traverse a symbolic link.",
+        "CASE_OUTPUT_PARENT_SYMLINK",
+        2,
+      );
+    }
+  }
+}
+
 type BufferedFile = { relativePath: string; bytes: Buffer };
 
 function comparePortablePaths(left: BufferedFile, right: BufferedFile): number {
@@ -457,17 +474,12 @@ function prepareRuntimeSnapshot(): ProductionContactDraftRuntimeEvidence {
   const pnpmInstallationSha256 = hashBufferedFiles(
     collectPnpmInstallationFiles(pnpmInstallationRoot),
   );
-  const verifyCurrent = (): void => {
-    if (
-      hashBufferedFiles(collectPnpmInstallationFiles(pnpmInstallationRoot)) !==
-      pnpmInstallationSha256
-    ) {
-      return fail(
-        "The installed pnpm dependency bytes changed during the production case.",
-        "CASE_RUNTIME_DRIFT",
-      );
-    }
-  };
+  const cliRuntimeSha256 = hashBufferedFiles(packageFiles);
+  const runnerPath = fileURLToPath(import.meta.url);
+  const runnerSha256 = createHash("sha256").update(readRegularFile(runnerPath)).digest("hex");
+  const lockPath = path.join(root, "pnpm-lock.yaml");
+  const pnpmLockSha256 = createHash("sha256").update(readRegularFile(lockPath)).digest("hex");
+  const foundrySourceSha256 = sourceEvidence(root);
 
   // Keep the private copy inside the installed package's pnpm dependency island.
   // ESM does not honor NODE_PATH, so moving the package under a generic cache
@@ -482,19 +494,32 @@ function prepareRuntimeSnapshot(): ProductionContactDraftRuntimeEvidence {
       writeFileSync(target, file.bytes, { flag: "wx", mode: 0o600 });
       if (process.platform !== "win32") chmodSync(target, 0o600);
     }
-    const lockBytes = readRegularFile(path.join(root, "pnpm-lock.yaml"));
+    const snapshotPackageRoot = path.join(snapshotRoot, "cli");
+    const verifyCurrent = (): void => {
+      if (
+        hashBufferedFiles(collectPnpmInstallationFiles(pnpmInstallationRoot)) !==
+          pnpmInstallationSha256 ||
+        hashBufferedFiles(collectFiles(snapshotPackageRoot)) !== cliRuntimeSha256 ||
+        createHash("sha256").update(readRegularFile(runnerPath)).digest("hex") !== runnerSha256 ||
+        createHash("sha256").update(readRegularFile(lockPath)).digest("hex") !== pnpmLockSha256 ||
+        sourceEvidence(root) !== foundrySourceSha256
+      ) {
+        return fail(
+          "The pinned runtime, source, lock, or pnpm dependency bytes changed during the production case.",
+          "CASE_RUNTIME_DRIFT",
+        );
+      }
+    };
     return {
       entrypoint: path.join(snapshotRoot, "cli", binRelativePath),
       cliPackageName: CLI_PACKAGE_NAME,
       cliPackageVersion: CLI_PACKAGE_VERSION,
       cliEntrypointSha256: createHash("sha256").update(binFile.bytes).digest("hex"),
-      cliRuntimeSha256: hashBufferedFiles(packageFiles),
-      runnerSha256: createHash("sha256")
-        .update(readRegularFile(fileURLToPath(import.meta.url)))
-        .digest("hex"),
-      pnpmLockSha256: createHash("sha256").update(lockBytes).digest("hex"),
+      cliRuntimeSha256,
+      runnerSha256,
+      pnpmLockSha256,
       pnpmInstallationSha256,
-      foundrySourceSha256: sourceEvidence(root),
+      foundrySourceSha256,
       verifyCurrent,
       cleanup: () =>
         rmSync(snapshotRoot, {
@@ -1109,6 +1134,7 @@ export async function runProductionContactDraftCase(
     );
   }
   const root = repositoryRoot();
+  assertPrivateParentInsideRepository(root, options.outDir);
   assertGitIgnoredCaseOutDir(root, options.outDir);
   const runtime = validateRuntimeEvidence(
     (deps.prepareRuntimeSnapshot ?? prepareRuntimeSnapshot)(),
@@ -1142,6 +1168,11 @@ export async function runProductionContactDraftCase(
     try {
       mkdirSync(outParent, { recursive: true, mode: 0o700 });
       if (!lstatSync(outParent).isDirectory()) throw new Error("not a directory");
+      const realParent = realpathSync(outParent);
+      const relativeRealParent = path.relative(root, realParent);
+      if (relativeRealParent.startsWith(`..${path.sep}`) || path.isAbsolute(relativeRealParent)) {
+        throw new Error("parent escaped repository");
+      }
       if (!outParentExisted && process.platform !== "win32") chmodSync(outParent, 0o700);
     } catch {
       return fail(

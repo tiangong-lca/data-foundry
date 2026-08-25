@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
+import os from "node:os";
 import test from "node:test";
 
 import {
@@ -176,6 +177,8 @@ test("production contact case requires POSIX-private ignored output before runti
       cliRuntimeSha256: "b".repeat(64),
       runnerSha256: "c".repeat(64),
       pnpmLockSha256: "d".repeat(64),
+      pnpmInstallationSha256: "e".repeat(64),
+      verifyCurrent: () => {},
       cleanup: () => {},
     };
   };
@@ -210,7 +213,28 @@ test("production contact case requires POSIX-private ignored output before runti
     assert.equal(prepared, 0);
   } finally {
     fs.rmSync(nonIgnored, { recursive: true, force: true });
+  }
+
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-case-outside-"));
+  const linkedParent = path.join(root, "linked-parent");
+  fs.symlinkSync(outside, linkedParent);
+  try {
+    await assert.rejects(
+      runProductionContactDraftCase(
+        {
+          envFile: path.join(root, "missing.env"),
+          expectedProjectRef: PROJECT_REF,
+          expectedUserId: USER_ID,
+          outDir: path.join(linkedParent, "case-output"),
+        },
+        { prepareRuntimeSnapshot: runtime },
+      ),
+      /must not traverse a symbolic link/u,
+    );
+    assert.equal(prepared, 0);
+  } finally {
     fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(outside, { recursive: true, force: true });
   }
 });
 
@@ -296,6 +320,7 @@ test("production contact case executes one bounded owner-draft mutation and uniq
   let extraPostwriteCheckStatus: string | null = null;
   let failIdentityReceipt = false;
   let injectSecretInPostwrite = false;
+  let injectSecretInPostwriteSidecar = false;
   const fakeRuntime = (
     cleanup = () => {
       runtimeCleanups += 1;
@@ -308,6 +333,8 @@ test("production contact case executes one bounded owner-draft mutation and uniq
     cliRuntimeSha256: "b".repeat(64),
     runnerSha256: "c".repeat(64),
     pnpmLockSha256: "d".repeat(64),
+    pnpmInstallationSha256: "e".repeat(64),
+    verifyCurrent: () => {},
     cleanup,
   });
 
@@ -454,6 +481,7 @@ test("production contact case executes one bounded owner-draft mutation and uniq
                 status: "ok",
                 exact_version: postWrite ? "00.00.001" : null,
                 latest_version: postWrite ? "00.00.001" : null,
+                ...(postWrite && injectSecretInPostwriteSidecar ? { debug_value: TEST_KEY } : {}),
               },
               ...(postWrite
                 ? [
@@ -722,7 +750,7 @@ test("production contact case executes one bounded owner-draft mutation and uniq
           spawnImpl: successfulSpawn,
         },
       ),
-      /secret material was detected/u,
+      /Secret material was detected/u,
     );
     injectSecretInPostwrite = false;
     const secretArtifactText = fs
@@ -733,6 +761,30 @@ test("production contact case executes one bounded owner-draft mutation and uniq
       .join("\n");
     assert.doesNotMatch(secretArtifactText, new RegExp(TEST_KEY, "u"));
     assert.equal(fs.existsSync(path.join(secretArtifactOutDir, "case-manifest.json")), false);
+
+    const secretSidecarOutDir = path.join(root, "secret-sidecar-output");
+    authCallsThisRun = 0;
+    injectSecretInPostwriteSidecar = true;
+    await assert.rejects(
+      runProductionContactDraftCase(
+        {
+          envFile,
+          expectedProjectRef: PROJECT_REF,
+          expectedUserId: USER_ID,
+          outDir: secretSidecarOutDir,
+        },
+        {
+          processEnv: { PATH: "/safe/bin" },
+          now: () => new Date("2026-08-25T12:36:00.000Z"),
+          randomUUID: () => CONTACT_ID,
+          prepareRuntimeSnapshot: fakeRuntime,
+          spawnImpl: successfulSpawn,
+        },
+      ),
+      /Secret material was detected/u,
+    );
+    injectSecretInPostwriteSidecar = false;
+    assert.equal(fs.existsSync(path.join(secretSidecarOutDir, "case-manifest.json")), false);
 
     const cleanupFailureOutDir = path.join(root, "cleanup-failure-output");
     authCallsThisRun = 0;
