@@ -14,8 +14,27 @@
 // and each run re-installs its own profile config (runs are sequential, race-free).
 import { createBafuBatchImportRunCommands } from "./bafu-batch-import-run.mjs";
 
-export function createWorldsteelBatchImportRunCommands(deps) {
-  const { runDatasetBafuBatchImportRun } = createBafuBatchImportRunCommands(deps, {
+export type WorldsteelBatchImportRunner = (...args: unknown[]) => unknown;
+export type WorldsteelBatchImportCommandSet = {
+  runDatasetBafuBatchImportRun: WorldsteelBatchImportRunner;
+};
+export type WorldsteelBatchImportFactory = (
+  deps: unknown,
+  config: Record<string, unknown>,
+) => WorldsteelBatchImportCommandSet;
+export type WorldsteelBatchImportFactoryOverrides = {
+  createBafuBatchImportRunCommands?: WorldsteelBatchImportFactory;
+};
+
+const defaultBatchImportFactory =
+  createBafuBatchImportRunCommands as unknown as WorldsteelBatchImportFactory;
+
+export function createWorldsteelBatchImportRunCommands(
+  deps: unknown,
+  overrides: WorldsteelBatchImportFactoryOverrides = {},
+): { runDatasetWorldsteelBatchImportRun: WorldsteelBatchImportRunner } {
+  const factory = overrides.createBafuBatchImportRunCommands ?? defaultBatchImportFactory;
+  const { runDatasetBafuBatchImportRun } = factory(deps, {
     profile: "worldsteel",
     commandName: "dataset-worldsteel-batch-import-run",
     enableBafuAutofill: false,

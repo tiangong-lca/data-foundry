@@ -953,7 +953,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-uslci-batch-import-run": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/uslci-batch-import-run.mjs",
+    ownerModule: "scripts/commands/uslci-batch-import-run.ts",
     ownerExport: "createUslciBatchImportRunCommands().runDatasetUslciBatchImportRun",
     inputs: [
       "ready-scopes.jsonl (library-resolution-v8)",
@@ -982,7 +982,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-worldsteel-batch-import-run": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/worldsteel-batch-import-run.mjs",
+    ownerModule: "scripts/commands/worldsteel-batch-import-run.ts",
     ownerExport: "createWorldsteelBatchImportRunCommands().runDatasetWorldsteelBatchImportRun",
     inputs: [
       "ready-scopes.jsonl (worldsteel library-resolution)",

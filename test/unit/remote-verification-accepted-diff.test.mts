@@ -199,7 +199,7 @@ test("foreign or RLS-hidden state-0 missing_dataset cannot be accepted by any ca
     "utf8",
   );
   const worldsteelSource = fs.readFileSync(
-    path.join(repoRoot, "scripts/commands/worldsteel-batch-import-run.mjs"),
+    path.join(repoRoot, "scripts/commands/worldsteel-batch-import-run.ts"),
     "utf8",
   );
   for (const source of [batchSource, worldsteelSource]) {

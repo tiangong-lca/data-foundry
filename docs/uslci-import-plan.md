@@ -163,7 +163,7 @@ related:
 
 ## 8. Runner 机制（foundry，本会话落地，2026-06 发布不含）
 
-USLCI runner = `dataset-uslci-batch-import-run`（`scripts/commands/uslci-batch-import-run.mjs`），薄包装 `createBafuBatchImportRunCommands(deps, config)`，BAFU 引擎零回归（`npm test` 206/206）。uslci 配置：`profile:"uslci"`、autofill OFF、family-signatures OFF、NREL libraryContact、`commitFlowSupportInline:true`、`mintUnmatchedFpUgSupport:true`。
+USLCI runner = `dataset-uslci-batch-import-run`（`scripts/commands/uslci-batch-import-run.ts`），薄包装 `createBafuBatchImportRunCommands(deps, config)`，BAFU 引擎零回归（`npm test` 206/206）。uslci 配置：`profile:"uslci"`、autofill OFF、family-signatures OFF、NREL libraryContact、`commitFlowSupportInline:true`、`mintUnmatchedFpUgSupport:true`。
 
 机制要点：
 

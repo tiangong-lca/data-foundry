@@ -11,8 +11,27 @@
 // and each run re-installs its own profile config (runs are sequential, race-free).
 import { createBafuBatchImportRunCommands } from "./bafu-batch-import-run.mjs";
 
-export function createUslciBatchImportRunCommands(deps) {
-  const { runDatasetBafuBatchImportRun } = createBafuBatchImportRunCommands(deps, {
+export type LibraryBatchImportRunner = (...args: unknown[]) => unknown;
+export type LibraryBatchImportCommandSet = {
+  runDatasetBafuBatchImportRun: LibraryBatchImportRunner;
+};
+export type LibraryBatchImportFactory = (
+  deps: unknown,
+  config: Record<string, unknown>,
+) => LibraryBatchImportCommandSet;
+export type LibraryBatchImportFactoryOverrides = {
+  createBafuBatchImportRunCommands?: LibraryBatchImportFactory;
+};
+
+const defaultBatchImportFactory =
+  createBafuBatchImportRunCommands as unknown as LibraryBatchImportFactory;
+
+export function createUslciBatchImportRunCommands(
+  deps: unknown,
+  overrides: LibraryBatchImportFactoryOverrides = {},
+): { runDatasetUslciBatchImportRun: LibraryBatchImportRunner } {
+  const factory = overrides.createBafuBatchImportRunCommands ?? defaultBatchImportFactory;
+  const { runDatasetBafuBatchImportRun } = factory(deps, {
     profile: "uslci",
     commandName: "dataset-uslci-batch-import-run",
     enableBafuAutofill: false,
@@ -38,7 +57,7 @@ export function createUslciBatchImportRunCommands(deps) {
     // holds exchange-reference-rewrites.jsonl. BAFU never sets this flag.
     applyResolutionRewrites: true,
     // D2 source attribution: USLCI rows must NOT inherit the BAFU FOEN library
-    // contact (nor any openLCA software identity). The materialize stage stamps
+    // contact (nor an openLCA software identity). The materialize stage stamps
     // this NREL / U.S. Federal LCA Commons contact as the shared library contact.
     libraryContact: {
       libraryName: "National Renewable Energy Laboratory (NREL)",

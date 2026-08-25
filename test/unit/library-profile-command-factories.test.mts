@@ -3,8 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createUslciBatchImportRunCommands } from "../../scripts/commands/uslci-batch-import-run.mjs";
-import { createWorldsteelBatchImportRunCommands } from "../../scripts/commands/worldsteel-batch-import-run.mjs";
+import { createUslciBatchImportRunCommands } from "../../scripts/commands/uslci-batch-import-run.ts";
+import { createWorldsteelBatchImportRunCommands } from "../../scripts/commands/worldsteel-batch-import-run.ts";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
