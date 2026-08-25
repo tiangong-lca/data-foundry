@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { auditTidasCutover } from "../../scripts/check-tidas-cutover.mjs";
+import { auditTidasCutover } from "../../scripts/check-tidas-cutover.ts";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
@@ -14,7 +14,7 @@ function negativeFixturePath(): string {
 }
 
 function runAuditScript(): { status: number | null; stdout: string; stderr: string } {
-  const result = spawnSync(process.execPath, ["scripts/check-tidas-cutover.mjs"], {
+  const result = spawnSync(process.execPath, ["scripts/check-tidas-cutover.ts"], {
     cwd: repoRoot,
     encoding: "utf8",
     env: process.env,
