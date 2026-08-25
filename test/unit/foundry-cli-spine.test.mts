@@ -328,6 +328,7 @@ test("active documentation and source contain no references to removed CLI spine
     "profiles-config.mjs",
     "workflow-patch-collect.mjs",
     "workflow-identity-decision-context.mjs",
+    "workflow-patch-evidence-context.mjs",
   ];
   const files = [
     "AGENTS.md",
