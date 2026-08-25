@@ -57,6 +57,15 @@
       }
     },
     {
+      "files": [
+        "scripts/lib/bundle-sample-utils.ts",
+        "test/unit/bundle-sample-utils-contract.test.mts"
+      ],
+      "rules": {
+        "typescript/no-explicit-any": "error"
+      }
+    },
+    {
       "files": ["test/**/*.{js,mjs,cjs,ts,mts,cts}"],
       "rules": {
         "typescript/no-floating-promises": "off",
