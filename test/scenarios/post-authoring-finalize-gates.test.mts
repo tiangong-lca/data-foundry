@@ -930,6 +930,7 @@ test("post-authoring finalize proves canonical UG for minted FP and excludes for
 
 test("post-authoring finalize stops after invalid datetime cleanup without downstream evidence", () => {
   const root = path.join(finalizeAutoQueueFixtureRoot, "invalid-datetime-cleanup");
+  let managedSymlinkPath: string | null = null;
   fs.rmSync(root, { recursive: true, force: true });
   const validId = "55555555-5555-4555-8555-555555555555";
   const invalidId = "66666666-6666-4666-8666-666666666666";
@@ -964,10 +965,13 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
   writeJsonLines(rowsFile, [valid, invalid]);
   const explicitParentBytes = '{"retained":true}\n';
   writeText(explicitParentOutput, explicitParentBytes);
-  writeJson(path.join(root, "finalize", ".tiangong-foundry-finalize-output.json"), {
+  const finalizeDir = path.join(root, "finalize");
+  fs.mkdirSync(finalizeDir, { recursive: true });
+  writeJson(path.join(finalizeDir, ".tiangong-foundry-finalize-output.json"), {
     schema_version: 1,
     command: "dataset-post-authoring-finalize",
-    output_directory: path.resolve(path.join(root, "finalize")),
+    output_directory: path.resolve(finalizeDir),
+    output_directory_realpath: fs.realpathSync(finalizeDir),
   });
   const supportSource = sourceRow(sourceId) as unknown as FixtureRecord;
   supportSource.sourceDataSet.sourceInformation.dataSetInformation.sourceCitation =
@@ -1098,7 +1102,62 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
     );
     assert.equal(fs.existsSync(unownedSchema), true);
     assert.equal(fs.existsSync(unownedCommand), true);
+
+    if (process.platform !== "win32") {
+      const externalVictim = path.join(root, "managed-symlink-victim");
+      fs.mkdirSync(externalVictim, { recursive: true });
+      managedSymlinkPath = path.join(
+        repoRoot,
+        ".foundry",
+        "workspaces",
+        `issue69-finalize-symlink-${process.pid}`,
+      );
+      fs.mkdirSync(path.dirname(managedSymlinkPath), { recursive: true });
+      fs.rmSync(managedSymlinkPath, { recursive: true, force: true });
+      fs.symlinkSync(externalVictim, managedSymlinkPath, "dir");
+      const nestedSymlinkOutput = path.join(managedSymlinkPath, "nested-finalize");
+      const externalNestedOutput = path.join(externalVictim, "nested-finalize");
+      fs.mkdirSync(externalNestedOutput, { recursive: true });
+      writeJson(path.join(externalNestedOutput, ".tiangong-foundry-finalize-output.json"), {
+        schema_version: 1,
+        command: "dataset-post-authoring-finalize",
+        output_directory: path.resolve(nestedSymlinkOutput),
+        output_directory_realpath: fs.realpathSync(externalNestedOutput),
+      });
+      const externalSchema = path.join(externalNestedOutput, "schema", "stale.json");
+      const externalCommand = path.join(
+        externalNestedOutput,
+        "commit-handoff",
+        "stale-command.json",
+      );
+      writeJson(externalSchema, { retained: "outside-real-managed-root" });
+      writeJson(externalCommand, { retained: "outside-real-managed-root" });
+      const symlinked = runFoundry([
+        "dataset-post-authoring-finalize",
+        "--type",
+        "process",
+        "--profile",
+        "bafu",
+        "--rows-file",
+        rel(rowsFile),
+        "--source-support-rows-file",
+        rel(sourceSupportRowsFile),
+        "--finalize-source-contact-support",
+        "--out-dir",
+        rel(nestedSymlinkOutput),
+      ]);
+      assert.equal(symlinked.code, 1);
+      assert.equal(
+        symlinked.json.blockers.some(
+          (blocker) => blocker.code === "stale_finalize_artifacts_not_invalidated",
+        ),
+        true,
+      );
+      assert.equal(fs.existsSync(externalSchema), true);
+      assert.equal(fs.existsSync(externalCommand), true);
+    }
   } finally {
+    if (managedSymlinkPath) fs.rmSync(managedSymlinkPath, { force: true });
     fs.rmSync(root, { recursive: true, force: true });
   }
 });

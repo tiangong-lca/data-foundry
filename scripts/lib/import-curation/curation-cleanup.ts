@@ -1,4 +1,4 @@
-import { readFileSync, rmSync } from "node:fs";
+import { lstatSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import path from "node:path";
 import { datasetTypeFromOptions, datasetTypePlural } from "./internal/dataset-types.ts";
 import { datasetIdentity } from "./internal/dataset-payload.ts";
@@ -60,6 +60,35 @@ function dateTimeBlockersFromError(error: unknown): JsonRecord[] | null {
   );
 }
 
+function isRegularNonSymlink(filePath: string): boolean {
+  try {
+    const stats = lstatSync(filePath);
+    return stats.isFile() && !stats.isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+function isDirectoryNonSymlink(directory: string): boolean {
+  try {
+    const stats = lstatSync(directory);
+    return stats.isDirectory() && !stats.isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+function realPathIsWithin(rootPath: string, targetPath: string): boolean {
+  try {
+    const rootRealPath = realpathSync(rootPath);
+    const targetRealPath = realpathSync(targetPath);
+    const relative = path.relative(rootRealPath, targetRealPath);
+    return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  } catch {
+    return false;
+  }
+}
+
 export function runDatasetCurationCleanup({
   repoRoot,
   options = {},
@@ -87,18 +116,28 @@ export function runDatasetCurationCleanup({
   const explicitOutFile = resolveRepoPath(root, options.out || options.outFile);
   const outFile = explicitOutFile || defaultOutFile;
   const managedWorkspaceRoot = path.resolve(root, ".foundry", "workspaces");
-  const managedRelative = path.relative(managedWorkspaceRoot, path.resolve(outFile));
-  const managedDefaultOutput =
-    !managedRelative.startsWith("..") && !path.isAbsolute(managedRelative);
+  const lexicalManagedRelative = path.relative(managedWorkspaceRoot, path.resolve(outFile));
+  const lexicallyManagedDefaultOutput =
+    lexicalManagedRelative === "" ||
+    (!lexicalManagedRelative.startsWith("..") && !path.isAbsolute(lexicalManagedRelative));
+  const managedDefaultOutput = realPathIsWithin(managedWorkspaceRoot, outFile);
+  const outputParentIsRegular = isDirectoryNonSymlink(path.dirname(outFile));
+  const ownershipPathSafe = !lexicallyManagedDefaultOutput || managedDefaultOutput;
   const outputOwnershipMarker = `${outFile}.tiangong-foundry-output.json`;
   let markerOwnsOutput = false;
-  if (fileExists(outputOwnershipMarker)) {
+  if (
+    isRegularNonSymlink(outputOwnershipMarker) &&
+    isRegularNonSymlink(outFile) &&
+    outputParentIsRegular &&
+    ownershipPathSafe
+  ) {
     try {
       const marker = JSON.parse(readFileSync(outputOwnershipMarker, "utf8")) as JsonRecord;
       markerOwnsOutput =
         marker.schema_version === 1 &&
         marker.command === "dataset-curation-cleanup" &&
-        marker.output_file === path.resolve(outFile);
+        marker.output_file === path.resolve(outFile) &&
+        marker.output_realpath === realpathSync(outFile);
     } catch {
       markerOwnsOutput = false;
     }
@@ -230,11 +269,16 @@ export function runDatasetCurationCleanup({
     addedFoundryTraceNamespaces += ensureFoundryTraceNamespaces(cleaned);
   });
   writeText(outFile, jsonLines(cleanedRows));
-  if (!explicitOutFile) {
+  const outputParentIsRegularAfterWrite = isDirectoryNonSymlink(path.dirname(outFile));
+  const managedDefaultOutputAfterWrite = realPathIsWithin(managedWorkspaceRoot, outFile);
+  const ownershipPathSafeAfterWrite =
+    !lexicallyManagedDefaultOutput || managedDefaultOutputAfterWrite;
+  if (!explicitOutFile && outputParentIsRegularAfterWrite && ownershipPathSafeAfterWrite) {
     writeJson(outputOwnershipMarker, {
       schema_version: 1,
       command: "dataset-curation-cleanup",
       output_file: path.resolve(outFile),
+      output_realpath: realpathSync(outFile),
     });
   }
 

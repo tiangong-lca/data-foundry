@@ -1130,8 +1130,9 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     outputs: [
       "post-authoring-finalize report (always)",
+      "cleanup report (always after cleanup attempt)",
       "cleanup-complete: final rows file",
-      "cleanup-complete: schema, cleanup, and dry-run reports",
+      "cleanup-complete: schema and dry-run reports",
       "cleanup-blocked: ordered blockers, blocked import ledger, null final rows, no CommandSpec",
     ],
     keyTests: [

@@ -4,6 +4,35 @@ import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
 type JsonRecord = Record<string, unknown>;
 
+function isRegularNonSymlink(filePath: string): boolean {
+  try {
+    const stats = fs.lstatSync(filePath);
+    return stats.isFile() && !stats.isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+function isDirectoryNonSymlink(directory: string): boolean {
+  try {
+    const stats = fs.lstatSync(directory);
+    return stats.isDirectory() && !stats.isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+function realPathIsWithin(rootPath: string, targetPath: string): boolean {
+  try {
+    const rootRealPath = fs.realpathSync(rootPath);
+    const targetRealPath = fs.realpathSync(targetPath);
+    const relative = path.relative(rootRealPath, targetRealPath);
+    return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  } catch {
+    return false;
+  }
+}
+
 interface DatasetReference extends JsonRecord {
   "@refObjectId"?: string;
   refObjectId?: string;
@@ -1046,28 +1075,44 @@ export function createPostAuthoringFinalizeCommands({
     fs.mkdirSync(outDir, { recursive: true });
     const finalizeOwnershipMarker = path.join(outDir, ".tiangong-foundry-finalize-output.json");
     const managedWorkspaceRoot = path.resolve(repoRoot, ".foundry", "workspaces");
-    const managedRelative = path.relative(managedWorkspaceRoot, path.resolve(outDir));
-    const managedWorkspaceOutput =
-      !managedRelative.startsWith("..") && !path.isAbsolute(managedRelative);
+    const lexicalManagedRelative = path.relative(managedWorkspaceRoot, path.resolve(outDir));
+    const lexicallyManagedWorkspaceOutput =
+      lexicalManagedRelative === "" ||
+      (!lexicalManagedRelative.startsWith("..") && !path.isAbsolute(lexicalManagedRelative));
+    const managedWorkspaceOutput = realPathIsWithin(managedWorkspaceRoot, outDir);
+    const ownershipPathSafe = !lexicallyManagedWorkspaceOutput || managedWorkspaceOutput;
+    const outputDirectoryRealPath = fs.realpathSync(outDir);
+    const outputDirectoryIsRegular = isDirectoryNonSymlink(outDir);
     let priorOwnershipMarker = false;
-    if (fileExists(finalizeOwnershipMarker)) {
+    if (
+      isRegularNonSymlink(finalizeOwnershipMarker) &&
+      outputDirectoryIsRegular &&
+      ownershipPathSafe
+    ) {
       try {
         const marker = JSON.parse(fs.readFileSync(finalizeOwnershipMarker, "utf8")) as JsonRecord;
         priorOwnershipMarker =
           marker.schema_version === 1 &&
           marker.command === "dataset-post-authoring-finalize" &&
-          marker.output_directory === path.resolve(outDir);
+          marker.output_directory === path.resolve(outDir) &&
+          marker.output_directory_realpath === outputDirectoryRealPath;
       } catch {
         priorOwnershipMarker = false;
       }
     }
     const outputDirectoryInitiallyEmpty = fs.readdirSync(outDir).length === 0;
     const mayInvalidateManagedArtifacts = managedWorkspaceOutput || priorOwnershipMarker;
-    if (managedWorkspaceOutput || priorOwnershipMarker || outputDirectoryInitiallyEmpty) {
+    if (
+      ownershipPathSafe &&
+      (managedWorkspaceOutput ||
+        priorOwnershipMarker ||
+        (outputDirectoryInitiallyEmpty && outputDirectoryIsRegular))
+    ) {
       writeJson(finalizeOwnershipMarker, {
         schema_version: 1,
         command: "dataset-post-authoring-finalize",
         output_directory: path.resolve(outDir),
+        output_directory_realpath: outputDirectoryRealPath,
       });
     }
     const fullContextRequirement = profileFullContextRequirement(options.profile, datasetType);

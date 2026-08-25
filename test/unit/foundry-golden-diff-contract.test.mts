@@ -99,6 +99,7 @@ test("Golden admits only exact strict-datetime capability contract pairs", () =>
     "0c2acbce5acb110348a62dfab4c5d226192567fcae90916b65dc49280e2567cb",
     "27b5aac2d5cee8c0aeb7e7df5e2d361993341a28fce2eecbb796d8a8edcec050",
     "d18a71a2dfa8933e114ea8b5917a7c54e7bd73813601c76133b9f2914c2be5af",
+    "ebc54fd890ea7732b69472f16239e6d5ae7553efcab4eb02fef1886ac6072050",
   ]) {
     assert.match(source, new RegExp(sha256, "u"));
   }
