@@ -1624,7 +1624,8 @@ function renderHelp(): string {
   pnpm case:production:contact-draft -- --env-file <ignored-.env> --expected-project-ref <ref> --expected-user-id <uuid> --out-dir <new-private-dir>
 
 This explicit case runs offline validation, bounded production reads, one owner-draft contact write,
-and an exact owner/state/payload readback. It is not part of ordinary CI and never retries a write.`;
+and an exact owner/state/payload readback. It is POSIX-only, requires an owner-private env file plus
+a repository-local git-ignored output without symlink parents, is not part of ordinary CI, and never retries a write.`;
 }
 
 export async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
@@ -1665,6 +1666,11 @@ function isDirectEntry(importMetaUrl: string, argv1: string | undefined): boolea
   return pathToFileURL(invokedPath).href === pathToFileURL(modulePath).href;
 }
 
-export const __testInternals = { contactPayload, contactRootProbe, prepareRuntimeSnapshot };
+export const __testInternals = {
+  contactPayload,
+  contactRootProbe,
+  prepareRuntimeSnapshot,
+  signalExitCode,
+};
 
 if (isDirectEntry(import.meta.url, process.argv[1])) process.exitCode = await main();

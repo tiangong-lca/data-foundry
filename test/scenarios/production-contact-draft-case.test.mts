@@ -5,6 +5,7 @@ import os from "node:os";
 import test from "node:test";
 
 import {
+  __testInternals,
   parseProductionContactDraftCaseArgs,
   runProductionContactDraftCase,
   type ProductionContactDraftSpawn,
@@ -256,6 +257,7 @@ test("production case source contracts bind dependency bytes and durable private
   assert.match(source, /verifyCurrent/u);
   assert.match(source, /fsyncSync/u);
   assert.match(source, /Buffer\.compare/u);
+  assert.equal(__testInternals.signalExitCode("SIGKILL"), 128 + os.constants.signals.SIGKILL);
 });
 
 test(
