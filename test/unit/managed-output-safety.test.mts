@@ -63,6 +63,22 @@ test("managed-root, .foundry, and task symlinks cannot expand deletion authority
   }
 });
 
+test("a symlink cannot redirect one managed task path into another managed task", (t) => {
+  if (process.platform === "win32") {
+    t.skip("Windows symlink creation requires privileges not guaranteed by the test contract.");
+    return;
+  }
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-managed-cross-task-root-"));
+  const managedRoot = path.join(root, ".foundry", "workspaces");
+  const actualTask = path.join(managedRoot, "actual-task");
+  const aliasTask = path.join(managedRoot, "alias-task");
+  fs.mkdirSync(actualTask, { recursive: true });
+  fs.symlinkSync(actualTask, aliasTask, "dir");
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  assert.equal(isTrustedManagedWorkspaceDescendant(root, aliasTask), false);
+});
+
 test("cleanup and finalize share the strict helper and ignore path-only ownership markers", () => {
   for (const relativePath of [
     "scripts/lib/import-curation/curation-cleanup.ts",

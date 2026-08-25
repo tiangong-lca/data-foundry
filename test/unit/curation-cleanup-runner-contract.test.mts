@@ -554,3 +554,39 @@ test("managed workspace root or .foundry symlinks cannot authorize cleanup delet
     assert.equal(fs.readFileSync(victim, "utf8"), victimBytes, symlinkAt);
   }
 });
+
+test("shared managed workspace container is not a cleanup task output root", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-cleanup-shared-root-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const rowsFile = path.join(root, "rows", "processes.jsonl");
+  writeJsonLines(rowsFile, [
+    processRow({
+      id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      referenceId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      annualSupply: "Not specified",
+      timestamp: "2025-02-30T00:00:00Z",
+    }),
+  ]);
+  const sharedRootOutput = path.join(root, ".foundry", "workspaces", "processes.cleaned.jsonl");
+  const sharedRootBytes = writeJsonLines(sharedRootOutput, [
+    { retained: "shared-workspace-container-is-not-a-task-output" },
+  ]);
+
+  const result = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: ".foundry/workspaces",
+      },
+    }),
+  );
+
+  assert.equal(result.status, "blocked_invalid_datetime_metadata");
+  assert.deepEqual(
+    records(result.blockers).map((blocker) => blocker.code),
+    ["invalid_datetime_metadata", "stale_cleanup_artifact_not_invalidated"],
+  );
+  assert.equal(fs.readFileSync(sharedRootOutput, "utf8"), sharedRootBytes);
+});
