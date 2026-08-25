@@ -87,7 +87,9 @@ export function runDatasetCurationCleanup({
   const defaultOutFile = path.join(outDir, `${datasetTypePlural[datasetType]}.cleaned.jsonl`);
   const explicitOutFile = resolveRepoPath(root, options.out || options.outFile);
   const outFile = explicitOutFile || defaultOutFile;
-  const managedDefaultOutput = isTrustedManagedWorkspaceDescendant(root, outFile);
+  const managedDefaultOutput =
+    isTrustedManagedWorkspaceDescendant(root, outDir) &&
+    isTrustedManagedWorkspaceDescendant(root, outFile);
   if (!rowsFile || !fileExists(rowsFile)) {
     throw new Error("--rows-file is required and must point to a JSON/JSONL dataset row file.");
   }

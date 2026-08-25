@@ -1,6 +1,15 @@
 import { realpathSync } from "node:fs";
 import path from "node:path";
 
+function isStrictRelativePath(relativePath: string): boolean {
+  return (
+    relativePath !== "" &&
+    relativePath !== ".." &&
+    !relativePath.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relativePath)
+  );
+}
+
 /**
  * Returns true only when targetPath exists as a strict realpath descendant of
  * the repository's physical .foundry/workspaces directory. Symlinking either
@@ -21,14 +30,15 @@ export function isTrustedManagedWorkspaceDescendant(repoRoot: string, targetPath
       return false;
     }
 
+    const targetAbsolutePath = path.resolve(targetPath);
+    const lexicalRelative = path.relative(managedWorkspacePath, targetAbsolutePath);
+    if (!isStrictRelativePath(lexicalRelative)) return false;
+
     const targetRealPath = realpathSync(targetPath);
-    const relative = path.relative(managedWorkspaceRealPath, targetRealPath);
-    return (
-      relative !== "" &&
-      relative !== ".." &&
-      !relative.startsWith(`..${path.sep}`) &&
-      !path.isAbsolute(relative)
-    );
+    const expectedTargetRealPath = path.resolve(managedWorkspaceRealPath, lexicalRelative);
+    if (path.relative(expectedTargetRealPath, targetRealPath) !== "") return false;
+
+    return isStrictRelativePath(path.relative(managedWorkspaceRealPath, targetRealPath));
   } catch {
     return false;
   }
