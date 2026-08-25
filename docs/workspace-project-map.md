@@ -80,8 +80,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: zero-JavaScript native TS7 evidence remains Foundry-local; Rust tidas, published CLI/database/search/readback, profiles, Worldsteel/Date.parse and cross-repository boundaries are unchanged."
+lastReviewedCommit: c25d1301b00231a94c030bd45bc0694fc747d123
+lastReviewedNote: "Reviewed for Issue #67 explicit-any proof hardening: target lint and semantic evidence types remain Foundry-local; Rust tidas, CLI/database/search/readback and cross-repository boundaries are unchanged."
 ---
 
 # Workspace Project Map

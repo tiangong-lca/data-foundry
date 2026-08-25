@@ -82,8 +82,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 entry/runtime/tests/config change no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse or sibling boundary."
+lastReviewedCommit: c25d1301b00231a94c030bd45bc0694fc747d123
+lastReviewedNote: "Reviewed for Issue #67 explicit-any proof hardening: type-only evidence and fixture narrowing changes no capability owner, remote operation, schema/search, profile or sibling boundary."
 ---
 
 # Capability Ownership Policy

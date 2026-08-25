@@ -137,8 +137,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: the zero-JavaScript native TS7 graph remains Foundry-local evidence; deterministic artifacts and fail-close move no CLI, schema, search or database authority."
+lastReviewedCommit: c25d1301b00231a94c030bd45bc0694fc747d123
+lastReviewedNote: "Reviewed for Issue #67 explicit-any proof hardening: stronger Foundry-local evidence types and target lint ratchets move no CLI, schema, search, profile or database authority."
 ---
 
 # Architecture

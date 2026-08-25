@@ -139,8 +139,8 @@ checkPaths:
   - specs/import-profiles.json
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 entry, runtime, tests and config plus the permanent zero-JavaScript ratchet preserve profiles, exact help/artifacts, bytes/order/hashes/errors and authority boundaries."
+lastReviewedCommit: c25d1301b00231a94c030bd45bc0694fc747d123
+lastReviewedNote: "Reviewed for Issue #67 explicit-any proof hardening: semantic interfaces, unknown narrowing and target Oxlint ratchets preserve exact artifacts, bytes, ordering, native errors and authority boundaries."
 ---
 
 # TianGong LCA Data Foundry
