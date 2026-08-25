@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -115,5 +116,53 @@ test("focused explicit-any contracts use the installed Oxlint AST rule", () => {
     assert.match(source, /"node_modules", "oxlint", "bin", "oxlint"/u, relativePath);
     assert.match(source, /process\.execPath/u, relativePath);
     assert.doesNotMatch(source, /from\s+["']typescript["']/u, relativePath);
+  }
+});
+
+test("Oxlint permanently rejects explicit any across the complete TypeScript graph", () => {
+  const configPath = path.join(repoRoot, ".oxlintrc.json");
+  const config = JSON.parse(fs.readFileSync(configPath, "utf8")) as {
+    rules?: Record<string, unknown>;
+    overrides?: Array<{ rules?: Record<string, unknown> }>;
+  };
+  assert.equal(config.rules?.["typescript/no-explicit-any"], "error");
+  assert.equal(
+    (config.overrides ?? []).some(
+      (override) => override.rules?.["typescript/no-explicit-any"] !== undefined,
+    ),
+    false,
+  );
+
+  const oxlint = path.join(repoRoot, "node_modules", "oxlint", "bin", "oxlint");
+  const printedResult = spawnSync(process.execPath, [oxlint, "--print-config", "-c", configPath], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  assert.equal(printedResult.status, 0, printedResult.stderr || printedResult.stdout);
+  const printed = JSON.parse(printedResult.stdout) as {
+    rules?: Record<string, unknown>;
+    overrides?: Array<{ rules?: Record<string, unknown> | null }>;
+  };
+  assert.equal(printed.rules?.["typescript/no-explicit-any"], "deny");
+  assert.equal(
+    (printed.overrides ?? []).some(
+      (override) => override.rules?.["typescript/no-explicit-any"] !== undefined,
+    ),
+    false,
+  );
+
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-explicit-any-ratchet-"));
+  try {
+    const fixturePath = path.join(fixtureRoot, "controlled-explicit-any.ts");
+    fs.writeFileSync(fixturePath, "export const controlled: any = 1;\n");
+    const lintResult = spawnSync(
+      process.execPath,
+      [oxlint, "-c", configPath, "--format", "json", fixturePath],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+    assert.equal(lintResult.status, 1, lintResult.stderr || lintResult.stdout);
+    assert.match(`${lintResult.stdout}\n${lintResult.stderr}`, /typescript\(no-explicit-any\)/u);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
