@@ -29,6 +29,9 @@ checkPaths:
   - scripts/commands/commit-handoff.ts
   - scripts/commands/identity-decision-task.ts
   - scripts/commands/support-cache.ts
+  - scripts/commands/cli-wrappers.ts
+  - scripts/commands/execution-capsule.ts
+  - scripts/commands/post-write-closeout.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -90,8 +93,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: typed curation planners and task/completion/handoff/identity/support-cache owners remain thin local adapters; exact order/bytes/hashes, deterministic proofs, blockers, and read-only requests move no CLI, schema, search, or database authority."
+lastReviewedCommit: 5afa583c0d89efaf8a5f147641c69d734ecc8caa
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: typed CLI wrappers, execution capsule and post-write closeout remain thin runtime adapters; argv/process, immutable seals, unique-root/accepted-diff and blocker semantics move no CLI, database or production authority."
 ---
 
 # Architecture
@@ -176,6 +179,8 @@ The typed authoring facades expose that SCC without wrapping or duplicating it. 
 The typed curation planning boundary follows those authoring layers. `curation-gate-workflow.ts` is a live-reference aggregate; `curation-gate.ts` reads local rows and evidence into ordered blockers, authoring packages and reports; `curation-cleanup.ts` deep-clones rows and performs the already-governed deterministic sentinel, trace, proof and redaction transforms. Their byte/order contracts are local Foundry evidence only and do not execute or authorize a database mutation.
 
 The typed command-owner layer now includes filesystem task/completion aggregation, commit handoff and identity task preparation, and canonical support-cache refresh/autofill. These factories keep their injected/local orchestration boundaries: task/report bytes and order remain content-stable, handoff only emits artifact-bound CommandSpecs, identity tasks only snapshot and package local evidence, and support refresh performs authenticated read-only queries. No factory implements CLI mutation, database semantics, review, or publication.
+
+The typed runtime-command layer also includes CLI wrappers, offline capsule admission and post-write closeout. Wrappers delegate to the installed CLI with an executable and argv array; capsule admission writes immutable local evidence with zero dispatch; closeout aggregates already-produced commit/readback proof without issuing a remote operation. Unique-root, owner/state/payload, accepted-diff and production-test rules remain in their typed proof owners rather than moving into transport code.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

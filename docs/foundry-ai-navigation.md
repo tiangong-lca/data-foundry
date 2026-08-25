@@ -22,6 +22,9 @@ checkPaths:
   - scripts/commands/commit-handoff.ts
   - scripts/commands/identity-decision-task.ts
   - scripts/commands/support-cache.ts
+  - scripts/commands/cli-wrappers.ts
+  - scripts/commands/execution-capsule.ts
+  - scripts/commands/post-write-closeout.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-cli.mjs
   - scripts/lib/foundry-command-registry.ts
@@ -79,8 +82,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: navigation records typed curation planner boundaries and five typed command owners, including exact TDD fixtures, order/bytes, deterministic proofs, handoff bindings, identity dedupe, support-cache request/mapping order, and all static consumers."
+lastReviewedCommit: 5afa583c0d89efaf8a5f147641c69d734ecc8caa
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: navigation records typed CLI wrapper, capsule and closeout owners with executable/argv, attempt/seal, unique-root/accepted-diff, local fixtures and static consumers."
 ---
 
 # Foundry AI Navigation
@@ -175,6 +178,8 @@ The typed authoring entry layer is split by responsibility. `internal/authoring-
 The typed curation planner is split the same way. `internal/curation-gate-workflow.ts` is a pure live-reference aggregate; `curation-gate.ts` owns ordered local evidence aggregation and authoring-package/report materialization; `curation-cleanup.ts` owns deterministic deep-cloned prewrite rows, sentinel/trace/proof/redaction counts and JSONL/report bytes. Navigate to the typed internal owners for individual rules rather than duplicating them in either runner.
 
 The typed command factories are `scripts/commands/tasks.ts`, `import-completion.ts`, `commit-handoff.ts`, `identity-decision-task.ts`, and `support-cache.ts`. Navigate to them for filesystem task state, closeout aggregation, artifact-bound commit/verify CommandSpecs, content-addressed identity decision tasks, or canonical public-support read/autofill behavior respectively. They preserve the existing command registry and metadata names and must not absorb remote execution semantics.
+
+The typed runtime command owners are `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts`. Navigate to the wrapper for direct executable/argv delegation and process diagnostics, to the capsule for offline immutable admission and attempt-state evidence, and to closeout for already-produced commit/readback aggregation. Root uniqueness and accepted-difference decisions remain in `post-write-root-proof.ts` and `remote-verification-accepted-diff.ts`.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 

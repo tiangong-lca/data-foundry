@@ -18,8 +18,8 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - package.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1d094b7e0d9a05b1660052f704e8f7f3ca4f8e6e
-lastReviewedNote: "Reviewed for Issue #67 Wave 16 freshness: profile-config typing and the continuing TS7 inventory cutover do not change Stop-hook registration, pnpm acceptance invocation, output, artifacts, or recursion guard."
+lastReviewedCommit: 5afa583c0d89efaf8a5f147641c69d734ecc8caa
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 freshness: typing CLI wrappers, capsule admission and post-write closeout does not change Stop-hook registration, pnpm acceptance invocation, output, artifacts, or recursion guard."
 ---
 
 # Codex Stop Hook

@@ -26,6 +26,9 @@ checkPaths:
   - scripts/commands/commit-handoff.ts
   - scripts/commands/identity-decision-task.ts
   - scripts/commands/support-cache.ts
+  - scripts/commands/cli-wrappers.ts
+  - scripts/commands/execution-capsule.ts
+  - scripts/commands/post-write-closeout.ts
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
@@ -50,8 +53,8 @@ checkPaths:
   - scripts/lib/import-curation/curation-gate.ts
   - scripts/lib/import-curation/curation-cleanup.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: typed curation planners and typed completion/handoff/identity/support-cache owners preserve fail-closed gates, exact artifact binding, deterministic cleanup, read-only cache refresh, and native errors without broadening write authority."
+lastReviewedCommit: 5afa583c0d89efaf8a5f147641c69d734ecc8caa
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: typed wrappers, capsule and closeout preserve shell-free argv, zero-dispatch admission, exact artifact/unique-root readback, production accepted-diff restrictions and fail-closed errors without broadening write authority."
 ---
 
 # Safety Policy

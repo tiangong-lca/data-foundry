@@ -17,8 +17,10 @@ checkPaths:
   - scripts/commands/execution-capsule.ts
   - test/commands/execution-capsule.test.mjs
   - test/unit/execution-capsule-attempt-state.test.mjs
-lastReviewedAt: 2026-07-23
-lastReviewedCommit: 2f1e80b02173fc20231f01ac9e6da62c16d63109
+  - test/unit/execution-capsule-command-factory.test.mts
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: 5afa583c0d89efaf8a5f147641c69d734ecc8caa
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: the native TS7 owner preserves exclusive immutable outputs, predecessor receipt/hash lineage, CAS/reviewer/boundary checks, seal hashes, zero dispatch, and the exact no-replay attempt model."
 ---
 
 # Execution Capsule Admission Contract

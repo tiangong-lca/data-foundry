@@ -26,6 +26,9 @@ checkPaths:
   - scripts/commands/commit-handoff.ts
   - scripts/commands/identity-decision-task.ts
   - scripts/commands/support-cache.ts
+  - scripts/commands/cli-wrappers.ts
+  - scripts/commands/execution-capsule.ts
+  - scripts/commands/post-write-closeout.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -131,6 +134,9 @@ checkPaths:
   - test/unit/wave24-curation-gate-runner-migration.test.mts
   - test/unit/curation-cleanup-runner-contract.test.mts
   - test/unit/wave24-curation-cleanup-runner-migration.test.mts
+  - test/unit/cli-wrapper-command-factory.test.mts
+  - test/unit/execution-capsule-command-factory.test.mts
+  - test/unit/post-write-closeout-command-factory.test.mts
   - test/unit/task-completion-command-factories.test.mts
   - test/unit/handoff-identity-task-command-factories.test.mts
   - test/unit/support-cache-command-factory.test.mts
@@ -139,8 +145,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: tests cover curation live references and gate/cleanup order/bytes/proofs plus task/closeout order, handoff bindings, identity dedupe, support-cache request/mapping order, fail-closed blockers, and native errors."
+lastReviewedCommit: 5afa583c0d89efaf8a5f147641c69d734ecc8caa
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: tests cover real CLI subprocess argv/env/output/errors, capsule receipt/hash/seal and attempt states, closeout unique-root/accepted-diff/fail-close behavior, typed ownership and native errors."
 ---
 
 # Test Layout
@@ -215,6 +221,8 @@ Wave 23 covers the authoring entry layer. `unit/authoring-workflow-facades-contr
 Wave 24 B3 covers curation planning without entering command-family semantics. `unit/curation-gate-workflow-facade-contract.test.mts` pins the exact live aggregate closure; `unit/curation-gate-runner-contract.test.mts` uses a realistic blocked two-process fixture to pin entity, schema/QA blocker, context, authoring-package, alias and report/JSONL byte order plus native JSON failure; `unit/curation-cleanup-runner-contract.test.mts` pins input preservation, deep-cloned row order, annual sentinel, trace externalization, output-only exchange proof, locator redaction, timestamps, counts, exact bytes and native JSON failure. The paired migration tests require native zero-escape TypeScript and every consumer update.
 
 Wave 24 covers five command factories in three RED/GREEN families. `unit/task-completion-command-factories.test.mts` pins queue/file order, duplicate diagnostics, task move bytes, closeout aggregation/dedupe and exact JSON. `unit/handoff-identity-task-command-factories.test.mts` pins final-row artifact SHA/bytes, authoritative CommandSpec argv, no-command blockers, identity snapshot names/bytes and action dedupe order. `unit/support-cache-command-factory.test.mts` uses local HTTP stubs to pin auth/read/paging order, cache summaries, mapping/manual-block order and native failures without reading credentials or production.
+
+Wave 25 covers three runtime command owners. `unit/cli-wrapper-command-factory.test.mts` executes a real local Node child to pin executable prefixes, argv, CWD/environment, stdout/stderr, nonzero exits and native spawn errors without shell strings. `unit/execution-capsule-command-factory.test.mts` and the existing command fixture pin offline help, attempt/no-replay states, immutable snapshots, predecessor receipts, semantic/raw hashes, reviewer/boundary checks and seals. `unit/post-write-closeout-command-factory.test.mts` routes to realistic unique-root, byte-drift, canonical-hash, accepted-diff and production-mode fixtures.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 
