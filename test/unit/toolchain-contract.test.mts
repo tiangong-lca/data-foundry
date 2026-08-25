@@ -36,6 +36,7 @@ const inventory = readJson<MigrationInventory>("specs/typescript-migration-inven
 const packageManager = "pnpm@11.23.0";
 const packageManagerVersion = "11.23.0";
 const typescriptVersion = "7.0.2";
+const nodeVersion = "24.19.0";
 const baselineCommit = "c996633832ea23bf7883c7b219f524bf28e6ce7e";
 const baselinePathListSha256 = "ac424319452a956dacee79a5a8ce83f2b2cf090a10b6cd1dc8c224d7aaacd904";
 const contractPath = "test/unit/toolchain-contract.test.mts";
@@ -62,8 +63,10 @@ const legacyPackageCommandPattern = new RegExp(
 );
 
 test("Foundry declares one exact pnpm workspace and lockfile", () => {
+  assert.equal(process.version, `v${nodeVersion}`);
+  assert.equal(readText(".nvmrc").trim(), nodeVersion);
   assert.equal(packageJson.packageManager, packageManager);
-  assert.equal(packageJson.engines?.node, ">=24 <25");
+  assert.equal(packageJson.engines?.node, `>=${nodeVersion} <25`);
   assert.equal(packageJson.engines?.pnpm, packageManagerVersion);
   assert.equal(execFileSync("pnpm", ["--version"], commandOptions()).trim(), packageManagerVersion);
 
@@ -211,7 +214,7 @@ test("the exact tracked JavaScript migration inventory cannot grow or drift sile
 });
 
 test("Foundry pins the published CLI runtime and high-risk audit closure", () => {
-  assert.equal(packageJson.dependencies?.["@tiangong-lca/cli"], "0.1.0");
+  assert.equal(packageJson.dependencies?.["@tiangong-lca/cli"], "0.1.1");
   assert.equal(packageJson.dependencies?.ajv, "8.20.0");
   const workspace = readText("pnpm-workspace.yaml");
   assert.match(workspace, /fast-uri:\s*3\.1\.5/u);
@@ -226,7 +229,7 @@ test("four-platform CI installs only from the frozen pnpm contract", () => {
     "windows-latest",
     "macos-latest",
     "ubuntu-24.04-arm",
-    "runtime: node@24",
+    `runtime: node@${nodeVersion}`,
     "fetch-depth: 0",
     "pnpm install --frozen-lockfile",
     "pnpm prepush:gate",
