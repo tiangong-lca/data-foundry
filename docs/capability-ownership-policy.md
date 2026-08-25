@@ -50,9 +50,13 @@ checkPaths:
   - scripts/lib/import-curation/patch-collect.ts
   - scripts/lib/import-curation/curation-gate.ts
   - scripts/lib/import-curation/curation-cleanup.ts
+  - scripts/lib/import-curation/internal/workflow-reference-closure.ts
+  - scripts/lib/import-curation/internal/workflow-source-reference-context.ts
+  - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
+  - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: typing curation planners plus task/completion/handoff/identity/support-cache factories changes no capability owner, remote operation, search behavior, profile authority, Worldsteel semantics, or sibling boundary."
+lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: typing reference closure/source context and mutation manifest changes no capability owner, remote operation, search behavior, profile authority, Worldsteel/Date.parse semantics, or sibling boundary."
 ---
 
 # Capability Ownership Policy

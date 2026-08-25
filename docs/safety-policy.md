@@ -49,9 +49,13 @@ checkPaths:
   - scripts/lib/import-curation/patch-collect.ts
   - scripts/lib/import-curation/curation-gate.ts
   - scripts/lib/import-curation/curation-cleanup.ts
+  - scripts/lib/import-curation/internal/workflow-reference-closure.ts
+  - scripts/lib/import-curation/internal/workflow-source-reference-context.ts
+  - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
+  - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: typed curation planners and typed completion/handoff/identity/support-cache owners preserve fail-closed gates, exact artifact binding, deterministic cleanup, read-only cache refresh, and native errors without broadening write authority."
+lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: typed reference closure/source proof and mutation manifest preserve fail-closed foreign/reference gates, exact partitions/bytes/hashes, empty executable write output on blockers and native errors without broadening write authority."
 ---
 
 # Safety Policy

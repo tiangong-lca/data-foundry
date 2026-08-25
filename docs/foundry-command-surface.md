@@ -35,11 +35,15 @@ checkPaths:
   - scripts/lib/import-curation/patch-collect.ts
   - scripts/lib/import-curation/curation-gate.ts
   - scripts/lib/import-curation/curation-cleanup.ts
+  - scripts/lib/import-curation/internal/workflow-reference-closure.ts
+  - scripts/lib/import-curation/internal/workflow-source-reference-context.ts
+  - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
+  - scripts/lib/import-curation/mutation-manifest.ts
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: curation planners and five command owners move to TS7 without changing command names/categories, owner exports, help, report bytes, artifacts, exit mapping, profile defaults, Worldsteel semantics, or remote-write modes."
+lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: reference closure/source proof and mutation facade/runner move to TS7 without changing command names/categories, owner exports, help, report/items bytes, artifacts, exit mapping, profiles, Worldsteel/Date.parse, or remote-write modes."
 ---
 
 # Foundry Command Surface

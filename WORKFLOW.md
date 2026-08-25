@@ -63,6 +63,10 @@ checkPaths:
   - scripts/lib/import-curation/patch-collect.ts
   - scripts/lib/import-curation/curation-gate.ts
   - scripts/lib/import-curation/curation-cleanup.ts
+  - scripts/lib/import-curation/internal/workflow-reference-closure.ts
+  - scripts/lib/import-curation/internal/workflow-source-reference-context.ts
+  - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
+  - scripts/lib/import-curation/mutation-manifest.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -151,10 +155,17 @@ checkPaths:
   - test/unit/wave24-curation-gate-runner-migration.test.mts
   - test/unit/curation-cleanup-runner-contract.test.mts
   - test/unit/wave24-curation-cleanup-runner-migration.test.mts
+  - test/unit/workflow-reference-closure-contract.test.mts
+  - test/unit/wave25-reference-closure-migration.test.mts
+  - test/unit/workflow-source-reference-context-contract.test.mts
+  - test/unit/wave25-source-reference-context-migration.test.mts
+  - test/unit/mutation-manifest-workflow-facade-contract.test.mts
+  - test/unit/mutation-manifest-runner-contract.test.mts
+  - test/unit/wave25-mutation-manifest-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: typed curation planners plus task/completion/handoff/identity/support-cache factories preserve live exports, order, report/snapshot/JSONL bytes, hashes/argv, deterministic proofs, blockers, read-only requests, and native failures."
+lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: typed reference closure/source proof and mutation facade/runner preserve partitions, fallback/order, remote proof, blocker/candidate/reuse order, exact bytes/hashes, native failures and fail-closed write authority."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -222,6 +233,8 @@ The authoring facade/runner layer is also native TypeScript. Facades must re-exp
 The curation planning boundary is native TypeScript as well. Its aggregate facade must retain exact owner references; the gate runner preserves row-derived entity order, blocker families, context files, authoring packages and report aliases/bytes; cleanup preserves deep-cloned row order, deterministic sentinel/trace/source-exchange transformations, JSONL bytes and complete counts. Missing or malformed local evidence remains blocking or raises the existing native error, and none of these modules execute remote operations.
 
 The task/completion, commit-handoff/identity-task, and support-cache command owners are native TypeScript. Preserve queue and closeout order, exact task/report/snapshot bytes, final-row artifact facts, authoritative CommandSpec argv, identity action dedupe, support-cache paging and row order, and every established blocker/native error. Credential-bearing support refresh remains a read-only operator command; ordinary tests must use local HTTP stubs and must not read `.env` or access production.
+
+The mutation reference stack is native TypeScript. Preserve reference DFS and table resolution, planned-self/public-remote/proven/unresolved/foreign closure partitions, explicit-before-default source rewrite selection, public-canonical source proof filtering, write/reference/blocked item order and report/items bytes. A blocked manifest must keep write-candidates empty; rendered plans and evidence never become mutation authority.
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 
