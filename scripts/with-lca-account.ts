@@ -102,7 +102,8 @@ Account profile requirements:
 
 The wrapper always obtains a fresh, intent-bound CLI 0.1.1 identity receipt before it
 executes the requested executable and argv without a shell. Authentication bypass flags
-are not supported.
+are not supported. The requested executable receives the account credential and inherits
+terminal stdio, so invoke only trusted project CLI or Foundry entrypoints.
 `;
 }
 

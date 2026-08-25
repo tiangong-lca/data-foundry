@@ -75,7 +75,9 @@ The wrapper selects only the required LCA credential values from the profile, di
 auth identity-receipt --expected-project-ref <ref> --expected-user-id <uuid> --timeout-ms 10000 --json
 ```
 
-It accepts only an exact, fresh `tiangong-lca.auth-identity-receipt.v1` whose assertions are `intent-bound`, whose project/user match both profile expectations, whose session is a cache-disabled forced signin, and whose CLI package/version match the installed package. Only then does it run the requested executable and argv with `shell:false` and a restricted environment. The child receives safe `FOUNDRY_AUTH_RECEIPT_*` bindings plus the required LCA credential values; unrelated parent environment variables are excluded. The wrapper never prints or persists the key or raw failed child output.
+It accepts only an exact, fresh `tiangong-lca.auth-identity-receipt.v1` whose assertions are `intent-bound`, whose project/user match both profile expectations, whose session is a cache-disabled forced signin, and whose CLI package/version match the installed package. Only then does it run the requested executable and argv with `shell:false` and a restricted environment. The child receives safe `FOUNDRY_AUTH_RECEIPT_*` bindings plus the required LCA credential values; unrelated parent environment variables are excluded.
+
+The wrapper never prints or persists the key and never relays the captured identity-receipt subprocess stdout/stderr on failure. The requested executable necessarily receives the credential and inherits terminal stdio; it is therefore part of the trusted computing boundary and must be a trusted project CLI or Foundry entrypoint. Its own output is not redacted by the wrapper. Child cancellation is returned as the stable shell-compatible `128 + signal` exit code (`130` for `SIGINT`, `143` for `SIGTERM`).
 
 There is no `--no-auth-check`, missing-expectation fallback, session-cache fallback, or environment-controlled skip path. Commands that do not need credentials should run directly instead of through `account:run`.
 
