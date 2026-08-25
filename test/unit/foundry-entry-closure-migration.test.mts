@@ -198,7 +198,6 @@ test("active entry consumers contain no retired Foundry entry path", () => {
   ].filter(
     (relativePath) =>
       !historicalDocument(relativePath) &&
-      relativePath !== "specs/typescript-migration-inventory.json" &&
       relativePath !== "test/unit/foundry-entry-closure-migration.test.mts" &&
       relativePath !== "test/unit/foundry-cli-spine.test.mts" &&
       /(?:^package\.json$|\.(?:[cm]?[jt]s|json|md|ya?ml|sh))$/u.test(relativePath),
