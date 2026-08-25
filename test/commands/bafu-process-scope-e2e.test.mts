@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import test from "node:test";
 import {
   bafuProcessScopeE2eTestHooks,
@@ -8,7 +9,6 @@ import {
   createFoundryCommandSpec,
 } from "../../scripts/lib/foundry-command-spec.ts";
 import {
-  assert,
   fs,
   path,
   readJson,
@@ -24,31 +24,34 @@ import {
 const fixtureRoot = testTmpRoot("bafu-process-scope-e2e-test");
 const processId = "11111111-2222-4333-8444-555555555555";
 
-function textValue(value) {
+function textValue(value: unknown): string {
   if (value == null) return "";
   if (typeof value === "string" || typeof value === "number") return String(value).trim();
-  if (typeof value === "object") return textValue(value["#text"] ?? value.value ?? value.id);
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return textValue(record["#text"] ?? record.value ?? record.id);
+  }
   return "";
 }
 
 createBafuProcessScopeE2eCommands({
-  booleanOption: (value) => value === true || value === "true",
-  fileExists: (filePath) =>
-    Boolean(filePath) && fs.existsSync(filePath) && fs.statSync(filePath).isFile(),
+  booleanOption: (value: unknown) => value === true || value === "true",
+  fileExists: (filePath: string | null) =>
+    Boolean(filePath) && fs.existsSync(filePath!) && fs.statSync(filePath!).isFile(),
   nowIso: () => "2026-01-01T00:00:00.000Z",
   readJson,
   readJsonLines,
-  readRowsFile: (filePath) => {
+  readRowsFile: (filePath: string) => {
     if (String(filePath).toLowerCase().endsWith(".jsonl")) return readJsonLines(filePath);
     const value = readJson(filePath);
     if (Array.isArray(value)) return value;
     if (Array.isArray(value.rows)) return value.rows;
     return [value];
   },
-  repoRelativeMaybe: (filePath) => (filePath ? rel(filePath) : null),
-  resolveRepoPath: (filePath) =>
+  repoRelativeMaybe: (filePath: string | null) => (filePath ? rel(filePath) : null),
+  resolveRepoPath: (filePath: string | null) =>
     filePath ? (path.isAbsolute(filePath) ? filePath : path.join(repoRoot, filePath)) : null,
-  shellQuote: (value) => {
+  shellQuote: (value: unknown) => {
     const text = String(value);
     return /^[A-Za-z0-9_./:=@%+-]+$/u.test(text) ? text : `'${text.replace(/'/gu, "'\\''")}'`;
   },
@@ -56,7 +59,7 @@ createBafuProcessScopeE2eCommands({
   writeJson,
 });
 
-function processRow(id = processId) {
+function processRow(id: string = processId) {
   return {
     processDataSet: {
       processInformation: {
@@ -74,7 +77,7 @@ function processRow(id = processId) {
   };
 }
 
-function runHelper(args) {
+function runHelper(args: string[]) {
   const result = spawnSync(
     process.execPath,
     ["scripts/foundry.mjs", "dataset-bafu-process-scope-e2e", ...args],
@@ -95,7 +98,7 @@ function runHelper(args) {
   };
 }
 
-function writeRows(root) {
+function writeRows(root: string) {
   const rowsFile = path.join(root, "rows", "process.jsonl");
   writeJsonLines(rowsFile, [processRow()]);
   const sourceSupportRowsFile = path.join(root, "rows", "sources.jsonl");
@@ -234,7 +237,9 @@ test("BAFU process scope helper hard-blocks unresolved AI curation items on resu
     assert.equal(result.json.status, "blocked_unresolved_ai_curation");
     assert.equal(result.json.counts.ai_action_items, 2);
     assert.equal(
-      result.json.blockers.some((blocker) => blocker.code === "unresolved_ai_curation_items"),
+      result.json.blockers.some(
+        (blocker: Record<string, unknown>) => blocker.code === "unresolved_ai_curation_items",
+      ),
       true,
     );
     const report = readJson(path.join(repoRoot, result.json.files.report));

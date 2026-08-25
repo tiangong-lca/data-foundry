@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import test from "node:test";
 import {
   bafuBatchImportRunTestHooks,
@@ -9,7 +10,6 @@ import {
   createFoundryCommandSpec,
 } from "../../scripts/lib/foundry-command-spec.ts";
 import {
-  assert,
   fs,
   path,
   readJson,
@@ -25,11 +25,21 @@ import {
 const fixtureRoot = testTmpRoot("bafu-batch-import-run-test");
 const processId = "11111111-2222-4333-8444-555555555555";
 
-function textValue(value) {
+type JsonRecord = Record<string, unknown>;
+type DatasetType = keyof typeof DATASET_ROOT_KEYS;
+
+function record(value: unknown): JsonRecord {
+  return typeof value === "object" && value !== null ? (value as JsonRecord) : {};
+}
+
+function textValue(value: unknown): string {
   if (value == null) return "";
   if (typeof value === "string" || typeof value === "number") return String(value).trim();
   if (Array.isArray(value)) return value.map(textValue).filter(Boolean).join("; ");
-  if (typeof value === "object") return textValue(value["#text"] ?? value.value ?? value.id);
+  if (typeof value === "object") {
+    const entry = record(value);
+    return textValue(entry["#text"] ?? entry.value ?? entry.id);
+  }
   return "";
 }
 
@@ -45,15 +55,18 @@ const DATASET_ROOT_KEYS = {
   flowproperty: ["flowPropertyDataSet", "flowPropertiesInformation"],
 };
 
-function datasetIdentity(row, type) {
+function datasetIdentity(row: JsonRecord, type: DatasetType) {
   const [rootKey, infoKey] = DATASET_ROOT_KEYS[type] ?? [`${type}DataSet`, `${type}Information`];
-  const root = row?.[rootKey] ?? {};
-  const information =
-    root?.[infoKey]?.dataSetInformation ?? root?.[infoKey]?.["common:dataSetInformation"] ?? {};
-  const publication =
-    root?.administrativeInformation?.publicationAndOwnership ??
-    root?.administrativeInformation?.["common:publicationAndOwnership"] ??
-    {};
+  const root = record(row[rootKey]);
+  const informationRoot = record(root[infoKey]);
+  const information = record(
+    informationRoot.dataSetInformation ?? informationRoot["common:dataSetInformation"],
+  );
+  const administrativeInformation = record(root.administrativeInformation);
+  const publication = record(
+    administrativeInformation.publicationAndOwnership ??
+      administrativeInformation["common:publicationAndOwnership"],
+  );
   return {
     id: textValue(information["common:UUID"]),
     version: textValue(publication["common:dataSetVersion"]),
@@ -62,17 +75,17 @@ function datasetIdentity(row, type) {
 
 createBafuBatchImportRunCommands({
   asText: textValue,
-  booleanOption: (value) => value === true || value === "true",
+  booleanOption: (value: unknown) => value === true || value === "true",
   datasetIdentity,
-  directoryExists: (filePath) =>
-    Boolean(filePath) && fs.existsSync(filePath) && fs.statSync(filePath).isDirectory(),
-  fileExists: (filePath) =>
-    Boolean(filePath) && fs.existsSync(filePath) && fs.statSync(filePath).isFile(),
-  integerOption: (value, fallback) => {
+  directoryExists: (filePath: string | null) =>
+    Boolean(filePath) && fs.existsSync(filePath!) && fs.statSync(filePath!).isDirectory(),
+  fileExists: (filePath: string | null) =>
+    Boolean(filePath) && fs.existsSync(filePath!) && fs.statSync(filePath!).isFile(),
+  integerOption: (value: unknown, fallback: number | null) => {
     const parsed = Number.parseInt(String(value ?? ""), 10);
     return Number.isFinite(parsed) ? parsed : fallback;
   },
-  normalizedList: (value) =>
+  normalizedList: (value: unknown) =>
     value == null
       ? []
       : (Array.isArray(value) ? value : String(value).split(","))
@@ -80,11 +93,11 @@ createBafuBatchImportRunCommands({
           .filter(Boolean),
   nowIso: () => "2026-01-01T00:00:00.000Z",
   readJson,
-  readJsonLines: (filePath) => (fs.existsSync(filePath) ? readJsonLines(filePath) : []),
-  repoRelativeMaybe: (filePath) => (filePath ? rel(filePath) : null),
-  resolveRepoPath: (filePath) =>
+  readJsonLines: (filePath: string) => (fs.existsSync(filePath) ? readJsonLines(filePath) : []),
+  repoRelativeMaybe: (filePath: string | null) => (filePath ? rel(filePath) : null),
+  resolveRepoPath: (filePath: string | null) =>
     filePath ? (path.isAbsolute(filePath) ? filePath : path.join(repoRoot, filePath)) : null,
-  shellQuote: (value) => {
+  shellQuote: (value: unknown) => {
     const text = String(value);
     return /^[A-Za-z0-9_./:=@%+-]+$/u.test(text) ? text : `'${text.replace(/'/gu, "'\\''")}'`;
   },
@@ -92,12 +105,12 @@ createBafuBatchImportRunCommands({
   writeJsonLines,
 });
 
-function writeTextFile(filePath, text = "{}\n") {
+function writeTextFile(filePath: string, text = "{}\n"): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, text);
 }
 
-function writeRequiredContext(runDir, schemaDir) {
+function writeRequiredContext(runDir: string, schemaDir: string): void {
   for (const type of ["flow", "process"]) {
     writeTextFile(path.join(runDir, "context", type, "outputs", "schema.json"));
     writeTextFile(path.join(runDir, "context", type, "outputs", "runtime-ruleset.json"));
@@ -122,7 +135,17 @@ function writeRequiredContext(runDir, schemaDir) {
   );
 }
 
-function bafuFamilyProcessPayload({ id, name, location, inputAmount }) {
+function bafuFamilyProcessPayload({
+  id,
+  name,
+  location,
+  inputAmount,
+}: {
+  id: string;
+  name: string;
+  location: string;
+  inputAmount: number;
+}) {
   return {
     processDataSet: {
       processInformation: {
@@ -175,12 +198,15 @@ function bafuFamilyProcessPayload({ id, name, location, inputAmount }) {
   };
 }
 
-function writeBafuFamilyBundleProcess(bundlesDir, payload) {
+function writeBafuFamilyBundleProcess(
+  bundlesDir: string,
+  payload: ReturnType<typeof bafuFamilyProcessPayload>,
+): void {
   const id = payload.processDataSet.processInformation.dataSetInformation["common:UUID"];
   writeJson(path.join(bundlesDir, id, "tidas", "processes", `${id}.json`), payload);
 }
 
-function coverageProcessPayload({ id, flowIds }) {
+function coverageProcessPayload({ id, flowIds }: { id: string; flowIds: string[] }) {
   return {
     processDataSet: {
       processInformation: {
@@ -213,7 +239,13 @@ function coverageProcessPayload({ id, flowIds }) {
   };
 }
 
-function coverageFlowPayload({ id, typeOfDataSet = "Product flow" }) {
+function coverageFlowPayload({
+  id,
+  typeOfDataSet = "Product flow",
+}: {
+  id: string;
+  typeOfDataSet?: string;
+}) {
   return {
     flowDataSet: {
       flowInformation: {
@@ -240,7 +272,7 @@ test("BAFU batch import runner publishes explicit commit stage contract", () => 
   assert.equal(result.json.remote_write_mode, "explicit-commit-only");
   assert.ok(Array.isArray(result.json.stage_pipeline));
   assert.deepEqual(
-    result.json.stage_pipeline.map((stage) => stage.phase),
+    result.json.stage_pipeline.map((stage: { phase: string }) => stage.phase),
     ["prepare", "rewrite_cleanup", "gate_validate", "report"],
   );
   assert.equal(
@@ -718,6 +750,7 @@ test("BAFU batch import runner can require leaf classification decisions before 
 test("BAFU batch import runner treats npm network apply failures as retryable", () => {
   const retryable = bafuBatchImportRunTestHooks.retryableStageFailure({
     stage: "classification.apply",
+    report: null,
     blocker: {
       code: "classification_apply_stage_failed",
       message: "CLI classification apply failed for process.",
@@ -726,6 +759,7 @@ test("BAFU batch import runner treats npm network apply failures as retryable", 
     },
   });
 
+  assert.ok(retryable);
   assert.equal(retryable.code, "ENOTFOUND");
 });
 
@@ -1131,7 +1165,9 @@ test("BAFU identity decision carry-forward appends library reuse rows with full 
       datasetType: "flow",
       rowsFile,
       curationGateReport: gateReportPath,
-    });
+    } as unknown as Parameters<
+      typeof bafuBatchImportRunTestHooks.mergeCompletedReusableIdentityDecisions
+    >[0]);
 
     assert.equal(result.report.status, "completed");
     assert.equal(result.report.counts.additions, 1);
@@ -1163,7 +1199,7 @@ test("BAFU identity decision carry-forward appends library reuse rows with full 
       "snapshot must be a byte-identical copy of the gate authoring package",
     );
     assert.deepEqual(
-      readJson(snapshotPath).contract_context_files.map((file) => file.kind),
+      readJson(snapshotPath).contract_context_files.map((file: { kind: string }) => file.kind),
       [
         "schema",
         "methodology_yaml",
@@ -1873,6 +1909,7 @@ test("BAFU batch import runner blocks unresolved identity reference rows", () =>
       },
     });
 
+    assert.ok(blocker);
     assert.equal(blocker.code, "flow_identity_unresolved_references");
     assert.equal(blocker.unresolved_reference_rows, rel(unresolvedRows));
   } finally {
@@ -1939,7 +1976,7 @@ test("BAFU batch import runner rejects a missing --process-id-file with the path
   );
 });
 
-function buildScopeScratchDir(label) {
+function buildScopeScratchDir(label: string) {
   const scopeDir = path.join(fixtureRoot, label, "scopes", processId);
   fs.mkdirSync(path.join(scopeDir, "import-ledger"), { recursive: true });
   fs.writeFileSync(
@@ -2024,7 +2061,7 @@ test("supportIdentityKeysFromHandoffPlan extracts minted FP/UG keys only under t
   const supportDir = path.join(fixtureRoot, "support-identity-keys");
   fs.mkdirSync(supportDir, { recursive: true });
   const supportRowsFile = path.join(supportDir, "support.cleaned.jsonl");
-  const ml = (text) => ({ "@xml:lang": "en", "#text": text });
+  const ml = (text: string) => ({ "@xml:lang": "en", "#text": text });
   const contactId = "00000000-0000-4000-8000-00000000000c";
   const fpId = "00000000-0000-4000-8000-00000000000f";
   const ugId = "00000000-0000-4000-8000-00000000000a";

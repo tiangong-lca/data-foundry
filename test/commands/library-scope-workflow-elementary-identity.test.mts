@@ -1,33 +1,38 @@
+import assert from "node:assert/strict";
 import test from "node:test";
 import { createLibraryScopeWorkflowCommands } from "../../scripts/commands/library-scope-workflow.mjs";
-import { assert, fs, path, testTmpRoot } from "../fixtures/foundry-core.mjs";
+import { fs, path, testTmpRoot } from "../fixtures/foundry-core.mjs";
 
 const fixtureRoot = testTmpRoot("library-scope-workflow-elementary-identity-test");
 
-const ensureArray = (value) => (Array.isArray(value) ? value : value == null ? [] : [value]);
-const asText = (value) => (value == null ? "" : String(value).trim());
+const ensureArray = (value: unknown) =>
+  Array.isArray(value) ? value : value == null ? [] : [value];
+const asText = (value: unknown) => (value == null ? "" : String(value).trim());
 
 const { libraryScopeWorkflowTestHooks } = createLibraryScopeWorkflowCommands({
   asText,
-  booleanOption: (value) => Boolean(value),
+  booleanOption: (value: unknown) => Boolean(value),
   bundleClassificationPath: () => null,
-  cloneJson: (value) => JSON.parse(JSON.stringify(value)),
+  cloneJson: <T,>(value: T): T => JSON.parse(JSON.stringify(value)),
   datasetIdentity: () => ({}),
-  directoryExists: (p) => Boolean(p) && fs.existsSync(p) && fs.statSync(p).isDirectory(),
+  directoryExists: (p: string | null) =>
+    Boolean(p) && fs.existsSync(p!) && fs.statSync(p!).isDirectory(),
   ensureArray,
-  fileExists: (p) => Boolean(p) && fs.existsSync(p),
+  fileExists: (p: string | null) => Boolean(p) && fs.existsSync(p!),
   flowTypeOfDataSet: () => "",
   jsonSha256: () => "",
   nowIso: () => "2026-01-01T00:00:00Z",
-  positiveIntegerOption: (value, fallback) => {
-    const parsed = Number.parseInt(value, 10);
+  positiveIntegerOption: (value: unknown, fallback: number | null) => {
+    const parsed = Number.parseInt(String(value), 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
   },
-  readJson: (p) => JSON.parse(fs.readFileSync(p, "utf8")),
+  readJson: (p: string) => JSON.parse(fs.readFileSync(p, "utf8")),
   readJsonLines: () => [],
-  repoRelativeMaybe: (p) => p ?? null,
-  repoRelativePath: (p) => p,
-  resolveRepoPath: (p) => (p ? p : null),
+  repoRelativeMaybe: (p: string | null) => p ?? null,
+  repoRelativePath: (p: string) => p,
+  resolveRepoPath: (p: string | null) => (p ? p : null),
+  profileFor: () => ({}),
+  repoRoot: fixtureRoot,
   sha256Text: () => "",
   textValue: asText,
   writeJson: () => {},
@@ -37,7 +42,7 @@ const { libraryScopeWorkflowTestHooks } = createLibraryScopeWorkflowCommands({
 const { evaluateElementaryIdentityDecision, openLcaCompartmentClassification } =
   libraryScopeWorkflowTestHooks;
 
-function sourceFileWithOpenLcaTrace(categoryPath) {
+function sourceFileWithOpenLcaTrace(categoryPath: string) {
   fs.mkdirSync(fixtureRoot, { recursive: true });
   const file = path.join(
     fixtureRoot,
@@ -67,7 +72,7 @@ function sourceFileWithOpenLcaTrace(categoryPath) {
   return file;
 }
 
-function sourceFileWithTrace({ category, subCategory }) {
+function sourceFileWithTrace({ category, subCategory }: { category: string; subCategory: string }) {
   fs.mkdirSync(fixtureRoot, { recursive: true });
   const file = path.join(
     fixtureRoot,
@@ -94,7 +99,17 @@ function sourceFileWithTrace({ category, subCategory }) {
   return file;
 }
 
-function candidate({ names, cas = null, flowProperty = "Mass", categories }) {
+function candidate({
+  names,
+  cas = null,
+  flowProperty = "Mass",
+  categories,
+}: {
+  names: string[];
+  cas?: string | null;
+  flowProperty?: string;
+  categories: string[];
+}) {
   return {
     id: `cand-${names[0].replace(/[^a-z0-9]/giu, "")}-${categories.join("").length}`,
     version: "03.00.004",
@@ -301,6 +316,7 @@ test("elementary identity evaluator overrides a mislabeled flow-property text on
   });
   assert.equal(evaluation.decision, "reuse_existing_reference");
   assert.match(evaluation.candidate.fields.categories.join(" "), /non-urban air/u);
+  assert.ok(evaluation.evidence.selected_candidate);
   assert.equal(evaluation.evidence.selected_candidate.flow_property_label_overridden, true);
 });
 
@@ -374,6 +390,7 @@ test("elementary identity evaluator recovers the openLCA compartment and picks t
     usage: null,
   });
   assert.equal(evaluation.decision, "reuse_existing_reference");
+  assert.ok(evaluation.evidence.selected_candidate);
   assert.match(evaluation.evidence.selected_candidate.categories.join(" "), /to soil/u);
 });
 
@@ -419,5 +436,6 @@ test("elementary identity evaluator rejects the long-term variant via the openLC
     usage: null,
   });
   assert.equal(evaluation.decision, "reuse_existing_reference");
+  assert.ok(evaluation.evidence.selected_candidate);
   assert.doesNotMatch(evaluation.evidence.selected_candidate.categories.join(" "), /long-term/u);
 });

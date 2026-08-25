@@ -8,25 +8,25 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const fixtureRoot = path.join(repoRoot, "tmp", "bafu-leaf-classification-tasks-test");
 
-function rel(filePath) {
+function rel(filePath: string): string {
   return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function writeJsonLines(filePath, rows) {
+function writeJsonLines(filePath: string, rows: unknown[]): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, rows.map((row) => JSON.stringify(row)).join("\n") + "\n");
 }
 
-function readJson(filePath) {
+function readJson(filePath: string) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
-function readJsonLines(filePath) {
+function readJsonLines(filePath: string) {
   return fs
     .readFileSync(filePath, "utf8")
     .trim()
@@ -35,7 +35,17 @@ function readJsonLines(filePath) {
     .map((line) => JSON.parse(line));
 }
 
-function processPayload({ id, name, sourceCategory, unit = "kg" }) {
+function processPayload({
+  id,
+  name,
+  sourceCategory,
+  unit = "kg",
+}: {
+  id: string;
+  name: string;
+  sourceCategory: string;
+  unit?: string;
+}) {
   return {
     processDataSet: {
       processInformation: {
@@ -108,7 +118,7 @@ function processPayload({ id, name, sourceCategory, unit = "kg" }) {
   };
 }
 
-function runFoundry(command, args) {
+function runFoundry(command: string, args: string[]) {
   const result = spawnSync(process.execPath, ["scripts/foundry.mjs", command, ...args], {
     cwd: repoRoot,
     encoding: "utf8",
@@ -117,7 +127,7 @@ function runFoundry(command, args) {
   return JSON.parse(result.stdout);
 }
 
-function runHelper(args) {
+function runHelper(args: string[]) {
   return runFoundry("dataset-bafu-leaf-classification-tasks-prepare", args);
 }
 

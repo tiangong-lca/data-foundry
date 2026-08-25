@@ -526,7 +526,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-leaf-classification-tasks.test.mjs",
+        "test/commands/bafu-leaf-classification-tasks.test.mts",
         "BAFU leaf classification helper prepares sharded process authoring tasks",
       ),
     ],
@@ -552,7 +552,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-leaf-classification-tasks.test.mjs",
+        "test/commands/bafu-leaf-classification-tasks.test.mts",
         "BAFU leaf category-map projection writes task-bound decisions and non-authoritative candidates separately",
       ),
     ],
@@ -565,7 +565,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["identity-decisions.jsonl", "bafu-identity-decisions-autofill-report.json"],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-auto-authoring.test.mjs",
+        "test/commands/bafu-auto-authoring.test.mts",
         "BAFU identity autofill creates product-flow create_new decisions only when candidates are not identity-equivalent",
       ),
     ],
@@ -578,11 +578,11 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["per-task ai-patches.json", "bafu-authoring-patches-autofill-report.json"],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-auto-authoring.test.mjs",
+        "test/commands/bafu-auto-authoring.test.mts",
         "BAFU patch autofill writes collectable name-plan and flowProperties patches",
       ),
       nodeTest(
-        "test/commands/bafu-auto-authoring.test.mjs",
+        "test/commands/bafu-auto-authoring.test.mts",
         "BAFU patch autofill splits disposal/incineration and transport route names",
       ),
     ],
@@ -933,7 +933,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-process-scope-e2e.test.mjs",
+        "test/commands/bafu-process-scope-e2e.test.mts",
         "BAFU process scope helper hard-blocks unresolved AI curation items on resume",
       ),
     ],
@@ -961,19 +961,19 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-batch-import-run.test.mjs",
+        "test/commands/bafu-batch-import-run.test.mts",
         "BAFU batch import runner skips already verified scopes through resumable ledgers",
       ),
       nodeTest(
-        "test/commands/bafu-batch-import-run.test.mjs",
+        "test/commands/bafu-batch-import-run.test.mts",
         "BAFU batch import runner applies pending-only before limit and honors pause file",
       ),
       nodeTest(
-        "test/commands/bafu-batch-import-run.test.mjs",
+        "test/commands/bafu-batch-import-run.test.mts",
         "BAFU batch import runner carries forward prior ledgers into fresh batch selection",
       ),
       nodeTest(
-        "test/commands/bafu-batch-import-run.test.mjs",
+        "test/commands/bafu-batch-import-run.test.mts",
         "BAFU batch import runner writes read-only preflight plan and primes support identity cache",
       ),
     ],
@@ -1002,7 +1002,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-batch-import-run.test.mjs",
+        "test/commands/bafu-batch-import-run.test.mts",
         "BAFU batch import runner skips already verified scopes through resumable ledgers",
       ),
     ],
@@ -1032,7 +1032,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-batch-import-run.test.mjs",
+        "test/commands/bafu-batch-import-run.test.mts",
         "BAFU batch import runner skips already verified scopes through resumable ledgers",
       ),
     ],
@@ -1056,7 +1056,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-batch-import-run.test.mjs",
+        "test/commands/bafu-batch-import-run.test.mts",
         "BAFU universe coverage report compares full process universe with ready scopes and ledgers",
       ),
     ],
