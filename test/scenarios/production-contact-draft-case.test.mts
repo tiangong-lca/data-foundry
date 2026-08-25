@@ -145,7 +145,7 @@ test("production contact case default pinned runtime completes offline gates bef
   const root = testTmpRoot("production-contact-offline-runtime");
   fs.rmSync(root, { recursive: true, force: true });
   fs.mkdirSync(root, { recursive: true });
-  const outDir = path.join(root, "case-output");
+  const outDir = path.join(root, "missing-parent", "case-output");
   try {
     await assert.rejects(
       runProductionContactDraftCase(
