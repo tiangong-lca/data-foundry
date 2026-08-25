@@ -33,6 +33,10 @@ checkPaths:
   - prettier.config.cjs
   - tsconfig*.json
   - scripts/foundry.mjs
+  - scripts/lib/import-curation.ts
+  - scripts/lib/import-curation/index.ts
+  - scripts/lib/import-curation/profiles.ts
+  - scripts/lib/import-curation/trace-summary.ts
   - scripts/with-lca-account.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
@@ -121,12 +125,14 @@ checkPaths:
   - test/unit/post-write-closeout-command-factory.test.mts
   - test/unit/wave25-identity-decision-command-migration.test.mts
   - test/unit/wave25-classification-location-command-migration.test.mts
+  - test/unit/import-curation-leaf-barrels-migration.test.mts
+  - test/unit/import-curation-entry-barrels-migration.test.mts
   - specs/typescript-migration-inventory.json
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 7d1d552a47f0cbf34d2d9597c9978d1d16169b94
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation, runtime-command, and decision owners preserve partitions, proofs, fail-closed authority, argv/process and capsule seals, unique-root/accepted-diff gates, queue/blocker order, deterministic CLI delegation, exact artifacts, and native failures under local fixtures."
+lastReviewedCommit: b033e4897b069d0d3a3ab2f3559ff644a9aa0008
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation, runtime-command, decision, and import-curation entry owners preserve partitions/proofs, fail-closed authority, process/capsule/closeout contracts, decision queues/stages, exact artifacts, namespace/live identity, consumer topology, and Node 24 source/emitted loading under local fixtures."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

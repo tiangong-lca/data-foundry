@@ -363,6 +363,10 @@ test("active documentation and source contain no references to removed CLI spine
     "commands/identity-decisions.mjs",
     "commands/classification-decisions.mjs",
     "commands/location-decisions.mjs",
+    "lib/import-curation.mjs",
+    "import-curation/index.mjs",
+    "import-curation/profiles.mjs",
+    "import-curation/trace-summary.mjs",
   ];
   const files = [
     "AGENTS.md",

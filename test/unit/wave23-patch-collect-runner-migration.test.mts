@@ -30,7 +30,7 @@ test("typed patch collect keeps one zero-escape export and typed facade import",
 
 test("patch collect consumers and navigation target the typed runner", () => {
   for (const consumer of [
-    "scripts/lib/import-curation/index.mjs",
+    "scripts/lib/import-curation/index.ts",
     "docs/foundry-ai-navigation.md",
     "docs/foundry-command-surface.md",
     "test/unit/patch-collect-runner-contract.test.mts",

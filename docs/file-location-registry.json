@@ -123,7 +123,7 @@
       "owner": "tiangong-lca-data-foundry",
       "referenced_by": [
         "README.md",
-        "scripts/lib/import-curation.mjs",
+        "scripts/lib/import-curation.ts",
         "docs/import-profiles/bafu/profile.md",
         "docs/import-profiles/bafu/constraints.md",
         "docs/import-profiles/bafu/leaf-process-classification-authoring.md"

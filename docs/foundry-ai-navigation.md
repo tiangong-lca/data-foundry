@@ -17,6 +17,10 @@ checkPaths:
   - docs/foundry-command-surface.md
   - test/README.md
   - scripts/foundry.mjs
+  - scripts/lib/import-curation.ts
+  - scripts/lib/import-curation/index.ts
+  - scripts/lib/import-curation/profiles.ts
+  - scripts/lib/import-curation/trace-summary.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -86,8 +90,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: febf43c6bf901e1a63aed975a2d8b15bd7889818
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: navigation records typed reference/mutation and runtime-command owners, exact partition/proof/order/byte/hash, executable/argv, attempt/seal and unique-root/accepted-diff fixtures, fail-closed authority, and static consumers."
+lastReviewedCommit: b033e4897b069d0d3a3ab2f3559ff644a9aa0008
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: navigation records typed reference/mutation, runtime-command, decision, and import-curation entry owners; exact proof/order/bytes/hashes, argv/seals/closeout, decision queues/stages, complete namespaces/live identity, semantic metadata, and Node 24 source/emitted evidence remain explicit."
 ---
 
 # Foundry AI Navigation
@@ -187,6 +191,8 @@ The typed mutation reference stack starts at `workflow-reference-closure.ts` for
 
 The typed runtime command owners are `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts`. Navigate to the wrapper for direct executable/argv delegation and process diagnostics, to the capsule for offline immutable admission and attempt-state evidence, and to closeout for already-produced commit/readback aggregation. Root uniqueness and accepted-difference decisions remain in `post-write-root-proof.ts` and `remote-verification-accepted-diff.ts`.
 
+The typed import-curation entry chain is `scripts/lib/import-curation.ts` → `import-curation/index.ts` → semantic owners. `profiles.ts` and `trace-summary.ts` are pure typed leaf barrels. Navigate through the public/index barrels to discover the complete namespace, but edit behavior only in the semantic owner named by command metadata.
+
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 
 The typed handoff primitive is `scripts/lib/foundry-command-spec.ts`. Navigate there for exact-key parsing, canonical command hashing, critical-flag uniqueness, final-row artifact facts, or pre-spawn drift checks. Callers must never reconstruct argv from `display`.
@@ -197,12 +203,12 @@ Use these semantic modules as the import-curation navigation surface:
 
 | Module | Responsibility |
 | --- | --- |
-| `scripts/lib/import-curation/profiles.mjs` | import profile listing and profile lookup |
+| `scripts/lib/import-curation/profiles.ts` | import profile listing and profile lookup |
 | `scripts/lib/import-curation/curation-gate.ts` | curation gate report and AI authoring package creation |
 | `scripts/lib/import-curation/authoring-packages.ts` | AI authoring task manifest/package preparation |
 | `scripts/lib/import-curation/patch-collect.ts` | AI patch collection and patch evidence readiness |
 | `scripts/lib/import-curation/curation-cleanup.ts` | deterministic prewrite row cleanup |
-| `scripts/lib/import-curation/trace-summary.mjs` | Foundry trace summarization |
+| `scripts/lib/import-curation/trace-summary.ts` | Foundry trace summarization |
 | `scripts/lib/import-curation/mutation-manifest.ts` | prewrite mutation manifest and blocker aggregation |
 
 Command runners live in the semantic modules above. The remaining reusable workflow logic is exposed through focused internal workflow facets such as `authoring-task-workflow.ts`, `authoring-patch-workflow.ts`, `curation-gate-workflow.ts`, and `mutation-manifest-workflow.ts`. New command behavior should start in the semantic owner module, with reusable helpers placed in focused internal modules.

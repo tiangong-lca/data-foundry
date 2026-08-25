@@ -22,6 +22,10 @@ checkPaths:
   - prettier.config.cjs
   - tsconfig*.json
   - scripts/foundry.mjs
+  - scripts/lib/import-curation.ts
+  - scripts/lib/import-curation/index.ts
+  - scripts/lib/import-curation/profiles.ts
+  - scripts/lib/import-curation/trace-summary.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -99,8 +103,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 7d1d552a47f0cbf34d2d9597c9978d1d16169b94
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: native TS7 reference/mutation, runtime, and decision owners preserve exact partition/proof/order/byte/hash, fail-closed authority, argv/process and capsule contracts, unique-root/accepted-diff proof, decision aliases/queues/stages/artifacts, blockers, and native failures."
+lastReviewedCommit: b033e4897b069d0d3a3ab2f3559ff644a9aa0008
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: native TS7 reference/mutation, runtime, decision, and import-curation entry owners preserve exact proof/order/bytes/hashes, fail-closed authority, argv/capsule/closeout contracts, decision queues/stages, namespace/live identity, consumer metadata, and Node 24 source/emitted loading."
 ---
 
 # TianGong LCA Data Foundry
@@ -178,6 +182,8 @@ Wave 25 migrates the mutation reference stack in dependency order. `workflow-ref
 Wave 25 migrates three runtime command owners. `cli-wrappers.ts` preserves installed-CLI executable prefixes, exact argv order, CWD/environment, JSON stdout, stderr, nonzero exits and native spawn errors without a shell-string path. `execution-capsule.ts` preserves exclusive immutable snapshots, predecessor receipts, raw/semantic hashes, reviewer and boundary checks, seal hashes, zero dispatch and no-replay attempt states. `post-write-closeout.ts` preserves artifact binding, exact unique-root readback, ordinary-only traceHash normalization, production-test fail-close and foreign/RLS-hidden `missing_dataset` rejection. Inventory moves 93→90 with no command-help, profile, Worldsteel or remote-authority change.
 
 Wave 25 migrates the three decision command factories in dependency order: standalone `identity-decisions.ts` first, then the shared-dispatch `classification-decisions.ts` and `location-decisions.ts` family. Characterization preserves exact help/report bytes, input aliases and defaults, row/path/order semantics, decision-task and queue closure blockers, deterministic CLI argv/stage failure behavior, read-only identity splitting, artifact write boundaries, and native JSON/filesystem errors. Inventory moves 98→95 without changing command names, profile defaults, Worldsteel behavior, or remote-write authority.
+
+Wave 25 migrates the import-curation re-export topology without wrappers. `profiles.ts` and `trace-summary.ts` retain their exact namespaces and owner function identity; `import-curation/index.ts` and the public `import-curation.ts` entry retain the complete eight-export namespace and direct references to the semantic owners. Node 24 loads both source and emitted entry layers, and command metadata continues to route each command to its semantic owner. Inventory moves 93→89 without changing runtime behavior, command help, profiles, Worldsteel semantics, or remote-write authority.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 
@@ -376,7 +382,7 @@ Installed shared runtime skills such as `.agents/skills/tiangong-kb-sci-search/`
 ## Repository Shape
 
 - `scripts/foundry.mjs`: small Foundry command surface.
-- `scripts/lib/import-curation.mjs`: generic dataset curation/cleanup implementation.
+- `scripts/lib/import-curation.ts`: typed public barrel for generic dataset curation/cleanup owners.
 - `.agents/shared-skills.json`: configured Foundry-local and shared runtime skills that may appear under `.agents/skills`.
 - `specs/automated-lca-capability-registry.json`: capability routing registry.
 - `specs/import-profiles.json`: data-driven import profiles.

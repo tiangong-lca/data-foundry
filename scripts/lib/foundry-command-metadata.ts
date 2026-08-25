@@ -43,10 +43,14 @@ const nodeTest = (path: string, assertion: string): CommandKeyTest => ({
   assertion,
 });
 
+const importCurationEntryContract = nodeTest(
+  "test/unit/import-curation-entry-barrels-migration.test.mts",
+  "import-curation entry preserves the complete owner namespace and live references",
+);
+
 const coreOwner = "scripts/commands/core.mjs";
 const taskOwner = "scripts/commands/tasks.ts";
 const tidasOwner = "scripts/commands/tidas-workflow.ts";
-const importOwner = (moduleName: string): string => `scripts/lib/import-curation/${moduleName}.mjs`;
 const typedImportOwner = (moduleName: string): string =>
   `scripts/lib/import-curation/${moduleName}.ts`;
 
@@ -178,11 +182,11 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "profiles-list": metadata({
     category: "public",
-    ownerModule: importOwner("profiles"),
+    ownerModule: typedImportOwner("profiles"),
     ownerExport: "listImportProfiles",
     inputs: ["specs/import-profiles.json"],
     outputs: ["import profile JSON report"],
-    keyTests: [goldenDiff, commandSmoke("profiles-list")],
+    keyTests: [goldenDiff, commandSmoke("profiles-list"), importCurationEntryContract],
   }),
   "route-task": metadata({
     category: "public",
@@ -380,6 +384,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "test/scenarios/identity-curation-context.test.mjs",
         "curation gate authoring package carries full contract text and queue dependency rows",
       ),
+      importCurationEntryContract,
     ],
   }),
   "dataset-authoring-plan": metadata({
@@ -416,6 +421,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "test/commands/authoring-task-context.test.mjs",
         "authoring task build blocks AI patch authoring when full context is incomplete",
       ),
+      importCurationEntryContract,
     ],
   }),
   "dataset-authoring-patch-collect": metadata({
@@ -429,6 +435,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "test/commands/authoring-task-context.test.mjs",
         "authoring patch collect blocks stale manifests that lack full-context task proof",
       ),
+      importCurationEntryContract,
     ],
   }),
   "dataset-identity-decision-task-build": metadata({
@@ -642,6 +649,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "test/scenarios/curation-cleanup-quality-gates.test.mjs",
         "curation cleanup fills placeholder annual supply with searchable sentinel",
       ),
+      importCurationEntryContract,
     ],
   }),
   "dataset-patch-apply": metadata({
@@ -1206,6 +1214,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "test/scenarios/mutation-manifest-reference-closure.test.mjs",
         "mutation manifest blocks process writes when referenced datasets are not proven",
       ),
+      importCurationEntryContract,
     ],
   }),
 };

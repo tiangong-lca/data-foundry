@@ -32,7 +32,7 @@ test("typed mutation sources retain zero-escape owner and facade boundaries", ()
 });
 
 test("mutation manifest consumers and navigation target the typed runner", () => {
-  const indexSource = readRepoFile("scripts/lib/import-curation/index.mjs");
+  const indexSource = readRepoFile("scripts/lib/import-curation/index.ts");
   const metadataSource = readRepoFile("scripts/lib/foundry-command-metadata.ts");
   assert.match(indexSource, /mutation-manifest\.ts/u);
   assert.doesNotMatch(indexSource, /mutation-manifest\.mjs/u);

@@ -27,7 +27,7 @@ test("typed cleanup runner keeps one zero-escape export and typed cleanup import
 });
 
 test("curation cleanup consumers and navigation target the typed runner", () => {
-  const indexSource = readRepoFile("scripts/lib/import-curation/index.mjs");
+  const indexSource = readRepoFile("scripts/lib/import-curation/index.ts");
   const metadataSource = readRepoFile("scripts/lib/foundry-command-metadata.ts");
   assert.match(indexSource, /curation-cleanup\.ts/u);
   assert.doesNotMatch(indexSource, /curation-cleanup\.mjs/u);

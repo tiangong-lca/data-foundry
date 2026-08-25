@@ -27,7 +27,7 @@ test("typed curation gate runner keeps one zero-escape export and typed facade i
 });
 
 test("curation gate consumers and navigation target the typed runner", () => {
-  const indexSource = readRepoFile("scripts/lib/import-curation/index.mjs");
+  const indexSource = readRepoFile("scripts/lib/import-curation/index.ts");
   const metadataSource = readRepoFile("scripts/lib/foundry-command-metadata.ts");
   assert.match(indexSource, /curation-gate\.ts/u);
   assert.doesNotMatch(indexSource, /curation-gate\.mjs/u);

@@ -41,6 +41,10 @@ checkPaths:
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
   - scripts/lib/import-curation/internal/hash-utils.ts
+  - scripts/lib/import-curation.ts
+  - scripts/lib/import-curation/index.ts
+  - scripts/lib/import-curation/profiles.ts
+  - scripts/lib/import-curation/trace-summary.ts
   - scripts/lib/import-curation/internal/dataset-types.ts
   - scripts/lib/import-curation/internal/runtime-io.ts
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
@@ -144,6 +148,8 @@ checkPaths:
   - test/unit/cli-wrapper-command-factory.test.mts
   - test/unit/execution-capsule-command-factory.test.mts
   - test/unit/post-write-closeout-command-factory.test.mts
+  - test/unit/import-curation-leaf-barrels-migration.test.mts
+  - test/unit/import-curation-entry-barrels-migration.test.mts
   - test/unit/task-completion-command-factories.test.mts
   - test/unit/handoff-identity-task-command-factories.test.mts
   - test/unit/support-cache-command-factory.test.mts
@@ -164,8 +170,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 7d1d552a47f0cbf34d2d9597c9978d1d16169b94
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: tests cover reference partitions/source proofs/mutation bytes and fail-closed writes, runtime argv/process and capsule/closeout proof, plus three zero-escape decision factories with exact help, aliases, paths/order, queue/blockers, CLI stages, artifact boundaries, and native errors."
+lastReviewedCommit: b033e4897b069d0d3a3ab2f3559ff644a9aa0008
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: tests cover reference/mutation fail-close, runtime process/capsule/closeout proof, decision help/queues/stages/artifacts, and native-only import-curation leaf/index/public entries with exact namespaces, live owner identity, consumers/metadata, Node 24 source/emitted loading, and native errors."
 ---
 
 # Test Layout
@@ -246,6 +252,8 @@ Wave 25 covers the reference stack in three dependency-ordered RED/GREEN familie
 Wave 25 covers three runtime command owners. `unit/cli-wrapper-command-factory.test.mts` executes a real local Node child to pin executable prefixes, argv, CWD/environment, stdout/stderr, nonzero exits and native spawn errors without shell strings. `unit/execution-capsule-command-factory.test.mts` and the existing command fixture pin offline help, attempt/no-replay states, immutable snapshots, predecessor receipts, semantic/raw hashes, reviewer/boundary checks and seals. `unit/post-write-closeout-command-factory.test.mts` routes to realistic unique-root, byte-drift, canonical-hash, accepted-diff and production-mode fixtures.
 
 Wave 25 covers the three decision command factories. `unit/wave25-identity-decision-command-migration.test.mts` and `unit/wave25-classification-location-command-migration.test.mts` pin native-only sources, exact export identity, zero explicit type escapes or suppressions, every dispatcher/metadata consumer, and exact serialized help reports. The realistic command/scenario fixtures continue to pin option aliases/defaults, queue and row path order, task-context and unclosed-item blockers, CLI argv/stage short-circuiting, identity output partitioning, report/JSONL writes, and native malformed-artifact failures.
+
+Wave 25 covers two re-export families. `unit/import-curation-leaf-barrels-migration.test.mts` pins the exact profile/trace namespaces and direct owner references. `unit/import-curation-entry-barrels-migration.test.mts` pins the complete eight-export index/public namespace, every owner reference, Foundry CLI injection keys, metadata owner routes, TS-only atomic entry migration, and a clean temporary TypeScript build loaded by Node 24. No fixture reads credentials, `.env`, production state, or ignored Foundry artifacts.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

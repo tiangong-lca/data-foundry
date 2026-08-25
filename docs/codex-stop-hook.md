@@ -18,8 +18,8 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - package.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: febf43c6bf901e1a63aed975a2d8b15bd7889818
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration freshness: reference/mutation and runtime-command typing changes no Stop-hook registration, invocation, output, artifacts, or recursion guard; local acceptance remains blocked only by the pre-existing missing USLCI source-package path."
+lastReviewedCommit: b033e4897b069d0d3a3ab2f3559ff644a9aa0008
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration freshness: reference/mutation, runtime-command, decision, and import-curation entry typing changes no Stop-hook registration, pnpm acceptance invocation, output, artifacts, or recursion guard; local acceptance remains blocked only by the pre-existing missing USLCI source-package path."
 ---
 
 # Codex Stop Hook

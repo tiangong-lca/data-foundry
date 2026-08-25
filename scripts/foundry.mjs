@@ -47,7 +47,7 @@ import {
   runDatasetCurationCleanup,
   runDatasetCurationGate,
   runDatasetMutationManifest,
-} from "./lib/import-curation.mjs";
+} from "./lib/import-curation.ts";
 import { createImportLedgerUtils } from "./lib/import-ledger.ts";
 import { createLocationQualityUtils } from "./lib/location-quality-utils.ts";
 import { createPostAuthoringFinalizeUtils } from "./lib/post-authoring-finalize-utils.mjs";
