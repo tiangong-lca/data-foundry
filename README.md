@@ -27,6 +27,7 @@ checkPaths:
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
   - scripts/lib/foundry-runtime-utils.ts
+  - scripts/lib/location-quality-utils.ts
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
   - scripts/lib/import-curation/internal/hash-utils.ts
@@ -60,8 +61,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
-lastReviewedNote: "Reviewed for Issue #67 Wave 10: shared runtime utilities are native zero-any TS7 with pinned CLI, JSON/path/frontmatter/env-file/stage contracts and all static consumers preserved."
+lastReviewedCommit: 1282579aa90016fde378293bfa4b1de11c679b4f
+lastReviewedNote: "Reviewed for Issue #67 Wave 11: location quality utilities are native zero-any TS7 with command strings, schema lookup, target order and queue/blocker contracts unchanged."
 ---
 
 # TianGong LCA Data Foundry
@@ -101,6 +102,8 @@ The canonical/bundle slice migrates canonical FlowProperty reference rewrites an
 The ledger hardening follow-up removes every explicit `any` from `import-ledger.ts` and publishes concrete JSON, dependency, blocker, manifest, report, row, write-option/result, and report-result types. A separate TypeScript compile fixture proves valid state unions and rejects invalid discriminators or numeric paths, while behavior tests preserve exact JSONL bytes, hashes, ordering, dedupe, paths, and errors. The first test-fixture slice also migrates shared fixture roots and ready-finalize builders with all direct consumers updated; inventory accounting therefore moves from 130 to 128 without changing production code.
 
 The runtime wave migrates `foundry-runtime-utils.ts`, the high-fan-in helper used by the entrypoint, account wrapper, context discovery, BAFU commands, location/remote verification and shared tests. Characterization pins the installed CLI package contract, override command rendering, all 49 factory helpers, exact file/JSON/JSONL/frontmatter/env-file/stage behavior, portable paths, errors, hashes, UUIDs and local subprocess reports. The runtime source has no explicit `any`; migration inventory moves from 128 to 127 without reading `.env` or accessing production.
+
+The location wave migrates `location-quality-utils.ts`, which feeds bundle sampling and location/finalize authoring through the Foundry entrypoint. Characterization pins classification/location command strings and artifacts, installed schema code loading, fallback and recursive location target discovery, depth-first/array order, valid/blocker counts, queue context, blocker envelopes and invalid-input errors. It remains fail-closed and zero-any; inventory moves from 127 to 126.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

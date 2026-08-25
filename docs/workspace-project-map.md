@@ -22,8 +22,8 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
-lastReviewedNote: "Reviewed for Issue #67 Wave 10: zero-any runtime helpers remain Foundry-local process/file/package delivery tooling; no cross-repository owner or normal execution surface changes."
+lastReviewedCommit: 1282579aa90016fde378293bfa4b1de11c679b4f
+lastReviewedNote: "Reviewed for Issue #67 Wave 11: zero-any location quality helpers remain Foundry-local authoring evidence; no cross-repository owner or normal execution surface changes."
 ---
 
 # Workspace Project Map

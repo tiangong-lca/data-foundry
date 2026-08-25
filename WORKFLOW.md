@@ -29,6 +29,7 @@ checkPaths:
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
   - scripts/lib/foundry-runtime-utils.ts
+  - scripts/lib/location-quality-utils.ts
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
   - scripts/lib/import-curation/internal/hash-utils.ts
@@ -79,10 +80,12 @@ checkPaths:
   - test/unit/fixture-helpers-contract.test.mts
   - test/unit/foundry-runtime-utils-contract.test.mts
   - test/unit/wave10-runtime-migration.test.mts
+  - test/unit/location-quality-utils-contract.test.mts
+  - test/unit/wave11-location-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
-lastReviewedNote: "Reviewed for Issue #67 Wave 10: typed runtime helpers preserve package/path/env-file/stage execution order and characterization without reading the repository .env in tests."
+lastReviewedCommit: 1282579aa90016fde378293bfa4b1de11c679b4f
+lastReviewedNote: "Reviewed for Issue #67 Wave 11: typed location helpers preserve CLI authoring commands, schema/fallback target discovery and fail-closed queue/blocker order."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

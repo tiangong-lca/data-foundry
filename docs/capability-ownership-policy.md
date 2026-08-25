@@ -24,8 +24,8 @@ checkPaths:
   - docs/safety-policy.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
-lastReviewedNote: "Reviewed for Issue #67 Wave 10: typed runtime file/path/package/env-file/stage helpers remain Foundry-owned adapters and add no sibling CLI session, SDK, converter, database, or Edge behavior."
+lastReviewedCommit: 1282579aa90016fde378293bfa4b1de11c679b4f
+lastReviewedNote: "Reviewed for Issue #67 Wave 11: typed location command planning, schema-code lookup, queue and blocker helpers remain Foundry-owned adapters and add no sibling CLI classification or schema behavior."
 ---
 
 # Capability Ownership Policy

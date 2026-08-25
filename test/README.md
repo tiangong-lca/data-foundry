@@ -26,6 +26,7 @@ checkPaths:
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
   - scripts/lib/foundry-runtime-utils.ts
+  - scripts/lib/location-quality-utils.ts
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
   - scripts/lib/import-curation/internal/hash-utils.ts
@@ -59,13 +60,15 @@ checkPaths:
   - test/unit/fixture-helpers-contract.test.mts
   - test/unit/foundry-runtime-utils-contract.test.mts
   - test/unit/wave10-runtime-migration.test.mts
+  - test/unit/location-quality-utils-contract.test.mts
+  - test/unit/wave11-location-migration.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
-lastReviewedNote: "Reviewed for Issue #67 Wave 10: tests cover all 49 runtime helpers, pinned CLI resolution, bytes/paths/frontmatter/options/stages/local subprocesses and the zero-any consumer migration."
+lastReviewedCommit: 1282579aa90016fde378293bfa4b1de11c679b4f
+lastReviewedNote: "Reviewed for Issue #67 Wave 11: tests cover exact location command strings, schema maps, DFS/array target order, valid/blocker counts, queue envelopes and zero-any migration."
 ---
 
 # Test Layout
@@ -110,6 +113,8 @@ Every behavior or migration slice starts with a failing focused test or a realis
 `unit/import-ledger-type-contract.test.mts` runs an isolated TS7 compile fixture for the public ledger type surface and rejects explicit `any`; the existing ledger behavior tests still pin exact schemas, JSONL bytes, hashes, ordering, paths, dedupe, and errors. `unit/fixture-helpers-contract.test.mts` pins all shared root names against the worktree-local test run id plus ready-finalize mutation/report bytes, defaults, overrides, native `.ts` paths, and consumers.
 
 `unit/foundry-runtime-utils-contract.test.mts` characterizes pinned installed-CLI discovery and override rendering, the exact 49-helper factory surface, synchronous file/JSON/JSONL bytes and errors, row counts/search/path portability, scalar/frontmatter/options/hash/UUID behavior, explicit temporary env-file precedence, stage/blocker/artifact envelopes, and local Node subprocess JSON. It intentionally does not call `loadRuntimeEnv()` or read `.env`. `unit/wave10-runtime-migration.test.mts` requires the zero-any native `.ts` module, exact exports, toolchain reference and all static imports.
+
+`unit/location-quality-utils-contract.test.mts` characterizes classification/location command plans, installed and missing schema maps, fallback/schema location keys, nested `#text` paths, depth-first/ascending-array order, exact counters, queue context, blocker order and invalid row-type errors. `unit/wave11-location-migration.test.mts` pins the zero-any factory, named export and static consumers; bundle/location/finalize command scenarios retain integration coverage.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

@@ -26,8 +26,8 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
-lastReviewedNote: "Reviewed for Issue #67 Wave 10: typing the shared runtime utility layer changes no command category, owner/export metadata, help, artifact schema, exit mapping, or remote-write mode."
+lastReviewedCommit: 1282579aa90016fde378293bfa4b1de11c679b4f
+lastReviewedNote: "Reviewed for Issue #67 Wave 11: typing location command-plan and blocker helpers changes no command category, owner/export metadata, help, artifacts, exit mapping, or remote-write mode."
 ---
 
 # Foundry Command Surface
