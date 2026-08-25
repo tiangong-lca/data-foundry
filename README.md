@@ -38,8 +38,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f
-lastReviewedNote: "Reviewed for Issue #67 Wave 2: parser, registry, metadata, and surface-audit leaves are native TS7 under focused characterization and pnpm-only gates."
+lastReviewedCommit: 279c7c0be11c1e5503f6af01e8b0a74257538006
+lastReviewedNote: "Reviewed for Issue #67 Wave 3: bundle roots, dataset types, TIDAS languages, and raw JSON/text hashing are native TS7 under focused characterization."
 ---
 
 # TianGong LCA Data Foundry

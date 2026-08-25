@@ -40,8 +40,8 @@ checkPaths:
   - test/unit/tidas-language-utils.test.mjs
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f
-lastReviewedNote: "Reviewed for Issue #67 Wave 2: metadata and surface-audit migration preserves the command/workflow contract, runtime reachability policy, and TDD gate order."
+lastReviewedCommit: 279c7c0be11c1e5503f6af01e8b0a74257538006
+lastReviewedNote: "Reviewed for Issue #67 Wave 3: low-level vocabulary and serialization migrations preserve the workflow contract and characterization-first gate order."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

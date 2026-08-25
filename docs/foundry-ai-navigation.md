@@ -30,8 +30,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f
-lastReviewedNote: "Reviewed for Issue #67 Wave 2: native TS metadata and surface audit expose exact owner/artifact schemas, script-only reachability, portable paths, and stale-module guards."
+lastReviewedCommit: 279c7c0be11c1e5503f6af01e8b0a74257538006
+lastReviewedNote: "Reviewed for Issue #67 Wave 3: low-level TS navigation identifies exact root/table/type, language, and serialization contracts and forbids silent canonicalization drift."
 ---
 
 # Foundry AI Navigation

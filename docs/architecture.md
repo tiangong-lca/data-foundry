@@ -41,8 +41,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f
-lastReviewedNote: "Reviewed for Issue #67 Wave 2: the typed metadata/audit leaves remain Foundry-local navigation and delivery tooling and do not alter sibling execution ownership."
+lastReviewedCommit: 279c7c0be11c1e5503f6af01e8b0a74257538006
+lastReviewedNote: "Reviewed for Issue #67 Wave 3: typed row/type/language/hash primitives remain Foundry-local contracts and do not alter sibling schema, CLI, database, or converter ownership."
 ---
 
 # Architecture

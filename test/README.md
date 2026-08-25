@@ -34,8 +34,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f
-lastReviewedNote: "Reviewed for Issue #67 Wave 2: characterization pins metadata schemas, TS import discovery, portable paths, test-only inbound exclusion, orphan/entrypoint policy, and removed-module guards."
+lastReviewedCommit: 279c7c0be11c1e5503f6af01e8b0a74257538006
+lastReviewedNote: "Reviewed for Issue #67 Wave 3: focused tests pin bundle roots/tables, dataset aliases/root detection, language enumeration/fallback, JSON/text hashes, ordering, invalid inputs, and stale paths."
 ---
 
 # Test Layout
