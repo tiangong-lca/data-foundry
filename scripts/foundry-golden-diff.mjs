@@ -414,15 +414,15 @@ if (args[0] === "dataset" && args[1] === "validate") {
   return cliPath;
 }
 
-function linkInstalledDependencies(root) {
-  const installed = path.join(repoRoot, "node_modules");
-  const target = path.join(root, "node_modules");
-  if (!existsSync(installed) || existsSync(target)) return;
-  symlinkSync(installed, target, process.platform === "win32" ? "junction" : "dir");
+function installBaselineDependencies(root) {
+  run("pnpm", ["install", "--frozen-lockfile", "--ignore-scripts"], {
+    cwd: root,
+    env: { ...process.env, HUSKY: "0" },
+  });
 }
 
 function linkLegacyInstalledCliAssets() {
-  const installedCliRoot = path.join(repoRoot, "node_modules", "@tiangong-lca", "cli");
+  const installedCliRoot = path.join(beforeRoot, "node_modules", "@tiangong-lca", "cli");
   const legacyCliRoot = path.join(tempRoot, "tiangong-lca-cli");
   if (!existsSync(installedCliRoot) || existsSync(legacyCliRoot)) return;
   // HEAD may predate the installed-package resolver. Supply only the pinned package
@@ -592,9 +592,38 @@ function runSide(label, root, fixture, cliPath) {
   );
 }
 
+function normalizeKnownContractMigration(value) {
+  if (value.id === "foundry.dataset.commit-handoff-plan") {
+    return {
+      ...value,
+      output_contract: "<commit-handoff-command-spec-contract>",
+      verification_gate: "<commit-handoff-command-spec-verification>",
+      source_manifest_requirements: ["<commit-handoff-command-spec-requirements>"],
+    };
+  }
+  if (value.id === "foundry.dataset.post-write-closeout") {
+    return {
+      ...value,
+      input_contract: "<post-write-closeout-command-spec-input>",
+    };
+  }
+  if (
+    ["safety_policy", "profile_context"].includes(value.kind) &&
+    typeof value.path === "string" &&
+    Object.hasOwn(value, "sha256")
+  ) {
+    return { ...value, sha256: "<policy_snapshot_sha256>" };
+  }
+  return value;
+}
+
 function normalize(value) {
   if (Array.isArray(value)) return value.map(normalize);
   if (value && typeof value === "object") {
+    if (value.schema === "tiangong-foundry.command-spec.v1" && typeof value.display === "string") {
+      return normalize(value.display);
+    }
+    const normalizedContract = normalizeKnownContractMigration(value);
     const volatileValues = {
       generated_at_utc: "<generated_at_utc>",
       started_at_utc: "<started_at_utc>",
@@ -606,7 +635,7 @@ function normalize(value) {
       scanned: "<scanned>",
     };
     return Object.fromEntries(
-      Object.entries(value)
+      Object.entries(normalizedContract)
         .sort(([left], [right]) => left.localeCompare(right))
         .map(([key, item]) => [
           key,
@@ -776,9 +805,9 @@ try {
     cwd: repoRoot,
   });
   normalizeBaselineLineEndings();
+  installBaselineDependencies(beforeRoot);
   installPortableBaselineProcessAdapters();
   linkLegacyInstalledCliAssets();
-  linkInstalledDependencies(beforeRoot);
   runSide("before", beforeRoot, fixture, cliPath);
   runSide("after", repoRoot, fixture, cliPath);
   normalizeOutputs();
