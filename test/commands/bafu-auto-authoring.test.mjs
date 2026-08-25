@@ -1,5 +1,5 @@
 import test from "node:test";
-import { bafuAutoAuthoringTestHooks } from "../../scripts/commands/bafu-auto-authoring.mjs";
+import { bafuAutoAuthoringTestHooks } from "../../scripts/commands/bafu-auto-authoring.ts";
 import {
   assert,
   fs,

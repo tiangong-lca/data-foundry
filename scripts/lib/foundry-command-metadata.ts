@@ -546,7 +546,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-bafu-identity-decisions-autofill": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/bafu-auto-authoring.mjs",
+    ownerModule: "scripts/commands/bafu-auto-authoring.ts",
     ownerExport: "createBafuAutoAuthoringCommands().runDatasetBafuIdentityDecisionsAutofill",
     inputs: ["identity-decision-task.json"],
     outputs: ["identity-decisions.jsonl", "bafu-identity-decisions-autofill-report.json"],
@@ -559,7 +559,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-bafu-authoring-patches-autofill": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/bafu-auto-authoring.mjs",
+    ownerModule: "scripts/commands/bafu-auto-authoring.ts",
     ownerExport: "createBafuAutoAuthoringCommands().runDatasetBafuAuthoringPatchesAutofill",
     inputs: ["authoring-task-manifest.json", "authoring-package-snapshots"],
     outputs: ["per-task ai-patches.json", "bafu-authoring-patches-autofill-report.json"],

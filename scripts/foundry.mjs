@@ -2,7 +2,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createAuthoringPlanCommands } from "./commands/authoring-plan.mjs";
-import { createBafuAutoAuthoringCommands } from "./commands/bafu-auto-authoring.mjs";
+import { createBafuAutoAuthoringCommands } from "./commands/bafu-auto-authoring.ts";
 import { createBafuBatchImportRunCommands } from "./commands/bafu-batch-import-run.mjs";
 import { createBafuLeafClassificationTaskCommands } from "./commands/bafu-leaf-classification-tasks.ts";
 import { createBafuProcessScopeE2eCommands } from "./commands/bafu-process-scope-e2e.mjs";

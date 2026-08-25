@@ -250,7 +250,7 @@ node scripts/foundry.mjs dataset-bafu-universe-coverage-report \
 | code | 阶段 | 含义 | 处置 |
 | --- | --- | --- | --- |
 | `post_authoring_curation_gate_not_ready` | finalize | curation gate 报 `blocked_needs_foundry_deterministic_cleanup` 等 | 看 scope 的 `finalize-*/curation-gate/dataset-curation-gate-report.json` 的 `entities[].deterministic_cleanup_count/blocking_item_count`，定位 cleanup 项。已诊断：v50 的 9 例根因是瞬时 auth/preflight 失败被误判终态——已修（retryable 归类 + finalize identity-preflight maxAttempts=3），旧案例已显式重试清零 |
-| `bafu_name_split_unsupported` | flow/process.authoring | 名称拆分规则链没有该模式 | 在 `scripts/commands/bafu-auto-authoring.mjs` 的 `splitBafuNamePlan` 加针对性规则 + 测试，重启批次后显式重试。已加：bark after debarking、`measured as X` 属性段；本会话又加约 16 组规则（清单见 §8「本会话代码修改」） |
+| `bafu_name_split_unsupported` | flow/process.authoring | 名称拆分规则链没有该模式 | 在 `scripts/commands/bafu-auto-authoring.ts` 的 `splitBafuNamePlan` 加针对性规则 + 测试，重启批次后显式重试。已加：bark after debarking、`measured as X` 属性段；本会话又加约 16 组规则（清单见 §8「本会话代码修改」） |
 | `bafu_process_functional_unit_location_token_unsupported` | process.authoring | FU 文本尾部地理 token 与 geography 不符 | 已修复：回退接受 name `mixAndLocationTypes` 中的代码。旧批次的此类 blocked 直接显式重试 |
 | `reference_closure_unproven` | process.finalize | 引用的 support 数据集既不在写入范围也无远端证明 | 多为 stale support identity cache（v12 渗入）。已修复：reuse 后 finalize 报 missing → 自动 invalidate + 真实写入。旧 blocked 显式重试 |
 | `missing_dataset`（remote verify） | precommit verify | 远端确实没有该数据集 | 看是谁声称它 verified（`verified-support-identities.jsonl` 的 `report` 字段溯源）；v12 来源即 stale |

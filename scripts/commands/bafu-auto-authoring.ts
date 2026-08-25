@@ -2,6 +2,48 @@ import fs from "node:fs";
 import path from "node:path";
 import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.ts";
 
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface BafuAutoAuthoringDependencies {
+  ensureArray: (value: unknown) => unknown[];
+  fileExists: (filePath: string | null | undefined) => boolean;
+  nowIso: () => string;
+  readJson: (filePath: string) => JsonRecord;
+  readText: (filePath: string) => string;
+  repoRelativePath: (filePath: string) => string;
+  resolveRepoPath: (filePath: unknown) => string | null;
+  writeJson: (filePath: string, value: unknown) => void;
+  writeJsonLines: (filePath: string, rows: readonly unknown[]) => void;
+}
+
+interface ReuseCandidateResult {
+  ok: boolean;
+  reason?: string;
+  reuse?: JsonRecord;
+  reviewed?: JsonRecord[];
+}
+
+interface MixLocationInput {
+  isProcess: boolean;
+  name: unknown;
+  locationCode: unknown;
+}
+
+interface PackageNameInput {
+  name: unknown;
+  packagePayload: JsonRecord;
+}
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function jsonRecord(value: unknown): JsonRecord {
+  return isJsonRecord(value) ? value : {};
+}
+
 const fullContextKinds = [
   "schema",
   "methodology_yaml",
@@ -10,68 +52,79 @@ const fullContextKinds = [
   "location_schema",
 ];
 
-function ensureDirFor(filePath) {
+function ensureDirFor(filePath: string): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
 }
 
-function lowerText(value) {
+function lowerText(value: unknown): string {
   return String(value ?? "").toLowerCase();
 }
 
-function arrayValues(value) {
+function arrayValues(value: unknown): unknown[] {
   if (Array.isArray(value)) return value;
   return value == null ? [] : [value];
 }
 
-function textFromMultilang(value) {
+function textFromMultilang(value: unknown): string {
   if (typeof value === "string") return value;
   if (value && typeof value === "object" && !Array.isArray(value)) {
-    return String(value["#text"] ?? value.text ?? "");
+    const record = jsonRecord(value);
+    return String(record["#text"] ?? record.text ?? "");
   }
   return "";
 }
 
-function englishText(text) {
+function englishText(text: unknown): JsonRecord {
   return { "@xml:lang": "en", "#text": text };
 }
 
-function actionCode(item) {
-  return String(item?.code ?? item?.action_item_code ?? item?.rule_id ?? "");
+function actionCode(item: JsonRecord): string {
+  return String(item.code ?? item.action_item_code ?? item.rule_id ?? "");
 }
 
-function actionPath(item) {
-  return String(item?.path ?? item?.json_path ?? "");
+function actionPath(item: JsonRecord): string {
+  return String(item.path ?? item.json_path ?? "");
 }
 
-function closureFor(item) {
+function closureFor(item: JsonRecord): JsonRecord {
   return { code: actionCode(item), path: actionPath(item) };
 }
 
-function evidenceObject(kind, task, actionItem, extra = {}) {
+function evidenceObject(
+  kind: string,
+  task: JsonRecord,
+  actionItem: JsonRecord,
+  extra: JsonRecord = {},
+): JsonRecord {
   const itemPath = actionPath(actionItem);
+  const actionEvidence = jsonRecord(actionItem.evidence);
+  const currentName = jsonRecord(actionEvidence.current_name);
+  const entity = jsonRecord(task.entity);
   return {
     source: "dataset-bafu-auto-authoring",
     field_path: itemPath || null,
     quote_or_trace:
-      actionItem?.evidence?.text ??
-      actionItem?.evidence?.current_name?.baseName ??
-      actionItem?.evidence?.reference_flow_properties?.join?.(", ") ??
+      actionEvidence.text ??
+      currentName.baseName ??
+      (Array.isArray(actionEvidence.reference_flow_properties)
+        ? actionEvidence.reference_flow_properties.join(", ")
+        : null) ??
       itemPath ??
       kind,
     kind,
-    dataset_type: task?.entity?.dataset_type ?? null,
-    dataset_id: task?.entity?.entity_id ?? null,
-    dataset_version: task?.entity?.version ?? null,
+    dataset_type: entity.dataset_type ?? null,
+    dataset_id: entity.entity_id ?? null,
+    dataset_version: entity.version ?? null,
     action_item: {
       code: actionCode(actionItem),
       path: actionPath(actionItem) || null,
-      evidence: actionItem?.evidence ?? null,
+      evidence: actionItem.evidence ?? null,
     },
     ...extra,
   };
 }
 
-function resolution(mode, summary, extra = {}) {
+function resolution(mode: string, summary: string, extra: JsonRecord = {}): JsonRecord {
   return {
     mode,
     used_context_kinds: fullContextKinds,
@@ -81,7 +134,7 @@ function resolution(mode, summary, extra = {}) {
   };
 }
 
-function splitBafuWasteDisposalName(baseName) {
+function splitBafuWasteDisposalName(baseName: unknown): JsonRecord | null {
   const text = textFromMultilang(baseName).trim();
   const match = /^(?<core>.+?),\s*(?<treatment>as building waste)$/iu.exec(text);
   if (!match?.groups?.core || !match?.groups?.treatment) return null;
@@ -92,13 +145,13 @@ function splitBafuWasteDisposalName(baseName) {
   };
 }
 
-function normalizeLocationTokenCode(value) {
+function normalizeLocationTokenCode(value: unknown): string {
   return String(value ?? "")
     .trim()
     .toUpperCase();
 }
 
-function trailingLocationToken(value) {
+function trailingLocationToken(value: unknown): { code: string; cleaned: string } | null {
   const text = String(value ?? "").trim();
   const match =
     /\s*\{(?<code>[A-Z0-9][A-Z0-9+&-]{1,30})\}\s*(?:[A-Z]\s*)?(?:-\s*(?<suffix>[A-Z0-9][A-Z0-9+&-]{1,30}))?\s*$/u.exec(
@@ -114,7 +167,10 @@ function trailingLocationToken(value) {
   };
 }
 
-function stripTrailingLocationTokenText(value, expectedLocationCode = null) {
+function stripTrailingLocationTokenText(
+  value: unknown,
+  expectedLocationCode: unknown = null,
+): string {
   const text = String(value ?? "").trim();
   const token = trailingLocationToken(text);
   if (!token) return text;
@@ -123,13 +179,13 @@ function stripTrailingLocationTokenText(value, expectedLocationCode = null) {
   return token.cleaned;
 }
 
-function stripGeneratedPrefixText(value) {
+function stripGeneratedPrefixText(value: unknown): string {
   return String(value ?? "")
     .replace(/^\s*x{2,}\s+/iu, "")
     .trim();
 }
 
-function cleanNamePlanPart(value) {
+function cleanNamePlanPart(value: unknown): string {
   return String(value ?? "")
     .replace(/\s+,/gu, ",")
     .replace(/,\s*/gu, ", ")
@@ -137,7 +193,7 @@ function cleanNamePlanPart(value) {
     .trim();
 }
 
-function splitCommaDelimitedMarketMixPart(value) {
+function splitCommaDelimitedMarketMixPart(value: unknown): JsonRecord | null {
   const parts = String(value ?? "")
     .split(",")
     .map((part) => part.trim())
@@ -152,7 +208,7 @@ function splitCommaDelimitedMarketMixPart(value) {
   };
 }
 
-function sourceLocatorMarkerInText(value) {
+function sourceLocatorMarkerInText(value: unknown): boolean {
   const text = String(value ?? "");
   return [
     /\b(?!(?:summer|winter|spring|autumn|fall)\s)[A-Z][A-Za-z]+(?:\s+et\s+al\.)?\s+(?:19|20)\d{2}\b/iu,
@@ -173,7 +229,7 @@ function sourceLocatorMarkerInText(value) {
 // anchored to the end; only the preposition-led "according to|as per|based on
 // <Author> <Year>" form is removed, leaving the surrounding name tokens intact for the
 // downstream matchers to split.
-function stripSourceLocatorSuffix(value) {
+function stripSourceLocatorSuffix(value: unknown): string {
   return String(value ?? "")
     .replace(
       /\s*,?\s*(?:according to|as per|based on)\s+[A-Z][A-Za-z.'-]+(?:\s+et\s+al\.?)?\s+(?:19|20)\d{2}\b/giu,
@@ -186,7 +242,7 @@ function stripSourceLocatorSuffix(value) {
     .trim();
 }
 
-function recyclingShareDescriptor(value) {
+function recyclingShareDescriptor(value: unknown): string | null {
   const text = String(value ?? "");
   const percentMatch =
     /\brecycling\s+share\s+(?:(?:19|20)\d{2}\s*)?\(?\s*(?<percent>\d+(?:\.\d+)?)\s*%\s*(?:Rec\.)?\s*\)?/iu.exec(
@@ -198,7 +254,10 @@ function recyclingShareDescriptor(value) {
   return null;
 }
 
-function splitBafuNamePlan(baseName, expectedLocationCode = null) {
+function splitBafuNamePlan(
+  baseName: unknown,
+  expectedLocationCode: unknown = null,
+): JsonRecord | null {
   const wasteSplit = splitBafuWasteDisposalName(baseName);
   if (wasteSplit) return wasteSplit;
 
@@ -213,7 +272,10 @@ function splitBafuNamePlan(baseName, expectedLocationCode = null) {
   // flows (exact string equality only). Reviewed manually; ambiguous names
   // (e.g. "Production, washing machine, V-ZUG", "Assembly, LCD screen") are
   // deliberately omitted and remain human-review residue.
-  const exactNameSplitOverrides = {
+  const exactNameSplitOverrides: Record<
+    string,
+    { base_name: string; treatment: string; mix_location?: string }
+  > = {
     "Fireproofed jute fibers, recycled": {
       base_name: "Fireproofed jute fibers",
       treatment: "recycled",
@@ -440,9 +502,8 @@ function splitBafuNamePlan(baseName, expectedLocationCode = null) {
   if (electricityBfeConsumerMatch) {
     // Same join/split duplication hazard as the ENTSO storage-pump names: rebuild the
     // canonical plan from groups; the BFE statistics citation moves to provenance.
-    const voltage = electricityBfeConsumerMatch.groups.voltage
-      ? cleanNamePlanPart(electricityBfeConsumerMatch.groups.voltage.replace(/,\s*$/u, ""))
-      : null;
+    const voltageGroup = electricityBfeConsumerMatch.groups?.voltage;
+    const voltage = voltageGroup ? cleanNamePlanPart(voltageGroup.replace(/,\s*$/u, "")) : null;
     const hadMix =
       /^electricity[,\s]+(?:high\s+voltage,\s*|medium\s+voltage,\s*|low\s+voltage,\s*)?mix,/iu.test(
         text,
@@ -1394,19 +1455,20 @@ function splitBafuNamePlan(baseName, expectedLocationCode = null) {
   };
 }
 
-function flowReferencePropertyActionValue(actionItem) {
-  const suggested = actionItem?.evidence?.suggested_value;
+function flowReferencePropertyActionValue(actionItem: JsonRecord): JsonRecord | null {
+  const evidence = jsonRecord(actionItem.evidence);
+  const suggested = evidence.suggested_value;
   if (suggested && typeof suggested === "object" && !Array.isArray(suggested)) {
     const text = textFromMultilang(suggested).trim();
     if (text) return englishText(text);
   }
-  const reference = actionItem?.evidence?.reference_flow_properties?.find?.((item) =>
+  const reference = arrayValues(evidence.reference_flow_properties).find((item) =>
     String(item ?? "").trim(),
   );
   return reference ? englishText(String(reference).trim()) : null;
 }
 
-function normalizeIdentityText(value) {
+function normalizeIdentityText(value: unknown): string {
   return String(value ?? "")
     .toLowerCase()
     .normalize("NFKD")
@@ -1435,21 +1497,21 @@ const identityStopWords = new Set([
   "with",
 ]);
 
-function identityTokens(value) {
+function identityTokens(value: unknown): Set<string> {
   const tokens = normalizeIdentityText(value)
     .split(" ")
     .filter((token) => token.length > 1 && !identityStopWords.has(token));
   return new Set(tokens);
 }
 
-function identityTextFromParts(parts) {
-  return (parts ?? [])
+function identityTextFromParts(parts: unknown): string {
+  return arrayValues(parts)
     .map((part) => String(part ?? ""))
     .filter(Boolean)
     .join(" ");
 }
 
-function tokenOverlapRatio(left, right) {
+function tokenOverlapRatio(left: unknown, right: unknown): number {
   const leftTokens = identityTokens(left);
   const rightTokens = identityTokens(right);
   if (leftTokens.size === 0 || rightTokens.size === 0) return 0;
@@ -1460,7 +1522,7 @@ function tokenOverlapRatio(left, right) {
   return overlap / Math.min(leftTokens.size, rightTokens.size);
 }
 
-function categoriesOverlap(left, right) {
+function categoriesOverlap(left: unknown, right: unknown): boolean {
   const leftTokens = identityTokens(identityTextFromParts(left));
   const rightTokens = identityTokens(identityTextFromParts(right));
   for (const token of leftTokens) {
@@ -1469,10 +1531,10 @@ function categoriesOverlap(left, right) {
   return false;
 }
 
-function namesAreExactIdentityMatch(targetNames, candidateNames) {
+function namesAreExactIdentityMatch(targetNames: unknown, candidateNames: unknown): boolean {
   const target = normalizeIdentityText(identityTextFromParts(targetNames));
   const candidate = normalizeIdentityText(identityTextFromParts(candidateNames));
-  return target && target === candidate;
+  return Boolean(target && target === candidate);
 }
 
 const NAME_MEANING_STOP_TOKENS = new Set([
@@ -1494,7 +1556,7 @@ const NAME_MEANING_STOP_TOKENS = new Set([
   "entso",
 ]);
 
-function substanceMeaningText(names) {
+function substanceMeaningText(names: unknown): string {
   return normalizeIdentityText(identityTextFromParts(names))
     .split(/\s+/u)
     .filter((token) => token.length >= 2 && !NAME_MEANING_STOP_TOKENS.has(token))
@@ -1502,7 +1564,7 @@ function substanceMeaningText(names) {
     .join(" ");
 }
 
-function strongNameMeaningDiffers(targetNames, candidateNames) {
+function strongNameMeaningDiffers(targetNames: unknown, candidateNames: unknown): boolean {
   const targetText = identityTextFromParts(targetNames);
   const candidateText = identityTextFromParts(candidateNames);
   const target = normalizeIdentityText(targetText);
@@ -1518,7 +1580,7 @@ function strongNameMeaningDiffers(targetNames, candidateNames) {
   return tokenOverlapRatio(targetText, candidateText) < 0.45;
 }
 
-function routeOrTechnologyDiffers(targetNames, candidateNames) {
+function routeOrTechnologyDiffers(targetNames: unknown, candidateNames: unknown): boolean {
   const target = normalizeIdentityText(identityTextFromParts(targetNames));
   const candidate = normalizeIdentityText(identityTextFromParts(candidateNames));
   const routeTokens = [
@@ -1547,15 +1609,18 @@ function routeOrTechnologyDiffers(targetNames, candidateNames) {
   return !sameList(targetRoutes, candidateRoutes);
 }
 
-function candidateHasClearNonEquivalence(reviewedCandidate) {
-  return (reviewedCandidate?.non_equivalence_reasons ?? []).length > 0;
+function candidateHasClearNonEquivalence(reviewedCandidate: JsonRecord): boolean {
+  return arrayValues(reviewedCandidate.non_equivalence_reasons).length > 0;
 }
 
-function reusableEquivalentCandidate(target, reviewedCandidates) {
-  const targetNames = target?.names ?? [];
-  const targetGeography = lowerText(target?.fields?.geography);
-  return (reviewedCandidates ?? []).find((candidate) => {
-    if (!candidate?.id || !candidate?.version) return false;
+function reusableEquivalentCandidate(
+  target: JsonRecord,
+  reviewedCandidates: JsonRecord[],
+): JsonRecord | undefined {
+  const targetNames = target.names ?? [];
+  const targetGeography = lowerText(jsonRecord(target.fields).geography);
+  return reviewedCandidates.find((candidate) => {
+    if (!candidate.id || !candidate.version) return false;
     if (candidateHasClearNonEquivalence(candidate)) return false;
     if (
       tokenOverlapRatio(
@@ -1565,23 +1630,27 @@ function reusableEquivalentCandidate(target, reviewedCandidates) {
     ) {
       return false;
     }
-    const candidateGeography = lowerText(candidate?.fields?.geography);
+    const candidateGeography = lowerText(jsonRecord(candidate.fields).geography);
     if (targetGeography && candidateGeography && targetGeography !== candidateGeography)
       return false;
     return true;
   });
 }
 
-function normalizedCategoryText(fields) {
-  return normalizeIdentityText(arrayValues(fields?.categories).join(" "));
+function normalizedCategoryText(fields: JsonRecord): string {
+  return normalizeIdentityText(arrayValues(fields.categories).join(" "));
 }
 
-function reusableBafuElementaryFlowCandidate(target, candidates) {
-  const targetType = lowerText(target?.fields?.type_of_dataset);
+function reusableBafuElementaryFlowCandidate(
+  target: JsonRecord,
+  candidates: JsonRecord[],
+): JsonRecord | null {
+  const targetFields = jsonRecord(target.fields);
+  const targetType = lowerText(targetFields.type_of_dataset);
   if (targetType !== "elementary flow") return null;
-  const targetNamesText = normalizeIdentityText(identityTextFromParts(target?.names ?? []));
-  const targetProperty = normalizeIdentityText(target?.fields?.flow_property);
-  const targetCategories = normalizedCategoryText(target?.fields ?? {});
+  const targetNamesText = normalizeIdentityText(identityTextFromParts(target.names ?? []));
+  const targetProperty = normalizeIdentityText(targetFields.flow_property);
+  const targetCategories = normalizedCategoryText(targetFields);
   const isIndustrialOccupation =
     targetProperty === "area time" &&
     targetNamesText.includes("occupation industrial area") &&
@@ -1592,11 +1661,11 @@ function reusableBafuElementaryFlowCandidate(target, candidates) {
     targetCategories.includes("land");
   if (!isIndustrialOccupation && !isIndustrialTransformationTo) return null;
 
-  for (const candidate of candidates ?? []) {
-    const fields = candidate?.fields ?? {};
+  for (const candidate of candidates) {
+    const fields = jsonRecord(candidate.fields);
     if (lowerText(fields.type_of_dataset) !== "elementary flow") continue;
     const candidateProperty = normalizeIdentityText(fields.flow_property);
-    const candidateNamesText = normalizeIdentityText(identityTextFromParts(candidate?.names ?? []));
+    const candidateNamesText = normalizeIdentityText(identityTextFromParts(candidate.names ?? []));
     const candidateCategories = normalizedCategoryText(fields);
     if (isIndustrialOccupation) {
       if (candidateProperty !== "area time") continue;
@@ -1623,23 +1692,26 @@ function reusableBafuElementaryFlowCandidate(target, candidates) {
   return null;
 }
 
-function nonEquivalentFlowCandidateReasons(target, candidates) {
-  const targetNames = target?.names ?? [];
-  const targetFields = target?.fields ?? {};
+function nonEquivalentFlowCandidateReasons(
+  target: JsonRecord,
+  candidates: JsonRecord[],
+): { exactEquivalentCandidate: JsonRecord | null; reviewed: JsonRecord[] } {
+  const targetNames = target.names ?? [];
+  const targetFields = jsonRecord(target.fields);
   const targetProperty = lowerText(targetFields.flow_property);
   const targetUnit = lowerText(targetFields.reference_unit);
   const targetGeography = lowerText(targetFields.geography);
-  const targetCategories = targetFields.categories ?? [];
-  const reviewed = [];
-  let exactEquivalentCandidate = null;
+  const targetCategories = arrayValues(targetFields.categories);
+  const reviewed: JsonRecord[] = [];
+  let exactEquivalentCandidate: JsonRecord | null = null;
 
-  for (const candidate of candidates ?? []) {
-    const candidateNames = candidate?.names ?? [];
-    const candidateFields = candidate?.fields ?? {};
+  for (const candidate of candidates) {
+    const candidateNames = candidate.names ?? [];
+    const candidateFields = jsonRecord(candidate.fields);
     const candidateProperty = lowerText(candidateFields.flow_property);
     const candidateUnit = lowerText(candidateFields.reference_unit);
     const candidateGeography = lowerText(candidateFields.geography);
-    const candidateCategories = candidateFields.categories ?? [];
+    const candidateCategories = arrayValues(candidateFields.categories);
     const reasons = [];
     if (targetProperty && candidateProperty && targetProperty !== candidateProperty) {
       reasons.push("flow property differs");
@@ -1678,9 +1750,9 @@ function nonEquivalentFlowCandidateReasons(target, candidates) {
   return { exactEquivalentCandidate, reviewed };
 }
 
-function sameList(left, right) {
-  const leftSet = new Set((left ?? []).map(lowerText).filter(Boolean));
-  const rightSet = new Set((right ?? []).map(lowerText).filter(Boolean));
+function sameList(left: unknown, right: unknown): boolean {
+  const leftSet = new Set(arrayValues(left).map(lowerText).filter(Boolean));
+  const rightSet = new Set(arrayValues(right).map(lowerText).filter(Boolean));
   if (leftSet.size !== rightSet.size) return false;
   for (const item of leftSet) {
     if (!rightSet.has(item)) return false;
@@ -1688,26 +1760,29 @@ function sameList(left, right) {
   return leftSet.size > 0;
 }
 
-function nonEquivalentProcessCandidateReasons(target, candidates) {
-  const targetNames = target?.names ?? [];
-  const targetFields = target?.fields ?? {};
+function nonEquivalentProcessCandidateReasons(
+  target: JsonRecord,
+  candidates: JsonRecord[],
+): { exactEquivalentCandidate: JsonRecord | null; reviewed: JsonRecord[] } {
+  const targetNames = target.names ?? [];
+  const targetFields = jsonRecord(target.fields);
   const targetGeography = lowerText(targetFields.geography);
-  const targetReferenceFlowIds = targetFields.reference_flow_ids ?? [];
-  const targetReferenceFlowNames = targetFields.reference_flow_names ?? [];
-  const targetCategories = targetFields.categories ?? [];
-  const targetExchangeSignature = target?.exchange_signature ?? [];
-  const reviewed = [];
-  let exactEquivalentCandidate = null;
+  const targetReferenceFlowIds = arrayValues(targetFields.reference_flow_ids);
+  const targetReferenceFlowNames = arrayValues(targetFields.reference_flow_names);
+  const targetCategories = arrayValues(targetFields.categories);
+  const targetExchangeSignature = arrayValues(target.exchange_signature);
+  const reviewed: JsonRecord[] = [];
+  let exactEquivalentCandidate: JsonRecord | null = null;
 
-  for (const candidate of candidates ?? []) {
-    const candidateNames = candidate?.names ?? [];
-    const candidateFields = candidate?.fields ?? {};
+  for (const candidate of candidates) {
+    const candidateNames = candidate.names ?? [];
+    const candidateFields = jsonRecord(candidate.fields);
     const candidateGeography = lowerText(candidateFields.geography);
-    const candidateReferenceFlowIds = candidateFields.reference_flow_ids ?? [];
-    const candidateReferenceFlowNames = candidateFields.reference_flow_names ?? [];
-    const candidateCategories = candidateFields.categories ?? [];
-    const candidateExchangeSignature = candidate?.exchange_signature ?? [];
-    const reasons = [];
+    const candidateReferenceFlowIds = arrayValues(candidateFields.reference_flow_ids);
+    const candidateReferenceFlowNames = arrayValues(candidateFields.reference_flow_names);
+    const candidateCategories = arrayValues(candidateFields.categories);
+    const candidateExchangeSignature = arrayValues(candidate.exchange_signature);
+    const reasons: string[] = [];
     if (targetGeography && candidateGeography && targetGeography !== candidateGeography) {
       reasons.push("geography differs");
     }
@@ -1761,13 +1836,13 @@ function nonEquivalentProcessCandidateReasons(target, candidates) {
   return { exactEquivalentCandidate, reviewed };
 }
 
-function canCreateBafuProductFlow(actionItem) {
-  const evidence = actionItem?.evidence ?? {};
-  const target = evidence.target ?? {};
-  const targetType = lowerText(target?.fields?.type_of_dataset);
+function canCreateBafuProductFlow(actionItem: JsonRecord): ReuseCandidateResult {
+  const evidence = jsonRecord(actionItem.evidence);
+  const target = jsonRecord(evidence.target);
+  const targetType = lowerText(jsonRecord(target.fields).type_of_dataset);
   const elementaryReuse = reusableBafuElementaryFlowCandidate(
     target,
-    evidence.top_candidates ?? [],
+    arrayValues(evidence.top_candidates).map(jsonRecord),
   );
   if (elementaryReuse) {
     return {
@@ -1802,7 +1877,7 @@ function canCreateBafuProductFlow(actionItem) {
   }
   const { exactEquivalentCandidate, reviewed } = nonEquivalentFlowCandidateReasons(
     target,
-    evidence.top_candidates ?? [],
+    arrayValues(evidence.top_candidates).map(jsonRecord),
   );
   const reuseCandidate = exactEquivalentCandidate ?? reusableEquivalentCandidate(target, reviewed);
   if (reuseCandidate) {
@@ -1824,9 +1899,9 @@ function canCreateBafuProductFlow(actionItem) {
   return { ok: true, reviewed };
 }
 
-function canCreateBafuProcess(actionItem) {
-  const evidence = actionItem?.evidence ?? {};
-  const target = evidence.target ?? {};
+function canCreateBafuProcess(actionItem: JsonRecord): ReuseCandidateResult {
+  const evidence = jsonRecord(actionItem.evidence);
+  const target = jsonRecord(evidence.target);
   const targetNames = target.names ?? [];
   if (!normalizeIdentityText(identityTextFromParts(targetNames))) {
     return {
@@ -1836,7 +1911,7 @@ function canCreateBafuProcess(actionItem) {
   }
   const { exactEquivalentCandidate, reviewed } = nonEquivalentProcessCandidateReasons(
     target,
-    evidence.top_candidates ?? [],
+    arrayValues(evidence.top_candidates).map(jsonRecord),
   );
   if (exactEquivalentCandidate) {
     return {
@@ -1856,9 +1931,9 @@ function canCreateBafuProcess(actionItem) {
   return { ok: true, reviewed };
 }
 
-function identityDecisionRow(actionItem, task) {
-  const evidence = actionItem?.evidence ?? {};
-  const target = evidence.target ?? {};
+function identityDecisionRow(actionItem: JsonRecord, _task: JsonRecord): JsonRecord {
+  const evidence = jsonRecord(actionItem.evidence);
+  const target = jsonRecord(evidence.target);
   const datasetType = String(
     actionItem?.dataset_type ?? target.dataset_type ?? "flow",
   ).toLowerCase();
@@ -1938,13 +2013,19 @@ function identityDecisionRow(actionItem, task) {
   };
 }
 
-function removeTrailingLocationToken(value, expectedLocationCode = null) {
+function removeTrailingLocationToken(
+  value: unknown,
+  expectedLocationCode: unknown = null,
+): JsonRecord | null {
   const text = textFromMultilang(value).trim();
   const cleaned = stripTrailingLocationTokenText(text, expectedLocationCode);
   return cleaned && cleaned !== text ? englishText(cleaned) : null;
 }
 
-function cleanProcessFunctionalUnitText(value, expectedLocationCode = null) {
+function cleanProcessFunctionalUnitText(
+  value: unknown,
+  expectedLocationCode: unknown = null,
+): JsonRecord | null {
   const text = textFromMultilang(value).trim();
   const expected = normalizeLocationTokenCode(expectedLocationCode);
   let cleaned = stripTrailingLocationTokenText(text, expectedLocationCode);
@@ -1962,9 +2043,9 @@ function cleanProcessFunctionalUnitText(value, expectedLocationCode = null) {
   return cleaned && cleaned !== text ? englishText(cleaned) : null;
 }
 
-let locationLabelCache = null;
+let locationLabelCache: Map<string, string> | null = null;
 
-function loadLocationLabels() {
+function loadLocationLabels(): Map<string, string> {
   if (locationLabelCache) return locationLabelCache;
   const labels = new Map([
     ["CH", "Switzerland"],
@@ -1990,9 +2071,9 @@ function loadLocationLabels() {
     "tidas_locations_category.json",
   );
   try {
-    const schema = JSON.parse(fs.readFileSync(schemaPath, "utf8"));
-    for (const item of arrayValues(schema.oneOf)) {
-      if (!item?.const || !item?.description) continue;
+    const schema = jsonRecord(JSON.parse(fs.readFileSync(schemaPath, "utf8")));
+    for (const item of arrayValues(schema.oneOf).map(jsonRecord)) {
+      if (!item.const || !item.description) continue;
       labels.set(String(item.const).toUpperCase(), String(item.description));
     }
   } catch {
@@ -2003,18 +2084,19 @@ function loadLocationLabels() {
   return labels;
 }
 
-function locationNameLabel(locationCode) {
+function locationNameLabel(locationCode: unknown): string {
   const code = String(locationCode ?? "").toUpperCase();
   return loadLocationLabels().get(code) ?? code;
 }
 
-function inferMixLocationPhrase({ isProcess, name, locationCode }) {
+function inferMixLocationPhrase({ isProcess, name, locationCode }: MixLocationInput): string {
+  const nameRecord = jsonRecord(name);
   const locationLabel = locationNameLabel(locationCode);
   const nameText = normalizeIdentityText(
     [
-      textFromMultilang(name?.baseName),
-      textFromMultilang(name?.treatmentStandardsRoutes),
-      textFromMultilang(name?.mixAndLocationTypes),
+      textFromMultilang(nameRecord.baseName),
+      textFromMultilang(nameRecord.treatmentStandardsRoutes),
+      textFromMultilang(nameRecord.mixAndLocationTypes),
     ].join(" "),
   );
   if (/\b(?:mounting|surface mount|through hole|solder|assembly)\b/u.test(nameText)) {
@@ -2082,11 +2164,12 @@ function inferMixLocationPhrase({ isProcess, name, locationCode }) {
   return isProcess ? `process, ${locationLabel}` : `supply mix, ${locationLabel}`;
 }
 
-function inferBareProductNamePlan({ name, packagePayload }) {
+function inferBareProductNamePlan({ name, packagePayload }: PackageNameInput): JsonRecord | null {
+  const nameRecord = jsonRecord(name);
   const locationCode = datasetLocationCode({ isProcess: false, packagePayload });
   const source = stripSourceLocatorSuffix(
     stripGeneratedPrefixText(
-      stripTrailingLocationTokenText(textFromMultilang(name?.baseName).trim(), locationCode),
+      stripTrailingLocationTokenText(textFromMultilang(nameRecord.baseName).trim(), locationCode),
     ),
   );
   // Comma-containing names are accepted as a whole-name base name (see the matching
@@ -2096,9 +2179,16 @@ function inferBareProductNamePlan({ name, packagePayload }) {
   // (e.g. "Fuel in transport, aircraft, passenger"). The product-flow type guard
   // below still restricts this to actual product flows.
   if (!source) return null;
-  const flow =
-    packagePayload?.source_row?.flowDataSet ?? packagePayload?.entity_payload?.flowDataSet ?? {};
-  const typeOfDataSet = lowerText(flow?.modellingAndValidation?.LCIMethod?.typeOfDataSet);
+  const sourceRow = jsonRecord(packagePayload.source_row);
+  const entityPayload = jsonRecord(packagePayload.entity_payload);
+  const flow = jsonRecord(
+    jsonRecord(sourceRow.flowDataSet).flowInformation
+      ? sourceRow.flowDataSet
+      : entityPayload.flowDataSet,
+  );
+  const typeOfDataSet = lowerText(
+    jsonRecord(jsonRecord(flow.modellingAndValidation).LCIMethod).typeOfDataSet,
+  );
   if (typeOfDataSet !== "product flow") return null;
 
   const normalized = normalizeIdentityText(source);
@@ -2116,11 +2206,12 @@ function inferBareProductNamePlan({ name, packagePayload }) {
   };
 }
 
-function inferBareProcessNamePlan({ name, packagePayload }) {
+function inferBareProcessNamePlan({ name, packagePayload }: PackageNameInput): JsonRecord | null {
+  const nameRecord = jsonRecord(name);
   const locationCode = datasetLocationCode({ isProcess: true, packagePayload });
   const source = stripSourceLocatorSuffix(
     stripGeneratedPrefixText(
-      stripTrailingLocationTokenText(textFromMultilang(name?.baseName).trim(), locationCode),
+      stripTrailingLocationTokenText(textFromMultilang(nameRecord.baseName).trim(), locationCode),
     ),
   );
   // Comma-containing names are accepted here as a whole-name base name. This fallback
@@ -2134,20 +2225,19 @@ function inferBareProcessNamePlan({ name, packagePayload }) {
   // requires a real reference-product output (or production classification) before
   // emitting a plan, so non-product rows are not mislabelled.
   if (!source) return null;
-  const process =
-    packagePayload?.source_row?.processDataSet ??
-    packagePayload?.entity_payload?.processDataSet ??
-    null;
-  if (!process) return null;
+  const sourceRow = jsonRecord(packagePayload.source_row);
+  const entityPayload = jsonRecord(packagePayload.entity_payload);
+  const process = jsonRecord(sourceRow.processDataSet || entityPayload.processDataSet);
+  if (Object.keys(process).length === 0) return null;
 
   const normalized = normalizeIdentityText(source);
   if (!/[a-z0-9]/u.test(normalized)) return null;
 
-  const exchanges = arrayValues(process?.exchanges?.exchange);
+  const exchanges = arrayValues(jsonRecord(process.exchanges).exchange).map(jsonRecord);
   const outputNames = exchanges
-    .filter((exchange) => lowerText(exchange?.exchangeDirection) === "output")
+    .filter((exchange) => lowerText(exchange.exchangeDirection) === "output")
     .map((exchange) =>
-      textFromMultilang(exchange?.referenceToFlowDataSet?.["common:shortDescription"]),
+      textFromMultilang(jsonRecord(exchange.referenceToFlowDataSet)["common:shortDescription"]),
     )
     .filter(Boolean);
   const hasMatchingOutput = outputNames.some((outputName) => {
@@ -2160,7 +2250,8 @@ function inferBareProcessNamePlan({ name, packagePayload }) {
   });
   const classificationText = lowerText(
     JSON.stringify(
-      process?.processInformation?.dataSetInformation?.classificationInformation ?? {},
+      jsonRecord(jsonRecord(process.processInformation).dataSetInformation)
+        .classificationInformation ?? {},
     ),
   );
   const hasProductionContext =
@@ -2189,9 +2280,12 @@ function inferBareProcessNamePlan({ name, packagePayload }) {
   };
 }
 
-function mergeExistingTreatmentRoute(nameSplit, name) {
+function mergeExistingTreatmentRoute(
+  nameSplit: JsonRecord | null,
+  name: JsonRecord,
+): JsonRecord | null {
   if (!nameSplit) return null;
-  const existing = textFromMultilang(name?.treatmentStandardsRoutes).trim();
+  const existing = textFromMultilang(name.treatmentStandardsRoutes).trim();
   if (!existing || normalizeIdentityText(existing) === "source described route") return nameSplit;
   const currentTreatment = String(nameSplit.treatment ?? "").trim();
   if (nameSplit.clean_existing_treatment) {
@@ -2232,22 +2326,33 @@ function mergeExistingTreatmentRoute(nameSplit, name) {
   };
 }
 
-function datasetLocationCode({ isProcess, packagePayload }) {
+function datasetLocationCode({
+  isProcess,
+  packagePayload,
+}: {
+  isProcess: boolean;
+  packagePayload: JsonRecord;
+}): string {
+  const sourceRow = jsonRecord(packagePayload.source_row);
+  const entityPayload = jsonRecord(packagePayload.entity_payload);
   if (isProcess) {
-    const process =
-      packagePayload?.source_row?.processDataSet ??
-      packagePayload?.entity_payload?.processDataSet ??
-      {};
-    const location = process?.processInformation?.geography?.locationOfOperationSupplyOrProduction;
+    const process = jsonRecord(sourceRow.processDataSet || entityPayload.processDataSet);
+    const location = jsonRecord(
+      jsonRecord(process.processInformation).geography,
+    ).locationOfOperationSupplyOrProduction;
     if (typeof location === "string") return location.toUpperCase();
-    return String(location?.["@location"] ?? "").toUpperCase();
+    return String(jsonRecord(location)["@location"] ?? "").toUpperCase();
   }
-  const flow =
-    packagePayload?.source_row?.flowDataSet ?? packagePayload?.entity_payload?.flowDataSet ?? {};
-  return String(flow?.flowInformation?.geography?.locationOfSupply ?? "").toUpperCase();
+  const flow = jsonRecord(sourceRow.flowDataSet || entityPayload.flowDataSet);
+  return String(
+    jsonRecord(jsonRecord(flow.flowInformation).geography).locationOfSupply ?? "",
+  ).toUpperCase();
 }
 
-function completeNameSplitMixLocationPhrase(mixLocation, locationCode) {
+function completeNameSplitMixLocationPhrase(
+  mixLocation: unknown,
+  locationCode: unknown,
+): string | null {
   const phrase = String(mixLocation ?? "").trim();
   if (!phrase) return null;
   if (/^(?:market|production|supply)\s+mix$/iu.test(phrase) && locationCode) {
@@ -2264,14 +2369,18 @@ function completeNameSplitMixLocationPhrase(mixLocation, locationCode) {
   return phrase;
 }
 
-function splitBafuNamePlanFromNameParts(name, expectedLocationCode = null) {
+function splitBafuNamePlanFromNameParts(
+  name: unknown,
+  expectedLocationCode: unknown = null,
+): JsonRecord | null {
+  const nameRecord = jsonRecord(name);
   // Strip a trailing source-locator citation from the base name up front: this function
   // appends treatment segments after the base name before delegating to
   // splitBafuNamePlan, which would leave the citation stranded mid-string (e.g.
   // "...water balance according to MoeK 2013, at plant") where the terminal-anchored
   // strip can no longer reach it.
-  const baseName = stripSourceLocatorSuffix(textFromMultilang(name?.baseName).trim());
-  const treatment = textFromMultilang(name?.treatmentStandardsRoutes).trim();
+  const baseName = stripSourceLocatorSuffix(textFromMultilang(nameRecord.baseName).trim());
+  const treatment = textFromMultilang(nameRecord.treatmentStandardsRoutes).trim();
   if (!baseName || !treatment || normalizeIdentityText(treatment) === "source described route") {
     return null;
   }
@@ -2302,11 +2411,19 @@ function splitBafuNamePlanFromNameParts(name, expectedLocationCode = null) {
   return splitBafuNamePlan(combinedName, expectedLocationCode);
 }
 
-function buildNamePatchOperations(task) {
-  const operations = [];
-  const actionItems = task.action_items ?? [];
-  const packagePayload = task.authoring_package_payload ?? {};
-  const datasetType = String(task.entity?.dataset_type ?? "").toLowerCase();
+function buildNamePatchOperations(task: JsonRecord): JsonRecord[] {
+  const operations: JsonRecord[] = [];
+  const actionItems = arrayValues(task.action_items).map(jsonRecord);
+  const packagePayload = jsonRecord(task.authoring_package_payload);
+  const entity = jsonRecord(task.entity);
+  const entityId = entity.entity_id ?? null;
+  const sourceRow = jsonRecord(packagePayload.source_row);
+  const entityPayload = jsonRecord(packagePayload.entity_payload);
+  const sourceProcess = jsonRecord(sourceRow.processDataSet);
+  const entityProcess = jsonRecord(entityPayload.processDataSet);
+  const sourceFlow = jsonRecord(sourceRow.flowDataSet);
+  const entityFlow = jsonRecord(entityPayload.flowDataSet);
+  const datasetType = String(entity.dataset_type ?? "").toLowerCase();
   const isProcess = datasetType === "process";
   const namePathPrefix = isProcess
     ? "/processDataSet/processInformation/dataSetInformation/name"
@@ -2314,18 +2431,20 @@ function buildNamePatchOperations(task) {
   const formalLocationField = isProcess
     ? "processDataSet.processInformation.geography.locationOfOperationSupplyOrProduction"
     : "flowDataSet.flowInformation.geography.locationOfSupply";
-  const name = isProcess
-    ? (packagePayload.source_row?.processDataSet?.processInformation?.dataSetInformation?.name ??
-      packagePayload.entity_payload?.processDataSet?.processInformation?.dataSetInformation?.name ??
-      {})
-    : (packagePayload.source_row?.flowDataSet?.flowInformation?.dataSetInformation?.name ??
-      packagePayload.entity_payload?.flowDataSet?.flowInformation?.dataSetInformation?.name ??
-      {});
+  const sourceProcessInformation = jsonRecord(sourceProcess.processInformation);
+  const entityProcessInformation = jsonRecord(entityProcess.processInformation);
+  const sourceFlowInformation = jsonRecord(sourceFlow.flowInformation);
+  const entityFlowInformation = jsonRecord(entityFlow.flowInformation);
+  const name = jsonRecord(
+    isProcess
+      ? (jsonRecord(sourceProcessInformation.dataSetInformation).name ??
+          jsonRecord(entityProcessInformation.dataSetInformation).name)
+      : (jsonRecord(sourceFlowInformation.dataSetInformation).name ??
+          jsonRecord(entityFlowInformation.dataSetInformation).name),
+  );
   const functionalUnit = isProcess
-    ? (packagePayload.source_row?.processDataSet?.processInformation?.quantitativeReference
-        ?.functionalUnitOrOther ??
-      packagePayload.entity_payload?.processDataSet?.processInformation?.quantitativeReference
-        ?.functionalUnitOrOther)
+    ? (jsonRecord(sourceProcessInformation.quantitativeReference).functionalUnitOrOther ??
+      jsonRecord(entityProcessInformation.quantitativeReference).functionalUnitOrOther)
     : null;
   const functionalUnitActionItems = actionItems.filter((item) => {
     const code = actionCode(item);
@@ -2365,16 +2484,17 @@ function buildNamePatchOperations(task) {
 
   for (const item of actionItems) {
     const code = actionCode(item);
+    const itemEvidence = jsonRecord(item.evidence);
     if (code === "semantic_content_saturation_flow_location_of_supply_missing" && !isProcess) {
       const mixText = normalizeLocationTokenCode(
-        textFromMultilang(name?.mixAndLocationTypes).trim(),
+        textFromMultilang(name.mixAndLocationTypes).trim(),
       );
       const codeToken = /^[A-Z0-9][A-Z0-9+&-]{1,30}$/u.test(mixText) ? mixText : null;
       if (!codeToken) {
         operations.push({
           blocker: {
             code: "bafu_flow_location_of_supply_unresolvable",
-            dataset_id: task.entity.entity_id,
+            dataset_id: entityId,
             action_item: closureFor(item),
             message:
               "Flow locationOfSupply is missing and the name mixAndLocationTypes does not carry a usable location code.",
@@ -2406,7 +2526,7 @@ function buildNamePatchOperations(task) {
       const itemPath = actionPath(item);
       if (!itemPath) continue;
       const pointer = `/${itemPath.split(".").join("/")}`;
-      const original = String(item?.evidence?.text ?? "");
+      const original = String(itemEvidence.text ?? "");
       const sanitized =
         original
           .replace(/\bsource\b[\s\S]*?\.xml\b\.?/iu, "source.")
@@ -2438,7 +2558,7 @@ function buildNamePatchOperations(task) {
       if (emittedFunctionalUnitClean) continue;
       emittedFunctionalUnitClean = true;
       const nameMixLocationText = normalizeLocationTokenCode(
-        textFromMultilang(name?.mixAndLocationTypes).trim(),
+        textFromMultilang(name.mixAndLocationTypes).trim(),
       );
       const nameMixLocationCode = /^[A-Z0-9][A-Z0-9+&-]{1,30}$/u.test(nameMixLocationText)
         ? nameMixLocationText
@@ -2454,7 +2574,7 @@ function buildNamePatchOperations(task) {
         operations.push({
           blocker: {
             code: "bafu_process_functional_unit_location_token_unsupported",
-            dataset_id: task.entity.entity_id,
+            dataset_id: entityId,
             action_item: closureFor(item),
             message:
               "BAFU auto patch only removes generated placeholder tokens and trailing formal location suffixes when they match the dataset geography field.",
@@ -2499,7 +2619,7 @@ function buildNamePatchOperations(task) {
         operations.push({
           blocker: {
             code: "bafu_name_split_unsupported",
-            dataset_id: task.entity.entity_id,
+            dataset_id: entityId,
             action_item: closureFor(item),
             message:
               "BAFU auto patch could not split the source name into a core baseName and source-backed treatment/route qualifier.",
@@ -2563,7 +2683,7 @@ function buildNamePatchOperations(task) {
       }
       if (nameSplit.flow_property) {
         const flowPropertyExists = Boolean(
-          textFromMultilang(name?.functionalUnitFlowProperties).trim(),
+          textFromMultilang(name.functionalUnitFlowProperties).trim(),
         );
         operations.push({
           op: flowPropertyExists ? "replace" : "add",
@@ -2587,7 +2707,7 @@ function buildNamePatchOperations(task) {
     if (code === "semantic_name_mix_location_too_bare") {
       if (emittedMixLocation) continue;
       emittedMixLocation = true;
-      const locationCode = String(item?.evidence?.location_code_candidate ?? "").toUpperCase();
+      const locationCode = String(itemEvidence.location_code_candidate ?? "").toUpperCase();
       const locationPhrase =
         nameSplitMixLocation ?? inferMixLocationPhrase({ isProcess, name, locationCode });
       operations.push({
@@ -2597,7 +2717,7 @@ function buildNamePatchOperations(task) {
         basis:
           "The field contains only a bare location code; the completed location decision places the formal code in locationOfSupply, while the required name-plan field should carry a human-readable availability/location-type phrase.",
         evidence: evidenceObject("bare_location_name_part_replaced", task, item, {
-          removed_value: item?.evidence?.text ?? null,
+          removed_value: itemEvidence.text ?? null,
           formal_location_field: formalLocationField,
           formal_location_code: locationCode || null,
           selected_name_phrase: locationPhrase,
@@ -2616,7 +2736,7 @@ function buildNamePatchOperations(task) {
         operations.push({
           blocker: {
             code: "bafu_flow_property_descriptor_missing",
-            dataset_id: task.entity.entity_id,
+            dataset_id: entityId,
             action_item: closureFor(item),
             message: "No reference flow-property descriptor was available for autofill.",
           },
@@ -2630,7 +2750,7 @@ function buildNamePatchOperations(task) {
         basis:
           "The referenced quantitative flow property is explicit evidence for the TIDAS name.flowProperties descriptor and is not redundant with the base flow name.",
         evidence: evidenceObject("flow_property_descriptor_from_reference", task, item, {
-          reference_flow_properties: item?.evidence?.reference_flow_properties ?? [],
+          reference_flow_properties: itemEvidence.reference_flow_properties ?? [],
           selected_value: value,
         }),
         resolution: resolution(
@@ -2648,21 +2768,29 @@ function buildNamePatchOperations(task) {
   return operations;
 }
 
-function processSourceTraceObject(task) {
-  const info =
-    task.authoring_package_payload?.source_row?.processDataSet?.processInformation
-      ?.dataSetInformation ??
-    task.authoring_package_payload?.entity_payload?.processDataSet?.processInformation
-      ?.dataSetInformation ??
-    {};
-  return info?.["common:other"]?.["tidasimport:sourceTrace"]?.payload ?? null;
+function processSourceTraceObject(task: JsonRecord): JsonRecord | null {
+  const packagePayload = jsonRecord(task.authoring_package_payload);
+  const sourceProcess = jsonRecord(jsonRecord(packagePayload.source_row).processDataSet);
+  const entityProcess = jsonRecord(jsonRecord(packagePayload.entity_payload).processDataSet);
+  const info = jsonRecord(
+    jsonRecord(sourceProcess.processInformation).dataSetInformation ??
+      jsonRecord(entityProcess.processInformation).dataSetInformation,
+  );
+  const sourceTrace = jsonRecord(jsonRecord(info["common:other"])["tidasimport:sourceTrace"]);
+  const payload = jsonRecord(sourceTrace.payload);
+  return Object.keys(payload).length > 0 ? payload : null;
 }
 
-function processSourceExchangeCompletenessEvidence(task, actionItem) {
+function processSourceExchangeCompletenessEvidence(
+  task: JsonRecord,
+  actionItem: JsonRecord,
+): JsonRecord {
   const sourceTrace = processSourceTraceObject(task);
-  const sourceObject = sourceTrace?.sourceObject ?? task.context?.source_rows_file ?? null;
-  const exchangeCount = actionItem?.evidence?.exchange_count ?? null;
-  const directions = actionItem?.evidence?.directions ?? [];
+  const sourceObject =
+    sourceTrace?.sourceObject ?? jsonRecord(task.context).source_rows_file ?? null;
+  const actionEvidence = jsonRecord(actionItem.evidence);
+  const exchangeCount = actionEvidence.exchange_count ?? null;
+  const directions = actionEvidence.directions ?? [];
   return {
     source: "dataset-bafu-auto-authoring",
     source_file: sourceObject,
@@ -2681,7 +2809,10 @@ function processSourceExchangeCompletenessEvidence(task, actionItem) {
   };
 }
 
-function buildSourceOnlyOutputExchangeTraceOperation(task, actionItem) {
+function buildSourceOnlyOutputExchangeTraceOperation(
+  task: JsonRecord,
+  actionItem: JsonRecord,
+): JsonRecord {
   const trace = {
     status: "source_only_output_exchange_verified",
     action_item_code: "semantic_process_only_output_exchange_requires_review",
@@ -2724,13 +2855,15 @@ export function createBafuAutoAuthoringCommands({
   fileExists,
   nowIso,
   readJson,
-  readText,
   repoRelativePath,
   resolveRepoPath,
   writeJson,
   writeJsonLines,
-}) {
-  function runDatasetBafuIdentityDecisionsAutofill(options = {}) {
+}: BafuAutoAuthoringDependencies): {
+  runDatasetBafuAuthoringPatchesAutofill: (options?: JsonRecord) => JsonRecord;
+  runDatasetBafuIdentityDecisionsAutofill: (options?: JsonRecord) => JsonRecord;
+} {
+  function runDatasetBafuIdentityDecisionsAutofill(options: JsonRecord = {}): JsonRecord {
     if (options.help) {
       return {
         schema_version: 1,
@@ -2748,17 +2881,18 @@ export function createBafuAutoAuthoringCommands({
       throw new Error("--identity-decision-task is required.");
     }
     const task = readJson(taskPath);
+    const taskFiles = jsonRecord(task.files);
     const outFile = resolveRepoPath(
       options.out ||
         options.decisions ||
-        task.files?.expected_decisions ||
+        taskFiles.expected_decisions ||
         path.join(path.dirname(taskPath), "identity-decisions.jsonl"),
-    );
-    const outDir = resolveRepoPath(options.outDir || path.dirname(outFile));
+    )!;
+    const outDir = resolveRepoPath(options.outDir || path.dirname(outFile))!;
     const reportFile = path.join(outDir, "bafu-identity-decisions-autofill-report.json");
-    const rows = ensureArray(task.identity_action_items).map((item) =>
-      identityDecisionRow(item, task),
-    );
+    const rows = ensureArray(task.identity_action_items)
+      .map(jsonRecord)
+      .map((item) => identityDecisionRow(item, task));
     const blockedRows = rows.filter((row) => row.identity_decision === "block_unresolved");
     fs.mkdirSync(outDir, { recursive: true });
     writeJsonLines(outFile, rows);
@@ -2788,7 +2922,7 @@ export function createBafuAutoAuthoringCommands({
     return report;
   }
 
-  function runDatasetBafuAuthoringPatchesAutofill(options = {}) {
+  function runDatasetBafuAuthoringPatchesAutofill(options: JsonRecord = {}): JsonRecord {
     if (options.help) {
       return {
         schema_version: 1,
@@ -2806,19 +2940,22 @@ export function createBafuAutoAuthoringCommands({
       throw new Error("--task-manifest is required.");
     }
     const manifest = readJson(manifestPath);
-    const outDir = resolveRepoPath(options.outDir || path.dirname(manifestPath));
+    const outDir = resolveRepoPath(options.outDir || path.dirname(manifestPath))!;
     const reportFile = path.join(outDir, "bafu-authoring-patches-autofill-report.json");
-    const blockers = [];
-    const patchFiles = [];
+    const blockers: JsonRecord[] = [];
+    const patchFiles: string[] = [];
 
-    for (const task of ensureArray(manifest.tasks)) {
+    for (const task of ensureArray(manifest.tasks).map(jsonRecord)) {
       if (task.status !== "ready_for_ai_authoring") continue;
-      const packagePath = resolveRepoPath(task.files?.authoring_package);
+      const taskFiles = jsonRecord(task.files);
+      const taskEntity = jsonRecord(task.entity);
+      const taskContext = jsonRecord(task.context);
+      const packagePath = resolveRepoPath(taskFiles.authoring_package);
       if (!packagePath || !fileExists(packagePath)) {
         blockers.push({
           code: "authoring_package_missing",
-          dataset_id: task.entity?.entity_id ?? null,
-          authoring_package: task.files?.authoring_package ?? null,
+          dataset_id: taskEntity.entity_id ?? null,
+          authoring_package: taskFiles.authoring_package ?? null,
         });
         continue;
       }
@@ -2829,14 +2966,14 @@ export function createBafuAutoAuthoringCommands({
       const operations = buildNamePatchOperations(enrichedTask);
       const operationBlockers = operations.filter((operation) => operation.blocker);
       if (operationBlockers.length > 0) {
-        blockers.push(...operationBlockers.map((operation) => operation.blocker));
+        blockers.push(...operationBlockers.map((operation) => jsonRecord(operation.blocker)));
         continue;
       }
-      const patchPath = resolveRepoPath(task.files?.output_patch_file);
+      const patchPath = resolveRepoPath(taskFiles.output_patch_file);
       if (!patchPath) {
         blockers.push({
           code: "output_patch_file_missing",
-          dataset_id: task.entity?.entity_id ?? null,
+          dataset_id: taskEntity.entity_id ?? null,
         });
         continue;
       }
@@ -2848,11 +2985,11 @@ export function createBafuAutoAuthoringCommands({
         task_manifest: repoRelativePath(manifestPath),
         patch_sets: [
           {
-            dataset_type: task.entity.dataset_type,
-            dataset_id: task.entity.entity_id,
-            version: task.entity.version,
+            dataset_type: taskEntity.dataset_type,
+            dataset_id: taskEntity.entity_id,
+            version: taskEntity.version,
             authoring_package: path.basename(packagePath),
-            authoring_package_sha256: task.context?.authoring_package_sha256 ?? null,
+            authoring_package_sha256: taskContext.authoring_package_sha256 ?? null,
             operations,
           },
         ],
