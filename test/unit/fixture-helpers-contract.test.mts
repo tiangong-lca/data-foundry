@@ -49,6 +49,7 @@ const expectedFixtureRootConsumers = [
   "test/scenarios/mutation-lineage-helpers.test.mjs",
   "test/scenarios/mutation-manifest-reference-closure.test.mjs",
   "test/scenarios/post-authoring-finalize-gates.test.mjs",
+  "test/unit/context-identity-mutation-fixture-migration.test.mts",
   "test/unit/fixture-helpers-contract.test.mts",
 ] as const;
 
