@@ -11,7 +11,7 @@ import {
   sameArtifactPath,
   unique,
 } from "./runtime-io.ts";
-import { readClassificationDecisionApplyContext } from "./workflow-decision-apply-context.mjs";
+import { readClassificationDecisionApplyContext } from "./workflow-decision-apply-context.ts";
 import {
   identityDecisionCanonical,
   identityDecisionClosesAction,

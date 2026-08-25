@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import * as decisionContext from "../../scripts/lib/import-curation/internal/workflow-decision-apply-context.mjs";
+import * as decisionContext from "../../scripts/lib/import-curation/internal/workflow-decision-apply-context.ts";
 import { sha256Json, sha256Text } from "../../scripts/lib/import-curation/internal/hash-utils.ts";
 
 type JsonRecord = Record<string, unknown>;
@@ -61,6 +61,7 @@ test("classification apply context preserves null and empty report envelopes", (
       path: "reports/null.json",
       value: null,
     });
+    assert.ok(nullValue);
     assert.equal(nullValue.status, "");
     assert.equal(nullValue.applied, 0);
   });
@@ -136,10 +137,11 @@ test("decision aliases, flow precedence, task proof, paths, payload hashes and l
       "custom_apply",
     );
 
+    assert.ok(context);
     assert.equal(context.status, "complete");
     assert.equal(context.decisionsFile, decisionsPath);
     assert.deepEqual(
-      context.decisions.map((decision: JsonRecord) => decision.marker),
+      context.decisions.map((decision) => (decision as JsonRecord).marker),
       ["process-first", "flow-second"],
     );
     assert.equal(context.decisionTaskProofs.length, 1);
@@ -205,9 +207,10 @@ test("process fallback, plural proof order, missing decision files and numeric c
         counts: { applied: -2 },
       },
     });
+    assert.ok(context);
     assert.equal(context.decisionTaskProof, null);
     assert.deepEqual(
-      context.decisionTaskProofs.map((proof: JsonRecord) => proof.path),
+      context.decisionTaskProofs.map((proof) => proof.path),
       ["tasks/first.json", "tasks/second.json"],
     );
     assert.deepEqual(
@@ -223,6 +226,7 @@ test("process fallback, plural proof order, missing decision files and numeric c
         counts: { applied: "not-a-number" },
       },
     });
+    assert.ok(missing);
     assert.deepEqual(missing.decisions, []);
     assert.equal(missing.decisionsFile, path.join(root, "decisions", "missing.json"));
     assert.equal(missing.applied, 0);

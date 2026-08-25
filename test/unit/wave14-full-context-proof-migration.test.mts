@@ -22,7 +22,7 @@ test("internal full-context proof exists only as native TypeScript", () => {
 
 test("every static internal full-context proof consumer targets the typed module", () => {
   const consumers = [
-    "scripts/lib/import-curation/internal/workflow-decision-apply-context.mjs",
+    "scripts/lib/import-curation/internal/workflow-decision-apply-context.ts",
     "scripts/lib/import-curation/internal/workflow-decision-full-context.mjs",
     "scripts/lib/import-curation/internal/workflow-identity-decision-context.mjs",
     "scripts/lib/import-curation/internal/workflow-patch-evidence-context.mjs",

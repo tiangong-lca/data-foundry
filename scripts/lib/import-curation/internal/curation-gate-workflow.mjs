@@ -31,7 +31,7 @@ export {
   writeJson,
   writeText,
 } from "./runtime-io.ts";
-export { readClassificationDecisionApplyContext } from "./workflow-decision-apply-context.mjs";
+export { readClassificationDecisionApplyContext } from "./workflow-decision-apply-context.ts";
 export {
   identityDecisionApplyContextDecisionsForIdentity,
   readIdentityDecisionApplyContexts,
