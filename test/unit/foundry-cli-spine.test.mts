@@ -334,6 +334,7 @@ test("active documentation and source contain no references to removed CLI spine
     "workflow-evidence-scope.mjs",
     "commands/import-ledger.mjs",
     "commands/tidas-workflow.mjs",
+    "commands/identity-reference-rewrites.mjs",
   ];
   const files = [
     "AGENTS.md",
