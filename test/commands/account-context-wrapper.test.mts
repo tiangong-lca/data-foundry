@@ -203,10 +203,18 @@ test("account wrapper package and surface metadata point only at the typed entry
     path.join(repositoryRoot, "scripts", "lib", "surface-audit.mjs"),
     "utf8",
   );
+  const wrapperSource = fs.readFileSync(
+    path.join(repositoryRoot, "scripts", "with-lca-account.ts"),
+    "utf8",
+  );
   assert.equal(packageJson.scripts?.["account:run"], "node scripts/with-lca-account.ts");
   assert.match(surfaceAudit, /scripts\/with-lca-account\.ts/u);
   assert.doesNotMatch(surfaceAudit, /scripts\/with-lca-account\.mjs/u);
   assert.equal(fs.existsSync(path.join(repositoryRoot, "scripts", "with-lca-account.mjs")), false);
+  assert.doesNotMatch(wrapperSource, /\bfetch\s*\(/u);
+  assert.doesNotMatch(wrapperSource, /base64/iu);
+  assert.doesNotMatch(wrapperSource, /shell:\s*true/u);
+  assert.doesNotMatch(wrapperSource, /--no-auth-check/u);
 });
 
 test("account wrapper rejects legacy bypass and missing project or user intent before spawning", () => {
