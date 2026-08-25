@@ -31,6 +31,11 @@ export function createFixture() {
   }));
   const rowsFile = path.join(fixtureRoot, "processes.jsonl");
   writeJsonLines(rowsFile, rows);
+  const finalRowsArtifact = {
+    path: rel(rowsFile),
+    bytes: fs.readFileSync(rowsFile).byteLength,
+    sha256: sha256Text(fs.readFileSync(rowsFile)),
+  };
 
   const checksFile = path.join(fixtureRoot, "remote-verification.jsonl");
   writeText(
@@ -212,6 +217,7 @@ export function createFixture() {
     finalize_report: rel(finalizeReport),
     mutation_manifest: rel(mutationMissingProof),
     final_rows_file: rel(rowsFile),
+    final_rows_artifact: finalRowsArtifact,
     target_user_id: targetUserId,
     expected_state_code: "0",
     counts: {
@@ -234,6 +240,7 @@ export function createFixture() {
     finalize_report: rel(finalizeReport),
     mutation_manifest: rel(mutationWithProof),
     final_rows_file: rel(rowsFile),
+    final_rows_artifact: finalRowsArtifact,
     target_user_id: targetUserId,
     expected_state_code: "0",
     counts: {

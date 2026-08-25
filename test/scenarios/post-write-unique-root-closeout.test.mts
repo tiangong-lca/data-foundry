@@ -52,3 +52,27 @@ test("post-write closeout rejects duplicate root checks that hide an intended ro
   assert.ok(blockerCodes(closeout.json).has("root_readback_duplicate"));
   assert.ok(blockerCodes(closeout.json).has("root_readback_missing"));
 });
+
+test("post-write closeout rejects same-path final-row byte drift after handoff", () => {
+  const fixture = createFixture();
+  const rows = readJsonLines(fixture.rowsFile);
+  rows[1].processDataSet.processInformation.dataSetInformation["common:name"] = {
+    "@xml:lang": "en",
+    "#text": "drifted after handoff",
+  };
+  writeJsonLines(fixture.rowsFile, rows);
+
+  const closeout = runFoundry([
+    "dataset-post-write-closeout",
+    "--handoff-plan",
+    rel(fixture.handoffWithProof),
+    "--commit-report",
+    rel(fixture.commitReport),
+    "--post-write-verify-report",
+    rel(fixture.verifyReport),
+    "--out-dir",
+    rel(path.join(repoRoot, "tmp", "drifted-root-closeout")),
+  ]);
+  assert.equal(closeout.code, 1, JSON.stringify(closeout.json));
+  assert.ok(blockerCodes(closeout.json).has("handoff_final_rows_artifact_sha256_drift"));
+});
