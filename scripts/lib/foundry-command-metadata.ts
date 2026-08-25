@@ -1137,7 +1137,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-post-write-closeout": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/post-write-closeout.mjs",
+    ownerModule: "scripts/commands/post-write-closeout.ts",
     ownerExport: "createPostWriteCloseoutCommands().runDatasetPostWriteCloseout",
     inputs: ["final rows", "write result", "trace queues", "readback/verify evidence"],
     outputs: ["post-write-closeout-report.json"],

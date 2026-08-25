@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createPostWriteCloseoutCommands } from "../../scripts/commands/post-write-closeout.mjs";
+import { createPostWriteCloseoutCommands } from "../../scripts/commands/post-write-closeout.ts";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
@@ -52,7 +52,7 @@ test("post-write closeout help is exact and invokes no artifact or verification 
 });
 
 test("post-write closeout keeps accepted-diff and unique-root proof in typed owner modules", () => {
-  const source = readRepoFile("scripts/commands/post-write-closeout.mjs");
+  const source = readRepoFile("scripts/commands/post-write-closeout.ts");
   assert.match(
     source,
     /normalizeAllowedTraceHashDifference\s*\}\s*from\s*["']\.\.\/lib\/remote-verification-accepted-diff\.ts["']/u,

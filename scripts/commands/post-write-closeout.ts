@@ -1,10 +1,146 @@
 import path from "node:path";
 import { createFileArtifactFact } from "../lib/foundry-command-spec.ts";
+import type { FoundryArtifactFact } from "../lib/foundry-command-spec.ts";
 import { normalizeAllowedTraceHashDifference } from "../lib/remote-verification-accepted-diff.ts";
 import {
   canonicalPayloadSha256,
   validateUniqueRootReadbacks,
 } from "../lib/post-write-root-proof.ts";
+import type { IntendedRoot, RootReadbackCheck } from "../lib/post-write-root-proof.ts";
+
+type JsonRecord = Record<string, unknown>;
+
+type CountRecord = Record<string, unknown> & {
+  failed?: unknown;
+  failure_count?: unknown;
+  executed?: unknown;
+  success_count?: unknown;
+  selected?: unknown;
+  total_rows?: unknown;
+  blockers?: unknown;
+  root_readback_checks?: unknown;
+  root_payload_mismatches?: unknown;
+  unresolved_trace_entries?: unknown;
+  source_exchange_completeness_entries?: unknown;
+  source_reference_rewrites?: unknown;
+  ai_patch_evidence_entries?: unknown;
+  ai_classification_decision_entries?: unknown;
+  ai_location_decision_entries?: unknown;
+  ai_identity_decision_entries?: unknown;
+  source_contact_rewrite_semantic_evidence_entries?: unknown;
+  entries_written?: unknown;
+};
+
+type FileRecord = Record<string, unknown> & {
+  checks?: unknown;
+  final_rows?: unknown;
+  rows_file?: unknown;
+  unresolved_traces?: unknown;
+  source_exchange_completeness_traces?: unknown;
+  source_reference_rewrites?: unknown;
+  trace_queues?: FileRecord;
+};
+
+type ReportValue = JsonRecord & {
+  status?: unknown;
+  mode?: unknown;
+  commit?: unknown;
+  counts?: CountRecord;
+  blockers?: unknown;
+  files?: FileRecord;
+  dataset_type?: unknown;
+  final_rows_file?: unknown;
+  final_rows_artifact?: unknown;
+  finalize_report?: unknown;
+  mutation_manifest?: unknown;
+  target_user_id?: unknown;
+  expected_state_code?: unknown;
+  account_mode?: unknown;
+  profile?: unknown;
+  rows_file?: unknown;
+};
+
+type JsonArtifact = {
+  path: string;
+  value: ReportValue;
+};
+
+type FullContextResult = {
+  required: boolean;
+  blockers: JsonRecord[];
+};
+
+type TraceQueueResult = {
+  counts: {
+    unresolved_trace_entries: number;
+    source_exchange_completeness_entries: number;
+    source_reference_rewrites: number;
+  };
+  files: {
+    unresolved_traces: unknown;
+    source_exchange_completeness_traces: unknown;
+    source_reference_rewrites: unknown;
+  };
+};
+
+type ImportLedgerResult = {
+  status: string;
+  files: JsonRecord;
+  counts: CountRecord;
+};
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export type PostWriteCloseoutOptions = Record<string, unknown> & {
+  help?: unknown;
+  handoffPlan?: unknown;
+  plan?: unknown;
+  input?: unknown;
+  commitReport?: unknown;
+  commit?: unknown;
+  writeReport?: unknown;
+  postWriteVerifyReport?: unknown;
+  verifyReport?: unknown;
+  remoteVerifyReport?: unknown;
+  type?: unknown;
+  outDir?: unknown;
+  rowsFile?: unknown;
+  finalizeReport?: unknown;
+  mutationManifest?: unknown;
+  targetUserId?: unknown;
+  stateCode?: unknown;
+  productionCase?: unknown;
+  ledgerDir?: unknown;
+  importLedgerDir?: unknown;
+};
+
+export type PostWriteCloseoutFactoryDependencies = {
+  asText: (value: unknown) => string;
+  countJsonLinesFile: (filePath: string) => number;
+  countRowsFile: (filePath: string) => number;
+  datasetIdentity: (row: JsonRecord, datasetType: string) => { id: string; version: string };
+  ensureArray: <T>(value: T | T[] | null | undefined) => T[];
+  fileExists: (filePath: string) => boolean;
+  fullContextProofCheck: (input: JsonRecord) => FullContextResult;
+  nowIso: () => string;
+  readJsonArtifactOption: (value: unknown) => JsonArtifact | null;
+  readJsonLines: (filePath: string) => JsonRecord[];
+  readRowsFile: (filePath: string) => JsonRecord[];
+  repoRelativeMaybe: (filePath: string | null | undefined) => string | null;
+  repoRelativePath: (filePath: string) => string;
+  reportInputPath: (report: ReportValue) => unknown;
+  resolveRepoPath: (value: unknown) => string | null;
+  sameResolvedPath: (left: string, right: string) => boolean;
+  validateTraceQueueCoverageForRows: (input: JsonRecord) => unknown;
+  writeCloseoutImportLedger?: (input: {
+    report: JsonRecord;
+    reportPath: string;
+    ledgerDir: string | null;
+  }) => ImportLedgerResult;
+  writeJson: (filePath: string, value: unknown) => unknown;
+};
 
 export function createPostWriteCloseoutCommands({
   asText,
@@ -26,7 +162,7 @@ export function createPostWriteCloseoutCommands({
   validateTraceQueueCoverageForRows,
   writeCloseoutImportLedger,
   writeJson,
-}) {
+}: PostWriteCloseoutFactoryDependencies) {
   function validateCommitReportForCloseout({
     commitReport,
     commitReportPath,
@@ -34,7 +170,14 @@ export function createPostWriteCloseoutCommands({
     finalRowsFile,
     expectedRows,
     blockers,
-  }) {
+  }: {
+    commitReport: ReportValue;
+    commitReportPath: string;
+    datasetType: string;
+    finalRowsFile: string;
+    expectedRows: number;
+    blockers: JsonRecord[];
+  }): void {
     const inputPath = resolveRepoPath(reportInputPath(commitReport));
     const status = asText(commitReport.status);
     const mode = asText(commitReport.mode);
@@ -109,10 +252,26 @@ export function createPostWriteCloseoutCommands({
     intendedRoots,
     allowTraceHashOnlyNormalization,
     blockers,
-  }) {
+  }: {
+    verifyReport: ReportValue;
+    verifyReportPath: string;
+    finalRowsFile: string;
+    expectedRows: number;
+    targetUserId: string;
+    expectedStateCode: number | null;
+    intendedRoots: IntendedRoot[];
+    allowTraceHashOnlyNormalization: boolean;
+    blockers: JsonRecord[];
+  }): {
+    checksFile: string | null;
+    readbackChecks: RootReadbackCheck[];
+    uniqueReadbackCount: number;
+  } {
     const inputPath = resolveRepoPath(reportInputPath(verifyReport));
     const counts = verifyReport.counts ?? {};
-    const blockerCount = Number(counts.blockers ?? verifyReport.blockers?.length ?? 0);
+    const blockerCount = Number(
+      counts.blockers ?? (Array.isArray(verifyReport.blockers) ? verifyReport.blockers.length : 0),
+    );
     const rootReadbackCount = Number(counts.root_readback_checks ?? 0);
     const rootPayloadMismatches = Number(counts.root_payload_mismatches ?? -1);
 
@@ -174,7 +333,7 @@ export function createPostWriteCloseoutCommands({
       return { checksFile: null, readbackChecks: [], uniqueReadbackCount: 0 };
     }
 
-    const checks = readJsonLines(checksFile);
+    const checks = readJsonLines(checksFile) as RootReadbackCheck[];
     const readbackChecks = checks.filter(
       (check) => check?.role === "root" && String(check?.path ?? "").endsWith("#readback"),
     );
@@ -229,7 +388,7 @@ export function createPostWriteCloseoutCommands({
       intended: intendedRoots,
       checks: readbackChecks,
       targetUserId,
-      expectedStateCode,
+      expectedStateCode: expectedStateCode as number,
       allowTraceHashOnlyNormalization,
     });
     blockers.push(...uniqueProof.blockers);
@@ -248,7 +407,14 @@ export function createPostWriteCloseoutCommands({
     datasetType,
     finalRowsFile,
     blockers,
-  }) {
+  }: {
+    handoffPlan: ReportValue;
+    finalizeReport: ReportValue | null;
+    mutationManifest: ReportValue | null;
+    datasetType: string;
+    finalRowsFile: string | null;
+    blockers: JsonRecord[];
+  }): TraceQueueResult {
     const counts = {
       unresolved_trace_entries:
         Number(
@@ -348,7 +514,10 @@ export function createPostWriteCloseoutCommands({
     };
   }
 
-  function rootTypeAndTable(row, fallbackType) {
+  function rootTypeAndTable(
+    row: JsonRecord,
+    fallbackType: string,
+  ): { type: string; table: string } {
     if (row?.contactDataSet) return { type: "contact", table: "contacts" };
     if (row?.sourceDataSet) return { type: "source", table: "sources" };
     if (row?.flowPropertyDataSet) return { type: "flowproperty", table: "flowproperties" };
@@ -373,15 +542,22 @@ export function createPostWriteCloseoutCommands({
     return { type: fallbackType, table };
   }
 
-  function validateHandoffFinalRowsArtifact({ handoffPlan, finalRowsFile, blockers }) {
+  function validateHandoffFinalRowsArtifact({
+    handoffPlan,
+    finalRowsFile,
+    blockers,
+  }: {
+    handoffPlan: ReportValue;
+    finalRowsFile: string;
+    blockers: JsonRecord[];
+  }): FoundryArtifactFact | null {
     const artifact = handoffPlan.final_rows_artifact;
     if (
       !artifact ||
-      typeof artifact !== "object" ||
-      Array.isArray(artifact) ||
+      !isJsonRecord(artifact) ||
       typeof artifact.path !== "string" ||
       !Number.isSafeInteger(artifact.bytes) ||
-      artifact.bytes < 0 ||
+      Number(artifact.bytes) < 0 ||
       typeof artifact.sha256 !== "string" ||
       !/^[a-f0-9]{64}$/u.test(artifact.sha256)
     ) {
@@ -425,7 +601,7 @@ export function createPostWriteCloseoutCommands({
     return current;
   }
 
-  function runDatasetPostWriteCloseout(options) {
+  function runDatasetPostWriteCloseout(options: PostWriteCloseoutOptions): JsonRecord {
     if (options.help) {
       return {
         schema_version: 1,
@@ -476,7 +652,7 @@ export function createPostWriteCloseoutCommands({
     }
     const outDir = resolveRepoPath(
       options.outDir || path.join(path.dirname(handoffArtifact.path), "post-write-closeout"),
-    );
+    )!;
     const finalRowsFile = resolveRepoPath(options.rowsFile || handoffPlan.final_rows_file);
     const finalizeArtifact = readJsonArtifactOption(
       options.finalizeReport || handoffPlan.finalize_report,
@@ -492,7 +668,7 @@ export function createPostWriteCloseoutCommands({
       expectedStateCodeText === "" || Number.isNaN(Number(expectedStateCodeText))
         ? null
         : Number(expectedStateCodeText);
-    const blockers = [];
+    const blockers: JsonRecord[] = [];
     const handoffAccountMode = asText(handoffPlan.account_mode).toLowerCase() || "ordinary";
     const environmentAccountMode = asText(process.env.FOUNDRY_ACCOUNT_MODE).toLowerCase();
     if (environmentAccountMode && environmentAccountMode !== handoffAccountMode) {
@@ -611,7 +787,7 @@ export function createPostWriteCloseoutCommands({
 
     const expectedRows =
       finalRowsFile && fileExists(finalRowsFile) ? countRowsFile(finalRowsFile) : 0;
-    const intendedRoots = [];
+    const intendedRoots: IntendedRoot[] = [];
     if (finalRowsFile && fileExists(finalRowsFile)) {
       readRowsFile(finalRowsFile).forEach((row, rowIndex) => {
         const rootType = rootTypeAndTable(row, datasetType);
@@ -647,7 +823,11 @@ export function createPostWriteCloseoutCommands({
       });
     }
 
-    let rootProof = { checksFile: null, readbackChecks: [], uniqueReadbackCount: 0 };
+    let rootProof: {
+      checksFile: string | null;
+      readbackChecks: RootReadbackCheck[];
+      uniqueReadbackCount: number;
+    } = { checksFile: null, readbackChecks: [], uniqueReadbackCount: 0 };
     if (finalRowsFile && fileExists(finalRowsFile)) {
       validateCommitReportForCloseout({
         commitReport: commitArtifact.value,
@@ -722,7 +902,10 @@ export function createPostWriteCloseoutCommands({
           ) || 0,
         post_write_verify_blockers:
           Number(
-            verifyArtifact.value.counts?.blockers ?? verifyArtifact.value.blockers?.length ?? 0,
+            verifyArtifact.value.counts?.blockers ??
+              (Array.isArray(verifyArtifact.value.blockers)
+                ? verifyArtifact.value.blockers.length
+                : 0),
           ) || 0,
         root_readback_checks: Number(verifyArtifact.value.counts?.root_readback_checks ?? 0) || 0,
         unique_root_readback_checks: rootProof.uniqueReadbackCount,

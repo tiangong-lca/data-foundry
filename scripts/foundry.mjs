@@ -20,7 +20,7 @@ import { createImportLedgerCommands } from "./commands/import-ledger.ts";
 import { createIncrementalChangeSetCommands } from "./commands/incremental-change-set.mjs";
 import { createLibraryScopeWorkflowCommands } from "./commands/library-scope-workflow.mjs";
 import { createPostAuthoringFinalizeCommands } from "./commands/post-authoring-finalize.mjs";
-import { createPostWriteCloseoutCommands } from "./commands/post-write-closeout.mjs";
+import { createPostWriteCloseoutCommands } from "./commands/post-write-closeout.ts";
 import { createSupportCacheCommands } from "./commands/support-cache.ts";
 import { createTaskCommands } from "./commands/tasks.ts";
 import { createTidasWorkflowCommands } from "./commands/tidas-workflow.ts";
