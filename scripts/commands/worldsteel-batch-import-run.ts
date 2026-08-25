@@ -8,8 +8,10 @@
 //   - BAFU autofill OFF (worldsteel identity/classification decisions are pre-authored;
 //     un-authored action items block instead of being mis-authored by BAFU logic);
 //   - BAFU family-signature ordering OFF (worldsteel has no ecoSpold name-family concept);
-//   - mintUnmatchedFpUgSupport OFF: worldsteel FP/UG are EF3.1 canonical and reused by
-//     reference (the opposite of USLCI, whose FEDEFL FP/UG had no canonical equivalent).
+//   - mintUnmatchedFpUgSupport=true: every materialized FP/UG missing from the canonical
+//     support cache enters the profile-authorized account-local support path. The retained
+//     reason was the EF3.1 LANCA gap; it is not a runtime name/count whitelist. Canonical
+//     matches are reused, and every candidate remains behind the profile/finalize gates.
 // BAFU behavior is unchanged: the engine's defaults reproduce the BAFU runner exactly,
 // and each run re-installs its own profile config (runs are sequential, race-free).
 import { createBafuBatchImportRunCommands } from "./bafu-batch-import-run.ts";

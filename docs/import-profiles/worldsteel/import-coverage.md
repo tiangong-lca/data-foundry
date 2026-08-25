@@ -4,6 +4,8 @@ Imported under account **data@worldsteel.org** (uid 7d6d550a). Generated 2026-07
 
 > Historical pre-hardening report. It records the 2026-07-01 run, but its accepted foreign `state_code=0` reference is no longer valid verification evidence. Current runs must remain blocked until that dependency resolves to an allowed public or same-owner visible row.
 
+Current executable policy, reviewed 2026-08-26: `mintUnmatchedFpUgSupport=true`. This retained report supplies the delivery reason (10+10 LANCA rows) and observed owner inventory (11+11), not a runtime name whitelist or numeric cap. Runtime admits materialized FP/UG canonical-cache misses only as same-owner `state_code=0` support candidates; canonical matches are reused, and any unit-scale, schema, QA, curation, closure, handoff, or readback failure defers the dependent scope while independent ready scopes may continue.
+
 ## Historical result: 33 / 33 processes committed; 1 reference no longer qualifies as verified
 
 | Entity (owned by data@worldsteel.org, state_code=0 My Data)                  | Count |

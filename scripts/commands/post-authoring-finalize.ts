@@ -439,8 +439,9 @@ export function createPostAuthoringFinalizeCommands({
   // "Unmatched" = a materialized FP/UG whose UUID is not already a canonical-cache
   // id; reusable canonical FP/UG (e.g. Mass 93a60a56) keep their public reference
   // and are never minted. UGs precede FPs so a minted FP's reference unit group is
-  // in scope. This generic support-mint flag is currently used by the USLCI route;
-  // BAFU private incubation uses its separate candidate registry and guarded owner-draft path.
+  // in scope. This generic support-mint flag is enabled by the USLCI and Worldsteel
+  // adapters; BAFU private incubation uses its separate candidate registry and guarded
+  // owner-draft path.
   // Read a Flow Property row's referenceToReferenceUnitGroup id + version.
   function flowPropertyReferenceUnitGroup(fpRow: DatasetRow): {
     reference: DatasetReference | null;
@@ -677,8 +678,8 @@ export function createPostAuthoringFinalizeCommands({
           source_reference_rewrites: 0,
           support_rows: 0,
         },
-        // Empty for BAFU (override off); populated only for the USLCI support sub-finalize
-        // so its mutation manifest can prove the FP->canonical-UG edge it writes.
+        // Empty when the adapter's mint flag is off; populated for a flag-enabled support
+        // sub-finalize so its mutation manifest can prove the FP->canonical-UG edge it writes.
         canonical_support: {
           canonical_unit_group_reference_keys: skippedCanonicalUnitGroupProofKeys,
         },

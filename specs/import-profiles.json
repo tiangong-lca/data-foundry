@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at_utc": "2026-08-25T16:02:35Z",
+  "updated_at_utc": "2026-08-25T19:46:13Z",
   "default_profile": "generic",
   "profiles": {
     "generic": {
@@ -100,11 +100,12 @@
     },
     "worldsteel": {
       "id": "worldsteel",
-      "description": "worldsteel EF3.1-reference native ILCD 1.1 package (33 steel LCI-result processes plus ~74 new product/waste/other and GaBi/Sphera pseudo-elementary flows) sitting on a large EF3.1 reference layer (~1,315 reference elementary flows, most flowproperties/unitgroups, 25 LCIA methods, and EF/PEF/OEF/ILCD compliance boilerplate). The reference layer is reused by its ORIGINAL canonical UUID through deterministic exchange-reference-rewrites (applyResolutionRewrites), never minted. Validation uses Rust tidas' locked corrected eILCD schemas, not raw EF3.1. Source binaries referenced via referenceToDigitalFile are uploaded to the external_docs storage bucket by the tiangong-lca-cli `dataset source upload-attachments` command and the source @uri rewritten before write. One canonical worldsteel library/attribution contact (reused from the package); worldsteel database fallback source.",
+      "description": "worldsteel EF3.1-reference native ILCD 1.1 package (33 steel LCI-result processes plus ~74 new product/waste/other and GaBi/Sphera pseudo-elementary flows) sitting on a large EF3.1 reference layer (~1,315 reference elementary flows, most flowproperties/unitgroups, 25 LCIA methods, and EF/PEF/OEF/ILCD compliance boilerplate). Canonical reference rows are reused by their ORIGINAL UUID through deterministic exchange-reference-rewrites (applyResolutionRewrites), never minted. A materialized flow property or unit group absent from the canonical-support cache may enter the separately gated account-local support path. Validation uses Rust tidas' locked corrected eILCD schemas, not raw EF3.1. Source binaries referenced via referenceToDigitalFile are uploaded to the external_docs storage bucket by the tiangong-lca-cli `dataset source upload-attachments` command and the source @uri rewritten before write. One canonical worldsteel library/attribution contact (reused from the package); worldsteel database fallback source.",
       "docs": [
         "docs/import-profiles/worldsteel/profile.md",
         "docs/import-profiles/worldsteel/constraints.md",
-        "docs/import-profiles/worldsteel/import-plan.md"
+        "docs/import-profiles/worldsteel/import-plan.md",
+        "docs/import-profiles/worldsteel/import-coverage.md"
       ],
       "waived_qa_codes_by_type": {
         "process": ["process_material_balance_deviation"]
@@ -118,7 +119,8 @@
       },
       "allow_account_local_support_and_elementary": {
         "enabled": true,
-        "authorized_by": "user decision 2026-06-29 (requirement 3): the ~1,315 EF3.1 reference elementary flows + canonical flowproperties/unitgroups are REUSED by their original canonical UUIDs (deterministic exchange-reference-rewrites + applyResolutionRewrites) and are NEVER minted. This override is a capped escape hatch scoped ONLY to the small residual of GaBi/Sphera pseudo-elementary flows (dataSetVersion 20.25.x) that have no canonical match — expected at most 17 — which are authored as account-local My Data (state_code=0) with full AI context so the 33 steel processes stay complete. These residual flows are NOT matched by UUID; the AI judges reuse-vs-mint from full context. Final mint count is reviewed after the UUID-reuse pass. Reversible (enabled=false).",
+        "mint_unmatched_fp_ug_support": true,
+        "authorized_by": "user decisions 2026-06-29 and 2026-07-01: canonical EF3.1 reference rows are REUSED by their original canonical UUIDs (deterministic exchange-reference-rewrites + applyResolutionRewrites) and are NEVER minted. The 2026-06-29 override authorizes the residual GaBi/Sphera pseudo-elementary flows with no canonical match as account-local My Data (state_code=0). The superseding 2026-07-01 support decision also enables mintUnmatchedFpUgSupport for materialized flow properties and unit groups absent from the canonical-support cache; the retained reason was the 10+10 EF3.1 LANCA gap observed during delivery. LANCA and those counts are evidence, not a runtime whitelist or hard cap. Every candidate remains same-owner state_code=0 at 00.00.001 and must pass unit-scale, schema, QA, curation, closure, dry-run, commit-handoff, and readback gates. Reversible (enabled=false).",
         "scope": [
           "elementary_flow_write",
           "elementary_flow_create_new",
@@ -126,7 +128,7 @@
           "unitgroup_write",
           "canonical_support_local_mint"
         ],
-        "note": "Unlike BAFU/USLCI (which mint reference support at scale because their FEDEFL/ecoSpold support has no public canonical equivalent), worldsteel's reference support and elementary flows ARE canonical and are reused by original UUID. This override exists only as a capped allowance for the <=17 unmatched GaBi/Sphera pseudo-elementary flows. Does NOT relax either unit-scale safety blocker (canonical_support_amount_scaling_required for a known positive non-1 factor, or canonical_support_amount_scale_unresolved for a missing/non-finite/non-positive factor) or schema/curation/full-context proof gates. Account-local rows are written at state_code=0 (My Data) keeping their source units. Set enabled=false to forbid all minting (then the residual flows externalize to common:other traces instead)."
+        "note": "Canonical-first remains the dominant policy: any elementary flow, flow property, or unit group with an acceptable canonical row is reused and never minted. For materialized FP/UG, mintUnmatchedFpUgSupport=true admits only canonical-cache misses into the profile-authorized support candidate set; it does not whitelist LANCA names or enforce the historical 10+10/11+11 counts. Unit groups precede flow properties, and dependent flows/processes wait for support closeout and readback. A support, unit-scale, schema, QA, curation, closure, dry-run, handoff, or readback failure defers that dependent scope while independent ready scopes may continue. Account-local rows remain same-owner state_code=0 (My Data) at 00.00.001 and never enter the public canonical cache. Set enabled=false to restore reference-only governance."
       },
       "full_context_ai_completion": {
         "required": false,

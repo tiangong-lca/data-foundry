@@ -23,13 +23,14 @@ Profile for the worldsteel EF3.1 native ILCD 1.1 package (`inputs/CUP2025-2_2022
 ## Scope
 
 - **New payload (authored):** 33 steel LCI-result processes (mass-based, GLO/Europe/EU, 2022; LCIAResult=0 on all 33 — expected for LCI results) + ~57 product/waste/other flows + up to 17 GaBi/Sphera pseudo-elementary flows + a thin worldsteel contact/source/flow-property overlay.
-- **Reference payload (reused, never minted):** ~1,315 EF3.1 reference elementary flows + most flowproperties/unitgroups, reused **by their original canonical UUID** via the offline library-resolution `exchange-reference-rewrites.jsonl` (`applyResolutionRewrites`). 25 LCIA methods are out of scope (reference/provenance only).
+- **Reference payload (canonical-first):** ~1,315 EF3.1 reference elementary flows + most flowproperties/unitgroups, reused **by their original canonical UUID** via the offline library-resolution `exchange-reference-rewrites.jsonl` (`applyResolutionRewrites`). A canonical row is never minted. Materialized FP/UG absent from the canonical-support cache follow the separately gated account-local path below. The 25 LCIA methods are out of scope (reference/provenance only).
 
-## Resolved Decisions (2026-06-29)
+## Resolved Decisions (2026-06-29, superseded where noted on 2026-07-01)
 
 - **Account:** `data@worldsteel.org` (API key in the foundry `.env` active `WORLDSTEEL ACCOUNT` block). Writes are state_code=0 (My Data).
 - **Reuse by UUID:** the canonical DB already holds the EF3.1 flows under their original UUIDs, so the ~1,315 reference flows are reused deterministically by UUID (no semantic search). See `docs/import-profiles/worldsteel/import-plan.md` §7.
-- **Capped elementary mint:** `allow_account_local_support_and_elementary` is enabled **only** as a capped escape hatch for the ≤17 GaBi/Sphera pseudo-elementary flows (dataSetVersion 20.25.x) with no canonical match. These are NOT matched by UUID — the AI judges reuse-vs-mint from full context. FP/UG are reference-only (`mintUnmatchedFpUgSupport=false`). Final mint count is reviewed after the UUID-reuse pass.
+- **Capped elementary mint:** `allow_account_local_support_and_elementary` authorizes the ≤17 GaBi/Sphera pseudo-elementary flows (dataSetVersion 20.25.x) with no canonical match. These are NOT matched by UUID — the AI judges reuse-vs-mint from full context. Final elementary mint count is reviewed after the UUID-reuse pass.
+- **Unmatched FP/UG support (2026-07-01):** the later delivery decision supersedes the earlier FP/UG reference-only statement. The executable contract is `mintUnmatchedFpUgSupport=true`: each materialized flow property or unit group whose UUID is absent from the canonical-support cache enters the profile-authorized account-local support candidate set. The observed reason was 10+10 EF3.1 LANCA rows and the retained owner inventory was 11+11; neither the names nor the counts are a runtime whitelist/cap.
 - **Library/attribution contact:** the package's own worldsteel contact `d5710976-d600-11da-a94d-0800200c9a66` (World Steel Association) is **reused** as the single shared library contact, not minted fresh. Threaded via the runner's `libraryContact.contactId`/`contactVersion`.
 - **Database fallback source:** worldsteel processes whose data source resolves to a placeholder cite the synthesized `worldsteel LCI database` source (`source-semantics.ts` worldsteel branch), never the BAFU default.
 - **External documents:** the 13 `referenceToDigitalFile` binaries are uploaded to the `external_docs` storage bucket and the source `@uri` rewritten by the `tiangong-lca dataset source upload-attachments` CLI command, authenticated as `data@worldsteel.org`, before write.
@@ -41,9 +42,13 @@ Profile for the worldsteel EF3.1 native ILCD 1.1 package (`inputs/CUP2025-2_2022
 - Full-context AI completion required for authored `flow`/`process`/`lifecyclemodel` scopes (identity/classification/location decision tasks with sha-bound proof).
 - Build entity queues with `tiangong-lca dataset curation-queue build`; require `curation-queue verify` before write planning.
 
+## Support mint / blocked-review boundary
+
+Canonical FP/UG are always reused. An unmatched candidate remains same-owner My Data (`state_code=0`, row version `00.00.001`), is ordered Unit Group before Flow Property, and never enters the public canonical cache. Unit-scale (`canonical_support_amount_scaling_required` and `canonical_support_amount_scale_unresolved`), schema, QA, curation, reference closure, dry-run, commit-handoff, and readback gates are unchanged. If support preparation, commit, or verification fails, the dependent flow/process scope is blocked and deferred; independent ready scopes may continue. This flag grants neither review nor publish authority.
+
 ## Runner
 
-`scripts/commands/worldsteel-batch-import-run.ts` (`dataset-worldsteel-batch-import-run`) wraps the BAFU per-scope engine with: `enableBafuAutofill=false`, `enableFamilySignatures=false`, `commitFlowSupportInline=true`, `mintUnmatchedFpUgSupport=false`, `applyResolutionRewrites=true`, and the reused worldsteel `libraryContact`.
+`scripts/commands/worldsteel-batch-import-run.ts` (`dataset-worldsteel-batch-import-run`) wraps the BAFU per-scope engine with: `enableBafuAutofill=false`, `enableFamilySignatures=false`, `commitFlowSupportInline=true`, `mintUnmatchedFpUgSupport=true`, `applyResolutionRewrites=true`, and the reused worldsteel `libraryContact`.
 
 ## Open Decisions
 

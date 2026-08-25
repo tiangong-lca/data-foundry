@@ -15,6 +15,7 @@ type WorldsteelProfileFile = {
       docs: string[];
       allow_account_local_support_and_elementary: {
         enabled: boolean;
+        mint_unmatched_fp_ug_support: boolean;
         scope: string[];
         authorized_by: string;
         note: string;
@@ -32,7 +33,7 @@ function activeWorldsteelDocs(): string[] {
 }
 
 function documentedRuntimeValues(source: string): boolean[] {
-  return [...source.matchAll(/mintUnmatchedFpUgSupport=(true|false)/gu)].map(
+  return [...source.matchAll(/mintUnmatchedFpUgSupport\s*(?:=|:)\s*`?(true|false)/gu)].map(
     (match) => match[1] === "true",
   );
 }
@@ -40,12 +41,15 @@ function documentedRuntimeValues(source: string): boolean[] {
 test("Worldsteel runtime, profile authorization, and every active document expose one support-mint truth", () => {
   let runtimeConfig: Record<string, unknown> | undefined;
   const runner = () => undefined;
-  createWorldsteelBatchImportRunCommands({}, {
-    createBafuBatchImportRunCommands(_deps, config) {
-      runtimeConfig = config;
-      return { runDatasetBafuBatchImportRun: runner };
+  createWorldsteelBatchImportRunCommands(
+    {},
+    {
+      createBafuBatchImportRunCommands(_deps, config) {
+        runtimeConfig = config;
+        return { runDatasetBafuBatchImportRun: runner };
+      },
     },
-  });
+  );
 
   assert.ok(runtimeConfig, "Worldsteel factory must pass a profile config to the batch engine");
   const runtimeValue = runtimeConfig.mintUnmatchedFpUgSupport;
@@ -56,6 +60,10 @@ test("Worldsteel runtime, profile authorization, and every active document expos
   ) as WorldsteelProfileFile;
   const worldsteel = profile.profiles.worldsteel;
   assert.equal(worldsteel.allow_account_local_support_and_elementary.enabled, true);
+  assert.equal(
+    worldsteel.allow_account_local_support_and_elementary.mint_unmatched_fp_ug_support,
+    runtimeValue,
+  );
   assert.deepEqual(
     new Set(worldsteel.allow_account_local_support_and_elementary.scope),
     new Set([
@@ -78,8 +86,13 @@ test("Worldsteel runtime, profile authorization, and every active document expos
     assert.deepEqual(
       [...new Set(documentedRuntimeValues(source))],
       [runtimeValue],
-      `${relativePath} must declare the executable mintUnmatchedFpUgSupport value exactly once in meaning`,
+      `${relativePath} must declare only the executable mintUnmatchedFpUgSupport value`,
     );
+    assert.match(source, /canonical(?:-support)?[- ]cache/iu, relativePath);
+    assert.match(source, /state_code=0/iu, relativePath);
+    assert.match(source, /defer/iu, relativePath);
+    assert.match(source, /independent ready scope/iu, relativePath);
+    assert.match(source, /(?:allow|white)list/iu, relativePath);
   }
 
   const retainedEvidence = fs.readFileSync(

@@ -14,19 +14,21 @@ related:
 
 ## Reference-by-UUID first (the dominant policy)
 
-The ~1,315 EF3.1 reference elementary flows + canonical flowproperties/unitgroups are **reused by their original canonical UUID** through the offline library-resolution `exchange-reference-rewrites.jsonl` (applied by the runner's `applyResolutionRewrites`). They are **never minted**. Each rewrite row must carry `canonical_short_description` so committed exchanges show the flow name, not the UUID.
+The ~1,315 EF3.1 reference elementary flows + every FP/UG present in the canonical-support cache are **reused by their original canonical UUID** through the offline library-resolution `exchange-reference-rewrites.jsonl` (applied by the runner's `applyResolutionRewrites`). A canonical row is **never minted**. Each rewrite row must carry `canonical_short_description` so committed exchanges show the flow name, not the UUID.
 
-## Authorized: capped account-local elementary mint (2026-06-29, requirement 3)
+## Authorized account-local exceptions (2026-06-29 and 2026-07-01)
 
-`allow_account_local_support_and_elementary` is enabled for the worldsteel profile (`specs/import-profiles.json`) **only** as a capped escape hatch. Unlike BAFU/USLCI (which mint reference support at scale), worldsteel's reference support is canonical and reused by UUID. The override is scoped to the small residual of **GaBi/Sphera pseudo-elementary flows** (dataSetVersion 20.25.x) that have no canonical match — **expected at most 17** — minted as account-local My Data (state_code=0) so the 33 steel processes stay complete.
+`allow_account_local_support_and_elementary` is enabled for the worldsteel profile (`specs/import-profiles.json`). The 2026-06-29 decision authorizes the small residual of **GaBi/Sphera pseudo-elementary flows** (dataSetVersion 20.25.x) that have no canonical match — **expected at most 17** — as account-local My Data (`state_code=0`). The 2026-07-01 delivery decision separately supersedes the earlier FP/UG reference-only statement: `mintUnmatchedFpUgSupport=true` admits materialized FP/UG whose UUID is absent from the canonical-support cache into the same profile-gated support path.
 
 - These residual flows are **NOT** matched by UUID; the AI judges reuse-vs-mint from **full context**.
 - The final mint count is reviewed **after** the UUID-reuse pass. If the residual is zero, set `enabled=false`.
-- Flow properties / unit groups are reference-only (`mintUnmatchedFpUgSupport=false`); only elementary flows may mint under this allowance.
+- Canonical FP/UG are always reused. For cache misses, Unit Groups are ordered before Flow Properties and candidates are normalized to same-owner My Data version `00.00.001`; they never enter the public canonical cache.
+- The retained 10+10 EF3.1 LANCA gap explains why the support flag was enabled, and the historical delivery inventory records 11+11 owner rows. The runtime has no LANCA name whitelist or numeric hard cap: its enforceable candidate boundary is the canonical-cache miss inside the materialized ready-scope closure.
+- Support preparation/commit/readback failure blocks and defers the dependent flow/process scope. Independent ready scopes may continue, but no failed support scope may be treated as complete.
 
 ## Gates that REMAIN blocking (NOT relaxed)
 
-- the unit-scale safety blocker `canonical_support_amount_scaling_required`;
+- both unit-scale safety blockers: `canonical_support_amount_scaling_required` and `canonical_support_amount_scale_unresolved`;
 - schema validation through Rust tidas against its locked corrected eILCD schemas (not raw EF3.1), deterministic QA (except the waived `process_material_balance_deviation`), curation, and full-context AI proof for `flow`/`process`/`lifecyclemodel`;
 - remote write requires dry-run, queue verify, commit handoff, closeout, and readback verification, **and account/write-policy approval before any remote commit** — `allow_remote_commit` stays false until then.
 
