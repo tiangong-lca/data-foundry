@@ -20,6 +20,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { constants as osConstants } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs, parseEnv } from "node:util";
 import {
@@ -572,7 +573,7 @@ function assertReceiptRuntime(
   }
 }
 
-function readCaseEnv(envFile: string): CaseEnv {
+function readCaseEnv(envFile: string, root: string): CaseEnv {
   let stats;
   try {
     stats = lstatSync(envFile);
@@ -581,6 +582,30 @@ function readCaseEnv(envFile: string): CaseEnv {
   }
   if (!stats.isFile() || stats.isSymbolicLink()) {
     return fail("Production case env file must be a regular file.", "CASE_ENV_INVALID", 2);
+  }
+  if ((stats.mode & 0o077) !== 0) {
+    return fail(
+      "Production case env file must be owner-private (0600 or stricter).",
+      "CASE_ENV_NOT_PRIVATE",
+      2,
+    );
+  }
+  const relative = path.relative(root, envFile);
+  if (relative && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)) {
+    const ignored = spawnSync("git", ["check-ignore", "--quiet", "--no-index", "--", envFile], {
+      cwd: root,
+      env: systemEnv(process.env),
+      encoding: "utf8",
+      shell: false,
+      windowsHide: true,
+    });
+    if (ignored.status !== 0 || ignored.signal !== null || ignored.error) {
+      return fail(
+        "Production case env file inside the repository must be git-ignored.",
+        "CASE_ENV_NOT_IGNORED",
+        2,
+      );
+    }
   }
   let parsed: NodeJS.ProcessEnv;
   try {
@@ -777,9 +802,8 @@ function safeChildCode(stderr: string): string {
 }
 
 function signalExitCode(signal: NodeJS.Signals): number {
-  if (signal === "SIGINT") return 130;
-  if (signal === "SIGTERM") return 143;
-  return 128;
+  const signalNumber = osConstants.signals[signal];
+  return typeof signalNumber === "number" ? 128 + signalNumber : 1;
 }
 
 function containsSecretMaterial(value: string, secrets: string[]): boolean {
@@ -1215,6 +1239,7 @@ export async function runProductionContactDraftCase(
       argv: string[],
       env: NodeJS.ProcessEnv,
       diskReportPath: string | null,
+      markMutationDispatch = false,
     ): JsonRecord => {
       stage = stageName;
       if (diskReportPath && existsSync(diskReportPath)) {
@@ -1232,6 +1257,11 @@ export async function runProductionContactDraftCase(
       let child: SpawnResult;
       try {
         runtime.verifyCurrent();
+      } catch {
+        return fail(`Runtime evidence drifted at ${stageName}.`, "CASE_RUNTIME_DRIFT");
+      }
+      if (markMutationDispatch) mutationDispatchCount += 1;
+      try {
         child = spawnImpl(process.execPath, [runtime.entrypoint, ...argv], spawnOptions);
       } catch {
         return fail(
@@ -1346,7 +1376,7 @@ export async function runProductionContactDraftCase(
     validateDryRun(dryRun, candidatePath);
 
     stage = "load-production-env";
-    const caseEnv = readCaseEnv(options.envFile);
+    const caseEnv = readCaseEnv(options.envFile, root);
     secrets = [caseEnv.TIANGONG_LCA_TEST_API_KEY];
     if (projectRefFromBaseUrl(caseEnv.TIANGONG_LCA_API_BASE_URL) !== options.expectedProjectRef) {
       return fail("Production env project does not match intent.", "CASE_PROJECT_MISMATCH", 2);
@@ -1447,7 +1477,6 @@ export async function runProductionContactDraftCase(
         "CASE_CANDIDATE_ARTIFACT_DRIFT",
       );
     }
-    mutationDispatchCount += 1;
     const commit = invoke(
       "commit-contact-draft",
       [
@@ -1464,6 +1493,7 @@ export async function runProductionContactDraftCase(
       ],
       authenticatedEnv,
       path.join(commitDir, "outputs", "dataset-save-draft", "summary.json"),
+      true,
     );
     validateCommit(commit, candidatePath, contactId);
 
