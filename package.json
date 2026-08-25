@@ -18,6 +18,7 @@
     "task:status": "node scripts/foundry.mjs tasks-check",
     "env:check": "node scripts/foundry.mjs env-check",
     "account:run": "node scripts/with-lca-account.mjs",
+    "case:production:contact-draft": "pnpm build && node dist/scripts/cases/production-contact-draft.js",
     "workflow:check": "node scripts/foundry.mjs workflow-check",
     "storage:check": "node scripts/foundry.mjs storage-check",
     "surface:audit": "node scripts/foundry.mjs surface-audit",

@@ -11,6 +11,7 @@ __pycache__/
 .foundry/workspaces/
 .foundry/state/
 .foundry/h5py-venv/
+.foundry/cases/
 .docpact/runs/
 # Runtime-installed shared skills. Foundry-owned orchestration skills under
 # .agents/skills stay tracked by name; do not ignore the whole skill root.

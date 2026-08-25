@@ -58,6 +58,20 @@ Artifact paths recorded by fixtures must accept both platform separators. Durabl
 
 Remote handoff commands are machine contracts, not shell snippets. `dataset-commit-handoff-plan` emits `tiangong-foundry.command-spec.v1` objects whose `executable` and `argv` are authoritative. `display` is derived for readers and is excluded from the command hash. Both commit and post-write verify specs bind the exact final rows path, bytes, and SHA-256; batch runners verify the binding immediately before `shell=false` execution.
 
+## Production Case TDD
+
+Production-backed development is an explicit case lane, not an ordinary test or CI secret path. The guarded contact case performs offline TIDAS validation and save-draft dry-run before reading credentials, then runs two fresh intent-bound CLI identity receipts, one bounded public `state_code=100` flow read, one bounded current-owner `state_code=0` process read, one new contact root collision probe, exactly one owner-draft contact mutation, and one unique owner/state/payload readback. A transport-ambiguous mutation is never retried automatically.
+
+```bash
+pnpm case:production:contact-draft -- \
+  --env-file <ignored-foundry-.env> \
+  --expected-project-ref <project-ref> \
+  --expected-user-id <user-id> \
+  --out-dir .foundry/cases/<new-case-id>
+```
+
+The runner accepts no API key or alternate CLI path on argv. It reads only `TIANGONG_LCA_API_BASE_URL`, `TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY`, and `TIANGONG_LCA_TEST_API_KEY`; the test key exists only in the child environment. It snapshots and hashes the exact installed CLI 0.1.1 runtime inside its pnpm dependency island, executes from a clean directory with `shell=false`, keeps artifacts private, redacts the key if a child artifact contains it, and publishes a content-addressed case manifest only after the runtime snapshot is removed. The created contact remains isolated, unreviewed, and unpublished under the authenticated test account for later case evidence; the lane never performs review/publish transitions or mutates foreign/public/shared rows.
+
 ## Import Lanes
 
 - `external-dataset-curated-import`: packaged LCA datasets converted through the Foundry adapter over Rust `tidas import`, with default per-process dependency bundles under `process-bundles/`, then validated by Rust tidas, QA checked, curated, cleaned, dry-run, committed, and verified through queue/checkpoint-driven scopes.
