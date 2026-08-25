@@ -14,10 +14,7 @@ import {
   unwrapDatasetPayload,
 } from "../../scripts/lib/import-curation/internal/dataset-payload.ts";
 
-const detectType = detectDatasetType as unknown as (
-  value: unknown,
-  fallback?: string | null,
-) => string | null;
+const detectType = detectDatasetType;
 
 test("dataset payload unwrapping preserves typed and generic precedence", () => {
   const typed = { flowDataSet: { marker: "typed" } };

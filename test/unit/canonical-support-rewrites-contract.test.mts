@@ -5,12 +5,30 @@ import path from "node:path";
 import test from "node:test";
 import * as canonicalSupportRewrites from "../../scripts/lib/canonical-support-rewrites.ts";
 
-type JsonObject = Record<string, any>;
+type JsonObject = Record<string, unknown>;
 
-const { createCanonicalSupportRewriteUtils } = canonicalSupportRewrites as Record<
-  string,
-  (...args: any[]) => any
->;
+const { createCanonicalSupportRewriteUtils } = canonicalSupportRewrites;
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function asJsonObject(value: unknown): JsonObject {
+  return isJsonObject(value) ? value : {};
+}
+
+function nestedValue(value: unknown, ...keys: string[]): unknown {
+  let current = value;
+  for (const key of keys) {
+    if (Array.isArray(current) && /^\d+$/u.test(key)) {
+      current = current[Number(key)];
+      continue;
+    }
+    if (!isJsonObject(current)) return undefined;
+    current = current[key];
+  }
+  return current;
+}
 
 const canonicalFlowPropertyId = "118f2a40-50ec-457c-aa60-9bc6b6af9931";
 const canonicalUnitGroupId = "3620148f-c5db-48ce-9065-a10092089aca";
@@ -51,28 +69,41 @@ function withTempRoot(name: string, body: (root: string) => void): void {
 }
 
 function makeUtils(root: string, overrides: { readJson?: (filePath: string) => JsonObject } = {}) {
-  const asText = (value: any): string => {
+  const asText = (value: unknown): string => {
     if (value == null) return "";
     if (typeof value === "string" || typeof value === "number") return String(value).trim();
-    if (typeof value === "object") return asText(value["#text"] ?? value.value ?? "");
+    if (isJsonObject(value)) return asText(value["#text"] ?? value.value ?? "");
     return "";
   };
   return createCanonicalSupportRewriteUtils({
     asText,
-    booleanOption: (value: any) => value === true || value === "true" || value === 1,
-    cloneJson: (value: any) => JSON.parse(JSON.stringify(value)),
-    datasetIdentity: (row: any) => ({
+    booleanOption: (value: unknown) => value === true || value === "true" || value === 1,
+    cloneJson: <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T,
+    datasetIdentity: (row: JsonObject) => ({
       id:
-        row?.flowDataSet?.flowInformation?.dataSetInformation?.["common:UUID"] ??
-        row?.processDataSet?.processInformation?.dataSetInformation?.["common:UUID"] ??
-        null,
+        asText(
+          nestedValue(row, "flowDataSet", "flowInformation", "dataSetInformation", "common:UUID") ??
+            nestedValue(
+              row,
+              "processDataSet",
+              "processInformation",
+              "dataSetInformation",
+              "common:UUID",
+            ),
+        ) || null,
       version:
-        row?.flowDataSet?.administrativeInformation?.publicationAndOwnership?.[
-          "common:dataSetVersion"
-        ] ?? "00.00.001",
+        asText(
+          nestedValue(
+            row,
+            "flowDataSet",
+            "administrativeInformation",
+            "publicationAndOwnership",
+            "common:dataSetVersion",
+          ),
+        ) || "00.00.001",
     }),
     datasetRowsFileStem: (type: string) => `${type}s`,
-    ensureArray: (value: any) => (Array.isArray(value) ? value : value == null ? [] : [value]),
+    ensureArray: (value: unknown) => (Array.isArray(value) ? value : value == null ? [] : [value]),
     fileExists: (filePath: string | null) =>
       Boolean(filePath) && fs.existsSync(filePath!) && fs.statSync(filePath!).isFile(),
     multiLang: (text: string, language = "en") => ({
@@ -86,8 +117,11 @@ function makeUtils(root: string, overrides: { readJson?: (filePath: string) => J
     repoRelativeMaybe: (filePath: string | null) =>
       filePath ? toPosix(path.relative(root, filePath)) : null,
     repoRelativePath: (filePath: string) => toPosix(path.relative(root, filePath)),
-    resolveRepoPath: (filePath: string | null | undefined) =>
-      filePath ? (path.isAbsolute(filePath) ? filePath : path.join(root, filePath)) : null,
+    resolveRepoPath: (filePath: unknown) => {
+      if (!filePath) return null;
+      const text = String(filePath);
+      return path.isAbsolute(text) ? text : path.join(root, text);
+    },
     writeJson,
     writeJsonLines,
   });
@@ -138,7 +172,7 @@ function canonicalCache({ includeUnitGroup = true }: { includeUnitGroup?: boolea
   };
 }
 
-function flowRow(id: string, units: string[]): JsonObject {
+function flowRow(id: string, units: string[]) {
   return {
     flowDataSet: {
       flowInformation: { dataSetInformation: { "common:UUID": id } },
@@ -164,7 +198,7 @@ function flowRow(id: string, units: string[]): JsonObject {
   };
 }
 
-function staleCanonicalFlowRow(id: string): JsonObject {
+function staleCanonicalFlowRow(id: string) {
   const row = flowRow(id, ["kg*km"]);
   const reference = row.flowDataSet.flowProperties.flowProperty[0].referenceToFlowPropertyDataSet;
   reference["@refObjectId"] = canonicalFlowPropertyId;
@@ -185,18 +219,21 @@ test("canonical support cache lookup preserves normalized unit mappings, ids, an
 
     writeJson(path.join(root, "cache.json"), canonicalCache());
     const loaded = utils.loadCanonicalSupportCache({ supportCache: "cache.json" });
+    assert.ok(loaded.cache);
+    const flowProperty = loaded.index.flowPropertyById.get(canonicalFlowPropertyId);
+    const unitGroup = loaded.index.unitGroupById.get(canonicalUnitGroupId);
+    const tonneKilometre = loaded.index.flowPropertyMappingByUnit.get("t*km");
+    const personKilometre = loaded.index.flowPropertyMappingByUnit.get("personkm");
+    assert.ok(flowProperty);
+    assert.ok(unitGroup);
+    assert.ok(tonneKilometre);
+    assert.ok(personKilometre);
     assert.equal(loaded.cache.schema_version, 1);
-    assert.equal(loaded.index.flowPropertyById.get(canonicalFlowPropertyId).version, "01.00.000");
-    assert.equal(loaded.index.unitGroupById.get(canonicalUnitGroupId).version, "29.00.000");
-    assert.equal(
-      loaded.index.flowPropertyMappingByUnit.get("t*km").canonicalId,
-      canonicalFlowPropertyId,
-    );
-    assert.equal(
-      loaded.index.flowPropertyMappingByUnit.get("t*km").source_unit_scales["t*km"],
-      1000,
-    );
-    assert.equal(loaded.index.flowPropertyMappingByUnit.get("personkm").canonicalId, "");
+    assert.equal(flowProperty.version, "01.00.000");
+    assert.equal(unitGroup.version, "29.00.000");
+    assert.equal(tonneKilometre.canonicalId, canonicalFlowPropertyId);
+    assert.equal(asJsonObject(tonneKilometre.source_unit_scales)["t*km"], 1000);
+    assert.equal(personKilometre.canonicalId, "");
 
     assert.equal(
       utils.supportText({ b: [" value ", { "#text": "nested" }], a: 7 }),
@@ -314,32 +351,47 @@ test("canonical rewrite preserves traversal order, amount bytes, scale evidence,
       version: "29.00.000",
       short_description: "Unit of kg*km",
     });
-    assert.equal(rewrites[0].canonical.short_description, "mass*distance");
+    assert.equal(nestedValue(rewrites[0], "canonical", "short_description"), "mass*distance");
 
     const outputRows = readJsonLines(path.join(outDir, "flows.canonical-support-rewritten.jsonl"));
-    const rewrittenProperties = outputRows[0].flowDataSet.flowProperties.flowProperty;
+    const rewrittenProperties = nestedValue(
+      outputRows[0],
+      "flowDataSet",
+      "flowProperties",
+      "flowProperty",
+    ) as JsonObject[];
     assert.deepEqual(
       rewrittenProperties.map((property: JsonObject) => property.meanValue),
       ["10", "11"],
       "canonical support rewrite must never scale amounts",
     );
     assert.deepEqual(
-      rewrittenProperties.map(
-        (property: JsonObject) => property.referenceToFlowPropertyDataSet["@refObjectId"],
+      rewrittenProperties.map((property: JsonObject) =>
+        nestedValue(property, "referenceToFlowPropertyDataSet", "@refObjectId"),
       ),
       [canonicalFlowPropertyId, canonicalFlowPropertyId],
     );
     assert.deepEqual(
-      rewrittenProperties.map(
-        (property: JsonObject) =>
-          property.referenceToFlowPropertyDataSet["common:shortDescription"]["@xml:lang"],
+      rewrittenProperties.map((property: JsonObject) =>
+        nestedValue(
+          property,
+          "referenceToFlowPropertyDataSet",
+          "common:shortDescription",
+          "@xml:lang",
+        ),
       ),
       ["de", "de"],
     );
     assert.equal(
-      outputRows[3].flowDataSet.flowProperties.flowProperty[0].referenceToFlowPropertyDataSet[
-        "@version"
-      ],
+      nestedValue(
+        outputRows[3],
+        "flowDataSet",
+        "flowProperties",
+        "flowProperty",
+        "0",
+        "referenceToFlowPropertyDataSet",
+        "@version",
+      ),
       "00.00.001",
       "default policy must not bump an already-canonical stale version",
     );
@@ -425,12 +477,12 @@ test("account-local override bumps stale canonical versions but suppresses pendi
     assert.equal(report.counts.canonical_flow_property_reference_rewrites, 1);
     assert.equal(report.counts.blockers, 0);
     assert.deepEqual(report.blockers, []);
-    assert.match(report.policy.public_canonical_first, /public canonical/u);
-    assert.match(report.policy.account_local_support_rows, /same-owner state_code=0/u);
+    assert.match(String(report.policy.public_canonical_first), /public canonical/u);
+    assert.match(String(report.policy.account_local_support_rows), /same-owner state_code=0/u);
     const rewrite = readJsonLines(path.join(root, "out", "canonical-support-rewrites.jsonl"))[0];
     assert.equal(rewrite.relation, "flow_property_reference_version_bump_to_canonical_support");
-    assert.equal(rewrite.original.version, "00.00.001");
-    assert.equal(rewrite.canonical.version, "01.00.000");
+    assert.equal(nestedValue(rewrite, "original", "version"), "00.00.001");
+    assert.equal(nestedValue(rewrite, "canonical", "version"), "01.00.000");
     assert.equal(rewrite.amount_scale_to_canonical_reference, 1);
   });
 });
@@ -494,9 +546,15 @@ test("account-local override leaves an already-canonical stale version unchanged
     assert.equal(report.counts.canonical_unit_group_reference_proofs, 0);
     const output = readJsonLines(path.join(root, "out", "flows.canonical-support-rewritten.jsonl"));
     assert.equal(
-      output[0].flowDataSet.flowProperties.flowProperty[0].referenceToFlowPropertyDataSet[
-        "@version"
-      ],
+      nestedValue(
+        output[0],
+        "flowDataSet",
+        "flowProperties",
+        "flowProperty",
+        "0",
+        "referenceToFlowPropertyDataSet",
+        "@version",
+      ),
       "00.00.001",
     );
   });
@@ -603,9 +661,11 @@ test("canonical rewrite fails closed on missing, non-finite, zero, and negative 
         const output = readJsonLines(
           path.join(root, "blocked", "flows.canonical-support-rewritten.jsonl"),
         );
-        const property = output[0].flowDataSet.flowProperties.flowProperty[0];
+        const property = asJsonObject(
+          nestedValue(output[0], "flowDataSet", "flowProperties", "flowProperty", "0"),
+        );
         assert.equal(
-          property.referenceToFlowPropertyDataSet["@refObjectId"],
+          nestedValue(property, "referenceToFlowPropertyDataSet", "@refObjectId"),
           canonicalFlowPropertyId,
         );
         assert.equal(property.meanValue, "10");

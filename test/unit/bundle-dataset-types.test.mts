@@ -23,10 +23,7 @@ const datasetTypeFromAliases = datasetTypeFromOptions as unknown as (
   options: Record<string, unknown>,
   forcedType?: string | null,
 ) => string;
-const detectType = detectDatasetType as unknown as (
-  value: unknown,
-  fallback?: string | null,
-) => string | null;
+const detectType = detectDatasetType;
 
 const expectedBundleRowTypes = {
   contact: {

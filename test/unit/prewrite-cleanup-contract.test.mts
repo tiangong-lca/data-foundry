@@ -3,7 +3,23 @@ import { createHash } from "node:crypto";
 import test from "node:test";
 import * as cleanup from "../../scripts/lib/import-curation/internal/prewrite-cleanup.ts";
 
-type JsonObject = Record<string, any>;
+type JsonObject = Record<string, unknown>;
+
+function asJsonObject(value: unknown): JsonObject {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonObject) : {};
+}
+
+function nestedValue(value: unknown, ...keys: Array<string | number>): unknown {
+  let current = value;
+  for (const key of keys) {
+    if (Array.isArray(current) && typeof key === "number") {
+      current = current[key];
+      continue;
+    }
+    current = asJsonObject(current)[String(key)];
+  }
+  return current;
+}
 
 function sha256Text(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -21,10 +37,12 @@ function processRow({
   exchanges?: JsonObject[];
   annualSupply?: unknown;
   commonOther?: JsonObject;
-} = {}): JsonObject {
-  const dataSetInformation: JsonObject = { "common:UUID": id };
+} = {}) {
+  const dataSetInformation: { "common:UUID": string; "common:other"?: JsonObject } = {
+    "common:UUID": id,
+  };
   if (commonOther !== undefined) dataSetInformation["common:other"] = commonOther;
-  const dataSources: JsonObject = {};
+  const dataSources: { annualSupplyOrProductionVolume?: unknown } = {};
   if (annualSupply !== undefined) {
     dataSources.annualSupplyOrProductionVolume = annualSupply;
   }
@@ -42,7 +60,7 @@ function processRow({
   };
 }
 
-function outputExchange(amount: string, flowId: string, extra: JsonObject = {}): JsonObject {
+function outputExchange(amount: string, flowId: string, extra: JsonObject = {}) {
   return {
     exchangeDirection: "Output",
     meanAmount: amount,
@@ -69,7 +87,7 @@ test("datetime normalization preserves accepted syntax, exact UTC bytes, recursi
     "2025-01-02T03:04:05.000Z",
   );
 
-  const value: JsonObject = {
+  const value = {
     "common:timeStamp": "2025-01-02T03:04:05+02:00",
     nested: [
       { "common:dateOfLastRevision": "2025-01-02T03:04:05Z" },
@@ -120,8 +138,14 @@ test("annual supply sentinel preserves process-only, real-value, wrapper, placeh
   const real = processRow({ annualSupply: { "#text": "125 kg/year" } });
   assert.equal(cleanup.applyAnnualSupplyMissingDataSentinel(real, "process"), false);
   assert.equal(
-    real.processDataSet.modellingAndValidation.dataSourcesTreatmentAndRepresentativeness
-      .annualSupplyOrProductionVolume["#text"],
+    nestedValue(
+      real,
+      "processDataSet",
+      "modellingAndValidation",
+      "dataSourcesTreatmentAndRepresentativeness",
+      "annualSupplyOrProductionVolume",
+      "#text",
+    ),
     "125 kg/year",
   );
 });
@@ -129,7 +153,7 @@ test("annual supply sentinel preserves process-only, real-value, wrapper, placeh
 test("source row index preserves exact-version last-write and bare-id first-write precedence", () => {
   const firstV1 = processRow({ id: "shared", version: "01.00.000" });
   const secondV1 = processRow({ id: "shared", version: "01.00.000" });
-  secondV1.marker = "second-v1";
+  (secondV1 as typeof secondV1 & { marker?: string }).marker = "second-v1";
   const v2 = processRow({ id: "shared", version: "02.00.000" });
   const index = cleanup.buildSourceRowsByIdentity([firstV1, secondV1, v2]);
 
@@ -165,21 +189,34 @@ test("deterministic source-exchange proof preserves output-only, array/object or
     }),
     true,
   );
-  const trace =
-    final.processDataSet.processInformation.dataSetInformation["common:other"][
-      "tiangongfoundry:sourceExchangeCompleteness"
-    ][0];
+  const trace = asJsonObject(
+    nestedValue(
+      final,
+      "processDataSet",
+      "processInformation",
+      "dataSetInformation",
+      "common:other",
+      "tiangongfoundry:sourceExchangeCompleteness",
+      0,
+    ),
+  );
+  const traceEvidence = asJsonObject(trace.evidence);
   assert.equal(trace.status, "source_only_output_exchange_verified");
-  assert.equal(trace.evidence.exchange_count, 2);
-  assert.deepEqual(trace.evidence.directions, ["output", "output"]);
+  assert.equal(traceEvidence.exchange_count, 2);
+  assert.deepEqual(traceEvidence.directions, ["output", "output"]);
   assert.equal(
-    trace.evidence.source_exchange_signature_hash,
-    trace.evidence.final_exchange_signature_hash,
+    traceEvidence.source_exchange_signature_hash,
+    traceEvidence.final_exchange_signature_hash,
   );
   assert.equal(
-    final.processDataSet.processInformation.dataSetInformation["common:other"][
-      "@xmlns:tiangongfoundry"
-    ],
+    nestedValue(
+      final,
+      "processDataSet",
+      "processInformation",
+      "dataSetInformation",
+      "common:other",
+      "@xmlns:tiangongfoundry",
+    ),
     cleanup.foundryTraceNamespace,
   );
   assert.deepEqual(proofRows[0], {
@@ -192,8 +229,8 @@ test("deterministic source-exchange proof preserves output-only, array/object or
     trace_hash: sha256Text(JSON.stringify(trace)),
     source_rows_file: "source.jsonl",
     rows_file: "final.jsonl",
-    source_exchange_signature_hash: trace.evidence.source_exchange_signature_hash,
-    final_exchange_signature_hash: trace.evidence.final_exchange_signature_hash,
+    source_exchange_signature_hash: traceEvidence.source_exchange_signature_hash,
+    final_exchange_signature_hash: traceEvidence.final_exchange_signature_hash,
     exchange_count: 2,
     directions: ["output", "output"],
   });
@@ -256,7 +293,7 @@ test("deterministic source-exchange proof preserves output-only, array/object or
 test("import trace externalization preserves DFS order, existing summary shape, exact hashes, namespaces, and serialization errors", () => {
   const traceA = { source: "a", rows: [1, 2] };
   const traceB = { source: "b", nested: { value: true } };
-  const value: JsonObject = {
+  const value = {
     first: {
       "common:other": {
         "@xmlns:tidasimport": "legacy",
@@ -267,7 +304,7 @@ test("import trace externalization preserves DFS order, existing summary shape, 
     list: [{ "common:other": { "tidasimport:sourceTrace": traceB } }],
   };
   assert.deepEqual(cleanup.externalizeImportTraceMetadata(value), { removed: 2, summaries: 2 });
-  const firstOther = value.first["common:other"];
+  const firstOther = asJsonObject(value.first["common:other"]);
   assert.equal(firstOther["tidasimport:sourceTrace"], undefined);
   assert.equal(firstOther["@xmlns:tidasimport"], undefined);
   assert.equal(firstOther["@xmlns:tiangongfoundry"], cleanup.foundryTraceNamespace);
@@ -281,7 +318,14 @@ test("import trace externalization preserves DFS order, existing summary shape, 
     },
   ]);
   assert.equal(
-    value.list[0]["common:other"]["tiangongfoundry:importTraceSummary"].traceHash,
+    nestedValue(
+      value,
+      "list",
+      0,
+      "common:other",
+      "tiangongfoundry:importTraceSummary",
+      "traceHash",
+    ),
     createHash("sha256").update(JSON.stringify(traceB)).digest("hex"),
   );
 
@@ -296,7 +340,7 @@ test("import trace externalization preserves DFS order, existing summary shape, 
 });
 
 test("Foundry namespace repair preserves existing namespaces and recursively counts only missing extension owners", () => {
-  const value: JsonObject = {
+  const value = {
     first: { "common:other": { "tiangongfoundry:unresolvedTrace": [] } },
     list: [
       {
@@ -310,11 +354,11 @@ test("Foundry namespace repair preserves existing namespaces and recursively cou
   };
   assert.equal(cleanup.ensureFoundryTraceNamespaces(value), 1);
   assert.equal(
-    value.first["common:other"]["@xmlns:tiangongfoundry"],
+    nestedValue(value, "first", "common:other", "@xmlns:tiangongfoundry"),
     cleanup.foundryTraceNamespace,
   );
-  assert.equal(value.list[0]["common:other"]["@xmlns:tiangongfoundry"], "custom");
-  assert.equal(value.list[1]["common:other"]["@xmlns:tiangongfoundry"], undefined);
+  assert.equal(nestedValue(value, "list", 0, "common:other", "@xmlns:tiangongfoundry"), "custom");
+  assert.equal(nestedValue(value, "list", 1, "common:other", "@xmlns:tiangongfoundry"), undefined);
   assert.equal(cleanup.ensureFoundryTraceNamespaces(value), 0);
 });
 
@@ -322,7 +366,7 @@ test("trace evidence locator sanitization preserves trace order, deletes locator
   const sourcePath = "/Users/example/source.zip:file.xml";
   const quotePath = "Evidence at file:///tmp/source.xml";
   const windowsPath = "C:\\datasets\\source.xml";
-  const value: JsonObject = {
+  const value = {
     processDataSet: {
       processInformation: {
         dataSetInformation: {
@@ -345,14 +389,24 @@ test("trace evidence locator sanitization preserves trace order, deletes locator
     },
   };
   assert.equal(cleanup.sanitizeFoundryTraceEvidenceLocators(value), 3);
-  const other = value.processDataSet.processInformation.dataSetInformation["common:other"];
-  const evidence = other["tiangongfoundry:unresolvedTrace"].evidence;
+  const other = asJsonObject(
+    nestedValue(
+      value,
+      "processDataSet",
+      "processInformation",
+      "dataSetInformation",
+      "common:other",
+    ),
+  );
+  const evidence = asJsonObject(nestedValue(other, "tiangongfoundry:unresolvedTrace", "evidence"));
   assert.equal(evidence.source_path, undefined);
   assert.equal(evidence.quote, `redacted local source locator sha256:${sha256Text(quotePath)}`);
   assert.equal(evidence.safe, "published source DOI 10.1000/example");
   assert.equal(evidence.source_locator_sha256, sha256Text(sourcePath));
   assert.equal(evidence.source_locator_status, "redacted_before_remote_write");
-  const sourceEvidence = other["tiangongfoundry:sourceExchangeCompleteness"][0].source_evidence[0];
+  const sourceEvidence = asJsonObject(
+    nestedValue(other, "tiangongfoundry:sourceExchangeCompleteness", 0, "source_evidence", 0),
+  );
   assert.equal(sourceEvidence.packagePath, undefined);
   assert.equal(sourceEvidence.source_locator_sha256, sha256Text(windowsPath));
   assert.equal(sourceEvidence.source_locator_status, "redacted_before_remote_write");

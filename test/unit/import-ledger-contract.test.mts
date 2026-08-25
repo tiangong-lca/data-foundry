@@ -3,11 +3,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { createImportLedgerUtils as createImportLedgerUtilsSource } from "../../scripts/lib/import-ledger.ts";
+import {
+  createImportLedgerUtils as createImportLedgerUtilsSource,
+  type CloseoutReport,
+  type JsonRecord,
+  type JsonValue,
+} from "../../scripts/lib/import-ledger.ts";
 
-type JsonObject = Record<string, any>;
-
-const createImportLedgerUtils = createImportLedgerUtilsSource as (options: JsonObject) => any;
+const createImportLedgerUtils = createImportLedgerUtilsSource;
 
 const rootKeys = {
   process: "processDataSet",
@@ -18,7 +21,7 @@ function toPosix(value: string): string {
   return value.replaceAll("\\", "/");
 }
 
-function writeJson(filePath: string, value: unknown): void {
+function writeJson(filePath: string, value: JsonValue): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
@@ -31,23 +34,26 @@ function writeJsonLines(filePath: string, rows: unknown[]): void {
   );
 }
 
-function readJson(filePath: string): JsonObject {
-  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+function readJson(filePath: string): JsonRecord {
+  return asJsonRecord(JSON.parse(fs.readFileSync(filePath, "utf8")));
 }
 
-function readJsonLines(filePath: string): JsonObject[] {
+function readJsonLines(filePath: string): JsonRecord[] {
   const text = fs.readFileSync(filePath, "utf8").trim();
-  return text ? text.split(/\r?\n/u).map((line) => JSON.parse(line)) : [];
+  return text ? text.split(/\r?\n/u).map((line) => asJsonRecord(JSON.parse(line))) : [];
 }
 
 function createHarness(root: string) {
   return createImportLedgerUtils({
     asText: (value: unknown) => (value == null ? "" : String(value).trim()),
-    datasetIdentity: (payload: JsonObject, datasetType: keyof typeof rootKeys) => {
-      const datasetRoot = payload?.[rootKeys[datasetType]] ?? {};
+    datasetIdentity: (payload: JsonValue, datasetType: string) => {
+      const payloadRecord = isJsonRecord(payload) ? payload : {};
+      const rootKey = rootKeys[datasetType as keyof typeof rootKeys];
+      const datasetRoot = rootKey ? asJsonRecord(payloadRecord[rootKey]) : {};
+      const identity = asJsonRecord(datasetRoot.identity);
       return {
-        id: datasetRoot.identity?.id ?? null,
-        version: datasetRoot.identity?.version ?? null,
+        id: typeof identity.id === "string" ? identity.id : null,
+        version: typeof identity.version === "string" ? identity.version : null,
       };
     },
     fileExists: (filePath: string) => fs.existsSync(filePath) && fs.statSync(filePath).isFile(),
@@ -55,10 +61,21 @@ function createHarness(root: string) {
     readJson,
     readJsonLines,
     repoRelativePath: (filePath: string) => toPosix(path.relative(root, filePath)),
-    resolveRepoPath: (filePath: string | null | undefined) =>
-      filePath ? (path.isAbsolute(filePath) ? filePath : path.join(root, filePath)) : null,
+    resolveRepoPath: (filePath: unknown) => {
+      if (!filePath) return null;
+      const text = String(filePath);
+      return path.isAbsolute(text) ? text : path.join(root, text);
+    },
     writeJson,
   });
+}
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function asJsonRecord(value: unknown): JsonRecord {
+  return isJsonRecord(value) ? value : {};
 }
 
 function withTempRoot(name: string, body: (root: string) => void): void {
@@ -89,7 +106,7 @@ test("verified closeout preserves JSONL order, row identities, hashes, artifact 
       { payload: flowPropertyPayload },
     ]);
     const report = {
-      status: "completed",
+      status: "completed" as const,
       dataset_type: "process",
       profile: "bafu",
       final_rows_file: "inputs/rows.jsonl",
@@ -175,7 +192,7 @@ test("verified closeout preserves JSONL order, row identities, hashes, artifact 
       append_only: true,
       dedup_key: "ledger_key",
     });
-    assert.equal(manifest.files.ok_scopes, "ledger/ok.scopes.verified.jsonl");
+    assert.equal(asJsonRecord(manifest.files).ok_scopes, "ledger/ok.scopes.verified.jsonl");
   });
 });
 
@@ -212,7 +229,7 @@ test("blocked finalize preserves blocker order, human actions, retry rows, summa
       },
     ];
     const report = {
-      status: "blocked",
+      status: "blocked" as const,
       dataset_type: "process",
       profile: "bafu",
       rows_file: "inputs/rows.json",
@@ -242,7 +259,10 @@ test("blocked finalize preserves blocker order, human actions, retry rows, summa
     );
     assert.equal(summaries[0].final_rows_file, "inputs/rows.json");
     assert.equal(summaries[0].curation_gate_report, "reports/curation.json");
-    assert.match(summaries[0].rerun_command, /--rows-file inputs\/rows\.json --type process/u);
+    assert.match(
+      String(summaries[0].rerun_command),
+      /--rows-file inputs\/rows\.json --type process/u,
+    );
 
     const identityRows = readJsonLines(path.join(ledgerDir, "blocked.dependencies.identity.jsonl"));
     const classificationRows = readJsonLines(
@@ -306,7 +326,7 @@ test("blocked closeout emits the remote-write envelope and preserves duplicate e
     };
     const result = createHarness(root).writeCloseoutImportLedger({
       ledgerDir,
-      report,
+      report: report as unknown as CloseoutReport,
       reportPath,
     });
 
@@ -329,7 +349,7 @@ test("blocked closeout emits the remote-write envelope and preserves duplicate e
       ["save-draft failed", "readback failed"],
     );
     assert.deepEqual(
-      dependencies.map((row) => row.ledger_key.match(/:([01]):reports/u)?.[1]),
+      dependencies.map((row) => String(row.ledger_key).match(/:([01]):reports/u)?.[1]),
       ["0", "1"],
     );
   });
@@ -395,6 +415,8 @@ test("ledger report keeps latest blocked rows in first-seen scope order and summ
       ledgerDir: "ledger",
       outDir: "output",
     });
+    assert.notEqual(report.status, "help");
+    if (report.status === "help") return;
     assert.deepEqual(report.counts, {
       ok_rows: 2,
       blocked_rows: 4,
@@ -446,7 +468,11 @@ test("ledger skip and error envelopes remain exact for absent inputs, ready repo
   withTempRoot("import-ledger-errors", (root) => {
     const utils = createHarness(root);
     assert.deepEqual(
-      utils.writeCloseoutImportLedger({ report: {}, reportPath: "report.json", ledgerDir: null }),
+      utils.writeCloseoutImportLedger({
+        report: {} as unknown as CloseoutReport,
+        reportPath: "report.json",
+        ledgerDir: null,
+      }),
       {
         status: "skipped",
         reason: "ledger_dir_missing",
