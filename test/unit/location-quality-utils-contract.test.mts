@@ -1,11 +1,9 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
-import * as locationModule from "../../scripts/lib/location-quality-utils.mjs";
+import { createLocationQualityUtils } from "../../scripts/lib/location-quality-utils.ts";
 
 type JsonObject = Record<string, any>;
-
-const { createLocationQualityUtils } = locationModule as Record<string, (...args: any[]) => any>;
 
 const bundleRowTypes = {
   contact: { plural: "contacts" },
@@ -41,10 +39,13 @@ function makeUtils({
   return createLocationQualityUtils({
     asText,
     bundleRowTypes,
-    datasetIdentity: (payload: JsonObject, type: string) => ({
-      id: payload.__identity?.id ?? `${type}-id`,
-      version: payload.__identity?.version ?? "00.00.001",
-    }),
+    datasetIdentity: (payload: unknown, type: string) => {
+      const record = payload as JsonObject;
+      return {
+        id: record.__identity?.id ?? `${type}-id`,
+        version: record.__identity?.version ?? "00.00.001",
+      };
+    },
     directoryExists,
     ensureArray: (value: any) => (Array.isArray(value) ? value : value == null ? [] : [value]),
     fileExists,

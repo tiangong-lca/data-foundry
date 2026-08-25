@@ -49,7 +49,7 @@ import {
   runDatasetMutationManifest,
 } from "./lib/import-curation.mjs";
 import { createImportLedgerUtils } from "./lib/import-ledger.ts";
-import { createLocationQualityUtils } from "./lib/location-quality-utils.mjs";
+import { createLocationQualityUtils } from "./lib/location-quality-utils.ts";
 import { createPostAuthoringFinalizeUtils } from "./lib/post-authoring-finalize-utils.mjs";
 import { createSourceSemanticUtils } from "./lib/source-semantics.ts";
 import {

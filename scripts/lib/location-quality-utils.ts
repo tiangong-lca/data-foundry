@@ -2,7 +2,83 @@ import fs from "node:fs";
 import path from "node:path";
 import { resolveInstalledTiangongLcaCliPackage } from "./foundry-runtime-utils.ts";
 
-function cliCommandPrefix(cliBin) {
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface BundleRowTypeConfig {
+  plural: string;
+}
+
+interface DatasetIdentity {
+  id: string | null;
+  version: string | null;
+}
+
+interface LocationQualityDependencies {
+  asText: (value: unknown) => string;
+  bundleRowTypes: Record<string, BundleRowTypeConfig>;
+  datasetIdentity: (payload: unknown, type: string) => DatasetIdentity;
+  directoryExists: (directory: string) => boolean;
+  ensureArray: (value: unknown) => unknown[];
+  fileExists: (filePath: string) => boolean;
+  pathExpression: (parts: Array<string | number>) => string;
+  readJson: (filePath: string) => unknown;
+  repoRelativeMaybe: (filePath: string | null) => string | null;
+  repoRelativePath: (filePath: string) => string;
+  shellQuote: (value: unknown) => string;
+}
+
+interface ClassificationCommandOptions {
+  cliBin: string | string[];
+  outDir: string;
+  rowsDir: string;
+  type: string;
+  rowType?: string;
+}
+
+interface LocationCommandOptions {
+  cliBin: string | string[];
+  outDir: string;
+  rowsDir: string;
+  type: string;
+}
+
+interface LocationTarget {
+  path: string;
+  parent_path: string;
+  value: string;
+}
+
+interface LocationTargetValue {
+  parent: JsonRecord | null;
+  key: string | null;
+  path_suffix: string[];
+  value: string;
+}
+
+interface LocationStats {
+  location_code_targets: number;
+  location_code_valid: number;
+  location_code_blockers: number;
+}
+
+interface LocationFindingOptions {
+  payload: unknown;
+  type: string;
+  sourceFile: string;
+  blockers: JsonRecord[];
+  stats: LocationStats;
+  locationQueueRows: JsonRecord[];
+  locationCodeMap: Map<string, string>;
+  locationCommands: JsonRecord;
+}
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function cliCommandPrefix(cliBin: string | string[]): string[] {
   return Array.isArray(cliBin) ? cliBin : [cliBin];
 }
 
@@ -18,8 +94,14 @@ export function createLocationQualityUtils({
   repoRelativeMaybe,
   repoRelativePath,
   shellQuote,
-}) {
-  function classificationAuthoringCommands({ cliBin, outDir, rowsDir, type, rowType = type }) {
+}: LocationQualityDependencies) {
+  function classificationAuthoringCommands({
+    cliBin,
+    outDir,
+    rowsDir,
+    type,
+    rowType = type,
+  }: ClassificationCommandOptions) {
     const decisionsFile = path.join(outDir, `${type}-classification-decisions.jsonl`);
     const inputFile = path.join(rowsDir, `${bundleRowTypes[rowType].plural}.jsonl`);
     const outputFile = path.join(rowsDir, `${bundleRowTypes[rowType].plural}.classified.jsonl`);
@@ -88,7 +170,7 @@ export function createLocationQualityUtils({
     };
   }
 
-  function locationAuthoringCommands({ cliBin, outDir, rowsDir, type }) {
+  function locationAuthoringCommands({ cliBin, outDir, rowsDir, type }: LocationCommandOptions) {
     const decisionsFile = path.join(outDir, `${type}-location-decisions.jsonl`);
     const inputFile = path.join(rowsDir, `${bundleRowTypes[type].plural}.jsonl`);
     const outputFile = path.join(rowsDir, `${bundleRowTypes[type].plural}.located.jsonl`);
@@ -159,17 +241,21 @@ export function createLocationQualityUtils({
     };
   }
 
-  function loadTidasLocationCodeMap() {
+  function loadTidasLocationCodeMap(): Map<string, string> {
     const schemaPath = path.join(
       resolveInstalledTiangongLcaCliPackage().schemaDir,
       "tidas_locations_category.json",
     );
     if (!fileExists(schemaPath)) return new Map();
     const schema = readJson(schemaPath);
+    const entries = isRecord(schema) ? schema.oneOf : undefined;
     return new Map(
-      ensureArray(schema.oneOf)
-        .map((entry) => [asText(entry?.const), asText(entry?.description)])
-        .filter(([code]) => code),
+      ensureArray(entries)
+        .map((value) => {
+          const entry = isRecord(value) ? value : {};
+          return [asText(entry.const), asText(entry.description)] as const;
+        })
+        .filter((entry): entry is readonly [string, string] => Boolean(entry[0])),
     );
   }
 
@@ -185,14 +271,14 @@ export function createLocationQualityUtils({
     "locationOfSupply",
     "subLocation",
   ]);
-  let cachedLocationTargetKeys = null;
+  let cachedLocationTargetKeys: Set<string> | null = null;
 
-  function tidasSchemaDirs() {
+  function tidasSchemaDirs(): string[] {
     return [resolveInstalledTiangongLcaCliPackage().schemaDir].filter(directoryExists);
   }
 
-  function lastSchemaPropertyName(schemaPathSegments) {
-    let propertyName = null;
+  function lastSchemaPropertyName(schemaPathSegments: string[]): string | null {
+    let propertyName: string | null = null;
     for (let index = 0; index < schemaPathSegments.length - 1; index += 1) {
       if (schemaPathSegments[index] === "properties") {
         propertyName = schemaPathSegments[index + 1] ?? propertyName;
@@ -201,14 +287,18 @@ export function createLocationQualityUtils({
     return propertyName;
   }
 
-  function collectLocationRefKeysFromSchema(value, schemaPathSegments, keys) {
+  function collectLocationRefKeysFromSchema(
+    value: unknown,
+    schemaPathSegments: string[],
+    keys: Set<string>,
+  ): void {
     if (Array.isArray(value)) {
       value.forEach((item, index) =>
         collectLocationRefKeysFromSchema(item, [...schemaPathSegments, String(index)], keys),
       );
       return;
     }
-    if (!value || typeof value !== "object") return;
+    if (!isRecord(value)) return;
     if (value.$ref === "tidas_locations_category.json") {
       const propertyName = lastSchemaPropertyName(schemaPathSegments);
       if (propertyName) keys.add(propertyName);
@@ -218,7 +308,7 @@ export function createLocationQualityUtils({
     }
   }
 
-  function loadTidasLocationTargetKeys() {
+  function loadTidasLocationTargetKeys(): Set<string> {
     if (cachedLocationTargetKeys) return cachedLocationTargetKeys;
     const keys = new Set(fallbackLocationTargetKeys);
     for (const schemaDir of tidasSchemaDirs()) {
@@ -231,11 +321,11 @@ export function createLocationQualityUtils({
     return cachedLocationTargetKeys;
   }
 
-  function isLocationTargetKey(key) {
+  function isLocationTargetKey(key: string): boolean {
     return loadTidasLocationTargetKeys().has(key);
   }
 
-  function locationTargetStringValue(value) {
+  function locationTargetStringValue(value: unknown): LocationTargetValue | null {
     if (typeof value === "string") {
       return {
         parent: null,
@@ -244,7 +334,7 @@ export function createLocationQualityUtils({
         value: value.trim(),
       };
     }
-    if (value && typeof value === "object" && !Array.isArray(value)) {
+    if (isRecord(value)) {
       const text = value["#text"];
       if (typeof text === "string") {
         return {
@@ -258,14 +348,18 @@ export function createLocationQualityUtils({
     return null;
   }
 
-  function collectLocationTargets(value, pathSegments = [], targets = []) {
-    if (!value || typeof value !== "object") return targets;
+  function collectLocationTargets(
+    value: unknown,
+    pathSegments: Array<string | number> = [],
+    targets: LocationTarget[] = [],
+  ): LocationTarget[] {
     if (Array.isArray(value)) {
       value.forEach((item, index) =>
         collectLocationTargets(item, [...pathSegments, index], targets),
       );
       return targets;
     }
+    if (!isRecord(value)) return targets;
     for (const [key, child] of Object.entries(value)) {
       const childPath = [...pathSegments, key];
       if (isLocationTargetKey(key)) {
@@ -295,7 +389,7 @@ export function createLocationQualityUtils({
     locationQueueRows,
     locationCodeMap,
     locationCommands,
-  }) {
+  }: LocationFindingOptions): void {
     const identity = datasetIdentity(payload, type);
     for (const target of collectLocationTargets(payload)) {
       stats.location_code_targets += 1;
