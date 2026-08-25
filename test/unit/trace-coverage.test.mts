@@ -47,8 +47,10 @@ function createUtils(rows: TraceRow[], observedTypes: string[] = []) {
     },
     fileExists: (filePath: string) => fs.existsSync(filePath),
     foundryTraceSummary: ({ row }: { row: TraceRow }) => ({
-      unresolved_traces: row.unresolved_traces ?? [],
-      source_exchange_completeness: row.source_exchange_completeness ?? [],
+      unresolved_traces: Array.isArray(row.unresolved_traces) ? row.unresolved_traces : [],
+      source_exchange_completeness: Array.isArray(row.source_exchange_completeness)
+        ? row.source_exchange_completeness
+        : [],
     }),
     readJsonLines: (filePath: string) =>
       fs
@@ -59,7 +61,7 @@ function createUtils(rows: TraceRow[], observedTypes: string[] = []) {
         .map((line) => JSON.parse(line)),
     readRowsFile: () => rows,
     repoRelativePath: (filePath: string) => path.basename(filePath),
-    resolveRepoPath: (filePath: string) => filePath,
+    resolveRepoPath: (filePath: string | null | undefined) => filePath ?? null,
   });
 }
 
