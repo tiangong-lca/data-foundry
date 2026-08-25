@@ -91,6 +91,26 @@ function readRepoFile(relativePath: string): string {
   return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 }
 
+function walkFiles(
+  relativeDirectory: string,
+  predicate: (relativePath: string) => boolean,
+): string[] {
+  const absoluteDirectory = path.join(repoRoot, relativeDirectory);
+  if (!fs.existsSync(absoluteDirectory)) return [];
+  return fs.readdirSync(absoluteDirectory, { withFileTypes: true }).flatMap((entry) => {
+    const relativePath = path.posix.join(relativeDirectory, entry.name);
+    if (entry.isDirectory()) return walkFiles(relativePath, predicate);
+    return entry.isFile() && predicate(relativePath) ? [relativePath] : [];
+  });
+}
+
+function isHistoricalDocument(relativePath: string): boolean {
+  if (!relativePath.endsWith(".md")) return false;
+  return /^status:\s*historical\s*$/imu.test(
+    readRepoFile(relativePath).split(/\r?\n/u).slice(0, 40).join("\n"),
+  );
+}
+
 test("scalar parsing preserves the established CLI coercion boundary", () => {
   assert.deepEqual(
     [
@@ -268,4 +288,23 @@ test("CLI spine leaves are native TypeScript and every static consumer targets t
       `${consumer} must import ${specifier}`,
     );
   }
+});
+
+test("active documentation and source contain no references to removed CLI spine modules", () => {
+  const removedModulePaths = ["foundry-args.mjs", "foundry-command-registry.mjs"];
+  const files = [
+    "AGENTS.md",
+    "README.md",
+    "WORKFLOW.md",
+    ...walkFiles("docs", (relativePath) => relativePath.endsWith(".md")),
+    ...walkFiles("scripts", (relativePath) => /\.(?:[cm]?[jt]s)$/u.test(relativePath)),
+  ].filter((relativePath) => !isHistoricalDocument(relativePath));
+  const findings = files.flatMap((relativePath) => {
+    const text = readRepoFile(relativePath);
+    return removedModulePaths
+      .filter((removedPath) => text.includes(removedPath))
+      .map((removedPath) => ({ path: relativePath, removed_module: removedPath }));
+  });
+
+  assert.deepEqual(findings, []);
 });
