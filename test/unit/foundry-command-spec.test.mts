@@ -6,6 +6,7 @@ import test from "node:test";
 
 import {
   assertFoundryCommandSpecArtifactsCurrent,
+  assertFoundryCommandSpecBindsArtifact,
   commandSpecOptionValue,
   createFileArtifactFact,
   createFoundryCommandSpec,
@@ -103,6 +104,14 @@ test("CommandSpec parser rejects extra keys hash drift and duplicate critical fl
       }),
     /input.*alias|--input-file/iu,
   );
+  assert.throws(
+    () =>
+      createFoundryCommandSpec({
+        executable: process.execPath,
+        argv: ["fixture.js", "--input=", "--commit=false", "--json"],
+      }),
+    /--input.*value|--commit.*boolean/iu,
+  );
 });
 
 test("CommandSpec blocks same-path artifact byte drift before spawn and never executes display", () => {
@@ -135,6 +144,17 @@ test("CommandSpec blocks same-path artifact byte drift before spawn and never ex
       },
     });
     const displayDrift = { ...spec, display: "touch should-not-exist" };
+    assert.doesNotThrow(() =>
+      assertFoundryCommandSpecBindsArtifact(displayDrift, spec.binding.artifacts[0]),
+    );
+    assert.throws(
+      () =>
+        assertFoundryCommandSpecBindsArtifact(displayDrift, {
+          ...spec.binding.artifacts[0],
+          sha256: "0".repeat(64),
+        }),
+      /required.*artifact|binding.*match/iu,
+    );
     const result = executeFoundryCommandSpecSync(displayDrift, {
       resolveArtifactPath: (value) => value,
       spawnImpl,
@@ -170,5 +190,6 @@ test("handoff runners contain no shell-string parser or shell:true execution pat
     assert.doesNotMatch(source, /function shellTokens\s*\(/u, file);
     assert.doesNotMatch(source, /function commandOptionValue\s*\(/u, file);
     assert.doesNotMatch(source, /shell:\s*true/u, file);
+    assert.match(source, /assertFoundryCommandSpecBindsArtifact/u, file);
   }
 });
