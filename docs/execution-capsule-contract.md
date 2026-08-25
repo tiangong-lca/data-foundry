@@ -19,7 +19,7 @@ checkPaths:
   - test/unit/execution-capsule-attempt-state.test.mjs
   - test/unit/execution-capsule-command-factory.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 5afa583c0d89efaf8a5f147641c69d734ecc8caa
+lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
 lastReviewedNote: "Reviewed for Issue #67 Wave 25: the native TS7 owner preserves exclusive immutable outputs, predecessor receipt/hash lineage, CAS/reviewer/boundary checks, seal hashes, zero dispatch, and the exact no-replay attempt model."
 ---
 

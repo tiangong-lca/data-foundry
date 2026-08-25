@@ -103,7 +103,7 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: b033e4897b069d0d3a3ab2f3559ff644a9aa0008
+lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
 lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: native TS7 reference/mutation, runtime, decision, and import-curation entry owners preserve exact proof/order/bytes/hashes, fail-closed authority, argv/capsule/closeout contracts, decision queues/stages, namespace/live identity, consumer metadata, and Node 24 source/emitted loading."
 ---
 

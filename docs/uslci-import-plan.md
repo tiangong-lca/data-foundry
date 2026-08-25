@@ -15,8 +15,8 @@ checkPaths:
   - docs/uslci-import-runbook.md
   - docs/import-profiles/uslci/**
   - specs/import-profiles.json
-lastReviewedAt: 2026-07-27
-lastReviewedCommit: d29e522562245956d5a146e582a26ddf2a68613e
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
 related:
   - docs/uslci-import-runbook.md
   - docs/import-profiles/uslci/profile.md

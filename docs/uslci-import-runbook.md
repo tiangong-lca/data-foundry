@@ -16,7 +16,7 @@ checkPaths:
   - docs/import-profiles/uslci/**
   - scripts/lib/import-curation/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2b66448599df0106ee8e03da94e6f6eeb5a878e
+lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
 lastReviewedNote: "Reviewed for Issue #67 Wave 22b: the typed USLCI profile wrapper preserves its exact configuration and leaves this retained Python-era runbook historical and non-authoritative."
 related:
   - docs/uslci-import-plan.md

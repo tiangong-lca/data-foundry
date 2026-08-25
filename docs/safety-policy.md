@@ -57,7 +57,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: febf43c6bf901e1a63aed975a2d8b15bd7889818
+lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
 lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation and runtime-command owners preserve fail-closed foreign/reference gates, exact partitions/bytes/hashes, empty writes on blockers, shell-free argv, zero-dispatch capsule admission, unique-root readback, production accepted-diff restrictions, and native errors without broadening write authority."
 ---
 

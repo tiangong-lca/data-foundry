@@ -181,7 +181,7 @@ checkPaths:
   - test/unit/import-curation-entry-barrels-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: b033e4897b069d0d3a3ab2f3559ff644a9aa0008
+lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
 lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation planning, runtime commands, decision factories, and import-curation re-exports preserve proof/order/bytes/hashes, fail-closed authority, process/capsule/closeout contracts, decision queues/stages, complete namespaces/live identity, consumer topology, and Node 24 source/emitted loading."
 tracker:
   kind: filesystem

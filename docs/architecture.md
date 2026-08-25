@@ -104,7 +104,7 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: b033e4897b069d0d3a3ab2f3559ff644a9aa0008
+lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
 lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation, runtime-command, decision, and import-curation entry adapters preserve exact evidence/order/bytes/hashes, argv/seals/closeout, queues/blockers, deterministic delegation, and identity-preserving navigation without moving orchestration, CLI, schema, search, profile, Worldsteel, database, or production authority."
 ---
 

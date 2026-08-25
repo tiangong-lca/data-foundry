@@ -56,7 +56,7 @@ checkPaths:
   - test/unit/import-curation-entry-barrels-migration.test.mts
   - test/unit/import-curation-leaf-barrels-migration.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: b033e4897b069d0d3a3ab2f3559ff644a9aa0008
+lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
 lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: reference/mutation, runtime-command, decision, and import-curation entry owners move to TS7 without changing command names/categories, semantic export identity, exact help, argv/exit, reports/artifacts, profiles, Worldsteel/Date.parse semantics, or remote-write modes."
 ---
 

@@ -170,7 +170,7 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: b033e4897b069d0d3a3ab2f3559ff644a9aa0008
+lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
 lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: tests cover reference/mutation fail-close, runtime process/capsule/closeout proof, decision help/queues/stages/artifacts, and native-only import-curation leaf/index/public entries with exact namespaces, live owner identity, consumers/metadata, Node 24 source/emitted loading, and native errors."
 ---
 

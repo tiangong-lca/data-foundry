@@ -90,7 +90,7 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: b033e4897b069d0d3a3ab2f3559ff644a9aa0008
+lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
 lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: navigation records typed reference/mutation, runtime-command, decision, and import-curation entry owners; exact proof/order/bytes/hashes, argv/seals/closeout, decision queues/stages, complete namespaces/live identity, semantic metadata, and Node 24 source/emitted evidence remain explicit."
 ---
 
