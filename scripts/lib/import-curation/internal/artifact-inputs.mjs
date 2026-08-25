@@ -1,11 +1,5 @@
 import path from "node:path";
-import {
-  asText,
-  ensureArray,
-  fileExists,
-  readJsonOrJsonl,
-  resolveRepoPath,
-} from "./runtime-io.mjs";
+import { asText, ensureArray, fileExists, readJsonOrJsonl, resolveRepoPath } from "./runtime-io.ts";
 
 export function idFromArtifactFile(fileName) {
   const base = path.basename(String(fileName ?? ""));

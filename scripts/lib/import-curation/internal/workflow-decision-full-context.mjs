@@ -10,7 +10,7 @@ import {
   repoRelativePath,
   sameArtifactPath,
   unique,
-} from "./runtime-io.mjs";
+} from "./runtime-io.ts";
 import { readClassificationDecisionApplyContext } from "./workflow-decision-apply-context.mjs";
 import {
   identityDecisionCanonical,

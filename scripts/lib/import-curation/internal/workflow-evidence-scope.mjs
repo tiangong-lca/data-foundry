@@ -6,7 +6,7 @@ import {
   repoRelativePath,
   resolveRepoPath,
   sameArtifactPath,
-} from "./runtime-io.mjs";
+} from "./runtime-io.ts";
 import {
   deterministicRowsFileTransformEntries,
   patchApplyOutputChainsThroughIdentityRewrite,

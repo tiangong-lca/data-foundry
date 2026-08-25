@@ -1,6 +1,6 @@
 import { datasetIdentity, datasetRoot, unwrapDatasetPayload } from "./dataset-payload.mjs";
 import { sha256Json, sha256Text } from "./hash-utils.ts";
-import { asText, ensureArray } from "./runtime-io.mjs";
+import { asText, ensureArray } from "./runtime-io.ts";
 
 export const annualSupplyMissingDataSentinelText = "9999 missing-data-sentinel/year";
 

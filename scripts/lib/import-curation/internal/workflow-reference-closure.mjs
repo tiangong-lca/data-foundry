@@ -21,7 +21,7 @@ import {
   fileExists,
   repoRelativePath,
   resolveRepoPath,
-} from "./runtime-io.mjs";
+} from "./runtime-io.ts";
 import { foundryTraceSummary } from "./trace-summary.mjs";
 import {
   buildClassificationDecisionFullContextBlockers,

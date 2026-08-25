@@ -19,7 +19,7 @@ import {
   resolveRepoPath,
   writeJson,
   writeText,
-} from "./internal/runtime-io.mjs";
+} from "./internal/runtime-io.ts";
 
 export function runDatasetCurationCleanup({ repoRoot, options = {} } = {}) {
   const datasetType = datasetTypeFromOptions(options);

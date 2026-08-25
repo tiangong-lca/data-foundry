@@ -12,7 +12,7 @@ import {
   repoRelativePath,
   resolveRepoPath,
   sameArtifactPath,
-} from "./runtime-io.mjs";
+} from "./runtime-io.ts";
 import { readRowsIfExists } from "./workflow-patch-collect.mjs";
 
 export function readUnresolvedExchangeExternalizationContext(repoRoot, artifact) {

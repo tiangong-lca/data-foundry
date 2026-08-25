@@ -12,7 +12,7 @@ import {
   readRows,
   repoRelativePath,
   resolveRepoPath,
-} from "./runtime-io.mjs";
+} from "./runtime-io.ts";
 
 // part-00.mjs
 export const annualSupplyFieldPath =

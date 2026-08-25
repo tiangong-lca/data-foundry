@@ -15,7 +15,7 @@ import {
   repoRelativePath,
   resolveRepoPath,
   sanitizeFileName,
-} from "./internal/runtime-io.mjs";
+} from "./internal/runtime-io.ts";
 
 function snapshotAuthoringPackage(repoRoot, packagePath, snapshotDir) {
   const text = readText(packagePath);

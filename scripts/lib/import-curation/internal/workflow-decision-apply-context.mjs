@@ -3,13 +3,7 @@ import {
   normalizeClassificationDecisionRows,
   payloadSha256ByIdentityForRows,
 } from "./full-context-proof.mjs";
-import {
-  asText,
-  ensureArray,
-  fileExists,
-  readJsonOrJsonl,
-  resolveRepoPath,
-} from "./runtime-io.mjs";
+import { asText, ensureArray, fileExists, readJsonOrJsonl, resolveRepoPath } from "./runtime-io.ts";
 
 export function readClassificationDecisionApplyContext(
   repoRoot,

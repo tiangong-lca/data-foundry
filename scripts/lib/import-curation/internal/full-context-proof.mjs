@@ -15,7 +15,7 @@ import {
   repoRelativeArtifactPath,
   repoRelativePath,
   resolveRepoPath,
-} from "./runtime-io.mjs";
+} from "./runtime-io.ts";
 
 export function curationGateContextHasKind(curationGateArtifact, kind) {
   const details = ensureArray(curationGateArtifact?.value?.context?.contract_context_file_details);

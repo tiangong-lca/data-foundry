@@ -16,7 +16,7 @@ import {
   readText,
   repoRelativePath,
   resolveRepoPath,
-} from "./runtime-io.mjs";
+} from "./runtime-io.ts";
 import { identityDecisionApplyContextClosesAction } from "./workflow-identity-decision-context.mjs";
 import {
   classCode,

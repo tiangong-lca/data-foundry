@@ -16,7 +16,7 @@ import {
   repoRelativePath,
   resolveRepoPath,
   writeJson,
-} from "./internal/runtime-io.mjs";
+} from "./internal/runtime-io.ts";
 
 export function runDatasetAuthoringPatchCollect({ repoRoot, options = {} } = {}) {
   if (options.help) {

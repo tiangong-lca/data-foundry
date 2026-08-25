@@ -1,4 +1,4 @@
-import { asText } from "./runtime-io.mjs";
+import { asText } from "./runtime-io.ts";
 
 export function unwrapDatasetPayload(row, datasetType) {
   if (row && typeof row === "object" && !Array.isArray(row)) {

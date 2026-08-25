@@ -1,6 +1,6 @@
 import { normalizeFullContextAiCompletion } from "./context-inputs.mjs";
 import { datasetTypeFromOptions, defaultProfilesFile, fallbackProfiles } from "./dataset-types.ts";
-import { ensureArray, optionList, readJsonIfExists, resolveRepoPath } from "./runtime-io.mjs";
+import { ensureArray, optionList, readJsonIfExists, resolveRepoPath } from "./runtime-io.ts";
 
 export function normalizeProfile(rawProfile, profileId) {
   const profile = rawProfile && typeof rawProfile === "object" ? rawProfile : {};

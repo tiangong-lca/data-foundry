@@ -17,7 +17,7 @@ import {
   unique,
   writeJson,
   writeText,
-} from "./runtime-io.mjs";
+} from "./runtime-io.ts";
 import {
   buildPatchTemplate,
   contextSummaryHasKind,

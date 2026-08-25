@@ -26,6 +26,7 @@ checkPaths:
   - scripts/lib/tidas-language-utils.ts
   - scripts/lib/import-curation/internal/hash-utils.ts
   - scripts/lib/import-curation/internal/dataset-types.ts
+  - scripts/lib/import-curation/internal/runtime-io.ts
   - scripts/commands/incremental-change-set.mjs
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
@@ -81,6 +82,8 @@ The typed navigation/governance leaves are `scripts/lib/foundry-command-metadata
 
 The typed low-level data leaves are `scripts/lib/bundle-row-types.ts`, `scripts/lib/tidas-language-utils.ts`, `scripts/lib/import-curation/internal/hash-utils.ts`, and `scripts/lib/import-curation/internal/dataset-types.ts`. Navigate there for exact TIDAS root/information/table mappings, language enumeration and CJK fallback, raw `JSON.stringify`/text SHA-256 behavior, or dataset-type aliases/plural/support constants. These are serialization and vocabulary contracts: callers must not silently canonicalize object key order, reorder arrays, widen language tags, or accept unsupported types during migration.
 
+The high-fan-in typed I/O leaf is `scripts/lib/import-curation/internal/runtime-io.ts`. It owns generic coercion, JSON/JSONL/text reading and synchronous writing, filesystem probes, repository/artifact path normalization, row-envelope loading, option lists, unique values, and safe filename fragments. Its current writer contract is direct synchronous overwrite rather than transactional rename: JSONL closes its descriptor on success and error, while a serialization failure after earlier rows leaves the completed prefix visible. Do not change those semantics implicitly during consumer migrations.
+
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 
 The typed handoff primitive is `scripts/lib/foundry-command-spec.ts`. Navigate there for exact-key parsing, canonical command hashing, critical-flag uniqueness, final-row artifact facts, or pre-spawn drift checks. Callers must never reconstruct argv from `display`.
@@ -122,12 +125,12 @@ semantic import-curation modules
   -> internal/trace-summary.mjs
   -> internal/dataset-payload.mjs
   -> internal/dataset-types.ts
-  -> internal/runtime-io.mjs
+  -> internal/runtime-io.ts
 ```
 
 Layer rules:
 
-- `runtime-io.mjs`: generic time, array, text, JSON/JSONL, filesystem, and path helpers.
+- `runtime-io.ts`: generic time, array, text, JSON/JSONL, filesystem, and path helpers.
 - `dataset-types.ts`: supported dataset type sets, plural names, and fallback profile constants.
 - `dataset-payload.mjs`: TIDAS row payload unwrap, dataset root/type detection, dataset identity, and identity map keys.
 - `profiles-config.mjs`: import profile loading, normalization, listing, and lookup.

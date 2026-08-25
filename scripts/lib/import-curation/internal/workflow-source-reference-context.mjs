@@ -1,4 +1,4 @@
-import { asText, fileExists, resolveRepoPath } from "./runtime-io.mjs";
+import { asText, fileExists, resolveRepoPath } from "./runtime-io.ts";
 import {
   defaultSourceReferenceRewriteFile,
   normalizeSourceReferenceRewriteRow,

@@ -11,7 +11,7 @@ import {
   readText,
   repoRelativePath,
   resolveRepoPath,
-} from "./runtime-io.mjs";
+} from "./runtime-io.ts";
 
 export const tidasSchemaSearchRoots = ["@tiangong-lca/cli@0.1.1/assets/tidas-schemas"];
 

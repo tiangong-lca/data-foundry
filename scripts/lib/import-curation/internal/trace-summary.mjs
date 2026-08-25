@@ -1,5 +1,5 @@
 import { sha256Text } from "./hash-utils.ts";
-import { asText, ensureArray } from "./runtime-io.mjs";
+import { asText, ensureArray } from "./runtime-io.ts";
 
 export function traceSummaryCount(value) {
   let count = 0;

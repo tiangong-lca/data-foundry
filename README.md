@@ -30,6 +30,7 @@ checkPaths:
   - scripts/lib/tidas-language-utils.ts
   - scripts/lib/import-curation/internal/hash-utils.ts
   - scripts/lib/import-curation/internal/dataset-types.ts
+  - scripts/lib/import-curation/internal/runtime-io.ts
   - docs/architecture.md
   - docs/runtime-skill-management.md
   - docs/foundry-task-contracts.md
@@ -63,6 +64,8 @@ The first completed CLI-spine slice migrates `scripts/lib/foundry-args.ts` and `
 The next slice migrates `scripts/lib/foundry-command-metadata.ts` and `scripts/lib/surface-audit.ts`. Characterization fixes all 63 metadata owner/export/artifact contracts plus TS import discovery, portable report paths, test-only inbound exclusion, orphan docs, declared entrypoints, hidden handlers, report JSON, and static consumers.
 
 The following low-level slice migrates bundle row/root mappings, the complete TIDAS language enumeration, exact `JSON.stringify`/text SHA-256 helpers, and dataset-type aliases/constants. Characterization preserves invalid-input failures, object insertion and array order, root detection, and every direct import before higher workflow modules migrate.
+
+The runtime I/O slice migrates the shared `runtime-io.ts` leaf without changing its synchronous visible contract: parent creation, exact text/pretty-JSON/JSONL bytes, direct overwrite, JSONL prefix retention on mid-stream serialization failure, descriptor closure, native filesystem/parse errors, JSON row envelopes, and portable repository/artifact paths.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

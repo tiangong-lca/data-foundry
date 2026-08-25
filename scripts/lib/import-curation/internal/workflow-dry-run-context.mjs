@@ -1,5 +1,5 @@
 import { curationEntityId, datasetIdentity, identityKey } from "./dataset-payload.mjs";
-import { asText, ensureArray, resolveRepoPath } from "./runtime-io.mjs";
+import { asText, ensureArray, resolveRepoPath } from "./runtime-io.ts";
 import { readJsonLines, readRowsIfExists } from "./workflow-patch-collect.mjs";
 
 function referenceKey({ table, id, version }) {

@@ -32,12 +32,14 @@ checkPaths:
   - scripts/lib/tidas-language-utils.ts
   - scripts/lib/import-curation/internal/hash-utils.ts
   - scripts/lib/import-curation/internal/dataset-types.ts
+  - scripts/lib/import-curation/internal/runtime-io.ts
   - test/unit/foundry-cli-spine.test.mts
   - test/unit/foundry-command-metadata.test.mts
   - test/unit/surface-audit-typescript.test.mts
   - test/unit/bundle-dataset-types.test.mts
   - test/unit/hash-utils.test.mts
   - test/unit/tidas-language-utils.test.mjs
+  - test/unit/runtime-io.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
 lastReviewedCommit: 279c7c0be11c1e5503f6af01e8b0a74257538006

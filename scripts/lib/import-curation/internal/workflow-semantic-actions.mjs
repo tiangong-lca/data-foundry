@@ -12,7 +12,7 @@ import {
   repoRelativeArtifactPath,
   repoRelativePath,
   resolveRepoPath,
-} from "./runtime-io.mjs";
+} from "./runtime-io.ts";
 import { collectCommonOtherTraceEntries } from "./trace-summary.mjs";
 import { hasNonEmptyTraceEvidence } from "./workflow-authoring-tasks.mjs";
 import { hasStructuredTraceEvidence } from "./workflow-patch-evidence.mjs";

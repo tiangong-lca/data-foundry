@@ -11,7 +11,7 @@ import {
   repoRelativePath,
   resolveRepoPath,
   unique,
-} from "./runtime-io.mjs";
+} from "./runtime-io.ts";
 import {
   operationFullContextEvidenceBlockers,
   operationHasEvidence,

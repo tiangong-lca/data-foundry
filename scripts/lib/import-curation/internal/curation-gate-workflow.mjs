@@ -30,7 +30,7 @@ export {
   sanitizeFileName,
   writeJson,
   writeText,
-} from "./runtime-io.mjs";
+} from "./runtime-io.ts";
 export { readClassificationDecisionApplyContext } from "./workflow-decision-apply-context.mjs";
 export {
   identityDecisionApplyContextDecisionsForIdentity,

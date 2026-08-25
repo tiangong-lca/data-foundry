@@ -13,7 +13,7 @@ import {
   readJsonOrJsonl,
   resolveRepoPath,
   unique,
-} from "./runtime-io.mjs";
+} from "./runtime-io.ts";
 import { readJsonLines } from "./workflow-patch-collect.mjs";
 
 function identityDecisionCompletionStatus(decision) {

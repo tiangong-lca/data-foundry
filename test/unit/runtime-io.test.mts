@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import * as runtimeIo from "../../scripts/lib/import-curation/internal/runtime-io.mjs";
+import * as runtimeIo from "../../scripts/lib/import-curation/internal/runtime-io.ts";
 
 function withFixture<T>(callback: (root: string) => T): T {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-runtime-io-"));
