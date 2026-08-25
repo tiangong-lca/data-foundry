@@ -46,7 +46,7 @@ test("trace barrel preserves the exact namespace and live owner reference", asyn
 });
 
 test("every active leaf-barrel consumer targets the typed module", () => {
-  const indexSource = readRepoFile("scripts/lib/import-curation/index.mjs");
+  const indexSource = readRepoFile("scripts/lib/import-curation/index.ts");
   assert.match(indexSource, /from "\.\/profiles\.ts"/u);
   assert.match(indexSource, /from "\.\/trace-summary\.ts"/u);
   assert.doesNotMatch(indexSource, /from "\.\/(?:profiles|trace-summary)\.mjs"/u);

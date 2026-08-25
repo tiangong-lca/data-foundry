@@ -7,4 +7,4 @@ export {
   runDatasetCurationCleanup,
   runDatasetCurationGate,
   runDatasetMutationManifest,
-} from "./import-curation/index.mjs";
+} from "./import-curation/index.ts";

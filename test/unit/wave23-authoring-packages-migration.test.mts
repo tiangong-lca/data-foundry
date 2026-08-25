@@ -30,7 +30,7 @@ test("typed authoring packages runner keeps one zero-escape export and typed fac
 
 test("authoring packages consumers and navigation target the typed runner", () => {
   for (const consumer of [
-    "scripts/lib/import-curation/index.mjs",
+    "scripts/lib/import-curation/index.ts",
     "docs/foundry-ai-navigation.md",
     "docs/foundry-command-surface.md",
     "test/unit/authoring-packages-runner-contract.test.mts",
