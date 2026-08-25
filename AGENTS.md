@@ -33,6 +33,10 @@ checkPaths:
   - prettier.config.cjs
   - tsconfig*.json
   - scripts/foundry.mjs
+  - scripts/lib/import-curation.ts
+  - scripts/lib/import-curation/index.ts
+  - scripts/lib/import-curation/profiles.ts
+  - scripts/lib/import-curation/trace-summary.ts
   - scripts/with-lca-account.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
@@ -103,8 +107,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: the typed curation aggregate/gate/cleanup and five typed command factories preserve live exports, order and bytes, deterministic proofs, CommandSpec bindings, read-only cache behavior, blockers, and native failures under local fixtures only."
+lastReviewedCommit: a5757e77a87c09e8aa1256e823cdbab2b58659e3
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 barrels: native profile/trace leaf barrels and import-curation index/public entry preserve exact namespaces, owner function identity, consumer metadata, and Node 24 source/emitted loading under local fixtures only."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

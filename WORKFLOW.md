@@ -34,6 +34,10 @@ checkPaths:
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
   - scripts/lib/foundry-runtime-utils.ts
+  - scripts/lib/import-curation.ts
+  - scripts/lib/import-curation/index.ts
+  - scripts/lib/import-curation/profiles.ts
+  - scripts/lib/import-curation/trace-summary.ts
   - scripts/lib/location-quality-utils.ts
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
@@ -151,10 +155,12 @@ checkPaths:
   - test/unit/wave24-curation-gate-runner-migration.test.mts
   - test/unit/curation-cleanup-runner-contract.test.mts
   - test/unit/wave24-curation-cleanup-runner-migration.test.mts
+  - test/unit/import-curation-leaf-barrels-migration.test.mts
+  - test/unit/import-curation-entry-barrels-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: typed curation planners plus task/completion/handoff/identity/support-cache factories preserve live exports, order, report/snapshot/JSONL bytes, hashes/argv, deterministic proofs, blockers, read-only requests, and native failures."
+lastReviewedCommit: a5757e77a87c09e8aa1256e823cdbab2b58659e3
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 barrels: typed import-curation leaf/index/public re-exports preserve complete namespaces, live references, command consumer/metadata topology, and Node 24 source/emitted loading."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -222,6 +228,8 @@ The authoring facade/runner layer is also native TypeScript. Facades must re-exp
 The curation planning boundary is native TypeScript as well. Its aggregate facade must retain exact owner references; the gate runner preserves row-derived entity order, blocker families, context files, authoring packages and report aliases/bytes; cleanup preserves deep-cloned row order, deterministic sentinel/trace/source-exchange transformations, JSONL bytes and complete counts. Missing or malformed local evidence remains blocking or raises the existing native error, and none of these modules execute remote operations.
 
 The task/completion, commit-handoff/identity-task, and support-cache command owners are native TypeScript. Preserve queue and closeout order, exact task/report/snapshot bytes, final-row artifact facts, authoritative CommandSpec argv, identity action dedupe, support-cache paging and row order, and every established blocker/native error. Credential-bearing support refresh remains a read-only operator command; ordinary tests must use local HTTP stubs and must not read `.env` or access production.
+
+The import-curation leaf, index, and public entry barrels are native TypeScript and must remain pure direct re-exports. Preserve the exact namespace keys and live function identity through both source and emitted Node 24 modules; do not add wrappers, initialization, hidden state, alternate owners, or a parallel `.mjs` entry. The CLI injection keys and metadata owner modules remain the authoritative command-consumer topology.
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 

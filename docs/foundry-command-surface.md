@@ -19,6 +19,10 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/import-curation.ts
+  - scripts/lib/import-curation/index.ts
+  - scripts/lib/import-curation/profiles.ts
+  - scripts/lib/import-curation/trace-summary.ts
   - scripts/lib/bafu-family-signatures.ts
   - scripts/lib/import-ledger.ts
   - scripts/lib/canonical-support-rewrites.ts
@@ -37,9 +41,10 @@ checkPaths:
   - scripts/lib/import-curation/curation-cleanup.ts
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
+  - test/unit/import-curation-entry-barrels-migration.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: curation planners and five command owners move to TS7 without changing command names/categories, owner exports, help, report bytes, artifacts, exit mapping, profile defaults, Worldsteel semantics, or remote-write modes."
+lastReviewedCommit: a5757e77a87c09e8aa1256e823cdbab2b58659e3
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 barrels: typed entry/index/leaf re-exports change no command names/categories, semantic owner exports, help, artifacts, exit mapping, profiles, Worldsteel semantics, or remote-write modes."
 ---
 
 # Foundry Command Surface
@@ -60,6 +65,8 @@ The Wave 8 BAFU family-signature and import-ledger migrations remain supporting 
 Wave 9 keeps `dataset-bundle-sample-rows` under its existing command owner and read-only mode. Its metadata now advertises the conditional `canonical-support-amount-scaling.jsonl` artifact and its command test: the explicit blocking flag retains known or unresolved scale evidence in the report and process-scope ledger rather than letting an early canonical-reference rewrite erase the source-unit safety decision.
 
 Wave 24 moves `tasks`, `import-completion`, `commit-handoff`, `identity-decision-task`, and `support-cache` to native TypeScript. Their registered command names, help payloads, owner exports, artifact lists, output ordering, fail-closed states, and read-only modes are unchanged. Focused tests pin exact Markdown/JSON/JSONL bytes, CommandSpec final-row binding and argv, identity snapshot/dedupe order, support-cache HTTP read order and native errors.
+
+Wave 25 moves the import-curation leaf, index, and public barrels to TypeScript while command metadata continues to identify semantic owner modules. Metadata links the entry namespace contract as navigation evidence for profile listing, authoring, curation, cleanup, and mutation commands; the runtime command surface and handler injection remain unchanged.
 
 ## Categories
 

@@ -17,6 +17,10 @@ checkPaths:
   - docs/foundry-command-surface.md
   - test/README.md
   - scripts/foundry.mjs
+  - scripts/lib/import-curation.ts
+  - scripts/lib/import-curation/index.ts
+  - scripts/lib/import-curation/profiles.ts
+  - scripts/lib/import-curation/trace-summary.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -79,8 +83,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: navigation records typed curation planner boundaries and five typed command owners, including exact TDD fixtures, order/bytes, deterministic proofs, handoff bindings, identity dedupe, support-cache request/mapping order, and all static consumers."
+lastReviewedCommit: a5757e77a87c09e8aa1256e823cdbab2b58659e3
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 barrels: navigation records the typed profile/trace leaf barrels, complete import-curation index/public namespace, semantic owner metadata, and Node 24 source/emitted load evidence."
 ---
 
 # Foundry AI Navigation
@@ -176,6 +180,8 @@ The typed curation planner is split the same way. `internal/curation-gate-workfl
 
 The typed command factories are `scripts/commands/tasks.ts`, `import-completion.ts`, `commit-handoff.ts`, `identity-decision-task.ts`, and `support-cache.ts`. Navigate to them for filesystem task state, closeout aggregation, artifact-bound commit/verify CommandSpecs, content-addressed identity decision tasks, or canonical public-support read/autofill behavior respectively. They preserve the existing command registry and metadata names and must not absorb remote execution semantics.
 
+The typed import-curation entry chain is `scripts/lib/import-curation.ts` → `import-curation/index.ts` → semantic owners. `profiles.ts` and `trace-summary.ts` are pure typed leaf barrels. Navigate through the public/index barrels to discover the complete namespace, but edit behavior only in the semantic owner named by command metadata.
+
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 
 The typed handoff primitive is `scripts/lib/foundry-command-spec.ts`. Navigate there for exact-key parsing, canonical command hashing, critical-flag uniqueness, final-row artifact facts, or pre-spawn drift checks. Callers must never reconstruct argv from `display`.
@@ -186,12 +192,12 @@ Use these semantic modules as the import-curation navigation surface:
 
 | Module | Responsibility |
 | --- | --- |
-| `scripts/lib/import-curation/profiles.mjs` | import profile listing and profile lookup |
+| `scripts/lib/import-curation/profiles.ts` | import profile listing and profile lookup |
 | `scripts/lib/import-curation/curation-gate.ts` | curation gate report and AI authoring package creation |
 | `scripts/lib/import-curation/authoring-packages.ts` | AI authoring task manifest/package preparation |
 | `scripts/lib/import-curation/patch-collect.ts` | AI patch collection and patch evidence readiness |
 | `scripts/lib/import-curation/curation-cleanup.ts` | deterministic prewrite row cleanup |
-| `scripts/lib/import-curation/trace-summary.mjs` | Foundry trace summarization |
+| `scripts/lib/import-curation/trace-summary.ts` | Foundry trace summarization |
 | `scripts/lib/import-curation/mutation-manifest.mjs` | prewrite mutation manifest and blocker aggregation |
 
 Command runners live in the semantic modules above. The remaining reusable workflow logic is exposed through focused internal workflow facets such as `authoring-task-workflow.ts`, `authoring-patch-workflow.ts`, `curation-gate-workflow.ts`, and `mutation-manifest-workflow.mjs`. New command behavior should start in the semantic owner module, with reusable helpers placed in focused internal modules.

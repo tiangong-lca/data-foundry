@@ -22,6 +22,10 @@ checkPaths:
   - prettier.config.cjs
   - tsconfig*.json
   - scripts/foundry.mjs
+  - scripts/lib/import-curation.ts
+  - scripts/lib/import-curation/index.ts
+  - scripts/lib/import-curation/profiles.ts
+  - scripts/lib/import-curation/trace-summary.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -89,8 +93,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: curation aggregate/gate/cleanup and task/completion/handoff/identity/support-cache factories are native zero-escape TS7 with exact order/bytes, deterministic proofs, SHA/argv binding, blockers, read-only requests, and native errors preserved."
+lastReviewedCommit: a5757e77a87c09e8aa1256e823cdbab2b58659e3
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 barrels: profile/trace leaf barrels and import-curation index/public entry are native zero-escape TS7 with exact namespaces, live owner references, consumer metadata, and Node 24 source/emitted load behavior preserved."
 ---
 
 # TianGong LCA Data Foundry
@@ -162,6 +166,8 @@ Wave 24 B3 migrates the curation planning boundary in topology order. `curation-
 Wave 24 migrates five command factories in three RED/GREEN families. `tasks.ts` and `import-completion.ts` preserve queue/file order, full-context completion gates, task moves and exact Markdown/JSON bytes. `commit-handoff.ts` and `identity-decision-task.ts` preserve final-row artifact SHA/bytes, authoritative CommandSpec argv, package snapshots, action encounter/dedupe order and fail-closed blockers. `support-cache.ts` preserves auth-then-read request order, pagination, public cache row order, unit mapping/manual-block order and native errors; tests stub HTTP locally and read no credentials. Inventory moves 101→96 without changing help, remote-write mode, profiles, or production authority.
 
 Together the parallel Wave 24 lanes reduce the inventory from 101 to 93 without changing public help, Golden artifacts, profiles, Worldsteel semantics, or remote-write authority.
+
+Wave 25 migrates the import-curation re-export topology without wrappers. `profiles.ts` and `trace-summary.ts` retain their exact namespaces and owner function identity; `import-curation/index.ts` and the public `import-curation.ts` entry retain the complete eight-export namespace and direct references to the semantic owners. Node 24 loads both source and emitted entry layers, and command metadata continues to route each command to its semantic owner. Inventory moves 93→89 without changing runtime behavior, command help, profiles, Worldsteel semantics, or remote-write authority.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 
@@ -360,7 +366,7 @@ Installed shared runtime skills such as `.agents/skills/tiangong-kb-sci-search/`
 ## Repository Shape
 
 - `scripts/foundry.mjs`: small Foundry command surface.
-- `scripts/lib/import-curation.mjs`: generic dataset curation/cleanup implementation.
+- `scripts/lib/import-curation.ts`: typed public barrel for generic dataset curation/cleanup owners.
 - `.agents/shared-skills.json`: configured Foundry-local and shared runtime skills that may appear under `.agents/skills`.
 - `specs/automated-lca-capability-registry.json`: capability routing registry.
 - `specs/import-profiles.json`: data-driven import profiles.
