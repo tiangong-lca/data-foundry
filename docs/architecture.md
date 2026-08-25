@@ -50,8 +50,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: cafacf6683810777a91bc1b03e014d708e817b1e
-lastReviewedNote: "Reviewed for Issue #67 Wave 5: typed artifact/context/dataset/trace boundaries remain Foundry-local evidence contracts and do not alter CLI schema assets or sibling ownership."
+lastReviewedCommit: 45b0848ab233c274f436c69a0b70ea28df30d922
+lastReviewedNote: "Reviewed for Issue #67 Wave 6: typed standalone mapping/source/coverage/row factories remain Foundry-local policy helpers and do not alter canonical or sibling ownership."
 ---
 
 # Architecture

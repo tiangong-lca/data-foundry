@@ -47,8 +47,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: cafacf6683810777a91bc1b03e014d708e817b1e
-lastReviewedNote: "Reviewed for Issue #67 Wave 5: artifact, dataset payload, trace summary, and context contracts are native TS7 under complete behavior characterization."
+lastReviewedCommit: 45b0848ab233c274f436c69a0b70ea28df30d922
+lastReviewedNote: "Reviewed for Issue #67 Wave 6: standalone canonical-support/source/trace-coverage/TIDAS-row helpers are native TS7 without profile-default or scale changes."
 ---
 
 # TianGong LCA Data Foundry

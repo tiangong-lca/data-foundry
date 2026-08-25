@@ -55,8 +55,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: cafacf6683810777a91bc1b03e014d708e817b1e
-lastReviewedNote: "Reviewed for Issue #67 Wave 5: typed artifact/context/dataset/trace contracts preserve path and identity precedence, QA dedupe, trace order/hashes, installed schemas, and missing/duplicate/drift/error evidence."
+lastReviewedCommit: 45b0848ab233c274f436c69a0b70ea28df30d922
+lastReviewedNote: "Reviewed for Issue #67 Wave 6: typed canonical mappings, source semantics, trace coverage, and TIDAS row factories preserve scales, profile defaults, rewrites, evidence keys, multilingual roots, and invalid inputs."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

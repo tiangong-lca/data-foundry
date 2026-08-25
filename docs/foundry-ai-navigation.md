@@ -39,8 +39,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: cafacf6683810777a91bc1b03e014d708e817b1e
-lastReviewedNote: "Reviewed for Issue #67 Wave 5: typed internal navigation records artifact/QA, payload identity, ordered trace, and installed-schema context contracts plus missing/duplicate/drift/error boundaries."
+lastReviewedCommit: 45b0848ab233c274f436c69a0b70ea28df30d922
+lastReviewedNote: "Reviewed for Issue #67 Wave 6: typed standalone navigation records canonical scale/pending mappings, profile-aware source defaults/rewrites, trace coverage keys/blockers, and TIDAS row helpers."
 ---
 
 # Foundry AI Navigation
