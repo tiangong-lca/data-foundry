@@ -862,6 +862,12 @@ test("dataset-identity-preflight-requests-build creates a fresh exact-row reques
   assert.equal(indexRows[0].dataset_type, "flow");
   assert.equal(indexRows[0].dataset_id, flowId);
   assert.match(indexRows[0].target_sha256, /^[a-f0-9]{64}$/u);
+  assert.match(indexRows[0].request_bytes_sha256, /^[a-f0-9]{64}$/u);
+  assert.match(indexRows[0].request_json_sha256, /^[a-f0-9]{64}$/u);
+  assert.equal(indexRows[0].command_spec.schema, "tiangong-foundry.command-spec.v1");
+  assert.equal(typeof indexRows[0].command_spec.executable, "string");
+  assert.equal(Array.isArray(indexRows[0].command_spec.argv), true);
+  assert.match(indexRows[0].command_spec.argv_sha256, /^[a-f0-9]{64}$/u);
   assert.equal(indexRows[0].remote_search.edge_request.endpoint, "flow_hybrid_search");
   assert.deepEqual(indexRows[0].remote_search.edge_request.body.filter, {
     flowType: "Elementary flow",
@@ -1021,7 +1027,7 @@ test("dataset-identity-preflight-query-audit blocks incomplete or noisy search b
   );
 });
 
-test("dataset-identity-preflight-run executes request indexes and preserves identity blockers as evidence", () => {
+test("dataset-identity-preflight-run retains nonzero identity findings but fails the batch", () => {
   fs.rmSync(fixtureRoot, { recursive: true, force: true });
   const runRoot = path.join(fixtureRoot, "identity-preflight-run");
   const fakeCli = path.join(runRoot, "fake-tiangong-lca.cjs");
@@ -1143,14 +1149,14 @@ process.exit(blocked ? 1 : 0);
       "--timeout-ms",
       "45000",
     ],
-    0,
+    1,
     { TIANGONG_LCA_CLI_BIN: fakeCli },
   );
 
-  assert.equal(report.status, "completed_with_identity_findings");
+  assert.equal(report.status, "failed");
   assert.equal(report.counts.selected_rows, 2);
-  assert.equal(report.counts.completed, 2);
-  assert.equal(report.counts.failed, 0);
+  assert.equal(report.counts.completed, 1);
+  assert.equal(report.counts.failed, 1);
   assert.equal(report.counts.identity_blocked, 1);
   assert.equal(report.counts.cli_exit_nonzero, 1);
   assert.equal(report.runtime_options.timeout_ms, 45000);
@@ -1161,6 +1167,10 @@ process.exit(blocked ? 1 : 0);
   assert.equal(
     report.results.find((row) => row.dataset_type === "flow").decision,
     "block_duplicate",
+  );
+  assert.equal(
+    report.results.find((row) => row.dataset_type === "flow").failure_code,
+    "identity_preflight_cli_exit_nonzero",
   );
   assert.equal(
     fs.existsSync(path.join(outputRoot, "flows", flowId, "outputs", "identity-decision.json")),
