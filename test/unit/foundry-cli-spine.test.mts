@@ -221,13 +221,19 @@ test("exit mapping preserves adapter, aggregate, wrapper, status-family, and def
   assert.equal(exitCodeForCommand("dataset-patch-apply", { foundry_wrapper: { exit_code: 9 } }), 9);
   assert.equal(exitCodeForCommand("dataset-patch-apply", {}), 1);
 
-  for (const command of [
-    "dataset-authoring-plan",
-    "dataset-library-index-build",
-    "dataset-curation-cleanup",
-  ]) {
+  for (const command of ["dataset-authoring-plan", "dataset-library-index-build"]) {
     assert.equal(exitCodeForCommand(command, { status: "failed" }), 0, command);
   }
+  for (const status of ["help", "completed"]) {
+    assert.equal(exitCodeForCommand("dataset-curation-cleanup", { status }), 0, status);
+  }
+  assert.equal(
+    exitCodeForCommand("dataset-curation-cleanup", {
+      status: "blocked_invalid_datetime_metadata",
+    }),
+    1,
+  );
+  assert.equal(exitCodeForCommand("dataset-curation-cleanup", { status: "failed" }), 1);
   assert.equal(exitCodeForCommand("execution-capsule-admit", { status: "sealed" }), 0);
   assert.equal(exitCodeForCommand("execution-capsule-admit", { status: "blocked" }), 1);
   assert.equal(

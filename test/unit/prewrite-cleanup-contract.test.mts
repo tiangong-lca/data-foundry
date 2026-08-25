@@ -92,8 +92,8 @@ test("datetime normalization preserves accepted syntax, exact UTC bytes, recursi
     "common:timeStamp": "2025-01-02T03:04:05+02:00",
     nested: [
       { "common:dateOfLastRevision": "2025-01-02T03:04:05Z" },
-      { "common:timeStamp": "invalid" },
-      { other: { "common:timeStamp": 7 } },
+      { "common:timeStamp": "2025-01-02T03:04:05.000Z" },
+      { other: "not-a-datetime-field" },
     ],
   };
   assert.equal(cleanup.normalizeDateTimeMetadata(value), 2);
@@ -101,8 +101,8 @@ test("datetime normalization preserves accepted syntax, exact UTC bytes, recursi
     "common:timeStamp": "2025-01-02T01:04:05.000Z",
     nested: [
       { "common:dateOfLastRevision": "2025-01-02T03:04:05.000Z" },
-      { "common:timeStamp": "invalid" },
-      { other: { "common:timeStamp": 7 } },
+      { "common:timeStamp": "2025-01-02T03:04:05.000Z" },
+      { other: "not-a-datetime-field" },
     ],
   });
   assert.equal(cleanup.normalizeDateTimeMetadata(null), 0);
@@ -112,13 +112,18 @@ test("datetime metadata rejects impossible calendars, invalid timezones, partial
   const invalidCases: Array<[unknown, string]> = [
     ["2025-02-29T00:00:00Z", "invalid_calendar_date"],
     ["2025-02-30T00:00:00Z", "invalid_calendar_date"],
+    ["2025-02-30T03:04:05+02:00", "invalid_calendar_date"],
     ["2025-04-31T00:00:00Z", "invalid_calendar_date"],
+    ["1900-02-29T00:00:00Z", "invalid_calendar_date"],
+    ["2100-02-29T00:00:00Z", "invalid_calendar_date"],
+    ["2025-00-01T00:00:00Z", "invalid_calendar_date"],
     ["2025-13-01T00:00:00Z", "invalid_calendar_date"],
+    ["2025-01-00T00:00:00Z", "invalid_calendar_date"],
     ["2025-01-02T24:00:00Z", "invalid_time"],
     ["2025-01-02T23:60:00Z", "invalid_time"],
     ["2025-01-02T23:59:60Z", "invalid_time"],
-    ["2025-01-02T03:04:05+14:01", "invalid_timezone_offset"],
-    ["2025-01-02T03:04:05+15:00", "invalid_timezone_offset"],
+    ["2025-01-02T03:04:05+24:00", "invalid_timezone_offset"],
+    ["2025-01-02T03:04:05+23:60", "invalid_timezone_offset"],
     ["2025-01-02", "invalid_datetime_syntax"],
     ["2025-01-02T03:04:05", "invalid_datetime_syntax"],
     ["Not specified", "invalid_datetime_syntax"],
@@ -166,12 +171,28 @@ test("datetime metadata rejects impossible calendars, invalid timezones, partial
     "2025-01-01T13:04:05.000Z",
   );
   assert.equal(
+    cleanup.normalizeUtcDateTimeString("2025-01-02T03:04:05+14:01"),
+    "2025-01-01T13:03:05.000Z",
+  );
+  assert.equal(
+    cleanup.normalizeUtcDateTimeString("2025-01-02T03:04:05+15:00"),
+    "2025-01-01T12:04:05.000Z",
+  );
+  assert.equal(
+    cleanup.normalizeUtcDateTimeString("2025-01-02T03:04:05+23:59"),
+    "2025-01-01T03:05:05.000Z",
+  );
+  assert.equal(
     cleanup.normalizeUtcDateTimeString("2025-01-02T03:04:05-14:00"),
     "2025-01-02T17:04:05.000Z",
   );
   assert.equal(
     cleanup.normalizeUtcDateTimeString("2025-01-02T03:04:05+05:30"),
     "2025-01-01T21:34:05.000Z",
+  );
+  assert.equal(
+    cleanup.normalizeUtcDateTimeString("2000-02-29T00:00:00Z"),
+    "2000-02-29T00:00:00.000Z",
   );
 });
 

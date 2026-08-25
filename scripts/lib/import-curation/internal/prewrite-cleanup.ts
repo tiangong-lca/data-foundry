@@ -48,46 +48,131 @@ interface LocatorStats {
   redacted: number;
 }
 
+type DateTimeValidationReason =
+  | "invalid_datetime_value_type"
+  | "invalid_datetime_syntax"
+  | "invalid_calendar_date"
+  | "invalid_time"
+  | "invalid_timezone_offset";
+
+interface DateTimeMetadataBlocker {
+  code: "invalid_datetime_metadata";
+  path: string;
+  value: unknown;
+  reason: DateTimeValidationReason;
+}
+
+interface DateTimeInspection {
+  normalized: string | null;
+  reason: DateTimeValidationReason | null;
+}
+
+interface DateTimeUpdate {
+  parent: JsonRecord;
+  key: string;
+  normalized: string;
+}
+
+class InvalidDateTimeMetadataError extends Error {
+  readonly blockers: DateTimeMetadataBlocker[];
+
+  constructor(blockers: DateTimeMetadataBlocker[]) {
+    super("TIDAS/ILCD datetime metadata contains invalid values.");
+    this.name = "InvalidDateTimeMetadataError";
+    this.blockers = blockers;
+  }
+}
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-export function normalizeUtcDateTimeString(value: unknown): string | null {
-  if (typeof value !== "string") return null;
+function inspectUtcDateTimeString(value: unknown): DateTimeInspection {
+  if (typeof value !== "string") {
+    return { normalized: null, reason: "invalid_datetime_value_type" };
+  }
   const trimmed = value.trim();
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.test(trimmed)) {
-    return null;
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|([+-])(\d{2}):(\d{2}))$/u.exec(
+      trimmed,
+    );
+  if (!match) {
+    return { normalized: null, reason: "invalid_datetime_syntax" };
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const zone = match[7];
+  const offsetHour = Number(match[9] ?? 0);
+  const offsetMinute = Number(match[10] ?? 0);
+
+  const calendarProbe = new Date(0);
+  calendarProbe.setUTCHours(0, 0, 0, 0);
+  calendarProbe.setUTCFullYear(year, month - 1, day);
+  if (
+    calendarProbe.getUTCFullYear() !== year ||
+    calendarProbe.getUTCMonth() !== month - 1 ||
+    calendarProbe.getUTCDate() !== day
+  ) {
+    return { normalized: null, reason: "invalid_calendar_date" };
+  }
+  if (hour > 23 || minute > 59 || second > 59) {
+    return { normalized: null, reason: "invalid_time" };
+  }
+  if (zone !== "Z" && (offsetHour > 23 || offsetMinute > 59)) {
+    return { normalized: null, reason: "invalid_timezone_offset" };
   }
   const time = Date.parse(trimmed);
-  if (Number.isNaN(time)) return null;
+  if (Number.isNaN(time)) {
+    return { normalized: null, reason: "invalid_datetime_syntax" };
+  }
   const normalized = new Date(time).toISOString();
-  return normalized === value ? null : normalized;
+  return { normalized: normalized === value ? null : normalized, reason: null };
+}
+
+export function normalizeUtcDateTimeString(value: unknown): string | null {
+  const inspection = inspectUtcDateTimeString(value);
+  return inspection.reason ? null : inspection.normalized;
 }
 
 export function normalizeDateTimeMetadata(value: unknown): number {
-  let normalized = 0;
-  const visit = (node: unknown): void => {
+  const updates: DateTimeUpdate[] = [];
+  const blockers: DateTimeMetadataBlocker[] = [];
+  const visit = (node: unknown, currentPath: string): void => {
     if (!node || typeof node !== "object") return;
     if (Array.isArray(node)) {
-      for (const item of node) visit(item);
+      node.forEach((item, index) => visit(item, `${currentPath}[${index}]`));
       return;
     }
 
     if (!isRecord(node)) return;
     for (const [key, child] of Object.entries(node)) {
+      const childPath = `${currentPath}.${key}`;
       if (datetimeFieldsToNormalize.has(key)) {
-        const nextValue = normalizeUtcDateTimeString(child);
-        if (nextValue) {
-          node[key] = nextValue;
-          normalized += 1;
+        const inspection = inspectUtcDateTimeString(child);
+        if (inspection.reason) {
+          blockers.push({
+            code: "invalid_datetime_metadata",
+            path: childPath,
+            value: child,
+            reason: inspection.reason,
+          });
+        } else if (inspection.normalized) {
+          updates.push({ parent: node, key, normalized: inspection.normalized });
         }
         continue;
       }
-      visit(child);
+      visit(child, childPath);
     }
   };
-  visit(value);
-  return normalized;
+  visit(value, "$");
+  if (blockers.length > 0) throw new InvalidDateTimeMetadataError(blockers);
+  for (const update of updates) update.parent[update.key] = update.normalized;
+  return updates.length;
 }
 
 function annualSupplyTextValue(value: unknown): string {

@@ -1189,10 +1189,144 @@ export function createPostAuthoringFinalizeCommands({
         },
       }),
     );
+    const cleanupReportFile = resolveRepoPath(cleanup.files?.report);
     const cleanedRowsFile = resolveRepoPath(
       cleanup.files?.cleaned_rows || cleanup.cleaned_rows_file,
-    )!;
-    const cleanupReportFile = resolveRepoPath(cleanup.files?.report);
+    );
+    if (cleanup.status !== "completed" || !cleanedRowsFile) {
+      const cleanupBlockers = ensureArray(cleanup.blockers).map((blocker) => ({
+        ...blocker,
+        stage: "curation_cleanup",
+        source: "curation_cleanup",
+        severity: blocker.severity || "error",
+      }));
+      const cleanupNotReadyBlocker = {
+        code: "curation_cleanup_not_ready",
+        stage: "curation_cleanup",
+        source: "curation_cleanup",
+        severity: "error",
+        cleanup_status: cleanup.status ?? null,
+        cleanup_report: repoRelativeMaybe(cleanupReportFile),
+        action:
+          "Resolve every cleanup blocker and rerun post-authoring finalize before any downstream prewrite stage.",
+      };
+      const blockers = [...cleanupBlockers, cleanupNotReadyBlocker];
+      const stageReports = [
+        {
+          stage: "identity_reference_rewrites",
+          status: identityReferenceRewriteStage.status,
+          exit_code: (identityReferenceRewriteStage.blockers ?? []).length > 0 ? 1 : 0,
+          command: "foundry.dataset-identity-reference-rewrites-apply",
+          args: [],
+          stderr: "",
+          report_file: null,
+        },
+        {
+          stage: "unresolved_exchange_externalization",
+          status: unresolvedExchangeExternalizeStage.status,
+          exit_code: 0,
+          command: "foundry.externalize-unresolved-process-flow-exchanges",
+          args: [],
+          stderr: "",
+          report_file: resolveRepoPath(unresolvedExchangeExternalizeStage.files?.report),
+        },
+        {
+          stage: "source_contact_rewrites",
+          status: sourceContactRewriteStage.status,
+          exit_code: 0,
+          command: "foundry.dataset-source-contact-rewrites-apply",
+          args: [],
+          stderr: "",
+          report_file: resolveRepoPath(sourceContactRewriteStage.files?.report),
+        },
+        {
+          stage: "canonical_support_rewrites",
+          status: canonicalSupportRewriteStage.status,
+          exit_code: (canonicalSupportRewriteStage.counts?.blockers ?? 0) > 0 ? 1 : 0,
+          command: "foundry.dataset-canonical-support-rewrites-apply",
+          args: [],
+          stderr: "",
+          report_file: canonicalSupportReportFile,
+        },
+        {
+          stage: "curation_cleanup",
+          status: cleanup.status,
+          exit_code: 1,
+          command: "foundry.dataset-curation-cleanup",
+          args: [],
+          stderr: "",
+          report_file: cleanupReportFile,
+        },
+      ];
+      const timingsByStage = new Map(finalizeTimings.map((timing) => [timing.stage, timing]));
+      const reportPath = path.join(outDir, "dataset-post-authoring-finalize-report.json");
+      const report = {
+        schema_version: 1,
+        started_at_utc: finalizeStartedAtUtc,
+        generated_at_utc: nowIso(),
+        status: "blocked",
+        dataset_type: datasetType,
+        profile: String(options.profile || "generic"),
+        rows_file: repoRelativePath(rowsFile),
+        pre_cleanup_rows_file: repoRelativeMaybe(preCleanupRowsFile),
+        source_contact_rows_file: repoRelativeMaybe(sourceContactRowsFile),
+        canonical_support_rows_file: repoRelativeMaybe(canonicalSupportRowsFile),
+        final_rows_file: null,
+        remote_write_mode: "read-only",
+        policy: {
+          purpose:
+            "Finalize AI-authored or support TIDAS rows into exact-scope prewrite evidence without committing to the database.",
+          cleanup_gate:
+            "Curation cleanup must complete with a concrete cleaned rows artifact before identity preflight, queue, schema, QA, dry-run, mutation manifest, or handoff stages may run.",
+        },
+        counts: {
+          finalize_duration_ms: Date.now() - finalizeStartedAtMs,
+          finalize_substage_count: finalizeTimings.length,
+          blockers: blockers.length,
+          mutation_manifest_blockers: 0,
+          prewrite_gate_blockers: blockers.length,
+          canonical_support_blockers: canonicalSupportRewriteStage.counts?.blockers ?? 0,
+          write_candidates: 0,
+        },
+        blockers,
+        stages: stageReports.map((stage) => compactStageReportWithTiming(stage, timingsByStage)),
+        timings: finalizeTimings,
+        files: {
+          source_contact_rewrite_report: sourceContactRewriteStage.files?.report ?? null,
+          source_contact_rewritten_rows: sourceContactRewriteStage.files?.output_rows ?? null,
+          cleanup_report: repoRelativeMaybe(cleanupReportFile),
+          canonical_support_rewrite_report: repoRelativeMaybe(canonicalSupportReportFile),
+          canonical_support_rewritten_rows: repoRelativeMaybe(canonicalSupportRowsFile),
+          final_rows: null,
+          identity_preflight_run_report: null,
+          identity_preflight_index: null,
+          curation_queue_dir: null,
+          curation_queue_report: null,
+          schema_report: null,
+          qa_report: null,
+          location_audit_report: null,
+          curation_gate_report: null,
+          dry_run_report: null,
+          remote_verify_report: null,
+          mutation_manifest: null,
+          commit_handoff_plan: null,
+        },
+        commit_handoff: {
+          status: "not_requested",
+          command: null,
+          post_write_verify_command: null,
+          blockers,
+        },
+      };
+      writeJson(reportPath, report);
+      return {
+        ...report,
+        files: {
+          ...report.files,
+          report: repoRelativePath(reportPath),
+        },
+      };
+    }
     const identityPreflightRunStage = timeStage("identity_preflight_run", () =>
       runFinalizeIdentityPreflightStage({
         rowsFile: cleanedRowsFile,

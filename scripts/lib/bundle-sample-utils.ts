@@ -52,6 +52,7 @@ type BundleSampleDependencies = {
   jsonSha256: (value: unknown) => string;
   languageForText: (value: unknown) => string;
   multiLang: (text: string, language?: string) => JsonRecord;
+  normalizeUtcDateTimeString: (value: unknown) => string | null;
   normalizedList: (value: unknown) => string[];
   nowIso: () => string;
   pathExpression: (parts: Array<string | number>) => string;
@@ -125,6 +126,7 @@ export function createBundleSampleUtils({
   jsonSha256,
   languageForText: _languageForText,
   multiLang,
+  normalizeUtcDateTimeString,
   normalizedList,
   nowIso,
   pathExpression,
@@ -281,7 +283,7 @@ export function createBundleSampleUtils({
     if (!value) return text;
     let normalized = value;
     if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?[+-]\d{2}:\d{2}$/u.test(value)) {
-      normalized = new Date(value).toISOString();
+      normalized = normalizeUtcDateTimeString(value) ?? value;
     } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/u.test(value)) {
       normalized = `${value}Z`;
     }

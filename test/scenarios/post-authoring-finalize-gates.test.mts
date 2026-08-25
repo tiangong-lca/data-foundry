@@ -905,6 +905,75 @@ test("post-authoring finalize proves canonical UG for minted FP and excludes for
   }
 });
 
+test("post-authoring finalize stops after invalid datetime cleanup without downstream evidence", () => {
+  const root = path.join(finalizeAutoQueueFixtureRoot, "invalid-datetime-cleanup");
+  fs.rmSync(root, { recursive: true, force: true });
+  const validId = "55555555-5555-4555-8555-555555555555";
+  const invalidId = "66666666-6666-4666-8666-666666666666";
+  const valid = processRowWithDefaultClassification(validId) as unknown as FixtureRecord;
+  const invalid = processRowWithDefaultClassification(invalidId) as unknown as FixtureRecord;
+  const validAdmin = valid.processDataSet.administrativeInformation as FixtureRecord;
+  const invalidAdmin = invalid.processDataSet.administrativeInformation as FixtureRecord;
+  validAdmin.dataEntryBy = {
+    "common:timeStamp": "2025-03-01T08:00:00+08:00",
+  };
+  invalidAdmin.dataEntryBy = {
+    "common:timeStamp": "2025-02-30T00:00:00Z",
+  };
+  const rowsFile = path.join(root, "rows", "processes.jsonl");
+  writeJsonLines(rowsFile, [valid, invalid]);
+
+  try {
+    const finalize = runFoundry([
+      "dataset-post-authoring-finalize",
+      "--type",
+      "process",
+      "--profile",
+      "generic",
+      "--rows-file",
+      rel(rowsFile),
+      "--out-dir",
+      rel(path.join(root, "finalize")),
+    ]);
+
+    assert.equal(finalize.code, 1, JSON.stringify(finalize.json, null, 2));
+    assert.equal(finalize.json.status, "blocked");
+    assert.equal(finalize.json.final_rows_file, null);
+    assert.equal((finalize.json.commit_handoff as FixtureRecord).status, "not_requested");
+    assert.deepEqual(
+      finalize.json.blockers.map((blocker) => blocker.code),
+      ["invalid_datetime_metadata", "curation_cleanup_not_ready"],
+    );
+    assert.deepEqual(
+      finalize.json.stages.map((stage) => stage.stage),
+      [
+        "identity_reference_rewrites",
+        "unresolved_exchange_externalization",
+        "source_contact_rewrites",
+        "canonical_support_rewrites",
+        "curation_cleanup",
+      ],
+    );
+    assert.equal(finalize.json.files.final_rows, null);
+    assert.ok(finalize.json.files.cleanup_report);
+    for (const absent of [
+      "identity-preflight-run",
+      "curation-queue",
+      "schema",
+      "qa",
+      "location-audit",
+      "curation-gate",
+      "dry-run",
+      "mutation-manifest",
+      "commit-handoff",
+    ]) {
+      assert.equal(fs.existsSync(path.join(root, "finalize", absent)), false, absent);
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 // Part A (deep redesign): the SUPPORT sub-finalize runs with --skip-source-contact-rewrites
 // (verify-remote OFF). It WRITES minted Flow Properties that reference a PUBLIC CANONICAL
 // Unit Group it does NOT write. The support sub-finalize must prove that reused canonical UG

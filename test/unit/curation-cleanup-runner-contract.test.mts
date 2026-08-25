@@ -261,6 +261,14 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-curation-cleanup-date-block-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const processId = "33333333-3333-4333-8333-333333333333";
+  const validProcessId = "44444444-4444-4444-8444-444444444444";
+  const valid = processRow({
+    id: validProcessId,
+    referenceId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    annualSupply: "Not specified",
+    trace: true,
+    timestamp: "2025-03-01T08:00:00+08:00",
+  });
   const invalid = processRow({
     id: processId,
     referenceId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
@@ -269,7 +277,7 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
     timestamp: "2025-02-30T00:00:00Z",
   });
   const rowsFile = path.join(root, "rows", "processes.jsonl");
-  const originalRowsText = writeJsonLines(rowsFile, [invalid]);
+  const originalRowsText = writeJsonLines(rowsFile, [valid, invalid]);
 
   const result = record(
     runDatasetCurationCleanup({
@@ -292,16 +300,17 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
       dataset_type: "process",
       dataset_id: processId,
       version: "00.00.001",
-      row_index: 0,
+      row_index: 1,
       path: "$.process.processDataSet.administrativeInformation.dataEntryBy.common:timeStamp",
       value: "2025-02-30T00:00:00Z",
       reason: "invalid_calendar_date",
-      action: "Correct the source timestamp or provide a schema-valid exact datetime before cleanup.",
+      action:
+        "Correct the source timestamp or provide a schema-valid exact datetime before cleanup.",
     },
   ]);
   const counts = record(result.counts);
   assert.deepEqual(counts, {
-    rows: 1,
+    rows: 2,
     blockers: 1,
     removed_source_trace_blocks: 0,
     externalized_source_trace_summaries: 0,
