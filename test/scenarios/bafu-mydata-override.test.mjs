@@ -6,7 +6,7 @@ import { normalizeProfile } from "../../scripts/lib/import-curation/internal/pro
 import {
   flowPrewriteIdentityBlockers,
   prewriteIdentityBlockers,
-} from "../../scripts/lib/import-curation/internal/workflow-identity-preflight.mjs";
+} from "../../scripts/lib/import-curation/internal/workflow-identity-preflight.ts";
 import { assert } from "../fixtures/foundry-core.mjs";
 
 // The override authorization flag must surface true ONLY for a profile that declares

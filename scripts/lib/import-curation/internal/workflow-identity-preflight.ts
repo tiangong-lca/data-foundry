@@ -17,7 +17,10 @@ import {
   repoRelativePath,
   resolveRepoPath,
 } from "./runtime-io.ts";
-import { identityDecisionApplyContextClosesAction } from "./workflow-identity-decision-context.ts";
+import {
+  type IdentityDecisionApplyContext,
+  identityDecisionApplyContextClosesAction,
+} from "./workflow-identity-decision-context.ts";
 import {
   classCode,
   classLevel,
@@ -35,17 +38,252 @@ import {
   nameTextForPayload,
 } from "./workflow-semantic-actions.ts";
 
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface DatasetIdentity extends JsonRecord {
+  id?: unknown;
+  version?: unknown;
+  payload?: unknown;
+}
+
+interface IdentityPreflightFreshness extends JsonRecord {
+  current_payload_sha256: string | null;
+  request_target_sha256: string | null;
+  current_payload_matches_request: unknown;
+  current_payload_scope_accepted?: unknown;
+}
+
+interface IdentityPreflightResult extends JsonRecord {
+  status?: unknown;
+  decision?: unknown;
+  confidence?: unknown;
+  next_action?: unknown;
+  target?: unknown;
+  candidates?: unknown;
+  candidate_sources?: unknown;
+  findings?: unknown;
+  blockers?: unknown;
+  files?: unknown;
+  out_dir?: unknown;
+}
+
+interface IdentityPreflightRow extends JsonRecord {
+  dataset_type: string;
+  dataset_id: string;
+  dataset_version: string;
+  source_file?: unknown;
+  request_file?: string | null;
+  output_dir?: string | null;
+  remote_search?: unknown;
+  request?: JsonRecord | null;
+  result?: IdentityPreflightResult | null;
+  status: string;
+  freshness?: IdentityPreflightFreshness;
+}
+
+interface IdentityPreflightContext {
+  indexPath: string;
+  rows: IdentityPreflightRow[];
+  rowsByIdentity: Map<string, IdentityPreflightRow>;
+  completed: number;
+  pending: number;
+}
+
+interface TransformContextLike extends JsonRecord {
+  status?: unknown;
+  inputRowsFile?: string | null;
+  outputRowsFile?: string | null;
+  inputRows?: string[];
+  outputRows?: string[];
+  inputPayloadSha256ByIdentity?: Map<string, string>;
+  outputPayloadSha256ByIdentity?: Map<string, string>;
+}
+
+interface DecisionApplyContext extends TransformContextLike {
+  reportPath?: string | null;
+  inputRows: string[];
+  outputRows: string[];
+}
+
+interface ExternalizationContext extends TransformContextLike {
+  affectedKeys: Set<string>;
+  externalizedExchangeCountByIdentity: Map<string, number>;
+  outputPayloadSha256ByIdentity: Map<string, string>;
+  reportPathRelative: string | null;
+  inputRowsFileRelative: string | null;
+  outputRowsFileRelative: string | null;
+  tracesFileRelative: string | null;
+}
+
+interface TransformOptions {
+  patchApplyContext?: TransformContextLike | null;
+  classificationDecisionApplyContext?: DecisionApplyContext | null;
+  locationDecisionApplyContext?: TransformContextLike | null;
+  identityDecisionApplyContext?: TransformContextLike | null;
+  identityReferenceRewriteContext?: TransformContextLike | null;
+  unresolvedExchangeExternalizationContext?: ExternalizationContext | null;
+  sourceContactRewriteContext?: TransformContextLike | null;
+  canonicalSupportRewriteContext?: TransformContextLike | null;
+  cleanupContext?: TransformContextLike | null;
+}
+
+interface ClassificationFreshnessOptions {
+  repoRoot: string;
+  freshness: IdentityPreflightFreshness;
+  datasetType: string;
+  identity: DatasetIdentity;
+  classificationDecisionApplyContext?: DecisionApplyContext | null;
+}
+
+interface DeterministicFreshnessOptions extends TransformOptions {
+  repoRoot: string;
+  freshness: IdentityPreflightFreshness;
+  datasetType: string;
+  identity: DatasetIdentity;
+}
+
+interface ExternalizationFreshnessOptions {
+  freshness: IdentityPreflightFreshness;
+  datasetType: string;
+  identity: DatasetIdentity;
+  unresolvedExchangeExternalizationContext?: ExternalizationContext | null;
+}
+
+interface AttachFreshnessOptions extends TransformOptions {
+  repoRoot?: string;
+  datasetType?: string;
+  identity?: DatasetIdentity;
+}
+
+interface SourceContextOptions {
+  profile?: JsonRecord | null;
+  datasetType: string;
+  curationQueueContext?: JsonRecord | null;
+  context?: { rows?: unknown } | null;
+}
+
+interface IdentityLookupContext {
+  rowsByIdentity: ReadonlyMap<string, unknown>;
+}
+
+interface DependencyPreflightRow extends JsonRecord {
+  relation: string;
+  ref: unknown;
+  ref_path: unknown;
+  identity_preflight: IdentityPreflightRow | null;
+}
+
+interface BuildAuthoringContextOptions extends TransformOptions {
+  context?: IdentityPreflightContext | null;
+  datasetType: string;
+  identity: DatasetIdentity;
+  curationQueueContext?: JsonRecord | null;
+  repoRoot: string;
+}
+
+interface IdentityPreflightAuthoringContext extends JsonRecord {
+  current: IdentityPreflightRow | null;
+  dependencies: DependencyPreflightRow[];
+}
+
+interface IdentityGateOptions {
+  required: boolean;
+  context?: IdentityPreflightContext | null;
+  authoringContext?: IdentityPreflightAuthoringContext | null;
+  datasetType: string;
+  identity: DatasetIdentity;
+  curationQueueContext?: JsonRecord | null;
+  profile?: JsonRecord | null;
+}
+
+interface AiDecisionActionOptions {
+  datasetType: string;
+  identity: DatasetIdentity;
+  row: unknown;
+  relation?: string;
+  path?: unknown;
+  dependencyType?: string | null;
+  dependencyId?: string | null;
+  dependencyVersion?: string | null;
+}
+
+interface IdentityDecisionActionItem extends JsonRecord {
+  code: string;
+  evidence: JsonRecord & { candidate_count: number; top_candidates: unknown[] };
+}
+
+interface AuthoringActionOptions {
+  required: boolean;
+  authoringContext?: IdentityPreflightAuthoringContext | null;
+  datasetType: string;
+  identity: DatasetIdentity;
+  identityDecisionApplyContext?: IdentityDecisionApplyContext | null;
+}
+
+interface TextLeaf {
+  path: string;
+  path_segments: string[];
+  text: string;
+}
+
+interface PrewriteContentPolicy {
+  path: string;
+  relative_path: string;
+  value: JsonRecord;
+}
+
+interface ContentQualityOptions {
+  repoRoot: string | null;
+  payload: unknown;
+  datasetType: string;
+  profile?: JsonRecord | null;
+}
+
+interface PrewriteIdentityOptions {
+  allowAccountLocalSupportAndElementary?: boolean;
+  profile?: JsonRecord | null;
+}
+
+interface QueueAuthoringOptions {
+  repoRoot: string;
+  datasetType?: string;
+  payload: unknown;
+  row: unknown;
+}
+
+interface QueueActionItem extends JsonRecord {
+  code: string;
+  path: string | null;
+  instruction: string;
+  evidence: JsonRecord;
+}
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function asRecord(value: unknown): JsonRecord {
+  return isRecord(value) ? value : {};
+}
+
 // part-01.mjs
-export function identityPreflightResultFile(repoRoot, indexPath, row) {
+export function identityPreflightResultFile(
+  repoRoot: string,
+  indexPath: string,
+  row: unknown,
+): string | null {
+  const typedRow = asRecord(row);
   const baseDir = path.dirname(indexPath);
   const explicit =
-    row?.expected_report_file ??
-    row?.identity_decision_file ??
-    row?.identityDecisionFile ??
-    row?.report_file ??
-    row?.reportFile;
-  if (explicit) return resolveArtifactPath(repoRoot, explicit, baseDir);
-  const outputDir = row?.output_dir ?? row?.outputDir;
+    typedRow.expected_report_file ??
+    typedRow.identity_decision_file ??
+    typedRow.identityDecisionFile ??
+    typedRow.report_file ??
+    typedRow.reportFile;
+  if (explicit) return resolveArtifactPath(repoRoot, asText(explicit), baseDir);
+  const outputDir = asText(typedRow.output_dir ?? typedRow.outputDir);
   if (!outputDir) return null;
   const resolvedOutputDir = path.isAbsolute(outputDir)
     ? outputDir
@@ -55,31 +293,38 @@ export function identityPreflightResultFile(repoRoot, indexPath, row) {
   return resolveRepoPath(repoRoot, path.join(outputDir, "outputs", "identity-decision.json"));
 }
 
-export function readIdentityPreflightIndexRow(repoRoot, indexPath, row) {
+export function readIdentityPreflightIndexRow(
+  repoRoot: string,
+  indexPath: string,
+  row: unknown,
+): IdentityPreflightRow | null {
+  const typedRow = asRecord(row);
   const baseDir = path.dirname(indexPath);
-  const datasetType = asText(row?.dataset_type ?? row?.type);
-  const datasetId = asText(row?.dataset_id ?? row?.entity_id ?? row?.id);
-  const datasetVersion = asText(row?.dataset_version ?? row?.version) || "00.00.001";
+  const datasetType = asText(typedRow.dataset_type ?? typedRow.type);
+  const datasetId = asText(typedRow.dataset_id ?? typedRow.entity_id ?? typedRow.id);
+  const datasetVersion = asText(typedRow.dataset_version ?? typedRow.version) || "00.00.001";
   if (!datasetType || !datasetId) return null;
-  const requestPath = resolveArtifactPath(repoRoot, row?.request_file, baseDir);
-  const request = readJsonIfExists(requestPath);
+  const requestPath = resolveArtifactPath(repoRoot, asText(typedRow.request_file), baseDir);
+  const request = requestPath ? readJsonIfExists<JsonRecord>(requestPath) : null;
   const requestText = requestPath && fileExists(requestPath) ? readText(requestPath) : null;
   const resultPath = identityPreflightResultFile(repoRoot, indexPath, row);
-  const result = readJsonIfExists(resultPath);
+  const result = resultPath ? readJsonIfExists<IdentityPreflightResult>(resultPath) : null;
   const resultText = resultPath && fileExists(resultPath) ? readText(resultPath) : null;
   const executionManifestPath =
     resolveArtifactPath(
       repoRoot,
-      row?.execution_manifest_file ?? row?.executionManifestFile,
+      asText(typedRow.execution_manifest_file ?? typedRow.executionManifestFile),
       baseDir,
     ) ??
     (resultPath
       ? path.join(path.dirname(resultPath), "foundry-identity-preflight-execution.json")
       : null);
-  const executionManifest = readJsonIfExists(executionManifestPath);
+  const executionManifest = executionManifestPath
+    ? readJsonIfExists<JsonRecord>(executionManifestPath)
+    : null;
   const targetSha256 =
-    row?.target_sha256 ??
-    row?.targetSha256 ??
+    typedRow.target_sha256 ??
+    typedRow.targetSha256 ??
     (request ? sha256Json(request.target ?? null) : null);
   const executionEvidence = validateIdentityPreflightEvidence(executionManifest, {
     requestText,
@@ -88,37 +333,40 @@ export function readIdentityPreflightIndexRow(repoRoot, indexPath, row) {
     datasetId,
     datasetVersion,
     targetSha256: asText(targetSha256),
-    expectedProjectRef: asText(row?.expected_project_ref ?? row?.expectedProjectRef) || null,
-    expectedUserId: asText(row?.expected_user_id ?? row?.expectedUserId) || null,
+    expectedProjectRef:
+      asText(typedRow.expected_project_ref ?? typedRow.expectedProjectRef) || null,
+    expectedUserId: asText(typedRow.expected_user_id ?? typedRow.expectedUserId) || null,
   });
   const completedResult = result && executionEvidence.ok ? result : null;
   // Candidate files are convenience exports and are not covered by the bound
   // execution manifest. Downstream semantic evidence comes only from the
   // manifest-bound identity-decision report.
-  const outputDir = row?.output_dir
-    ? (resolveArtifactPath(repoRoot, row.output_dir, baseDir) ??
-      resolveRepoPath(repoRoot, row.output_dir))
-    : (result?.out_dir ?? null);
+  const rowOutputDir = asText(typedRow.output_dir);
+  const resultOutputDir = asText(result?.out_dir);
+  const outputDir = rowOutputDir
+    ? (resolveArtifactPath(repoRoot, rowOutputDir, baseDir) ??
+      resolveRepoPath(repoRoot, rowOutputDir))
+    : resultOutputDir || null;
   return {
     dataset_type: datasetType,
     dataset_id: datasetId,
     dataset_version: datasetVersion,
-    source_file: row?.source_file ?? null,
+    source_file: typedRow.source_file ?? null,
     request_file: requestPath ? repoRelativePath(repoRoot, requestPath) : null,
     output_dir: outputDir ? repoRelativePath(repoRoot, outputDir) : null,
-    command: row?.command ?? null,
-    remote_search: row?.remote_search ?? request?.remote_candidate_search ?? null,
+    command: typedRow.command ?? null,
+    remote_search: typedRow.remote_search ?? request?.remote_candidate_search ?? null,
     request: request
       ? {
           schema_version: request.schema_version ?? null,
           remote_candidate_search: request.remote_candidate_search ?? null,
           target_sha256: targetSha256,
         }
-      : row?.target_sha256 || row?.targetSha256
+      : typedRow.target_sha256 || typedRow.targetSha256
         ? {
             schema_version: null,
             remote_candidate_search: null,
-            target_sha256: row?.target_sha256 ?? row?.targetSha256,
+            target_sha256: typedRow.target_sha256 ?? typedRow.targetSha256,
           }
         : null,
     result: completedResult
@@ -147,7 +395,11 @@ export function readIdentityPreflightIndexRow(repoRoot, indexPath, row) {
   };
 }
 
-export function readIdentityPreflightContext(repoRoot, options, rowsFile) {
+export function readIdentityPreflightContext(
+  repoRoot: string,
+  options: JsonRecord,
+  rowsFile: string | null | undefined,
+): IdentityPreflightContext | null {
   const indexPath = identityPreflightIndexPath(repoRoot, options, rowsFile);
   if (!indexPath) return null;
   if (!fileExists(indexPath)) {
@@ -155,8 +407,8 @@ export function readIdentityPreflightContext(repoRoot, options, rowsFile) {
   }
   const rows = readJsonLinesIfExists(indexPath)
     .map((row) => readIdentityPreflightIndexRow(repoRoot, indexPath, row))
-    .filter(Boolean);
-  const rowsByIdentity = new Map();
+    .filter((row): row is IdentityPreflightRow => row !== null);
+  const rowsByIdentity = new Map<string, IdentityPreflightRow>();
   for (const row of rows) {
     const key = `${row.dataset_type}:${row.dataset_id}@@${row.dataset_version}`;
     rowsByIdentity.set(key, row);
@@ -173,20 +425,26 @@ export function readIdentityPreflightContext(repoRoot, options, rowsFile) {
   };
 }
 
-export function identityPreflightRowForIdentity(context, datasetType, identity) {
+export function identityPreflightRowForIdentity(
+  context: IdentityLookupContext | null | undefined,
+  datasetType: string,
+  identity: DatasetIdentity | null | undefined,
+): IdentityPreflightRow | null {
   if (!context || !identity?.id) return null;
-  return (
-    context.rowsByIdentity.get(
-      `${datasetType}:${identity.id}@@${identity.version || "00.00.001"}`,
-    ) ??
+  return (context.rowsByIdentity.get(
+    `${datasetType}:${identity.id}@@${identity.version || "00.00.001"}`,
+  ) ??
     context.rowsByIdentity.get(`${datasetType}:${identity.id}`) ??
-    null
-  );
+    null) as IdentityPreflightRow | null;
 }
 
-export function identityPreflightFreshness(row, payload) {
+export function identityPreflightFreshness(
+  row: unknown,
+  payload: unknown,
+): IdentityPreflightFreshness {
+  const request = asRecord(asRecord(row).request);
   const currentPayloadSha256 = payload ? sha256Json(payload) : null;
-  const requestTargetSha256 = asText(row?.request?.target_sha256) || null;
+  const requestTargetSha256 = asText(request.target_sha256) || null;
   return {
     current_payload_sha256: currentPayloadSha256,
     request_target_sha256: requestTargetSha256,
@@ -202,7 +460,7 @@ export function classificationFreshnessAllowance({
   datasetType,
   identity,
   classificationDecisionApplyContext,
-}) {
+}: ClassificationFreshnessOptions): JsonRecord | null {
   if (
     freshness?.current_payload_matches_request === true ||
     classificationDecisionApplyContext?.status !== "completed"
@@ -260,7 +518,7 @@ export function deterministicTransformFreshnessAllowance({
   sourceContactRewriteContext,
   canonicalSupportRewriteContext,
   cleanupContext,
-}) {
+}: DeterministicFreshnessOptions): JsonRecord | null {
   if (
     freshness?.current_payload_matches_request === true ||
     !freshness?.request_target_sha256 ||
@@ -282,7 +540,7 @@ export function deterministicTransformFreshnessAllowance({
     cleanupContext,
   });
   const reachable = new Set([freshness.request_target_sha256]);
-  const applied = [];
+  const applied: JsonRecord[] = [];
   for (let pass = 0; pass <= transforms.length; pass += 1) {
     let changed = false;
     for (const transform of transforms) {
@@ -335,7 +593,7 @@ export function externalizationFreshnessAllowance({
   datasetType,
   identity,
   unresolvedExchangeExternalizationContext,
-}) {
+}: ExternalizationFreshnessOptions): JsonRecord | null {
   if (
     datasetType !== "process" ||
     freshness?.current_payload_matches_request === true ||
@@ -366,28 +624,32 @@ export function externalizationFreshnessAllowance({
   };
 }
 
-export function attachIdentityPreflightFreshness(row, payload, options = {}) {
+export function attachIdentityPreflightFreshness(
+  row: IdentityPreflightRow | null | undefined,
+  payload: unknown,
+  options: AttachFreshnessOptions = {},
+): IdentityPreflightRow | null {
   if (!row) return null;
   const freshness = identityPreflightFreshness(row, payload);
   const deterministicAllowances = [
     classificationFreshnessAllowance({
-      repoRoot: options.repoRoot,
+      repoRoot: options.repoRoot!,
       freshness,
-      datasetType: options.datasetType,
-      identity: options.identity,
+      datasetType: options.datasetType!,
+      identity: options.identity!,
       classificationDecisionApplyContext: options.classificationDecisionApplyContext,
     }),
     externalizationFreshnessAllowance({
       freshness,
-      datasetType: options.datasetType,
-      identity: options.identity,
+      datasetType: options.datasetType!,
+      identity: options.identity!,
       unresolvedExchangeExternalizationContext: options.unresolvedExchangeExternalizationContext,
     }),
     deterministicTransformFreshnessAllowance({
-      repoRoot: options.repoRoot,
+      repoRoot: options.repoRoot!,
       freshness,
-      datasetType: options.datasetType,
-      identity: options.identity,
+      datasetType: options.datasetType!,
+      identity: options.identity!,
       patchApplyContext: options.patchApplyContext,
       classificationDecisionApplyContext: options.classificationDecisionApplyContext,
       locationDecisionApplyContext: options.locationDecisionApplyContext,
@@ -412,10 +674,11 @@ export function attachIdentityPreflightFreshness(row, payload, options = {}) {
   };
 }
 
-export function identityPreflightFreshnessAccepted(freshness) {
+export function identityPreflightFreshnessAccepted(freshness: unknown): boolean {
+  const typedFreshness = asRecord(freshness);
   return Boolean(
-    freshness?.current_payload_matches_request === true ||
-    freshness?.current_payload_scope_accepted === true,
+    typedFreshness.current_payload_matches_request === true ||
+    typedFreshness.current_payload_scope_accepted === true,
   );
 }
 
@@ -424,39 +687,45 @@ export function identityPreflightSourceContextRequired({
   datasetType,
   curationQueueContext,
   context,
-}) {
+}: SourceContextOptions): boolean {
   return Boolean(
     asText(profile?.id).toLowerCase() === "bafu" &&
     ["flow", "process"].includes(datasetType) &&
     curationQueueContext?.status === "attached" &&
-    ensureArray(context?.rows).some((row) => asText(row?.source_file)),
+    ensureArray(context?.rows).some((row) => asText(asRecord(row).source_file)),
   );
 }
 
-export function identityPreflightHasSourceContext(row) {
-  return Boolean(asText(row?.source_file));
+export function identityPreflightHasSourceContext(row: unknown): boolean {
+  return Boolean(asText(asRecord(row).source_file));
 }
 
-export function dependencyPayloadForFreshness(dependency) {
+export function dependencyPayloadForFreshness(dependency: unknown): unknown {
+  const typedDependency = asRecord(dependency);
   const rows = ensureArray(
-    dependency?.input_rows ??
-      dependency?.rows ??
-      dependency?.payload_rows ??
-      dependency?.payloadRows,
+    typedDependency.input_rows ??
+      typedDependency.rows ??
+      typedDependency.payload_rows ??
+      typedDependency.payloadRows,
   ).filter(Boolean);
-  return rows[0] ?? dependency?.payload ?? null;
+  return rows[0] ?? typedDependency.payload ?? null;
 }
 
-export function dependencyIdentityPreflightRows(context, curationQueueContext, options = {}) {
+export function dependencyIdentityPreflightRows(
+  context: IdentityPreflightContext | null | undefined,
+  curationQueueContext: JsonRecord | null | undefined,
+  options: AttachFreshnessOptions = {},
+): DependencyPreflightRow[] {
   if (!context || !curationQueueContext) return [];
-  const rows = [];
-  const seen = new Set();
+  const rows: DependencyPreflightRow[] = [];
+  const seen = new Set<string>();
   for (const dependency of ensureArray(curationQueueContext.dependency_rows)) {
-    const task = dependency?.task;
-    const datasetType = asText(task?.entity_type);
+    const typedDependency = asRecord(dependency);
+    const task = asRecord(typedDependency.task);
+    const datasetType = asText(task.entity_type);
     const identity = {
-      id: asText(task?.entity_id),
-      version: asText(task?.version) || "00.00.001",
+      id: asText(task.entity_id),
+      version: asText(task.version) || "00.00.001",
     };
     const row = identityPreflightRowForIdentity(context, datasetType, identity);
     if (!row) continue;
@@ -465,8 +734,8 @@ export function dependencyIdentityPreflightRows(context, curationQueueContext, o
     seen.add(key);
     rows.push({
       relation: "dependency",
-      ref: dependency?.ref ?? null,
-      ref_path: dependency?.ref_path ?? null,
+      ref: typedDependency.ref ?? null,
+      ref_path: typedDependency.ref_path ?? null,
       identity_preflight: attachIdentityPreflightFreshness(
         row,
         dependencyPayloadForFreshness(dependency),
@@ -504,7 +773,7 @@ export function buildIdentityPreflightAuthoringContext({
   sourceContactRewriteContext,
   canonicalSupportRewriteContext,
   cleanupContext,
-}) {
+}: BuildAuthoringContextOptions): IdentityPreflightAuthoringContext | null {
   if (!context) return null;
   const current = attachIdentityPreflightFreshness(
     identityPreflightRowForIdentity(context, datasetType, identity),
@@ -538,7 +807,7 @@ export function buildIdentityPreflightAuthoringContext({
     index_file: repoRelativePath(repoRoot, context.indexPath),
     status:
       current?.status === "completed" &&
-      dependencies.every((row) => row.identity_preflight.status === "completed")
+      dependencies.every((row) => row.identity_preflight?.status === "completed")
         ? "completed"
         : "pending_or_partial",
     current,
@@ -562,9 +831,9 @@ export function identityPreflightGateItems({
   identity,
   curationQueueContext,
   profile,
-}) {
+}: IdentityGateOptions): JsonRecord[] {
   if (!required || !["flow", "process"].includes(datasetType)) return [];
-  const items = [];
+  const items: JsonRecord[] = [];
   const baseInstruction =
     "Run dataset-identity-preflight-run for the generated identity-preflight-requests index before AI authoring, then pass the same index to dataset-curation-gate with --identity-preflight-index.";
   if (!context) {
@@ -665,12 +934,13 @@ export function identityPreflightGateItems({
     );
     const dependencyRows = ensureArray(curationQueueContext.dependency_rows);
     for (const dependency of dependencyRows) {
-      const task = dependency?.task;
-      const dependencyType = asText(task?.entity_type);
+      const typedDependency = asRecord(dependency);
+      const task = asRecord(typedDependency.task);
+      const dependencyType = asText(task.entity_type);
       if (!["flow", "process"].includes(dependencyType)) continue;
       const dependencyIdentity = {
-        id: asText(task?.entity_id),
-        version: asText(task?.version) || "00.00.001",
+        id: asText(task.entity_id),
+        version: asText(task.version) || "00.00.001",
       };
       if (!dependencyIdentity.id) continue;
       const dependencyPreflight = identityPreflightRowForIdentity(
@@ -689,7 +959,7 @@ export function identityPreflightGateItems({
         items.push({
           source: "identity_preflight",
           code: "identity_preflight_dependency_result_missing",
-          path: dependency?.ref_path ?? null,
+          path: typedDependency.ref_path ?? null,
           message: "No identity-preflight result is attached for a referenced dependency entity.",
           action_kind: "identity_preflight_required",
           required_owner: "foundry_identity_preflight_run",
@@ -699,12 +969,15 @@ export function identityPreflightGateItems({
           dependency_version: dependencyIdentity.version,
           instruction: baseInstruction,
         });
-      } else if (dependencyPreflightWithFreshness.status !== "completed") {
+        continue;
+      }
+      const evaluatedPreflight = dependencyPreflightWithFreshness ?? dependencyPreflight;
+      if (evaluatedPreflight.status !== "completed") {
         items.push({
           source: "identity_preflight",
           code: "identity_preflight_dependency_result_pending",
-          path: dependency?.ref_path ?? null,
-          message: `Referenced dependency identity-preflight status is ${dependencyPreflightWithFreshness.status}.`,
+          path: typedDependency.ref_path ?? null,
+          message: `Referenced dependency identity-preflight status is ${evaluatedPreflight.status}.`,
           action_kind: "identity_preflight_required",
           required_owner: "foundry_identity_preflight_run",
           ai_required: false,
@@ -714,13 +987,13 @@ export function identityPreflightGateItems({
           instruction: baseInstruction,
         });
       } else if (
-        dependencyPreflightWithFreshness.freshness &&
-        !identityPreflightFreshnessAccepted(dependencyPreflightWithFreshness.freshness)
+        evaluatedPreflight.freshness &&
+        !identityPreflightFreshnessAccepted(evaluatedPreflight.freshness)
       ) {
         items.push({
           source: "identity_preflight",
           code: "identity_preflight_dependency_scope_stale",
-          path: dependency?.ref_path ?? null,
+          path: typedDependency.ref_path ?? null,
           message:
             "Referenced dependency identity-preflight result was generated from a different dependency payload than the current curation queue context.",
           action_kind: "identity_preflight_required",
@@ -730,16 +1003,13 @@ export function identityPreflightGateItems({
           dependency_id: dependencyIdentity.id,
           dependency_version: dependencyIdentity.version,
           instruction: staleInstruction,
-          evidence: dependencyPreflightWithFreshness.freshness,
+          evidence: evaluatedPreflight.freshness,
         });
-      } else if (
-        requiresSourceContext &&
-        !identityPreflightHasSourceContext(dependencyPreflightWithFreshness)
-      ) {
+      } else if (requiresSourceContext && !identityPreflightHasSourceContext(evaluatedPreflight)) {
         items.push({
           source: "identity_preflight",
           code: "identity_preflight_dependency_source_context_missing",
-          path: dependency?.ref_path ?? null,
+          path: typedDependency.ref_path ?? null,
           message:
             "Referenced dependency identity-preflight is missing source_file trace context, so hybrid search and AI authoring may lose source-package evidence.",
           action_kind: "identity_preflight_required",
@@ -750,8 +1020,8 @@ export function identityPreflightGateItems({
           dependency_version: dependencyIdentity.version,
           instruction: sourceContextInstruction,
           evidence: {
-            remote_search: dependencyPreflightWithFreshness.remote_search ?? null,
-            request_file: dependencyPreflightWithFreshness.request_file ?? null,
+            remote_search: evaluatedPreflight.remote_search ?? null,
+            request_file: evaluatedPreflight.request_file ?? null,
           },
         });
       }
@@ -760,11 +1030,12 @@ export function identityPreflightGateItems({
   return items;
 }
 
-export function identityPreflightNeedsAiDecision(row) {
-  const result = row?.result;
+export function identityPreflightNeedsAiDecision(row: unknown): boolean {
+  const result = asRecord(row).result;
   if (!result) return false;
-  const status = asText(result.status);
-  const decision = asText(result.decision);
+  const typedResult = asRecord(result);
+  const status = asText(typedResult.status);
+  const decision = asText(typedResult.decision);
   return status === "needs_review" || decision === "manual_review";
 }
 
@@ -777,10 +1048,11 @@ export function identityPreflightAiDecisionActionItem({
   dependencyType = null,
   dependencyId = null,
   dependencyVersion = null,
-}) {
-  const result = row?.result ?? {};
+}: AiDecisionActionOptions): IdentityDecisionActionItem {
+  const typedRow = asRecord(row);
+  const result = asRecord(typedRow.result);
   const candidates = ensureArray(result.candidates);
-  const resultFlowType = asText(result?.target?.fields?.type_of_dataset);
+  const resultFlowType = asText(asRecord(asRecord(result.target).fields).type_of_dataset);
   const isElementaryFlow =
     (dependencyType || datasetType) === "flow" &&
     (flowUsesElementaryClassification(identity.payload) || resultFlowType === "Elementary flow");
@@ -810,7 +1082,7 @@ export function identityPreflightAiDecisionActionItem({
       confidence: result.confidence ?? null,
       next_action: result.next_action ?? null,
       candidate_count: candidates.length,
-      remote_search: row?.remote_search ?? null,
+      remote_search: typedRow.remote_search ?? null,
       target: result.target ?? null,
       top_candidates: candidates.slice(0, 10),
     },
@@ -826,9 +1098,9 @@ export function identityPreflightAuthoringActionItems({
   datasetType,
   identity,
   identityDecisionApplyContext = null,
-}) {
+}: AuthoringActionOptions): IdentityDecisionActionItem[] {
   if (!required || !authoringContext) return [];
-  const items = [];
+  const items: IdentityDecisionActionItem[] = [];
   const current = authoringContext.current;
   if (identityPreflightNeedsAiDecision(current)) {
     const item = identityPreflightAiDecisionActionItem({
@@ -878,45 +1150,50 @@ export function identityPreflightAuthoringActionItems({
   return items;
 }
 
-export function comparableText(value) {
+export function comparableText(value: unknown): string {
   return asText(value).replace(/\s+/gu, " ").trim().toLowerCase();
 }
 
-export function classificationClassesForPayload(payload, datasetType) {
+export function classificationClassesForPayload(
+  payload: unknown,
+  datasetType: string,
+): JsonRecord[] {
   const root = datasetRoot(payload, datasetType);
   const info = dataSetInformation(root, datasetType);
   const classification = info?.classificationInformation?.["common:classification"] ?? null;
   const classes = classification?.["common:class"] ?? classification?.["common:category"] ?? null;
-  return ensureArray(classes).filter(
-    (item) => item && typeof item === "object" && !Array.isArray(item),
-  );
+  return ensureArray(classes).filter(isRecord);
 }
 
-export function classificationDisplayForPayload(payload, datasetType) {
+export function classificationDisplayForPayload(payload: unknown, datasetType: string): string {
   return classificationClassesForPayload(payload, datasetType)
     .map((item) => asText(item?.["#text"] ?? item?.text ?? item?.label))
     .filter(Boolean)
     .join(" > ");
 }
 
-export function textContent(value) {
+export function textContent(value: unknown): string {
   if (Array.isArray(value)) {
     return value.map(textContent).filter(Boolean).join(" ");
   }
   if (value && typeof value === "object") {
-    return asText(value["#text"] ?? value.text ?? value.label ?? value.name);
+    const record = value as JsonRecord;
+    return asText(record["#text"] ?? record.text ?? record.label ?? record.name);
   }
   return asText(value);
 }
 
-export function sourcePrewriteIdentityBlockers(payload, datasetType) {
+export function sourcePrewriteIdentityBlockers(
+  payload: unknown,
+  datasetType: string,
+): JsonRecord[] {
   if (datasetType !== "source") return [];
   const root = datasetRoot(payload, "source");
   const info = dataSetInformation(root, "source");
   const shortName = textContent(info?.["common:shortName"] ?? info?.shortName);
   const sourceCitation = textContent(info?.sourceCitation ?? info?.["common:sourceCitation"]);
   const classification = classificationDisplayForPayload(payload, "source");
-  const blockers = [];
+  const blockers: JsonRecord[] = [];
   if (/^(ILCD format|Not specified|Not declared|Unspecified)$/iu.test(shortName)) {
     blockers.push({
       code: "source_identity_not_true_source",
@@ -954,10 +1231,10 @@ export function sourcePrewriteIdentityBlockers(payload, datasetType) {
 }
 
 export function flowPrewriteIdentityBlockers(
-  payload,
-  datasetType,
+  payload: unknown,
+  datasetType: string,
   allowAccountLocalSupportAndElementary = false,
-) {
+): JsonRecord[] {
   if (datasetType !== "flow") return [];
   if (allowAccountLocalSupportAndElementary) return [];
   if (!flowUsesElementaryClassification(payload)) return [];
@@ -984,24 +1261,28 @@ export function flowPrewriteIdentityBlockers(
 
 const defaultPrewriteContentPolicyFile = "specs/prewrite-content-policy.json";
 
-function readPrewriteContentPolicy(repoRoot) {
-  const policyPath = resolveRepoPath(repoRoot, defaultPrewriteContentPolicyFile);
+function readPrewriteContentPolicy(repoRoot: string | null): PrewriteContentPolicy | null {
+  const policyPath = resolveRepoPath(repoRoot!, defaultPrewriteContentPolicyFile);
   if (!policyPath || !fileExists(policyPath)) return null;
   return {
     path: policyPath,
-    relative_path: repoRelativePath(repoRoot, policyPath),
-    value: readJson(policyPath),
+    relative_path: repoRelativePath(repoRoot!, policyPath),
+    value: readJson<JsonRecord>(policyPath),
   };
 }
 
-function isFoundryTracePathSegments(pathSegments) {
+function isFoundryTracePathSegments(pathSegments: string[]): boolean {
   return pathSegments.some((segment) => {
     const text = String(segment).toLowerCase();
     return text === "common:other" || text.startsWith("tiangongfoundry:");
   });
 }
 
-function payloadTextLeaves(value, pathSegments = [], leaves = []) {
+function payloadTextLeaves(
+  value: unknown,
+  pathSegments: string[] = [],
+  leaves: TextLeaf[] = [],
+): TextLeaf[] {
   if (isFoundryTracePathSegments(pathSegments)) return leaves;
   if (typeof value === "string") {
     leaves.push({
@@ -1024,37 +1305,45 @@ function payloadTextLeaves(value, pathSegments = [], leaves = []) {
   return leaves;
 }
 
-function normalizedPathSegments(pathSegments) {
+function normalizedPathSegments(pathSegments: string[]): string[] {
   return pathSegments.map((segment) => String(segment).replace(/^common:/u, ""));
 }
 
-function pathScopeMatches(pathSegments, pathScope = {}) {
+function pathScopeMatches(pathSegments: string[], pathScope: unknown = {}): boolean {
+  const typedScope = asRecord(pathScope);
   const raw = pathSegments.map(String);
   const normalized = normalizedPathSegments(pathSegments);
-  const contains = ensureArray(pathScope.contains).map(String);
-  const excludeContains = ensureArray(pathScope.exclude_contains).map(String);
-  const hasSegment = (segment) =>
+  const contains = ensureArray(typedScope.contains).map(String);
+  const excludeContains = ensureArray(typedScope.exclude_contains).map(String);
+  const hasSegment = (segment: string): boolean =>
     raw.includes(segment) || normalized.includes(segment.replace(/^common:/u, ""));
   if (contains.some((segment) => !hasSegment(segment))) return false;
   if (excludeContains.some((segment) => hasSegment(segment))) return false;
   return true;
 }
 
-function compilePolicyPattern(entry) {
+function compilePolicyPattern(entry: unknown): RegExp | null {
+  const typedEntry = asRecord(entry);
   try {
-    return new RegExp(asText(entry?.pattern), asText(entry?.flags) || "u");
+    return new RegExp(asText(typedEntry.pattern), asText(typedEntry.flags) || "u");
   } catch {
     return null;
   }
 }
 
-function policyLexiconEntries(policy, rule) {
-  const lexiconName = asText(rule?.lexicon);
+function policyLexiconEntries(policy: JsonRecord, rule: unknown): unknown[] {
+  const typedRule = asRecord(rule);
+  const lexiconName = asText(typedRule.lexicon);
   if (!lexiconName) return [];
-  return ensureArray(policy?.lexicons?.[lexiconName]);
+  return ensureArray(asRecord(policy.lexicons)[lexiconName]);
 }
 
-export function prewriteContentQualityBlockers({ repoRoot, payload, datasetType, profile = null }) {
+export function prewriteContentQualityBlockers({
+  repoRoot,
+  payload,
+  datasetType,
+  profile = null,
+}: ContentQualityOptions): JsonRecord[] {
   if (!["flow", "process", "lifecyclemodel"].includes(datasetType)) return [];
   const policy = readPrewriteContentPolicy(repoRoot);
   if (!policy) return [];
@@ -1063,31 +1352,37 @@ export function prewriteContentQualityBlockers({ repoRoot, payload, datasetType,
   // latin-author-year marker, not a citation locator). A waiver matches either the rule code
   // or the rule id. Absent a profile (or waiver), every rule applies — BAFU/USLCI unchanged.
   const waivedRuleCodes = new Set(
-    ensureArray(profile?.waivedContentPolicyRulesByType?.[datasetType]).map(asText),
+    ensureArray(asRecord(asRecord(profile).waivedContentPolicyRulesByType)[datasetType]).map(
+      asText,
+    ),
   );
   const leaves = payloadTextLeaves(payload);
-  const blockers = [];
-  for (const rule of ensureArray(policy.value?.rules)) {
-    const allowedTypes = ensureArray(rule?.dataset_types).map(asText);
+  const blockers: JsonRecord[] = [];
+  for (const rule of ensureArray(policy.value.rules)) {
+    const typedRule = asRecord(rule);
+    const allowedTypes = ensureArray(typedRule.dataset_types).map(asText);
     if (allowedTypes.length > 0 && !allowedTypes.includes(datasetType)) continue;
-    if (waivedRuleCodes.has(asText(rule?.code)) || waivedRuleCodes.has(asText(rule?.id))) continue;
+    if (waivedRuleCodes.has(asText(typedRule.code)) || waivedRuleCodes.has(asText(typedRule.id))) {
+      continue;
+    }
     const entries = policyLexiconEntries(policy.value, rule);
     for (const leaf of leaves) {
-      if (!pathScopeMatches(leaf.path_segments, rule?.path_scope)) continue;
+      if (!pathScopeMatches(leaf.path_segments, typedRule.path_scope)) continue;
       for (const entry of entries) {
+        const typedEntry = asRecord(entry);
         const pattern = compilePolicyPattern(entry);
         if (!pattern || !pattern.test(leaf.text)) continue;
         blockers.push({
-          code: asText(rule?.code) || "prewrite_content_quality_blocked",
-          stage: asText(rule?.stage) || "prewrite_content_quality",
+          code: asText(typedRule.code) || "prewrite_content_quality_blocked",
+          stage: asText(typedRule.stage) || "prewrite_content_quality",
           message:
-            asText(rule?.message) ||
+            asText(typedRule.message) ||
             "Write payload text violates the configured prewrite content policy.",
           dataset_type: datasetType,
           policy: policy.relative_path,
-          rule_id: asText(rule?.id) || null,
-          lexicon: asText(rule?.lexicon) || null,
-          marker_id: asText(entry?.id) || null,
+          rule_id: asText(typedRule.id) || null,
+          lexicon: asText(typedRule.lexicon) || null,
+          marker_id: asText(typedEntry.id) || null,
           path: leaf.path,
           text: leaf.text,
         });
@@ -1098,11 +1393,11 @@ export function prewriteContentQualityBlockers({ repoRoot, payload, datasetType,
 }
 
 export function prewriteIdentityBlockers(
-  payload,
-  datasetType,
-  repoRoot = null,
-  { allowAccountLocalSupportAndElementary = false, profile = null } = {},
-) {
+  payload: unknown,
+  datasetType: string,
+  repoRoot: string | null = null,
+  { allowAccountLocalSupportAndElementary = false, profile = null }: PrewriteIdentityOptions = {},
+): JsonRecord[] {
   return [
     ...sourcePrewriteIdentityBlockers(payload, datasetType),
     ...flowPrewriteIdentityBlockers(payload, datasetType, allowAccountLocalSupportAndElementary),
@@ -1110,7 +1405,10 @@ export function prewriteIdentityBlockers(
   ];
 }
 
-export function processClassificationClassesAreCanonical(repoRoot, classes) {
+export function processClassificationClassesAreCanonical(
+  repoRoot: string,
+  classes: JsonRecord[],
+): boolean {
   const rawCodes = classes.map(classCode).filter(Boolean);
   const leafCode = rawCodes.at(-1);
   const canonical = processCategoryPathForCode(repoRoot, leafCode);
@@ -1128,8 +1426,14 @@ export function processClassificationClassesAreCanonical(repoRoot, classes) {
   });
 }
 
-export function classificationQueueRowStillNeedsAuthoring({ repoRoot, datasetType, payload, row }) {
-  const expectedDisplay = comparableText(row?.current_classification);
+export function classificationQueueRowStillNeedsAuthoring({
+  repoRoot,
+  datasetType = "process",
+  payload,
+  row,
+}: QueueAuthoringOptions): boolean {
+  const typedRow = asRecord(row);
+  const expectedDisplay = comparableText(typedRow.current_classification);
   if (!expectedDisplay) return true;
   const currentDisplay = comparableText(classificationDisplayForPayload(payload, datasetType));
   if (!currentDisplay) return true;
@@ -1146,7 +1450,7 @@ export function classificationQueueRowStillNeedsAuthoring({ repoRoot, datasetTyp
   return false;
 }
 
-export function valueAtDotPath(value, dotPath) {
+export function valueAtDotPath(value: unknown, dotPath: unknown): unknown {
   const parts = asText(dotPath).split(".").filter(Boolean);
   let current = value;
   for (const part of parts) {
@@ -1157,43 +1461,50 @@ export function valueAtDotPath(value, dotPath) {
       continue;
     }
     if (!current || typeof current !== "object") return undefined;
-    current = current[part];
+    current = (current as JsonRecord)[part];
   }
   return current;
 }
 
-export function locationQueueRowStillNeedsAuthoring({ repoRoot, payload, row }) {
-  const targetPath = asText(row?.target_path ?? row?.path);
+export function locationQueueRowStillNeedsAuthoring({
+  repoRoot,
+  payload,
+  row,
+}: QueueAuthoringOptions): boolean {
+  const typedRow = asRecord(row);
+  const targetPath = asText(typedRow.target_path ?? typedRow.path);
   if (!targetPath) return true;
   const currentLocation = asText(valueAtDotPath(payload, targetPath));
   if (!currentLocation) return true;
-  const queuedLocation = asText(row?.current_location ?? row?.location);
+  const queuedLocation = asText(typedRow.current_location ?? typedRow.location);
   if (!locationCodeMapForPatch(repoRoot).has(currentLocation)) return true;
   if (queuedLocation && currentLocation === queuedLocation) return true;
   return false;
 }
 
-export function classificationQueueActionItem(row) {
-  const datasetType = asText(row?.dataset_type) || "process";
+export function classificationQueueActionItem(row: unknown): QueueActionItem {
+  const typedRow = asRecord(row);
+  const datasetType = asText(typedRow.dataset_type) || "process";
   const classificationPath =
     datasetType === "flow"
       ? "flowDataSet.flowInformation.dataSetInformation.classificationInformation.common:classification"
       : "processDataSet.processInformation.dataSetInformation.classificationInformation.common:classification";
   return {
     source: "classification_authoring_queue",
-    code: asText(row?.code) || "process_classification_requires_authoring",
+    code: asText(typedRow.code) || "process_classification_requires_authoring",
     path: classificationPath,
     message:
-      asText(row?.message) || "Converted classification requires AI authoring before remote write.",
+      asText(typedRow.message) ||
+      "Converted classification requires AI authoring before remote write.",
     evidence: {
-      current_classification: row?.current_classification ?? null,
-      source_classification: row?.source_classification ?? null,
-      authoring_context: row?.authoring_context ?? null,
-      source_file: row?.source_file ?? null,
-      classification_workflow: row?.classification_workflow ?? null,
+      current_classification: typedRow.current_classification ?? null,
+      source_classification: typedRow.source_classification ?? null,
+      authoring_context: typedRow.authoring_context ?? null,
+      source_file: typedRow.source_file ?? null,
+      classification_workflow: typedRow.classification_workflow ?? null,
     },
     instruction:
-      asText(row?.required_resolution) ||
+      asText(typedRow.required_resolution) ||
       "Use the full schema/YAML/context package and TIDAS classification workflow to choose the target classification. Preserve source classification only as provenance.",
     action_kind: "classification_decision_authoring",
     required_owner: "foundry_ai_authoring",
@@ -1202,22 +1513,23 @@ export function classificationQueueActionItem(row) {
   };
 }
 
-export function locationQueueActionItem(row) {
+export function locationQueueActionItem(row: unknown): QueueActionItem {
+  const typedRow = asRecord(row);
   return {
     source: "location_authoring_queue",
-    code: asText(row?.code) || "location_code_requires_authoring",
-    path: asText(row?.target_path ?? row?.path) || null,
+    code: asText(typedRow.code) || "location_code_requires_authoring",
+    path: asText(typedRow.target_path ?? typedRow.path) || null,
     message:
-      asText(row?.message) ||
+      asText(typedRow.message) ||
       "Location value must be replaced with a valid TIDAS location code before remote write.",
     evidence: {
-      current_location: row?.current_location ?? row?.location ?? null,
-      target_path: row?.target_path ?? row?.path ?? null,
-      location_workflow: row?.location_workflow ?? null,
-      source_file: row?.source_file ?? null,
+      current_location: typedRow.current_location ?? typedRow.location ?? null,
+      target_path: typedRow.target_path ?? typedRow.path ?? null,
+      location_workflow: typedRow.location_workflow ?? null,
+      source_file: typedRow.source_file ?? null,
     },
     instruction:
-      asText(row?.required_resolution) ||
+      asText(typedRow.required_resolution) ||
       "Use the full schema/YAML/context package and TIDAS location classification workflow to choose the target location code.",
     action_kind: "location_decision_authoring",
     required_owner: "foundry_ai_authoring",

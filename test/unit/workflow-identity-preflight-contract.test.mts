@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import * as identity from "../../scripts/lib/import-curation/internal/workflow-identity-preflight.mjs";
+import * as identity from "../../scripts/lib/import-curation/internal/workflow-identity-preflight.ts";
 
 function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -174,7 +174,7 @@ test("identity text, queue action aliases, and source blockers preserve encounte
     required_resolution: " choose canonical ",
   });
   assert.equal(classification.code, "classify");
-  assert.match(classification.path, /^flowDataSet\./u);
+  assert.match(classification.path!, /^flowDataSet\./u);
   assert.equal(classification.instruction, "choose canonical");
   const location = identity.locationQueueActionItem({
     path: "flowDataSet.location",

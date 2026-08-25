@@ -4,7 +4,7 @@ import {
   decisionApplyContextCoversExpectedRowsIdentity,
   decisionApplyContextRelevantToRowsFile,
 } from "../../scripts/lib/import-curation/internal/workflow-decision-full-context.ts";
-import { attachIdentityPreflightFreshness } from "../../scripts/lib/import-curation/internal/workflow-identity-preflight.mjs";
+import { attachIdentityPreflightFreshness } from "../../scripts/lib/import-curation/internal/workflow-identity-preflight.ts";
 import {
   decisionApplyOutputRowsReachableThroughDeterministicTransforms,
   readRowsFileTransformContext,

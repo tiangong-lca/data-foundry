@@ -23,7 +23,7 @@ test("workflow queue context exists only as native TypeScript", () => {
 test("every static workflow queue consumer targets the typed module", () => {
   const consumers = [
     "scripts/lib/import-curation/internal/curation-gate-workflow.mjs",
-    "scripts/lib/import-curation/internal/workflow-identity-preflight.mjs",
+    "scripts/lib/import-curation/internal/workflow-identity-preflight.ts",
     "scripts/lib/import-curation/internal/workflow-patch-evidence.ts",
     "scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts",
     "scripts/lib/import-curation/internal/workflow-semantic-actions.ts",

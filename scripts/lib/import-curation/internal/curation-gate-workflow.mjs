@@ -46,7 +46,7 @@ export {
   locationQueueActionItem,
   locationQueueRowStillNeedsAuthoring,
   readIdentityPreflightContext,
-} from "./workflow-identity-preflight.mjs";
+} from "./workflow-identity-preflight.ts";
 export {
   identityDecisionApplyReportOptionValues,
   readJsonArtifactsIfOption,

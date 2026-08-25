@@ -30,7 +30,7 @@ import {
   decisionApplyContextRelevantToRowsFile,
 } from "./workflow-decision-full-context.ts";
 import { normalizeDryRunOperation } from "./workflow-dry-run-context.ts";
-import { prewriteIdentityBlockers } from "./workflow-identity-preflight.mjs";
+import { prewriteIdentityBlockers } from "./workflow-identity-preflight.ts";
 import { readJsonLines } from "./workflow-patch-collect.ts";
 import {
   hasImportOnlyTrace,
