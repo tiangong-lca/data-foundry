@@ -23,6 +23,10 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - scripts/foundry-golden-diff.ts
   - scripts/check-tidas-cutover.ts
+  - scripts/check-lint-suppressions.ts
+  - scripts/clean-build-output.ts
+  - scripts/lib/foundry-runtime-environment.ts
+  - scripts/lib/foundry-runtime-paths.ts
   - scripts/lib/tidas-adapter.ts
   - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
@@ -80,8 +84,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 2574513ba7233b0f3cd3d1babcde70763451878d
-lastReviewedNote: "Reviewed for Issue #67 zero-any completion: decision, source, proof and global-lint evidence remains Foundry-local; Rust tidas, published CLI/database/Edge search/readback, profiles, Worldsteel/Date.parse and cross-repository boundaries are unchanged."
+lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
+lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry/root parity, isolated Golden environments, suppression-resistant complete TS coverage, erasable syntax, clean builds and TS-aware cutover audit remain Foundry-local with cross-repository boundaries unchanged."
 ---
 
 # Workspace Project Map
@@ -108,7 +112,7 @@ The Wave 26 library, classification, authoring, process-scope and batch modules 
 | Incremental release planning and conversion logs | `tiangong-lca-data-foundry` for offline composition; `tiangong-lca-cli` for execution/readback | `dataset-incremental-change-set-compose`, per-conversion JSONL, dependency closure, CLI candidate contract, then fresh reconciliation/capsule admission and published CLI execution |
 | Flow-topology convergence and physical retirement | `tiangong-lca-data-foundry` for offline F/P/D composition; `tiangong-lca-cli` for protected execution/readback | `dataset-topology-convergence-compose`, occurrence-keyed conversion logs, F/P contracts, post-P zero-inbound D candidates, then fixed-fingerprint `dataset maintenance apply` |
 | Foundry test structure and command navigation checks | `tiangong-lca-data-foundry` | `test/README.md`, `test/unit`, `test/commands`, `test/scenarios`, `test/fixtures`, `scripts/lib/foundry-command-metadata.ts`, `scripts/lib/surface-audit.ts` |
-| Foundry package/compiler, portable artifact I/O, and typed runtime | `tiangong-lca-data-foundry` | Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2`, Oxlint, native `prettier.config.ts`, permanent zero-JavaScript ratchet, `.gitattributes` LF policy, separator-neutral artifact handling, clean arbitrary-worktree gates, and merge-base Golden comparison |
+| Foundry package/compiler, portable artifact I/O, and typed runtime | `tiangong-lca-data-foundry` | Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` with erasable-only syntax, root-only Oxlint config plus tracked-source native-disable audit, intentional TS includes with Git-enumerated coverage, clean/type-error-no-emit builds, trusted source/emitted entry discovery, credential-free symmetric Golden comparison, native `prettier.config.ts`, permanent zero-JavaScript ratchet, `.gitattributes` LF policy, and separator-neutral artifacts |
 | Foundry-local surface cleanup | `tiangong-lca-data-foundry` | remove old aliases, empty command categories, and orphaned draft docs only after metadata, tests, docs, and docpact show no remaining consumer |
 
 Before implementing a missing capability, classify it with `docs/capability-ownership-policy.md` and `specs/capability-ownership-rules.json`.

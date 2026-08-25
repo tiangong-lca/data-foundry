@@ -28,6 +28,8 @@ checkPaths:
   - scripts/lib/import-curation/trace-summary.ts
   - scripts/foundry-golden-diff.ts
   - scripts/check-tidas-cutover.ts
+  - scripts/check-lint-suppressions.ts
+  - scripts/clean-build-output.ts
   - scripts/lib/tidas-adapter.ts
   - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
@@ -57,6 +59,8 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-environment.ts
+  - scripts/lib/foundry-runtime-paths.ts
   - scripts/lib/foundry-runtime-utils.ts
   - scripts/lib/location-quality-utils.ts
   - scripts/lib/bundle-row-types.ts
@@ -139,10 +143,13 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - docs/topology-convergence-contract.md
   - specs/import-profiles.json
+  - test/unit/foundry-entry-closure-migration.test.mts
+  - test/unit/foundry-runtime-environment.test.mts
+  - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 2574513ba7233b0f3cd3d1babcde70763451878d
-lastReviewedNote: "Reviewed for Issue #67 zero-any completion: all TypeScript uses semantic interfaces or narrowed unknown under one global Oxlint AST rule while profiles, exact artifacts/bytes/order/hashes/errors and authority boundaries remain unchanged."
+lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
+lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry/root parity, isolated Golden environments, suppression-resistant complete TS coverage, erasable syntax, clean builds and expanded cutover scanning change no runtime authority boundary."
 ---
 
 # TianGong LCA Data Foundry
@@ -157,7 +164,7 @@ Remote verification is visibility-bound. A `missing_dataset` reference that is f
 
 ## Toolchain And Typed Spine
 
-Foundry is a pnpm-only Node.js 24 project. The reproducible toolchain is `pnpm@11.23.0`, TypeScript `7.0.2` as the only compiler anywhere in the dependency graph, Oxlint for linting, and Prettier for formatting. The repository keeps one root `pnpm-workspace.yaml` and `pnpm-lock.yaml`; npm/Yarn lockfiles, TypeScript 5/6 aliases, `@typescript-eslint`, and TypeScript-compiler-backed formatting plugins are outside the supported graph.
+Foundry is a pnpm-only, non-JSX Node.js 24 project. The reproducible toolchain is `pnpm@11.23.0`, TypeScript `7.0.2` as the only compiler anywhere in the dependency graph, Oxlint for linting, and Prettier for formatting; tracked `.jsx`/`.tsx` are rejected. TypeScript enforces erasable-only runtime syntax; root lint ignores nested Oxlint configs, bans TypeScript error-suppression comments, runs a comment-aware tracked-source audit that rejects native disable directives without treating strings as directives, and reconciles every Git-enumerated `.ts`/`.mts`/`.cts` file against intentional first-party includes. Builds use the Node-native safe cleaner to remove stale `dist` output before `tsc`; `noEmitOnError` guarantees that TypeScript diagnostics emit no replacement JavaScript, without claiming arbitrary I/O failure atomicity. Source and built commands resolve one trusted repository root and their active `.ts`/`.js` entry independently of CWD. The repository keeps one root `pnpm-workspace.yaml` and `pnpm-lock.yaml`; npm/Yarn lockfiles, TypeScript 5/6 aliases, `@typescript-eslint`, and TypeScript-compiler-backed formatting plugins are outside the supported graph.
 
 Issue #63 began with a historical baseline of 160 tracked JavaScript artifacts: 95 runtime `.mjs` files, 64 `.mjs` tests, and one Prettier `.cjs` config. That monotonic migration is complete. `test/unit/zero-javascript-ratchet.test.mts` now permanently enforces zero tracked first-party JavaScript, native TypeScript configuration, and TS-only compiler/test/lint globs; characterization and real-case TDD remain mandatory for later changes.
 
@@ -243,7 +250,7 @@ Wave 26 then migrates all 19 remaining `test/scenarios/*.test.mjs` suites in fou
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 
-The Golden gate checks normalized command artifacts against a non-`HEAD` merge-base (normally `origin/main`) with a Node-native recursive comparator, so committed PR changes cannot degrade into a self-comparison and Windows runners do not depend on a Unix `diff` binary. Script-backed test executables such as fake TIDAS run through `process.execPath` on every platform, and `.gitattributes` keeps repository text at LF so Prettier observes the same bytes on every checkout.
+The Golden gate checks normalized command artifacts against a non-`HEAD` merge-base (normally `origin/main`) with a Node-native recursive comparator, so committed PR changes cannot degrade into a self-comparison and Windows runners do not depend on a Unix `diff` binary. Both sides receive the same explicit allowlisted environment and isolated HOME/temp/npm/git/corepack state; ambient credentials, `NODE_OPTIONS`, and the live checkout's `.env` cannot affect only the current side. Script-backed test executables such as fake TIDAS run through `process.execPath` on every platform, and `.gitattributes` keeps repository text at LF so Prettier observes the same bytes on every checkout.
 
 Artifact paths recorded by fixtures must accept both platform separators. Durable JSON writers fsync the same writable descriptor they opened; POSIX permission-bit assertions apply only where the operating system implements those bits.
 

@@ -20,9 +20,12 @@ checkPaths:
   - .oxlintrc.json
   - .prettierignore
   - prettier.config.ts
+  - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
   - scripts/foundry-golden-diff.ts
   - scripts/check-tidas-cutover.ts
+  - scripts/check-lint-suppressions.ts
+  - scripts/clean-build-output.ts
   - scripts/lib/tidas-adapter.ts
   - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
@@ -52,6 +55,8 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-environment.ts
+  - scripts/lib/foundry-runtime-paths.ts
   - scripts/lib/foundry-runtime-utils.ts
   - scripts/lib/location-quality-utils.ts
   - scripts/lib/bundle-row-types.ts
@@ -175,6 +180,8 @@ checkPaths:
   - test/scenarios/scenario-identity-reference-test-migration.test.mts
   - test/scenarios/scenario-mutation-finalize-test-migration.test.mts
   - test/scenarios/scenario-library-algorithm-test-migration.test.mts
+  - test/unit/foundry-entry-closure-migration.test.mts
+  - test/unit/foundry-runtime-environment.test.mts
   - test/unit/foundry-runtime-utils-contract.test.mts
   - test/unit/wave10-runtime-migration.test.mts
   - test/unit/location-quality-utils-contract.test.mts
@@ -265,8 +272,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 2574513ba7233b0f3cd3d1babcde70763451878d
-lastReviewedNote: "Reviewed for Issue #67 zero-any completion: focused family contracts and one global Oxlint AST rule cover the complete TypeScript graph while exact bytes/order/hashes/errors and authority boundaries remain unchanged."
+lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
+lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry parity, isolated Golden environments, suppression-resistant complete TS coverage and clean/type-error-no-emit builds add focused contracts without changing authority."
 ---
 
 # Test Layout
@@ -288,7 +295,7 @@ Test files should name the behavior surface they cover, for example `post-author
 
 Every behavior or migration slice starts with a failing focused test or a realistic case characterization. Preserve command help, stdout, exit, artifacts, receipts, stage contracts, and fail-closed safety before moving implementation across the TypeScript boundary.
 
-The Issue #63 migration is complete. `unit/zero-javascript-ratchet.test.mts` permanently enforces zero tracked first-party JavaScript, native TypeScript configuration, and TS-only compiler/test/lint globs. `unit/toolchain-contract.test.mts` enforces pnpm-only locking, Node.js 24, TypeScript `7.0.2` as the sole compiler graph, Oxlint, and forbidden compatibility bridges.
+The Issue #63 migration is complete. `unit/zero-javascript-ratchet.test.mts` permanently enforces zero tracked first-party JavaScript, rejects `.jsx`/`.tsx` in this non-JSX Node control plane, and requires native TypeScript configuration plus TS-only compiler/test/lint globs. `unit/toolchain-contract.test.mts` enforces pnpm-only locking, Node.js 24, TypeScript `7.0.2` as the sole compiler graph, Oxlint, and forbidden compatibility bridges.
 
 `unit/foundry-cli-spine.test.mts` characterizes the typed argument parser and command registry: scalar/argv parsing, exact command/help JSON order, exit-code families, and every static consumer import. Keep that focused contract green before relying on broader command or Golden gates.
 
@@ -306,7 +313,7 @@ The Issue #63 migration is complete. `unit/zero-javascript-ratchet.test.mts` per
 
 `unit/source-row-explicit-any-contract.test.mts` and `unit/identity-rewrite-explicit-any-contract.test.mts` invoke the installed Oxlint TypeScript AST rule through Node over the exact source/direct-fixture targets. They reject explicit `any` without a compiler-API dependency; the existing standalone/evidence unit tests and realistic command/scenario cases continue to pin exact source/profile/reference rows, bytes, order, hashes, native errors, and remote-write fail-close behavior.
 
-`unit/zero-javascript-ratchet.test.mts` additionally requires `typescript/no-explicit-any` as one global Oxlint error, rejects duplicate target overrides, checks the printed effective rule graph, and proves a controlled temporary `.ts` fixture fails full lint. This is the permanent whole-repository boundary; focused family contracts remain diagnostic TDD evidence.
+`unit/lint-suppression-audit.test.mts` proves the tracked-TypeScript audit catches native line, next-line, and block disable directives while ignoring identical raw tokens in strings, templates, regexes, and non-directive prose comments. `unit/zero-javascript-ratchet.test.mts` additionally requires `typescript/no-explicit-any` and `typescript/ban-ts-comment` as global Oxlint errors, rejects nested config and TS-comment suppression bypasses, reconciles every Git-visible `.ts`/`.mts`/`.cts` path with intentional Oxlint and `tsc` inventories, and checks the printed rule graph. `unit/toolchain-contract.test.mts` pins package wiring, `erasableSyntaxOnly`, guarded stale-`dist` cleanup, retired `.mjs`/map removal, and no emit on a controlled TypeScript diagnostic; it deliberately does not claim arbitrary I/O failure atomicity. These are permanent whole-repository boundaries; focused family contracts remain diagnostic TDD evidence.
 
 `unit/bafu-family-signatures-contract.test.mts` and `unit/import-ledger-contract.test.mts` characterize the Wave 8 leaves independently: exact normalized family and ordered exchange hashes, scope-order grouping/rank/summary/missing envelopes, then append-only verified/blocked/dependency/retry bytes, root-based row identity, payload hashes, human actions, duplicate suppression, latest-row resume ordering, artifact paths, and native errors. `unit/wave8-large-leaf-migration.test.mts` pins both native `.ts` files, their consumers, and named exports.
 
@@ -314,7 +321,7 @@ The Issue #63 migration is complete. `unit/zero-javascript-ratchet.test.mts` per
 
 `unit/import-ledger-type-contract.test.mts` runs an isolated TS7 compile fixture for the public ledger type surface and rejects explicit `any`; the existing ledger behavior tests still pin exact schemas, JSONL bytes, hashes, ordering, paths, dedupe, and errors. `unit/fixture-helpers-contract.test.mts` pins all shared root names against the worktree-local test run id plus ready-finalize mutation/report bytes, defaults, overrides, native `.ts` paths, and consumers.
 
-`unit/foundry-runtime-utils-contract.test.mts` characterizes pinned installed-CLI discovery and override rendering, the exact 49-helper factory surface, synchronous file/JSON/JSONL bytes and errors, row counts/search/path portability, scalar/frontmatter/options/hash/UUID behavior, explicit temporary env-file precedence, stage/blocker/artifact envelopes, and local Node subprocess JSON. It intentionally does not call `loadRuntimeEnv()` or read `.env`. `unit/wave10-runtime-migration.test.mts` requires the zero-any native `.ts` module, exact exports, toolchain reference and all static imports.
+`unit/foundry-runtime-utils-contract.test.mts` characterizes pinned installed-CLI discovery and override rendering, the exact 49-helper factory surface, synchronous file/JSON/JSONL bytes and errors, row counts/search/path portability, scalar/frontmatter/options/hash/UUID behavior, explicit temporary env-file precedence, stage/blocker/artifact envelopes, and local Node subprocess JSON. Its filesystem-env-disabled case uses only a temporary root. `unit/foundry-runtime-environment.test.mts` pins the credential-free allowlist and protected overrides; `unit/foundry-entry-closure-migration.test.mts` pins source/emitted root, profile and nested-entry parity from an unrelated CWD. None reads repository `.env`; `unit/wave10-runtime-migration.test.mts` retains the exact runtime-utils export contract.
 
 `unit/location-quality-utils-contract.test.mts` characterizes classification/location command plans, installed and missing schema maps, fallback/schema location keys, nested `#text` paths, depth-first/ascending-array order, exact counters, queue context, blocker order and invalid row-type errors. `unit/wave11-location-migration.test.mts` pins the zero-any factory, named export and static consumers; bundle/location/finalize command scenarios retain integration coverage.
 
@@ -356,7 +363,7 @@ Wave 25 covers two re-export families. `unit/import-curation-leaf-barrels-migrat
 
 Wave 26 covers five dependency-ordered orchestration families. The five `unit/wave26-*-command-migration.test.mts` contracts require one native zero-escape owner, every dispatcher/metadata/wrapper consumer and exact serialized help bytes. Existing command and scenario fixtures remain the behavior authority for generic-versus-BAFU configuration, library/scope/classification/identity blocker and artifact order, resume ledgers, pause/stop, bounded parallel selection, read-only preflight, guarded commit delegation, native errors and deterministic report/JSONL bytes. All fixtures are local and read neither `.env` nor production.
 
-Wave 26 covers adapters and repository tooling in four RED/GREEN families. `unit/tidas-adapter-migration-contract.test.mts` uses controlled local executables to pin argv, environment, operation reports, version gates, path resolution, hashes and native spawn failures. `unit/post-authoring-finalize-utils-contract.test.mts` pins rewrite resolution, identity reuse, queue/input order and fail-closed preflight behavior. `unit/tidas-cutover-script-contract.test.mts` pins the tracked inventory, exact stdout and exit contract. `unit/foundry-golden-diff-contract.test.mts` pins merge-base selection, normalization, cross-platform executable/argv handling, Node-native comparison, Golden diffs and failure exits. All four require zero-escape native TypeScript and prohibit real external TIDAS or production access.
+Wave 26 covers adapters and repository tooling in four RED/GREEN families. `unit/tidas-adapter-migration-contract.test.mts` uses controlled local executables to pin argv, environment, operation reports, version gates, path resolution, hashes and native spawn failures. `unit/post-authoring-finalize-utils-contract.test.mts` pins rewrite resolution, identity reuse, queue/input order and fail-closed preflight behavior. `unit/tidas-cutover-script-contract.test.mts` pins the TypeScript-aware tracked inventory, exact stdout and exit contract. `unit/foundry-golden-diff-contract.test.mts` pins merge-base selection, normalization, cross-platform executable/argv handling, byte-equal credential-free child environments, Node-native comparison, Golden diffs and failure exits. All four require zero-escape native TypeScript and prohibit real external TIDAS or production access.
 
 Wave 26 covers four algorithmic command owners as independent RED/GREEN families. `unit/authoring-plan-command-migration.test.mts` pins the native owner/export, all consumers and exact help while existing authoring command cases preserve phase/row order, lineage, artifacts and hashes. `unit/bundle-sample-command-migration.test.mts` combines that migration contract with realistic selection cases for seed, row type, location and scale fail-close. `unit/incremental-command-migration.test.mts` covers native ownership/help while the existing unit, command and scenario fixtures preserve three-way activation, dependency holds, terminal receipts and no-authority CLI handoff. `unit/topology-command-migration.test.mts` does the same for occurrence-aware graph convergence, cycles, retry/hold behavior and ordered F/P/D handoffs. All four reject explicit type escapes and suppression directives.
 

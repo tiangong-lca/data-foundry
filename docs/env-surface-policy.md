@@ -17,12 +17,15 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - docs/env-surface-policy.md
   - scripts/foundry.ts
+  - scripts/foundry-golden-diff.ts
   - scripts/commands/core.ts
   - scripts/with-lca-account.ts
+  - scripts/lib/foundry-runtime-environment.ts
   - scripts/lib/foundry-runtime-utils.ts
+  - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 entry/runtime/tests/config add, remove or broaden no environment variable; tests use explicit local values and no repository credentials."
+lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
+lastReviewedNote: "Reviewed for Issue #67 Golden isolation: the internal filesystem-env-disabled child policy and allowlisted temporary HOME/config environment are not public .env inputs and forward no ambient credentials."
 ---
 
 # Environment Surface Policy
@@ -70,6 +73,10 @@ When a variable is needed by more than one project, record the owner before docu
 - private operator convenience variables stay in local `.env` and must not become reusable project examples.
 
 The account wrapper reads credential and expected project/user intent only from the selected ignored account profile. `FOUNDRY_AUTH_RECEIPT_*` values are safe, wrapper-generated child bindings and must not be configured in `.env` or account profiles. `FOUNDRY_ACCOUNT_PROFILE_SKIP_AUTH_CHECK` and equivalent bypass variables are unsupported and must not be documented or propagated.
+
+## Internal Credential-Free Child Policy
+
+`FOUNDRY_RUNTIME_ENV_FILE_POLICY=disabled` is an internal child-process binding, not a user-configurable `.env.example` variable. The Golden harness sets it only inside an explicit allowlisted environment shared byte-for-byte by baseline and current commands. That environment replaces HOME, temp, XDG, npm, git and Corepack state with task-local directories, preserves only required platform launcher keys, accepts only `TIANGONG_LCA_CLI_BIN` and `TIDAS_BIN` as caller overrides, and drops ambient `NODE_OPTIONS`, tokens, keys, passwords, sessions, credential URLs and other configuration injection. Ordinary Foundry execution keeps the existing default of loading the repository `.env`; tests seed only a temporary `.env` to prove the disabled and default paths.
 
 ## Automatic Check
 

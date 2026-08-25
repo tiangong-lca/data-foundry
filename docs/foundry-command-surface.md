@@ -19,6 +19,7 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-paths.ts
   - scripts/commands/identity-decisions.ts
   - scripts/commands/classification-decisions.ts
   - scripts/commands/location-decisions.ts
@@ -68,6 +69,7 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - docs/topology-convergence-contract.md
   - test/unit/foundry-command-metadata.test.mts
+  - test/unit/foundry-entry-closure-migration.test.mts
   - test/unit/wave25-identity-decision-command-migration.test.mts
   - test/unit/wave25-classification-location-command-migration.test.mts
   - test/unit/import-curation-entry-barrels-migration.test.mts
@@ -82,8 +84,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 entry/runtime/tests/config preserve all 63 commands, categories/help, exports, argv/exit artifacts, profiles, Worldsteel/Date.parse and remote-write modes."
+lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
+lastReviewedNote: "Reviewed for Issue #67 emitted-runtime hardening: all 63 source/emitted commands share the trusted repository root and active entry while help, categories, profiles, nested argv and remote-write modes remain stable."
 ---
 
 # Foundry Command Surface
@@ -120,6 +122,8 @@ Wave 26 moves `authoring-plan`, `bundle-sample-rows`, `incremental-change-set`, 
 Wave 26 moves `core`, `identity-preflight-run`, and `post-authoring-finalize` to native TypeScript. Core retains all public bootstrap/diagnostic/route commands and exact global help. The identity-preflight family retains its four workflow-internal commands, receipt-bound shell-free argv and fail-closed execution evidence. Finalize retains the existing read-only stage pipeline, report/artifact schema, blocker order and handoff plan. Metadata binds each command to the new focused contract tests without changing registry order or categories.
 
 Wave 27 moves every remaining `test/commands/*.test.mjs` contract to `.test.mts` and makes `pnpm test:commands` a single TypeScript-only glob. Command metadata, retained contracts and file-location references point to the renamed tests; runtime owner modules and the command registry remain unchanged.
+
+The completed emitted-runtime hardening keeps the same command surface while removing an output-directory ambiguity: source `scripts/foundry.ts` and emitted `dist/scripts/foundry.js` resolve one trusted package root independently of CWD, and batch, process-scope and finalize self-invocations use the active entry rather than a hard-coded source path. The entry-closure contract pins full profile discovery, exact help/unknown behavior and nested entry identity for both forms.
 
 ## Categories
 

@@ -39,6 +39,8 @@ checkPaths:
   - scripts/lib/import-curation/trace-summary.ts
   - scripts/foundry-golden-diff.ts
   - scripts/check-tidas-cutover.ts
+  - scripts/check-lint-suppressions.ts
+  - scripts/clean-build-output.ts
   - scripts/with-lca-account.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
@@ -67,6 +69,8 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-environment.ts
+  - scripts/lib/foundry-runtime-paths.ts
   - scripts/lib/foundry-runtime-utils.ts
   - scripts/lib/tidas-adapter.ts
   - scripts/lib/post-authoring-finalize-utils.ts
@@ -215,12 +219,15 @@ checkPaths:
   - test/unit/post-authoring-finalize-utils-contract.test.mts
   - test/unit/tidas-cutover-script-contract.test.mts
   - test/unit/foundry-golden-diff-contract.test.mts
+  - test/unit/foundry-entry-closure-migration.test.mts
+  - test/unit/foundry-runtime-environment.test.mts
+  - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 2574513ba7233b0f3cd3d1babcde70763451878d
-lastReviewedNote: "Reviewed for Issue #67 zero-any completion: the complete TypeScript graph uses semantic interfaces or narrowed unknown under one global Oxlint AST rule while exact artifacts/order/hashes/native errors and fail-closed authority remain unchanged without credentials."
+lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
+lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry/root parity, isolated Golden environments, suppression-resistant complete TS coverage, erasable syntax, clean builds and TS-aware cutover audit preserve exact behavior and authority boundaries."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -251,7 +258,10 @@ Receive external LCA packages or source documents, choose the correct import lan
 - pnpm `11.23.0` is the only package manager for this Node project. The repository has one root `pnpm-workspace.yaml` and one root `pnpm-lock.yaml`; do not add npm, Yarn, a nested lockfile, or a package-manager fallback.
 - Node.js 24 is the runtime line. TypeScript `7.0.2` is the only compiler allowed in the direct or recursive dependency graph: do not add TypeScript 5/6 aliases, `@typescript-eslint`, `typescript-eslint`, or a formatter plugin that loads the TypeScript compiler API.
 - Oxlint owns linting and Prettier owns formatting. Lint and check commands must be read-only; formatting is an explicit write command.
-- `typescript/no-explicit-any` is a repository-wide error with no target-specific override. The zero-ratchet test verifies raw and printed config and proves the full rule rejects a controlled TypeScript fixture; new code must use semantic interfaces or narrow `unknown`, never an explicit-any exception or TS6 compiler API bridge.
+- `typescript/no-explicit-any` is a repository-wide error with no target-specific override. Root lint disables nested Oxlint configuration, bans TypeScript suppression comments, and runs a comment-aware audit that rejects native disable directives across every Git-visible `.ts`/`.mts`/`.cts` file; the zero-ratchet verifies intentional first-party Oxlint/typecheck coverage. New code must use semantic interfaces or narrow `unknown`, never an explicit-any exception or TS6 compiler API bridge.
+- Foundry is a non-JSX Node control plane. Tracked `.jsx` and `.tsx` files are forbidden; adding a UI surface requires an explicit architecture and toolchain decision rather than bypassing the `.ts` graph.
+- TypeScript must keep `erasableSyntaxOnly`. Builds remove the exact repository `dist` tree through the guarded Node-native cleaner before `tsc`; `noEmitOnError` ensures TypeScript diagnostics emit no replacement JavaScript. This is a clean/type-error guarantee, not a claim that arbitrary filesystem I/O failures are atomic.
+- Source and emitted execution share `foundry-runtime-paths.ts`: resolve the trusted package root independently of CWD, select the active `.ts` or `.js` entry, and use that entry for nested Foundry argv. Golden comparison gives both sides one identical allowlisted child environment, isolated HOME/temp/config state, and disabled filesystem env loading; it never forwards ambient credentials or `NODE_OPTIONS`.
 - The owner CLI is installed as the exact project dependency `@tiangong-lca/cli@0.1.1` and invoked with `pnpm exec tiangong-lca`; Foundry runtime adapters and the account wrapper resolve the same installed package manifest and bin directly. Do not use `dlx` or `@latest` for the owner CLI. The external `skills@latest` package remains intentionally floating and its resolved upstream ref must still be recorded in task evidence.
 - The historical pre-migration baseline at commit `c996633832ea23bf7883c7b219f524bf28e6ce7e` contained 160 tracked JavaScript artifacts: 95 runtime `.mjs` files, 64 `.mjs` tests, and one Prettier `.cjs` config. Migration is complete; `test/unit/zero-javascript-ratchet.test.mts` permanently requires zero tracked first-party `.js`/`.mjs`/`.cjs` files, TS-only compiler/test globs, and native `prettier.config.ts`.
 - Issue #63 established the pnpm/TS7 toolchain and typed spine in dependency order: entrypoints, registry/metadata, runtime I/O, artifact/receipt primitives, command families, fixtures, and tests. The permanent ratchet is zero tracked first-party JavaScript; future changes must start directly in TypeScript with equivalent characterization and case coverage.
@@ -259,7 +269,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - `source-semantics.ts`, `tidas-row-utils.ts`, `identity-reference-rewrite-utils.ts`, and their directly coupled contract fixtures use concrete dependency, row, reference, mapping, report, and blocker interfaces or `unknown` narrowed at the read boundary. Their focused worktree-local Oxlint contracts reject every explicit TypeScript `any` node without loading the TypeScript compiler API; existing source/profile/reference bytes, order, errors, and fail-closed write boundaries remain the behavior authority.
 - Canonical FP rewrites never convert amounts. When bundle sampling uses `--block-on-unscaled-canonical-support`, a known finite positive non-1 factor emits `canonical_support_amount_scaling_required`; a missing, non-finite, zero, or negative factor emits `canonical_support_amount_scale_unresolved`. Both remain in the scaling JSONL, command report, and process-scope ledger before any later stage can lose the source-unit evidence.
 - `import-ledger.ts` is a strict compile-time boundary rather than an extension-only migration: it exports recursive JSON types, dependency interfaces, discriminated closeout/finalize reports, verified/blocked/retry/resume row contracts, manifest/write/report results, and uses `unknown` narrowing plus a generic latest-by-key helper with no explicit `any`. The fixture type contract must compile while every JSONL/hash/order/error behavior test stays byte-identical.
-- `foundry-runtime-utils.ts` is the typed shared runtime boundary. It preserves the exact installed `@tiangong-lca/cli@0.1.1` package/bin/schema resolution, environment override command prefix, synchronous text/JSON/JSONL and portable path helpers, task frontmatter/scalar parsing, explicit env-file precedence, stage/blocker envelopes, local CLI subprocess JSON parsing, hashes and deterministic UUIDs. Tests must use an explicit temporary env file and local Node subprocess; they must not call `loadRuntimeEnv()` or read repository credentials.
+- `foundry-runtime-utils.ts` is the typed shared runtime boundary. It preserves the exact installed `@tiangong-lca/cli@0.1.1` package/bin/schema resolution, environment override command prefix, synchronous text/JSON/JSONL and portable path helpers, task frontmatter/scalar parsing, explicit env-file precedence, stage/blocker envelopes, local CLI subprocess JSON parsing, hashes and deterministic UUIDs. `foundry-runtime-paths.ts` owns trusted source/emitted root and entry discovery; `foundry-runtime-environment.ts` owns credential-free child isolation. Tests use explicit temporary env files or the internal filesystem-env-disabled policy and never read repository credentials.
 - `location-quality-utils.ts` is the typed location authoring boundary. It preserves classification/location CLI command strings, installed location schema codes plus fallback/schema-derived target keys, ascending-array/depth-first target order, `#text` leaf paths, exact valid/blocker counters and `location_code_requires_authoring` queue/blocker envelopes. Invalid locations never become write candidates merely because a schema file or nested value is missing.
 - `prewrite-cleanup.ts` is the typed deterministic evidence-cleanup boundary. It preserves timestamp recursion, annual-supply sentinel policy, output-only source/final exchange signature proof, import-trace hash summaries, Foundry namespaces and local-locator SHA redaction. Exchange arrays and object insertion order remain part of the proof hash; circular/unserializable trace input throws before source evidence is deleted.
 - `workflow-queue-context.ts` is the typed queue-attachment boundary. It preserves manifest task order, exact-identity then id-only fallback, last-row JSONL identity binding, dependency/support traversal order, portable artifact paths and native filesystem/parse/invalid-dependency failures. It only assembles local authoring evidence and cannot grant remote-write authority.

@@ -25,6 +25,8 @@ checkPaths:
   - specs/capability-ownership-rules.json
   - scripts/foundry-golden-diff.ts
   - scripts/check-tidas-cutover.ts
+  - scripts/check-lint-suppressions.ts
+  - scripts/clean-build-output.ts
   - scripts/with-lca-account.ts
   - scripts/lib/tidas-adapter.ts
   - scripts/lib/post-authoring-finalize-utils.ts
@@ -55,6 +57,8 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-environment.ts
+  - scripts/lib/foundry-runtime-paths.ts
   - scripts/lib/foundry-runtime-utils.ts
   - scripts/lib/import-curation.ts
   - scripts/lib/import-curation/index.ts
@@ -266,10 +270,13 @@ checkPaths:
   - test/unit/post-authoring-finalize-utils-contract.test.mts
   - test/unit/tidas-cutover-script-contract.test.mts
   - test/unit/foundry-golden-diff-contract.test.mts
+  - test/unit/foundry-entry-closure-migration.test.mts
+  - test/unit/foundry-runtime-environment.test.mts
+  - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 2574513ba7233b0f3cd3d1babcde70763451878d
-lastReviewedNote: "Reviewed for Issue #67 zero-any completion: one global Oxlint AST rule guards the full TypeScript graph while established cases preserve dependency order, exact artifacts/hashes/errors, CommandSpecs, first-binding and fail-closed authority."
+lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
+lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry/root parity, isolated Golden environments, suppression-resistant complete TS coverage, erasable syntax, clean builds and TS-aware cutover audit preserve workflow authority and fail-close boundaries."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -308,7 +315,7 @@ Choose one lane:
 
 ## Toolchain Preflight
 
-Use Node.js 24 and the repository-pinned `pnpm@11.23.0`. TypeScript `7.0.2` is the sole compiler, Oxlint is the linter, and Prettier is the formatter. Do not create npm/Yarn lockfiles, TypeScript 5/6 aliases, or compiler-API lint/format bridges.
+Use Node.js 24 and the repository-pinned `pnpm@11.23.0`. TypeScript `7.0.2` is the sole compiler, Oxlint is the linter, and Prettier is the formatter. TypeScript must keep `erasableSyntaxOnly`; Git-enumerated `.ts`/`.mts`/`.cts` files must all appear in the intentional first-party Oxlint and typecheck graphs, while tracked `.jsx`/`.tsx` are forbidden in this non-JSX control plane. Root lint ignores nested Oxlint configs, bans `@ts-ignore`/`@ts-nocheck`/`@ts-expect-error`, and runs the comment-aware native-disable audit before Oxlint, so inline suppression cannot bypass zero-any or erasable-syntax enforcement. The build removes stale `dist` output before compiling and emits nothing on TypeScript diagnostics; it does not promise atomic recovery from arbitrary filesystem failure. Source and emitted commands must resolve the same trusted root, use their active `.ts`/`.js` entry for nested argv, and remain equivalent from an unrelated CWD. Do not create npm/Yarn lockfiles, TypeScript 5/6 aliases, or compiler-API lint/format bridges.
 
 Issue #63 established the typed spine and its migration is complete. Keep the permanent `test/unit/zero-javascript-ratchet.test.mts` green: tracked first-party JavaScript, compatibility compiler includes, and mixed JS test/lint globs must remain at zero. Drive every later slice with focused characterization plus a realistic case, and verify toolchain changes from a clean arbitrary worktree after `pnpm install --frozen-lockfile`, without credentials, ignored `.foundry` artifacts, a sibling checkout, or another worktree's dependencies.
 
@@ -354,7 +361,7 @@ The identity, classification, and location decision command factories are native
 
 The import-curation leaf, index, and public entry barrels are native TypeScript and must remain pure direct re-exports. Preserve the exact namespace keys and live function identity through both source and emitted Node 24 modules; do not add wrappers, initialization, hidden state, alternate owners, or a parallel `.mjs` entry. The CLI injection keys and metadata owner modules remain the authoritative command-consumer topology.
 
-The TIDAS adapter, finalize utility boundary, cutover audit and Golden harness are native TypeScript. Preserve direct executable-plus-argv invocation, allowed environment forwarding, operation/version/hash reports, finalize rewrite/reuse/freshness order, authoritative Git inventory JSON/exit, and non-HEAD Node-native Golden comparison. Tests use only controlled fake executables and local Git/filesystem fixtures.
+The TIDAS adapter, finalize utility boundary, cutover audit and Golden harness are native TypeScript. Preserve direct executable-plus-argv invocation, operation/version/hash reports, finalize rewrite/reuse/freshness order, authoritative Git inventory JSON/exit, and non-HEAD Node-native Golden comparison. Golden baseline/current children receive one byte-identical allowlisted environment with isolated HOME/temp/config state and filesystem env loading disabled; ambient credentials and live `.env` state are never forwarded. Tests use only controlled fake executables and local Git/filesystem fixtures.
 
 All shared fixtures are native TypeScript. Keep `foundry-core.ts`, `row-builders.ts`, full-context/identity/mutation fixtures and incremental/topology packages deterministic and worktree-local. `fake-tidas.ts` must be invoked through `process.execPath` plus its script argv, never through an executable bit, shell, or platform-specific launcher; fixtures must not read credentials, `.env`, production state, or ignored historical artifacts.
 

@@ -25,6 +25,10 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - scripts/foundry-golden-diff.ts
   - scripts/check-tidas-cutover.ts
+  - scripts/check-lint-suppressions.ts
+  - scripts/clean-build-output.ts
+  - scripts/lib/foundry-runtime-environment.ts
+  - scripts/lib/foundry-runtime-paths.ts
   - scripts/lib/tidas-adapter.ts
   - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
@@ -82,8 +86,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 2574513ba7233b0f3cd3d1babcde70763451878d
-lastReviewedNote: "Reviewed for Issue #67 zero-any completion: global lint plus local decision, source, proof and fixture narrowing changes no capability owner, Edge search, remote operation, transport/readback, schema, profile, Worldsteel/Date.parse or sibling boundary."
+lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
+lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry/root parity, isolated Golden environments, suppression-resistant complete TS coverage, erasable syntax, clean builds and TS-aware cutover audit remain Foundry-owned delivery tooling and move no sibling capability."
 ---
 
 # Capability Ownership Policy
@@ -109,6 +113,7 @@ Foundry owns:
 - offline candidate-topology convergence composition, including fresh-census binding, owner/public/foreign target classification, process-local occurrence mapping, approved multilingual preservation, phased F/P/D artifacts, and zero-inbound delete candidates, without remote dispatch or delete authority;
 - acceptance checks and Stop-hook feedback loops;
 - local test structure for Foundry-owned metadata, command contracts, scenario orchestration, and shared fixtures;
+- repository-wide TypeScript lint/typecheck inventory, root-only Oxlint configuration, native-disable suppression audit, erasable-syntax policy, safe stale-output build cleanup, trusted source/emitted entry discovery, and credential-free Golden child isolation;
 - thin adapters that select and call stable owner entrypoints, verify their machine contracts, and map reports into Foundry gates without reimplementing domain logic.
 - account-profile and Codex-thread intent checks plus a restricted executable/argv process boundary; live session resolution and identity receipt construction remain CLI-owned.
 

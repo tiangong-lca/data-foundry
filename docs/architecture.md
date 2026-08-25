@@ -28,6 +28,8 @@ checkPaths:
   - test/unit/identity-rewrite-explicit-any-contract.test.mts
   - scripts/foundry-golden-diff.ts
   - scripts/check-tidas-cutover.ts
+  - scripts/check-lint-suppressions.ts
+  - scripts/clean-build-output.ts
   - scripts/lib/tidas-adapter.ts
   - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
@@ -57,6 +59,8 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-environment.ts
+  - scripts/lib/foundry-runtime-paths.ts
   - scripts/lib/foundry-runtime-utils.ts
   - scripts/lib/location-quality-utils.ts
   - scripts/lib/bundle-row-types.ts
@@ -137,10 +141,13 @@ checkPaths:
   - prettier.config.ts
   - tsconfig*.json
   - scripts/with-lca-account.ts
+  - test/unit/foundry-entry-closure-migration.test.mts
+  - test/unit/foundry-runtime-environment.test.mts
+  - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 2574513ba7233b0f3cd3d1babcde70763451878d
-lastReviewedNote: "Reviewed for Issue #67 zero-any completion: concrete decision, source and proof types plus one global AST ratchet remain Foundry-local evidence and move no CLI, schema, Edge search, filesystem-error, profile or database authority."
+lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
+lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry/root parity, isolated Golden environments, suppression-resistant complete TS coverage, erasable syntax, clean builds and TS-aware cutover audit remain Foundry-local delivery evidence."
 ---
 
 # Architecture
@@ -172,7 +179,7 @@ profiles
 
 ## Toolchain And Typed-Spine Boundary
 
-Foundry's Node runtime is standardized on Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2`, Oxlint, and Prettier. pnpm is the sole dependency manager and owns the only root workspace and lockfile. The compiler graph must contain TypeScript 7.0.2 only; TypeScript 5/6 aliases, `@typescript-eslint`, and formatting plugins that load the TypeScript compiler API are not compatibility paths.
+Foundry's non-JSX Node runtime is standardized on Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2`, Oxlint, and Prettier. pnpm is the sole dependency manager and owns the only root workspace and lockfile. The compiler graph must contain TypeScript 7.0.2 only and enforce erasable-only runtime syntax; tracked `.jsx`/`.tsx`, TypeScript 5/6 aliases, `@typescript-eslint`, and formatting plugins that load the TypeScript compiler API are not compatibility paths. Git inventory is reconciled against intentional first-party Oxlint and typecheck file lists; root lint disables nested configs, bans TypeScript suppression comments, and runs a comment-aware tracked-TypeScript native-disable audit before Oxlint. The build removes the exact stale `dist` tree before compilation, and `noEmitOnError` prevents TypeScript diagnostics from emitting replacement JavaScript; arbitrary I/O failures are outside that guarantee. Emitted and source runtimes use one trusted-root/active-entry resolver rather than deriving repository state from an output directory or CWD.
 
 The historical Issue #63 baseline contained 160 tracked JavaScript artifacts: 95 runtime files, 64 tests, and one Prettier config. The migration is complete. A permanent zero-JavaScript ratchet and TS-only compiler/test/lint graph now replace the retired migration ledger. The typed spine was introduced in dependency order:
 
@@ -198,7 +205,7 @@ The typed canonical-support and bundle-sampling leaves own local reference rewri
 
 The typed import-ledger boundary now models its JSON graph, external dependencies, report state unions, every emitted row family, manifest and write results directly. Unknown external values are narrowed at the boundary and no explicit `any` remains; the emitted append-only schema and byte/order/hash behavior are unchanged. Typed fixture roots/finalize builders remain test-only delivery infrastructure and do not enter the runtime dependency graph.
 
-The high-fan-in runtime utility boundary is native TypeScript and owns only Foundry-local file/path/frontmatter/env-file/stage mechanics plus exact installed-package discovery. It resolves the pinned CLI package bin/schema assets or an explicit operator/test binary override, but the published CLI still owns sessions and remote behavior. Runtime tests execute only a local Node JSON subprocess and explicit temporary env files; production credentials and repository `.env` remain outside the test boundary.
+The high-fan-in runtime utility boundary is native TypeScript and owns only Foundry-local file/path/frontmatter/env-file/stage mechanics plus exact installed-package discovery. The focused runtime-path leaf resolves a trusted package root and the active source/emitted entry; the runtime-environment leaf creates allowlisted child environments with isolated local state. Runtime tests execute only local Node subprocesses and explicit temporary env files or the internal filesystem-env-disabled policy; production credentials and repository `.env` remain outside the test boundary.
 
 The typed location-quality boundary reads the installed CLI location vocabulary and discovers only schema/fallback-declared location fields. It creates local authoring commands, queue context and blockers; the CLI owns classification lookup/apply and the schema package owns valid codes. Missing schema evidence yields an empty valid-code map rather than approving unknown values, and invalid targets remain blocking before finalize.
 
@@ -242,7 +249,7 @@ The typed decision command boundary now includes `identity-decisions.ts`, `class
 
 The import-curation entry topology is typed end to end. `profiles.ts` and `trace-summary.ts` are identity-preserving leaf barrels; `import-curation/index.ts` aggregates the eight semantic owner exports; `import-curation.ts` is the public entry consumed by `foundry.ts`. These modules contain no runtime wrapper or initialization logic. The CLI dispatcher still receives the same injected functions, and command metadata still names the semantic owner modules rather than assigning behavior to a barrel.
 
-The typed adapter/tooling layer keeps external ownership explicit. `tidas-adapter.ts` only selects and validates the Rust machine contract; finalize utilities coordinate existing CLI/identity stages; cutover audit reads Git inventory; Golden comparison creates isolated worktrees and compares normalized local outputs. None owns converter rules, database behavior or production mutation.
+The typed adapter/tooling layer keeps external ownership explicit. `tidas-adapter.ts` only selects and validates the Rust machine contract; finalize utilities coordinate existing CLI/identity stages; cutover audit reads the TypeScript-aware Git inventory; Golden comparison creates isolated worktrees and compares normalized local outputs under one identical credential-free environment. None owns converter rules, database behavior or production mutation.
 
 The shared fixture topology is typed end to end but remains outside the production build. `foundry-core.ts` provides worktree-local filesystem and command helpers; `row-builders.ts` feeds full-context, identity and mutation evidence fixtures; incremental and topology packages remain separate algorithm fixtures. The fake tidas process is a published-report/exit harness only and is launched through Node executable-plus-argv even without an executable bit. This layer cannot acquire credentials, network access, schema ownership, or mutation authority.
 

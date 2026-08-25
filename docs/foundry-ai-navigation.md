@@ -50,6 +50,8 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-environment.ts
+  - scripts/lib/foundry-runtime-paths.ts
   - scripts/lib/foundry-runtime-utils.ts
   - scripts/lib/location-quality-utils.ts
   - scripts/lib/bundle-row-types.ts
@@ -122,13 +124,16 @@ checkPaths:
   - test/scenarios/scenario-library-algorithm-test-migration.test.mts
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
+  - test/unit/foundry-entry-closure-migration.test.mts
+  - test/unit/foundry-runtime-environment.test.mts
+  - test/unit/lint-suppression-audit.test.mts
   - test/unit/core-command-factory.test.mts
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 2574513ba7233b0f3cd3d1babcde70763451878d
-lastReviewedNote: "Reviewed for Issue #67 zero-any completion: navigation retains focused family contracts under one global Oxlint AST rule while preserving semantic owners, exact artifacts/order/errors and fail-close."
+lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
+lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: navigation exposes trusted source/emitted entry resolution, isolated Golden environments and suppression-resistant complete TS coverage without moving semantic ownership."
 ---
 
 # Foundry AI Navigation
@@ -198,6 +203,8 @@ The typed canonical/materialization leaves are `canonical-support-rewrites.ts` a
 
 The typed runtime leaf is `foundry-runtime-utils.ts`. Navigate there for the pinned installed CLI manifest/bin/schema contract, `TIANGONG_LCA_CLI_BIN` precedence and command rendering, generic text/JSON/JSONL/path/count/search helpers, task frontmatter and scalar fields, explicit env-file loading, list/option/hash/UUID helpers, stage blocker aggregation and CLI JSON subprocess envelopes. `foundry-runtime-utils-contract.test.mts` covers all returned helpers without invoking `loadRuntimeEnv()`; `wave10-runtime-migration.test.mts` pins the zero-any source and every static consumer.
 
+Two focused leaves sit beside that factory. Navigate to `foundry-runtime-paths.ts` when source and emitted commands need the trusted repository root or their active `.ts`/`.js` entry; its closure test runs both forms from an unrelated CWD and pins nested batch/finalize/process argv. Navigate to `foundry-runtime-environment.ts` for credential-free subprocess isolation; Golden uses it to give baseline and current sides byte-identical allowlisted environments while dropping ambient credentials, `NODE_OPTIONS`, user config, and filesystem `.env` loading. Toolchain suppression policy is owned by `check-lint-suppressions.ts`, which uses Oxlint's comment parser to reject native disable directives without confusing strings or regex literals.
+
 The typed location leaf is `location-quality-utils.ts`. Navigate there for classification and location authoring command strings, installed location-code map loading, schema/fallback location target keys, recursive target paths and `location_code_requires_authoring` evidence. It returns four helpers through `foundry.ts`; command/scenario tests cover their bundle, location-decision, curation and finalize consumers while `location-quality-utils-contract.test.mts` pins exact order and envelopes.
 
 The typed deterministic prewrite leaf is `import-curation/internal/prewrite-cleanup.ts`. Navigate there for UTC metadata normalization, annual-supply missing-data sentinel completion, source-row identity indexing, output-only exchange completeness proof, `tidasimport:sourceTrace` hash externalization, Foundry trace namespace repair and local locator redaction. Its proof hashes intentionally preserve exchange array and object insertion order while excluding only `referenceToFlowDataSet`.
@@ -246,7 +253,7 @@ All unit suites use `.test.mts`. Navigate through the four `unit-*-test-migratio
 
 All scenario suites use `.test.mts`. Navigate through the four `scenario-*-test-migration.test.mts` contracts for authoring/curation, identity/reference, mutation/finalize and library/algorithm partitions. Their shared report types describe captured test artifacts only; semantic ownership stays in command metadata and runtime owners.
 
-The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
+The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only with erasable syntax, root-config Oxlint plus the native-suppression audit, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install, clean/type-error-no-emit build proof, and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 
 The typed handoff primitive is `scripts/lib/foundry-command-spec.ts`. Navigate there for exact-key parsing, canonical command hashing, critical-flag uniqueness, final-row artifact facts, or pre-spawn drift checks. Callers must never reconstruct argv from `display`.
 
