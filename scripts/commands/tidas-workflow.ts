@@ -1,23 +1,63 @@
+export type TidasWorkflowOptions = Record<string, unknown> & {
+  help?: unknown;
+  rowsFile?: unknown;
+};
+
+type TidasWorkflowAdapterInput = {
+  repoRoot: string;
+  options: TidasWorkflowOptions;
+};
+
+export type TidasHandshakeAdapterResult = Record<string, unknown> & {
+  binary_version: unknown;
+  report: unknown;
+  validation_describe: unknown;
+  validation_describe_report: unknown;
+};
+
+export type TidasOperationAdapterResult = Record<string, unknown> & {
+  report: Record<string, unknown>;
+};
+
+export type TidasWorkflowFactoryDependencies = {
+  repoRoot: string;
+  runTidasHandshake: (input: TidasWorkflowAdapterInput) => TidasHandshakeAdapterResult;
+  runTidasImport: (input: TidasWorkflowAdapterInput) => TidasOperationAdapterResult;
+  runTidasPackageValidation: (input: TidasWorkflowAdapterInput) => TidasOperationAdapterResult;
+  runTidasRowsValidation: (input: TidasWorkflowAdapterInput) => TidasOperationAdapterResult;
+};
+
+type TidasHelpReport = {
+  schema_version: 1;
+  status: "help";
+  command: string;
+  usage: string[];
+  owner: "tidas";
+  remote_write_mode: "read-only";
+};
+
+export type TidasWorkflowReport = Record<string, unknown>;
+
+function help(command: string, usage: string[]): TidasHelpReport {
+  return {
+    schema_version: 1,
+    status: "help",
+    command,
+    usage,
+    owner: "tidas",
+    remote_write_mode: "read-only",
+  };
+}
+
 export function createTidasWorkflowCommands({
   repoRoot,
   runTidasHandshake,
   runTidasImport,
   runTidasPackageValidation,
   runTidasRowsValidation,
-}) {
-  function help(command, usage) {
-    return {
-      schema_version: 1,
-      status: "help",
-      command,
-      usage,
-      owner: "tidas",
-      remote_write_mode: "read-only",
-    };
-  }
-
+}: TidasWorkflowFactoryDependencies) {
   return {
-    runTidasHandshake(options = {}) {
+    runTidasHandshake(options: TidasWorkflowOptions = {}): TidasWorkflowReport {
       if (options.help) {
         return help("tidas-handshake", [
           "node scripts/foundry.mjs tidas-handshake [--tidas-bin /path/to/tidas] [--tidas-config /path/to/config]",
@@ -35,7 +75,7 @@ export function createTidasWorkflowCommands({
         foundry_adapter: result,
       };
     },
-    runTidasImport(options = {}) {
+    runTidasImport(options: TidasWorkflowOptions = {}): TidasWorkflowReport {
       if (options.help) {
         return help("dataset-tidas-import", [
           "node scripts/foundry.mjs dataset-tidas-import --input <source> --output <dir> [--from-format <format>] [--target tidas|ilcd|both] [--write-mapping]",
@@ -47,7 +87,7 @@ export function createTidasWorkflowCommands({
         foundry_adapter: result,
       };
     },
-    runTidasPackageValidation(options = {}) {
+    runTidasPackageValidation(options: TidasWorkflowOptions = {}): TidasWorkflowReport {
       if (options.help) {
         return help("dataset-tidas-validate", [
           "node scripts/foundry.mjs dataset-tidas-validate --input <package-dir> [--input-format tidas-json|ilcd-xml]",

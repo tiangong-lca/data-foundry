@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createTidasWorkflowCommands } from "../../scripts/commands/tidas-workflow.mjs";
+import { createTidasWorkflowCommands } from "../../scripts/commands/tidas-workflow.ts";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");

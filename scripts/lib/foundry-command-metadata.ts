@@ -45,7 +45,7 @@ const nodeTest = (path: string, assertion: string): CommandKeyTest => ({
 
 const coreOwner = "scripts/commands/core.mjs";
 const taskOwner = "scripts/commands/tasks.mjs";
-const tidasOwner = "scripts/commands/tidas-workflow.mjs";
+const tidasOwner = "scripts/commands/tidas-workflow.ts";
 const importOwner = (moduleName: string): string => `scripts/lib/import-curation/${moduleName}.mjs`;
 
 function workflowEntryForCategory(category: string): CommandWorkflowEntry {

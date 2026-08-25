@@ -23,7 +23,7 @@ import { createPostAuthoringFinalizeCommands } from "./commands/post-authoring-f
 import { createPostWriteCloseoutCommands } from "./commands/post-write-closeout.mjs";
 import { createSupportCacheCommands } from "./commands/support-cache.mjs";
 import { createTaskCommands } from "./commands/tasks.mjs";
-import { createTidasWorkflowCommands } from "./commands/tidas-workflow.mjs";
+import { createTidasWorkflowCommands } from "./commands/tidas-workflow.ts";
 import { createTopologyConvergenceCommands } from "./commands/topology-convergence.mjs";
 import { createUslciBatchImportRunCommands } from "./commands/uslci-batch-import-run.mjs";
 import { createWorldsteelBatchImportRunCommands } from "./commands/worldsteel-batch-import-run.mjs";
