@@ -41,3 +41,28 @@ export function assertAuthoritativeCommand(value: AuthoritativeCommand): {
   }
   return { executable, argv };
 }
+
+export function assertReceiptBoundHandoffAccount(
+  handoffPlan: Record<string, unknown>,
+  env: NodeJS.ProcessEnv,
+): void {
+  const verifiedProjectRef = String(env.FOUNDRY_VERIFIED_PROJECT_REF ?? "").trim();
+  const verifiedUserId = String(env.FOUNDRY_VERIFIED_USER_ID ?? "").trim();
+  const environmentMode = String(env.FOUNDRY_ACCOUNT_MODE ?? "").trim();
+  if (!verifiedProjectRef && !verifiedUserId && !environmentMode) return;
+  const planProjectRef = String(handoffPlan.verified_project_ref ?? "").trim();
+  const planUserId = String(handoffPlan.verified_user_id ?? "").trim();
+  const targetUserId = String(handoffPlan.target_user_id ?? "").trim();
+  const planMode = String(handoffPlan.account_mode ?? "ordinary").trim();
+  if (
+    !verifiedProjectRef ||
+    !verifiedUserId ||
+    !environmentMode ||
+    planProjectRef !== verifiedProjectRef ||
+    planUserId !== verifiedUserId ||
+    targetUserId !== verifiedUserId ||
+    planMode !== environmentMode
+  ) {
+    throw new Error("Handoff account evidence does not match the receipt-bound session.");
+  }
+}

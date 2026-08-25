@@ -11,6 +11,7 @@ import {
   commandSpecOptionValue,
   executeFoundryCommandSpecSync,
 } from "../lib/foundry-command-spec.ts";
+import { assertReceiptBoundHandoffAccount } from "../lib/production-case-policy.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const commandName = "dataset-bafu-process-scope-e2e";
@@ -518,6 +519,16 @@ function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, label }) {
     blockers.push({
       code: "handoff_plan_not_ready",
       message: `Handoff plan status is ${handoffPlan.status || "missing"}.`,
+      handoff_plan: repoRelative(handoffPlanPath),
+    });
+    return { status: "blocked", blockers, stages, handoffPlan };
+  }
+  try {
+    assertReceiptBoundHandoffAccount(handoffPlan, process.env);
+  } catch (error) {
+    blockers.push({
+      code: "handoff_account_evidence_mismatch",
+      message: String(error?.message || error),
       handoff_plan: repoRelative(handoffPlanPath),
     });
     return { status: "blocked", blockers, stages, handoffPlan };
