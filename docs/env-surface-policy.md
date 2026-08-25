@@ -25,7 +25,7 @@ checkPaths:
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-08-26
 lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
-lastReviewedNote: "Reviewed for Issue #69: strict datetime and local realpath ownership checks add no environment input, credential forwarding or public .env surface."
+lastReviewedNote: "Reviewed for Issue #69: strict datetime and non-destructive blocked artifact reporting add no environment input, credential forwarding or public .env surface."
 ---
 
 # Environment Surface Policy

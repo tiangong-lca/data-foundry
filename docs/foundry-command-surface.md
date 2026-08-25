@@ -85,7 +85,7 @@ checkPaths:
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
 lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
-lastReviewedNote: "Reviewed for Issue #69: strict datetime and local stale-artifact ownership do not change the 63-command surface, categories, profiles or remote-write modes."
+lastReviewedNote: "Reviewed for Issue #69: strict datetime and non-destructive stale reporting do not change the 63-command surface, categories, profiles or remote-write modes."
 ---
 
 # Foundry Command Surface

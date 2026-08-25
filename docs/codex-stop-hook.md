@@ -20,7 +20,7 @@ checkPaths:
   - scripts/commands/core.ts
 lastReviewedAt: 2026-08-26
 lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
-lastReviewedNote: "Reviewed for Issue #69: strict datetime cleanup, ownership-guarded artifact invalidation and finalize short-circuiting do not change Stop-hook registration, recursion guard, output or authority."
+lastReviewedNote: "Reviewed for Issue #69: strict datetime cleanup, non-destructive stale reporting and finalize short-circuiting do not change Stop-hook registration, recursion guard, output or authority."
 ---
 
 # Codex Stop Hook
