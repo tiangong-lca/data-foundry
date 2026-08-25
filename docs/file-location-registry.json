@@ -264,7 +264,7 @@
         "README.md",
         "WORKFLOW.md",
         "docs/foundry-command-surface.md",
-        "scripts/commands/incremental-change-set.mjs"
+        "scripts/commands/incremental-change-set.ts"
       ],
       "sensitivity": "non-sensitive local planning contract; private payloads remain in ignored workspaces",
       "tracked": true,
@@ -279,7 +279,7 @@
       "owner": "tiangong-lca-data-foundry",
       "referenced_by": [
         "docs/incremental-change-set-contract.md",
-        "scripts/commands/incremental-change-set.mjs",
+        "scripts/commands/incremental-change-set.ts",
         "test/commands/incremental-change-set.test.mjs"
       ],
       "sensitivity": "non-sensitive schema; no credentials or private payloads",
@@ -298,7 +298,7 @@
         "README.md",
         "WORKFLOW.md",
         "docs/foundry-command-surface.md",
-        "scripts/commands/topology-convergence.mjs"
+        "scripts/commands/topology-convergence.ts"
       ],
       "sensitivity": "non-sensitive planning contract; private candidate and owner payloads remain in ignored workspaces",
       "tracked": true,
@@ -313,7 +313,7 @@
       "owner": "tiangong-lca-data-foundry",
       "referenced_by": [
         "docs/topology-convergence-contract.md",
-        "scripts/commands/topology-convergence.mjs",
+        "scripts/commands/topology-convergence.ts",
         "test/commands/topology-convergence.test.mjs"
       ],
       "sensitivity": "non-sensitive schema; no credentials or private payloads",

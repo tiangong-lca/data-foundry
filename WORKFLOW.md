@@ -29,6 +29,10 @@ checkPaths:
   - scripts/commands/commit-handoff.ts
   - scripts/commands/identity-decision-task.ts
   - scripts/commands/support-cache.ts
+  - scripts/commands/authoring-plan.ts
+  - scripts/commands/bundle-sample-rows.ts
+  - scripts/commands/incremental-change-set.ts
+  - scripts/commands/topology-convergence.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -164,8 +168,8 @@ checkPaths:
   - test/unit/wave25-mutation-manifest-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: typed reference closure/source proof and mutation facade/runner preserve partitions, fallback/order, remote proof, blocker/candidate/reuse order, exact bytes/hashes, native failures and fail-closed write authority."
+lastReviewedCommit: 5af446bb230dd1f37e26d979352eda8c5ab51550
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: typed authoring, bundle sampling, incremental, and topology algorithms preserve deterministic order, hashes, receipt/handoff semantics, exact help and fail-closed write authority."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

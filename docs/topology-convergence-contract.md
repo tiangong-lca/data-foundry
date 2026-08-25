@@ -15,15 +15,16 @@ whenToUpdate:
 checkPaths:
   - docs/topology-convergence-contract.md
   - specs/schemas/topology-convergence.schema.json
-  - scripts/commands/topology-convergence.mjs
+  - scripts/commands/topology-convergence.ts
+  - test/unit/topology-command-migration.test.mts
   - test/fixtures/topology-convergence-fixtures.mjs
   - test/unit/topology-convergence.test.mjs
   - test/commands/topology-convergence.test.mjs
   - test/scenarios/topology-convergence-handoff.test.mjs
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 4d415fac33799011d37094ac79122c1eef3a7855
-lastReviewedNote: "Reviewed for Issue #63: the stage-contract module moved to TypeScript without changing topology composition semantics or artifacts."
+lastReviewedCommit: 5af446bb230dd1f37e26d979352eda8c5ab51550
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: the native zero-escape TS7 composer preserves occurrence-aware graph/cycle/retry semantics, deterministic F/P/D artifacts, handoff blockers, native failures and no-write authority."
 ---
 
 # Topology Convergence Contract

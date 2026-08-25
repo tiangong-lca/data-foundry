@@ -26,6 +26,10 @@ checkPaths:
   - scripts/commands/commit-handoff.ts
   - scripts/commands/identity-decision-task.ts
   - scripts/commands/support-cache.ts
+  - scripts/commands/authoring-plan.ts
+  - scripts/commands/bundle-sample-rows.ts
+  - scripts/commands/incremental-change-set.ts
+  - scripts/commands/topology-convergence.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -145,13 +149,17 @@ checkPaths:
   - test/unit/mutation-manifest-workflow-facade-contract.test.mts
   - test/unit/mutation-manifest-runner-contract.test.mts
   - test/unit/wave25-mutation-manifest-migration.test.mts
+  - test/unit/authoring-plan-command-migration.test.mts
+  - test/unit/bundle-sample-command-migration.test.mts
+  - test/unit/incremental-command-migration.test.mts
+  - test/unit/topology-command-migration.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: tests cover reference DFS/partition/remote algebra, source fallback/public proof order, mutation facade references, write/reference/blocked order, exact report/items bytes and hashes, native errors and fail-closed write authority."
+lastReviewedCommit: 5af446bb230dd1f37e26d979352eda8c5ab51550
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: realistic tests cover authoring lineage/hashes, deterministic sampling and scale fail-close, incremental activation/receipts/handoff, topology graph/cycle/retry/F-P-D behavior, exact help, native errors and write boundaries."
 ---
 
 # Test Layout
@@ -228,6 +236,8 @@ Wave 24 B3 covers curation planning without entering command-family semantics. `
 Wave 24 covers five command factories in three RED/GREEN families. `unit/task-completion-command-factories.test.mts` pins queue/file order, duplicate diagnostics, task move bytes, closeout aggregation/dedupe and exact JSON. `unit/handoff-identity-task-command-factories.test.mts` pins final-row artifact SHA/bytes, authoritative CommandSpec argv, no-command blockers, identity snapshot names/bytes and action dedupe order. `unit/support-cache-command-factory.test.mts` uses local HTTP stubs to pin auth/read/paging order, cache summaries, mapping/manual-block order and native failures without reading credentials or production.
 
 Wave 25 covers the reference stack in three dependency-ordered RED/GREEN families. `unit/workflow-reference-closure-contract.test.mts` pins exact exports, DFS/table mapping, Foundry-trace exclusion, planned-self/public-remote/proven/unresolved/foreign closure partitions, write/reuse candidates and decision/operation order. `unit/workflow-source-reference-context-contract.test.mts` pins explicit/default source file precedence, scope/index order, public-canonical filtering and support proof order. `unit/mutation-manifest-workflow-facade-contract.test.mts` pins every live owner reference; `unit/mutation-manifest-runner-contract.test.mts` pins realistic write/reference/blocked partitions, remote proof, report/items and partition JSONL bytes/hashes, native JSON failure, and empty write output whenever the manifest is blocked. Migration tests require atomic native zero-escape TypeScript and every consumer update.
+
+Wave 26 covers four algorithmic command owners as independent RED/GREEN families. `unit/authoring-plan-command-migration.test.mts` pins the native owner/export, all consumers and exact help while existing authoring command cases preserve phase/row order, lineage, artifacts and hashes. `unit/bundle-sample-command-migration.test.mts` combines that migration contract with realistic selection cases for seed, row type, location and scale fail-close. `unit/incremental-command-migration.test.mts` covers native ownership/help while the existing unit, command and scenario fixtures preserve three-way activation, dependency holds, terminal receipts and no-authority CLI handoff. `unit/topology-command-migration.test.mts` does the same for occurrence-aware graph convergence, cycles, retry/hold behavior and ordered F/P/D handoffs. All four reject explicit type escapes and suppression directives.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 
