@@ -133,6 +133,26 @@ checkPaths:
   - test/unit/context-identity-mutation-fixture-migration.test.mts
   - test/unit/incremental-fixture-migration.test.mts
   - test/unit/topology-fixture-migration.test.mts
+  - test/unit/bafu-family-signatures.test.mts
+  - test/unit/canonical-source-review-report-rewrite.test.mts
+  - test/unit/content-policy-profile-waiver.test.mts
+  - test/unit/execution-capsule-attempt-state.test.mts
+  - test/unit/finalize-resolution-reuse-seed.test.mts
+  - test/unit/foundry-stage-contract.test.mts
+  - test/unit/import-ledger-utils.test.mts
+  - test/unit/incremental-change-set.test.mts
+  - test/unit/library-contact-reuse.test.mts
+  - test/unit/runtime-skill-config.test.mts
+  - test/unit/source-semantics.test.mts
+  - test/unit/support-closure-proof-keys.test.mts
+  - test/unit/tidas-adapter.test.mts
+  - test/unit/tidas-cutover-audit.test.mts
+  - test/unit/topology-convergence.test.mts
+  - test/unit/workflow-semantic-actions.test.mts
+  - test/unit/unit-source-ledger-test-migration.test.mts
+  - test/unit/unit-execution-library-test-migration.test.mts
+  - test/unit/unit-algorithm-adapter-test-migration.test.mts
+  - test/unit/unit-runtime-policy-test-migration.test.mts
   - test/unit/foundry-runtime-utils-contract.test.mts
   - test/unit/wave10-runtime-migration.test.mts
   - test/unit/location-quality-utils-contract.test.mts
@@ -194,8 +214,8 @@ checkPaths:
   - test/unit/import-curation-entry-barrels-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 65b36d340ca7978a4d036ef72fa978fc856d5e6c
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: typed shared fixtures preserve exact namespaces, payload/report bytes and hashes, dependency order, isolated roots, native failures, and Node executable-plus-argv dispatch without changing workflow authority."
+lastReviewedCommit: f168873fb41cb6064f08b1a901a3439eb0b054e4
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 unit-test completion: native TS7 unit suites preserve source/ledger/support, execution/finalize/library, adapter/algorithm and runtime/content-policy behavior without changing workflow or production authority."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -273,6 +293,8 @@ The identity, classification, and location decision command factories are native
 The import-curation leaf, index, and public entry barrels are native TypeScript and must remain pure direct re-exports. Preserve the exact namespace keys and live function identity through both source and emitted Node 24 modules; do not add wrappers, initialization, hidden state, alternate owners, or a parallel `.mjs` entry. The CLI injection keys and metadata owner modules remain the authoritative command-consumer topology.
 
 All shared fixtures are native TypeScript. Keep `foundry-core.ts`, `row-builders.ts`, full-context/identity/mutation fixtures and incremental/topology packages deterministic and worktree-local. `fake-tidas.ts` must be invoked through `process.execPath` plus its script argv, never through an executable bit, shell, or platform-specific launcher; fixtures must not read credentials, `.env`, production state, or ignored historical artifacts.
+
+All unit suites are native `.test.mts`. Preserve the exact existing cases before and after each rename, keep shared fixture imports on `.ts`, and use explicit narrowing or test-local dependency casts only where the runtime owner still exposes a JavaScript-shaped boundary. Unit-test typing must not modify owner behavior, profile defaults, Worldsteel/Date.parse semantics, or remote authority.
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 

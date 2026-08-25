@@ -22,8 +22,8 @@ checkPaths:
   - test/scenarios/topology-convergence-handoff.test.mjs
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 65b36d340ca7978a4d036ef72fa978fc856d5e6c
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: the native TS7 topology fixture preserves candidate graph/mapping order, admission binding, stable package/JSONL bytes and hashes, isolated roots and native errors without changing convergence semantics or authority."
+lastReviewedCommit: f168873fb41cb6064f08b1a901a3439eb0b054e4
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 unit-test completion: the native TS7 topology suite and fixture preserve occurrence identity, canonical hashes, graph/mapping order, admission binding, stable artifacts and native errors without changing convergence semantics or authority."
 ---
 
 # Topology Convergence Contract

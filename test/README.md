@@ -113,6 +113,27 @@ checkPaths:
   - test/unit/context-identity-mutation-fixture-migration.test.mts
   - test/unit/incremental-fixture-migration.test.mts
   - test/unit/topology-fixture-migration.test.mts
+  - test/unit/bafu-family-signatures.test.mts
+  - test/unit/canonical-source-review-report-rewrite.test.mts
+  - test/unit/content-policy-profile-waiver.test.mts
+  - test/unit/execution-capsule-attempt-state.test.mts
+  - test/unit/finalize-resolution-reuse-seed.test.mts
+  - test/unit/foundry-stage-contract.test.mts
+  - test/unit/import-ledger-utils.test.mts
+  - test/unit/incremental-change-set.test.mts
+  - test/unit/library-contact-reuse.test.mts
+  - test/unit/runtime-skill-config.test.mts
+  - test/unit/source-semantics.test.mts
+  - test/unit/support-closure-proof-keys.test.mts
+  - test/unit/tidas-adapter.test.mts
+  - test/unit/tidas-cutover-audit.test.mts
+  - test/unit/tidas-language-utils.test.mts
+  - test/unit/topology-convergence.test.mts
+  - test/unit/workflow-semantic-actions.test.mts
+  - test/unit/unit-source-ledger-test-migration.test.mts
+  - test/unit/unit-execution-library-test-migration.test.mts
+  - test/unit/unit-algorithm-adapter-test-migration.test.mts
+  - test/unit/unit-runtime-policy-test-migration.test.mts
   - test/unit/foundry-runtime-utils-contract.test.mts
   - test/unit/wave10-runtime-migration.test.mts
   - test/unit/location-quality-utils-contract.test.mts
@@ -183,8 +204,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 65b36d340ca7978a4d036ef72fa978fc856d5e6c
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: fixture migration tests pin eight native-only TS7 modules, exact namespaces/live Node references, bytes/hashes/order, isolated temporary roots, native errors and non-executable fake-tidas Node dispatch."
+lastReviewedCommit: f168873fb41cb6064f08b1a901a3439eb0b054e4
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 unit-test completion: four migration families pin all 17 remaining suites as native zero-escape TS7 while their 65 behavior cases, fixture imports, bytes/order/policies and native failures remain unchanged."
 ---
 
 # Test Layout
@@ -269,6 +290,8 @@ Wave 25 covers the three decision command factories. `unit/wave25-identity-decis
 Wave 25 covers two re-export families. `unit/import-curation-leaf-barrels-migration.test.mts` pins the exact profile/trace namespaces and direct owner references. `unit/import-curation-entry-barrels-migration.test.mts` pins the complete eight-export index/public namespace, every owner reference, Foundry CLI injection keys, metadata owner routes, TS-only atomic entry migration, and a clean temporary TypeScript build loaded by Node 24. No fixture reads credentials, `.env`, production state, or ignored Foundry artifacts.
 
 Wave 26 covers the remaining eight shared fixtures as five dependency-ordered RED/GREEN families. `unit/fixture-executable-core-migration.test.mts` pins the core namespace/live Node references, exact writer bytes, native errors and a non-executable `fake-tidas.ts` launched only through `process.execPath`. `unit/row-builders-fixture-migration.test.mts` pins every payload family and one combined byte/hash contract. `unit/context-identity-mutation-fixture-migration.test.mts` pins workflow namespaces, receipt and row bytes, context/dependency order and isolated roots. `unit/incremental-fixture-migration.test.mts` and `unit/topology-fixture-migration.test.mts` pin their policy/graph constants, artifact order, stable JSONL/package bytes and native failures. All consumers use `.ts`; no fixture reads credentials, `.env`, production state or historical `.foundry` data.
+
+Wave 26 completes the unit-test boundary in four more RED/GREEN families. `unit/unit-source-ledger-test-migration.test.mts` covers six source/language/ledger/support suites; `unit/unit-execution-library-test-migration.test.mts` covers capsule attempt, finalize reuse and library contact suites; `unit/unit-algorithm-adapter-test-migration.test.mts` covers tidas adapter/cutover plus incremental/topology suites and typed fixture imports; `unit/unit-runtime-policy-test-migration.test.mts` covers runtime skill, stage and content/semantic policy suites. All 17 legacy `.test.mjs` files are gone, all 65 original cases stay green, and explicit test-side narrowing adds no production behavior or authority.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

@@ -22,8 +22,8 @@ checkPaths:
   - test/scenarios/incremental-change-set-handoff.test.mjs
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a5367648066099c9bd6210cb21f52d13c7317989
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: the native TS7 incremental fixture preserves policy constants, comparison/owner/policy JSONL bytes and hashes, dependency order, isolated roots and native errors without changing composition semantics or authority."
+lastReviewedCommit: f168873fb41cb6064f08b1a901a3439eb0b054e4
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 unit-test completion: the native TS7 incremental helper suite and fixture preserve canonical hashes, merge/noise/array rules, policy artifacts, dependency order and native errors without changing composition semantics or authority."
 ---
 
 # Incremental Change-Set Contract

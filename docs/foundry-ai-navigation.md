@@ -94,12 +94,16 @@ checkPaths:
   - test/fixtures/mutation-fixtures.ts
   - test/fixtures/row-builders.ts
   - test/fixtures/topology-convergence-fixtures.ts
+  - test/unit/unit-source-ledger-test-migration.test.mts
+  - test/unit/unit-execution-library-test-migration.test.mts
+  - test/unit/unit-algorithm-adapter-test-migration.test.mts
+  - test/unit/unit-runtime-policy-test-migration.test.mts
   - scripts/commands/incremental-change-set.mjs
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 65b36d340ca7978a4d036ef72fa978fc856d5e6c
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: navigation records the native typed core/row/workflow/algorithm fixture topology, exact namespace and artifact contracts, isolated roots, native failures, and cross-platform Node process boundary."
+lastReviewedCommit: f168873fb41cb6064f08b1a901a3439eb0b054e4
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 unit-test completion: navigation records four native TS7 unit behavior families, typed fixture edges, governed test paths and unchanged runtime owner boundaries."
 ---
 
 # Foundry AI Navigation
@@ -202,6 +206,8 @@ The typed runtime command owners are `scripts/commands/cli-wrappers.ts`, `execut
 The typed import-curation entry chain is `scripts/lib/import-curation.ts` → `import-curation/index.ts` → semantic owners. `profiles.ts` and `trace-summary.ts` are pure typed leaf barrels. Navigate through the public/index barrels to discover the complete namespace, but edit behavior only in the semantic owner named by command metadata.
 
 The typed fixture chain starts at `test/fixtures/foundry-core.ts` and `row-builders.ts`, then branches into full-context/identity/mutation evidence and independent incremental/topology packages. Navigate to `fake-tidas.ts` only for the stable Rust operation-report/exit harness; dispatch it as `process.execPath` plus script argv. Fixture modules preserve runtime export namespaces and artifact bytes but are never semantic command owners.
+
+All unit suites use `.test.mts`. Navigate through the four `unit-*-test-migration.test.mts` contracts for the source/ledger/support, execution/finalize/library, adapter/algorithm, and runtime/content-policy partitions; navigate from each behavior test to its existing semantic owner without treating test-side type narrowing as a new runtime abstraction.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 

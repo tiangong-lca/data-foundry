@@ -19,8 +19,8 @@ checkPaths:
   - test/unit/execution-capsule-attempt-state.test.mts
   - test/unit/execution-capsule-command-factory.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a5367648066099c9bd6210cb21f52d13c7317989
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: typed shared test helpers change no capsule schema or behavior; exclusive immutable outputs, predecessor lineage, reviewer/boundary checks, seal hashes, zero dispatch, and the no-replay attempt model remain exact."
+lastReviewedCommit: f168873fb41cb6064f08b1a901a3439eb0b054e4
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 unit-test completion: the native TS7 attempt-state suite preserves every disposition/consumption/replay case; capsule schema, immutable output, lineage, review, sealing, zero dispatch and no-replay behavior are unchanged."
 ---
 
 # Execution Capsule Admission Contract
