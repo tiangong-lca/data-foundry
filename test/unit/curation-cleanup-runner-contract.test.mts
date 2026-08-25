@@ -256,3 +256,388 @@ test("malformed readable rows retain native SyntaxError before output", (t) => {
   );
   assert.equal(fs.existsSync(path.join(root, "cleanup")), false);
 });
+
+test("impossible datetime blocks the whole cleanup before partial transforms or cleaned-row output", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-curation-cleanup-date-block-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const processId = "33333333-3333-4333-8333-333333333333";
+  const validProcessId = "44444444-4444-4444-8444-444444444444";
+  const valid = processRow({
+    id: validProcessId,
+    referenceId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    annualSupply: "Not specified",
+    trace: true,
+    timestamp: "2025-03-01T08:00:00+08:00",
+  });
+  const invalid = processRow({
+    id: processId,
+    referenceId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    annualSupply: "Not specified",
+    trace: true,
+    timestamp: "2025-02-30T00:00:00Z",
+  });
+  const rowsFile = path.join(root, "rows", "processes.jsonl");
+  const originalRowsText = writeJsonLines(rowsFile, [valid, invalid]);
+  const staleCleanedRows = path.join(
+    root,
+    ".foundry",
+    "workspaces",
+    "cleanup",
+    "processes.cleaned.jsonl",
+  );
+  const staleManagedBytes = writeJsonLines(staleCleanedRows, [
+    { retained: "blocked-rerun-never-deletes-prior-artifact-by-path" },
+  ]);
+
+  const result = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: ".foundry/workspaces/cleanup",
+      },
+    }),
+  );
+
+  assert.equal(fs.readFileSync(rowsFile, "utf8"), originalRowsText);
+  assert.equal(result.status, "blocked_invalid_datetime_metadata");
+  assert.equal(result.cleaned_rows_file, null);
+  assert.deepEqual(result.source_exchange_completeness_proofs, []);
+  const resultBlockers = records(result.blockers);
+  assert.deepEqual(
+    resultBlockers.map((blocker) => blocker.code),
+    ["invalid_datetime_metadata", "stale_cleanup_artifact_not_invalidated"],
+  );
+  assert.deepEqual(resultBlockers[0], {
+    code: "invalid_datetime_metadata",
+    dataset_type: "process",
+    dataset_id: processId,
+    version: "00.00.001",
+    row_index: 1,
+    path: "$.process.processDataSet.administrativeInformation.dataEntryBy.common:timeStamp",
+    value: "2025-02-30T00:00:00Z",
+    reason: "invalid_calendar_date",
+    action: "Correct the source timestamp or provide a schema-valid exact datetime before cleanup.",
+  });
+  assert.deepEqual(resultBlockers[1], {
+    code: "stale_cleanup_artifact_not_invalidated",
+    path: ".foundry/workspaces/cleanup/processes.cleaned.jsonl",
+    reason: "blocked_cleanup_preserves_existing_artifacts",
+    action:
+      "Preserve and inspect the stale cleaned artifact manually; use a new output path for the repaired rerun.",
+  });
+  const counts = record(result.counts);
+  assert.deepEqual(counts, {
+    rows: 2,
+    blockers: 2,
+    removed_source_trace_blocks: 0,
+    externalized_source_trace_summaries: 0,
+    redacted_foundry_trace_evidence_locators: 0,
+    added_foundry_trace_namespaces: 0,
+    normalized_datetime_values: 0,
+    annual_supply_missing_data_sentinels: 0,
+    source_exchange_completeness_proofs: 0,
+  });
+  const files = record(result.files);
+  assert.equal(files.cleaned_rows, null);
+  assert.equal(fs.readFileSync(staleCleanedRows, "utf8"), staleManagedBytes);
+  assert.equal(
+    fs.readFileSync(path.join(root, String(files.report)), "utf8"),
+    `${JSON.stringify(result, null, 2)}\n`,
+  );
+
+  const explicitOutput = path.join(root, "retained-evidence", "explicit.jsonl");
+  const explicitBytes = writeJsonLines(explicitOutput, [{ retained: true }]);
+  const explicitResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: "cleanup-explicit",
+        outFile: "retained-evidence/explicit.jsonl",
+      },
+    }),
+  );
+  assert.equal(explicitResult.status, "blocked_invalid_datetime_metadata");
+  assert.equal(explicitResult.cleaned_rows_file, null);
+  assert.equal(fs.readFileSync(explicitOutput, "utf8"), explicitBytes);
+
+  const unownedOutput = path.join(root, "unowned-output", "processes.cleaned.jsonl");
+  const unownedBytes = writeJsonLines(unownedOutput, [{ retained: "unowned-default-path" }]);
+  const unownedResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: "unowned-output",
+      },
+    }),
+  );
+  assert.equal(unownedResult.status, "blocked_invalid_datetime_metadata");
+  assert.equal(unownedResult.cleaned_rows_file, null);
+  assert.equal(fs.readFileSync(unownedOutput, "utf8"), unownedBytes);
+
+  const forgedOutput = path.join(root, "forged-output", "processes.cleaned.jsonl");
+  const forgedBytes = writeJsonLines(forgedOutput, [
+    { retained: "forged-marker-is-not-authority" },
+  ]);
+  fs.writeFileSync(
+    `${forgedOutput}.tiangong-foundry-output.json`,
+    `${JSON.stringify({
+      schema_version: 1,
+      command: "dataset-curation-cleanup",
+      output_file: path.resolve(forgedOutput),
+      output_realpath: fs.realpathSync(forgedOutput),
+    })}\n`,
+  );
+  const forgedResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: "forged-output",
+      },
+    }),
+  );
+  assert.equal(forgedResult.status, "blocked_invalid_datetime_metadata");
+  assert.deepEqual(
+    records(forgedResult.blockers).map((blocker) => blocker.code),
+    ["invalid_datetime_metadata", "stale_cleanup_artifact_not_invalidated"],
+  );
+  assert.equal(fs.readFileSync(forgedOutput, "utf8"), forgedBytes);
+
+  writeJsonLines(rowsFile, [valid]);
+  const replacedOutput = path.join(root, "prior-valid-output", "processes.cleaned.jsonl");
+  const priorValidResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: "prior-valid-output",
+      },
+    }),
+  );
+  assert.equal(priorValidResult.status, "completed");
+  const replacementBytes = writeJsonLines(replacedOutput, [
+    { retained: "same-path-artifact-replaced-after-valid-run" },
+  ]);
+  writeJsonLines(rowsFile, [invalid]);
+  const replacedResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: "prior-valid-output",
+      },
+    }),
+  );
+  assert.equal(replacedResult.status, "blocked_invalid_datetime_metadata");
+  assert.deepEqual(
+    records(replacedResult.blockers).map((blocker) => blocker.code),
+    ["invalid_datetime_metadata", "stale_cleanup_artifact_not_invalidated"],
+  );
+  assert.equal(fs.readFileSync(replacedOutput, "utf8"), replacementBytes);
+
+  writeJsonLines(rowsFile, [valid]);
+  const managedReplacedOutput = path.join(
+    root,
+    ".foundry",
+    "workspaces",
+    "prior-valid-output",
+    "processes.cleaned.jsonl",
+  );
+  const managedPriorValidResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: ".foundry/workspaces/prior-valid-output",
+      },
+    }),
+  );
+  assert.equal(managedPriorValidResult.status, "completed");
+  const managedReplacementBytes = writeJsonLines(managedReplacedOutput, [
+    { retained: "managed-same-path-artifact-replaced-after-valid-run" },
+  ]);
+  writeJsonLines(rowsFile, [invalid]);
+  const managedReplacedResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: ".foundry/workspaces/prior-valid-output",
+      },
+    }),
+  );
+  assert.equal(managedReplacedResult.status, "blocked_invalid_datetime_metadata");
+  assert.deepEqual(
+    records(managedReplacedResult.blockers).map((blocker) => blocker.code),
+    ["invalid_datetime_metadata", "stale_cleanup_artifact_not_invalidated"],
+  );
+  assert.equal(fs.readFileSync(managedReplacedOutput, "utf8"), managedReplacementBytes);
+});
+
+test("lexically managed cleanup path cannot mint ownership or delete through a symlink ancestor", (t) => {
+  if (process.platform === "win32") {
+    t.skip("Windows symlink creation requires privileges not guaranteed by the test contract.");
+    return;
+  }
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-cleanup-symlink-root-"));
+  const external = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-cleanup-symlink-victim-"));
+  t.after(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(external, { recursive: true, force: true });
+  });
+  const managedParent = path.join(root, ".foundry", "workspaces");
+  const linkedOutput = path.join(managedParent, "linked-cleanup");
+  fs.mkdirSync(managedParent, { recursive: true });
+  fs.symlinkSync(external, linkedOutput, "dir");
+  const rowsFile = path.join(root, "rows", "processes.jsonl");
+  const validRow = processRow({
+    id: "99999999-9999-4999-8999-999999999999",
+    referenceId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+    annualSupply: "Not specified",
+    timestamp: "2025-02-28T00:00:00Z",
+  });
+  writeJsonLines(rowsFile, [validRow]);
+  const victim = path.join(external, "processes.cleaned.jsonl");
+  const ownershipMarker = `${victim}.tiangong-foundry-output.json`;
+
+  const validResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: ".foundry/workspaces/linked-cleanup",
+      },
+    }),
+  );
+  assert.equal(validResult.status, "completed");
+  assert.equal(fs.existsSync(victim), true);
+  assert.equal(fs.existsSync(ownershipMarker), false);
+  const victimBytes = fs.readFileSync(victim, "utf8");
+
+  writeJsonLines(rowsFile, [
+    processRow({
+      id: "99999999-9999-4999-8999-999999999999",
+      referenceId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      annualSupply: "Not specified",
+      timestamp: "2025-02-30T00:00:00Z",
+    }),
+  ]);
+
+  const blockedResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: ".foundry/workspaces/linked-cleanup",
+      },
+    }),
+  );
+
+  assert.equal(blockedResult.status, "blocked_invalid_datetime_metadata");
+  assert.equal(blockedResult.cleaned_rows_file, null);
+  assert.equal(fs.existsSync(ownershipMarker), false);
+  assert.equal(fs.readFileSync(victim, "utf8"), victimBytes);
+});
+
+test("managed workspace root or .foundry symlinks cannot authorize cleanup deletion", (t) => {
+  if (process.platform === "win32") {
+    t.skip("Windows symlink creation requires privileges not guaranteed by the test contract.");
+    return;
+  }
+  for (const symlinkAt of ["workspaces", ".foundry"] as const) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), `foundry-cleanup-${symlinkAt}-root-`));
+    const external = fs.mkdtempSync(path.join(os.tmpdir(), `foundry-cleanup-${symlinkAt}-victim-`));
+    t.after(() => {
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.rmSync(external, { recursive: true, force: true });
+    });
+    const rowsFile = path.join(root, "rows", "processes.jsonl");
+    writeJsonLines(rowsFile, [
+      processRow({
+        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        referenceId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        annualSupply: "Not specified",
+        timestamp: "2025-02-30T00:00:00Z",
+      }),
+    ]);
+    if (symlinkAt === "workspaces") {
+      fs.mkdirSync(path.join(root, ".foundry"), { recursive: true });
+      fs.symlinkSync(external, path.join(root, ".foundry", "workspaces"), "dir");
+    } else {
+      fs.mkdirSync(path.join(external, "workspaces"), { recursive: true });
+      fs.symlinkSync(external, path.join(root, ".foundry"), "dir");
+    }
+    const victim = path.join(
+      external,
+      ...(symlinkAt === "workspaces" ? [] : ["workspaces"]),
+      "task",
+      "processes.cleaned.jsonl",
+    );
+    const victimBytes = writeJsonLines(victim, [
+      { retained: `managed-${symlinkAt}-realpath-is-outside-repository` },
+    ]);
+
+    const result = record(
+      runDatasetCurationCleanup({
+        repoRoot: root,
+        options: {
+          type: "process",
+          rowsFile: "rows/processes.jsonl",
+          outDir: ".foundry/workspaces/task",
+        },
+      }),
+    );
+
+    assert.equal(result.status, "blocked_invalid_datetime_metadata");
+    assert.equal(fs.readFileSync(victim, "utf8"), victimBytes, symlinkAt);
+  }
+});
+
+test("shared managed workspace container is not a cleanup task output root", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-cleanup-shared-root-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const rowsFile = path.join(root, "rows", "processes.jsonl");
+  writeJsonLines(rowsFile, [
+    processRow({
+      id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      referenceId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      annualSupply: "Not specified",
+      timestamp: "2025-02-30T00:00:00Z",
+    }),
+  ]);
+  const sharedRootOutput = path.join(root, ".foundry", "workspaces", "processes.cleaned.jsonl");
+  const sharedRootBytes = writeJsonLines(sharedRootOutput, [
+    { retained: "shared-workspace-container-is-not-a-task-output" },
+  ]);
+
+  const result = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: ".foundry/workspaces",
+      },
+    }),
+  );
+
+  assert.equal(result.status, "blocked_invalid_datetime_metadata");
+  assert.deepEqual(
+    records(result.blockers).map((blocker) => blocker.code),
+    ["invalid_datetime_metadata", "stale_cleanup_artifact_not_invalidated"],
+  );
+  assert.equal(fs.readFileSync(sharedRootOutput, "utf8"), sharedRootBytes);
+});

@@ -106,6 +106,7 @@ checkPaths:
   - scripts/lib/import-ledger.ts
   - scripts/lib/canonical-support-rewrites.ts
   - scripts/lib/bundle-sample-utils.ts
+  - specs/prewrite-content-policy.json
   - test/fixtures/fixture-roots.ts
   - test/fixtures/finalize-fixtures.ts
   - test/fixtures/fake-tidas.ts
@@ -136,8 +137,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
-lastReviewedNote: "Reviewed for Issue #68: navigation binds the Worldsteel factory, profile authorization, four active documents, retained evidence, and exact Golden migration while documenting the deliberate one-way Docpact route from dataset-specific paths."
+lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
+lastReviewedNote: "Reviewed for Issue #69: navigation identifies strict datetime, non-destructive stale reporting, bundle preservation, blocked CLI/finalize flow and focused contracts."
 ---
 
 # Foundry AI Navigation
@@ -201,7 +202,7 @@ The focused contracts are local diagnostics only. The permanent repository bound
 
 The typed family/ledger leaves are `bafu-family-signatures.ts` and `import-ledger.ts`. Navigate to the former for location-aware family-name normalization, ordered skeleton/flow-template/amount-vector hashes, scope-order master selection, compact planning fields, and missing-signature summaries. Navigate to the latter for append-only verified/blocked/dependency/retry JSONL, row identity and payload hashes, human-action text, dedupe keys, manifest paths, and read-only resume/skipped reports. Preserve insertion order, exact JSON bytes, and native parse/filesystem failures during caller migrations.
 
-The typed canonical/materialization leaves are `canonical-support-rewrites.ts` and `bundle-sample-utils.ts`. Navigate to the former for normalized source-unit lookup, canonical FP/UG proof, stale-version and account-local precedence, exact rewrite/blocker/scaling artifacts, or deferred rows. Navigate to the latter for source traces and field repair, classification/elementary queues, profile-safe library contacts, bundle selection, and identity-key dedupe. Bundle sampling must pass the same scaling accumulator and block flag into canonical rewrites before the original source-unit reference is lost; known non-1 and unresolved invalid scales have distinct blocker codes.
+The typed canonical/materialization leaves are `canonical-support-rewrites.ts` and `bundle-sample-utils.ts`. Navigate to the former for normalized source-unit lookup, canonical FP/UG proof, stale-version and account-local precedence, exact rewrite/blocker/scaling artifacts, or deferred rows. Navigate to the latter for source traces and field repair, classification/elementary queues, profile-safe library contacts, bundle selection, and identity-key dedupe. Bundle sampling delegates offset timestamp conversion to the strict prewrite owner; impossible or timezone-less source datetimes must remain byte-visible for cleanup to block, never roll forward or gain an invented `Z`. Bundle sampling must also pass the same scaling accumulator and block flag into canonical rewrites before the original source-unit reference is lost; known non-1 and unresolved invalid scales have distinct blocker codes.
 
 `import-ledger.ts` exports the typed ledger vocabulary as well as its factory. Navigate there for recursive JSON values, dependency injection, closeout/finalize discriminators, verified/blocked/dependency/retry/resume rows, manifests, write results, and read-only report results. `import-ledger-type-contract.test.mts` compiles positive and negative usage outside the main tsconfig; behavioral tests remain authoritative for bytes and ordering. Test-only shared paths/default report builders live in `test/fixtures/fixture-roots.ts` and `finalize-fixtures.ts`.
 
@@ -211,7 +212,7 @@ Two focused leaves sit beside that factory. Navigate to `foundry-runtime-paths.t
 
 The typed location leaf is `location-quality-utils.ts`. Navigate there for classification and location authoring command strings, installed location-code map loading, schema/fallback location target keys, recursive target paths and `location_code_requires_authoring` evidence. It returns four helpers through `foundry.ts`; command/scenario tests cover their bundle, location-decision, curation and finalize consumers while `location-quality-utils-contract.test.mts` pins exact order and envelopes.
 
-The typed deterministic prewrite leaf is `import-curation/internal/prewrite-cleanup.ts`. Navigate there for UTC metadata normalization, annual-supply missing-data sentinel completion, source-row identity indexing, output-only exchange completeness proof, `tidasimport:sourceTrace` hash externalization, Foundry trace namespace repair and local locator redaction. Its proof hashes intentionally preserve exchange array and object insertion order while excluding only `referenceToFlowDataSet`.
+The typed deterministic prewrite leaf is `import-curation/internal/prewrite-cleanup.ts`. Navigate there for strict timezone-qualified datetime classification, Gregorian/clock/offset validation, atomic normalization planning, annual-supply missing-data sentinel completion, source-row identity indexing, output-only exchange completeness proof, `tidasimport:sourceTrace` hash externalization, Foundry trace namespace repair and local locator redaction. `curation-cleanup.ts` owns row identity enrichment plus `blocked_invalid_datetime_metadata` report/no-output behavior. Its proof hashes intentionally preserve exchange array and object insertion order while excluding only `referenceToFlowDataSet`.
 
 The typed queue leaf is `import-curation/internal/workflow-queue-context.ts`. Navigate there for annual-supply schema actions, curation manifest loading, task/artifact path resolution, exact-version and id-only task selection, closure dependency/support attachment, authoring JSONL identity indexes and identity-preflight request paths. Its tests pin encounter order, duplicate-map behavior, portable paths and native fail-closed errors across all static consumers.
 
@@ -237,7 +238,7 @@ The typed decision proof leaf is `import-curation/internal/workflow-decision-ful
 
 The typed authoring entry layer is split by responsibility. `internal/authoring-task-workflow.ts` and `internal/authoring-patch-workflow.ts` are pure live-reference facades. `authoring-packages.ts` owns gate-entry selection, content-addressed snapshot copies, task directories and manifest/JSONL materialization. `patch-collect.ts` owns task-output admission, invalid-JSON/blocker classification, ordered patch-set aggregation and the blocker-free batch write. Navigate to the underlying workflow modules for validation rules; do not add duplicate logic to the facades or runners.
 
-The typed curation planner is split the same way. `internal/curation-gate-workflow.ts` is a pure live-reference aggregate; `curation-gate.ts` owns ordered local evidence aggregation and authoring-package/report materialization; `curation-cleanup.ts` owns deterministic deep-cloned prewrite rows, sentinel/trace/proof/redaction counts and JSONL/report bytes. Navigate to the typed internal owners for individual rules rather than duplicating them in either runner.
+The typed curation planner is split the same way. `internal/curation-gate-workflow.ts` is a pure live-reference aggregate; `curation-gate.ts` owns ordered local evidence aggregation and authoring-package/report materialization; `curation-cleanup.ts` owns deterministic deep-cloned prewrite rows, batch-wide datetime preflight, blocker-only reports, sentinel/trace/proof/redaction counts and JSONL/report bytes. Navigate to the typed internal owners for individual rules rather than duplicating them in either runner.
 
 The typed command factories are `scripts/commands/tasks.ts`, `import-completion.ts`, `commit-handoff.ts`, `identity-decision-task.ts`, and `support-cache.ts`. Navigate to them for filesystem task state, closeout aggregation, artifact-bound commit/verify CommandSpecs, content-addressed identity decision tasks, or canonical public-support read/autofill behavior respectively. They preserve the existing command registry and metadata names and must not absorb remote execution semantics.
 
@@ -247,7 +248,7 @@ The typed high-level orchestration path is `library-scope-workflow.ts` for profi
 
 The typed runtime command owners are `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts`. Navigate to the wrapper for direct executable/argv delegation and process diagnostics, to the capsule for offline immutable admission and attempt-state evidence, and to closeout for already-produced commit/readback aggregation. Root uniqueness and accepted-difference decisions remain in `post-write-root-proof.ts` and `remote-verification-accepted-diff.ts`.
 
-The typed final command owners are `scripts/commands/core.ts`, `identity-preflight-run.ts`, and `post-authoring-finalize.ts`. Navigate to core for local bootstrap, environment/workflow/storage/surface diagnostics and route artifacts; to identity preflight for receipt-bound CLI argv, request/target/binding hashes, positive-only cache and stdout/disk execution evidence; and to finalize for ordered rewrite, cleanup, validation, curation, dry-run, mutation-manifest and handoff aggregation. Finalize utilities live at `post-authoring-finalize-utils.ts`.
+The typed final command owners are `scripts/commands/core.ts`, `identity-preflight-run.ts`, and `post-authoring-finalize.ts`. Navigate to core for local bootstrap, environment/workflow/storage/surface diagnostics and route artifacts; to identity preflight for receipt-bound CLI argv, request/target/binding hashes, positive-only cache and stdout/disk execution evidence; and to finalize for ordered rewrite, parent cleanup, nested support, validation, curation, dry-run, mutation-manifest and handoff aggregation. Finalize treats any non-completed cleanup or null cleaned artifact as `curation_cleanup_not_ready`, preserves/reports every pre-existing stale path without deleting it, appends the blocked import ledger, writes no CommandSpec, and constructs no downstream stage. Finalize utilities live at `post-authoring-finalize-utils.ts`.
 
 The typed import-curation entry chain is `scripts/lib/import-curation.ts` → `import-curation/index.ts` → semantic owners. `profiles.ts` and `trace-summary.ts` are pure typed leaf barrels. Navigate through the public/index barrels to discover the complete namespace, but edit behavior only in the semantic owner named by command metadata.
 
@@ -311,7 +312,7 @@ Layer rules:
 - `dataset-payload.ts`: TIDAS row payload unwrap, dataset root/type detection, dataset identity, and identity map keys.
 - `profiles-config.ts`: import profile loading, normalization, listing, and lookup.
 - `trace-summary.ts`: Foundry trace entry collection and compact trace summaries.
-- `prewrite-cleanup.ts`: deterministic write-preparation transforms such as annual-supply sentinel completion, import trace externalization, Foundry trace namespace repair, local locator redaction, and timestamp normalization.
+- `prewrite-cleanup.ts`: strict datetime validation and atomic write-preparation transforms such as annual-supply sentinel completion, import trace externalization, Foundry trace namespace repair and local locator redaction.
 - `full-context-proof.ts`: full-context package/task proof loading and blocker construction.
 - `authoring-task-workflow.ts`: typed facade for AI authoring package to task manifest/template preparation helpers.
 - `authoring-patch-workflow.ts`: typed facade for AI patch collection, patch-set validation, and full-context readiness helpers.

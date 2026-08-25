@@ -84,8 +84,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
-lastReviewedNote: "Reviewed for Issue #68: aligning Worldsteel runtime/profile documentation and routing remains Data Foundry-local; workspace ownership and cross-repository boundaries are unchanged."
+lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
+lastReviewedNote: "Reviewed for Issue #69: strict datetime cleanup and finalize fail-close are Data Foundry-local; workspace repository ownership and cross-project boundaries are unchanged."
 ---
 
 # Workspace Project Map

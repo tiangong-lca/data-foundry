@@ -656,11 +656,23 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ownerModule: typedImportOwner("curation-cleanup"),
     ownerExport: "runDatasetCurationCleanup",
     inputs: ["curated rows file", "profile cleanup policy"],
-    outputs: ["dataset-curation-cleanup-report.json", "cleaned rows file"],
+    outputs: [
+      "dataset-curation-cleanup-report.json",
+      "completed: cleaned rows file",
+      "blocked_invalid_datetime_metadata: ordered blockers, null cleaned rows, and every pre-existing stale output preserved",
+    ],
     keyTests: [
       nodeTest(
         "test/scenarios/curation-cleanup-quality-gates.test.mts",
         "curation cleanup fills placeholder annual supply with searchable sentinel",
+      ),
+      nodeTest(
+        "test/scenarios/curation-cleanup-quality-gates.test.mts",
+        "curation cleanup CLI exits nonzero and emits only blocker evidence for an impossible datetime",
+      ),
+      nodeTest(
+        "test/unit/curation-cleanup-runner-contract.test.mts",
+        "impossible datetime blocks the whole cleanup before partial transforms or cleaned-row output",
       ),
       importCurationEntryContract,
     ],
@@ -1117,11 +1129,12 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       "decision/patch evidence",
     ],
     outputs: [
-      "final rows file",
-      "schema report",
-      "cleanup report",
-      "dry-run report",
-      "post-authoring-finalize report",
+      "post-authoring-finalize report (always)",
+      "cleanup report (always after cleanup attempt)",
+      "cleanup-complete: final rows file",
+      "cleanup-complete: schema and dry-run reports",
+      "cleanup-blocked: ordered blockers, blocked import ledger, null final rows, no CommandSpec",
+      "cleanup-blocked: every pre-existing stale artifact is preserved and reported",
     ],
     keyTests: [
       goldenDiff,
@@ -1137,6 +1150,10 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       nodeTest(
         "test/scenarios/post-authoring-finalize-gates.test.mts",
         "post-authoring finalize auto-builds curation queue context from sibling process bundle rows",
+      ),
+      nodeTest(
+        "test/scenarios/post-authoring-finalize-gates.test.mts",
+        "post-authoring finalize stops after invalid datetime cleanup without downstream evidence",
       ),
     ],
   }),

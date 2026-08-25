@@ -86,8 +86,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
-lastReviewedNote: "Reviewed for Issue #68: Worldsteel's frozen adapter/profile support-mint truth remains Foundry-owned profile governance and moves no CLI, database, SDK, skill, or sibling-repository capability."
+lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
+lastReviewedNote: "Reviewed for Issue #69: strict datetime and non-destructive blocked artifact reporting stay in Data Foundry; Rust schema and CLI/database authority do not move."
 ---
 
 # Capability Ownership Policy
@@ -132,7 +132,7 @@ The TypeScript migration does not change capability ownership. Foundry may type 
 
 Cross-platform Git line-ending and test-harness policy are also Foundry-owned delivery tooling. They may normalize repository text and fixture dispatch, but they do not normalize or redefine any sibling capability output.
 
-Foundry also owns portability of its local artifact paths, command-plan parsing, and durable file writes. Separator normalization and writable-descriptor fsync preserve the same Foundry contract on each OS; they do not move CLI execution or Rust validation semantics into Foundry.
+Foundry also owns portability and fail-closed handling of its local artifact paths, command-plan parsing, and durable file writes. Separator normalization and writable-descriptor fsync preserve the same Foundry contract on each OS. Blocked cleanup/finalize never delete pre-existing artifacts; they null current output aliases, report stale paths, and require a new output path or deliberate operator-managed archival. These controls do not move CLI execution or Rust validation semantics into Foundry.
 
 Foundry owns the `tiangong-foundry.command-spec.v1` handoff envelope: strict executable/argv validation, duplicate critical-flag rejection, reader-only display rendering, command hashing, and exact input artifact facts. The published CLI still owns the command's remote behavior. Foundry runners may execute only the parsed executable and argv with `shell=false`, after rechecking bound artifact bytes.
 

@@ -141,8 +141,9 @@ export function exitCodeForCommand(
       return statusIs(result, ["help", "ready", "ready_with_profile_waivers"]) ? 0 : 1;
     case "dataset-authoring-plan":
     case "dataset-library-index-build":
-    case "dataset-curation-cleanup":
       return 0;
+    case "dataset-curation-cleanup":
+      return statusIs(result, ["help", "completed"]) ? 0 : 1;
     case "dataset-library-authoring-plan":
       return statusIs(result, ["help", "ready_for_ai_library_decisions", "ready_no_action_items"])
         ? 0

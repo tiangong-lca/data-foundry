@@ -12,6 +12,7 @@ function utils() {
       "@xml:lang": lang,
       "#text": text,
     }),
+    normalizeUtcDateTimeString: () => null,
     canonicalSourceReferenceForRelation: () => null,
     cloneJson: <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T,
     sourceReferenceSnapshot: (reference: unknown) => {

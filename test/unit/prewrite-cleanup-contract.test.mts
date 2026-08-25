@@ -72,12 +72,13 @@ function outputExchange(amount: string, flowId: string, extra: JsonObject = {}) 
 test("datetime normalization preserves accepted syntax, exact UTC bytes, recursion order, arrays, and invalids", () => {
   assert.equal(cleanup.normalizeUtcDateTimeString(null), null);
   assert.equal(cleanup.normalizeUtcDateTimeString("not-a-date"), null);
-  assert.equal(
-    cleanup.normalizeUtcDateTimeString("2025-02-30T00:00:00Z"),
-    "2025-03-02T00:00:00.000Z",
-  );
+  assert.equal(cleanup.normalizeUtcDateTimeString("2025-02-30T00:00:00Z"), null);
   assert.equal(cleanup.normalizeUtcDateTimeString("2025-13-01T00:00:00Z"), null);
   assert.equal(cleanup.normalizeUtcDateTimeString("2025-01-02T03:04:05.000Z"), null);
+  assert.equal(
+    cleanup.normalizeUtcDateTimeString("2024-02-29T23:59:59Z"),
+    "2024-02-29T23:59:59.000Z",
+  );
   assert.equal(
     cleanup.normalizeUtcDateTimeString("2025-01-02T03:04:05+02:00"),
     "2025-01-02T01:04:05.000Z",
@@ -91,8 +92,8 @@ test("datetime normalization preserves accepted syntax, exact UTC bytes, recursi
     "common:timeStamp": "2025-01-02T03:04:05+02:00",
     nested: [
       { "common:dateOfLastRevision": "2025-01-02T03:04:05Z" },
-      { "common:timeStamp": "invalid" },
-      { other: { "common:timeStamp": 7 } },
+      { "common:timeStamp": "2025-01-02T03:04:05.000Z" },
+      { other: "not-a-datetime-field" },
     ],
   };
   assert.equal(cleanup.normalizeDateTimeMetadata(value), 2);
@@ -100,11 +101,105 @@ test("datetime normalization preserves accepted syntax, exact UTC bytes, recursi
     "common:timeStamp": "2025-01-02T01:04:05.000Z",
     nested: [
       { "common:dateOfLastRevision": "2025-01-02T03:04:05.000Z" },
-      { "common:timeStamp": "invalid" },
-      { other: { "common:timeStamp": 7 } },
+      { "common:timeStamp": "2025-01-02T03:04:05.000Z" },
+      { other: "not-a-datetime-field" },
     ],
   });
   assert.equal(cleanup.normalizeDateTimeMetadata(null), 0);
+});
+
+test("datetime metadata rejects impossible calendars, invalid timezones, partials, sentinels, and non-strings without partial mutation", () => {
+  const invalidCases: Array<[unknown, string]> = [
+    ["2025-02-29T00:00:00Z", "invalid_calendar_date"],
+    ["2025-02-30T00:00:00Z", "invalid_calendar_date"],
+    ["2025-02-30T03:04:05+02:00", "invalid_calendar_date"],
+    ["2025-04-31T00:00:00Z", "invalid_calendar_date"],
+    ["1900-02-29T00:00:00Z", "invalid_calendar_date"],
+    ["2100-02-29T00:00:00Z", "invalid_calendar_date"],
+    ["2025-00-01T00:00:00Z", "invalid_calendar_date"],
+    ["2025-13-01T00:00:00Z", "invalid_calendar_date"],
+    ["2025-01-00T00:00:00Z", "invalid_calendar_date"],
+    ["2025-01-02T24:00:00Z", "invalid_time"],
+    ["2025-01-02T23:60:00Z", "invalid_time"],
+    ["2025-01-02T23:59:60Z", "invalid_time"],
+    ["2025-01-02T03:04:05+24:00", "invalid_timezone_offset"],
+    ["2025-01-02T03:04:05+23:60", "invalid_timezone_offset"],
+    ["2025-01-02", "invalid_datetime_syntax"],
+    ["2025-01-02T03:04:05", "invalid_datetime_syntax"],
+    ["Not specified", "invalid_datetime_syntax"],
+    [7, "invalid_datetime_value_type"],
+    [null, "invalid_datetime_value_type"],
+  ];
+
+  for (const [value, reason] of invalidCases) {
+    const row = { "common:timeStamp": value };
+    const before = structuredClone(row);
+    assert.throws(
+      () => cleanup.normalizeDateTimeMetadata(row),
+      (error: unknown) => {
+        const failure = error as Error & { blockers?: unknown };
+        assert.equal(failure.name, "InvalidDateTimeMetadataError");
+        assert.deepEqual(failure.blockers, [
+          {
+            code: "invalid_datetime_metadata",
+            path: "$.common:timeStamp",
+            value,
+            reason,
+          },
+        ]);
+        return true;
+      },
+      String(value),
+    );
+    assert.deepEqual(row, before, String(value));
+  }
+
+  const mixed = {
+    "common:timeStamp": "2025-01-02T03:04:05+02:00",
+    nested: { "common:dateOfLastRevision": "2025-02-30T00:00:00Z" },
+  };
+  const before = structuredClone(mixed);
+  assert.throws(() => cleanup.normalizeDateTimeMetadata(mixed));
+  assert.deepEqual(mixed, before);
+
+  assert.equal(
+    cleanup.normalizeUtcDateTimeString("2025-01-02T03:04:05.1234Z"),
+    "2025-01-02T03:04:05.123Z",
+  );
+  assert.equal(
+    cleanup.normalizeUtcDateTimeString("2025-01-02T03:04:05+14:00"),
+    "2025-01-01T13:04:05.000Z",
+  );
+  assert.equal(
+    cleanup.normalizeUtcDateTimeString("2025-01-02T03:04:05+14:01"),
+    "2025-01-01T13:03:05.000Z",
+  );
+  assert.equal(
+    cleanup.normalizeUtcDateTimeString("2025-01-02T03:04:05+15:00"),
+    "2025-01-01T12:04:05.000Z",
+  );
+  assert.equal(
+    cleanup.normalizeUtcDateTimeString("2025-01-02T03:04:05+23:59"),
+    "2025-01-01T03:05:05.000Z",
+  );
+  assert.equal(
+    cleanup.normalizeUtcDateTimeString("2025-01-02T03:04:05-14:00"),
+    "2025-01-02T17:04:05.000Z",
+  );
+  assert.equal(
+    cleanup.normalizeUtcDateTimeString("2025-01-02T03:04:05+05:30"),
+    "2025-01-01T21:34:05.000Z",
+  );
+  assert.equal(
+    cleanup.normalizeUtcDateTimeString("2000-02-29T00:00:00Z"),
+    "2000-02-29T00:00:00.000Z",
+  );
+  for (const boundary of ["9999-12-31T23:59:59-14:00", "0000-01-01T00:00:00+14:00"]) {
+    assert.equal(cleanup.normalizeUtcDateTimeString(boundary), null, boundary);
+    const row = { "common:timeStamp": boundary };
+    assert.equal(cleanup.normalizeDateTimeMetadata(row), 0, boundary);
+    assert.equal(row["common:timeStamp"], boundary);
+  }
 });
 
 test("annual supply sentinel preserves process-only, real-value, wrapper, placeholder, and missing-container behavior", () => {

@@ -18,9 +18,9 @@ checkPaths:
   - .codex/hooks.json
   - .codex/hooks/run-foundry-acceptance-check.sh
   - scripts/commands/core.ts
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: core acceptance aggregation and orchestration owners move under local RED/GREEN characterization; pnpm Stop-hook invocation, continuation, ignored report policy, environment checks and failure artifacts remain unchanged."
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: 417a0a2c440c976a32a1b767319e7594b85c066c
+lastReviewedNote: "Reviewed for Issue #69: strict datetime cleanup and ownership-guarded finalize artifacts do not change the pnpm Stop-hook, acceptance continuation, ignored report policy, environment checks or failure-artifact contract."
 related:
   - docs/file-organization.md
   - docs/codex-stop-hook.md

@@ -84,6 +84,27 @@ const worldsteelProfileContractMigrations = new Map<string, string>([
     ]),
   ],
 ]);
+const capabilityContractMigrationHashes = new Map<string, Set<string>>([
+  [
+    "foundry.dataset.curation-cleanup",
+    new Set([
+      "4d041cb2ce4b0f9b9181a94e44a0569b71ce7101097cb56db51f254460feade9",
+      "0c2acbce5acb110348a62dfab4c5d226192567fcae90916b65dc49280e2567cb",
+      "1bd5ce56f134f22da328281d67a9e5937f8737ebc606479a502d46392025f51e",
+      "0427147e40c500e344686703942157f526244b4585dd6555538c5a33f8a4f749",
+    ]),
+  ],
+  [
+    "foundry.dataset.post-authoring-finalize",
+    new Set([
+      "27b5aac2d5cee8c0aeb7e7df5e2d361993341a28fce2eecbb796d8a8edcec050",
+      "d18a71a2dfa8933e114ea8b5917a7c54e7bd73813601c76133b9f2914c2be5af",
+      "ebc54fd890ea7732b69472f16239e6d5ae7553efcab4eb02fef1886ac6072050",
+      "7edaa6363ab849eccc0679f228d5be74c9d3b3aa172e82672e9c678970bab264",
+      "b53b6dcbe4dfaa324cec9011285f5d9430cacf554f332c717ba512583311b61c",
+    ]),
+  ],
+]);
 
 function resolveGoldenBase(): GoldenBase {
   const explicitBase = String(process.env.FOUNDRY_GOLDEN_BASE ?? "").trim();
@@ -694,6 +715,25 @@ function normalizeWorldsteelProfileContract(value: JsonRecord): JsonRecord | nul
 function normalizeKnownContractMigration(value: JsonRecord): JsonRecord {
   const normalizedWorldsteelProfile = normalizeWorldsteelProfileContract(value);
   if (normalizedWorldsteelProfile) return normalizedWorldsteelProfile;
+  const capabilityHashes = capabilityContractMigrationHashes.get(String(value.id ?? ""));
+  if (capabilityHashes) {
+    const projection = {
+      input_contract: value.input_contract,
+      output_contract: value.output_contract,
+      verification_gate: value.verification_gate,
+      source_manifest_requirements: value.source_manifest_requirements,
+    };
+    const projectionSha256 = createHash("sha256").update(JSON.stringify(projection)).digest("hex");
+    if (capabilityHashes.has(projectionSha256)) {
+      return {
+        ...value,
+        input_contract: "<strict-datetime-capability-contract>",
+        output_contract: "<strict-datetime-capability-contract>",
+        verification_gate: "<strict-datetime-capability-contract>",
+        source_manifest_requirements: ["<strict-datetime-capability-contract>"],
+      };
+    }
+  }
   if (value.id === "foundry.dataset.commit-handoff-plan") {
     return {
       ...value,

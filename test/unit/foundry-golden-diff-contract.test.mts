@@ -91,6 +91,27 @@ test("Golden admits only exact reviewed Worldsteel profile-truth contracts", () 
   assert.doesNotMatch(source, /d8943c24ab3f7518451ac9db103e0faf7dd5f760872411910cc977c047049ab5/u);
 });
 
+test("Golden admits only exact strict-datetime capability contract pairs", () => {
+  const source = fs.readFileSync(path.join(repoRoot, "scripts/foundry-golden-diff.ts"), "utf8");
+  assert.match(source, /capabilityContractMigrationHashes/u);
+  for (const sha256 of [
+    "4d041cb2ce4b0f9b9181a94e44a0569b71ce7101097cb56db51f254460feade9",
+    "0c2acbce5acb110348a62dfab4c5d226192567fcae90916b65dc49280e2567cb",
+    "1bd5ce56f134f22da328281d67a9e5937f8737ebc606479a502d46392025f51e",
+    "0427147e40c500e344686703942157f526244b4585dd6555538c5a33f8a4f749",
+    "27b5aac2d5cee8c0aeb7e7df5e2d361993341a28fce2eecbb796d8a8edcec050",
+    "d18a71a2dfa8933e114ea8b5917a7c54e7bd73813601c76133b9f2914c2be5af",
+    "ebc54fd890ea7732b69472f16239e6d5ae7553efcab4eb02fef1886ac6072050",
+    "7edaa6363ab849eccc0679f228d5be74c9d3b3aa172e82672e9c678970bab264",
+    "b53b6dcbe4dfaa324cec9011285f5d9430cacf554f332c717ba512583311b61c",
+  ]) {
+    assert.match(source, new RegExp(sha256, "u"));
+  }
+  assert.match(source, /createHash\("sha256"\)\s*\.update\(JSON\.stringify\(projection\)\)/su);
+  assert.match(source, /capabilityHashes\.has\(projectionSha256\)/u);
+  assert.match(source, /<strict-datetime-capability-contract>/u);
+});
+
 test("Golden harness exists only as zero-escape native TypeScript", () => {
   const typedPath = path.join(repoRoot, "scripts/foundry-golden-diff.ts");
   assert.equal(fs.existsSync(typedPath), true);

@@ -636,6 +636,7 @@ test("post-authoring finalize includes referenced true sources in source/contact
   const sourceId = "b1111111-2222-4333-8444-555555555555";
   const rowsFile = path.join(root, "rows", "processes.jsonl");
   const sourceSupportRowsFile = path.join(root, "rows", "sources.jsonl");
+  const parentCleanedRowsFile = path.join(root, "parent-output", "processes.cleaned.jsonl");
   const processRow = processRowWithDefaultClassification(processId) as unknown as FixtureRecord;
   processRow.processDataSet.modellingAndValidation = {
     dataSourcesTreatmentAndRepresentativeness: {
@@ -667,15 +668,15 @@ test("post-authoring finalize includes referenced true sources in source/contact
       rel(rowsFile),
       "--source-support-rows-file",
       rel(sourceSupportRowsFile),
+      "--finalize-source-contact-support",
+      "--cleaned-rows-file",
+      rel(parentCleanedRowsFile),
       "--out-dir",
       rel(path.join(root, "finalize")),
     ]);
 
     assert.equal(finalize.json.counts.source_contact_support_rows, 2);
-    assert.equal(
-      finalize.json.counts.source_contact_support_finalize_status,
-      "available_not_requested",
-    );
+    assert.equal(finalize.json.counts.source_contact_support_finalize_status, "blocked");
     assert.equal(finalize.json.counts.source_contact_source_reference_rewrites, 2);
     const supportRows = readJsonLines(
       path.join(repoRoot, finalize.json.files.source_contact_support_rows),
@@ -696,6 +697,28 @@ test("post-authoring finalize includes referenced true sources in source/contact
         "#text"
       ],
       "Fixture report",
+    );
+    const parentCleanedRows = readJsonLines(parentCleanedRowsFile);
+    assert.equal(parentCleanedRows.length, 1);
+    assert.ok(parentCleanedRows[0].processDataSet);
+    assert.equal(parentCleanedRows[0].contactDataSet, undefined);
+    assert.equal(parentCleanedRows[0].sourceDataSet, undefined);
+    assert.ok(finalize.json.files.source_contact_support_finalize_report);
+    const nestedReport = readJson(
+      path.join(repoRoot, finalize.json.files.source_contact_support_finalize_report),
+    );
+    const nestedFinalRows = readJsonLines(path.join(repoRoot, nestedReport.files.final_rows));
+    assert.equal(
+      nestedFinalRows.some((row) => row.contactDataSet),
+      true,
+    );
+    assert.equal(
+      nestedFinalRows.some((row) => row.sourceDataSet),
+      true,
+    );
+    assert.equal(
+      nestedFinalRows.some((row) => row.processDataSet),
+      false,
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -901,6 +924,246 @@ test("post-authoring finalize proves canonical UG for minted FP and excludes for
     const proofKeys = rewriteReport.canonical_support.canonical_unit_group_reference_keys;
     assert.deepEqual(proofKeys, [{ id: canonicalUnitGroupId, version: canonicalUnitGroupVersion }]);
   } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("post-authoring finalize stops after invalid datetime cleanup without downstream evidence", () => {
+  const root = path.join(finalizeAutoQueueFixtureRoot, "invalid-datetime-cleanup");
+  let managedSymlinkPath: string | null = null;
+  fs.rmSync(root, { recursive: true, force: true });
+  const validId = "55555555-5555-4555-8555-555555555555";
+  const invalidId = "66666666-6666-4666-8666-666666666666";
+  const sourceId = "88888888-8888-4888-8888-888888888888";
+  const valid = processRowWithDefaultClassification(validId) as unknown as FixtureRecord;
+  const invalid = processRowWithDefaultClassification(invalidId) as unknown as FixtureRecord;
+  const validRoot = valid.processDataSet;
+  const invalidRoot = invalid.processDataSet;
+  const validAdmin = valid.processDataSet.administrativeInformation as FixtureRecord;
+  const invalidAdmin = invalid.processDataSet.administrativeInformation as FixtureRecord;
+  validAdmin.dataEntryBy = {
+    "common:timeStamp": "2025-03-01T08:00:00+08:00",
+  };
+  invalidAdmin.dataEntryBy = {
+    "common:timeStamp": "2025-02-30T00:00:00Z",
+  };
+  for (const processRoot of [validRoot, invalidRoot]) {
+    processRoot.modellingAndValidation = {
+      dataSourcesTreatmentAndRepresentativeness: {
+        referenceToDataSource: {
+          "@type": "source data set",
+          "@refObjectId": sourceId,
+          "@version": "00.00.001",
+          "common:shortDescription": { "@xml:lang": "en", "#text": "Fixture report" },
+        },
+      },
+    } as unknown as FixtureRecord;
+  }
+  const rowsFile = path.join(root, "rows", "processes.jsonl");
+  const sourceSupportRowsFile = path.join(root, "rows", "sources.jsonl");
+  const explicitParentOutput = path.join(root, "retained-evidence", "parent-cleaned.jsonl");
+  writeJsonLines(rowsFile, [valid, invalid]);
+  const explicitParentBytes = '{"retained":true}\n';
+  writeText(explicitParentOutput, explicitParentBytes);
+  const finalizeDir = path.join(
+    repoRoot,
+    ".foundry",
+    "workspaces",
+    `issue69-owned-finalize-${process.pid}`,
+  );
+  fs.rmSync(finalizeDir, { recursive: true, force: true });
+  fs.mkdirSync(finalizeDir, { recursive: true });
+  const supportSource = sourceRow(sourceId) as unknown as FixtureRecord;
+  supportSource.sourceDataSet.sourceInformation.dataSetInformation.sourceCitation =
+    "Fixture report, 2026";
+  writeJsonLines(sourceSupportRowsFile, [supportSource]);
+  writeJson(path.join(finalizeDir, "mutation-manifest", "stale-report.json"), {
+    status: "ready_for_remote_write",
+  });
+  writeJson(path.join(finalizeDir, "commit-handoff", "stale-command-spec.json"), {
+    schema: "tiangong-foundry.command-spec.v1",
+    display: "must never survive the blocked rerun",
+  });
+  const staleDirectories = [
+    "mutation-manifest",
+    "commit-handoff",
+    "source-contact-support-finalize",
+    "precommit-verify-remote",
+    "curation-queue-inputs",
+    "identity-preflight-run-parallel",
+    "identity-preflight-current-scope",
+  ];
+  for (const staleDirectory of staleDirectories.slice(2)) {
+    writeJson(path.join(finalizeDir, staleDirectory, "stale-evidence.json"), {
+      stale: true,
+    });
+  }
+  const staleFiles = [
+    "identity-reference-rewrite-external-flow-refs.jsonl",
+    "process-reference-external-flow-refs.jsonl",
+  ];
+  for (const staleFile of staleFiles) {
+    writeText(path.join(finalizeDir, staleFile), '{"stale":true}\n');
+  }
+
+  try {
+    const finalize = runFoundry([
+      "dataset-post-authoring-finalize",
+      "--type",
+      "process",
+      "--profile",
+      "bafu",
+      "--rows-file",
+      rel(rowsFile),
+      "--source-support-rows-file",
+      rel(sourceSupportRowsFile),
+      "--finalize-source-contact-support",
+      "--cleaned-rows-file",
+      rel(explicitParentOutput),
+      "--out-dir",
+      rel(finalizeDir),
+    ]);
+
+    assert.equal(finalize.code, 1, JSON.stringify(finalize.json, null, 2));
+    assert.equal(finalize.json.status, "blocked");
+    assert.equal(finalize.json.final_rows_file, null);
+    assert.equal((finalize.json.commit_handoff as FixtureRecord).status, "not_requested");
+    assert.deepEqual(
+      finalize.json.blockers.map((blocker) => blocker.code),
+      [
+        "invalid_datetime_metadata",
+        "curation_cleanup_not_ready",
+        "stale_finalize_artifacts_not_invalidated",
+      ],
+    );
+    assert.deepEqual(
+      finalize.json.stages.map((stage) => stage.stage),
+      [
+        "identity_reference_rewrites",
+        "unresolved_exchange_externalization",
+        "source_contact_rewrites",
+        "canonical_support_rewrites",
+        "curation_cleanup",
+      ],
+    );
+    assert.equal(finalize.json.files.final_rows, null);
+    assert.ok(finalize.json.files.cleanup_report);
+    assert.equal(fs.readFileSync(explicitParentOutput, "utf8"), explicitParentBytes);
+    assert.ok(Number(finalize.json.counts.import_ledger_entries) > 0);
+    const importLedger = finalize.json.files.import_ledger as unknown as FixtureRecord;
+    assert.ok(importLedger.blocked_scopes);
+    assert.equal(fs.existsSync(path.join(repoRoot, String(importLedger.blocked_scopes))), true);
+    for (const staleDirectory of staleDirectories) {
+      assert.equal(fs.existsSync(path.join(finalizeDir, staleDirectory)), true, staleDirectory);
+    }
+    for (const staleFile of staleFiles) {
+      assert.equal(fs.existsSync(path.join(finalizeDir, staleFile)), true, staleFile);
+    }
+    for (const absent of [
+      "identity-preflight-run",
+      "curation-queue",
+      "schema",
+      "qa",
+      "location-audit",
+      "curation-gate",
+      "dry-run",
+    ]) {
+      assert.equal(fs.existsSync(path.join(finalizeDir, absent)), false, absent);
+    }
+
+    const unownedFinalizeDir = path.join(root, "unowned-finalize");
+    const unownedSchema = path.join(unownedFinalizeDir, "schema", "stale.json");
+    const unownedCommand = path.join(unownedFinalizeDir, "commit-handoff", "stale-command.json");
+    writeJson(unownedSchema, { stale: true });
+    writeJson(unownedCommand, { stale: true });
+    writeJson(path.join(unownedFinalizeDir, ".tiangong-foundry-finalize-output.json"), {
+      schema_version: 1,
+      command: "dataset-post-authoring-finalize",
+      output_directory: path.resolve(unownedFinalizeDir),
+      output_directory_realpath: fs.realpathSync(unownedFinalizeDir),
+    });
+    const unowned = runFoundry([
+      "dataset-post-authoring-finalize",
+      "--type",
+      "process",
+      "--profile",
+      "bafu",
+      "--rows-file",
+      rel(rowsFile),
+      "--source-support-rows-file",
+      rel(sourceSupportRowsFile),
+      "--finalize-source-contact-support",
+      "--out-dir",
+      rel(unownedFinalizeDir),
+    ]);
+    assert.equal(unowned.code, 1);
+    assert.deepEqual(
+      unowned.json.blockers.map((blocker) => blocker.code),
+      [
+        "invalid_datetime_metadata",
+        "curation_cleanup_not_ready",
+        "stale_finalize_artifacts_not_invalidated",
+      ],
+    );
+    assert.equal(fs.existsSync(unownedSchema), true);
+    assert.equal(fs.existsSync(unownedCommand), true);
+
+    if (process.platform !== "win32") {
+      const externalVictim = path.join(root, "managed-symlink-victim");
+      fs.mkdirSync(externalVictim, { recursive: true });
+      managedSymlinkPath = path.join(
+        repoRoot,
+        ".foundry",
+        "workspaces",
+        `issue69-finalize-symlink-${process.pid}`,
+      );
+      fs.mkdirSync(path.dirname(managedSymlinkPath), { recursive: true });
+      fs.rmSync(managedSymlinkPath, { recursive: true, force: true });
+      fs.symlinkSync(externalVictim, managedSymlinkPath, "dir");
+      const nestedSymlinkOutput = path.join(managedSymlinkPath, "nested-finalize");
+      const externalNestedOutput = path.join(externalVictim, "nested-finalize");
+      fs.mkdirSync(externalNestedOutput, { recursive: true });
+      writeJson(path.join(externalNestedOutput, ".tiangong-foundry-finalize-output.json"), {
+        schema_version: 1,
+        command: "dataset-post-authoring-finalize",
+        output_directory: path.resolve(nestedSymlinkOutput),
+        output_directory_realpath: fs.realpathSync(externalNestedOutput),
+      });
+      const externalSchema = path.join(externalNestedOutput, "schema", "stale.json");
+      const externalCommand = path.join(
+        externalNestedOutput,
+        "commit-handoff",
+        "stale-command.json",
+      );
+      writeJson(externalSchema, { retained: "outside-real-managed-root" });
+      writeJson(externalCommand, { retained: "outside-real-managed-root" });
+      const symlinked = runFoundry([
+        "dataset-post-authoring-finalize",
+        "--type",
+        "process",
+        "--profile",
+        "bafu",
+        "--rows-file",
+        rel(rowsFile),
+        "--source-support-rows-file",
+        rel(sourceSupportRowsFile),
+        "--finalize-source-contact-support",
+        "--out-dir",
+        rel(nestedSymlinkOutput),
+      ]);
+      assert.equal(symlinked.code, 1);
+      assert.equal(
+        symlinked.json.blockers.some(
+          (blocker) => blocker.code === "stale_finalize_artifacts_not_invalidated",
+        ),
+        true,
+      );
+      assert.equal(fs.existsSync(externalSchema), true);
+      assert.equal(fs.existsSync(externalCommand), true);
+    }
+  } finally {
+    if (managedSymlinkPath) fs.rmSync(managedSymlinkPath, { force: true });
+    fs.rmSync(finalizeDir, { recursive: true, force: true });
     fs.rmSync(root, { recursive: true, force: true });
   }
 });

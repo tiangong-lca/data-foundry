@@ -304,6 +304,28 @@ const postAuthoringFinalizeStageContract = readOnlyStageContract([
   },
 ]);
 
+const postCleanupArtifactDirectories = [
+  "source-contact-support-finalize",
+  "identity-preflight-run",
+  "identity-preflight-run-parallel",
+  "identity-preflight-current-scope",
+  "curation-queue",
+  "curation-queue-inputs",
+  "schema",
+  "qa",
+  "location-audit",
+  "curation-gate",
+  "dry-run",
+  "precommit-verify-remote",
+  "mutation-manifest",
+  "commit-handoff",
+];
+
+const postCleanupArtifactFiles = [
+  "identity-reference-rewrite-external-flow-refs.jsonl",
+  "process-reference-external-flow-refs.jsonl",
+];
+
 function verifiedReferenceLedgerFilesForDir(ledgerDir: string | null): string[] {
   if (!ledgerDir) return [];
   return [
@@ -1097,53 +1119,55 @@ export function createPostAuthoringFinalizeCommands({
       Number(sourceContactRewriteStage.counts?.support_account_local_fp_ug_rows ?? 0) > 0
         ? "support"
         : "contact";
-    const sourceContactSupportFinalize = sourceContactSupportFinalizeRequested
-      ? timeStage("source_contact_support_finalize", () =>
-          runDatasetPostAuthoringFinalize({
-            ...options,
-            type: sourceContactSupportFinalizeType,
-            rowsFile: sourceContactSupportRowsFile,
-            outDir: path.join(outDir, "source-contact-support-finalize"),
-            skipSourceContactRewrites: true,
-            finalizeSourceContactSupport: false,
-            prepareSourceContactSupport: false,
-            autoFinalizeSourceContactSupport: false,
-            // The FP/UG are already in this support rows file; don't re-collect
-            // them in the nested finalize (skipSourceContactRewrites already
-            // early-returns before the collector, but be explicit).
-            mintUnmatchedFpUgSupport: false,
-            requireIdentityPreflight: false,
-            runIdentityPreflight: false,
-            identityPreflightIndex: null,
-            identityPreflightRequests: null,
-            identityPreflightRequestsIndex: null,
-            classificationDecisionApplyReport: null,
-            classificationDecisionsApplyReport: null,
-            locationDecisionApplyReport: null,
-            locationDecisionsApplyReport: null,
-            identityDecisionApplyReport: null,
-            identityDecisionsApplyReport: null,
-            identityDecisionApplyReports: [],
-            identityDecisionsApplyReports: [],
-            patchCollectReport: null,
-            authoringPatchCollectReport: null,
-            patchApplyReport: null,
-            verifyRemote: false,
-            precommitVerifyRemote: false,
-          }),
-        )
-      : {
-          status: sourceContactSupportRowsFile ? "available_not_requested" : "not_required",
-          counts: { blockers: 0, write_candidates: 0 },
-          files: {
-            report: null,
-            final_rows: sourceContactSupportRowsFile
-              ? repoRelativePath(sourceContactSupportRowsFile)
-              : null,
-          },
-          commit_handoff: { status: "not_requested", blockers: [] },
-          blockers: [],
-        };
+    let sourceContactSupportFinalize: FinalizeStage = {
+      status: sourceContactSupportRowsFile ? "available_not_requested" : "not_required",
+      counts: { blockers: 0, write_candidates: 0 },
+      files: {
+        report: null,
+        final_rows: sourceContactSupportRowsFile
+          ? repoRelativePath(sourceContactSupportRowsFile)
+          : null,
+      },
+      commit_handoff: { status: "not_requested", blockers: [] },
+      blockers: [],
+    };
+    const finalizeSourceContactSupport = (): FinalizeStage =>
+      runDatasetPostAuthoringFinalize({
+        ...options,
+        type: sourceContactSupportFinalizeType,
+        rowsFile: sourceContactSupportRowsFile,
+        outDir: path.join(outDir, "source-contact-support-finalize"),
+        cleanedRowsFile: null,
+        cleanedRows: null,
+        outFile: null,
+        out: null,
+        skipSourceContactRewrites: true,
+        finalizeSourceContactSupport: false,
+        prepareSourceContactSupport: false,
+        autoFinalizeSourceContactSupport: false,
+        // The FP/UG are already in this support rows file; don't re-collect
+        // them in the nested finalize (skipSourceContactRewrites already
+        // early-returns before the collector, but be explicit).
+        mintUnmatchedFpUgSupport: false,
+        requireIdentityPreflight: false,
+        runIdentityPreflight: false,
+        identityPreflightIndex: null,
+        identityPreflightRequests: null,
+        identityPreflightRequestsIndex: null,
+        classificationDecisionApplyReport: null,
+        classificationDecisionsApplyReport: null,
+        locationDecisionApplyReport: null,
+        locationDecisionsApplyReport: null,
+        identityDecisionApplyReport: null,
+        identityDecisionsApplyReport: null,
+        identityDecisionApplyReports: [],
+        identityDecisionsApplyReports: [],
+        patchCollectReport: null,
+        authoringPatchCollectReport: null,
+        patchApplyReport: null,
+        verifyRemote: false,
+        precommitVerifyRemote: false,
+      });
 
     const canonicalSupportRewriteStage = timeStage("canonical_support_rewrites", () =>
       applyCanonicalSupportRewrites({
@@ -1189,10 +1213,236 @@ export function createPostAuthoringFinalizeCommands({
         },
       }),
     );
+    const cleanupReportFile = resolveRepoPath(cleanup.files?.report);
     const cleanedRowsFile = resolveRepoPath(
       cleanup.files?.cleaned_rows || cleanup.cleaned_rows_file,
-    )!;
-    const cleanupReportFile = resolveRepoPath(cleanup.files?.report);
+    );
+    if (cleanup.status !== "completed" || !cleanedRowsFile) {
+      const staleManagedArtifacts = [
+        ...postCleanupArtifactDirectories
+          .map((directory) => path.join(outDir, directory))
+          .filter((directory) => fs.existsSync(directory)),
+        ...postCleanupArtifactFiles
+          .map((file) => path.join(outDir, file))
+          .filter((file) => fs.existsSync(file)),
+      ];
+      const priorStageBlockers = [
+        ...ensureArray(identityReferenceRewriteStage.blockers).map((blocker) => ({
+          ...blocker,
+          stage: "identity_reference_rewrites",
+          source: "identity_reference_rewrites",
+          severity: blocker.severity || "error",
+        })),
+        ...ensureArray(unresolvedExchangeExternalizeStage.blockers).map((blocker) => ({
+          ...blocker,
+          stage: "unresolved_exchange_externalization",
+          source: "unresolved_exchange_externalization",
+          severity: blocker.severity || "error",
+        })),
+        ...ensureArray(sourceContactRewriteStage.blockers).map((blocker) => ({
+          ...blocker,
+          stage: "source_contact_rewrites",
+          source: "source_contact_rewrites",
+          severity: blocker.severity || "error",
+        })),
+        ...ensureArray(sourceContactSupportFinalize.blockers).map((blocker) => ({
+          ...blocker,
+          stage: "source_contact_support_finalize",
+          source: "source_contact_support_finalize",
+          severity: blocker.severity || "error",
+        })),
+        ...ensureArray(sourceContactSupportFinalize.commit_handoff?.blockers).map((blocker) => ({
+          ...blocker,
+          stage: "source_contact_support_finalize",
+          source: "source_contact_support_commit_handoff",
+          severity: blocker.severity || "error",
+        })),
+        ...canonicalSupportPrewriteBlockers,
+      ];
+      const cleanupBlockers = ensureArray(cleanup.blockers).map((blocker) => ({
+        ...blocker,
+        stage: "curation_cleanup",
+        source: "curation_cleanup",
+        severity: blocker.severity || "error",
+      }));
+      const cleanupNotReadyBlocker = {
+        code: "curation_cleanup_not_ready",
+        stage: "curation_cleanup",
+        source: "curation_cleanup",
+        severity: "error",
+        cleanup_status: cleanup.status ?? null,
+        cleanup_report: repoRelativeMaybe(cleanupReportFile),
+        action:
+          "Resolve every cleanup blocker and rerun post-authoring finalize before any downstream prewrite stage.",
+      };
+      const invalidationBlockers =
+        staleManagedArtifacts.length > 0
+          ? [
+              {
+                code: "stale_finalize_artifacts_not_invalidated",
+                stage: "curation_cleanup",
+                source: "finalize_output_ownership",
+                severity: "error",
+                paths: staleManagedArtifacts.map((artifact) => repoRelativeMaybe(artifact)),
+                action:
+                  "Preserve and inspect the stale artifacts manually, then use a new output directory for the repaired rerun.",
+              },
+            ]
+          : [];
+      const blockers = [
+        ...priorStageBlockers,
+        ...cleanupBlockers,
+        cleanupNotReadyBlocker,
+        ...invalidationBlockers,
+      ];
+      const stageReports = [
+        {
+          stage: "identity_reference_rewrites",
+          status: identityReferenceRewriteStage.status,
+          exit_code: (identityReferenceRewriteStage.blockers ?? []).length > 0 ? 1 : 0,
+          command: "foundry.dataset-identity-reference-rewrites-apply",
+          args: [],
+          stderr: "",
+          report_file: null,
+        },
+        {
+          stage: "unresolved_exchange_externalization",
+          status: unresolvedExchangeExternalizeStage.status,
+          exit_code: 0,
+          command: "foundry.externalize-unresolved-process-flow-exchanges",
+          args: [],
+          stderr: "",
+          report_file: resolveRepoPath(unresolvedExchangeExternalizeStage.files?.report),
+        },
+        {
+          stage: "source_contact_rewrites",
+          status: sourceContactRewriteStage.status,
+          exit_code: 0,
+          command: "foundry.dataset-source-contact-rewrites-apply",
+          args: [],
+          stderr: "",
+          report_file: resolveRepoPath(sourceContactRewriteStage.files?.report),
+        },
+        {
+          stage: "canonical_support_rewrites",
+          status: canonicalSupportRewriteStage.status,
+          exit_code: (canonicalSupportRewriteStage.counts?.blockers ?? 0) > 0 ? 1 : 0,
+          command: "foundry.dataset-canonical-support-rewrites-apply",
+          args: [],
+          stderr: "",
+          report_file: canonicalSupportReportFile,
+        },
+        {
+          stage: "curation_cleanup",
+          status: cleanup.status,
+          exit_code: 1,
+          command: "foundry.dataset-curation-cleanup",
+          args: [],
+          stderr: "",
+          report_file: cleanupReportFile,
+        },
+      ];
+      const timingsByStage = new Map(finalizeTimings.map((timing) => [timing.stage, timing]));
+      const reportPath = path.join(outDir, "dataset-post-authoring-finalize-report.json");
+      const report = {
+        schema_version: 1,
+        started_at_utc: finalizeStartedAtUtc,
+        generated_at_utc: nowIso(),
+        status: "blocked",
+        dataset_type: datasetType,
+        profile: String(options.profile || "generic"),
+        rows_file: repoRelativePath(rowsFile),
+        pre_cleanup_rows_file: repoRelativeMaybe(preCleanupRowsFile),
+        source_contact_rows_file: repoRelativeMaybe(sourceContactRowsFile),
+        canonical_support_rows_file: repoRelativeMaybe(canonicalSupportRowsFile),
+        final_rows_file: null,
+        remote_write_mode: "read-only",
+        policy: {
+          purpose:
+            "Finalize AI-authored or support TIDAS rows into exact-scope prewrite evidence without committing to the database.",
+          cleanup_gate:
+            "Curation cleanup must complete with a concrete cleaned rows artifact before identity preflight, queue, schema, QA, dry-run, mutation manifest, or handoff stages may run.",
+        },
+        counts: {
+          finalize_duration_ms: Date.now() - finalizeStartedAtMs,
+          finalize_substage_count: finalizeTimings.length,
+          blockers: blockers.length,
+          mutation_manifest_blockers: 0,
+          prewrite_gate_blockers: blockers.length,
+          canonical_support_blockers: canonicalSupportRewriteStage.counts?.blockers ?? 0,
+          write_candidates: 0,
+        },
+        blockers,
+        stages: stageReports.map((stage) => compactStageReportWithTiming(stage, timingsByStage)),
+        timings: finalizeTimings,
+        files: {
+          source_contact_rewrite_report: sourceContactRewriteStage.files?.report ?? null,
+          source_contact_rewritten_rows: sourceContactRewriteStage.files?.output_rows ?? null,
+          cleanup_report: repoRelativeMaybe(cleanupReportFile),
+          canonical_support_rewrite_report: repoRelativeMaybe(canonicalSupportReportFile),
+          canonical_support_rewritten_rows: repoRelativeMaybe(canonicalSupportRowsFile),
+          final_rows: null,
+          identity_preflight_run_report: null,
+          identity_preflight_index: null,
+          curation_queue_dir: null,
+          curation_queue_report: null,
+          schema_report: null,
+          qa_report: null,
+          location_audit_report: null,
+          curation_gate_report: null,
+          dry_run_report: null,
+          remote_verify_report: null,
+          mutation_manifest: null,
+          commit_handoff_plan: null,
+        },
+        commit_handoff: {
+          status: "not_requested",
+          command: null,
+          post_write_verify_command: null,
+          blockers,
+        },
+      };
+      writeJson(reportPath, report);
+      const importLedger = writeFinalizeImportLedger
+        ? timeStage("import_ledger", () =>
+            writeFinalizeImportLedger({
+              report,
+              reportPath,
+              ledgerDir: resolveRepoPath(
+                options.ledgerDir || options.importLedgerDir || path.join(outDir, "import-ledger"),
+              ),
+            }),
+          )
+        : { status: "skipped", files: {}, counts: { entries_written: 0 } };
+      const finalReport = {
+        ...report,
+        counts: {
+          ...report.counts,
+          finalize_duration_ms: Date.now() - finalizeStartedAtMs,
+          finalize_substage_count: finalizeTimings.length,
+          import_ledger_entries: importLedger.counts?.entries_written ?? 0,
+        },
+        timings: finalizeTimings,
+        files: {
+          ...report.files,
+          import_ledger: importLedger.files ?? {},
+        },
+      };
+      writeJson(reportPath, finalReport);
+      return {
+        ...finalReport,
+        files: {
+          ...finalReport.files,
+          report: repoRelativePath(reportPath),
+        },
+      };
+    }
+    if (sourceContactSupportFinalizeRequested) {
+      sourceContactSupportFinalize = timeStage(
+        "source_contact_support_finalize",
+        finalizeSourceContactSupport,
+      );
+    }
     const identityPreflightRunStage = timeStage("identity_preflight_run", () =>
       runFinalizeIdentityPreflightStage({
         rowsFile: cleanedRowsFile,

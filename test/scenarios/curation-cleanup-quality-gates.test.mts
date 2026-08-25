@@ -335,6 +335,38 @@ test("curation cleanup fills placeholder annual supply with searchable sentinel"
   }
 });
 
+test("curation cleanup CLI exits nonzero and emits only blocker evidence for an impossible datetime", () => {
+  const root = path.join(repoRoot, "tmp", "invalid-datetime-cleanup-cli-test");
+  fs.rmSync(root, { recursive: true, force: true });
+  const processId = "77777777-7777-4777-8777-777777777777";
+  const row = processRowWithInvalidAnnualSupply(processId);
+  (row.processDataSet.administrativeInformation as Record<string, unknown>).dataEntryBy = {
+    "common:timeStamp": "2025-02-30T00:00:00Z",
+  };
+  const rowsFile = path.join(root, "rows", "processes.jsonl");
+  writeJsonLines(rowsFile, [row]);
+
+  try {
+    const cleanup = runFoundry([
+      "dataset-curation-cleanup",
+      "--type",
+      "process",
+      "--rows-file",
+      rel(rowsFile),
+      "--out-dir",
+      rel(path.join(root, "cleanup")),
+    ]);
+
+    assert.equal(cleanup.code, 1);
+    assert.equal(cleanup.json.status, "blocked_invalid_datetime_metadata");
+    assert.deepEqual(blockerCodes(cleanup.json), new Set(["invalid_datetime_metadata"]));
+    assert.equal(cleanup.json.files.cleaned_rows, null);
+    assert.equal(fs.existsSync(path.join(root, "cleanup", "processes.cleaned.jsonl")), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("curation cleanup treats unavailable annual production volume as sentinel", () => {
   const root = path.join(repoRoot, "tmp", "annual-supply-unavailable-cleanup-test");
   fs.rmSync(root, { recursive: true, force: true });
