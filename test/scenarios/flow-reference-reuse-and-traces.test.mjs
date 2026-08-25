@@ -18,7 +18,7 @@ import {
 } from "../fixtures/foundry-core.ts";
 import { writeContextPackFiles } from "../fixtures/full-context-fixtures.mjs";
 import { writeCompletedIdentityPreflightIndex } from "../fixtures/identity-fixtures.mjs";
-import { flowRowWithClassification, processRowWithFlowRef } from "../fixtures/row-builders.mjs";
+import { flowRowWithClassification, processRowWithFlowRef } from "../fixtures/row-builders.ts";
 
 test("unresolved elementary flow identity decisions defer references as Foundry traces", () => {
   const root = testTmpRoot("elementary-flow-identity-unresolved-trace-test");

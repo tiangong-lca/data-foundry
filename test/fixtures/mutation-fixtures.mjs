@@ -12,7 +12,7 @@ import {
   writeText,
 } from "./foundry-core.ts";
 import { contextFile } from "./full-context-fixtures.mjs";
-import { processRowWithDeferredTrace } from "./row-builders.mjs";
+import { processRowWithDeferredTrace } from "./row-builders.ts";
 
 export function createMutationManifestFixture() {
   fs.rmSync(mutationFixtureRoot, { recursive: true, force: true });

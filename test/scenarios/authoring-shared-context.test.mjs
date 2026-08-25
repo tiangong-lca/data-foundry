@@ -13,7 +13,7 @@ import {
   writeJson,
   writeText,
 } from "../fixtures/foundry-core.ts";
-import { processRowWithInvalidLocation } from "../fixtures/row-builders.mjs";
+import { processRowWithInvalidLocation } from "../fixtures/row-builders.ts";
 
 test("authoring task batch writes shared full-context bundle for repeated package context", () => {
   const root = path.join(fixtureRoot, "authoring-task-shared-context");

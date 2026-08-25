@@ -1,4 +1,4 @@
-export function processRowWithDeferredTrace(processId) {
+export function processRowWithDeferredTrace(processId: string) {
   return {
     processDataSet: {
       processInformation: {
@@ -33,7 +33,7 @@ export function processRowWithDeferredTrace(processId) {
   };
 }
 
-export function processRowWithDefaultClassification(processId) {
+export function processRowWithDefaultClassification(processId: string) {
   return {
     processDataSet: {
       processInformation: {
@@ -82,7 +82,15 @@ export function processRowWithDefaultClassification(processId) {
   };
 }
 
-export function flowRowWithClassification({ flowId, typeOfDataSet, classification }) {
+export function flowRowWithClassification({
+  flowId,
+  typeOfDataSet,
+  classification,
+}: {
+  flowId: string;
+  typeOfDataSet: string;
+  classification: unknown;
+}) {
   return {
     flowDataSet: {
       flowInformation: {
@@ -119,7 +127,7 @@ export function flowRowWithClassification({ flowId, typeOfDataSet, classificatio
   };
 }
 
-export function processRowWithInvalidLocation(processId) {
+export function processRowWithInvalidLocation(processId: string) {
   return {
     processDataSet: {
       processInformation: {
@@ -158,7 +166,7 @@ export function processRowWithInvalidLocation(processId) {
   };
 }
 
-export function processRowWithInvalidAnnualSupply(processId) {
+export function processRowWithInvalidAnnualSupply(processId: string) {
   return {
     processDataSet: {
       processInformation: {
@@ -208,7 +216,7 @@ export function processRowWithInvalidAnnualSupply(processId) {
   };
 }
 
-export function processRowWithFlowRef(processId, flowId) {
+export function processRowWithFlowRef(processId: string, flowId: string) {
   return {
     processDataSet: {
       processInformation: {
@@ -242,7 +250,7 @@ export function processRowWithFlowRef(processId, flowId) {
   };
 }
 
-export function processRowWithOnlyOutputExchange(processId) {
+export function processRowWithOnlyOutputExchange(processId: string) {
   return {
     processDataSet: {
       processInformation: {
@@ -296,7 +304,7 @@ export function processRowWithOnlyOutputExchange(processId) {
   };
 }
 
-export function flowRow(flowId) {
+export function flowRow(flowId: string) {
   return {
     flowDataSet: {
       flowInformation: {
@@ -319,7 +327,7 @@ export function flowRow(flowId) {
   };
 }
 
-export function sourceRow(sourceId) {
+export function sourceRow(sourceId: string) {
   return {
     sourceDataSet: {
       sourceInformation: {

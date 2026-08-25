@@ -31,7 +31,7 @@ import {
   processRowWithFlowRef,
   processRowWithInvalidLocation,
   sourceRow,
-} from "../fixtures/row-builders.mjs";
+} from "../fixtures/row-builders.ts";
 
 test("flow post-authoring finalize dry-run omits unsupported state-code flag", () => {
   const root = path.join(fixtureRoot, "flow-finalize-dry-run-state-code");

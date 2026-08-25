@@ -18,7 +18,7 @@ import {
   writeJsonLines,
 } from "../fixtures/foundry-core.ts";
 import { writeCompletedIdentityPreflightIndex } from "../fixtures/identity-fixtures.mjs";
-import { processRowWithFlowRef } from "../fixtures/row-builders.mjs";
+import { processRowWithFlowRef } from "../fixtures/row-builders.ts";
 
 test("mutation manifest blocks process writes when referenced datasets are not proven", () => {
   fs.rmSync(referenceClosureFixtureRoot, { recursive: true, force: true });

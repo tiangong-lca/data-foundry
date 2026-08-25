@@ -27,7 +27,7 @@ import {
   flowRowWithClassification,
   processRowWithFlowRef,
   sourceRow,
-} from "../fixtures/row-builders.mjs";
+} from "../fixtures/row-builders.ts";
 
 test("identity decision task deduplicates repeated targets and keeps source evidence", () => {
   const root = path.join(repoRoot, "tmp", "identity-decision-task-dedupe-test");

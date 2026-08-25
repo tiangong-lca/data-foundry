@@ -16,7 +16,7 @@ import { writeContextPackFiles } from "../fixtures/full-context-fixtures.mjs";
 import {
   processRowWithDefaultClassification,
   processRowWithInvalidLocation,
-} from "../fixtures/row-builders.mjs";
+} from "../fixtures/row-builders.ts";
 
 test("decision tasks externalize full context into stable shared bundles", () => {
   const root = path.join(fixtureRoot, "decision-task-shared-context");

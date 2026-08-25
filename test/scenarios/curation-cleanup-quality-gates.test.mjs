@@ -25,7 +25,7 @@ import {
   processRowWithInvalidAnnualSupply,
   processRowWithInvalidLocation,
   processRowWithOnlyOutputExchange,
-} from "../fixtures/row-builders.mjs";
+} from "../fixtures/row-builders.ts";
 
 test("curation gate maps process QA functional unit findings to concrete TIDAS paths", () => {
   fs.rmSync(qaPathFixtureRoot, { recursive: true, force: true });

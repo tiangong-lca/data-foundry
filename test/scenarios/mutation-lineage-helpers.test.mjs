@@ -26,7 +26,7 @@ import {
 import {
   flowRowWithClassification,
   processRowWithDefaultClassification,
-} from "../fixtures/row-builders.mjs";
+} from "../fixtures/row-builders.ts";
 
 test("rows artifact lineage accepts content-equivalent no-op transform files", () => {
   const root = path.join(fixtureRoot, "content-equivalent-row-artifacts");

@@ -21,7 +21,7 @@ import {
 } from "../fixtures/foundry-core.ts";
 import { writeContextPackFiles } from "../fixtures/full-context-fixtures.mjs";
 import { writeCompletedIdentityPreflightIndex } from "../fixtures/identity-fixtures.mjs";
-import { flowRowWithClassification } from "../fixtures/row-builders.mjs";
+import { flowRowWithClassification } from "../fixtures/row-builders.ts";
 
 test("flow curation gate distinguishes elementary and product category schemas", () => {
   fs.rmSync(flowClassificationFixtureRoot, {

@@ -20,7 +20,7 @@ import {
   writeJsonLines,
 } from "../fixtures/foundry-core.ts";
 import { writeContextPackFiles } from "../fixtures/full-context-fixtures.mjs";
-import { processRowWithInvalidLocation } from "../fixtures/row-builders.mjs";
+import { processRowWithInvalidLocation } from "../fixtures/row-builders.ts";
 
 test("curation gate attaches location queue context as a concrete AI action item", () => {
   fs.rmSync(locationFixtureRoot, { recursive: true, force: true });

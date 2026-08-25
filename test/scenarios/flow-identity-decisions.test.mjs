@@ -18,7 +18,7 @@ import {
   flowRow,
   flowRowWithClassification,
   processRowWithFlowRef,
-} from "../fixtures/row-builders.mjs";
+} from "../fixtures/row-builders.ts";
 
 test("identity duplicate flow decisions become reference reuse rows before mutation planning", () => {
   fs.rmSync(flowIdentityReferenceFixtureRoot, {
