@@ -139,7 +139,7 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
+lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
 lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: tests cover curation live references and gate/cleanup order/bytes/proofs plus task/closeout order, handoff bindings, identity dedupe, support-cache request/mapping order, fail-closed blockers, and native errors."
 ---
 

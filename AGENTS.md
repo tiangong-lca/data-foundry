@@ -103,7 +103,7 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
+lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
 lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: the typed curation aggregate/gate/cleanup and five typed command factories preserve live exports, order and bytes, deterministic proofs, CommandSpec bindings, read-only cache behavior, blockers, and native failures under local fixtures only."
 ---
 

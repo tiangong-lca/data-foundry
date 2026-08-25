@@ -20,7 +20,7 @@ checkPaths:
   - scripts/with-lca-account.ts
   - scripts/lib/foundry-runtime-utils.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 61744bf0195f6311638fc2cd3a3fd1b0f40a4ac8
+lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
 lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: curation planners add no environment reads; typing five command factories adds or removes no variable, and support-cache retains the existing API-base/publishable-key/user-key read-only refresh surface while tests use local stubs and no repository credentials."
 ---
 

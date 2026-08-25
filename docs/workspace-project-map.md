@@ -49,7 +49,7 @@ checkPaths:
   - scripts/lib/import-curation/curation-gate.ts
   - scripts/lib/import-curation/curation-cleanup.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
+lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
 lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: curation planners and task/completion/handoff/identity/support-cache owners remain Foundry-local and preserve cross-repository ownership, CLI routing, profile, search, Worldsteel, and execution boundaries."
 ---
 

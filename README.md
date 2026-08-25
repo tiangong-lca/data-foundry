@@ -89,7 +89,7 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
+lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
 lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: curation aggregate/gate/cleanup and task/completion/handoff/identity/support-cache factories are native zero-escape TS7 with exact order/bytes, deterministic proofs, SHA/argv binding, blockers, read-only requests, and native errors preserved."
 ---
 

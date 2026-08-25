@@ -38,7 +38,7 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
+lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
 lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: curation planners and five command owners move to TS7 without changing command names/categories, owner exports, help, report bytes, artifacts, exit mapping, profile defaults, Worldsteel semantics, or remote-write modes."
 ---
 

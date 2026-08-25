@@ -79,7 +79,7 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
+lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
 lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: navigation records typed curation planner boundaries and five typed command owners, including exact TDD fixtures, order/bytes, deterministic proofs, handoff bindings, identity dedupe, support-cache request/mapping order, and all static consumers."
 ---
 

@@ -153,7 +153,7 @@ checkPaths:
   - test/unit/wave24-curation-cleanup-runner-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
+lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
 lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: typed curation planners plus task/completion/handoff/identity/support-cache factories preserve live exports, order, report/snapshot/JSONL bytes, hashes/argv, deterministic proofs, blockers, read-only requests, and native failures."
 tracker:
   kind: filesystem

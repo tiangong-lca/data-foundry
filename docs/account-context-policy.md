@@ -19,7 +19,7 @@ checkPaths:
   - scripts/with-lca-account.ts
   - scripts/commands/commit-handoff.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a0ae6af1fd9f4a3334307d5a7caed50a2b6b96d8
+lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
 lastReviewedNote: "Reviewed for Issue #67 Wave 24: the typed commit-handoff owner preserves receipt-bound target-user/account-mode checks, current-session binding for unsupported commands, exact CommandSpec artifacts, and no authentication bypass."
 ---
 

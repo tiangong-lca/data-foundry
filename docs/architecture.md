@@ -90,7 +90,7 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
+lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
 lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: typed curation planners and task/completion/handoff/identity/support-cache owners remain thin local adapters; exact order/bytes/hashes, deterministic proofs, blockers, and read-only requests move no CLI, schema, search, or database authority."
 ---
 
