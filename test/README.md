@@ -25,8 +25,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
-lastReviewedNote: "Reviewed for Issue #63: TDD, TS7 migration inventory, pnpm toolchain tests, and clean arbitrary-worktree isolation."
+lastReviewedCommit: db0d3129414884234cb24452ba71168c02e64d60
+lastReviewedNote: "Reviewed for Issue #65: typed receipt/CommandSpec/root-proof tests, explicit production case TDD outside ordinary CI, TS surface audit, pnpm-only gates, and clean-worktree isolation."
 ---
 
 # Test Layout
