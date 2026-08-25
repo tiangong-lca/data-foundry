@@ -321,6 +321,7 @@ test("active documentation and source contain no references to removed CLI spine
     "finalize-fixtures.mjs",
     "foundry-runtime-utils.mjs",
     "location-quality-utils.mjs",
+    "prewrite-cleanup.mjs",
   ];
   const files = [
     "AGENTS.md",
