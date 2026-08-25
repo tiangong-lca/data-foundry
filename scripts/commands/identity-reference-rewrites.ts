@@ -1,5 +1,47 @@
 import path from "node:path";
 
+export type IdentityReferenceRewriteOptions = Record<string, unknown> & {
+  help?: unknown;
+  type?: unknown;
+  datasetType?: unknown;
+  rowsFile?: unknown;
+  input?: unknown;
+  rows?: unknown;
+  outDir?: unknown;
+  out?: unknown;
+  output?: unknown;
+  outputRows?: unknown;
+};
+
+export type IdentityReferenceRewriteResult = Record<string, unknown> & {
+  output_rows_file?: unknown;
+  reference_rows_file?: unknown;
+  rewrite_file?: unknown;
+  unresolved_references_file?: unknown;
+};
+
+type ApplyIdentityReferenceRewritesInput = {
+  datasetType: string;
+  rowsFile: string;
+  outFile: string;
+  outDir: string;
+  options: IdentityReferenceRewriteOptions;
+  allowMissingIndex: false;
+};
+
+export type IdentityReferenceRewriteFactoryDependencies = {
+  applyIdentityReferenceRewrites: (
+    input: ApplyIdentityReferenceRewritesInput,
+  ) => IdentityReferenceRewriteResult;
+  asText: (value: unknown) => string;
+  datasetRowsFileStem: (datasetType: string) => string;
+  fileExists: (filePath: string) => boolean;
+  nowIso: () => string;
+  repoRelativePath: (filePath: string) => string;
+  resolveRepoPath: (value: unknown) => string | null;
+  writeJson: (filePath: string, value: unknown) => unknown;
+};
+
 export function createIdentityReferenceRewriteCommands({
   applyIdentityReferenceRewrites,
   asText,
@@ -9,8 +51,10 @@ export function createIdentityReferenceRewriteCommands({
   repoRelativePath,
   resolveRepoPath,
   writeJson,
-}) {
-  function runDatasetIdentityReferenceRewritesApply(options) {
+}: IdentityReferenceRewriteFactoryDependencies) {
+  function runDatasetIdentityReferenceRewritesApply(
+    options: IdentityReferenceRewriteOptions,
+  ): Record<string, unknown> {
     if (options.help) {
       return {
         schema_version: 1,
@@ -30,13 +74,13 @@ export function createIdentityReferenceRewriteCommands({
     }
     const outDir = resolveRepoPath(
       options.outDir || path.join(path.dirname(rowsFile), "identity-reference-rewrites"),
-    );
+    )!;
     const outFile = resolveRepoPath(
       options.out ||
         options.output ||
         options.outputRows ||
         path.join(outDir, `${datasetRowsFileStem(datasetType)}.identity-rewritten.jsonl`),
-    );
+    )!;
     const result = applyIdentityReferenceRewrites({
       datasetType,
       rowsFile,

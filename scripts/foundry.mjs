@@ -14,7 +14,7 @@ import { createExecutionCapsuleCommands } from "./commands/execution-capsule.mjs
 import { createIdentityDecisionTaskCommands } from "./commands/identity-decision-task.mjs";
 import { createIdentityDecisionCommands } from "./commands/identity-decisions.mjs";
 import { createIdentityPreflightRunCommands } from "./commands/identity-preflight-run.mjs";
-import { createIdentityReferenceRewriteCommands } from "./commands/identity-reference-rewrites.mjs";
+import { createIdentityReferenceRewriteCommands } from "./commands/identity-reference-rewrites.ts";
 import { createImportCompletionCommands } from "./commands/import-completion.mjs";
 import { createImportLedgerCommands } from "./commands/import-ledger.ts";
 import { createIncrementalChangeSetCommands } from "./commands/incremental-change-set.mjs";

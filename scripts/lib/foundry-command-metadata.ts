@@ -1036,7 +1036,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-identity-reference-rewrites-apply": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/identity-reference-rewrites.mjs",
+    ownerModule: "scripts/commands/identity-reference-rewrites.ts",
     ownerExport:
       "createIdentityReferenceRewriteCommands().runDatasetIdentityReferenceRewritesApply",
     inputs: ["process rows file", "identity-preflight index or identity decision rewrites"],
