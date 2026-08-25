@@ -35,7 +35,7 @@ export {
   identityDecisionUnresolvedReferenceKeys,
   readIdentityDecisionApplyContexts,
   readIdentityReferenceRewriteContext,
-} from "./workflow-identity-decision-context.mjs";
+} from "./workflow-identity-decision-context.ts";
 export {
   identityDecisionApplyReportOptionValues,
   readFileArtifactIfOption,

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import * as identityContext from "../../scripts/lib/import-curation/internal/workflow-identity-decision-context.mjs";
+import * as identityContext from "../../scripts/lib/import-curation/internal/workflow-identity-decision-context.ts";
 import { sha256Json, sha256Text } from "../../scripts/lib/import-curation/internal/hash-utils.ts";
 
 type JsonRecord = Record<string, unknown>;
@@ -145,7 +145,7 @@ test("identity rewrite context preserves configured/default selection, scope ord
     });
     assert.equal(context.sourceFile, rewritesPath);
     assert.deepEqual(
-      context.sourceRows.map((row: JsonRecord) => row.marker),
+      context.sourceRows.map((row) => (row as JsonRecord).marker),
       ["exact", "id-fallback", "reference", "excluded", "missing-id"],
     );
     assert.deepEqual(
@@ -153,11 +153,11 @@ test("identity rewrite context preserves configured/default selection, scope ord
       ["exact", "id-fallback", "reference"],
     );
     assert.deepEqual(
-      context.byIdentity.get("write-id@@01.00.000").map((row: JsonRecord) => row.marker),
+      context.byIdentity.get("write-id@@01.00.000")!.map((row) => row.marker),
       ["exact"],
     );
     assert.deepEqual(
-      context.byIdentity.get("write-id").map((row: JsonRecord) => row.marker),
+      context.byIdentity.get("write-id")!.map((row) => row.marker),
       ["exact", "id-fallback"],
     );
     assert.equal(context.status, "complete");
@@ -325,15 +325,16 @@ test("identity apply context preserves file/embedded fallback, decision indexes,
         },
       },
     });
+    assert.ok(context);
     assert.equal(context.status, "completed");
     assert.equal(context.reportPath, "reports/apply.json");
     assert.equal(context.decisionsFile, path.join(root, "decisions", "decisions.json"));
     assert.deepEqual(
-      context.byIdentity.get("flow:flow-id@@01.00.000").map((row: JsonRecord) => row.marker),
+      context.byIdentity.get("flow:flow-id@@01.00.000")!.map((row) => row.marker),
       ["first", "second"],
     );
     assert.equal(context.authoringPackageProofs.length, 1);
-    assert.deepEqual(context.authoringPackageProofs[0].blockers, []);
+    assert.deepEqual((context.authoringPackageProofs[0] as JsonRecord).blockers, []);
     assert.deepEqual(context.inputRows, [
       path.join(root, "rows", "missing.json"),
       path.join(root, "rows", "input-a.jsonl"),
@@ -360,6 +361,7 @@ test("identity apply context preserves file/embedded fallback, decision indexes,
       path: "reports/embedded.json",
       value: { decisions_file: "missing.json", decisions: [decisions[1]] },
     });
+    assert.ok(embedded);
     assert.deepEqual(embedded.decisions, [decisions[1]]);
 
     writeText(path.join(root, "decisions", "invalid.jsonl"), "{bad}\n");
@@ -413,6 +415,7 @@ test("identity context merge preserves concatenation, map rows, proof/file dedup
   assert.equal(identityContext.mergeIdentityDecisionApplyContexts([]), null);
   assert.equal(identityContext.mergeIdentityDecisionApplyContexts([contextA]), contextA);
   const merged = identityContext.mergeIdentityDecisionApplyContexts([contextA, null, contextB]);
+  assert.ok(merged);
   assert.equal(merged.status, "mixed");
   assert.equal(merged.reportPath, "report-a.json");
   assert.deepEqual(merged.reportPaths, ["report-a.json", "report-b.json"]);
@@ -421,11 +424,11 @@ test("identity context merge preserves concatenation, map rows, proof/file dedup
     ["a", "b"],
   );
   assert.deepEqual(
-    merged.byIdentity.get("flow:id").map((row: JsonRecord) => row.marker),
+    merged.byIdentity.get("flow:id")!.map((row) => row.marker),
     ["a", "b"],
   );
   assert.deepEqual(
-    merged.authoringPackageProofs.map((proof: JsonRecord) => proof.marker),
+    merged.authoringPackageProofs.map((proof) => (proof as JsonRecord).marker),
     ["first", "second"],
   );
   assert.deepEqual(merged.inputRows, ["input-a", "shared", "input-b"]);
@@ -434,13 +437,12 @@ test("identity context merge preserves concatenation, map rows, proof/file dedup
   assert.deepEqual(merged.identityReferenceRewritesFiles, ["rewrite-a", "rewrite-b"]);
   assert.equal(merged.identityReferenceRewritesFile, "rewrite-a");
   assert.equal(merged.decisionsFile, null);
-  assert.equal(
-    identityContext.mergeIdentityDecisionApplyContexts([
-      contextA,
-      { ...contextB, status: "completed" },
-    ]).status,
-    "completed",
-  );
+  const completed = identityContext.mergeIdentityDecisionApplyContexts([
+    contextA,
+    { ...contextB, status: "completed" },
+  ]);
+  assert.ok(completed);
+  assert.equal(completed.status, "completed");
 });
 
 test("identity lookup, completion predicates, and unresolved reference keys preserve key priority and set order", () => {

@@ -36,7 +36,7 @@ export {
   identityDecisionApplyContextDecisionsForIdentity,
   readIdentityDecisionApplyContexts,
   readIdentityReferenceRewriteContext,
-} from "./workflow-identity-decision-context.mjs";
+} from "./workflow-identity-decision-context.ts";
 export {
   buildIdentityPreflightAuthoringContext,
   classificationQueueActionItem,

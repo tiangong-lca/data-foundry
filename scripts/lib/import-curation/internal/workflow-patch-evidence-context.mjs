@@ -11,7 +11,7 @@ import {
   resolveRepoPath,
   unique,
 } from "./runtime-io.ts";
-import { identityDecisionApplyContextHasDecision } from "./workflow-identity-decision-context.mjs";
+import { identityDecisionApplyContextHasDecision } from "./workflow-identity-decision-context.ts";
 import { readFileArtifactIfOption, readJsonLines } from "./workflow-patch-collect.ts";
 import { isAnnualSupplyTarget } from "./workflow-queue-context.ts";
 

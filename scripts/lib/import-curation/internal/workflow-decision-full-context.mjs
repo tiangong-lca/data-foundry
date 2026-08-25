@@ -18,7 +18,7 @@ import {
   identityDecisionPackageReference,
   identityDecisionPackageSha,
   identityDecisionValue,
-} from "./workflow-identity-decision-context.mjs";
+} from "./workflow-identity-decision-context.ts";
 import {
   decisionApplyExpectedRowsFile,
   decisionApplyInputRowsMatch,
