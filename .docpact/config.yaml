@@ -8,8 +8,9 @@ layout: repo
 # Review note, 2026-08-25: Issue #63 establishes the pnpm 11.23 / Node 24 / TypeScript 7.0.2 typed spine, explicit JavaScript migration inventory, Oxlint boundary, CLI 0.1.0 command pin, and clean arbitrary-worktree validation. Existing ownership and routing semantics are unchanged.
 # Review note, 2026-08-25: Issue #65 removes the foreign/RLS-hidden state-0 missing-dataset accepted-diff path from the helper, shared batch runner, and worldsteel config; legitimate root traceHash-only normalization remains, and the touched helper/test migrate to TypeScript.
 # Review note, 2026-08-25: Issue #65 adds the typed CommandSpec envelope, authoritative executable/argv handoffs, final-row byte/SHA binding, and shell-free BAFU execution. Ownership and routing semantics are unchanged.
+# Review note, 2026-08-25: Issue #67 Wave 24 B3 migrates the curation aggregate, gate runner, and cleanup runner under the existing scripts/** and test/** ownership/rule coverage. No catalog, routing, rule, profile, environment, or remote-authority semantics change.
 lastReviewedAt: "2026-08-25"
-lastReviewedCommit: "e94db0428e3508e68617bb1878c7e8dbec904def"
+lastReviewedCommit: "61744bf0195f6311638fc2cd3a3fd1b0f40a4ac8"
 
 catalog:
   repos:
