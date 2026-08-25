@@ -1,25 +1,38 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { auditTidasCutover } from "../../scripts/check-tidas-cutover.ts";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
 
-function negativeFixturePath(): string {
-  return path.join(repoRoot, "scripts", `tidas-cutover-negative-${process.pid}.mjs`);
-}
-
-function runAuditScript(): { status: number | null; stdout: string; stderr: string } {
+function runAuditScript(cwd = repoRoot): { status: number | null; stdout: string; stderr: string } {
   const result = spawnSync(process.execPath, ["scripts/check-tidas-cutover.ts"], {
-    cwd: repoRoot,
+    cwd,
     encoding: "utf8",
     env: process.env,
   });
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+}
+
+function createNegativeFixtureRepository(): string {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-tidas-cutover-"));
+  const fixtureScripts = path.join(fixtureRoot, "scripts");
+  fs.mkdirSync(fixtureScripts, { recursive: true });
+  fs.copyFileSync(
+    path.join(repoRoot, "scripts", "check-tidas-cutover.ts"),
+    path.join(fixtureScripts, "check-tidas-cutover.ts"),
+  );
+  fs.writeFileSync(
+    path.join(fixtureScripts, "tidas-cutover-negative.mjs"),
+    ["export const safe = true;", 'export const retired = "python -m tidas_tools";', ""].join("\n"),
+  );
+  const initialized = spawnSync("git", ["init", "--quiet", fixtureRoot], { encoding: "utf8" });
+  assert.equal(initialized.status, 0, initialized.stderr);
+  return fixtureRoot;
 }
 
 test("TIDAS cutover script emits exact JSON stdout and zero exit for the active inventory", () => {
@@ -34,26 +47,26 @@ test("TIDAS cutover script emits exact JSON stdout and zero exit for the active 
 });
 
 test("TIDAS cutover detects an untracked authoritative violation with stable line and exit", () => {
-  const fixture = negativeFixturePath();
-  fs.writeFileSync(
-    fixture,
-    ["export const safe = true;", 'export const retired = "python -m tidas_tools";', ""].join("\n"),
-  );
+  const fixtureRoot = createNegativeFixtureRepository();
   try {
-    const report = auditTidasCutover();
+    const result = runAuditScript(fixtureRoot);
+    const report = JSON.parse(result.stdout) as {
+      status: string;
+      findings: Array<{ file: string; line: number; pattern: string }>;
+    };
+    assert.equal(result.status, 1);
+    assert.equal(result.stderr, "");
     assert.equal(report.status, "failed");
     assert.deepEqual(report.findings, [
       {
-        file: path.relative(repoRoot, fixture).split(path.sep).join("/"),
+        file: "scripts/tidas-cutover-negative.mjs",
         line: 2,
         pattern: "python(?:3)?\\s+-m\\s+tidas_tools",
       },
     ]);
-    const result = runAuditScript();
-    assert.equal(result.status, 1);
-    assert.equal((JSON.parse(result.stdout).findings as unknown[]).length, 1);
+    assert.equal(result.stdout, `${JSON.stringify(report, null, 2)}\n`);
   } finally {
-    fs.rmSync(fixture, { force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 
