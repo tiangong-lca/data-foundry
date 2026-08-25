@@ -33,8 +33,8 @@ checkPaths:
   - test/unit/surface-audit-typescript.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: f5206e37987e7ff8db7f5f207965dcd8b5204201
-lastReviewedNote: "Reviewed for Issue #65: CommandSpecs prevent byte drift, foreign hidden drafts remain blocked, and credential-scoped execution requires the fail-closed typed CLI 0.1.1 receipt wrapper."
+lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f
+lastReviewedNote: "Reviewed for Issue #67 Wave 2: metadata and surface-audit migration preserves the command/workflow contract, runtime reachability policy, and TDD gate order."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

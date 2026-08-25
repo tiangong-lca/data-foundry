@@ -22,8 +22,8 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 231489cff1ebf662397317de36da6eb88a09640a
-lastReviewedNote: "Reviewed for Issue #67: the native TypeScript parser and command registry remain Foundry-local delivery tooling; no cross-repository owner or normal execution surface changes."
+lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f
+lastReviewedNote: "Reviewed for Issue #67 Wave 2: native TS parser, registry, metadata, and surface audit remain Foundry-local delivery tooling; no cross-repository owner or normal execution surface changes."
 ---
 
 # Workspace Project Map

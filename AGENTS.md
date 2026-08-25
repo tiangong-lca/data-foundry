@@ -42,8 +42,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: f5206e37987e7ff8db7f5f207965dcd8b5204201
-lastReviewedNote: "Reviewed for Issue #65: foreign/RLS-hidden state-0 references stay blocking; typed CommandSpecs bind final-row bytes; the TS account wrapper requires CLI 0.1.1 intent-bound receipts with no authentication bypass."
+lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f
+lastReviewedNote: "Reviewed for Issue #67 Wave 2: four characterized CLI-spine leaves are native TS7, active stale module references are rejected, inventory is monotonic, and runtime/help/exit ownership remains unchanged."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

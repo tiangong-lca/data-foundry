@@ -34,8 +34,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: f5206e37987e7ff8db7f5f207965dcd8b5204201
-lastReviewedNote: "Reviewed for Issue #65: typed CommandSpecs bind final-row bytes, foreign hidden drafts stay blocked, and the typed account boundary requires CLI 0.1.1 intent-bound receipts."
+lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f
+lastReviewedNote: "Reviewed for Issue #67 Wave 2: parser, registry, metadata, and surface-audit leaves are native TS7 under focused characterization and pnpm-only gates."
 ---
 
 # TianGong LCA Data Foundry

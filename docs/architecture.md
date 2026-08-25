@@ -37,8 +37,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: f5206e37987e7ff8db7f5f207965dcd8b5204201
-lastReviewedNote: "Reviewed for Issue #65: typed CommandSpecs make handoffs content-addressed, foreign hidden drafts stay excluded, and the TS account boundary consumes CLI 0.1.1 identity receipts fail-closed."
+lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f
+lastReviewedNote: "Reviewed for Issue #67 Wave 2: the typed metadata/audit leaves remain Foundry-local navigation and delivery tooling and do not alter sibling execution ownership."
 ---
 
 # Architecture

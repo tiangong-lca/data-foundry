@@ -26,8 +26,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
-lastReviewedNote: "Reviewed for Issue #65: typed CommandSpec navigation and metadata-test migration."
+lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f
+lastReviewedNote: "Reviewed for Issue #67 Wave 2: native TS metadata and surface audit expose exact owner/artifact schemas, script-only reachability, portable paths, and stale-module guards."
 ---
 
 # Foundry AI Navigation

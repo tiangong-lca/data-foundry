@@ -22,8 +22,8 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
-lastReviewedNote: "Reviewed for Issue #65: CommandSpec handoff artifacts and typed metadata tests."
+lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f
+lastReviewedNote: "Reviewed for Issue #67 Wave 2: the typed command metadata and surface audit preserve all 63 commands, report JSON, owner/export contracts, and consumer paths."
 ---
 
 # Foundry Command Surface

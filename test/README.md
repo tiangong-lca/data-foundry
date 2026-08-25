@@ -30,8 +30,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: db0d3129414884234cb24452ba71168c02e64d60
-lastReviewedNote: "Reviewed for Issue #65: typed receipt/CommandSpec/root-proof tests, explicit production case TDD outside ordinary CI, TS surface audit, pnpm-only gates, and clean-worktree isolation."
+lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f
+lastReviewedNote: "Reviewed for Issue #67 Wave 2: characterization pins metadata schemas, TS import discovery, portable paths, test-only inbound exclusion, orphan/entrypoint policy, and removed-module guards."
 ---
 
 # Test Layout

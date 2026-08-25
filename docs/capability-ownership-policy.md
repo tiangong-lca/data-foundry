@@ -24,8 +24,8 @@ checkPaths:
   - docs/safety-policy.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 231489cff1ebf662397317de36da6eb88a09640a
-lastReviewedNote: "Reviewed for Issue #67: typing the Foundry-owned argument and command-registry leaves preserves the existing thin-control-plane ownership boundary and adds no sibling CLI, skill, SDK, converter, database, or Edge behavior."
+lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f
+lastReviewedNote: "Reviewed for Issue #67 Wave 2: typing Foundry-owned parser, registry, metadata, and surface-audit leaves preserves the thin-control-plane boundary and adds no sibling CLI, skill, SDK, converter, database, or Edge behavior."
 ---
 
 # Capability Ownership Policy
