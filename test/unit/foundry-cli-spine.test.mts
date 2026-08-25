@@ -324,6 +324,7 @@ test("active documentation and source contain no references to removed CLI spine
     "prewrite-cleanup.mjs",
     "workflow-queue-context.mjs",
     "internal/full-context-proof.mjs",
+    "workflow-decision-apply-context.mjs",
   ];
   const files = [
     "AGENTS.md",
