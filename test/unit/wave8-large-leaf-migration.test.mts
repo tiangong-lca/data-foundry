@@ -50,7 +50,7 @@ test("import ledger exists only as native TypeScript", () => {
 
 test("BAFU family signature consumers target the typed module explicitly", () => {
   assertStaticImports([
-    ["scripts/commands/bafu-batch-import-run.mjs", "../lib/bafu-family-signatures.ts"],
+    ["scripts/commands/bafu-batch-import-run.ts", "../lib/bafu-family-signatures.ts"],
     ["test/unit/bafu-family-signatures.test.mjs", "../../scripts/lib/bafu-family-signatures.ts"],
     [
       "test/unit/bafu-family-signatures-contract.test.mts",

@@ -106,7 +106,7 @@
         "docs/foundry-task-contracts.md",
         "docs/safety-policy.md",
         "scripts/commands/commit-handoff.ts",
-        "scripts/commands/bafu-batch-import-run.mjs",
+        "scripts/commands/bafu-batch-import-run.ts",
         "scripts/commands/bafu-process-scope-e2e.ts",
         "test/unit/foundry-command-spec.test.mts"
       ],

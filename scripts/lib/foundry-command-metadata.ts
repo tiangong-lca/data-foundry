@@ -927,7 +927,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-bafu-batch-import-run": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/bafu-batch-import-run.mjs",
+    ownerModule: "scripts/commands/bafu-batch-import-run.ts",
     ownerExport: "createBafuBatchImportRunCommands().runDatasetBafuBatchImportRun",
     inputs: [
       "ready-scopes.jsonl",
@@ -1026,7 +1026,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-bafu-universe-coverage-report": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/bafu-batch-import-run.mjs",
+    ownerModule: "scripts/commands/bafu-batch-import-run.ts",
     ownerExport: "createBafuBatchImportRunCommands().runDatasetBafuUniverseCoverageReport",
     inputs: [
       "BAFU input directory",

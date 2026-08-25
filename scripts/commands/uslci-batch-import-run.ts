@@ -9,7 +9,7 @@
 //   - BAFU family-signature ordering OFF (USLCI has no ecoSpold name-family concept).
 // BAFU behavior is unchanged: the engine's defaults reproduce the BAFU runner exactly,
 // and each run re-installs its own profile config (runs are sequential, race-free).
-import { createBafuBatchImportRunCommands } from "./bafu-batch-import-run.mjs";
+import { createBafuBatchImportRunCommands } from "./bafu-batch-import-run.ts";
 
 export type LibraryBatchImportRunner = (...args: unknown[]) => unknown;
 export type LibraryBatchImportCommandSet = {

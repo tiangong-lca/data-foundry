@@ -17,6 +17,8 @@ import {
   assertFoundryCommandSpecArtifactsCurrent,
   assertFoundryCommandSpecBindsArtifact,
   commandSpecOptionValue,
+  type FoundryArtifactFact,
+  type FoundryCommandSpec,
 } from "../lib/foundry-command-spec.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.ts";
 import { stageContract } from "../lib/stage-contract.ts";
@@ -25,11 +27,333 @@ import {
   traceHashNormalizationAllowed,
 } from "../lib/production-case-policy.ts";
 
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface DatasetIdentity {
+  id: string | null;
+  version: string;
+}
+
+interface BafuBatchRuntime {
+  nowIso: () => string;
+  resolveRepoPath: (value: unknown) => string | null;
+  repoRelativeMaybe: (filePath: string | null | undefined) => string | null;
+  fileExists: (filePath: string | null | undefined) => boolean;
+  directoryExists: (filePath: string | null | undefined) => boolean;
+  readJson: (filePath: string) => unknown;
+  readJsonLines: (filePath: string) => unknown[];
+  writeJson: (filePath: string, value: unknown) => void;
+  writeJsonLines: (filePath: string, rows: readonly unknown[]) => void;
+  asText: (value: unknown) => string;
+  booleanOption: (value: unknown) => boolean;
+  integerOption: (value: unknown, fallback?: number | null) => number | null;
+  normalizedList: (value: unknown) => string[];
+  shellQuote: (value: string) => string;
+  datasetIdentity: (
+    row: unknown,
+    datasetType: string,
+  ) => {
+    id?: string | null;
+    version?: string | null;
+  };
+}
+
+interface BafuBatchConfig extends JsonRecord {
+  profile?: string;
+  commandName?: string;
+  enableBafuAutofill?: boolean;
+  enableFamilySignatures?: boolean;
+  defaults?: JsonRecord;
+  commitFlowSupportInline?: boolean;
+  mintUnmatchedFpUgSupport?: boolean;
+  applyResolutionRewrites?: boolean;
+}
+
+interface StageResult extends JsonRecord {
+  stage: string;
+  command: string;
+  exit_code: number;
+  signal: NodeJS.Signals | null;
+  timed_out: boolean;
+  timeout_ms: number;
+  started_at_utc: string;
+  finished_at_utc: string;
+  stdout_log: string;
+  stderr_log: string;
+  json: JsonRecord | null;
+  report?: string;
+  attempt?: number;
+  max_attempts?: number;
+  retry_reason?: string;
+  retry_next_delay_ms?: number;
+}
+
+interface HandoffResult extends JsonRecord {
+  status: string;
+  blockers: JsonRecord[];
+  stages: JsonRecord[];
+  handoffPlan?: JsonRecord;
+  closeoutReport?: JsonRecord | null;
+  commitReportPath?: string | null;
+  verifyReportPath?: string | null;
+  closeoutReportPath?: string | null;
+}
+
+interface CommitFailureSummary {
+  accepted: boolean;
+  alreadyExists: number;
+  otherFailures: number;
+}
+
+interface ReusableDecisionIndex {
+  files: string[];
+  byKey: Map<string, { row: JsonRecord; source_file: string }>;
+  conflicts: JsonRecord[];
+}
+
+interface CarryForwardReport extends JsonRecord {
+  status: string;
+  counts: {
+    replacements: number;
+    additions: number;
+    conflicts: number;
+    [key: string]: number;
+  };
+}
+
+interface CarryForwardResult {
+  report: CarryForwardReport;
+  reportPath: string;
+  outputFile: string;
+}
+
+interface GatePackageSnapshot extends JsonRecord {
+  authoring_package: string;
+  authoring_package_sha256: string;
+  contractContextKinds: string[];
+}
+
+interface IdentityPatchCompleted extends JsonRecord {
+  status: "completed";
+  rowsFile: string;
+  identityApplyReport: string | null;
+  patchCollectReport: string | null;
+  patchApplyReport: string | null;
+}
+
+interface IdentityPatchBlocked extends JsonRecord {
+  status: "blocked";
+  blocker: JsonRecord;
+  report?: string | null;
+}
+
+type IdentityPatchResult = IdentityPatchCompleted | IdentityPatchBlocked;
+
+interface FinalizeArgsInput {
+  type: string;
+  rowsFile: string;
+  outDir: string;
+  ledgerDir: string;
+  sourceSupportRowsFile?: string | null;
+  sourceRowsFile?: string | null;
+  flowpropertyRowsFile?: string | null;
+  unitgroupRowsFile?: string | null;
+  identityPreflightIndex?: string | null;
+  context: ContextPaths;
+  classificationQueue?: string | null;
+  locationQueue?: string | null;
+  classificationApplyReport?: string | null;
+  locationApplyReport?: string | null;
+  identityApplyReports: string[];
+  patchCollectReport?: string | null;
+  patchApplyReport?: string | null;
+  targetUserId: string;
+  stateCode: number;
+}
+
+interface ContextPaths {
+  schemaFile: string;
+  yamlFile: string;
+  rulesetFile: string;
+}
+
+interface SchemaPaths extends JsonRecord {
+  processCategory: string;
+  flowProductCategory: string;
+  flowElementaryCategory: string;
+  location: string;
+  allClassification: string[];
+}
+
+interface SchemaClass extends JsonRecord {
+  classId: string;
+  level: string;
+  text: string;
+}
+
+interface FlowVerificationPartition {
+  pendingRows: JsonRecord[];
+  verifiedRows: JsonRecord[];
+  pendingIdentities: JsonRecord[];
+  verifiedIdentities: JsonRecord[];
+}
+
+interface ScopeSelectionCandidate extends JsonRecord {
+  scope: JsonRecord;
+  index: number;
+  weight: number | null;
+  familySignature: BafuFamilySignature;
+  classificationPreflight: JsonRecord;
+}
+
+interface ScopeSelectionResult {
+  scopes: JsonRecord[];
+  stats: JsonRecord;
+}
+
+interface ClassificationDecisionIndex {
+  row_count: number;
+  indexed_decisions: number;
+  byKey: Map<string, JsonRecord>;
+}
+
+interface ClassificationRepairResult extends JsonRecord {
+  unresolved: JsonRecord[];
+  unresolvedPath: string;
+}
+
+interface CarriedForwardFlowRows extends JsonRecord {
+  count: number;
+  rows: JsonRecord[];
+  ledger: string;
+}
+
+interface MaterializedRows {
+  flowRowsFile: string | null;
+  processRowsFile: string | null;
+  sourceRowsFile: string | null;
+  supportRowsFile: string | null;
+  flowpropertyRowsFile: string | null;
+  unitgroupRowsFile: string | null;
+  classificationQueue: string | null;
+  locationQueue: string | null;
+  identityPreflightIndex: string | null;
+}
+
+interface BatchPaths extends JsonRecord {
+  runDir: string;
+  outDir: string;
+  scopeFile: string;
+  processBundlesDir: string;
+  libraryClassificationDecisions: string | null;
+  scopeCheckpoints: string;
+  okFlows: string;
+  okProcesses: string;
+  okScopes: string;
+  blockedHumanReview: string;
+  blockedHumanReviewActive: string;
+  blockedHumanReviewResolved: string;
+  blocked_human_review: string;
+  blocked_reference_closure: string;
+  blocked_remote_write: string;
+  blockedOther: string;
+  failedRetry: string;
+  supportIdentityCache: string;
+  preflightPlan: string;
+  bafuFamilySignatures: string;
+  resolutionRewritesByProcess: Map<string, JsonRecord[]>;
+  applyResolutionRewritesMode: boolean;
+}
+
+interface ScopeActionInput {
+  stage: string;
+  blocker: JsonRecord;
+  report: string | null;
+}
+
+interface RunOneScopeInput {
+  scope: JsonRecord;
+  familySignature: BafuFamilySignature;
+  options: JsonRecord;
+  paths: BatchPaths;
+  schemas: SchemaPaths;
+  verifiedScopes: Set<string>;
+  verifiedFlows: Set<string>;
+  verifiedFlowRowsByKey: Map<string, JsonRecord>;
+  blockedScopes: Set<string>;
+  workerIndex?: number;
+}
+
+interface SupportFinalizeInput {
+  type: string;
+  finalizeReport: JsonRecord;
+  finalizeReportPath: string;
+  finalizeArgs: string[];
+  ledgerDir: string;
+  scopeDir: string;
+  logDir: string;
+  stages: JsonRecord[];
+  supportIdentityCacheFile: string;
+}
+
+interface FinalizeAndCommitInput {
+  type: string;
+  rowsFile: string;
+  scopeDir: string;
+  runDir: string;
+  materialized: MaterializedRows;
+  classificationApplyReport: string | null;
+  locationApplyReport: string | null;
+  identityApplyReports: string[];
+  patchCollectReport: string | null;
+  patchApplyReport: string | null;
+  targetUserId: string;
+  stateCode: number;
+  logDir: string;
+  ledgerDir: string;
+  stages: JsonRecord[];
+  supportIdentityCacheFile: string;
+}
+
+interface DatasetCommitCompleted extends JsonRecord {
+  status: "completed";
+  report: string;
+  finalizeReport: JsonRecord;
+  handoff: HandoffResult;
+}
+
+interface DatasetCommitBlocked extends JsonRecord {
+  status: "failed" | "blocked";
+  blocker: JsonRecord;
+  report: string;
+  finalizeReport: JsonRecord | null;
+  handoff?: HandoffResult;
+}
+
+type DatasetCommitResult = DatasetCommitCompleted | DatasetCommitBlocked;
+
+type BafuFamilyIndex = ReturnType<typeof buildBafuFamilySignatureIndex>;
+type BafuFamilySignature = ReturnType<typeof bafuFamilySignatureForScope>;
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function jsonRecord(value: unknown): JsonRecord {
+  return isJsonRecord(value) ? value : {};
+}
+
+function recordArray(value: unknown): JsonRecord[] {
+  return Array.isArray(value) ? value.map(jsonRecord) : [];
+}
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const commandName = "dataset-bafu-batch-import-run";
 const coverageCommandName = "dataset-bafu-universe-coverage-report";
-let supportCommitQueue = Promise.resolve();
-const verifiedSupportIdentities = new Set();
+let supportCommitQueue: Promise<unknown> = Promise.resolve();
+const verifiedSupportIdentities = new Set<string>();
 const bafuBatchStageContract = {
   remote_write_mode: "explicit-commit-only",
   stage_pipeline: stageContract([
@@ -109,15 +433,15 @@ const bafuBatchRuntimeKeys = [
   "normalizedList",
   "shellQuote",
   "datasetIdentity",
-];
+] as const satisfies readonly (keyof BafuBatchRuntime)[];
 
-let bafuBatchRuntime = null;
+let bafuBatchRuntime: BafuBatchRuntime | null = null;
 // Profile config lets the same engine drive other profiles (e.g. USLCI) without
 // changing BAFU behavior: every default below reproduces the BAFU runner exactly,
 // so an empty config == the historical BAFU runner.
-let bafuBatchConfig = {};
+let bafuBatchConfig: BafuBatchConfig = {};
 
-function installBafuBatchRuntime(deps, config = {}) {
+function installBafuBatchRuntime(deps: BafuBatchRuntime, config: BafuBatchConfig = {}): void {
   const missing = bafuBatchRuntimeKeys.filter((key) => typeof deps?.[key] !== "function");
   if (missing.length > 0) {
     throw new Error(`createBafuBatchImportRunCommands missing dependencies: ${missing.join(", ")}`);
@@ -126,7 +450,7 @@ function installBafuBatchRuntime(deps, config = {}) {
   bafuBatchConfig = config || {};
 }
 
-function runtime() {
+function runtime(): BafuBatchRuntime {
   if (!bafuBatchRuntime) {
     throw new Error("createBafuBatchImportRunCommands must install command dependencies.");
   }
@@ -134,20 +458,17 @@ function runtime() {
 }
 
 // Profile-config accessors. Defaults == BAFU, so BAFU is byte-for-byte unchanged.
-function activeProfile() {
+function activeProfile(): string {
   return bafuBatchConfig.profile || "bafu";
 }
-function activeCommandName() {
+function activeCommandName(): string {
   return bafuBatchConfig.commandName || commandName;
 }
-function bafuAutofillEnabled() {
+function bafuAutofillEnabled(): boolean {
   return bafuBatchConfig.enableBafuAutofill !== false;
 }
-function familySignaturesEnabled() {
+function familySignaturesEnabled(): boolean {
   return bafuBatchConfig.enableFamilySignatures !== false;
-}
-function activeDefaults() {
-  return bafuBatchConfig.defaults || {};
 }
 // When true, the dependency-flow finalize commits its source/contact support
 // (the shared library contact) inline right after pre-finalize — mirroring the
@@ -155,7 +476,7 @@ function activeDefaults() {
 // reference closure for its own flows. BAFU leaves this false: its FOEN library
 // contact already exists remotely, so flow pre-finalize is closure-clean and the
 // inline support commit would be redundant.
-function commitFlowSupportInline() {
+function commitFlowSupportInline(): boolean {
   return Boolean(bafuBatchConfig.commitFlowSupportInline);
 }
 // When true, the finalize lifts the scope's UNMATCHED (non-canonical) Unit Groups
@@ -164,7 +485,7 @@ function commitFlowSupportInline() {
 // (P1a of the BAFU-cleanup backlog). USLCI-only: BAFU keeps FP/UG reference-only
 // and must not start minting them even though its profile also has the
 // account-local override enabled.
-function mintUnmatchedFpUgSupport() {
+function mintUnmatchedFpUgSupport(): boolean {
   return Boolean(bafuBatchConfig.mintUnmatchedFpUgSupport);
 }
 // The dataset types the runner tracks as account-local "support" identities. BAFU
@@ -176,7 +497,7 @@ function mintUnmatchedFpUgSupport() {
 // not falsely short-circuit the support commit (a contact already verified must not
 // hide an un-committed minted FP/UG), and so a committed FP/UG can be reused across
 // scopes. Order is irrelevant; membership is what gates.
-function supportIdentityTypes() {
+function supportIdentityTypes(): string[] {
   return mintUnmatchedFpUgSupport()
     ? ["contact", "source", "unitgroup", "flowproperty"]
     : ["contact", "source"];
@@ -188,61 +509,61 @@ function supportIdentityTypes() {
 // frequently came out empty (apply skipped -> dependency flows wrongly minted even
 // when the offline resolution already matched them to canonical). BAFU keeps this
 // false: its reuse runs entirely through autofill + carry-forward.
-function applyResolutionRewrites() {
+function applyResolutionRewrites(): boolean {
   return Boolean(bafuBatchConfig.applyResolutionRewrites);
 }
 
-function nowIso() {
+function nowIso(): string {
   return runtime().nowIso();
 }
 
-function resolveRepoPath(value) {
+function resolveRepoPath(value: unknown): string | null {
   return runtime().resolveRepoPath(value);
 }
 
-function repoRelative(filePath) {
-  return runtime().repoRelativeMaybe(filePath);
+function repoRelative(filePath: string | null | undefined): string {
+  return runtime().repoRelativeMaybe(filePath) as string;
 }
 
-function fileExists(filePath) {
+function fileExists(filePath: string | null | undefined): boolean {
   return runtime().fileExists(filePath);
 }
 
-function directoryExists(filePath) {
+function directoryExists(filePath: string | null | undefined): boolean {
   return runtime().directoryExists(filePath);
 }
 
-function readJson(filePath) {
-  return runtime().readJson(filePath);
+function readJson(filePath: string): JsonRecord {
+  return runtime().readJson(filePath) as JsonRecord;
 }
 
-function readJsonLines(filePath) {
+function readJsonLines(filePath: string | null | undefined): JsonRecord[] {
   if (!fileExists(filePath)) return [];
-  return runtime().readJsonLines(filePath);
+  return runtime().readJsonLines(filePath!) as JsonRecord[];
 }
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   runtime().writeJson(filePath, value);
 }
 
-function writeJsonLines(filePath, rows) {
+function writeJsonLines(filePath: string, rows: readonly unknown[]): void {
   runtime().writeJsonLines(filePath, rows);
 }
 
-function appendJsonLine(filePath, row) {
+function appendJsonLine(filePath: string, row: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.appendFileSync(filePath, `${JSON.stringify(row)}\n`);
 }
 
-function sha256File(filePath) {
+function sha256File(filePath: string): string {
   return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
 }
 
-function asText(value) {
+function asText(value: unknown): string {
   return runtime().asText(value);
 }
 
-function normalizeSearchText(value) {
+function normalizeSearchText(value: unknown): string {
   return String(value ?? "")
     .toLowerCase()
     .normalize("NFKD")
@@ -252,19 +573,19 @@ function normalizeSearchText(value) {
     .trim();
 }
 
-function booleanOption(value) {
+function booleanOption(value: unknown): boolean {
   return runtime().booleanOption(value);
 }
 
-function integerOption(value, fallback) {
+function integerOption(value: unknown, fallback: number | null = null): number | null {
   return runtime().integerOption(value, fallback);
 }
 
-function normalizedList(value) {
+function normalizedList(value: unknown): string[] {
   return runtime().normalizedList(value);
 }
 
-function requestedProcessIdValues(options) {
+function requestedProcessIdValues(options: JsonRecord): string[] {
   const values = [...normalizedList(options.processId || options.processIds)];
   const fileOption = options.processIdFile ?? options.processIdsFile;
   if (fileOption == null || fileOption === false) return values;
@@ -283,19 +604,19 @@ function requestedProcessIdValues(options) {
   return [...values, ...fileIds];
 }
 
-function uniqueValues(values) {
+function uniqueValues<T>(values: T[]): T[] {
   return [...new Set(values.filter((value) => value != null && value !== ""))];
 }
 
-function shellQuote(value) {
+function shellQuote(value: string): string {
   return runtime().shellQuote(value);
 }
 
-function commandString(argv) {
+function commandString(argv: string[]): string {
   return argv.map(shellQuote).join(" ");
 }
 
-function datasetIdentity(row, type) {
+function datasetIdentity(row: JsonRecord, type: string): DatasetIdentity {
   const injected = runtime().datasetIdentity(row, type);
   if (injected?.id || injected?.version) {
     return {
@@ -303,46 +624,60 @@ function datasetIdentity(row, type) {
       version: injected.version || "00.00.001",
     };
   }
-  const root = row?.[`${type}DataSet`] ?? row;
+  const root = jsonRecord(row[`${type}DataSet`] ?? row);
+  const typeInformation = jsonRecord(root[`${type}Information`]);
   const dataSetInformation =
-    root?.[`${type}Information`]?.dataSetInformation ??
-    root?.[`${type}Information`]?.["common:dataSetInformation"] ??
-    root?.processInformation?.dataSetInformation ??
-    root?.flowInformation?.dataSetInformation ??
+    typeInformation.dataSetInformation ??
+    typeInformation["common:dataSetInformation"] ??
+    jsonRecord(root.processInformation).dataSetInformation ??
+    jsonRecord(root.flowInformation).dataSetInformation ??
     {};
+  const information = jsonRecord(dataSetInformation);
   const publication =
-    root?.administrativeInformation?.publicationAndOwnership ??
-    root?.administrativeInformation?.["common:publicationAndOwnership"] ??
+    jsonRecord(root.administrativeInformation).publicationAndOwnership ??
+    jsonRecord(root.administrativeInformation)["common:publicationAndOwnership"] ??
     {};
+  const publicationRecord = jsonRecord(publication);
   return {
     id:
-      asText(dataSetInformation["common:UUID"]) ||
-      asText(dataSetInformation.UUID) ||
-      asText(row?.dataset_id) ||
-      asText(row?.id),
+      asText(information["common:UUID"]) ||
+      asText(information.UUID) ||
+      asText(row.dataset_id) ||
+      asText(row.id),
     version:
-      asText(publication["common:dataSetVersion"]) ||
-      asText(publication.dataSetVersion) ||
-      asText(row?.dataset_version) ||
-      asText(row?.version) ||
+      asText(publicationRecord["common:dataSetVersion"]) ||
+      asText(publicationRecord.dataSetVersion) ||
+      asText(row.dataset_version) ||
+      asText(row.version) ||
       "00.00.001",
   };
 }
 
-function taskIdentity(task) {
+function taskIdentity(task: JsonRecord): { id: string; version: string } {
+  const entity = jsonRecord(task.entity);
   return {
-    id: asText(task?.entity?.entity_id ?? task?.dataset_id ?? task?.id),
-    version: asText(task?.entity?.version ?? task?.dataset_version ?? task?.version) || "00.00.001",
+    id: asText(entity.entity_id ?? task.dataset_id ?? task.id),
+    version: asText(entity.version ?? task.dataset_version ?? task.version) || "00.00.001",
   };
 }
 
-export function filterAuthoringTaskManifestToRows({ taskManifest, rowsFile, type, reportPath }) {
+export function filterAuthoringTaskManifestToRows({
+  taskManifest,
+  rowsFile,
+  type,
+  reportPath,
+}: {
+  taskManifest: unknown;
+  rowsFile: unknown;
+  type: string;
+  reportPath?: unknown;
+}): JsonRecord {
   const resolvedTaskManifest = resolveRepoPath(taskManifest);
   const resolvedRowsFile = resolveRepoPath(rowsFile);
   const resolvedReportPath =
     resolveRepoPath(reportPath) ||
-    path.join(path.dirname(resolvedTaskManifest), "authoring-task-filter-report.json");
-  const manifest = readJson(resolvedTaskManifest);
+    path.join(path.dirname(resolvedTaskManifest!), "authoring-task-filter-report.json");
+  const manifest = readJson(resolvedTaskManifest!);
   const rows = readRows(resolvedRowsFile);
   const retainedKeys = new Set(
     rows
@@ -350,9 +685,9 @@ export function filterAuthoringTaskManifestToRows({ taskManifest, rowsFile, type
       .filter((identity) => identity.id)
       .map((identity) => `${identity.id}@${identity.version}`),
   );
-  const tasks = Array.isArray(manifest.tasks) ? manifest.tasks : [];
-  const retainedTasks = [];
-  const skippedTasks = [];
+  const tasks = Array.isArray(manifest.tasks) ? manifest.tasks.map(jsonRecord) : [];
+  const retainedTasks: JsonRecord[] = [];
+  const skippedTasks: JsonRecord[] = [];
   for (const task of tasks) {
     const identity = taskIdentity(task);
     const key = identity.id ? `${identity.id}@${identity.version}` : "";
@@ -360,7 +695,7 @@ export function filterAuthoringTaskManifestToRows({ taskManifest, rowsFile, type
       retainedTasks.push(task);
     } else {
       skippedTasks.push({
-        dataset_type: task?.entity?.dataset_type ?? type,
+        dataset_type: jsonRecord(task.entity).dataset_type ?? type,
         dataset_id: identity.id || null,
         dataset_version: identity.version || null,
         reason: "dataset_not_present_after_identity_apply",
@@ -369,8 +704,8 @@ export function filterAuthoringTaskManifestToRows({ taskManifest, rowsFile, type
   }
   const filtered =
     skippedTasks.length > 0
-      ? path.join(path.dirname(resolvedTaskManifest), "authoring-task-manifest.current-rows.json")
-      : resolvedTaskManifest;
+      ? path.join(path.dirname(resolvedTaskManifest!), "authoring-task-manifest.current-rows.json")
+      : resolvedTaskManifest!;
   if (filtered !== resolvedTaskManifest) {
     writeJson(filtered, {
       ...manifest,
@@ -398,14 +733,14 @@ export function filterAuthoringTaskManifestToRows({ taskManifest, rowsFile, type
   const retainedActionItemCount = retainedTasks.reduce(
     (sum, task) =>
       sum +
-      (Number.isFinite(Number(task?.action_item_count))
+      (Number.isFinite(Number(task.action_item_count))
         ? Number(task.action_item_count)
-        : Array.isArray(task?.action_items)
+        : Array.isArray(task.action_items)
           ? task.action_items.length
           : 0),
     0,
   );
-  const report = {
+  const report: JsonRecord = {
     schema_version: 1,
     generated_at_utc: nowIso(),
     status: retainedActionItemCount > 0 ? "ready_for_ai_authoring_batch" : "ready_no_action_items",
@@ -431,20 +766,27 @@ export function filterAuthoringTaskManifestToRows({ taskManifest, rowsFile, type
   };
 }
 
-function readRows(filePath) {
+function readRows(filePath: string | null | undefined): JsonRecord[] {
   if (!fileExists(filePath)) return [];
   if (String(filePath).toLowerCase().endsWith(".jsonl")) return readJsonLines(filePath);
-  const value = readJson(filePath);
-  if (Array.isArray(value)) return value;
-  if (Array.isArray(value.rows)) return value.rows;
-  return [value];
+  const value: unknown = readJson(filePath!);
+  if (Array.isArray(value)) return value.map(jsonRecord);
+  const record = jsonRecord(value);
+  if (Array.isArray(record.rows)) return record.rows.map(jsonRecord);
+  return [record];
 }
 
-function uniqueExistingPaths(paths) {
-  return [...new Set((paths ?? []).map(resolveRepoPath).filter(fileExists))];
+function uniqueExistingPaths(paths: unknown[]): string[] {
+  return [
+    ...new Set(
+      paths
+        .map(resolveRepoPath)
+        .filter((filePath): filePath is string => Boolean(filePath && fileExists(filePath))),
+    ),
+  ];
 }
 
-function datasetTypeFromRow(row) {
+function datasetTypeFromRow(row: JsonRecord): string | null {
   if (row?.contactDataSet) return "contact";
   if (row?.sourceDataSet) return "source";
   if (row?.flowDataSet) return "flow";
@@ -454,24 +796,24 @@ function datasetTypeFromRow(row) {
   return null;
 }
 
-function supportIdentityKeysFromHandoffPlan(handoffPlan) {
+function supportIdentityKeysFromHandoffPlan(handoffPlan: JsonRecord): string[] {
+  const commands = jsonRecord(handoffPlan.commands);
   const inputPath = resolveRepoPath(
-    commandSpecOptionValue(handoffPlan?.commands?.commit, "--input") ||
-      commandSpecOptionValue(handoffPlan?.commands?.commit, "--input-file"),
+    commandSpecOptionValue(commands.commit, "--input") ||
+      commandSpecOptionValue(commands.commit, "--input-file"),
   );
   if (!fileExists(inputPath)) return [];
   return readRows(inputPath)
     .map((row) => {
-      const type =
-        datasetTypeFromRow(row) || commandSpecOptionValue(handoffPlan?.commands?.commit, "--type");
-      if (!supportIdentityTypes().includes(type)) return null;
+      const type = datasetTypeFromRow(row) || commandSpecOptionValue(commands.commit, "--type");
+      if (!type || !supportIdentityTypes().includes(type)) return null;
       const identity = datasetIdentity(row, type);
       return identity.id ? `${type}:${identity.id}@${identity.version}` : null;
     })
-    .filter(Boolean);
+    .filter((key): key is string => Boolean(key));
 }
 
-function splitSupportIdentityKey(identityKey) {
+function splitSupportIdentityKey(identityKey: unknown): JsonRecord | null {
   // contact|source for every profile; unitgroup|flowproperty additionally under
   // --mint-unmatched-fp-ug-support (USLCI). Parsing a wider key set is harmless for
   // BAFU because BAFU never produces unitgroup/flowproperty support identity keys.
@@ -482,7 +824,7 @@ function splitSupportIdentityKey(identityKey) {
   return { dataset_type: match[1], dataset_id: match[2], dataset_version: match[3] };
 }
 
-function supportIdentityKeyFromCacheRow(row) {
+function supportIdentityKeyFromCacheRow(row: JsonRecord): string | null {
   if (row?.identity_key) return String(row.identity_key);
   const rawType = row?.dataset_type || row?.type || row?.table;
   // Tables are plural (flowproperties/unitgroups/contacts/sources); strip to singular.
@@ -497,7 +839,15 @@ function supportIdentityKeyFromCacheRow(row) {
   return supportIdentityTypes().includes(type) && id ? `${type}:${id}@${version}` : null;
 }
 
-function supportIdentityCacheRow({ identityKey, source, report }) {
+function supportIdentityCacheRow({
+  identityKey,
+  source,
+  report,
+}: {
+  identityKey: string;
+  source: string;
+  report: string | null;
+}): JsonRecord | null {
   const identity = splitSupportIdentityKey(identityKey);
   if (!identity) return null;
   return {
@@ -511,7 +861,17 @@ function supportIdentityCacheRow({ identityKey, source, report }) {
   };
 }
 
-function appendSupportIdentityCacheRows({ cacheFile, identityKeys, source, report }) {
+function appendSupportIdentityCacheRows({
+  cacheFile,
+  identityKeys,
+  source,
+  report,
+}: {
+  cacheFile: string;
+  identityKeys: string[];
+  source: string;
+  report: string | null;
+}): number {
   if (!cacheFile || identityKeys.length === 0) return 0;
   let written = 0;
   for (const identityKey of identityKeys) {
@@ -523,7 +883,17 @@ function appendSupportIdentityCacheRows({ cacheFile, identityKeys, source, repor
   return written;
 }
 
-function appendSupportIdentityInvalidationRows({ cacheFile, identityKeys, source, report }) {
+function appendSupportIdentityInvalidationRows({
+  cacheFile,
+  identityKeys,
+  source,
+  report,
+}: {
+  cacheFile: string;
+  identityKeys: string[];
+  source: string;
+  report: string;
+}): number {
   if (!cacheFile || identityKeys.length === 0) return 0;
   let written = 0;
   for (const identityKey of identityKeys) {
@@ -543,14 +913,17 @@ function appendSupportIdentityInvalidationRows({ cacheFile, identityKeys, source
   return written;
 }
 
-function staleReusedSupportIdentityKeys(finalizeReport, supportIdentityKeys) {
+function staleReusedSupportIdentityKeys(
+  finalizeReport: JsonRecord,
+  supportIdentityKeys: string[],
+): string[] {
   const keySet = new Set(supportIdentityKeys);
-  const stale = new Set();
-  for (const blocker of asArray(finalizeReport?.blockers)) {
-    if (!["missing_dataset", "reference_closure_unproven"].includes(asText(blocker?.code))) {
+  const stale = new Set<string>();
+  for (const blocker of asArray(finalizeReport.blockers).map(jsonRecord)) {
+    if (!["missing_dataset", "reference_closure_unproven"].includes(asText(blocker.code))) {
       continue;
     }
-    const table = asText(blocker?.table);
+    const table = asText(blocker.table);
     const type =
       table === "contacts"
         ? "contact"
@@ -562,17 +935,17 @@ function staleReusedSupportIdentityKeys(finalizeReport, supportIdentityKeys) {
               ? "flowproperty"
               : null;
     if (!type || !supportIdentityTypes().includes(type)) continue;
-    const id = asText(blocker?.reference_id ?? blocker?.id);
+    const id = asText(blocker.reference_id ?? blocker.id);
     if (!id) continue;
-    const version = asText(blocker?.reference_version ?? blocker?.version) || "00.00.001";
+    const version = asText(blocker.reference_version ?? blocker.version) || "00.00.001";
     const identityKey = `${type}:${id}@${version}`;
     if (keySet.has(identityKey)) stale.add(identityKey);
   }
   return [...stale];
 }
 
-function supportCacheRowsFromFile(cacheFile) {
-  const byKey = new Map();
+function supportCacheRowsFromFile(cacheFile: string): JsonRecord[] {
+  const byKey = new Map<string, JsonRecord>();
   for (const row of readJsonLines(cacheFile)) {
     const identityKey = supportIdentityKeyFromCacheRow(row);
     if (!identityKey) continue;
@@ -581,16 +954,20 @@ function supportCacheRowsFromFile(cacheFile) {
   return [...byKey.values()];
 }
 
-function supportCacheRowIsVerified(row) {
+function supportCacheRowIsVerified(row: JsonRecord): boolean {
   const status = asText(row?.status) || "verified";
   return status === "verified";
 }
 
-function supportCacheRowsFromCommitSummary(summaryPath, closeoutPath) {
+function supportCacheRowsFromCommitSummary(
+  summaryPath: string,
+  closeoutPath: string,
+): JsonRecord[] {
   const summary = readJson(summaryPath);
   if (summary?.commit !== true || summary?.status !== "completed") return [];
-  return (summary.rows ?? [])
-    .filter((row) => row?.status === "executed")
+  return (Array.isArray(summary.rows) ? summary.rows : [])
+    .map(jsonRecord)
+    .filter((row) => row.status === "executed")
     .map((row) => {
       const type =
         row.table === "contacts"
@@ -602,30 +979,31 @@ function supportCacheRowsFromCommitSummary(summaryPath, closeoutPath) {
               : row.table === "flowproperties"
                 ? "flowproperty"
                 : row.type;
-      if (!supportIdentityTypes().includes(type) || !row.id) return null;
+      const normalizedType = asText(type);
+      if (!supportIdentityTypes().includes(normalizedType) || !row.id) return null;
       return supportIdentityCacheRow({
-        identityKey: `${type}:${row.id}@${row.version || "00.00.001"}`,
+        identityKey: `${normalizedType}:${row.id}@${row.version || "00.00.001"}`,
         source: "existing_support_closeout_scan",
         report: closeoutPath,
       });
     })
-    .filter(Boolean);
+    .filter((row): row is JsonRecord => Boolean(row));
 }
 
-function supportCacheRowsFromCloseoutReport(closeoutPath) {
+function supportCacheRowsFromCloseoutReport(closeoutPath: string): JsonRecord[] {
   const closeout = readJson(closeoutPath);
   if (closeout?.status !== "completed") return [];
   const commitReport = resolveRepoPath(closeout.commit_report);
   if (
     !fileExists(commitReport) ||
-    !commitReport.includes(`${path.sep}dataset-save-draft${path.sep}`)
+    !commitReport!.includes(`${path.sep}dataset-save-draft${path.sep}`)
   ) {
     return [];
   }
-  return supportCacheRowsFromCommitSummary(commitReport, closeoutPath);
+  return supportCacheRowsFromCommitSummary(commitReport!, closeoutPath);
 }
 
-function discoverVerifiedSupportIdentityRows(outDir) {
+function discoverVerifiedSupportIdentityRows(outDir: string): JsonRecord[] {
   const scopesDir = path.join(outDir, "scopes");
   if (!directoryExists(scopesDir)) return [];
   return findFiles(
@@ -636,39 +1014,50 @@ function discoverVerifiedSupportIdentityRows(outDir) {
   ).flatMap(supportCacheRowsFromCloseoutReport);
 }
 
-function primeVerifiedSupportIdentityCache({ outDir, cacheFile, sourceLedgerDirs = [] }) {
+function primeVerifiedSupportIdentityCache({
+  outDir,
+  cacheFile,
+  sourceLedgerDirs = [],
+}: {
+  outDir: string;
+  cacheFile: string;
+  sourceLedgerDirs?: string[];
+}): JsonRecord {
   verifiedSupportIdentities.clear();
-  const seen = new Set();
+  const seen = new Set<string>();
   let loaded_from_cache = 0;
   let loaded_from_ledger_sources = 0;
   let discovered_from_artifacts = 0;
   let discovered_from_ledger_source_artifacts = 0;
   for (const row of supportCacheRowsFromFile(cacheFile)) {
-    if (seen.has(row.identity_key)) continue;
-    seen.add(row.identity_key);
+    const identityKey = asText(row.identity_key);
+    if (!identityKey || seen.has(identityKey)) continue;
+    seen.add(identityKey);
     if (!supportCacheRowIsVerified(row)) continue;
-    verifiedSupportIdentities.add(row.identity_key);
+    verifiedSupportIdentities.add(identityKey);
     loaded_from_cache += 1;
   }
   for (const ledgerDir of sourceLedgerDirs) {
     const sourceCacheFile = path.join(ledgerDir, "verified-support-identities.jsonl");
     for (const row of supportCacheRowsFromFile(sourceCacheFile)) {
-      if (seen.has(row.identity_key)) continue;
-      seen.add(row.identity_key);
+      const identityKey = asText(row.identity_key);
+      if (!identityKey || seen.has(identityKey)) continue;
+      seen.add(identityKey);
       appendJsonLine(cacheFile, {
         ...row,
         carried_forward_from: repoRelative(sourceCacheFile),
         carried_forward_at_utc: nowIso(),
       });
       if (!supportCacheRowIsVerified(row)) continue;
-      verifiedSupportIdentities.add(row.identity_key);
+      verifiedSupportIdentities.add(identityKey);
       loaded_from_ledger_sources += 1;
     }
   }
   for (const row of discoverVerifiedSupportIdentityRows(outDir)) {
-    if (seen.has(row.identity_key)) continue;
-    seen.add(row.identity_key);
-    verifiedSupportIdentities.add(row.identity_key);
+    const identityKey = asText(row.identity_key);
+    if (!identityKey || seen.has(identityKey)) continue;
+    seen.add(identityKey);
+    verifiedSupportIdentities.add(identityKey);
     appendJsonLine(cacheFile, row);
     discovered_from_artifacts += 1;
   }
@@ -676,9 +1065,10 @@ function primeVerifiedSupportIdentityCache({ outDir, cacheFile, sourceLedgerDirs
     .filter((ledgerDir) => path.basename(ledgerDir) === "import-ledger")
     .map((ledgerDir) => path.dirname(ledgerDir))) {
     for (const row of discoverVerifiedSupportIdentityRows(outDirFromLedger)) {
-      if (seen.has(row.identity_key)) continue;
-      seen.add(row.identity_key);
-      verifiedSupportIdentities.add(row.identity_key);
+      const identityKey = asText(row.identity_key);
+      if (!identityKey || seen.has(identityKey)) continue;
+      seen.add(identityKey);
+      verifiedSupportIdentities.add(identityKey);
       appendJsonLine(cacheFile, {
         ...row,
         carried_forward_from: repoRelative(outDirFromLedger),
@@ -697,7 +1087,7 @@ function primeVerifiedSupportIdentityCache({ outDir, cacheFile, sourceLedgerDirs
   };
 }
 
-function appendOption(args, name, value) {
+function appendOption(args: string[], name: string, value: unknown): void {
   if (value == null || value === "") return;
   if (value === true) {
     args.push(name);
@@ -706,16 +1096,16 @@ function appendOption(args, name, value) {
   args.push(name, String(value));
 }
 
-function appendPathOption(args, name, value) {
+function appendPathOption(args: string[], name: string, value: unknown): void {
   if (!value) return;
   appendOption(args, name, repoRelative(resolveRepoPath(value)));
 }
 
-function appendPathOptions(args, name, values) {
+function appendPathOptions(args: string[], name: string, values: unknown): void {
   for (const value of normalizedList(values)) appendPathOption(args, name, value);
 }
 
-function foundryCommand(command, options = {}) {
+function foundryCommand(command: string, options: JsonRecord = {}): string[] {
   const args = [process.execPath, "scripts/foundry.mjs", command];
   for (const [key, value] of Object.entries(options)) {
     const flag = `--${key.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`)}`;
@@ -728,7 +1118,7 @@ function foundryCommand(command, options = {}) {
   return args;
 }
 
-function parseJsonStdout(stdout) {
+function parseJsonStdout(stdout: unknown): JsonRecord | null {
   const text = String(stdout || "").trim();
   if (!text) return null;
   try {
@@ -747,7 +1137,7 @@ function parseJsonStdout(stdout) {
   }
 }
 
-function stageTimeoutMs(stage) {
+function stageTimeoutMs(stage: unknown): number {
   const override = integerOption(process.env.BAFU_BATCH_STAGE_TIMEOUT_MS, null);
   if (override && override > 0) return override;
   const name = String(stage ?? "");
@@ -757,17 +1147,35 @@ function stageTimeoutMs(stage) {
   return 180_000;
 }
 
-async function runArgvStage({ stage, argv, logDir, reportPath }) {
+async function runArgvStage({
+  stage,
+  argv,
+  logDir,
+  reportPath,
+}: {
+  stage: string;
+  argv: string[];
+  logDir: string;
+  reportPath?: unknown;
+}): Promise<StageResult> {
   const result = await runStage({ stage, logDir, command: argv });
   const resolvedReport = resolveRepoPath(reportPath);
   if (fileExists(resolvedReport)) {
-    result.json = readJson(resolvedReport);
+    result.json = readJson(resolvedReport!);
     result.report = repoRelative(resolvedReport);
   }
   return result;
 }
 
-function runCommandSpecStage({ stage, commandSpec, logDir }) {
+function runCommandSpecStage({
+  stage,
+  commandSpec,
+  logDir,
+}: {
+  stage: string;
+  commandSpec: unknown;
+  logDir: string;
+}): Promise<StageResult> {
   const spec = assertFoundryCommandSpecArtifactsCurrent(commandSpec, resolveRepoPath);
   return runStage({
     stage,
@@ -776,17 +1184,25 @@ function runCommandSpecStage({ stage, commandSpec, logDir }) {
   });
 }
 
-function sleep(ms) {
+function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function runStage({ stage, command, logDir }) {
+function runStage({
+  stage,
+  command,
+  logDir,
+}: {
+  stage: string;
+  command: string[];
+  logDir: string;
+}): Promise<StageResult> {
   fs.mkdirSync(logDir, { recursive: true });
   const safeStage = stage.replace(/[^A-Za-z0-9_.-]+/gu, "-");
   const stdoutLog = path.join(logDir, `${safeStage}.stdout.log`);
   const stderrLog = path.join(logDir, `${safeStage}.stderr.log`);
   const startedAt = nowIso();
-  return new Promise((resolve) => {
+  return new Promise<StageResult>((resolve) => {
     const timeoutMs = stageTimeoutMs(stage);
     let timedOut = false;
     let closed = false;
@@ -839,12 +1255,12 @@ function runStage({ stage, command, logDir }) {
   });
 }
 
-function postWriteVerifyRetryAttempts() {
+function postWriteVerifyRetryAttempts(): number {
   const parsed = integerOption(process.env.BAFU_POST_WRITE_VERIFY_ATTEMPTS, 3);
   return Math.max(1, Math.min(8, parsed || 3));
 }
 
-function postWriteVerifyRetryDelayMs(attemptIndex) {
+function postWriteVerifyRetryDelayMs(attemptIndex: number): number {
   const base = integerOption(process.env.BAFU_POST_WRITE_VERIFY_RETRY_DELAY_MS, 2_000);
   return Math.max(0, Math.min(60_000, (base || 2_000) * 2 ** attemptIndex));
 }
@@ -860,48 +1276,55 @@ const postWriteVerifyRetryableCodes = new Set([
   "verify_report_missing",
 ]);
 
-function collectReportCodes(value, codes = new Set(), depth = 0) {
+function collectReportCodes(
+  value: unknown,
+  codes: Set<string> = new Set(),
+  depth = 0,
+): Set<string> {
   if (value == null || depth > 6) return codes;
   if (Array.isArray(value)) {
     for (const entry of value) collectReportCodes(entry, codes, depth + 1);
     return codes;
   }
   if (typeof value !== "object") return codes;
+  const record = jsonRecord(value);
   for (const key of ["code", "failure_code", "status_code", "readback_status"]) {
-    const text = asText(value[key]);
+    const text = asText(record[key]);
     if (text) codes.add(text);
   }
   for (const key of ["blockers", "findings", "checks", "results", "rows", "items"]) {
-    collectReportCodes(value[key], codes, depth + 1);
+    collectReportCodes(record[key], codes, depth + 1);
   }
   return codes;
 }
 
-function postWriteVerifyRetryReason(verifyReportPath) {
+function postWriteVerifyRetryReason(verifyReportPath: string | null): string | null {
   if (!verifyReportPath || !fileExists(verifyReportPath)) return "verify_report_missing";
   const report = readJson(verifyReportPath);
   const codes = collectReportCodes(report);
   for (const code of codes) {
     if (postWriteVerifyRetryableCodes.has(code)) return code;
   }
-  const byStatus = report?.counts?.by_status || report?.counts?.statuses || {};
+  const counts = jsonRecord(report.counts);
+  const byStatus = jsonRecord(counts.by_status || counts.statuses);
   for (const code of postWriteVerifyRetryableCodes) {
     if (Number(byStatus?.[code] ?? 0) > 0) return code;
   }
   return null;
 }
 
-function firstExistingPath(candidates) {
+function firstExistingPath(candidates: unknown[]): string | null {
   return candidates.map(resolveRepoPath).find(fileExists) ?? null;
 }
 
-function findReportFile(rootDir, predicate) {
+function findReportFile(rootDir: unknown, predicate: (filePath: string) => boolean): string | null {
   const resolved = resolveRepoPath(rootDir);
   if (!resolved || !fs.existsSync(resolved)) return null;
   const stack = [resolved];
-  const matches = [];
+  const matches: string[] = [];
   while (stack.length > 0) {
     const current = stack.pop();
+    if (!current) continue;
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const next = path.join(current, entry.name);
       if (entry.isDirectory()) {
@@ -914,13 +1337,14 @@ function findReportFile(rootDir, predicate) {
   return matches.sort()[0] ?? null;
 }
 
-function findFiles(rootDir, predicate) {
+function findFiles(rootDir: unknown, predicate: (filePath: string) => boolean): string[] {
   const resolved = resolveRepoPath(rootDir);
   if (!resolved || !fs.existsSync(resolved)) return [];
   const stack = [resolved];
-  const matches = [];
+  const matches: string[] = [];
   while (stack.length > 0) {
     const current = stack.pop();
+    if (!current) continue;
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const next = path.join(current, entry.name);
       if (entry.isDirectory()) {
@@ -933,8 +1357,8 @@ function findFiles(rootDir, predicate) {
   return matches.sort();
 }
 
-function commitReportForHandoffPlan(handoffPlan) {
-  const expectedDir = resolveRepoPath(handoffPlan?.files?.expected_commit_report_dir);
+function commitReportForHandoffPlan(handoffPlan: JsonRecord): string | null {
+  const expectedDir = resolveRepoPath(jsonRecord(handoffPlan.files).expected_commit_report_dir);
   return (
     firstExistingPath([
       path.join(
@@ -981,8 +1405,8 @@ function commitReportForHandoffPlan(handoffPlan) {
 // that already committed some support. Postgres unique-violation 23505 with the
 // "same id and version already exists" message is the authoritative signal. Any other
 // failure type is NOT accepted.
-function commitFailuresAllAlreadyExist(handoffPlan) {
-  const expectedDir = resolveRepoPath(handoffPlan?.files?.expected_commit_report_dir);
+function commitFailuresAllAlreadyExist(handoffPlan: JsonRecord): CommitFailureSummary {
+  const expectedDir = resolveRepoPath(jsonRecord(handoffPlan.files).expected_commit_report_dir);
   if (!expectedDir) return { accepted: false, alreadyExists: 0, otherFailures: 0 };
   const summaries = findFiles(expectedDir, (filePath) =>
     /(?:summary|sync_report)\.json$/u.test(path.basename(filePath)),
@@ -990,16 +1414,16 @@ function commitFailuresAllAlreadyExist(handoffPlan) {
   let failed = 0;
   let alreadyExists = 0;
   for (const summaryPath of summaries) {
-    let report;
+    let report: JsonRecord;
     try {
       report = readJson(summaryPath);
     } catch {
       continue;
     }
-    for (const row of asArray(report?.rows)) {
-      if (asText(row?.status) !== "failed") continue;
+    for (const row of asArray(report.rows).map(jsonRecord)) {
+      if (asText(row.status) !== "failed") continue;
       failed += 1;
-      const error = row?.error ?? {};
+      const error = jsonRecord(row.error);
       const haystack = `${asText(error.message)} ${asText(error.details)}`.toLowerCase();
       if (
         haystack.includes("same id and version already exists") ||
@@ -1016,8 +1440,8 @@ function commitFailuresAllAlreadyExist(handoffPlan) {
   };
 }
 
-function verifyReportForHandoffPlan(handoffPlan) {
-  const expectedDir = resolveRepoPath(handoffPlan?.files?.expected_post_write_verify_dir);
+function verifyReportForHandoffPlan(handoffPlan: JsonRecord): string | null {
+  const expectedDir = resolveRepoPath(jsonRecord(handoffPlan.files).expected_post_write_verify_dir);
   return (
     firstExistingPath([
       path.join(expectedDir || "", "outputs", "remote-verification-report.json"),
@@ -1029,7 +1453,19 @@ function verifyReportForHandoffPlan(handoffPlan) {
   );
 }
 
-async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, label }) {
+async function executeHandoff({
+  handoffPlanPath,
+  ledgerDir,
+  outDir,
+  logDir,
+  label,
+}: {
+  handoffPlanPath: string;
+  ledgerDir: string;
+  outDir: string;
+  logDir: string;
+  label: string;
+}): Promise<HandoffResult> {
   if (!fileExists(handoffPlanPath)) {
     return {
       status: "blocked",
@@ -1038,8 +1474,8 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
     };
   }
   const handoffPlan = readJson(handoffPlanPath);
-  const blockers = [];
-  const stages = [];
+  const blockers: JsonRecord[] = [];
+  const stages: JsonRecord[] = [];
   if (handoffPlan.status !== "ready_for_explicit_commit") {
     return {
       status: "blocked",
@@ -1062,7 +1498,7 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
       blockers: [
         {
           code: "handoff_account_evidence_mismatch",
-          message: String(error?.message || error),
+          message: String(error instanceof Error ? error.message : error),
           handoff_plan: repoRelative(handoffPlanPath),
         },
       ],
@@ -1070,19 +1506,20 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
       handoffPlan,
     };
   }
-  let commitSpec;
-  let verifySpec;
+  let commitSpec: FoundryCommandSpec;
+  let verifySpec: FoundryCommandSpec;
   try {
-    const requiredFinalRowsArtifact = {
+    const commands = jsonRecord(handoffPlan.commands);
+    const artifact = jsonRecord(handoffPlan.final_rows_artifact);
+    const requiredFinalRowsArtifact: FoundryArtifactFact = {
       role: "final_rows",
-      ...handoffPlan.final_rows_artifact,
+      path: asText(artifact.path),
+      bytes: Number(artifact.bytes),
+      sha256: asText(artifact.sha256),
     };
-    commitSpec = assertFoundryCommandSpecBindsArtifact(
-      handoffPlan.commands?.commit,
-      requiredFinalRowsArtifact,
-    );
+    commitSpec = assertFoundryCommandSpecBindsArtifact(commands.commit, requiredFinalRowsArtifact);
     verifySpec = assertFoundryCommandSpecBindsArtifact(
-      handoffPlan.commands?.post_write_verify,
+      commands.post_write_verify,
       requiredFinalRowsArtifact,
     );
   } catch (error) {
@@ -1091,7 +1528,7 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
       blockers: [
         {
           code: "handoff_command_spec_invalid",
-          message: `${label} handoff plan must include valid authoritative commit and post_write_verify CommandSpecs: ${String(error?.message || error)}`,
+          message: `${label} handoff plan must include valid authoritative commit and post_write_verify CommandSpecs: ${String(error instanceof Error ? error.message : error)}`,
           handoff_plan: repoRelative(handoffPlanPath),
         },
       ],
@@ -1100,7 +1537,7 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
     };
   }
 
-  let commitStage;
+  let commitStage: StageResult;
   try {
     commitStage = await runCommandSpecStage({
       stage: `${label}.commit`,
@@ -1110,7 +1547,7 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
   } catch (error) {
     blockers.push({
       code: "commit_handoff_artifact_binding_failed",
-      message: `${label} commit CommandSpec artifact binding failed before spawn: ${String(error?.message || error)}`,
+      message: `${label} commit CommandSpec artifact binding failed before spawn: ${String(error instanceof Error ? error.message : error)}`,
       handoff_plan: repoRelative(handoffPlanPath),
     });
     return { status: "failed", blockers, stages, handoffPlan };
@@ -1150,7 +1587,7 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
   for (let attempt = 1; attempt <= maxVerifyAttempts; attempt += 1) {
     const verifyStageName =
       attempt === 1 ? `${label}.post_write_verify` : `${label}.post_write_verify.retry_${attempt}`;
-    let verifyStage;
+    let verifyStage: StageResult;
     try {
       verifyStage = await runCommandSpecStage({
         stage: verifyStageName,
@@ -1160,7 +1597,7 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
     } catch (error) {
       blockers.push({
         code: "post_write_verify_artifact_binding_failed",
-        message: `${label} verify CommandSpec artifact binding failed before spawn: ${String(error?.message || error)}`,
+        message: `${label} verify CommandSpec artifact binding failed before spawn: ${String(error instanceof Error ? error.message : error)}`,
         handoff_plan: repoRelative(handoffPlanPath),
       });
       return { status: "failed", blockers, stages, handoffPlan };
@@ -1168,7 +1605,7 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
     verifyReportPath = verifyReportForHandoffPlan(handoffPlan);
     verifyExitCode = verifyStage.exit_code;
     verifyAttempts = attempt;
-    const stageRecord = {
+    const stageRecord: StageResult = {
       ...verifyStage,
       report: repoRelative(verifyReportPath),
       attempt,
@@ -1265,28 +1702,32 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
   };
 }
 
-function reportFile(stageJson, fallback) {
-  const value = stageJson?.files?.report ?? stageJson?.report;
+function reportFile(stageJson: JsonRecord | null, fallback: string): string | null {
+  const value = jsonRecord(stageJson?.files).report ?? stageJson?.report;
   return resolveRepoPath(value) || fallback;
 }
 
-function outputRowsByStem(report, stem) {
-  const rows = Array.isArray(report?.files?.output_rows)
-    ? report.files.output_rows
-    : [report?.files?.output_rows].filter(Boolean);
+function outputRowsByStem(report: JsonRecord | null, stem: string): string | null {
+  const files = jsonRecord(report?.files);
+  const rows = Array.isArray(files.output_rows)
+    ? files.output_rows
+    : [files.output_rows].filter(Boolean);
   return resolveRepoPath(
     rows.find((entry) => path.basename(String(entry)).startsWith(stem)) ?? rows[0],
   );
 }
 
-function identityApplyReportHasReferenceRewrites(reportPath) {
+function identityApplyReportHasReferenceRewrites(reportPath: string): boolean {
   if (!fileExists(reportPath)) return false;
   const report = readJson(reportPath);
-  const rewritesFile = resolveRepoPath(report?.files?.identity_reference_rewrites);
+  const rewritesFile = resolveRepoPath(jsonRecord(report.files).identity_reference_rewrites);
   return readJsonLines(rewritesFile).length > 0;
 }
 
-function existingIdentityApplyReportsWithReferenceRewrites(scopeDir, label) {
+function existingIdentityApplyReportsWithReferenceRewrites(
+  scopeDir: string,
+  label: string,
+): string[] {
   const candidates = [
     path.join(scopeDir, `${label}-identity-apply`, "identity-decisions-apply-report.json"),
     ...findFiles(
@@ -1297,7 +1738,10 @@ function existingIdentityApplyReportsWithReferenceRewrites(scopeDir, label) {
   return uniqueExistingPaths(candidates).filter(identityApplyReportHasReferenceRewrites);
 }
 
-function identityDecisionDatasetKey(row, fallbackType = null) {
+function identityDecisionDatasetKey(
+  row: JsonRecord,
+  fallbackType: string | null = null,
+): string | null {
   const datasetType = asText(row?.dataset_type ?? row?.datasetType ?? row?.type ?? fallbackType);
   const datasetId = asText(
     row?.dataset_id ??
@@ -1319,7 +1763,7 @@ function identityDecisionDatasetKey(row, fallbackType = null) {
   return `${datasetType.toLowerCase()}:${datasetId}@${datasetVersion}`;
 }
 
-function identityDecisionValue(row) {
+function identityDecisionValue(row: JsonRecord): string {
   const value = asText(row?.identity_decision ?? row?.identityDecision ?? row?.decision);
   if (["reuse", "reuse_existing", "reference_reuse"].includes(value)) {
     return "reuse_existing_reference";
@@ -1328,9 +1772,9 @@ function identityDecisionValue(row) {
   return value;
 }
 
-function identityDecisionCanonical(row) {
-  const canonical = row?.canonical ?? row?.selected_reference ?? row?.selectedReference;
-  if (!canonical || typeof canonical !== "object") return null;
+function identityDecisionCanonical(row: JsonRecord): JsonRecord | null {
+  const canonical = jsonRecord(row.canonical ?? row.selected_reference ?? row.selectedReference);
+  if (Object.keys(canonical).length === 0) return null;
   const id = asText(
     canonical.ref_object_id ?? canonical.refObjectId ?? canonical.id ?? canonical["@refObjectId"],
   );
@@ -1344,23 +1788,23 @@ function identityDecisionCanonical(row) {
       asText(
         canonical.short_description ??
           canonical.shortDescription ??
-          canonical["common:shortDescription"]?.["#text"],
+          jsonRecord(canonical["common:shortDescription"])["#text"],
       ) || id,
   };
 }
 
-function canonicalDecisionKey(canonical) {
+function canonicalDecisionKey(canonical: JsonRecord | null): string {
   if (!canonical) return "";
   return `${canonical.table}:${canonical.ref_object_id}@${canonical.version}`;
 }
 
-function completedReusableIdentityDecision(row) {
+function completedReusableIdentityDecision(row: JsonRecord): boolean {
   return (
     asText(row?.decision_status ?? row?.decisionStatus ?? row?.status) === "completed" &&
     identityDecisionValue(row) === "reuse_existing_reference" &&
     Boolean(identityDecisionCanonical(row)) &&
     Boolean(row?.evidence && typeof row.evidence === "object") &&
-    asText(row?.basis ?? row?.reason)
+    Boolean(asText(row.basis ?? row.reason))
   );
 }
 
@@ -1370,12 +1814,12 @@ function completedReusableIdentityDecision(row) {
 // instead of restoring the stale pre-mint result and minting a duplicate.
 // Paired with the cache in scripts/commands/identity-preflight-run.mjs. No-op unless
 // BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE is set.
-function invalidateIdentityPreflightResultCacheEntry(identityKey) {
+function invalidateIdentityPreflightResultCacheEntry(identityKey: string): boolean {
   const raw = process.env.BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE;
   if (!raw || !identityKey) return false;
   const cacheDir = resolveRepoPath(raw);
   const match = String(identityKey).match(/^([^:]+):(.+)@([^@]+)$/u);
-  if (!match || !directoryExists(cacheDir)) return false;
+  if (!cacheDir || !match || !directoryExists(cacheDir)) return false;
   const [, datasetType, datasetId, datasetVersion] = match;
   let removed = 0;
   try {
@@ -1406,7 +1850,7 @@ function invalidateIdentityPreflightResultCacheEntry(identityKey) {
   return removed > 0;
 }
 
-function identityDecisionSourceFiles(runDir) {
+function identityDecisionSourceFiles(runDir: string): string[] {
   if (!directoryExists(runDir)) return [];
   return fs
     .readdirSync(runDir, { withFileTypes: true })
@@ -1416,9 +1860,9 @@ function identityDecisionSourceFiles(runDir) {
     .sort();
 }
 
-function loadCompletedReusableIdentityDecisions(runDir) {
-  const byKey = new Map();
-  const conflicts = [];
+function loadCompletedReusableIdentityDecisions(runDir: string): ReusableDecisionIndex {
+  const byKey = new Map<string, { row: JsonRecord; source_file: string }>();
+  const conflicts: JsonRecord[] = [];
   const files = identityDecisionSourceFiles(runDir);
   for (const filePath of files) {
     for (const row of readJsonLines(filePath)) {
@@ -1453,11 +1897,11 @@ function loadCompletedReusableIdentityDecisions(runDir) {
 // per exchange, that a materialized source flow (source_flow_id/source_flow_version)
 // should reference a canonical library flow (canonical_flow_id/canonical_flow_version).
 // Empty/missing dir yields an empty map (deterministic path simply applies no reuse).
-function loadResolutionRewritesByProcess(resolutionDir) {
-  const byProcess = new Map();
+function loadResolutionRewritesByProcess(resolutionDir: string): Map<string, JsonRecord[]> {
+  const byProcess = new Map<string, JsonRecord[]>();
   if (!resolutionDir) return byProcess;
   const rewritesFile = path.join(
-    resolveRepoPath(resolutionDir),
+    resolveRepoPath(resolutionDir)!,
     "exchange-reference-rewrites.jsonl",
   );
   if (!fileExists(rewritesFile)) {
@@ -1469,15 +1913,17 @@ function loadResolutionRewritesByProcess(resolutionDir) {
     const processId = asText(row?.process_id);
     if (!processId) continue;
     if (!byProcess.has(processId)) byProcess.set(processId, []);
-    byProcess.get(processId).push(row);
+    byProcess.get(processId)!.push(row);
   }
   return byProcess;
 }
 
-function curationGateAuthoringPackagesById(curationGateReport) {
-  const byId = new Map();
+function curationGateAuthoringPackagesById(
+  curationGateReport: string | null,
+): Map<string, JsonRecord> {
+  const byId = new Map<string, JsonRecord>();
   if (!curationGateReport || !fileExists(curationGateReport)) return byId;
-  let report;
+  let report: JsonRecord;
   try {
     report = readJson(curationGateReport);
   } catch {
@@ -1486,7 +1932,7 @@ function curationGateAuthoringPackagesById(curationGateReport) {
   const entities = [report?.entities, report?.processes, report?.flows, report?.items].find(
     Array.isArray,
   );
-  for (const entity of entities ?? []) {
+  for (const entity of (entities ?? []).map(jsonRecord)) {
     const id = asText(entity?.entity_id ?? entity?.dataset_id);
     const packageRef = asText(entity?.authoring_package);
     if (!id || !packageRef) continue;
@@ -1500,10 +1946,16 @@ function curationGateAuthoringPackagesById(curationGateReport) {
 
 // Mirrors dataset-identity-decision-task-build: bind the decision to a snapshot of the
 // entity's real full-context authoring package so downstream full-context proofs hold.
-function snapshotGateAuthoringPackage({ gatePackage, outDir }) {
+function snapshotGateAuthoringPackage({
+  gatePackage,
+  outDir,
+}: {
+  gatePackage: JsonRecord;
+  outDir: string;
+}): GatePackageSnapshot | null {
   const packagePath = resolveRepoPath(gatePackage.package_ref);
   if (!packagePath || !fileExists(packagePath)) return null;
-  const sha = gatePackage.sha256 || sha256File(packagePath);
+  const sha = asText(gatePackage.sha256) || sha256File(packagePath);
   const parsed = path.parse(path.basename(packagePath));
   const snapshotPath = path.join(
     outDir,
@@ -1512,11 +1964,12 @@ function snapshotGateAuthoringPackage({ gatePackage, outDir }) {
   );
   fs.mkdirSync(path.dirname(snapshotPath), { recursive: true });
   if (!fileExists(snapshotPath)) fs.copyFileSync(packagePath, snapshotPath);
-  let contractContextKinds = [];
+  let contractContextKinds: string[] = [];
   try {
+    const snapshot = readJson(snapshotPath);
     contractContextKinds = uniqueValues(
-      (readJson(snapshotPath)?.contract_context_files ?? [])
-        .filter((file) => asText(file?.kind) && asText(file?.text))
+      recordArray(snapshot.contract_context_files)
+        .filter((file) => asText(file.kind) && asText(file.text))
         .map((file) => asText(file.kind)),
     );
   } catch {
@@ -1536,11 +1989,18 @@ function mergeCompletedReusableIdentityDecisions({
   datasetType,
   rowsFile = null,
   curationGateReport = null,
-}) {
+}: {
+  runDir: string;
+  decisionsFile: string;
+  outDir: string;
+  datasetType: string;
+  rowsFile?: string | null;
+  curationGateReport?: string | null;
+}): CarryForwardResult {
   const currentRows = fileExists(decisionsFile) ? readJsonLines(decisionsFile) : [];
   const reusable = loadCompletedReusableIdentityDecisions(runDir);
-  const replacements = [];
-  const additions = [];
+  const replacements: JsonRecord[] = [];
+  const additions: JsonRecord[] = [];
   const mergedRows = currentRows.map((row) => {
     const key = identityDecisionDatasetKey(row, datasetType);
     const reusableDecision = key ? reusable.byKey.get(key) : null;
@@ -1580,8 +2040,10 @@ function mergeCompletedReusableIdentityDecisions({
   // (e.g. an elementary flow that produced no preflight action item).
   if (rowsFile && fileExists(rowsFile)) {
     const gatePackagesById = curationGateAuthoringPackagesById(curationGateReport);
-    const decidedKeys = new Set(
-      mergedRows.map((row) => identityDecisionDatasetKey(row, datasetType)).filter(Boolean),
+    const decidedKeys = new Set<string>(
+      mergedRows
+        .map((row) => identityDecisionDatasetKey(row, datasetType))
+        .filter((key): key is string => Boolean(key)),
     );
     for (const payloadRow of readJsonLines(rowsFile)) {
       const identity = datasetIdentity(payloadRow, datasetType);
@@ -1639,7 +2101,7 @@ function mergeCompletedReusableIdentityDecisions({
     : decisionsFile;
   if (changed) writeJsonLines(outputFile, mergedRows);
   const reportPath = path.join(outDir, "identity-decision-carry-forward-report.json");
-  const report = {
+  const report: CarryForwardReport = {
     schema_version: 1,
     generated_at_utc: nowIso(),
     command: "dataset-bafu-identity-decision-carry-forward",
@@ -1668,11 +2130,7 @@ function mergeCompletedReusableIdentityDecisions({
   return { report, reportPath, outputFile };
 }
 
-function countRows(filePath) {
-  return readRows(filePath).length;
-}
-
-function categoryForBlocker(code) {
+function categoryForBlocker(code: unknown): string {
   const text = String(code || "");
   if (/classification|location|identity|authoring|patch|curation/u.test(text)) {
     return "human-review";
@@ -1682,21 +2140,33 @@ function categoryForBlocker(code) {
   return "other";
 }
 
-function firstBlocker(report, fallbackCode, fallbackMessage) {
-  return report?.blockers?.[0] ?? { code: fallbackCode, message: fallbackMessage };
+function firstBlocker(
+  report: JsonRecord | null,
+  fallbackCode: string,
+  fallbackMessage: string,
+): JsonRecord {
+  return recordArray(report?.blockers)[0] ?? { code: fallbackCode, message: fallbackMessage };
 }
 
-function statusIs(report, values) {
+function statusIs(report: JsonRecord | null, values: string[]): boolean {
   return values.includes(String(report?.status || ""));
 }
 
-function authoringRecoveryProducedEvidence(recovery) {
+function authoringRecoveryProducedEvidence(recovery: JsonRecord | null): boolean {
   return Boolean(
     recovery?.identityApplyReport || recovery?.patchCollectReport || recovery?.patchApplyReport,
   );
 }
 
-function preFinalizeRecoveryBlocker({ type, finalizeReport, recovery }) {
+function preFinalizeRecoveryBlocker({
+  type,
+  finalizeReport,
+  recovery,
+}: {
+  type: string;
+  finalizeReport: JsonRecord;
+  recovery: JsonRecord | null;
+}): JsonRecord | null {
   if (statusIs(finalizeReport, ["ready_for_remote_write"])) return null;
   if (authoringRecoveryProducedEvidence(recovery)) return null;
   return firstBlocker(
@@ -1706,18 +2176,22 @@ function preFinalizeRecoveryBlocker({ type, finalizeReport, recovery }) {
   );
 }
 
-function identityUnresolvedReferenceBlocker({ type, report }) {
+function identityUnresolvedReferenceBlocker({
+  type,
+  report,
+}: {
+  type: string;
+  report: JsonRecord;
+}): JsonRecord | null {
+  const files = jsonRecord(report.files);
+  const counts = jsonRecord(report.counts);
   const unresolvedRowsFile = resolveRepoPath(
-    report?.files?.identity_unresolved_references || report?.files?.unresolved_reference_rows,
+    files.identity_unresolved_references || files.unresolved_reference_rows,
   );
   const unresolvedRows = readJsonLines(unresolvedRowsFile);
   const unresolvedCount =
     unresolvedRows.length ||
-    Number(
-      report?.counts?.identity_unresolved_references ??
-        report?.counts?.unresolved_reference_rows ??
-        0,
-    );
+    Number(counts.identity_unresolved_references ?? counts.unresolved_reference_rows ?? 0);
   if (!unresolvedCount) return null;
   return {
     code: `${type}_identity_unresolved_references`,
@@ -1726,17 +2200,17 @@ function identityUnresolvedReferenceBlocker({ type, report }) {
   };
 }
 
-function findOneFile(rootDir, pattern) {
+function findOneFile(rootDir: unknown, pattern: RegExp): string | null {
   const resolved = resolveRepoPath(rootDir);
   if (!directoryExists(resolved)) return null;
   const matches = fs
-    .readdirSync(resolved)
+    .readdirSync(resolved!)
     .filter((name) => pattern.test(name))
     .sort();
-  return matches.length ? path.join(resolved, matches[0]) : null;
+  return matches.length ? path.join(resolved!, matches[0]) : null;
 }
 
-function defaultContext(runDir, type) {
+function defaultContext(runDir: string, type: string): ContextPaths {
   return {
     schemaFile: path.join(runDir, "context", type, "outputs", "schema.json"),
     yamlFile: path.join(runDir, "context", type, "outputs", "methodology.yaml"),
@@ -1744,15 +2218,15 @@ function defaultContext(runDir, type) {
   };
 }
 
-function defaultSchemaFiles(options) {
+function defaultSchemaFiles(options: JsonRecord): SchemaPaths {
   const schemaRoot = resolveRepoPath(
     options.tidasSchemaDir || resolveInstalledTiangongLcaCliPackage().schemaDir,
   );
   return {
-    processCategory: path.join(schemaRoot, "tidas_processes_category.json"),
-    flowProductCategory: path.join(schemaRoot, "tidas_flows_product_category.json"),
-    flowElementaryCategory: path.join(schemaRoot, "tidas_flows_elementary_category.json"),
-    location: path.join(schemaRoot, "tidas_locations_category.json"),
+    processCategory: path.join(schemaRoot!, "tidas_processes_category.json"),
+    flowProductCategory: path.join(schemaRoot!, "tidas_flows_product_category.json"),
+    flowElementaryCategory: path.join(schemaRoot!, "tidas_flows_elementary_category.json"),
+    location: path.join(schemaRoot!, "tidas_locations_category.json"),
     allClassification: [
       "tidas_contacts_category.json",
       "tidas_flowproperties_category.json",
@@ -1762,20 +2236,22 @@ function defaultSchemaFiles(options) {
       "tidas_processes_category.json",
       "tidas_sources_category.json",
       "tidas_unitgroups_category.json",
-    ].map((name) => path.join(schemaRoot, name)),
+    ].map((name) => path.join(schemaRoot!, name)),
   };
 }
 
-function schemaClasses(schemaFile) {
-  const classes = new Map();
-  const visit = (value) => {
+function schemaClasses(schemaFile: string): Map<string, SchemaClass> {
+  const classes = new Map<string, SchemaClass>();
+  const visit = (value: unknown): void => {
     if (!value || typeof value !== "object") return;
-    const classId = value?.properties?.["@classId"]?.const;
+    const record = jsonRecord(value);
+    const properties = jsonRecord(record.properties);
+    const classId = jsonRecord(properties["@classId"]).const;
     if (classId != null) {
       classes.set(String(classId), {
         classId: String(classId),
-        level: String(value?.properties?.["@level"]?.const ?? ""),
-        text: String(value?.properties?.["#text"]?.const ?? ""),
+        level: String(jsonRecord(properties["@level"]).const ?? ""),
+        text: String(jsonRecord(properties["#text"]).const ?? ""),
       });
     }
     for (const child of Object.values(value)) visit(child);
@@ -1784,7 +2260,7 @@ function schemaClasses(schemaFile) {
   return classes;
 }
 
-function categorySchemaForDecision(decision, schemas) {
+function categorySchemaForDecision(decision: JsonRecord, schemas: SchemaPaths): string | null {
   const type = String(decision?.category_type || decision?.schema_type || "").toLowerCase();
   if (type === "process") return schemas.processCategory;
   if (type === "flow-elementary") return schemas.flowElementaryCategory;
@@ -1794,7 +2270,7 @@ function categorySchemaForDecision(decision, schemas) {
   return null;
 }
 
-function childClassesFor(classes, parentCode) {
+function childClassesFor(classes: Map<string, SchemaClass>, parentCode: string): SchemaClass[] {
   const parent = classes.get(parentCode);
   const parentLevel = Number(parent?.level);
   if (!Number.isFinite(parentLevel)) return [];
@@ -1811,10 +2287,12 @@ function childClassesFor(classes, parentCode) {
     .sort((left, right) => left.classId.localeCompare(right.classId));
 }
 
-function decisionEvidenceText(row) {
-  const queue = row?.evidence?.queue ?? {};
-  const authoringContext = queue?.authoring_context ?? {};
-  const libraryDecision = row?.evidence?.library_decision ?? {};
+function decisionEvidenceText(row: JsonRecord): string {
+  const evidence = jsonRecord(row.evidence);
+  const queue = jsonRecord(evidence.queue);
+  const authoringContext = jsonRecord(queue.authoring_context);
+  const libraryDecision = jsonRecord(evidence.library_decision);
+  const sourceClassification = jsonRecord(queue.source_classification);
   return normalizeSearchText(
     [
       row?.basis,
@@ -1822,8 +2300,8 @@ function decisionEvidenceText(row) {
       row?.selected_code,
       libraryDecision?.basis,
       libraryDecision?.source_name,
-      queue?.source_classification?.category,
-      queue?.source_classification?.localCategory,
+      sourceClassification.category,
+      sourceClassification.localCategory,
       authoringContext?.source_name,
       authoringContext?.source_local_name,
       authoringContext?.technology,
@@ -1833,7 +2311,11 @@ function decisionEvidenceText(row) {
   );
 }
 
-function bestChildRepairCode(row, parentCode, children) {
+function bestChildRepairCode(
+  row: JsonRecord,
+  parentCode: string,
+  children: SchemaClass[],
+): string | null {
   if (children.length === 0) return null;
   const text = decisionEvidenceText(row);
 
@@ -1861,7 +2343,7 @@ function bestChildRepairCode(row, parentCode, children) {
     }
   }
 
-  let best = null;
+  let best: SchemaClass | null = null;
   let bestScore = -1;
   const tokens = new Set(text.split(" ").filter((token) => token.length > 2));
   for (const child of children) {
@@ -1877,16 +2359,24 @@ function bestChildRepairCode(row, parentCode, children) {
   return best?.classId ?? null;
 }
 
-function repairClassificationDecisionCodes({ decisionsFile, schemas, outDir }) {
+function repairClassificationDecisionCodes({
+  decisionsFile,
+  schemas,
+  outDir,
+}: {
+  decisionsFile: string;
+  schemas: SchemaPaths;
+  outDir: string;
+}): ClassificationRepairResult {
   const rows = readJsonLines(decisionsFile);
-  const cache = new Map();
-  const repairs = [];
-  const unresolved = [];
+  const cache = new Map<string, Map<string, SchemaClass>>();
+  const repairs: JsonRecord[] = [];
+  const unresolved: JsonRecord[] = [];
   const repaired = rows.map((row) => {
     const schemaFile = categorySchemaForDecision(row, schemas);
     if (!schemaFile || !fileExists(schemaFile)) return row;
     if (!cache.has(schemaFile)) cache.set(schemaFile, schemaClasses(schemaFile));
-    const classes = cache.get(schemaFile);
+    const classes = cache.get(schemaFile)!;
     const code = String(row.code ?? row.selected_code ?? "").trim();
     if (!code || classes.has(code)) return row;
     const stripped = code.replace(/0+$/u, "");
@@ -1917,7 +2407,7 @@ function repairClassificationDecisionCodes({ decisionsFile, schemas, outDir }) {
             ? `${row.basis || "Classification decision projected from library-level semantic decision."} Schema repair: ${code} -> ${stripped} because ${code} is not a valid bundled TIDAS classId and ${stripped} is the valid parent class.`
             : `${row.basis || "Classification decision projected from library-level semantic decision."} Schema repair: ${code} -> ${repairedCode} because ${code} is not a valid bundled TIDAS classId and ${repairedCode} is the closest valid child class under parent ${stripped}.`,
         evidence: {
-          ...(row.evidence ?? {}),
+          ...jsonRecord(row.evidence),
           schema_repair: {
             source: "dataset-bafu-batch-import-run",
             original_code: code,
@@ -1955,26 +2445,27 @@ function repairClassificationDecisionCodes({ decisionsFile, schemas, outDir }) {
   return { repairs, unresolved, repairPath, unresolvedPath };
 }
 
-function ledgerDirCandidate(sourcePath) {
+function ledgerDirCandidate(sourcePath: unknown): string | null {
   if (!sourcePath) return null;
-  if (directoryExists(path.join(sourcePath, "import-ledger"))) {
-    return path.join(sourcePath, "import-ledger");
+  const source = asText(sourcePath);
+  if (directoryExists(path.join(source, "import-ledger"))) {
+    return path.join(source, "import-ledger");
   }
-  if (!directoryExists(sourcePath)) return null;
-  if (path.basename(sourcePath) === "import-ledger") return sourcePath;
+  if (!directoryExists(source)) return null;
+  if (path.basename(source) === "import-ledger") return source;
   const knownLedgerFiles = [
     "ok.scopes.verified.jsonl",
     "ok.flows.verified.jsonl",
     "blocked.scopes.human-review.jsonl",
     "verified-support-identities.jsonl",
   ];
-  if (knownLedgerFiles.some((name) => fileExists(path.join(sourcePath, name)))) return sourcePath;
+  if (knownLedgerFiles.some((name) => fileExists(path.join(source, name)))) return source;
   return null;
 }
 
-function resolveLedgerSourceDirs(value) {
-  const seen = new Set();
-  const dirs = [];
+function resolveLedgerSourceDirs(value: unknown): string[] {
+  const seen = new Set<string>();
+  const dirs: string[] = [];
   for (const entry of normalizedList(value)) {
     const resolved = resolveRepoPath(entry);
     const ledgerDir = ledgerDirCandidate(resolved);
@@ -1991,11 +2482,11 @@ function resolveLedgerSourceDirs(value) {
   return dirs;
 }
 
-function ledgerFiles(sourceDirs, name) {
+function ledgerFiles(sourceDirs: string[], name: string): string[] {
   return sourceDirs.map((dir) => path.join(dir, name));
 }
 
-function summarizeLedgerSources(sourceDirs) {
+function summarizeLedgerSources(sourceDirs: string[]): JsonRecord[] {
   return sourceDirs.map((dir) => ({
     ledger_dir: repoRelative(dir),
     ok_scope_rows: readJsonLines(path.join(dir, "ok.scopes.verified.jsonl")).length,
@@ -2007,27 +2498,27 @@ function summarizeLedgerSources(sourceDirs) {
   }));
 }
 
-function sumLedgerSourceRows(summary, field) {
+function sumLedgerSourceRows(summary: JsonRecord[], field: string): number {
   return summary.reduce((sum, row) => sum + (Number(row[field]) || 0), 0);
 }
 
-function sortedSet(values) {
+function sortedSet(values: Iterable<string>): string[] {
   return [...values].sort();
 }
 
-function setDifference(left, right) {
+function setDifference(left: Set<string>, right: Set<string>): Set<string> {
   return new Set([...left].filter((value) => !right.has(value)));
 }
 
-function setIntersection(left, right) {
+function setIntersection(left: Set<string>, right: Set<string>): Set<string> {
   return new Set([...left].filter((value) => right.has(value)));
 }
 
-function datasetKeyFromParts(id, version) {
+function datasetKeyFromParts(id: unknown, version: unknown): string | null {
   return id ? `${id}@${version || "00.00.001"}` : null;
 }
 
-function datasetKeyFromRow(row, type) {
+function datasetKeyFromRow(row: JsonRecord, type: string): string | null {
   const id = row?.dataset_id || row?.id || row?.[`${type}_id`] || row?.process_id || row?.flow_id;
   const version =
     row?.dataset_version ||
@@ -2039,37 +2530,43 @@ function datasetKeyFromRow(row, type) {
   return datasetKeyFromParts(id, version);
 }
 
-function identityFromTidasRow(row, type, fallbackId = null) {
+function identityFromTidasRow(
+  row: JsonRecord,
+  type: string,
+  fallbackId: string | null = null,
+): DatasetIdentity {
   const identity = runtime().datasetIdentity(row, type) ?? {};
-  const root = row?.[`${type}DataSet`] ?? {};
+  const root = jsonRecord(row[`${type}DataSet`]);
+  const typeInformation = jsonRecord(root[`${type}Information`]);
   const info =
-    root?.[`${type}Information`]?.dataSetInformation ??
-    root?.[`${type}Information`]?.["common:dataSetInformation"] ??
-    {};
+    typeInformation.dataSetInformation ?? typeInformation["common:dataSetInformation"] ?? {};
+  const information = jsonRecord(info);
   const publication =
-    root?.administrativeInformation?.publicationAndOwnership ??
-    root?.administrativeInformation?.["common:publicationAndOwnership"] ??
+    jsonRecord(root.administrativeInformation).publicationAndOwnership ??
+    jsonRecord(root.administrativeInformation)["common:publicationAndOwnership"] ??
     {};
+  const publicationRecord = jsonRecord(publication);
   return {
-    id: identity.id || asText(info["common:UUID"] ?? info.UUID) || fallbackId,
+    id: identity.id || asText(information["common:UUID"] ?? information.UUID) || fallbackId,
     version:
       identity.version ||
-      asText(publication["common:dataSetVersion"] ?? publication.dataSetVersion) ||
+      asText(publicationRecord["common:dataSetVersion"] ?? publicationRecord.dataSetVersion) ||
       "00.00.001",
   };
 }
 
-function readJsonIfExists(filePath) {
-  return fileExists(filePath) ? readJson(filePath) : null;
+function readJsonIfExists(filePath: string | null | undefined): JsonRecord | null {
+  return fileExists(filePath) ? readJson(filePath!) : null;
 }
 
-function walkFiles(rootDir, predicate) {
+function walkFiles(rootDir: unknown, predicate: (filePath: string) => boolean): string[] {
   const resolved = resolveRepoPath(rootDir);
   if (!resolved || !fs.existsSync(resolved)) return [];
   const stack = [resolved];
-  const files = [];
+  const files: string[] = [];
   while (stack.length > 0) {
     const current = stack.pop();
+    if (!current) continue;
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const next = path.join(current, entry.name);
       if (entry.isDirectory()) {
@@ -2082,38 +2579,43 @@ function walkFiles(rootDir, predicate) {
   return files.sort();
 }
 
-function bundleIndexRows(processBundlesDir) {
+function bundleIndexRows(processBundlesDir: string): JsonRecord[] {
   const indexFile = path.join(processBundlesDir, "index.json");
   const indexDir = path.dirname(indexFile);
-  const index = readJsonIfExists(indexFile);
-  let entries = [];
+  const index: unknown = readJsonIfExists(indexFile);
+  let entries: JsonRecord[] = [];
   if (Array.isArray(index)) {
-    entries = index;
-  } else if (Array.isArray(index?.bundles)) {
-    entries = index.bundles;
-  } else if (Array.isArray(index?.process_bundles)) {
-    entries = index.process_bundles;
+    entries = index.map(jsonRecord);
+  } else if (Array.isArray(jsonRecord(index).bundles)) {
+    entries = (jsonRecord(index).bundles as unknown[]).map(jsonRecord);
+  } else if (Array.isArray(jsonRecord(index).process_bundles)) {
+    entries = (jsonRecord(index).process_bundles as unknown[]).map(jsonRecord);
   } else if (index && typeof index === "object") {
-    entries = Object.values(index).find(Array.isArray) ?? [];
+    entries = (Object.values(index).find(Array.isArray) ?? []).map(jsonRecord);
   }
   return entries.map((entry) => {
     const processId = asText(
-      entry?.process_id || entry?.id || entry?.dataset_id || entry?.process?.id,
+      entry.process_id || entry.id || entry.dataset_id || jsonRecord(entry.process).id,
     );
     const processVersion = asText(
-      entry?.process_version || entry?.version || entry?.dataset_version || entry?.process?.version,
+      entry.process_version ||
+        entry.version ||
+        entry.dataset_version ||
+        jsonRecord(entry.process).version,
     );
     const bundleDir = processId ? path.join(processBundlesDir, processId) : null;
-    const manifest = entry?.manifest
+    const manifestValue = asText(entry.manifest);
+    const manifest = manifestValue
       ? resolveRepoPath(
-          path.isAbsolute(entry.manifest) ? entry.manifest : path.join(indexDir, entry.manifest),
+          path.isAbsolute(manifestValue) ? manifestValue : path.join(indexDir, manifestValue),
         )
       : bundleDir
         ? path.join(bundleDir, "manifest.json")
         : null;
-    const tidasDir = entry?.tidas_dir
+    const tidasDirValue = asText(entry.tidas_dir);
+    const tidasDir = tidasDirValue
       ? resolveRepoPath(
-          path.isAbsolute(entry.tidas_dir) ? entry.tidas_dir : path.join(indexDir, entry.tidas_dir),
+          path.isAbsolute(tidasDirValue) ? tidasDirValue : path.join(indexDir, tidasDirValue),
         )
       : bundleDir
         ? path.join(bundleDir, "tidas")
@@ -2128,7 +2630,7 @@ function bundleIndexRows(processBundlesDir) {
   });
 }
 
-function processFileRows(processesDir) {
+function processFileRows(processesDir: string): JsonRecord[] {
   return walkFiles(processesDir, (filePath) => filePath.endsWith(".json")).map((filePath) => {
     const row = readJson(filePath);
     const fallbackId = path.basename(filePath, ".json");
@@ -2143,22 +2645,26 @@ function processFileRows(processesDir) {
   });
 }
 
-function textAt(value) {
+function textAt(value: unknown): string {
   if (value == null) return "";
   if (typeof value === "string" || typeof value === "number") return String(value);
   if (Array.isArray(value)) return value.map(textAt).filter(Boolean).join("; ");
-  if (typeof value === "object") return textAt(value["#text"] ?? value.value ?? value.id);
+  if (typeof value === "object") {
+    const record = jsonRecord(value);
+    return textAt(record["#text"] ?? record.value ?? record.id);
+  }
   return "";
 }
 
-function collectFlowReferences(value, refs = []) {
+function collectFlowReferences(value: unknown, refs: JsonRecord[] = []): JsonRecord[] {
   if (!value || typeof value !== "object") return refs;
   if (Array.isArray(value)) {
     for (const entry of value) collectFlowReferences(entry, refs);
     return refs;
   }
-  const ref = value.referenceToFlowDataSet;
-  if (ref && typeof ref === "object") {
+  const record = jsonRecord(value);
+  const ref = jsonRecord(record.referenceToFlowDataSet);
+  if (Object.keys(ref).length > 0) {
     const flowId = asText(ref["@refObjectId"] ?? ref.refObjectId ?? ref.id);
     const flowVersion = asText(ref["@version"] ?? ref.version) || "00.00.001";
     if (flowId) {
@@ -2170,20 +2676,22 @@ function collectFlowReferences(value, refs = []) {
       });
     }
   }
-  for (const entry of Object.values(value)) collectFlowReferences(entry, refs);
+  for (const entry of Object.values(record)) collectFlowReferences(entry, refs);
   return refs;
 }
 
-function flowTypeOfRow(row) {
+function flowTypeOfRow(row: JsonRecord): string {
+  const flowInformation = jsonRecord(jsonRecord(row.flowDataSet).flowInformation);
   const info =
-    row?.flowDataSet?.flowInformation?.dataSetInformation ??
-    row?.flowDataSet?.flowInformation?.["common:dataSetInformation"] ??
-    {};
-  return asText(info.typeOfDataSet ?? info["common:typeOfDataSet"] ?? row?.typeOfDataSet);
+    flowInformation.dataSetInformation ?? flowInformation["common:dataSetInformation"] ?? {};
+  const information = jsonRecord(info);
+  return asText(
+    information.typeOfDataSet ?? information["common:typeOfDataSet"] ?? row.typeOfDataSet,
+  );
 }
 
-function flowRowsByKey(flowsDir) {
-  const rowsByKey = new Map();
+function flowRowsByKey(flowsDir: string): Map<string, JsonRecord> {
+  const rowsByKey = new Map<string, JsonRecord>();
   for (const filePath of walkFiles(flowsDir, (entry) => entry.endsWith(".json"))) {
     const row = readJson(filePath);
     const fallbackId = path.basename(filePath, ".json");
@@ -2201,14 +2709,14 @@ function flowRowsByKey(flowsDir) {
   return rowsByKey;
 }
 
-function scopeFilesForCoverage(options, runDir) {
+function scopeFilesForCoverage(options: JsonRecord, runDir: string): string[] {
   const explicit = normalizedList(options.scopeFile || options.scopeFiles);
   if (explicit.length > 0) return uniqueExistingPaths(explicit);
   return walkFiles(runDir, (filePath) => path.basename(filePath) === "ready-scopes.jsonl");
 }
 
-function scopeKeyRowsFromFiles(files) {
-  const rows = [];
+function scopeKeyRowsFromFiles(files: string[]): JsonRecord[] {
+  const rows: JsonRecord[] = [];
   for (const filePath of files) {
     for (const row of readJsonLines(filePath)) {
       const key = scopeKey(row);
@@ -2225,18 +2733,20 @@ function scopeKeyRowsFromFiles(files) {
   return rows;
 }
 
-function keySetFromRows(rows, type) {
-  return new Set(rows.map((row) => datasetKeyFromRow(row, type)).filter(Boolean));
+function keySetFromRows(rows: JsonRecord[], type: string): Set<string> {
+  return new Set(
+    rows.map((row) => datasetKeyFromRow(row, type)).filter((key): key is string => Boolean(key)),
+  );
 }
 
-function keySetFromFiles(files, type) {
+function keySetFromFiles(files: string[], type: string): Set<string> {
   return keySetFromRows(
     files.flatMap((filePath) => readJsonLines(filePath)),
     type,
   );
 }
 
-function runDatasetBafuUniverseCoverageReport(options = {}) {
+function runDatasetBafuUniverseCoverageReport(options: JsonRecord = {}): JsonRecord {
   if (options.help) {
     return {
       schema_version: 1,
@@ -2254,18 +2764,18 @@ function runDatasetBafuUniverseCoverageReport(options = {}) {
 
   const inputDir = resolveRepoPath(
     options.inputDir || "inputs/BAFU-2025 Version 2 - TIDAS 2026-03-09",
-  );
+  )!;
   const processBundlesDir = resolveRepoPath(
     options.processBundlesDir || options.bundlesDir || path.join(inputDir, "process-bundles"),
-  );
+  )!;
   const processesDir = resolveRepoPath(
     options.processesDir || path.join(inputDir, "tidas", "processes"),
-  );
-  const flowsDir = resolveRepoPath(options.flowsDir || path.join(inputDir, "tidas", "flows"));
-  const runDir = resolveRepoPath(options.runDir || path.dirname(processBundlesDir));
+  )!;
+  const flowsDir = resolveRepoPath(options.flowsDir || path.join(inputDir, "tidas", "flows"))!;
+  const runDir = resolveRepoPath(options.runDir || path.dirname(processBundlesDir))!;
   const outDir = resolveRepoPath(
     options.outDir || path.join(runDir, "bafu-universe-coverage-report"),
-  );
+  )!;
   if (!directoryExists(processBundlesDir)) {
     throw new Error("--process-bundles-dir is required and must point to process-bundles.");
   }
@@ -2283,24 +2793,25 @@ function runDatasetBafuUniverseCoverageReport(options = {}) {
   const ledgerSourceSummary = summarizeLedgerSources(ledgerSourceDirs);
   const scopeFiles = scopeFilesForCoverage(options, runDir);
   const scopeRows = scopeKeyRowsFromFiles(scopeFiles);
-  const readyScopeSet = new Set(scopeRows.map((row) => row.process_key));
+  const readyScopeSet = new Set(scopeRows.map((row) => asText(row.process_key)).filter(Boolean));
   const bundleRows = bundleIndexRows(processBundlesDir);
   const processRows = processFileRows(processesDir);
-  const processByKey = new Map();
+  const processByKey = new Map<string, JsonRecord>();
   for (const row of bundleRows) {
     if (!row.process_key) continue;
-    processByKey.set(row.process_key, {
+    processByKey.set(asText(row.process_key), {
       process_id: row.process_id,
       process_version: row.process_version,
       process_key: row.process_key,
       in_process_bundles: true,
       in_tidas_processes: false,
-      bundle_manifest: repoRelative(row.manifest),
+      bundle_manifest: repoRelative(asText(row.manifest)),
     });
   }
   for (const row of processRows) {
     if (!row.process_key) continue;
-    const current = processByKey.get(row.process_key) ?? {
+    const rowKey = asText(row.process_key);
+    const current = processByKey.get(rowKey) ?? {
       process_id: row.process_id,
       process_version: row.process_version,
       process_key: row.process_key,
@@ -2308,8 +2819,8 @@ function runDatasetBafuUniverseCoverageReport(options = {}) {
       in_tidas_processes: false,
     };
     current.in_tidas_processes = true;
-    current.process_file = repoRelative(row.file);
-    processByKey.set(row.process_key, current);
+    current.process_file = repoRelative(asText(row.file));
+    processByKey.set(rowKey, current);
   }
   const processUniverseSet = new Set(processByKey.keys());
 
@@ -2335,37 +2846,34 @@ function runDatasetBafuUniverseCoverageReport(options = {}) {
   ].flatMap((filePath) => readJsonLines(filePath));
   const retryScopes = setDifference(keySetFromRows(retryScopeRows, "scope"), verifiedScopes);
   const nonImportableScopes = keySetFromFiles(
-    normalizedList(options.nonImportableScopesFile || options.nonImportableScopesFiles).map(
-      resolveRepoPath,
-    ),
+    normalizedList(options.nonImportableScopesFile || options.nonImportableScopesFiles)
+      .map(resolveRepoPath)
+      .filter((filePath): filePath is string => Boolean(filePath)),
     "scope",
   );
 
   const readyUniverseSet = setIntersection(processUniverseSet, readyScopeSet);
   const missingReadySet = setDifference(processUniverseSet, readyScopeSet);
   const verifiedUniverseSet = setIntersection(processUniverseSet, verifiedScopes);
-  const pendingReadySet = setDifference(
-    setDifference(setDifference(readyUniverseSet, verifiedUniverseSet), activeBlockedScopes),
-    retryScopes,
-  );
-
   const flowIndex = flowRowsByKey(flowsDir);
-  const referencedFlows = new Map();
+  const referencedFlows = new Map<string, JsonRecord & { referencing_processes: Set<string> }>();
   for (const row of processRows) {
-    for (const ref of collectFlowReferences(row.row)) {
-      const current = referencedFlows.get(ref.flow_key) ?? {
+    for (const ref of collectFlowReferences(jsonRecord(row.row))) {
+      const flowKey = asText(ref.flow_key);
+      if (!flowKey) continue;
+      const current = referencedFlows.get(flowKey) ?? {
         ...ref,
-        referencing_processes: new Set(),
+        referencing_processes: new Set<string>(),
       };
-      current.referencing_processes.add(row.process_key);
-      referencedFlows.set(ref.flow_key, current);
+      current.referencing_processes.add(asText(row.process_key));
+      referencedFlows.set(flowKey, current);
     }
   }
-  const productOrUnknownFlowKeys = new Set();
-  const referencedFlowRows = [];
+  const productOrUnknownFlowKeys = new Set<string>();
+  const referencedFlowRows: JsonRecord[] = [];
   for (const [flowKey, ref] of referencedFlows.entries()) {
     const indexed = flowIndex.get(flowKey);
-    const flowType = indexed?.flow_type || "unknown";
+    const flowType = asText(indexed?.flow_type) || "unknown";
     const isElementary = /elementary/u.test(flowType.toLowerCase());
     if (!isElementary) productOrUnknownFlowKeys.add(flowKey);
     referencedFlowRows.push({
@@ -2374,7 +2882,7 @@ function runDatasetBafuUniverseCoverageReport(options = {}) {
       flow_version: ref.flow_version,
       flow_key: flowKey,
       flow_type: flowType,
-      flow_file: repoRelative(indexed?.file),
+      flow_file: repoRelative(asText(indexed?.file)),
       reference_kind: isElementary
         ? "elementary"
         : flowType === "unknown"
@@ -2387,8 +2895,8 @@ function runDatasetBafuUniverseCoverageReport(options = {}) {
   }
   const unverifiedProductOrUnknownFlows = setDifference(productOrUnknownFlowKeys, verifiedFlows);
 
-  const processCoverageRows = sortedSet(processUniverseSet).map((key) => {
-    const processRow = processByKey.get(key);
+  const processCoverageRows: JsonRecord[] = sortedSet(processUniverseSet).map((key) => {
+    const processRow = processByKey.get(key) ?? {};
     const verified = verifiedScopes.has(key);
     const nonImportable = nonImportableScopes.has(key);
     const activeBlocked = activeBlockedScopes.has(key);
@@ -2416,12 +2924,16 @@ function runDatasetBafuUniverseCoverageReport(options = {}) {
       coverage_status: coverageStatus,
     };
   });
-  const processCoverageStatusCounts = processCoverageRows.reduce((counts, row) => {
-    counts[row.coverage_status] = (counts[row.coverage_status] ?? 0) + 1;
-    return counts;
-  }, {});
+  const processCoverageStatusCounts = processCoverageRows.reduce<Record<string, number>>(
+    (counts, row) => {
+      const status = asText(row.coverage_status);
+      counts[status] = (counts[status] ?? 0) + 1;
+      return counts;
+    },
+    {},
+  );
   const processGapRows = processCoverageRows.filter(
-    (row) => !["verified", "non_importable"].includes(row.coverage_status),
+    (row) => !["verified", "non_importable"].includes(asText(row.coverage_status)),
   );
   const flowGapRows = referencedFlowRows.filter(
     (row) => row.reference_kind !== "elementary" && !row.verified,
@@ -2460,9 +2972,13 @@ function runDatasetBafuUniverseCoverageReport(options = {}) {
     },
     counts: {
       process_bundle_entries: bundleRows.length,
-      process_bundle_unique: new Set(bundleRows.map((row) => row.process_key).filter(Boolean)).size,
+      process_bundle_unique: new Set(
+        bundleRows.map((row) => asText(row.process_key)).filter(Boolean),
+      ).size,
       tidas_process_files: processRows.length,
-      tidas_process_unique: new Set(processRows.map((row) => row.process_key).filter(Boolean)).size,
+      tidas_process_unique: new Set(
+        processRows.map((row) => asText(row.process_key)).filter(Boolean),
+      ).size,
       process_universe: processUniverseSet.size,
       ready_scope_files: scopeFiles.length,
       ready_scope_rows: scopeRows.length,
@@ -2518,8 +3034,8 @@ function runDatasetBafuUniverseCoverageReport(options = {}) {
   return report;
 }
 
-function loadVerifiedSetFromFiles(filePaths, type) {
-  const set = new Set();
+function loadVerifiedSetFromFiles(filePaths: string[], type: string): Set<string> {
+  const set = new Set<string>();
   for (const filePath of filePaths) {
     for (const row of readJsonLines(filePath)) {
       const id = row.dataset_id || row.id || row[`${type}_id`] || row.process_id;
@@ -2535,8 +3051,11 @@ function loadVerifiedSetFromFiles(filePaths, type) {
   return set;
 }
 
-function loadVerifiedRowsByKeyFromFiles(filePaths, type) {
-  const rowsByKey = new Map();
+function loadVerifiedRowsByKeyFromFiles(
+  filePaths: string[],
+  type: string,
+): Map<string, JsonRecord> {
+  const rowsByKey = new Map<string, JsonRecord>();
   for (const filePath of filePaths) {
     for (const row of readJsonLines(filePath)) {
       const id = row.dataset_id || row.id || row[`${type}_id`] || row.process_id;
@@ -2558,21 +3077,24 @@ function loadVerifiedRowsByKeyFromFiles(filePaths, type) {
   return rowsByKey;
 }
 
-function loadVerifiedSet(filePath, type) {
+function loadVerifiedSet(filePath: string, type: string): Set<string> {
   return loadVerifiedSetFromFiles([filePath], type);
 }
 
-function datasetIdentityKey(identity) {
+function datasetIdentityKey(identity: DatasetIdentity): string | null {
   const id = asText(identity?.id);
   if (!id) return null;
   return `${id}@${asText(identity?.version) || "00.00.001"}`;
 }
 
-function flowRowsPendingVerification(rows, verifiedFlows) {
-  const pendingRows = [];
-  const verifiedRows = [];
-  const pendingIdentities = [];
-  const verifiedIdentities = [];
+function flowRowsPendingVerification(
+  rows: JsonRecord[],
+  verifiedFlows: Set<string>,
+): FlowVerificationPartition {
+  const pendingRows: JsonRecord[] = [];
+  const verifiedRows: JsonRecord[] = [];
+  const pendingIdentities: JsonRecord[] = [];
+  const verifiedIdentities: JsonRecord[] = [];
   for (const row of rows) {
     const identity = datasetIdentity(row, "flow");
     const key = datasetIdentityKey(identity);
@@ -2603,16 +3125,25 @@ function writeScopeCarriedForwardVerifiedFlowRows({
   processId,
   verifiedIdentities,
   verifiedFlowRowsByKey,
-}) {
+}: {
+  ledgerDir: string;
+  processId: string;
+  verifiedIdentities: JsonRecord[];
+  verifiedFlowRowsByKey: Map<string, JsonRecord>;
+}): CarriedForwardFlowRows {
   const ledgerPath = path.join(ledgerDir, "ok.flows.verified.jsonl");
   const existing = loadVerifiedSet(ledgerPath, "flow");
-  const written = [];
-  for (const identity of verifiedIdentities ?? []) {
-    const key = identity.identity_key || datasetIdentityKey(identity);
+  const written: JsonRecord[] = [];
+  for (const identity of verifiedIdentities) {
+    const normalizedIdentity: DatasetIdentity = {
+      id: asText(identity.id) || null,
+      version: asText(identity.version) || "00.00.001",
+    };
+    const key = asText(identity.identity_key) || datasetIdentityKey(normalizedIdentity);
     if (!key || existing.has(key)) continue;
-    const sourceRow = verifiedFlowRowsByKey?.get(key);
+    const sourceRow = verifiedFlowRowsByKey.get(key);
     if (!sourceRow) continue;
-    const carried = {
+    const carried: JsonRecord = {
       ...sourceRow,
       schema_version: 1,
       status: "verified",
@@ -2623,8 +3154,12 @@ function writeScopeCarriedForwardVerifiedFlowRows({
     appendJsonLine(ledgerPath, carried);
     existing.add(key);
     written.push({
-      id: identity.id || carried.dataset_id || carried.flow_id,
-      version: identity.version || carried.dataset_version || carried.flow_version || "00.00.001",
+      id: normalizedIdentity.id || carried.dataset_id || carried.flow_id,
+      version:
+        normalizedIdentity.version ||
+        carried.dataset_version ||
+        carried.flow_version ||
+        "00.00.001",
       identity_key: key,
       source_ledger_file: carried.source_ledger_file ?? null,
     });
@@ -2636,21 +3171,21 @@ function writeScopeCarriedForwardVerifiedFlowRows({
   };
 }
 
-function scopeKeyFromLedgerRow(row) {
+function scopeKeyFromLedgerRow(row: JsonRecord): string | null {
   const id = row?.process_id || row?.dataset_id || row?.id;
   const version = row?.process_version || row?.dataset_version || row?.version || "00.00.001";
   return id ? `${id}@${version}` : null;
 }
 
-function writeBlockedScopeViews(paths) {
+function writeBlockedScopeViews(paths: JsonRecord): JsonRecord {
   const verified = new Map();
-  for (const row of readJsonLines(paths.okScopes)) {
+  for (const row of readJsonLines(asText(paths.okScopes))) {
     const key = scopeKeyFromLedgerRow(row);
     if (key) verified.set(key, row);
   }
-  const historical = readJsonLines(paths.blockedHumanReview);
-  const active = [];
-  const resolved = [];
+  const historical = readJsonLines(asText(paths.blockedHumanReview));
+  const active: JsonRecord[] = [];
+  const resolved: JsonRecord[] = [];
   for (const row of historical) {
     const key = scopeKeyFromLedgerRow(row);
     const ok = key ? verified.get(key) : null;
@@ -2665,8 +3200,8 @@ function writeBlockedScopeViews(paths) {
       resolved_report: ok.report ?? null,
     });
   }
-  writeJsonLines(paths.blockedHumanReviewActive, active);
-  writeJsonLines(paths.blockedHumanReviewResolved, resolved);
+  writeJsonLines(asText(paths.blockedHumanReviewActive), active);
+  writeJsonLines(asText(paths.blockedHumanReviewResolved), resolved);
   return {
     historical: historical.length,
     active: active.length,
@@ -2674,8 +3209,11 @@ function writeBlockedScopeViews(paths) {
   };
 }
 
-function loadActiveBlockedScopeSetFromFiles(filePaths, verifiedScopes) {
-  const set = new Set();
+function loadActiveBlockedScopeSetFromFiles(
+  filePaths: string[],
+  verifiedScopes: Set<string>,
+): Set<string> {
+  const set = new Set<string>();
   for (const filePath of filePaths) {
     for (const row of readJsonLines(filePath)) {
       const key = scopeKeyFromLedgerRow(row);
@@ -2685,33 +3223,30 @@ function loadActiveBlockedScopeSetFromFiles(filePaths, verifiedScopes) {
   return set;
 }
 
-function loadActiveBlockedScopeSet(paths, verifiedScopes) {
-  return loadActiveBlockedScopeSetFromFiles([paths.blockedHumanReview], verifiedScopes);
-}
-
-function scopeKey(scope) {
+function scopeKey(scope: JsonRecord): string {
   return `${scope.process_id || scope.id}@${scope.process_version || scope.version || "00.00.001"}`;
 }
 
-function finiteNumber(value) {
+function finiteNumber(value: unknown): number | null {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function scopeEstimatedWeight(scope) {
+function scopeEstimatedWeight(scope: JsonRecord): number | null {
+  const checkpoint = jsonRecord(scope.checkpoint);
   const direct = [
-    scope?.estimated_weight,
-    scope?.estimatedWeight,
-    scope?.weight,
-    scope?.checkpoint?.estimated_weight,
-    scope?.checkpoint?.estimatedWeight,
-    scope?.checkpoint?.weight,
+    scope.estimated_weight,
+    scope.estimatedWeight,
+    scope.weight,
+    checkpoint.estimated_weight,
+    checkpoint.estimatedWeight,
+    checkpoint.weight,
   ];
   for (const value of direct) {
     const parsed = finiteNumber(value);
     if (parsed != null) return parsed;
   }
-  const counts = scope?.dependency_counts ?? scope?.checkpoint?.dependency_counts ?? {};
+  const counts = jsonRecord(scope.dependency_counts ?? checkpoint.dependency_counts);
   const flowCount = finiteNumber(counts.flows ?? counts.flow_count ?? scope?.flow_count);
   const supportCount = finiteNumber(
     counts.support_rows ?? counts.support ?? counts.sources ?? scope?.support_count,
@@ -2723,12 +3258,22 @@ function scopeEstimatedWeight(scope) {
   return null;
 }
 
-function asArray(value) {
+function asArray(value: unknown): unknown[] {
   if (value == null) return [];
   return Array.isArray(value) ? value : [value];
 }
 
-function classificationDecisionKey({ datasetType, datasetId, datasetVersion, categoryType }) {
+function classificationDecisionKey({
+  datasetType,
+  datasetId,
+  datasetVersion,
+  categoryType,
+}: {
+  datasetType: unknown;
+  datasetId: unknown;
+  datasetVersion: unknown;
+  categoryType: unknown;
+}): string | null {
   const type = asText(datasetType);
   const id = asText(datasetId);
   const version = asText(datasetVersion) || "00.00.001";
@@ -2736,8 +3281,8 @@ function classificationDecisionKey({ datasetType, datasetId, datasetVersion, cat
   return type && id && category ? `${type}:${id}@${version}:${category}` : null;
 }
 
-function loadClassificationDecisionIndex(filePath) {
-  const byKey = new Map();
+function loadClassificationDecisionIndex(filePath: string | null): ClassificationDecisionIndex {
+  const byKey = new Map<string, JsonRecord>();
   const rows = readJsonLines(filePath);
   for (const row of rows) {
     const key = classificationDecisionKey({
@@ -2755,19 +3300,19 @@ function loadClassificationDecisionIndex(filePath) {
   };
 }
 
-function isLeafClassificationDecision(row) {
-  return (
+function isLeafClassificationDecision(row: JsonRecord | null | undefined): boolean {
+  return Boolean(
     row &&
     asText(row.decision_status || "completed") === "completed" &&
     asText(row.classification_decision_level) === "leaf" &&
-    Boolean(asText(row.selected_code ?? row.code))
+    Boolean(asText(row.selected_code ?? row.code)),
   );
 }
 
-function scopeClassificationRequirements(scope) {
+function scopeClassificationRequirements(scope: JsonRecord): JsonRecord[] {
   const processId = asText(scope?.process_id ?? scope?.id);
   const processVersion = asText(scope?.process_version ?? scope?.version) || "00.00.001";
-  const requirements = [];
+  const requirements: JsonRecord[] = [];
   if (processId) {
     requirements.push({
       dataset_type: "process",
@@ -2776,25 +3321,29 @@ function scopeClassificationRequirements(scope) {
       category_type: "process",
     });
   }
-  for (const flow of asArray(scope?.dependency_ids?.flows)) {
-    const flowType = asText(flow?.flow_type);
+  const dependencies = jsonRecord(scope.dependency_ids);
+  for (const flow of asArray(dependencies.flows).map(jsonRecord)) {
+    const flowType = asText(flow.flow_type);
     if (flowType && flowType !== "Product flow") continue;
-    const flowId = asText(flow?.id ?? flow?.dataset_id);
+    const flowId = asText(flow.id ?? flow.dataset_id);
     if (!flowId) continue;
     requirements.push({
       dataset_type: "flow",
       dataset_id: flowId,
-      dataset_version: asText(flow?.version ?? flow?.dataset_version) || "00.00.001",
+      dataset_version: asText(flow.version ?? flow.dataset_version) || "00.00.001",
       category_type: "flow-product",
     });
   }
   return requirements;
 }
 
-function scopeClassificationPreflight(scope, classificationDecisionIndex) {
+function scopeClassificationPreflight(
+  scope: JsonRecord,
+  classificationDecisionIndex: ClassificationDecisionIndex,
+): JsonRecord {
   const requirements = scopeClassificationRequirements(scope);
-  const missing = [];
-  const notLeaf = [];
+  const missing: JsonRecord[] = [];
+  const notLeaf: JsonRecord[] = [];
   for (const requirement of requirements) {
     const key = classificationDecisionKey({
       datasetType: requirement.dataset_type,
@@ -2802,7 +3351,7 @@ function scopeClassificationPreflight(scope, classificationDecisionIndex) {
       datasetVersion: requirement.dataset_version,
       categoryType: requirement.category_type,
     });
-    const decision = key ? classificationDecisionIndex?.byKey?.get(key) : null;
+    const decision = key ? classificationDecisionIndex.byKey.get(key) : null;
     if (!decision) {
       missing.push(requirement);
       continue;
@@ -2827,9 +3376,9 @@ function scopeClassificationPreflight(scope, classificationDecisionIndex) {
   };
 }
 
-function selectionOrderOption(value) {
+function selectionOrderOption(value: unknown): string {
   const normalized = asText(value || "input");
-  const aliases = {
+  const aliases: Record<string, string> = {
     family: "family-master-first",
     "family-master": "family-master-first",
     weight: "estimated-weight-asc",
@@ -2855,32 +3404,40 @@ function selectionOrderOption(value) {
   return order;
 }
 
-function compareSelectionRows(left, right, selectionOrder) {
+function compareSelectionRows(
+  left: ScopeSelectionCandidate,
+  right: ScopeSelectionCandidate,
+  selectionOrder: string,
+): number {
   if (selectionOrder.startsWith("family-master-first")) {
     const leftRank = bafuFamilySelectionRank(left.familySignature);
     const rightRank = bafuFamilySelectionRank(right.familySignature);
     if (leftRank !== rightRank) return leftRank - rightRank;
-    const leftGroup = left.familySignature?.family_group_key ?? "";
-    const rightGroup = right.familySignature?.family_group_key ?? "";
+    const leftGroup = asText(left.familySignature?.family_group_key);
+    const rightGroup = asText(right.familySignature?.family_group_key);
     if (leftGroup !== rightGroup) return leftGroup.localeCompare(rightGroup);
     if (selectionOrder === "family-master-first-weight-asc") {
-      const leftUnknown = left.weight == null;
-      const rightUnknown = right.weight == null;
+      const leftWeight = left.weight;
+      const rightWeight = right.weight;
+      const leftUnknown = leftWeight == null;
+      const rightUnknown = rightWeight == null;
       if (leftUnknown !== rightUnknown) return leftUnknown ? 1 : -1;
-      if (!leftUnknown && !rightUnknown && left.weight !== right.weight) {
-        return left.weight - right.weight;
+      if (leftWeight != null && rightWeight != null && leftWeight !== rightWeight) {
+        return leftWeight - rightWeight;
       }
     }
     return left.index - right.index;
   }
   if (selectionOrder === "input") return left.index - right.index;
-  const leftUnknown = left.weight == null;
-  const rightUnknown = right.weight == null;
+  const leftWeight = left.weight;
+  const rightWeight = right.weight;
+  const leftUnknown = leftWeight == null;
+  const rightUnknown = rightWeight == null;
   if (leftUnknown !== rightUnknown) return leftUnknown ? 1 : -1;
-  if (!leftUnknown && !rightUnknown && left.weight !== right.weight) {
+  if (leftWeight != null && rightWeight != null && leftWeight !== rightWeight) {
     return selectionOrder === "estimated-weight-desc"
-      ? right.weight - left.weight
-      : left.weight - right.weight;
+      ? rightWeight - leftWeight
+      : leftWeight - rightWeight;
   }
   return left.index - right.index;
 }
@@ -2897,7 +3454,19 @@ function selectScopesForRun({
   familySignatureIndex,
   classificationDecisionIndex,
   requireLeafClassification,
-}) {
+}: {
+  allScopes: JsonRecord[];
+  requestedProcessIds: Set<string>;
+  verifiedScopes: Set<string>;
+  blockedScopes: Set<string>;
+  pendingOnly: boolean;
+  force: boolean;
+  selectionOrder: string;
+  limit: number | null;
+  familySignatureIndex: BafuFamilyIndex;
+  classificationDecisionIndex: ClassificationDecisionIndex;
+  requireLeafClassification: boolean;
+}): ScopeSelectionResult {
   const explicit = requestedProcessIds.size > 0;
   const stats = {
     input_scopes: allScopes.length,
@@ -2909,9 +3478,9 @@ function selectScopesForRun({
     candidate_scopes_before_limit: 0,
     selected_scopes: 0,
   };
-  const candidates = [];
+  const candidates: ScopeSelectionCandidate[] = [];
   for (const [index, scope] of allScopes.entries()) {
-    const processId = scope?.process_id || scope?.id;
+    const processId = asText(scope.process_id || scope.id);
     if (explicit && !requestedProcessIds.has(processId)) continue;
     stats.matched_scopes += 1;
     const key = scopeKey(scope);
@@ -2959,7 +3528,13 @@ function preflightPlanRows({
   blockedScopes,
   familySignatureIndex,
   classificationDecisionIndex,
-}) {
+}: {
+  scopes: JsonRecord[];
+  verifiedScopes: Set<string>;
+  blockedScopes: Set<string>;
+  familySignatureIndex: BafuFamilyIndex;
+  classificationDecisionIndex: ClassificationDecisionIndex;
+}): JsonRecord[] {
   return scopes.map((scope, index) => {
     const key = scopeKey(scope);
     const familySignature = bafuFamilySignatureForScope(familySignatureIndex, scope);
@@ -2988,7 +3563,16 @@ function preflightPlanRows({
   });
 }
 
-function batchRunStatus(results, { paused = false, stoppedAfterBlocked = false } = {}) {
+function batchRunStatus(
+  results: JsonRecord[],
+  {
+    paused = false,
+    stoppedAfterBlocked = false,
+  }: {
+    paused?: boolean;
+    stoppedAfterBlocked?: boolean;
+  } = {},
+): string {
   const failed = results.some((row) => row.status === "failed");
   const blocked = results.some((row) => row.status === "blocked");
   if (stoppedAfterBlocked) {
@@ -3005,7 +3589,21 @@ function batchRunStatus(results, { paused = false, stoppedAfterBlocked = false }
   return "completed";
 }
 
-function okDatasetRow({ type, id, version, processId, report, files }) {
+function okDatasetRow({
+  type,
+  id,
+  version,
+  processId,
+  report,
+  files,
+}: {
+  type: string;
+  id: unknown;
+  version: unknown;
+  processId: unknown;
+  report: string;
+  files: unknown;
+}): JsonRecord {
   return {
     schema_version: 1,
     generated_at_utc: nowIso(),
@@ -3019,7 +3617,19 @@ function okDatasetRow({ type, id, version, processId, report, files }) {
   };
 }
 
-function blockRow({ scope, stage, blocker, report, rerunCommand }) {
+function blockRow({
+  scope,
+  stage,
+  blocker,
+  report,
+  rerunCommand,
+}: {
+  scope: JsonRecord;
+  stage: string;
+  blocker: JsonRecord;
+  report?: string | null;
+  rerunCommand?: string;
+}): JsonRecord {
   return {
     schema_version: 1,
     generated_at_utc: nowIso(),
@@ -3042,15 +3652,25 @@ function blockRow({ scope, stage, blocker, report, rerunCommand }) {
 // otherwise reject Promise.all and abort the ENTIRE batch with no ledgers written.
 // Record the scope as a retryable failure (mirroring the in-scope `fail` path) so the
 // remaining scopes continue and the failed scope can simply be rerun.
-function recordScopeExecutionException({ scope, familySignature, error, paths }) {
-  const processId = scope.process_id || scope.id;
-  const processVersion = scope.process_version || scope.version || "00.00.001";
+function recordScopeExecutionException({
+  scope,
+  familySignature,
+  error,
+  paths,
+}: {
+  scope: JsonRecord;
+  familySignature: BafuFamilySignature;
+  error: unknown;
+  paths: JsonRecord;
+}): JsonRecord {
+  const processId = asText(scope.process_id || scope.id);
+  const processVersion = asText(scope.process_version || scope.version) || "00.00.001";
   const row = blockRow({
     scope,
     stage: "scope_execution",
     blocker: {
       code: "scope_execution_exception",
-      message: `Uncaught error during scope execution: ${error?.message || String(error)}`,
+      message: `Uncaught error during scope execution: ${error instanceof Error ? error.message : String(error)}`,
       retryable: true,
       retryable_reason_code: "scope_execution_exception",
       required_human_action:
@@ -3062,13 +3682,13 @@ function recordScopeExecutionException({ scope, familySignature, error, paths })
       "scripts/foundry.mjs",
       commandName,
       "--scope-file",
-      repoRelative(paths.scopeFile),
+      repoRelative(asText(paths.scopeFile)),
       "--process-bundles-dir",
-      repoRelative(paths.processBundlesDir),
+      repoRelative(asText(paths.processBundlesDir)),
       "--run-dir",
-      repoRelative(paths.runDir),
+      repoRelative(asText(paths.runDir)),
       "--out-dir",
-      repoRelative(paths.outDir),
+      repoRelative(asText(paths.outDir)),
       "--process-id",
       processId,
       "--commit",
@@ -3076,9 +3696,9 @@ function recordScopeExecutionException({ scope, familySignature, error, paths })
       "1",
     ]),
   });
-  appendJsonLine(paths.failedRetry, row);
-  appendJsonLine(paths.blocked_remote_write, row);
-  appendJsonLine(paths.scopeCheckpoints, {
+  appendJsonLine(asText(paths.failedRetry), row);
+  appendJsonLine(asText(paths.blocked_remote_write), row);
+  appendJsonLine(asText(paths.scopeCheckpoints), {
     schema_version: 1,
     generated_at_utc: nowIso(),
     process_id: processId,
@@ -3100,7 +3720,7 @@ function recordScopeExecutionException({ scope, familySignature, error, paths })
 const retryableStageFailurePattern =
   /\b(?:ENOTFOUND|EAI_AGAIN|ETIMEDOUT|ECONNRESET|ECONNREFUSED|ECONNABORTED|EHOSTUNREACH|ENETUNREACH|ESOCKETTIMEDOUT)\b|npm error network|registry\.npmjs\.org|network connectivity|timed out after|lookup_failed after insert|identity_preflight_report_missing_or_non_json|identity_preflight_timeout|REMOTE_REQUEST_FAILED|Auth session missing/u;
 
-function failedStageNestedReportText(stageEntry) {
+function failedStageNestedReportText(stageEntry: JsonRecord): unknown[] {
   if (!stageEntry || stageEntry.exit_code === 0) return [];
   const nestedPath = resolveRepoPath(stageEntry.report_file);
   if (!nestedPath || !fileExists(nestedPath)) return [];
@@ -3118,32 +3738,48 @@ function failedStageNestedReportText(stageEntry) {
   ].filter(Boolean);
 }
 
-function retryableStageFailureText({ blocker, report }) {
+function retryableStageFailureText({
+  blocker,
+  report,
+}: {
+  blocker: JsonRecord;
+  report: string | null;
+}): string {
   const parts = [
     blocker?.code,
     blocker?.message,
     blocker?.stderr,
-    blocker?.stage?.stderr,
-    blocker?.stage?.command,
+    jsonRecord(blocker.stage).stderr,
+    jsonRecord(blocker.stage).command,
   ];
   const reportPath = resolveRepoPath(report);
   if (fileExists(reportPath)) {
-    const reportJson = readJson(reportPath);
+    const reportJson = readJson(reportPath!);
+    const blockers = recordArray(reportJson.blockers);
+    const reportStages = recordArray(reportJson.stages);
     parts.push(
       reportJson?.status,
-      ...(reportJson?.blockers ?? []).map((entry) => JSON.stringify(entry)),
-      ...(reportJson?.stages ?? []).map((entry) =>
+      ...blockers.map((entry) => JSON.stringify(entry)),
+      ...reportStages.map((entry) =>
         [entry?.stage, entry?.status, entry?.exit_code, entry?.stderr, entry?.command]
           .filter((value) => value != null && value !== "")
           .join("\n"),
       ),
-      ...(reportJson?.stages ?? []).flatMap((entry) => failedStageNestedReportText(entry)),
+      ...reportStages.flatMap((entry) => failedStageNestedReportText(entry)),
     );
   }
   return parts.filter(Boolean).join("\n");
 }
 
-function retryableStageFailure({ stage, blocker, report }) {
+function retryableStageFailure({
+  stage,
+  blocker,
+  report,
+}: {
+  stage: string;
+  blocker: JsonRecord;
+  report: string | null;
+}): JsonRecord | null {
   const code = String(blocker?.code ?? "");
   const stageName = String(stage ?? "");
   if (
@@ -3184,7 +3820,7 @@ function buildFinalizeArgs({
   patchApplyReport,
   targetUserId,
   stateCode,
-}) {
+}: FinalizeArgsInput): string[] {
   const args = [
     process.execPath,
     "scripts/foundry.mjs",
@@ -3227,8 +3863,8 @@ function buildFinalizeArgs({
   // contact the materialize stage stamped (deterministic on profile+name+website).
   // Without this the finalize would fall back to the default (BAFU FOEN) contact.
   // Empty for BAFU (no libraryContact config) → BAFU finalize args unchanged.
-  const libraryContact = bafuBatchConfig.libraryContact;
-  if (libraryContact && typeof libraryContact === "object") {
+  const libraryContact = jsonRecord(bafuBatchConfig.libraryContact);
+  if (Object.keys(libraryContact).length > 0) {
     appendOption(args, "--library-name", libraryContact.libraryName);
     appendOption(args, "--library-short-name", libraryContact.shortName);
     appendOption(args, "--library-website", libraryContact.website);
@@ -3255,7 +3891,17 @@ function buildFinalizeArgs({
   return args;
 }
 
-async function runFinalizeStage({ stage, args, reportPath, logDir }) {
+async function runFinalizeStage({
+  stage,
+  args,
+  reportPath,
+  logDir,
+}: {
+  stage: string;
+  args: string[];
+  reportPath: string;
+  logDir: string;
+}): Promise<StageResult> {
   const result = await runArgvStage({ stage, argv: args, logDir });
   const reportExists = fileExists(reportPath);
   const report = reportExists
@@ -3305,8 +3951,20 @@ async function runIdentityAndPatch({
   // FIX A: rewrite rows for THIS scope's process_id (may be undefined) + the mode flag.
   resolutionRewriteRows = undefined,
   applyResolutionRewritesMode = false,
-}) {
-  const gateReport = resolveRepoPath(preFinalizeReport?.files?.curation_gate_report);
+}: {
+  type: string;
+  inputRowsFile: string;
+  preFinalizeReport: JsonRecord;
+  scopeDir: string;
+  runDir: string;
+  logDir: string;
+  stages: JsonRecord[];
+  label?: string;
+  stagePrefix?: string;
+  resolutionRewriteRows?: JsonRecord[];
+  applyResolutionRewritesMode?: boolean;
+}): Promise<IdentityPatchResult> {
+  const gateReport = resolveRepoPath(jsonRecord(preFinalizeReport.files).curation_gate_report);
   if (!fileExists(gateReport)) {
     return {
       status: "blocked",
@@ -3425,7 +4083,7 @@ async function runIdentityAndPatch({
     }
     const unresolvedReferenceBlocker = identityUnresolvedReferenceBlocker({
       type,
-      report: identityApply.json,
+      report: identityApply.json!,
     });
     if (unresolvedReferenceBlocker) {
       return {
@@ -3435,7 +4093,7 @@ async function runIdentityAndPatch({
       };
     }
     identityOutputRows =
-      resolveRepoPath(identityApply.json?.files?.output_rows) || identityOutputRows;
+      resolveRepoPath(jsonRecord(identityApply.json?.files).output_rows) || identityOutputRows;
   } else if (
     applyResolutionRewritesMode &&
     type === "flow" &&
@@ -3535,7 +4193,7 @@ async function runIdentityAndPatch({
     }
     const unresolvedReferenceBlocker = identityUnresolvedReferenceBlocker({
       type,
-      report: identityApply.json,
+      report: identityApply.json!,
     });
     if (unresolvedReferenceBlocker) {
       return {
@@ -3545,7 +4203,7 @@ async function runIdentityAndPatch({
       };
     }
     identityOutputRows =
-      resolveRepoPath(identityApply.json?.files?.output_rows) || identityOutputRows;
+      resolveRepoPath(jsonRecord(identityApply.json?.files).output_rows) || identityOutputRows;
   } else {
     // Pre-authored reuse path (no runtime AI autofill). Reached for BOTH
     // ready_no_identity_actions AND ready_for_ai_identity_decisions when autofill is
@@ -3604,7 +4262,7 @@ async function runIdentityAndPatch({
       }
       const unresolvedReferenceBlocker = identityUnresolvedReferenceBlocker({
         type,
-        report: identityApply.json,
+        report: identityApply.json!,
       });
       if (unresolvedReferenceBlocker) {
         return {
@@ -3614,7 +4272,7 @@ async function runIdentityAndPatch({
         };
       }
       identityOutputRows =
-        resolveRepoPath(identityApply.json?.files?.output_rows) || identityOutputRows;
+        resolveRepoPath(jsonRecord(identityApply.json?.files).output_rows) || identityOutputRows;
     }
   }
 
@@ -3658,7 +4316,7 @@ async function runIdentityAndPatch({
     type,
     reportPath: path.join(authoringDir, "authoring-task-filter-report.json"),
   });
-  const activeTaskManifest = taskFilter.taskManifest;
+  const activeTaskManifest = asText(taskFilter.taskManifest);
   if (taskFilter.status === "ready_no_action_items") {
     return {
       status: "completed",
@@ -3754,7 +4412,8 @@ async function runIdentityAndPatch({
       repoRelative(identityOutputRows),
       "--patch",
       repoRelative(
-        patchCollect.json?.files?.batch_patch || path.join(authoringDir, "ai-patches.batch.json"),
+        asText(jsonRecord(patchCollect.json?.files).batch_patch) ||
+          path.join(authoringDir, "ai-patches.batch.json"),
       ),
       "--out",
       repoRelative(patchedRowsFile),
@@ -3786,7 +4445,7 @@ async function runIdentityAndPatch({
   }
   return {
     status: "completed",
-    rowsFile: resolveRepoPath(patchApply.json?.files?.patched_rows) || patchedRowsFile,
+    rowsFile: resolveRepoPath(jsonRecord(patchApply.json?.files).patched_rows) || patchedRowsFile,
     identityApplyReport,
     patchCollectReport,
     patchApplyReport,
@@ -3803,20 +4462,20 @@ async function maybeCommitSupportThenRerunFinalize({
   logDir,
   stages,
   supportIdentityCacheFile,
-}) {
+}: SupportFinalizeInput): Promise<JsonRecord> {
   const supportPlan = resolveRepoPath(
-    finalizeReport?.files?.source_contact_support_commit_handoff_plan,
+    jsonRecord(finalizeReport.files).source_contact_support_commit_handoff_plan,
   );
   if (!fileExists(supportPlan)) return finalizeReport;
-  const handoffPlan = readJson(supportPlan);
+  const handoffPlan = readJson(supportPlan!);
   const supportIdentityKeys = supportIdentityKeysFromHandoffPlan(handoffPlan);
   const previousSupportCommit = supportCommitQueue;
-  let releaseSupportCommit;
-  supportCommitQueue = new Promise((resolve) => {
+  let releaseSupportCommit: () => void = () => {};
+  supportCommitQueue = new Promise<void>((resolve) => {
     releaseSupportCommit = resolve;
   });
   await previousSupportCommit;
-  let supportResult;
+  let supportResult: HandoffResult | null = null;
   try {
     if (
       supportIdentityKeys.length > 0 &&
@@ -3845,8 +4504,8 @@ async function maybeCommitSupportThenRerunFinalize({
         logDir,
       });
       stages.push(rerun);
-      const staleKeys = staleReusedSupportIdentityKeys(rerun.json, supportIdentityKeys);
-      if (staleKeys.length === 0) return rerun.json;
+      const staleKeys = staleReusedSupportIdentityKeys(rerun.json!, supportIdentityKeys);
+      if (staleKeys.length === 0) return rerun.json!;
       for (const identityKey of staleKeys) verifiedSupportIdentities.delete(identityKey);
       appendSupportIdentityInvalidationRows({
         cacheFile: supportIdentityCacheFile,
@@ -3862,7 +4521,7 @@ async function maybeCommitSupportThenRerunFinalize({
       });
     }
     supportResult = await executeHandoff({
-      handoffPlanPath: supportPlan,
+      handoffPlanPath: supportPlan!,
       ledgerDir,
       outDir: path.join(scopeDir, `${type}-source-contact-support-handoff`),
       logDir,
@@ -3871,12 +4530,13 @@ async function maybeCommitSupportThenRerunFinalize({
   } finally {
     releaseSupportCommit();
   }
+  if (!supportResult) return finalizeReport;
   stages.push(...supportResult.stages);
   if (supportResult.status !== "completed") {
     return {
       ...finalizeReport,
       status: "blocked",
-      blockers: [...(supportResult.blockers ?? []), ...(finalizeReport.blockers ?? [])],
+      blockers: [...supportResult.blockers, ...recordArray(finalizeReport.blockers)],
     };
   }
   for (const identityKey of supportIdentityKeys) verifiedSupportIdentities.add(identityKey);
@@ -3884,7 +4544,7 @@ async function maybeCommitSupportThenRerunFinalize({
     cacheFile: supportIdentityCacheFile,
     identityKeys: supportIdentityKeys,
     source: `${type}.support_handoff`,
-    report: supportResult.closeoutReportPath,
+    report: supportResult.closeoutReportPath ?? null,
   });
   const rerun = await runFinalizeStage({
     stage: `${type}.finalize_after_support`,
@@ -3893,7 +4553,7 @@ async function maybeCommitSupportThenRerunFinalize({
     logDir,
   });
   stages.push(rerun);
-  return rerun.json;
+  return rerun.json!;
 }
 
 async function finalizeAndCommitDataset({
@@ -3913,7 +4573,7 @@ async function finalizeAndCommitDataset({
   ledgerDir,
   stages,
   supportIdentityCacheFile,
-}) {
+}: FinalizeAndCommitInput): Promise<DatasetCommitResult> {
   const context = defaultContext(runDir, type);
   const finalizeDir = path.join(scopeDir, `finalize-${type}-ready`);
   const finalizeReportPath = path.join(finalizeDir, "dataset-post-authoring-finalize-report.json");
@@ -3956,7 +4616,7 @@ async function finalizeAndCommitDataset({
     });
     stages.push(finalize);
     if (finalize.finalize_report_missing) {
-      finalizeReport = finalize.json;
+      finalizeReport = finalize.json!;
       return {
         status: "failed",
         blocker: firstBlocker(
@@ -3970,7 +4630,7 @@ async function finalizeAndCommitDataset({
     }
     finalizeReport = await maybeCommitSupportThenRerunFinalize({
       type,
-      finalizeReport: finalize.json,
+      finalizeReport: finalize.json!,
       finalizeReportPath,
       finalizeArgs,
       ledgerDir,
@@ -3980,7 +4640,7 @@ async function finalizeAndCommitDataset({
       supportIdentityCacheFile,
     });
     if (finalizeReport?.status === "ready_for_remote_write") break;
-    const gateReport = resolveRepoPath(finalizeReport?.files?.curation_gate_report);
+    const gateReport = resolveRepoPath(jsonRecord(finalizeReport.files).curation_gate_report);
     if (!fileExists(gateReport)) break;
     const recovery = await runIdentityAndPatch({
       type,
@@ -4022,9 +4682,9 @@ async function finalizeAndCommitDataset({
       finalizeReport,
     };
   }
-  const handoffPlan = resolveRepoPath(finalizeReport?.files?.commit_handoff_plan);
+  const handoffPlan = resolveRepoPath(jsonRecord(finalizeReport.files).commit_handoff_plan);
   const handoff = await executeHandoff({
-    handoffPlanPath: handoffPlan,
+    handoffPlanPath: handoffPlan!,
     ledgerDir,
     outDir: path.join(scopeDir, `${type}-handoff`),
     logDir,
@@ -4061,10 +4721,10 @@ async function finalizeAndCommitDataset({
 // Best-effort (never fails the import), gated on a real commit; --keep-scratch (or
 // BAFU_KEEP_SCOPE_SCRATCH=1) opts out for debugging / re-verify sessions.
 const VERIFIED_SCOPE_KEEP = new Set(["import-ledger", "scope-run-report.json"]);
-function keepScratchRequested(options) {
+function keepScratchRequested(options: JsonRecord): boolean {
   return booleanOption(options?.keepScratch) || process.env.BAFU_KEEP_SCOPE_SCRATCH === "1";
 }
-function trimVerifiedScopeScratch(scopeDir, options) {
+function trimVerifiedScopeScratch(scopeDir: string, options: JsonRecord): void {
   if (!booleanOption(options?.commit)) return;
   if (keepScratchRequested(options)) return;
   let entries;
@@ -4093,10 +4753,10 @@ const SHARED_CONTEXT_CACHE_MAX_ENTRIES = (() => {
   return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 6000;
 })();
 function enforceSharedContextCacheCap(
-  runDir,
-  options,
+  runDir: string,
+  options: JsonRecord,
   maxEntries = SHARED_CONTEXT_CACHE_MAX_ENTRIES,
-) {
+): void {
   if (keepScratchRequested(options)) return;
   const cacheDir = path.join(runDir, "shared-context-cache");
   let names;
@@ -4125,13 +4785,15 @@ async function runOneScope({
   verifiedFlows,
   verifiedFlowRowsByKey,
   blockedScopes,
-}) {
-  const processId = scope.process_id || scope.id;
-  const processVersion = scope.process_version || scope.version || "00.00.001";
+}: RunOneScopeInput): Promise<JsonRecord> {
+  const processId = asText(scope.process_id || scope.id);
+  const processVersion = asText(scope.process_version || scope.version) || "00.00.001";
+  const targetUserId = asText(options.targetUserId);
+  const stateCode = integerOption(options.stateCode, 0) ?? 0;
   const scopeDir = path.join(paths.outDir, "scopes", processId);
   const logDir = path.join(scopeDir, "logs");
   const ledgerDir = path.join(scopeDir, "import-ledger");
-  const stages = [];
+  const stages: JsonRecord[] = [];
   const checkpointBase = {
     schema_version: 1,
     generated_at_utc: nowIso(),
@@ -4178,11 +4840,12 @@ async function runOneScope({
 
   appendJsonLine(paths.scopeCheckpoints, { ...checkpointBase, state: "started" });
 
-  const block = ({ stage, blocker, report }) => {
+  const block = ({ stage, blocker, report }: ScopeActionInput): JsonRecord => {
     const row = blockRow({ scope, stage, blocker, report, rerunCommand });
     appendJsonLine(paths.blockedHumanReview, row);
     appendJsonLine(
-      paths[`blocked_${categoryForBlocker(row.code).replace(/-/gu, "_")}`] || paths.blockedOther,
+      asText(paths[`blocked_${categoryForBlocker(row.code).replace(/-/gu, "_")}`]) ||
+        paths.blockedOther,
       row,
     );
     appendJsonLine(paths.scopeCheckpoints, {
@@ -4199,7 +4862,7 @@ async function runOneScope({
     };
   };
 
-  const fail = ({ stage, blocker, report }) => {
+  const fail = ({ stage, blocker, report }: ScopeActionInput): JsonRecord => {
     const row = blockRow({ scope, stage, blocker, report, rerunCommand });
     appendJsonLine(paths.failedRetry, row);
     appendJsonLine(paths.blocked_remote_write, row);
@@ -4217,7 +4880,7 @@ async function runOneScope({
     };
   };
 
-  const defer = ({ stage, blocker, report }) => {
+  const defer = ({ stage, blocker, report }: ScopeActionInput): JsonRecord => {
     const retryable = retryableStageFailure({ stage, blocker, report });
     if (!retryable) return block({ stage, blocker, report });
     return fail({
@@ -4252,7 +4915,7 @@ async function runOneScope({
   });
   stages.push(materialize);
   const materializedReport = materialize.json;
-  const fatalMaterializeBlocker = (materializedReport?.blockers ?? []).find((blocker) =>
+  const fatalMaterializeBlocker = recordArray(materializedReport?.blockers).find((blocker) =>
     [
       "requested_process_bundle_missing",
       "bundle_row_identity_missing",
@@ -4268,18 +4931,21 @@ async function runOneScope({
       report: path.join(materializedDir, "dataset-bundle-sample-rows-report.json"),
     });
   }
-  const materialized = {
-    flowRowsFile: resolveRepoPath(materializedReport.files?.rows?.flow),
-    processRowsFile: resolveRepoPath(materializedReport.files?.rows?.process),
-    sourceRowsFile: resolveRepoPath(materializedReport.files?.rows?.source),
-    supportRowsFile: resolveRepoPath(materializedReport.files?.rows?.support),
-    flowpropertyRowsFile: resolveRepoPath(materializedReport.files?.rows?.flowproperty),
-    unitgroupRowsFile: resolveRepoPath(materializedReport.files?.rows?.unitgroup),
-    classificationQueue: resolveRepoPath(materializedReport.files?.classification_authoring_queue),
-    locationQueue: resolveRepoPath(materializedReport.files?.location_authoring_queue),
-    identityPreflightIndex: resolveRepoPath(materializedReport.files?.identity_preflight_requests),
+  const materializedFiles = jsonRecord(materializedReport.files);
+  const materializedRowFiles = jsonRecord(materializedFiles.rows);
+  const materialized: MaterializedRows = {
+    flowRowsFile: resolveRepoPath(materializedRowFiles.flow),
+    processRowsFile: resolveRepoPath(materializedRowFiles.process),
+    sourceRowsFile: resolveRepoPath(materializedRowFiles.source),
+    supportRowsFile: resolveRepoPath(materializedRowFiles.support),
+    flowpropertyRowsFile: resolveRepoPath(materializedRowFiles.flowproperty),
+    unitgroupRowsFile: resolveRepoPath(materializedRowFiles.unitgroup),
+    classificationQueue: resolveRepoPath(materializedFiles.classification_authoring_queue),
+    locationQueue: resolveRepoPath(materializedFiles.location_authoring_queue),
+    identityPreflightIndex: resolveRepoPath(materializedFiles.identity_preflight_requests),
   };
-  if (!fileExists(materialized.processRowsFile)) {
+  const materializedProcessRowsFile = materialized.processRowsFile;
+  if (!materializedProcessRowsFile || !fileExists(materializedProcessRowsFile)) {
     return defer({
       stage: "materialize",
       blocker: {
@@ -4336,9 +5002,9 @@ async function runOneScope({
     });
   }
 
-  let classificationApplyReport = null;
-  let flowClassifiedRows = materialized.flowRowsFile;
-  let processClassifiedRows = materialized.processRowsFile;
+  let classificationApplyReport: string | null = null;
+  let flowClassifiedRows: string | null = materialized.flowRowsFile;
+  let processClassifiedRows = materializedProcessRowsFile;
   if (statusIs(classificationTask.json, ["ready_for_ai_classification_decisions"])) {
     const classificationProjectionDir = path.join(scopeDir, "classification-projection");
     const classificationProjection = await runArgvStage({
@@ -4448,8 +5114,8 @@ async function runOneScope({
       outputRowsByStem(classificationApply.json, "processes.") || processClassifiedRows;
   }
 
-  let flowRowsForFinalize = flowClassifiedRows;
-  let locationApplyReport = null;
+  let flowRowsForFinalize: string | null = flowClassifiedRows;
+  let locationApplyReport: string | null = null;
   if (
     fileExists(materialized.locationQueue) &&
     readJsonLines(materialized.locationQueue).length > 0 &&
@@ -4646,7 +5312,7 @@ async function runOneScope({
     });
     flowRowsForFinalize = pendingRowsFile;
   }
-  let flowIdentityReport = null;
+  let flowIdentityReport: string | null = null;
   let flowIdentityReportsForProcess = existingIdentityApplyReportsWithReferenceRewrites(
     scopeDir,
     "flow",
@@ -4656,7 +5322,7 @@ async function runOneScope({
     const flowPreReportPath = path.join(flowPreDir, "dataset-post-authoring-finalize-report.json");
     const flowPreArgs = buildFinalizeArgs({
       type: "flow",
-      rowsFile: flowRowsForFinalize,
+      rowsFile: flowRowsForFinalize!,
       outDir: flowPreDir,
       ledgerDir,
       sourceSupportRowsFile: materialized.supportRowsFile,
@@ -4670,8 +5336,8 @@ async function runOneScope({
       classificationApplyReport,
       locationApplyReport,
       identityApplyReports: [],
-      targetUserId: options.targetUserId,
-      stateCode: options.stateCode,
+      targetUserId,
+      stateCode,
     });
     const flowPre = await runFinalizeStage({
       stage: "flow.pre_finalize",
@@ -4700,7 +5366,7 @@ async function runOneScope({
     if (commitFlowSupportInline()) {
       flowPre.json = await maybeCommitSupportThenRerunFinalize({
         type: "flow",
-        finalizeReport: flowPre.json,
+        finalizeReport: flowPre.json!,
         finalizeReportPath: flowPreReportPath,
         finalizeArgs: flowPreArgs,
         ledgerDir,
@@ -4710,9 +5376,10 @@ async function runOneScope({
         supportIdentityCacheFile: paths.supportIdentityCache,
       });
     }
-    let flowReadyRows = resolveRepoPath(flowPre.json?.files?.final_rows) || flowRowsForFinalize;
-    let flowPatchCollectReport = null;
-    let flowPatchApplyReport = null;
+    const flowPreFiles = jsonRecord(flowPre.json?.files);
+    let flowReadyRows = resolveRepoPath(flowPreFiles.final_rows) || flowRowsForFinalize!;
+    let flowPatchCollectReport: string | null = null;
+    let flowPatchApplyReport: string | null = null;
     // FIX A (apply-gate): in deterministic resolution-rewrite mode the flow identity
     // apply MUST run even when pre-finalize reports ready_for_remote_write. A "ready"
     // status there means the source elementary flows would be MINTED as account-local
@@ -4729,7 +5396,7 @@ async function runOneScope({
       const flowAuthoring = await runIdentityAndPatch({
         type: "flow",
         inputRowsFile: flowReadyRows,
-        preFinalizeReport: flowPre.json,
+        preFinalizeReport: flowPre.json!,
         scopeDir,
         runDir: paths.runDir,
         logDir,
@@ -4745,7 +5412,7 @@ async function runOneScope({
         return defer({
           stage: "flow.authoring",
           blocker: flowAuthoring.blocker,
-          report: flowAuthoring.report,
+          report: flowAuthoring.report ?? null,
         });
       }
       flowReadyRows = flowAuthoring.rowsFile;
@@ -4758,7 +5425,7 @@ async function runOneScope({
       flowPatchApplyReport = flowAuthoring.patchApplyReport;
       const recoveryBlocker = preFinalizeRecoveryBlocker({
         type: "flow",
-        finalizeReport: flowPre.json,
+        finalizeReport: flowPre.json!,
         recovery: flowAuthoring,
       });
       if (recoveryBlocker) {
@@ -4792,8 +5459,8 @@ async function runOneScope({
         identityApplyReports: flowIdentityReport ? [flowIdentityReport] : [],
         patchCollectReport: flowPatchCollectReport,
         patchApplyReport: flowPatchApplyReport,
-        targetUserId: options.targetUserId,
-        stateCode: options.stateCode,
+        targetUserId,
+        stateCode,
         logDir,
         ledgerDir,
         stages,
@@ -4820,14 +5487,18 @@ async function runOneScope({
           report: flowCommit.report,
         });
       }
+      const committedFinalRows = resolveRepoPath(
+        jsonRecord(flowCommit.finalizeReport.files).final_rows,
+      );
       const committedFlowRows =
-        readRows(resolveRepoPath(flowCommit.finalizeReport?.files?.final_rows)).length > 0
-          ? readRows(resolveRepoPath(flowCommit.finalizeReport?.files?.final_rows))
+        readRows(committedFinalRows).length > 0
+          ? readRows(committedFinalRows)
           : readRows(flowReadyRows);
       for (const identity of committedFlowRows
         .map((row) => datasetIdentity(row, "flow"))
         .filter((entry) => entry.id)) {
         const identityKey = datasetIdentityKey(identity);
+        if (!identityKey) continue;
         const alreadyVerified = verifiedFlows.has(identityKey);
         verifiedFlows.add(identityKey);
         invalidateIdentityPreflightResultCacheEntry(
@@ -4841,7 +5512,7 @@ async function runOneScope({
           report: flowCommit.report,
           files: {
             finalize_report: repoRelative(flowCommit.report),
-            closeout_report: repoRelative(flowCommit.handoff?.closeoutReportPath),
+            closeout_report: repoRelative(flowCommit.handoff.closeoutReportPath),
           },
         });
         verifiedFlowRowsByKey?.set(identityKey, {
@@ -4875,8 +5546,8 @@ async function runOneScope({
     classificationApplyReport,
     locationApplyReport,
     identityApplyReports: flowIdentityReportsForProcess,
-    targetUserId: options.targetUserId,
-    stateCode: options.stateCode,
+    targetUserId,
+    stateCode,
   });
   const processPre = await runFinalizeStage({
     stage: "process.pre_finalize",
@@ -4898,7 +5569,7 @@ async function runOneScope({
   }
   const processPreReport = await maybeCommitSupportThenRerunFinalize({
     type: "process",
-    finalizeReport: processPre.json,
+    finalizeReport: processPre.json!,
     finalizeReportPath: processPreReportPath,
     finalizeArgs: processPreArgs,
     ledgerDir,
@@ -4908,10 +5579,10 @@ async function runOneScope({
     supportIdentityCacheFile: paths.supportIdentityCache,
   });
   let processRowsForE2e =
-    resolveRepoPath(processPreReport?.files?.final_rows) || processClassifiedRows;
-  let processIdentityReport = null;
-  let processPatchCollectReport = null;
-  let processPatchApplyReport = null;
+    resolveRepoPath(jsonRecord(processPreReport.files).final_rows) || processClassifiedRows;
+  let processIdentityReport: string | null = null;
+  let processPatchCollectReport: string | null = null;
+  let processPatchApplyReport: string | null = null;
   if (processPreReport?.status !== "ready_for_remote_write") {
     const processAuthoring = await runIdentityAndPatch({
       type: "process",
@@ -4926,7 +5597,7 @@ async function runOneScope({
       return defer({
         stage: "process.authoring",
         blocker: processAuthoring.blocker,
-        report: processAuthoring.report,
+        report: processAuthoring.report ?? null,
       });
     }
     processRowsForE2e = processAuthoring.rowsFile;
@@ -4947,12 +5618,12 @@ async function runOneScope({
     }
   }
 
-  let processScopeReport = processPreReportPath;
-  let processCloseoutReport = null;
+  let processScopeReport: string = processPreReportPath;
+  let processCloseoutReport: string | null = null;
   if (processPreReport?.status === "ready_for_remote_write" && !processPatchApplyReport) {
-    const handoffPlan = resolveRepoPath(processPreReport.files?.commit_handoff_plan);
+    const handoffPlan = resolveRepoPath(jsonRecord(processPreReport.files).commit_handoff_plan);
     const handoff = await executeHandoff({
-      handoffPlanPath: handoffPlan,
+      handoffPlanPath: handoffPlan!,
       ledgerDir,
       outDir: path.join(scopeDir, "process-handoff"),
       logDir,
@@ -4966,7 +5637,7 @@ async function runOneScope({
       };
       return fail({ stage: "process.commit", blocker, report: processPreReportPath });
     }
-    processCloseoutReport = handoff.closeoutReportPath;
+    processCloseoutReport = handoff.closeoutReportPath ?? null;
   } else {
     const processCommit = await finalizeAndCommitDataset({
       type: "process",
@@ -4977,12 +5648,12 @@ async function runOneScope({
       classificationApplyReport,
       locationApplyReport,
       identityApplyReports: [...flowIdentityReportsForProcess, processIdentityReport].filter(
-        Boolean,
+        (report): report is string => Boolean(report),
       ),
       patchCollectReport: processPatchCollectReport,
       patchApplyReport: processPatchApplyReport,
-      targetUserId: options.targetUserId,
-      stateCode: options.stateCode,
+      targetUserId,
+      stateCode,
       logDir,
       ledgerDir,
       stages,
@@ -5010,7 +5681,7 @@ async function runOneScope({
       });
     }
     processScopeReport = processCommit.report;
-    processCloseoutReport = processCommit.handoff?.closeoutReportPath ?? null;
+    processCloseoutReport = processCommit.handoff.closeoutReportPath ?? null;
   }
 
   verifiedScopes.add(`${processId}@${processVersion}`);
@@ -5068,9 +5739,15 @@ async function runOneScope({
   return { status: "verified", stages };
 }
 
-export function createBafuBatchImportRunCommands(deps, config = {}) {
+export function createBafuBatchImportRunCommands(
+  deps: BafuBatchRuntime,
+  config: BafuBatchConfig = {},
+): {
+  runDatasetBafuBatchImportRun: (options?: JsonRecord) => Promise<JsonRecord>;
+  runDatasetBafuUniverseCoverageReport: typeof runDatasetBafuUniverseCoverageReport;
+} {
   installBafuBatchRuntime(deps, config);
-  async function runDatasetBafuBatchImportRun(options = {}) {
+  async function runDatasetBafuBatchImportRun(options: JsonRecord = {}): Promise<JsonRecord> {
     // Re-install this factory's profile config so a sibling factory (e.g. USLCI)
     // constructed against the same module cannot leak its config into this run.
     // Runs are sequential, so this is race-free.
@@ -5092,27 +5769,26 @@ export function createBafuBatchImportRunCommands(deps, config = {}) {
         ],
         purpose:
           "Run BAFU ready process scopes through materialize, semantic decisions, dependency flow commit, support commit, process commit, readback verify, and resumable ledgers.",
-        remote_write_mode: "explicit-commit-only",
         ...bafuBatchStageContract,
       };
     }
 
     const runDir = resolveRepoPath(
       options.runDir || path.dirname(resolveRepoPath(options.scopeFile || "") || repoRoot),
-    );
+    )!;
     const scopeFile = resolveRepoPath(
       options.scopeFile ||
         path.join(runDir, "library-resolution-v4-leaf-category-map", "ready-scopes.jsonl"),
-    );
+    )!;
     const processBundlesDir = resolveRepoPath(
       options.processBundlesDir ||
         options.bundlesDir ||
         "inputs/BAFU-2025 Version 2 - TIDAS 2026-03-09/process-bundles",
-    );
+    )!;
     if (!fileExists(scopeFile)) throw new Error("--scope-file is required.");
     if (!directoryExists(processBundlesDir)) throw new Error("--process-bundles-dir is required.");
     if (!directoryExists(runDir)) throw new Error("--run-dir is required.");
-    const outDir = resolveRepoPath(options.outDir || path.join(runDir, "batch-import"));
+    const outDir = resolveRepoPath(options.outDir || path.join(runDir, "batch-import"))!;
     const commit = booleanOption(options.commit);
     const preflightOnly = booleanOption(options.preflightOnly || options.planOnly);
     if (!commit && !preflightOnly) {
@@ -5122,9 +5798,9 @@ export function createBafuBatchImportRunCommands(deps, config = {}) {
     }
     const targetUserId = asText(options.targetUserId);
     if (!preflightOnly && !targetUserId) throw new Error("--target-user-id is required.");
-    const stateCode = integerOption(options.stateCode, 0);
-    const parallel = Math.max(1, Math.min(20, integerOption(options.parallel, 5)));
-    const limit = options.limit == null ? null : Math.max(0, integerOption(options.limit, 0));
+    const stateCode = integerOption(options.stateCode, 0) ?? 0;
+    const parallel = Math.max(1, Math.min(20, integerOption(options.parallel, 5) ?? 5));
+    const limit = options.limit == null ? null : Math.max(0, integerOption(options.limit, 0) ?? 0);
     const requestedProcessIds = new Set(requestedProcessIdValues(options));
     const pendingOnly = booleanOption(options.pendingOnly);
     const force = booleanOption(options.force);
@@ -5146,9 +5822,9 @@ export function createBafuBatchImportRunCommands(deps, config = {}) {
     const stopAfterBlocked =
       options.stopAfterBlocked == null
         ? null
-        : Math.max(1, integerOption(options.stopAfterBlocked, 1));
+        : Math.max(1, integerOption(options.stopAfterBlocked, 1) ?? 1);
     fs.mkdirSync(outDir, { recursive: true });
-    const paths = {
+    const paths: BatchPaths = {
       runDir,
       outDir,
       scopeFile,
@@ -5193,7 +5869,7 @@ export function createBafuBatchImportRunCommands(deps, config = {}) {
         options.verifiedSupportIdentitiesFile ||
           options.supportIdentityCache ||
           path.join(outDir, "import-ledger", "verified-support-identities.jsonl"),
-      ),
+      )!,
       preflightPlan: path.join(outDir, "import-ledger", "preflight.plan.jsonl"),
       bafuFamilySignatures: path.join(outDir, "import-ledger", "bafu-family-signatures.json"),
       // FIX A: run-level resolution rewrite index (process_id -> rewrite rows) plus the
@@ -5255,14 +5931,14 @@ export function createBafuBatchImportRunCommands(deps, config = {}) {
       cacheFile: paths.supportIdentityCache,
       sourceLedgerDirs: ledgerSourceDirs,
     });
-    const familySignatureIndex = familySignaturesEnabled()
+    const familySignatureIndex: BafuFamilyIndex = familySignaturesEnabled()
       ? buildBafuFamilySignatureIndex({
           scopes: allScopes,
           processBundlesDir,
           processesDir: directoryExists(processFilesDir) ? processFilesDir : null,
           readJson,
         })
-      : { summary: {}, entries: [], byScopeKey: new Map() };
+      : ({ summary: {}, entries: [], byScopeKey: new Map() } as unknown as BafuFamilyIndex);
     const classificationDecisionIndex = loadClassificationDecisionIndex(
       paths.libraryClassificationDecisions,
     );
@@ -5347,9 +6023,9 @@ export function createBafuBatchImportRunCommands(deps, config = {}) {
         selected_scopes: selectedFamilySummary,
       },
       files: Object.fromEntries(
-        Object.entries(paths)
-          .filter(([, value]) => typeof value === "string")
-          .map(([key, value]) => [key, repoRelative(value)]),
+        Object.entries(paths).flatMap(([key, value]) =>
+          typeof value === "string" ? [[key, repoRelative(value)]] : [],
+        ),
       ),
       selection: {
         pending_only: pendingOnly,
@@ -5449,7 +6125,7 @@ export function createBafuBatchImportRunCommands(deps, config = {}) {
       return report;
     }
 
-    const results = [];
+    const results: JsonRecord[] = [];
     let nextIndex = 0;
     let pauseObserved = false;
     let stoppedAfterBlocked = false;
@@ -5461,13 +6137,13 @@ export function createBafuBatchImportRunCommands(deps, config = {}) {
     function stopRequested() {
       return stoppedAfterBlocked;
     }
-    async function worker(workerIndex) {
+    async function worker(workerIndex: number): Promise<void> {
       while (nextIndex < scopes.length) {
         if (pauseRequested() || stopRequested()) break;
         const scope = scopes[nextIndex];
         const familySignature = bafuFamilySignatureForScope(familySignatureIndex, scope);
         nextIndex += 1;
-        let result;
+        let result: JsonRecord;
         try {
           result = await runOneScope({
             scope,
@@ -5610,7 +6286,7 @@ export const bafuBatchImportRunTestHooks = {
   writeScopeCarriedForwardVerifiedFlowRows,
   // Test-only: drive the profile-config flags (e.g. mintUnmatchedFpUgSupport) that
   // gate the FP/UG support-identity behavior without standing up a full run.
-  setBafuBatchConfigForTest: (config) => {
+  setBafuBatchConfigForTest: (config: BafuBatchConfig): void => {
     bafuBatchConfig = config || {};
   },
 };

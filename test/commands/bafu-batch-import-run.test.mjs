@@ -3,7 +3,7 @@ import {
   bafuBatchImportRunTestHooks,
   createBafuBatchImportRunCommands,
   filterAuthoringTaskManifestToRows,
-} from "../../scripts/commands/bafu-batch-import-run.mjs";
+} from "../../scripts/commands/bafu-batch-import-run.ts";
 import {
   createFileArtifactFact,
   createFoundryCommandSpec,
