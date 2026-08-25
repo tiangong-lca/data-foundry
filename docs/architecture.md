@@ -137,8 +137,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: the zero-JavaScript native TS7 graph remains Foundry-local evidence; deterministic artifacts and fail-close move no CLI, schema, search or database authority."
+lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
+lastReviewedNote: "Reviewed for Issue #67 evidence-decision typing: zero-any decision/preflight contracts remain Foundry-local evidence and move no CLI, schema, Edge search or database authority."
 ---
 
 # Architecture
@@ -184,7 +184,7 @@ entrypoint + args
 
 This boundary avoids a misleading bulk rename. Each module remains in the inventory until a TypeScript replacement preserves its command, artifact, stdout, exit, and safety behavior under focused tests. Completion means no untyped business-runtime modules remain and the full case-driven suite is green.
 
-The native TypeScript leaf set now also covers decision context, identity reference rewrite, full-context proof, and preflight artifact factories. Focused characterization preserves queue/context SHA scopes, exact reference rows/reports, fail-closed missing evidence, transform relevance, request/report artifact facts, CommandSpec argv, first-bound source indexes, positive-only execution reuse, and every static consumer.
+The native TypeScript leaf set now also covers decision context, identity reference rewrite, full-context proof, and preflight artifact factories. Focused characterization preserves queue/context SHA scopes, exact reference rows/reports, fail-closed missing evidence, transform relevance, request/report artifact facts, CommandSpec argv, first-bound source indexes, positive-only execution reuse, and every static consumer. `decision-task-utils.ts` and `identity-preflight-artifacts.ts` now model their dependency injection, queue/context/proof, dataset request and source-index shapes directly; external JSON stays `unknown` until its local boundary, and an Oxlint AST contract keeps this family free of explicit `any` without moving search or execution authority.
 
 The typed BAFU family and import-ledger leaves preserve two local control-plane boundaries: deterministic family grouping/ranking over ordered signature hashes, and append-only resume evidence over verified, blocked, dependency, retry, and skipped JSONL rows. They do not change database writes, command ownership, public help, profile defaults, or the owner CLI boundary.
 

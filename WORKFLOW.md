@@ -266,8 +266,8 @@ checkPaths:
   - test/unit/foundry-golden-diff-contract.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: pnpm-only native TS7 entry/runtime/tests/config preserve dependency order, exact artifacts/order/hashes/errors, planner algebra, receipts and fail-closed authority."
+lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
+lastReviewedNote: "Reviewed for Issue #67 evidence-decision typing: local queue/context/proof/request contracts preserve exact hashes, CommandSpecs, blockers, first-binding and fail-closed authority."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -313,6 +313,8 @@ Issue #63 established the typed spine and its migration is complete. Keep the pe
 Queue authoring context must preserve manifest and JSONL encounter order, exact-version selection before id-only fallback, closure dependency/support order and native parse/filesystem/invalid-dependency failures. Missing or malformed queue evidence must not be converted into an executable or remote-write allowance.
 
 Full-context package and decision-task proof must remain bound to exact file bytes, recorded hashes and non-empty required context. Shared context follows embedded task context in the existing order; missing, malformed, hash-drifted or incomplete proof remains blocking and cannot be converted into remote-write authority.
+
+Decision-task and identity-preflight artifact helpers must keep concrete queue, context, proof, request and source-index contracts with `unknown` narrowed at JSON/dependency boundaries. Preserve selection and dedupe order, stable queue/context hashes, exact CommandSpec artifact facts, first-bound source indexes and native fail-close behavior; typing these local artifacts must not absorb Edge search or CLI execution authority.
 
 Classification decision apply context must preserve the apply report's decision/task order, exact resolved input/output paths and content hashes. A missing decision file stays empty, while malformed readable JSON or an invalid path type retains its native failure; evidence aggregation never executes decisions.
 

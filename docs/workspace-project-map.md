@@ -80,8 +80,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: zero-JavaScript native TS7 evidence remains Foundry-local; Rust tidas, published CLI/database/search/readback, profiles, Worldsteel/Date.parse and cross-repository boundaries are unchanged."
+lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
+lastReviewedNote: "Reviewed for Issue #67 evidence-decision typing: local decision/preflight evidence remains Foundry-owned while CLI, database/Edge search, readback and cross-repository ownership are unchanged."
 ---
 
 # Workspace Project Map

@@ -139,8 +139,8 @@ checkPaths:
   - specs/import-profiles.json
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 entry, runtime, tests and config plus the permanent zero-JavaScript ratchet preserve profiles, exact help/artifacts, bytes/order/hashes/errors and authority boundaries."
+lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
+lastReviewedNote: "Reviewed for Issue #67 evidence-decision typing: decision-task and preflight artifact boundaries are strict zero-any TS7 while exact behavior, profiles and remote authority remain unchanged."
 ---
 
 # TianGong LCA Data Foundry
@@ -171,7 +171,7 @@ The next internal-contract slice migrates artifact/QA inputs, dataset payload id
 
 The standalone-leaf slice migrates canonical FlowProperty mappings, profile-aware source semantics, trace queue coverage, and reusable TIDAS row helpers. Characterization preserves all scale factors and pending defaults, BAFU/USLCI/worldsteel source identities, canonical reference rewrites, trace evidence keys/blockers, multilingual/root/id/version helpers, and invalid-input behavior.
 
-The evidence/decision slice migrates decision-task context and stable hashes, identity reference rewrites, full-context completion proof, and identity-preflight request artifacts. Characterization preserves exact paths/bytes/SHA/ordering, missing or ambiguous evidence blockers, artifact-bound CommandSpecs, source-index first binding, and positive-only cache/execution reuse boundaries.
+The evidence/decision slice migrates decision-task context and stable hashes, identity reference rewrites, full-context completion proof, and identity-preflight request artifacts. Characterization preserves exact paths/bytes/SHA/ordering, missing or ambiguous evidence blockers, artifact-bound CommandSpecs, source-index first binding, and positive-only cache/execution reuse boundaries. The strict follow-up gives `decision-task-utils.ts` and `identity-preflight-artifacts.ts` concrete dependency, queue, context, proof, payload, request and index contracts with `unknown` at external JSON boundaries; an Oxlint AST check and the existing cases prohibit explicit `any` without changing outputs or authority.
 
 The family/ledger slice migrates BAFU family signatures and the append-only import ledger. Characterization preserves normalized family names, ordered exchange skeleton/template/amount hashes, scope-order master selection and summaries, verified/blocked/retry row schemas, payload identity hashes, duplicate suppression, human-review ordering, resume/skipped artifacts, relative paths, and native parse/filesystem errors.
 

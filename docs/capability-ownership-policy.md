@@ -82,8 +82,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 entry/runtime/tests/config change no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse or sibling boundary."
+lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
+lastReviewedNote: "Reviewed for Issue #67 evidence-decision typing: concrete local artifact types change no capability owner, Edge search, remote operation, transport/readback, schema, profile or sibling boundary."
 ---
 
 # Capability Ownership Policy
