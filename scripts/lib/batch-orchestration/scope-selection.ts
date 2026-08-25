@@ -38,27 +38,16 @@ export interface ClassificationPreflight extends JsonRecord {
   first_not_leaf: ClassificationNotLeafRequirement | null;
 }
 
-export interface ScopeFamilySignature extends JsonRecord {
-  family_group_key: string;
-  optimization_kind: "same_amount_vector" | "same_skeleton" | "standard";
-  optimization_role:
-    | "same_amount_master"
-    | "same_amount_variant"
-    | "same_skeleton_master"
-    | "same_skeleton_variant"
-    | "standard";
-  master_process_id: string;
-  family_group_size: number;
-  family_hash: string;
-  exchange_skeleton_hash: string;
-  exchange_amount_vector_hash: string;
+export interface ScopeFamilyAdapter<TFamily extends JsonRecord> {
+  selectionRank: (entry: TFamily | null) => number;
+  planFields: (entry: TFamily | null) => JsonRecord;
 }
 
-export interface ScopeSelectionCandidate {
+export interface ScopeSelectionCandidate<TFamily extends JsonRecord> {
   scope: JsonRecord;
   index: number;
   weight: number | null;
-  familySignature: ScopeFamilySignature | null;
+  familySignature: TFamily | null;
   classificationPreflight: ClassificationPreflight;
 }
 
@@ -73,7 +62,7 @@ export interface ScopeSelectionStats extends JsonRecord {
   selected_scopes: number;
 }
 
-export interface ScopeSelectionInput {
+export interface ScopeSelectionInput<TFamily extends JsonRecord> {
   allScopes: readonly JsonRecord[];
   requestedProcessIds: ReadonlySet<string>;
   verifiedScopes: ReadonlySet<string>;
@@ -82,7 +71,8 @@ export interface ScopeSelectionInput {
   force: boolean;
   selectionOrder: SelectionOrder;
   limit: number | null;
-  familySignaturesByScopeKey: ReadonlyMap<string, ScopeFamilySignature>;
+  familySignaturesByScopeKey: ReadonlyMap<string, TFamily>;
+  familyAdapter: ScopeFamilyAdapter<TFamily>;
   classificationDecisionIndex: ClassificationDecisionIndex;
   requireLeafClassification: boolean;
 }
@@ -92,11 +82,12 @@ export interface ScopeSelectionResult {
   stats: ScopeSelectionStats;
 }
 
-export interface PreflightPlanInput {
+export interface PreflightPlanInput<TFamily extends JsonRecord> {
   scopes: readonly JsonRecord[];
   verifiedScopes: ReadonlySet<string>;
   blockedScopes: ReadonlySet<string>;
-  familySignaturesByScopeKey: ReadonlyMap<string, ScopeFamilySignature>;
+  familySignaturesByScopeKey: ReadonlyMap<string, TFamily>;
+  familyAdapter: ScopeFamilyAdapter<TFamily>;
   classificationDecisionIndex: ClassificationDecisionIndex;
 }
 
@@ -162,51 +153,14 @@ function finiteNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function familySignatureForScope(
-  familySignaturesByScopeKey: ReadonlyMap<string, ScopeFamilySignature>,
+function familySignatureForScope<TFamily extends JsonRecord>(
+  familySignaturesByScopeKey: ReadonlyMap<string, TFamily>,
   scope: JsonRecord,
-): ScopeFamilySignature | null {
+): TFamily | null {
   const processId = familyIdentityText(scope.process_id ?? scope.id);
   if (!processId) return null;
   const processVersion = familyIdentityText(scope.process_version ?? scope.version) || "00.00.001";
   return familySignaturesByScopeKey.get(`${processId}@${processVersion}`) ?? null;
-}
-
-function familySelectionRank(entry: ScopeFamilySignature | null): number {
-  switch (entry?.optimization_role) {
-    case "same_amount_master":
-      return 0;
-    case "same_skeleton_master":
-      return 1;
-    case "standard":
-      return 2;
-    case "same_amount_variant":
-      return 3;
-    case "same_skeleton_variant":
-      return 4;
-    default:
-      return 5;
-  }
-}
-
-function familyPlanFields(entry: ScopeFamilySignature | null): JsonRecord {
-  if (!entry) {
-    return {
-      bafu_family_optimization_kind: "unknown",
-      bafu_family_optimization_role: "unknown",
-      bafu_family_master_process_id: null,
-      bafu_family_group_size: null,
-    };
-  }
-  return {
-    bafu_family_optimization_kind: entry.optimization_kind,
-    bafu_family_optimization_role: entry.optimization_role,
-    bafu_family_master_process_id: entry.master_process_id,
-    bafu_family_group_size: entry.family_group_size,
-    bafu_family_hash: entry.family_hash,
-    bafu_family_skeleton_hash: entry.exchange_skeleton_hash,
-    bafu_family_amount_vector_hash: entry.exchange_amount_vector_hash,
-  };
 }
 
 export function scopeKey(scope: JsonRecord): string {
@@ -383,10 +337,11 @@ export function selectionOrderOption(value: unknown): SelectionOrder {
   return order;
 }
 
-export function compareSelectionRows(
-  left: ScopeSelectionCandidate,
-  right: ScopeSelectionCandidate,
+export function compareSelectionRows<TFamily extends JsonRecord>(
+  left: ScopeSelectionCandidate<TFamily>,
+  right: ScopeSelectionCandidate<TFamily>,
   selectionOrder: SelectionOrder,
+  familySelectionRank: ScopeFamilyAdapter<TFamily>["selectionRank"],
 ): number {
   if (selectionOrder.startsWith("family-master-first")) {
     const leftRank = familySelectionRank(left.familySignature);
@@ -421,7 +376,7 @@ export function compareSelectionRows(
   return left.index - right.index;
 }
 
-export function selectScopesForRun({
+export function selectScopesForRun<TFamily extends JsonRecord>({
   allScopes,
   requestedProcessIds,
   verifiedScopes,
@@ -431,9 +386,10 @@ export function selectScopesForRun({
   selectionOrder,
   limit,
   familySignaturesByScopeKey,
+  familyAdapter,
   classificationDecisionIndex,
   requireLeafClassification,
-}: ScopeSelectionInput): ScopeSelectionResult {
+}: ScopeSelectionInput<TFamily>): ScopeSelectionResult {
   const explicit = requestedProcessIds.size > 0;
   const stats: ScopeSelectionStats = {
     input_scopes: allScopes.length,
@@ -445,7 +401,7 @@ export function selectScopesForRun({
     candidate_scopes_before_limit: 0,
     selected_scopes: 0,
   };
-  const candidates: ScopeSelectionCandidate[] = [];
+  const candidates: ScopeSelectionCandidate<TFamily>[] = [];
   for (const [index, scope] of allScopes.entries()) {
     const processId = asText(scope.process_id || scope.id);
     if (explicit && !requestedProcessIds.has(processId)) continue;
@@ -479,7 +435,9 @@ export function selectScopesForRun({
       classificationPreflight,
     });
   }
-  candidates.sort((left, right) => compareSelectionRows(left, right, selectionOrder));
+  candidates.sort((left, right) =>
+    compareSelectionRows(left, right, selectionOrder, familyAdapter.selectionRank),
+  );
   stats.candidate_scopes_before_limit = candidates.length;
   const limited = limit == null ? candidates : candidates.slice(0, limit);
   stats.selected_scopes = limited.length;
@@ -489,13 +447,14 @@ export function selectScopesForRun({
   };
 }
 
-export function preflightPlanRows({
+export function preflightPlanRows<TFamily extends JsonRecord>({
   scopes,
   verifiedScopes,
   blockedScopes,
   familySignaturesByScopeKey,
+  familyAdapter,
   classificationDecisionIndex,
-}: PreflightPlanInput): PreflightPlanRow[] {
+}: PreflightPlanInput<TFamily>): PreflightPlanRow[] {
   return scopes.map((scope, index) => {
     const key = scopeKey(scope);
     const familySignature = familySignatureForScope(familySignaturesByScopeKey, scope);
@@ -519,7 +478,7 @@ export function preflightPlanRows({
       classification_preflight_not_leaf_decisions: classificationPreflight.not_leaf_decisions,
       classification_preflight_first_missing: classificationPreflight.first_missing,
       classification_preflight_first_not_leaf: classificationPreflight.first_not_leaf,
-      ...familyPlanFields(familySignature),
+      ...familyAdapter.planFields(familySignature),
     };
   });
 }

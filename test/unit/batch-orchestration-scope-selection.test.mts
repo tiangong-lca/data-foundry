@@ -13,7 +13,7 @@ import {
   selectScopesForRun,
   selectionOrderOption,
   type JsonRecord,
-  type ScopeFamilySignature,
+  type ScopeFamilyAdapter,
   type ScopeSelectionInput,
   type ScopeSelectionResult,
 } from "../../scripts/lib/batch-orchestration/scope-selection.ts";
@@ -29,6 +29,54 @@ const modulePath = path.join(
 );
 
 const version = "00.00.001";
+
+interface TestFamilySignature extends JsonRecord {
+  family_group_key: string;
+  optimization_kind: "same_amount_vector" | "same_skeleton" | "standard";
+  optimization_role:
+    | "same_amount_master"
+    | "same_amount_variant"
+    | "same_skeleton_master"
+    | "same_skeleton_variant"
+    | "standard";
+  master_process_id: string;
+  family_group_size: number;
+  family_hash: string;
+  exchange_skeleton_hash: string;
+  exchange_amount_vector_hash: string;
+}
+
+const familyAdapter: ScopeFamilyAdapter<TestFamilySignature> = {
+  selectionRank(entry) {
+    const rank = [
+      "same_amount_master",
+      "same_skeleton_master",
+      "standard",
+      "same_amount_variant",
+      "same_skeleton_variant",
+    ].indexOf(entry?.optimization_role ?? "unknown");
+    return rank === -1 ? 5 : rank;
+  },
+  planFields(entry) {
+    if (!entry) {
+      return {
+        bafu_family_optimization_kind: "unknown",
+        bafu_family_optimization_role: "unknown",
+        bafu_family_master_process_id: null,
+        bafu_family_group_size: null,
+      };
+    }
+    return {
+      bafu_family_optimization_kind: entry.optimization_kind,
+      bafu_family_optimization_role: entry.optimization_role,
+      bafu_family_master_process_id: entry.master_process_id,
+      bafu_family_group_size: entry.family_group_size,
+      bafu_family_hash: entry.family_hash,
+      bafu_family_skeleton_hash: entry.exchange_skeleton_hash,
+      bafu_family_amount_vector_hash: entry.exchange_amount_vector_hash,
+    };
+  },
+};
 
 function scope(
   id: string,
@@ -76,9 +124,9 @@ function familySignature({
 }: {
   id: string;
   group: string;
-  role: ScopeFamilySignature["optimization_role"];
-  kind?: ScopeFamilySignature["optimization_kind"];
-}): ScopeFamilySignature {
+  role: TestFamilySignature["optimization_role"];
+  kind?: TestFamilySignature["optimization_kind"];
+}): TestFamilySignature {
   return {
     family_group_key: group,
     optimization_kind: kind,
@@ -92,7 +140,8 @@ function familySignature({
 }
 
 function select(
-  overrides: Partial<ScopeSelectionInput> & Pick<ScopeSelectionInput, "allScopes">,
+  overrides: Partial<ScopeSelectionInput<TestFamilySignature>> &
+    Pick<ScopeSelectionInput<TestFamilySignature>, "allScopes">,
 ): ScopeSelectionResult {
   return selectScopesForRun({
     requestedProcessIds: new Set(),
@@ -102,7 +151,8 @@ function select(
     force: false,
     selectionOrder: "input",
     limit: null,
-    familySignaturesByScopeKey: new Map(),
+    familySignaturesByScopeKey: new Map<string, TestFamilySignature>(),
+    familyAdapter,
     classificationDecisionIndex: buildClassificationDecisionIndex([]),
     requireLeafClassification: false,
     ...overrides,
@@ -114,6 +164,9 @@ test("scope-selection is a pure typed module with no owner runtime or I/O depend
   assert.doesNotMatch(source, /node:(?:fs|process|child_process)|\bprocess\.|\bspawn\b|\benv\b/u);
   assert.doesNotMatch(source, /^let\s+/mu);
   assert.doesNotMatch(source, /install\w*Runtime|moduleRuntime|runtime\(\)/u);
+  assert.doesNotMatch(source, /function family(?:SelectionRank|PlanFields)/u);
+  assert.match(source, /familyAdapter\.selectionRank/u);
+  assert.match(source, /familyAdapter\.planFields/u);
 });
 
 test("pending-only filters verified and active-blocked scopes before ordering and limit", () => {
@@ -239,7 +292,7 @@ test("estimated weight preserves precedence, ties, and unknown-last ordering", (
 
 test("family-master ordering ranks masters before standard, variants, and unknown scopes", () => {
   const ids = ["variant", "standard", "skeleton-master", "unknown", "amount-master"];
-  const byScope = new Map<string, ScopeFamilySignature>([
+  const byScope = new Map<string, TestFamilySignature>([
     [
       `${ids[0]}@${version}`,
       familySignature({ id: "amount-master", group: "a", role: "same_amount_variant" }),
@@ -372,7 +425,8 @@ test("preflight plan preserves exact object and JSONL key order", () => {
     scopes: [inputScope],
     verifiedScopes: new Set([`${processId}@${version}`]),
     blockedScopes: new Set([`${processId}@${version}`]),
-    familySignaturesByScopeKey: new Map(),
+    familySignaturesByScopeKey: new Map<string, TestFamilySignature>(),
+    familyAdapter,
     classificationDecisionIndex: index,
   });
 

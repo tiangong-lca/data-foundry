@@ -5,6 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import {
   bafuFamilyPlanFields,
+  bafuFamilySelectionRank,
   bafuFamilySignatureForScope,
   buildBafuFamilySignatureIndex,
   compactBafuFamilySignature,
@@ -5593,6 +5594,10 @@ export function createBafuBatchImportRunCommands(
           readJson,
         })
       : ({ summary: {}, entries: [], byScopeKey: new Map() } as unknown as BafuFamilyIndex);
+    const familyAdapter = {
+      selectionRank: bafuFamilySelectionRank,
+      planFields: bafuFamilyPlanFields,
+    };
     const classificationDecisionIndex = buildClassificationDecisionIndex(
       readJsonLines(paths.libraryClassificationDecisions),
     );
@@ -5606,6 +5611,7 @@ export function createBafuBatchImportRunCommands(
       selectionOrder,
       limit,
       familySignaturesByScopeKey: familySignatureIndex.byScopeKey,
+      familyAdapter,
       classificationDecisionIndex,
       requireLeafClassification,
     });
@@ -5718,6 +5724,7 @@ export function createBafuBatchImportRunCommands(
           verifiedScopes,
           blockedScopes,
           familySignaturesByScopeKey: familySignatureIndex.byScopeKey,
+          familyAdapter,
           classificationDecisionIndex,
         }),
       );
