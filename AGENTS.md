@@ -59,8 +59,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 45b0848ab233c274f436c69a0b70ea28df30d922
-lastReviewedNote: "Reviewed for Issue #67 Wave 6: typed canonical mappings, source semantics, trace coverage, and TIDAS row factories preserve scales, profile defaults, rewrites, evidence keys, multilingual roots, and invalid inputs."
+lastReviewedCommit: 0583d551f971ad8288875388e0b69a1c6c3ca7b8
+lastReviewedNote: "Reviewed for Issue #67 Wave 7: typed decision, identity rewrite, full-context, and preflight artifact factories preserve fail-closed evidence, exact hashes/paths/argv, positive-only bindings, and consumers."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

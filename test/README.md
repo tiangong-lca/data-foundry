@@ -47,8 +47,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 45b0848ab233c274f436c69a0b70ea28df30d922
-lastReviewedNote: "Reviewed for Issue #67 Wave 6: focused tests cover mapping bytes/scales/pending rows, source kinds/profile fallbacks/rewrites, trace evidence coverage/blockers, TIDAS row roots/languages/cleanup/JSONL, and consumers."
+lastReviewedCommit: 0583d551f971ad8288875388e0b69a1c6c3ca7b8
+lastReviewedNote: "Reviewed for Issue #67 Wave 7: tests cover decision selection/SHA/dedupe, missing-index fail-close, exact reuse rows, full-context blockers, preflight request bytes/CommandSpecs, first binding, and identity scenarios."
 ---
 
 # Test Layout

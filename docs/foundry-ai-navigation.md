@@ -43,8 +43,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 45b0848ab233c274f436c69a0b70ea28df30d922
-lastReviewedNote: "Reviewed for Issue #67 Wave 6: typed standalone navigation records canonical scale/pending mappings, profile-aware source defaults/rewrites, trace coverage keys/blockers, and TIDAS row helpers."
+lastReviewedCommit: 0583d551f971ad8288875388e0b69a1c6c3ca7b8
+lastReviewedNote: "Reviewed for Issue #67 Wave 7: typed evidence navigation records decision context/hash, exact identity reuse, full-context lineage, preflight request/CommandSpec facts, and positive-only binding."
 ---
 
 # Foundry AI Navigation

@@ -64,8 +64,8 @@ checkPaths:
   - test/unit/evidence-leaf-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 45b0848ab233c274f436c69a0b70ea28df30d922
-lastReviewedNote: "Reviewed for Issue #67 Wave 6: standalone policy/row helper migration preserves canonical scales, source profile routing, trace blockers, row JSON, and characterization-first order."
+lastReviewedCommit: 0583d551f971ad8288875388e0b69a1c6c3ca7b8
+lastReviewedNote: "Reviewed for Issue #67 Wave 7: typed evidence factories preserve decision SHA scopes, identity rewrite blockers, full-context lineage, preflight CommandSpecs, and characterization-first order."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

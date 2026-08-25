@@ -54,8 +54,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 45b0848ab233c274f436c69a0b70ea28df30d922
-lastReviewedNote: "Reviewed for Issue #67 Wave 6: typed standalone mapping/source/coverage/row factories remain Foundry-local policy helpers and do not alter canonical or sibling ownership."
+lastReviewedCommit: 0583d551f971ad8288875388e0b69a1c6c3ca7b8
+lastReviewedNote: "Reviewed for Issue #67 Wave 7: typed decision/identity/full-context/preflight factories remain Foundry-local evidence boundaries and do not alter CLI authority."
 ---
 
 # Architecture
