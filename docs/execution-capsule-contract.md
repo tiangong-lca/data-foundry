@@ -18,9 +18,9 @@ checkPaths:
   - test/commands/execution-capsule.test.mts
   - test/unit/execution-capsule-attempt-state.test.mts
   - test/unit/execution-capsule-command-factory.test.mts
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: f168873fb41cb6064f08b1a901a3439eb0b054e4
-lastReviewedNote: "Reviewed for Issue #67 test integration: native TS7 command and attempt-state suites preserve immutable outputs, receipt/hash lineage, CAS/reviewer/boundary checks, seals, zero dispatch and no replay."
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 command and attempt-state suites preserve immutable outputs, receipt/hash lineage, CAS/reviewer/boundary checks, seals, zero dispatch and no replay."
 ---
 
 # Execution Capsule Admission Contract

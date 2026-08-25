@@ -81,9 +81,9 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: 2173145388df1daab563cf501a1cd44658e4bc3e
-lastReviewedNote: "Reviewed for Issue #67 test integration: typing entry/runtime and all local test boundaries changes no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse or sibling boundary."
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 entry/runtime/tests/config change no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse or sibling boundary."
 ---
 
 # Capability Ownership Policy

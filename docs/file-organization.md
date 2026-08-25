@@ -15,9 +15,9 @@ checkPaths:
   - docs/file-organization.md
   - docs/file-location-registry.json
   - test/unit/zero-javascript-ratchet.test.mts
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
-lastReviewedNote: "Reviewed for Issue #63: pnpm acceptance commands and the checked TypeScript migration inventory location."
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: native TypeScript configuration and the permanent zero-JavaScript ratchet replace the completed migration inventory without a compatibility ledger."
 ---
 
 # Repository File Organization

@@ -79,9 +79,9 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: 2173145388df1daab563cf501a1cd44658e4bc3e
-lastReviewedNote: "Reviewed for Issue #67 test integration: native entry/runtime and TypeScript-only test evidence remain Foundry-local; Rust tidas, published CLI/database/search/readback, profiles, Worldsteel/Date.parse and cross-repository boundaries are unchanged."
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: zero-JavaScript native TS7 evidence remains Foundry-local; Rust tidas, published CLI/database/search/readback, profiles, Worldsteel/Date.parse and cross-repository boundaries are unchanged."
 ---
 
 # Workspace Project Map

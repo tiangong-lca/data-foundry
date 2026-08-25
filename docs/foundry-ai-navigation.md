@@ -124,9 +124,9 @@ checkPaths:
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3a5bd04827ebdcd028f9c08b86641e7a7d3a94e9
-lastReviewedNote: "Reviewed for Issue #67 test integration: navigation records native entry/runtime, command, fixture, unit and scenario families while preserving semantic owners, exact artifacts/order/errors and fail-close."
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: navigation records the zero-JavaScript native TS7 topology while preserving semantic owners, exact artifacts/order/errors and fail-close."
 ---
 
 # Foundry AI Navigation

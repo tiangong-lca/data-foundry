@@ -81,9 +81,9 @@ checkPaths:
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
-lastReviewedNote: "Reviewed for Issue #67 Wave 27 integration: native entry/runtime and strict TS7 command contracts preserve commands/categories/help, exports, argv/exit artifacts, profiles, Worldsteel/Date.parse and remote-write modes."
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 entry/runtime/tests/config preserve all 63 commands, categories/help, exports, argv/exit artifacts, profiles, Worldsteel/Date.parse and remote-write modes."
 ---
 
 # Foundry Command Surface

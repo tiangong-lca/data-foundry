@@ -288,6 +288,8 @@ rules:
         kind: service-contract
       - path: specs/schemas/**
         kind: artifact-schema-contract
+      - path: specs/typescript-migration-*.json
+        kind: retired-typescript-migration-artifact
       - path: test/unit/zero-javascript-ratchet.test.mts
         kind: zero-javascript-ratchet
       - path: specs/workspace-capability-adapters.md
@@ -300,6 +302,8 @@ rules:
         kind: command-navigation
       - path: docs/foundry-command-surface.md
         kind: command-surface-doc
+      - path: docs/countable-product-functional-unit-design.md
+        kind: functional-unit-design
     requiredDocs:
       - path: README.md
         mode: review_or_update
@@ -315,6 +319,8 @@ rules:
         mode: must_exist
       - path: docs/env-surface-policy.md
         mode: must_exist
+      - path: test/unit/zero-javascript-ratchet.test.mts
+        mode: review_or_update
       - path: specs/capability-ownership-rules.json
         mode: must_exist
     reason: Command wrappers, route plans, and capability ownership changes must preserve Foundry as task/workspace/profile/gate control.
@@ -342,11 +348,11 @@ rules:
         kind: execution-capsule-contract
       - path: specs/schemas/execution-capsule-stage.schema.json
         kind: execution-capsule-schema
-      - path: scripts/commands/execution-capsule.mjs
+      - path: scripts/commands/execution-capsule.ts
         kind: execution-capsule-command
-      - path: test/commands/execution-capsule.test.mjs
+      - path: test/commands/execution-capsule.test.mts
         kind: execution-capsule-command-test
-      - path: test/unit/execution-capsule-attempt-state.test.mjs
+      - path: test/unit/execution-capsule-attempt-state.test.mts
         kind: execution-capsule-state-test
     requiredDocs:
       - path: docs/execution-capsule-contract.md

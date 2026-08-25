@@ -18,9 +18,9 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - package.json
   - scripts/commands/core.ts
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: orchestration and core acceptance owners move to TS7 without changing Stop-hook registration, pnpm invocation, output, artifacts, recursion guard or authoritative local inputs."
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 owners and pnpm-only gates do not change Stop-hook registration, output, artifacts, recursion guard or authoritative local inputs."
 ---
 
 # Codex Stop Hook

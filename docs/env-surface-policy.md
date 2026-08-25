@@ -20,9 +20,9 @@ checkPaths:
   - scripts/commands/core.ts
   - scripts/with-lca-account.ts
   - scripts/lib/foundry-runtime-utils.ts
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typing orchestration plus core env/doctor/workspace, identity-preflight and finalize owners adds, removes or broadens no environment variable; tests use explicit local values and no repository credentials."
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 entry/runtime/tests/config add, remove or broaden no environment variable; tests use explicit local values and no repository credentials."
 ---
 
 # Environment Surface Policy

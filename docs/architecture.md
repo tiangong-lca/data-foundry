@@ -136,9 +136,9 @@ checkPaths:
   - tsconfig*.json
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3a5bd04827ebdcd028f9c08b86641e7a7d3a94e9
-lastReviewedNote: "Reviewed for Issue #67 test integration: native entry/runtime, command, fixture, unit and scenario boundaries remain local evidence; deterministic artifacts and fail-close move no CLI/schema/search/database authority."
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: the zero-JavaScript native TS7 graph remains Foundry-local evidence; deterministic artifacts and fail-close move no CLI, schema, search or database authority."
 ---
 
 # Architecture

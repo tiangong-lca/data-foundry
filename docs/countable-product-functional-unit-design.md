@@ -1,4 +1,7 @@
 ---
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: only the Foundry entry check path moves to native TypeScript; countable-product and functional-unit semantics are unchanged."
 title: Countable Product Functional Unit Design
 docType: design
 scope: data-foundry

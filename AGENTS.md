@@ -216,9 +216,9 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3a5bd04827ebdcd028f9c08b86641e7a7d3a94e9
-lastReviewedNote: "Reviewed for Issue #67 test integration: native entry/runtime, command, fixture, unit and scenario boundaries are strict TS7 while preserving exact artifacts/order/hashes/errors, metadata topology and fail-closed authority without credentials."
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: Foundry is pnpm-only native TS7 with zero tracked first-party JavaScript; exact help, artifacts, ordering, hashes, errors, metadata topology and fail-closed authority remain preserved without credentials."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
