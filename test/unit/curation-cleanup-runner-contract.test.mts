@@ -256,3 +256,66 @@ test("malformed readable rows retain native SyntaxError before output", (t) => {
   );
   assert.equal(fs.existsSync(path.join(root, "cleanup")), false);
 });
+
+test("impossible datetime blocks the whole cleanup before partial transforms or cleaned-row output", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-curation-cleanup-date-block-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const processId = "33333333-3333-4333-8333-333333333333";
+  const invalid = processRow({
+    id: processId,
+    referenceId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    annualSupply: "Not specified",
+    trace: true,
+    timestamp: "2025-02-30T00:00:00Z",
+  });
+  const rowsFile = path.join(root, "rows", "processes.jsonl");
+  const originalRowsText = writeJsonLines(rowsFile, [invalid]);
+
+  const result = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: "cleanup",
+      },
+    }),
+  );
+
+  assert.equal(fs.readFileSync(rowsFile, "utf8"), originalRowsText);
+  assert.equal(result.status, "blocked_invalid_datetime_metadata");
+  assert.equal(result.cleaned_rows_file, null);
+  assert.deepEqual(result.source_exchange_completeness_proofs, []);
+  assert.deepEqual(records(result.blockers), [
+    {
+      code: "invalid_datetime_metadata",
+      dataset_type: "process",
+      dataset_id: processId,
+      version: "00.00.001",
+      row_index: 0,
+      path: "$.process.processDataSet.administrativeInformation.dataEntryBy.common:timeStamp",
+      value: "2025-02-30T00:00:00Z",
+      reason: "invalid_calendar_date",
+      action: "Correct the source timestamp or provide a schema-valid exact datetime before cleanup.",
+    },
+  ]);
+  const counts = record(result.counts);
+  assert.deepEqual(counts, {
+    rows: 1,
+    blockers: 1,
+    removed_source_trace_blocks: 0,
+    externalized_source_trace_summaries: 0,
+    redacted_foundry_trace_evidence_locators: 0,
+    added_foundry_trace_namespaces: 0,
+    normalized_datetime_values: 0,
+    annual_supply_missing_data_sentinels: 0,
+    source_exchange_completeness_proofs: 0,
+  });
+  const files = record(result.files);
+  assert.equal(files.cleaned_rows, null);
+  assert.equal(fs.existsSync(path.join(root, "cleanup", "processes.cleaned.jsonl")), false);
+  assert.equal(
+    fs.readFileSync(path.join(root, String(files.report)), "utf8"),
+    `${JSON.stringify(result, null, 2)}\n`,
+  );
+});
