@@ -201,7 +201,7 @@ function stripTraceHashValue(value: any, pathParts: string[], removed: string[])
   return output;
 }
 
-function normalizeAllowedTraceHashDifference(payload: unknown): {
+export function normalizeAllowedTraceHashDifference(payload: unknown): {
   normalized: any;
   removed_paths: string[];
   normalized_sha256: string;

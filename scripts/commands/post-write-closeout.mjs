@@ -1,5 +1,6 @@
 import path from "node:path";
 import { createFileArtifactFact } from "../lib/foundry-command-spec.ts";
+import { normalizeAllowedTraceHashDifference } from "../lib/remote-verification-accepted-diff.ts";
 import {
   canonicalPayloadSha256,
   validateUniqueRootReadbacks,
@@ -106,6 +107,7 @@ export function createPostWriteCloseoutCommands({
     targetUserId,
     expectedStateCode,
     intendedRoots,
+    allowTraceHashOnlyNormalization,
     blockers,
   }) {
     const inputPath = resolveRepoPath(reportInputPath(verifyReport));
@@ -228,6 +230,7 @@ export function createPostWriteCloseoutCommands({
       checks: readbackChecks,
       targetUserId,
       expectedStateCode,
+      allowTraceHashOnlyNormalization,
     });
     blockers.push(...uniqueProof.blockers);
 
@@ -490,6 +493,9 @@ export function createPostWriteCloseoutCommands({
         ? null
         : Number(expectedStateCodeText);
     const blockers = [];
+    const productionTestAccount =
+      String(options.accountMode || handoffPlan.account_mode || "").toLowerCase() ===
+        "production-test" || ["1", "true"].includes(String(options.productionCase || ""));
 
     if (handoffPlan.status !== "ready_for_explicit_commit") {
       blockers.push({
@@ -609,12 +615,18 @@ export function createPostWriteCloseoutCommands({
           });
           return;
         }
+        const acceptedNormalization = normalizeAllowedTraceHashDifference(row);
         intendedRoots.push({
           rowIndex,
           table: rootType.table,
           id: identity.id,
           version: identity.version,
           payloadSha256: canonicalPayloadSha256(row),
+          acceptedNormalizedPayloadSha256:
+            acceptedNormalization.removed_paths.length > 0
+              ? acceptedNormalization.normalized_sha256
+              : null,
+          acceptedNormalizedRemovedPaths: acceptedNormalization.removed_paths,
         });
       });
     }
@@ -644,6 +656,7 @@ export function createPostWriteCloseoutCommands({
         targetUserId,
         expectedStateCode,
         intendedRoots,
+        allowTraceHashOnlyNormalization: !productionTestAccount,
         blockers,
       });
     }
@@ -685,6 +698,7 @@ export function createPostWriteCloseoutCommands({
         commit_boundary:
           "This closeout is read-only. It accepts only an already executed explicit CLI commit plus post-write root payload readback evidence.",
         compare_root_payload_required: true,
+        accepted_trace_hash_only_normalization: !productionTestAccount,
         closeout_completion:
           "completed means Foundry handoff was ready, CLI commit completed without row failures, post-write verify proved owner, state_code, and local/remote payload hash equality for the same final rows, and profile-required full schema/YAML/context AI proof remained attached.",
       },

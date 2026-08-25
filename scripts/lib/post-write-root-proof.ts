@@ -4,6 +4,8 @@ export type IntendedRoot = {
   id: string;
   version: string;
   payloadSha256: string;
+  acceptedNormalizedPayloadSha256?: string | null;
+  acceptedNormalizedRemovedPaths?: string[];
 };
 
 export type RootReadbackCheck = {
@@ -18,6 +20,11 @@ export type RootReadbackCheck = {
   remote_payload_sha256?: unknown;
   remote_user_id?: unknown;
   remote_state_code?: unknown;
+  foundry_verification_mode?: unknown;
+  foundry_original_status?: unknown;
+  foundry_original_local_payload_sha256?: unknown;
+  foundry_original_remote_payload_sha256?: unknown;
+  foundry_accepted_differences?: unknown;
 };
 
 export type RootProofBlocker = {
@@ -47,11 +54,62 @@ export function canonicalPayloadSha256(value: unknown): string {
     .digest("hex");
 }
 
+function stringArray(value: unknown): string[] | null {
+  return Array.isArray(value) && value.every((item) => typeof item === "string") ? value : null;
+}
+
+function sameStrings(left: string[], right: string[]): boolean {
+  return (
+    left.length === right.length &&
+    [...left].sort().every((value, index) => value === [...right].sort()[index])
+  );
+}
+
+function acceptedTraceHashPayloadMatches(
+  root: IntendedRoot,
+  check: RootReadbackCheck,
+  allowed: boolean,
+): boolean {
+  if (
+    !allowed ||
+    !root.acceptedNormalizedPayloadSha256 ||
+    !Array.isArray(root.acceptedNormalizedRemovedPaths) ||
+    root.acceptedNormalizedRemovedPaths.length === 0 ||
+    check.foundry_verification_mode !== "accepted_normalized_payload" ||
+    check.foundry_original_status !== "payload_mismatch" ||
+    check.local_payload_sha256 !== root.acceptedNormalizedPayloadSha256 ||
+    check.remote_payload_sha256 !== root.acceptedNormalizedPayloadSha256 ||
+    typeof check.foundry_original_local_payload_sha256 !== "string" ||
+    typeof check.foundry_original_remote_payload_sha256 !== "string" ||
+    !/^[a-f0-9]{64}$/u.test(check.foundry_original_local_payload_sha256) ||
+    !/^[a-f0-9]{64}$/u.test(check.foundry_original_remote_payload_sha256) ||
+    check.foundry_original_local_payload_sha256 === check.foundry_original_remote_payload_sha256 ||
+    !Array.isArray(check.foundry_accepted_differences) ||
+    check.foundry_accepted_differences.length !== 1
+  ) {
+    return false;
+  }
+  const evidence = check.foundry_accepted_differences[0];
+  if (!evidence || typeof evidence !== "object" || Array.isArray(evidence)) return false;
+  const record = evidence as Record<string, unknown>;
+  const localRemovedPaths = stringArray(record.local_removed_paths);
+  const remoteRemovedPaths = stringArray(record.remote_removed_paths);
+  return Boolean(
+    record.accepted_difference === "tiangongfoundry_import_trace_summary_trace_hash_only" &&
+    record.normalized_payload_sha256 === root.acceptedNormalizedPayloadSha256 &&
+    localRemovedPaths?.length &&
+    remoteRemovedPaths?.length &&
+    sameStrings(localRemovedPaths, root.acceptedNormalizedRemovedPaths) &&
+    sameStrings(remoteRemovedPaths, root.acceptedNormalizedRemovedPaths),
+  );
+}
+
 export function validateUniqueRootReadbacks(input: {
   intended: IntendedRoot[];
   checks: RootReadbackCheck[];
   targetUserId: string;
   expectedStateCode: number;
+  allowTraceHashOnlyNormalization?: boolean;
 }): { blockers: RootProofBlocker[]; uniqueReadbackCount: number } {
   const blockers: RootProofBlocker[] = [];
   const intendedByKey = new Map<string, IntendedRoot>();
@@ -128,9 +186,12 @@ export function validateUniqueRootReadbacks(input: {
         row_index: root.rowIndex,
       });
     }
+    const directPayloadMatch =
+      check.local_payload_sha256 === root.payloadSha256 &&
+      check.remote_payload_sha256 === root.payloadSha256;
     if (
-      check.local_payload_sha256 !== root.payloadSha256 ||
-      check.remote_payload_sha256 !== root.payloadSha256
+      !directPayloadMatch &&
+      !acceptedTraceHashPayloadMatches(root, check, input.allowTraceHashOnlyNormalization === true)
     ) {
       blockers.push({
         code: "root_readback_payload_mismatch",
