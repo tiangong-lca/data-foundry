@@ -20,6 +20,23 @@ const zeroAnyPaths = [
   "test/unit/evidence-decision-leaves.test.mts",
 ] as const;
 
+type TestRecord = Record<string, unknown>;
+
+interface TestDatasetPayload extends TestRecord {
+  flowDataSet?: {
+    flowInformation?: { dataSetInformation?: TestRecord };
+    administrativeInformation?: {
+      publicationAndOwnership?: TestRecord;
+    };
+  };
+  processDataSet?: {
+    processInformation?: { dataSetInformation?: TestRecord };
+    administrativeInformation?: {
+      publicationAndOwnership?: TestRecord;
+    };
+  };
+}
+
 test("evidence-decision family contains no explicit any or TypeScript suppression", () => {
   const oxlint = path.join(repoRoot, "node_modules", "oxlint", "bin", "oxlint");
   const result = spawnSync(
@@ -43,7 +60,7 @@ function withFixture<T>(callback: (root: string) => T): T {
   }
 }
 
-function asText(value: any): string {
+function asText(value: unknown): string {
   if (value === undefined || value === null) return "";
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
     return String(value).trim();
@@ -57,37 +74,37 @@ function ensureArray<T>(value: T | T[] | null | undefined): T[] {
   return [value];
 }
 
-function normalizedList(value: any): string[] {
+function normalizedList(value: unknown): string[] {
   return ensureArray(value)
     .flatMap((entry) => String(entry ?? "").split(","))
     .map((entry) => entry.trim())
     .filter(Boolean);
 }
 
-function sha256Text(value: any): string {
+function sha256Text(value: unknown): string {
   return crypto
     .createHash("sha256")
     .update(String(value ?? ""))
     .digest("hex");
 }
 
-function writeJson(filePath: string, value: any): void {
+function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function readJsonLines(filePath: string): any[] {
+function readJsonLines(filePath: string): TestRecord[] {
   const text = fs.readFileSync(filePath, "utf8").trim();
   return text
     ? text
         .split(/\r?\n/u)
         .filter(Boolean)
-        .map((line) => JSON.parse(line))
+        .map((line) => JSON.parse(line) as TestRecord)
     : [];
 }
 
 function decisionUtils(root: string) {
-  const resolve = (value: any) =>
+  const resolve = (value: unknown) =>
     value
       ? path.isAbsolute(String(value))
         ? String(value)
@@ -98,13 +115,13 @@ function decisionUtils(root: string) {
     cloneJson: <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T,
     ensureArray,
     fileExists: (filePath: string) => Boolean(filePath && fs.existsSync(filePath)),
-    integerOption: (value: any, fallback: any) => {
+    integerOption: (value: unknown, fallback: number | null) => {
       const number = Number(value);
       return Number.isInteger(number) ? number : fallback;
     },
     normalizedList,
     nowIso: () => "2026-08-25T00:00:00.000Z",
-    positiveIntegerOption: (value: any, fallback: any) => {
+    positiveIntegerOption: (value: unknown, fallback: number | null) => {
       const number = Number(value);
       return Number.isInteger(number) && number > 0 ? number : fallback;
     },
@@ -114,7 +131,7 @@ function decisionUtils(root: string) {
     repoRelativePath: (filePath: string) =>
       path.relative(root, filePath).split(path.sep).join(path.posix.sep),
     resolveRepoPath: resolve,
-    sameResolvedPath: (left: string, right: string) =>
+    sameResolvedPath: (left: string | null, right: string | null) =>
       Boolean(left && right && path.resolve(left) === path.resolve(right)),
     sha256Text,
     unique: <T,>(values: T[]) => [...new Set(values)],
@@ -165,7 +182,7 @@ test("decision-task helpers preserve selection, path, dedupe, and stable queue h
     );
 
     const stable = utils.stableDecisionTaskQueueRows(rows);
-    assert.equal(stable[0].classification_workflow.commands.output_rows, undefined);
+    assert.equal(stable[0]?.classification_workflow?.commands?.output_rows, undefined);
     assert.equal(rows[0].classification_workflow.commands.output_rows, "volatile-a.jsonl");
     assert.equal(utils.decisionTaskQueueSha256(rows), sha256Text(JSON.stringify(stable)));
 
@@ -188,8 +205,8 @@ test("decision-task helpers preserve selection, path, dedupe, and stable queue h
   });
 });
 
-function rewriteUtils(root: string): any {
-  const resolve = (value: any) =>
+function rewriteUtils(root: string) {
+  const resolve = (value: unknown) =>
     value
       ? path.isAbsolute(String(value))
         ? String(value)
@@ -199,20 +216,18 @@ function rewriteUtils(root: string): any {
     asText,
     cloneJson: <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T,
     countRowsFile: (filePath: string) => readJsonLines(filePath).length,
-    datasetIdentity: (row: any, type: string) => {
-      const rootPayload = type === "flow" ? row?.flowDataSet : row?.processDataSet;
+    datasetIdentity: (row: TestDatasetPayload, type: string) => {
       const info =
-        rootPayload?.flowInformation?.dataSetInformation ??
-        rootPayload?.processInformation?.dataSetInformation ??
-        {};
+        (type === "flow"
+          ? row.flowDataSet?.flowInformation?.dataSetInformation
+          : row.processDataSet?.processInformation?.dataSetInformation) ?? {};
+      const publicationAndOwnership =
+        type === "flow"
+          ? row.flowDataSet?.administrativeInformation?.publicationAndOwnership
+          : row.processDataSet?.administrativeInformation?.publicationAndOwnership;
       return {
         id: asText(info["common:UUID"]),
-        version:
-          asText(
-            rootPayload?.administrativeInformation?.publicationAndOwnership?.[
-              "common:dataSetVersion"
-            ],
-          ) || "00.00.001",
+        version: asText(publicationAndOwnership?.["common:dataSetVersion"]) || "00.00.001",
       };
     },
     datasetRowsFileStem: (type: string) => `${type}s`,
@@ -220,26 +235,31 @@ function rewriteUtils(root: string): any {
     fileExists: (filePath: string) => Boolean(filePath && fs.existsSync(filePath)),
     foundryTraceNamespace: "https://example.test/foundry",
     identityPreflightCommands: {
-      identityPreflightRunReportFile: (row: any) => resolve(row.report_file),
+      identityPreflightRunReportFile: (row: TestRecord) => resolve(row.report_file),
     },
     languageForText: () => "en",
-    multiLang: (text: any, language = "en") => ({ "@xml:lang": language, "#text": text }),
+    multiLang: (text: unknown, language = "en") => ({ "@xml:lang": language, "#text": text }),
     normalizedList,
     nowIso: () => "2026-08-25T00:00:00.000Z",
-    pathExpression: (parts: any[]) => parts.join("."),
-    preferredSourceLanguageText: (values: any) => asText(ensureArray(values)[0]),
+    pathExpression: (parts: unknown[]) => parts.join("."),
+    preferredSourceLanguageText: (values: unknown) => asText(ensureArray(values)[0]),
     readJson: (filePath: string) => JSON.parse(fs.readFileSync(filePath, "utf8")),
     readJsonLines,
     readRowsFile: readJsonLines,
-    repoRelativeMaybe: (filePath: any) =>
-      filePath ? path.relative(root, filePath).split(path.sep).join(path.posix.sep) : null,
+    repoRelativeMaybe: (filePath: unknown) =>
+      filePath
+        ? path
+            .relative(root, filePath as string)
+            .split(path.sep)
+            .join(path.posix.sep)
+        : null,
     repoRelativePath: (filePath: string) =>
       path.relative(root, filePath).split(path.sep).join(path.posix.sep),
     resolveRepoPath: resolve,
     supportText: asText,
     unique: <T,>(values: T[]) => [...new Set(values)],
     writeJson,
-    writeJsonLines: (filePath: string, rows: any[]) => {
+    writeJsonLines: (filePath: string, rows: unknown[]) => {
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(
         filePath,
@@ -274,7 +294,7 @@ test("identity rewrite is fail-closed without evidence and emits exact reference
     });
     assert.equal(missing.status, "blocked");
     assert.deepEqual(
-      missing.blockers.map((blocker: any) => blocker.code),
+      missing.blockers.map((blocker: TestRecord) => blocker.code),
       ["identity_preflight_index_required"],
     );
     const allowed = utils.applyIdentityReferenceRewrites({
@@ -321,12 +341,13 @@ test("identity rewrite is fail-closed without evidence and emits exact reference
   });
 });
 
-function fullContextUtils(root: string): any {
+function fullContextUtils(root: string) {
   return createFullContextProofUtils({
     asText,
-    classificationDecisionUsedContextKinds: (row: any) => normalizedList(row.used_context_kinds),
-    decisionCompletionStatus: (row: any) => asText(row.decision_status ?? row.status),
-    decisionContextBundleSha256: (row: any) => asText(row.context_bundle_sha256),
+    classificationDecisionUsedContextKinds: (row: TestRecord) =>
+      normalizedList(row.used_context_kinds),
+    decisionCompletionStatus: (row: TestRecord) => asText(row.decision_status ?? row.status),
+    decisionContextBundleSha256: (row: TestRecord) => asText(row.context_bundle_sha256),
     ensureArray,
     fileExists: (filePath: string) => Boolean(filePath && fs.existsSync(filePath)),
     listImportProfiles: () => ({
@@ -351,7 +372,7 @@ function fullContextUtils(root: string): any {
     readText: (filePath: string) => fs.readFileSync(filePath, "utf8"),
     repoRelativePath: (filePath: string) =>
       path.relative(root, filePath).split(path.sep).join(path.posix.sep),
-    resolveRepoPath: (value: any) =>
+    resolveRepoPath: (value: unknown) =>
       value
         ? path.isAbsolute(String(value))
           ? String(value)
@@ -387,7 +408,7 @@ test("full-context proof remains profile-aware and fail-closed for missing mutat
     });
     assert.equal(missing.required, true);
     assert.deepEqual(
-      missing.blockers.map((blocker: any) => blocker.code),
+      missing.blockers.map((blocker: TestRecord) => blocker.code),
       [
         "verify_full_context_scope_missing",
         "verify_full_context_semantic_evidence_missing",
@@ -400,14 +421,14 @@ test("full-context proof remains profile-aware and fail-closed for missing mutat
           task: { meta: { profile: "strict", dataset_type: "flow" } },
           completionReport: { closeouts: [], counts: {} },
         })
-        .map((blocker: any) => blocker.code),
+        .map((blocker: TestRecord) => blocker.code),
       ["completion_full_context_closeout_missing"],
     );
   });
 });
 
-function preflightUtils(root: string): any {
-  const resolve = (value: any) =>
+function preflightUtils(root: string) {
+  const resolve = (value: unknown) =>
     value
       ? path.isAbsolute(String(value))
         ? String(value)
@@ -416,9 +437,9 @@ function preflightUtils(root: string): any {
   return createIdentityPreflightArtifactUtils({
     asText,
     bundleClassificationPath: () => "Products > Test",
-    cleanEcoSpoldNameText: (value: any) => asText(value),
-    collectSourceTracePayloads: (value: any) => ensureArray(value),
-    datasetIdentity: (payload: any, type: string) => {
+    cleanEcoSpoldNameText: (value) => asText(value),
+    collectSourceTracePayloads: (value) => ensureArray(value),
+    datasetIdentity: (payload, type) => {
       const info =
         type === "flow"
           ? payload?.flowDataSet?.flowInformation?.dataSetInformation
@@ -426,30 +447,36 @@ function preflightUtils(root: string): any {
       return { id: asText(info?.["common:UUID"]), version: "01.00.000" };
     },
     ensureArray,
-    fileExists: (filePath: string) => Boolean(filePath && fs.existsSync(filePath)),
-    flowNameParts: (payload: any) =>
-      payload?.flowDataSet?.flowInformation?.dataSetInformation?.name ?? {},
+    fileExists: (filePath) => Boolean(filePath && fs.existsSync(filePath)),
+    flowNameParts: (payload) => ({
+      ...(payload.flowDataSet?.flowInformation?.dataSetInformation?.name ?? {}),
+    }),
     flowTypeOfDataSet: () => "Product flow",
     isConvertedDefaultClassification: () => false,
-    jsonSha256: (value: any) => sha256Text(JSON.stringify(value)),
+    jsonSha256: (value) => sha256Text(JSON.stringify(value)),
     normalizedList,
     processAuthoringContextFromTrace: () => ({}),
     processSourceClassificationSummary: () => ({}),
     readJson: (filePath: string) => JSON.parse(fs.readFileSync(filePath, "utf8")),
     readJsonLines,
-    repoRelativeMaybe: (filePath: any) =>
-      filePath ? path.relative(root, filePath).split(path.sep).join(path.posix.sep) : null,
+    repoRelativeMaybe: (filePath) =>
+      filePath
+        ? path
+            .relative(root, filePath as string)
+            .split(path.sep)
+            .join(path.posix.sep)
+        : null,
     repoRelativePath: (filePath: string) =>
       path.relative(root, filePath).split(path.sep).join(path.posix.sep),
     resolveRepoPath: resolve,
-    safeFileToken: (value: any, fallback: string) =>
+    safeFileToken: (value, fallback) =>
       asText(value).replace(/[^A-Za-z0-9_.-]+/gu, "-") || fallback,
     sha256Text,
-    shellQuote: (value: any) => JSON.stringify(String(value)),
+    shellQuote: (value) => JSON.stringify(String(value)),
     sourceTraceLocationCode: () => "",
     textValue: asText,
     writeJson,
-    writeJsonLines: (filePath: string, rows: any[]) => {
+    writeJsonLines: (filePath: string, rows: unknown[]) => {
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(
         filePath,
@@ -504,7 +531,7 @@ test("preflight artifacts bind exact request bytes, CommandSpec facts, and attac
     assert.ok(row.remote_search.query);
     assert.equal(row.remote_search.edge_request.endpoint, "flow_hybrid_search");
 
-    const queue: any[] = [
+    const queue: TestRecord[] = [
       { dataset_type: "flow", dataset_id: "flow-id", dataset_version: "01.00.000" },
     ];
     utils.attachIdentityPreflightRows(queue, artifacts);
@@ -564,7 +591,7 @@ test("preflight source-index loading is first-binding and fail-closed for missin
     assert.equal(loaded.rowCount, 3);
     assert.equal(loaded.sourceFilesByIdentity.get("flow:flow-id:01.00.000"), firstSource);
     assert.deepEqual(
-      loaded.blockers.map((blocker: any) => blocker.code),
+      loaded.blockers.map((blocker: TestRecord) => blocker.code),
       ["identity_preflight_source_context_file_missing", "identity_preflight_source_index_missing"],
     );
   });

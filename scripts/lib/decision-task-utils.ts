@@ -1,5 +1,235 @@
 import path from "node:path";
 
+type UnknownRecord = Record<string, unknown>;
+
+interface WorkflowCommands extends UnknownRecord {
+  input_rows?: unknown;
+  output_rows?: unknown;
+}
+
+interface DecisionWorkflow extends UnknownRecord {
+  schema_type?: unknown;
+  row_type?: unknown;
+  commands?: WorkflowCommands;
+}
+
+interface DecisionQueueRow extends UnknownRecord {
+  dataset_id?: unknown;
+  dataset_version?: unknown;
+  dataset_type?: unknown;
+  schema_type?: unknown;
+  category_type?: unknown;
+  type?: unknown;
+  source_file?: unknown;
+  sourceFile?: unknown;
+  classification_workflow?: DecisionWorkflow;
+  location_workflow?: DecisionWorkflow;
+  foundry_selection?: UnknownRecord;
+}
+
+interface ContextKindEvidence extends UnknownRecord {
+  used_context_kinds?: unknown;
+  usedContextKinds?: unknown;
+}
+
+interface DecisionRecord extends UnknownRecord {
+  category_type?: unknown;
+  categoryType?: unknown;
+  classification_type?: unknown;
+  classificationType?: unknown;
+  type?: unknown;
+  dataset_id?: unknown;
+  datasetId?: unknown;
+  id?: unknown;
+  uuid?: unknown;
+  dataset_version?: unknown;
+  datasetVersion?: unknown;
+  version?: unknown;
+  code?: unknown;
+  class_id?: unknown;
+  classId?: unknown;
+  cat_id?: unknown;
+  catId?: unknown;
+  leaf_code?: unknown;
+  leafCode?: unknown;
+  used_context_kinds?: unknown;
+  usedContextKinds?: unknown;
+  evidence?: ContextKindEvidence;
+  resolution?: ContextKindEvidence;
+  authoring_context?: ContextKindEvidence;
+  authoringContext?: UnknownRecord;
+  authoring_context_sha256?: unknown;
+  context_bundle_sha256?: unknown;
+  contextBundleSha256?: unknown;
+  decision_status?: unknown;
+  decisionStatus?: unknown;
+  status?: unknown;
+}
+
+interface DecisionTaskOptions extends UnknownRecord {
+  datasetId?: unknown;
+  datasetIds?: unknown;
+  id?: unknown;
+  datasetType?: unknown;
+  datasetTypes?: unknown;
+  categoryType?: unknown;
+  categoryTypes?: unknown;
+  schemaType?: unknown;
+  schemaTypes?: unknown;
+  bundleId?: unknown;
+  bundleIds?: unknown;
+  processId?: unknown;
+  offset?: unknown;
+  limit?: unknown;
+  count?: unknown;
+  chunkLabel?: unknown;
+  chunk?: unknown;
+  label?: unknown;
+  rowsFile?: unknown;
+  inputRows?: unknown;
+  inputRowsFile?: unknown;
+  currentRows?: unknown;
+  currentRowsFile?: unknown;
+  schemaFile?: unknown;
+  yamlFile?: unknown;
+  rulesetFile?: unknown;
+  contextFile?: unknown;
+  classificationSchema?: unknown;
+  locationSchema?: unknown;
+  decisionTask?: unknown;
+  classificationDecisionTask?: unknown;
+  classificationTask?: unknown;
+  locationDecisionTask?: unknown;
+  locationTask?: unknown;
+  taskReport?: unknown;
+  task?: unknown;
+}
+
+interface QueueSelection {
+  dataset_ids: string[];
+  dataset_types: string[];
+  category_types: string[];
+  bundle_ids: string[];
+  offset: number;
+  limit: number | null;
+}
+
+interface SelectedQueueRow<Row extends DecisionQueueRow = DecisionQueueRow> {
+  row: Row;
+  sourceIndex: number;
+}
+
+interface ContextFileInput extends UnknownRecord {
+  kind?: unknown;
+  path?: unknown;
+  sha256?: unknown;
+  bytes?: unknown;
+  text?: unknown;
+}
+
+interface DecisionContextFile extends UnknownRecord {
+  kind: string;
+  path: string | null;
+  sha256: string;
+  bytes: number;
+  text: string;
+}
+
+interface MissingContextFile {
+  kind: string;
+  path: string;
+}
+
+interface ContractContext {
+  files: ContextFileInput[];
+  missing: MissingContextFile[];
+}
+
+interface ProvenanceEntry extends UnknownRecord {
+  file?: unknown;
+  total_rows?: unknown;
+  truncated?: unknown;
+}
+
+interface AttachedInputRow extends UnknownRecord {
+  input_rows?: unknown;
+  index?: unknown;
+  row_type?: unknown;
+  dataset_id?: unknown;
+  dataset_version?: unknown;
+}
+
+interface SharedContextInput extends UnknownRecord {
+  path?: unknown;
+  sha256?: unknown;
+  counts?: unknown;
+}
+
+interface TaskContextInput extends UnknownRecord {
+  sha256?: unknown;
+  context_bundle_sha256?: unknown;
+  shared_context_bundle?: SharedContextInput;
+}
+
+interface DecisionTaskInput extends UnknownRecord {
+  status?: unknown;
+  task_kind?: unknown;
+  context_bundle?: TaskContextInput;
+  authoring_context?: TaskContextInput;
+  shared_context_bundle?: SharedContextInput;
+  files?: UnknownRecord;
+  classification_queue?: unknown;
+  location_queue?: unknown;
+  source_classification_queue?: unknown;
+  source_location_queue?: unknown;
+  contract_context_files?: unknown;
+  missing_context_files?: unknown;
+}
+
+interface SharedContextProof {
+  path: string | null;
+  sha256: string | null;
+  expected_sha256: string | null;
+  counts: unknown;
+  files: unknown[];
+  blockers: UnknownRecord[];
+}
+
+interface DecisionTaskProof {
+  path: string;
+  sha256: string | null;
+  status: string | null;
+  task_kind: string | null;
+  context_bundle_sha256: string | null;
+  queue: string | null;
+  source_queue: string | null;
+  contract_context_files: ContextFileInput[];
+  missing_context_files: unknown[];
+  context_bundle?: TaskContextInput | null;
+  shared_context_bundle: SharedContextProof | null;
+  blockers: UnknownRecord[];
+}
+
+interface DecisionTaskUtilsDependencies {
+  asText: (value: unknown) => string;
+  cloneJson: <Value>(value: Value) => Value;
+  ensureArray: <Value>(value: Value | Value[] | null | undefined) => Value[];
+  fileExists: (filePath: string) => boolean;
+  integerOption: (value: unknown, fallback: number | null) => number | null;
+  normalizedList: (value: unknown) => string[];
+  nowIso: () => string;
+  positiveIntegerOption: (value: unknown, fallback: number | null) => number | null;
+  readJson: (filePath: string) => UnknownRecord;
+  readJsonLines: (filePath: string) => UnknownRecord[];
+  readText: (filePath: string) => string;
+  repoRelativePath: (filePath: string) => string;
+  resolveRepoPath: (filePath: unknown) => string | null;
+  sameResolvedPath: (left: string | null, right: string | null) => boolean;
+  sha256Text: (value: unknown) => string;
+  unique: <Value>(values: Value[]) => Value[];
+  writeJson: (filePath: string, value: unknown) => void;
+}
+
 export function createDecisionTaskUtils({
   asText,
   cloneJson,
@@ -18,8 +248,8 @@ export function createDecisionTaskUtils({
   sha256Text,
   unique,
   writeJson,
-}: any) {
-  function classificationQueueSchemaType(row: any) {
+}: DecisionTaskUtilsDependencies) {
+  function classificationQueueSchemaType(row: DecisionQueueRow) {
     return asText(
       row?.classification_workflow?.schema_type ??
         row?.schema_type ??
@@ -28,28 +258,28 @@ export function createDecisionTaskUtils({
     );
   }
 
-  function classificationQueueRowType(row: any) {
+  function classificationQueueRowType(row: DecisionQueueRow) {
     return asText(row?.classification_workflow?.row_type ?? row?.dataset_type);
   }
 
-  function classificationQueueInputRows(row: any) {
+  function classificationQueueInputRows(row: DecisionQueueRow) {
     return asText(row?.classification_workflow?.commands?.input_rows);
   }
 
-  function classificationQueueOutputRows(row: any) {
+  function classificationQueueOutputRows(row: DecisionQueueRow) {
     return asText(row?.classification_workflow?.commands?.output_rows);
   }
 
-  function queueRowSourceFile(row: any) {
+  function queueRowSourceFile(row: DecisionQueueRow) {
     return asText(row?.source_file ?? row?.sourceFile);
   }
 
-  function queueRowBundleId(row: any) {
+  function queueRowBundleId(row: DecisionQueueRow) {
     const match = queueRowSourceFile(row).match(/(?:^|\/)process-bundles\/([^/]+)\//u);
     return match?.[1] ?? "";
   }
 
-  function hasQueueSelectionOptions(options: any) {
+  function hasQueueSelectionOptions(options: DecisionTaskOptions) {
     return Boolean(
       normalizedList(options.datasetId || options.datasetIds || options.id).length ||
       normalizedList(options.datasetType || options.datasetTypes).length ||
@@ -62,7 +292,7 @@ export function createDecisionTaskUtils({
     );
   }
 
-  function queueSelectionSummary(options: any) {
+  function queueSelectionSummary(options: DecisionTaskOptions): QueueSelection {
     return {
       dataset_ids: normalizedList(options.datasetId || options.datasetIds || options.id),
       dataset_types: normalizedList(options.datasetType || options.datasetTypes),
@@ -75,7 +305,11 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function queueRowMatchesSelection(row: any, selection: any, schemaTypeForRow: any) {
+  function queueRowMatchesSelection<Row extends DecisionQueueRow>(
+    row: Row,
+    selection: QueueSelection,
+    schemaTypeForRow: (row: Row) => string,
+  ) {
     const datasetId = asText(row?.dataset_id);
     const datasetType = asText(row?.dataset_type);
     const categoryType = schemaTypeForRow(row);
@@ -95,7 +329,11 @@ export function createDecisionTaskUtils({
     return true;
   }
 
-  function selectDecisionTaskQueueRows(queueRows: any[], options: any, schemaTypeForRow: any) {
+  function selectDecisionTaskQueueRows<Row extends DecisionQueueRow>(
+    queueRows: Row[],
+    options: DecisionTaskOptions,
+    schemaTypeForRow: (row: Row) => string,
+  ) {
     const selection = queueSelectionSummary(options);
     const filtered = queueRows
       .map((row, sourceIndex) => ({ row, sourceIndex }))
@@ -115,14 +353,18 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function safeFileToken(value: any, fallback: any) {
+  function safeFileToken(value: unknown, fallback: string) {
     const token = asText(value)
       .replace(/[^A-Za-z0-9_.-]+/gu, "-")
       .replace(/^-+|-+$/gu, "");
     return token || fallback;
   }
 
-  function decisionTaskChunkLabel(options: any, selection: any, fallback: any) {
+  function decisionTaskChunkLabel(
+    options: DecisionTaskOptions,
+    selection: QueueSelection,
+    fallback: string,
+  ) {
     if (options.chunkLabel || options.chunk || options.label) {
       return safeFileToken(options.chunkLabel || options.chunk || options.label, fallback);
     }
@@ -150,9 +392,18 @@ export function createDecisionTaskUtils({
     outputSuffix,
     inputRowsForRow,
     inputRowsOverride = null,
-  }: any) {
+  }: {
+    selected: SelectedQueueRow[];
+    sourceQueuePath: string;
+    outDir: string;
+    chunkLabel: string;
+    workflowKey: string;
+    outputSuffix: string;
+    inputRowsForRow: (row: DecisionQueueRow) => unknown;
+    inputRowsOverride?: string | null;
+  }) {
     const outputByInput = new Map<string, string>();
-    return selected.map(({ row, sourceIndex }: any) => {
+    return selected.map(({ row, sourceIndex }) => {
       const next = cloneJson(row);
       const inputRows = inputRowsOverride || resolveRepoPath(inputRowsForRow(next));
       const inputBase = inputRows
@@ -170,16 +421,17 @@ export function createDecisionTaskUtils({
         bundle_id: queueRowBundleId(row) || null,
       };
       next[workflowKey] ??= {};
-      next[workflowKey].commands ??= {};
+      const workflow = next[workflowKey] as DecisionWorkflow;
+      workflow.commands ??= {};
       if (inputRowsOverride) {
-        next[workflowKey].commands.input_rows = repoRelativePath(inputRowsOverride);
+        workflow.commands.input_rows = repoRelativePath(inputRowsOverride);
       }
-      next[workflowKey].commands.output_rows = repoRelativePath(outputByInput.get(inputBase));
+      workflow.commands.output_rows = repoRelativePath(outputByInput.get(inputBase)!);
       return next;
     });
   }
 
-  function decisionTaskInputRowsOverride(options: any) {
+  function decisionTaskInputRowsOverride(options: DecisionTaskOptions) {
     const optionValue =
       options.rowsFile ||
       options.inputRows ||
@@ -196,7 +448,7 @@ export function createDecisionTaskUtils({
     return resolved;
   }
 
-  function classificationDecisionSchemaType(decision: any) {
+  function classificationDecisionSchemaType(decision: DecisionRecord) {
     return asText(
       decision?.category_type ??
         decision?.categoryType ??
@@ -206,7 +458,7 @@ export function createDecisionTaskUtils({
     );
   }
 
-  function classificationDecisionTargetKey(decision: any, schemaType = "") {
+  function classificationDecisionTargetKey(decision: DecisionRecord, schemaType = "") {
     const datasetId = asText(
       decision?.dataset_id ?? decision?.datasetId ?? decision?.id ?? decision?.uuid,
     );
@@ -217,13 +469,13 @@ export function createDecisionTaskUtils({
     return `${type}::${datasetId}::${version}`;
   }
 
-  function classificationQueueTargetKey(row: any) {
+  function classificationQueueTargetKey(row: DecisionQueueRow) {
     return `${classificationQueueSchemaType(row)}::${asText(
       row?.dataset_id,
     )}::${asText(row?.dataset_version)}`;
   }
 
-  function classificationDecisionCode(decision: any) {
+  function classificationDecisionCode(decision: DecisionRecord) {
     return asText(
       decision?.code ??
         decision?.class_id ??
@@ -235,7 +487,7 @@ export function createDecisionTaskUtils({
     );
   }
 
-  function classificationDecisionUsedContextKinds(decision: any) {
+  function classificationDecisionUsedContextKinds(decision: DecisionRecord) {
     return unique([
       ...normalizedList(decision?.used_context_kinds ?? decision?.usedContextKinds),
       ...normalizedList(
@@ -247,7 +499,11 @@ export function createDecisionTaskUtils({
     ]);
   }
 
-  function readClassificationTaskJsonlContextRows(baseDir: any, fileName: any, maxRows = 2000) {
+  function readClassificationTaskJsonlContextRows(
+    baseDir: string,
+    fileName: string,
+    maxRows = 2000,
+  ) {
     const filePath = path.join(baseDir, fileName);
     if (!fileExists(filePath)) return { file: null, rows: [] };
     const rows = readJsonLines(filePath);
@@ -259,7 +515,7 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function buildClassificationTaskProvenanceContext(queuePath: any) {
+  function buildClassificationTaskProvenanceContext(queuePath: string) {
     const baseDir = path.dirname(queuePath);
     const sourceSemantics = readClassificationTaskJsonlContextRows(
       baseDir,
@@ -280,8 +536,8 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function decisionTaskContextFileDetails(contractContext: any) {
-    return contractContext.files.map((file: any) => ({
+  function decisionTaskContextFileDetails(contractContext: ContractContext) {
+    return contractContext.files.map((file) => ({
       kind: file.kind,
       path: file.path,
       sha256: file.sha256,
@@ -289,7 +545,7 @@ export function createDecisionTaskUtils({
     }));
   }
 
-  function decisionTaskContextFileWithText(file: any) {
+  function decisionTaskContextFileWithText(file: ContextFileInput): DecisionContextFile {
     const text = String(file?.text ?? "");
     return {
       kind: asText(file?.kind) || "context",
@@ -300,7 +556,7 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function decisionTaskContextFileSummary(file: any) {
+  function decisionTaskContextFileSummary(file: ContextFileInput) {
     const withText = decisionTaskContextFileWithText(file);
     return {
       kind: withText.kind,
@@ -310,8 +566,8 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function dedupeDecisionTaskContextFiles(files: any) {
-    const byKey = new Map<string, any>();
+  function dedupeDecisionTaskContextFiles(files: ContextFileInput | ContextFileInput[]) {
+    const byKey = new Map<string, DecisionContextFile>();
     for (const file of ensureArray(files).map(decisionTaskContextFileWithText)) {
       const key = JSON.stringify([file.kind, file.path, file.sha256]);
       if (!byKey.has(key)) byKey.set(key, file);
@@ -325,13 +581,19 @@ export function createDecisionTaskUtils({
     files,
     references = [],
     cacheDir = null,
-  }: any) {
+  }: {
+    outDir: string;
+    taskKind: string;
+    files: ContextFileInput | ContextFileInput[];
+    references?: UnknownRecord[];
+    cacheDir?: unknown;
+  }) {
     const uniqueFiles = dedupeDecisionTaskContextFiles(files);
     const uniqueBytes = uniqueFiles.reduce((total, file) => total + (Number(file.bytes) || 0), 0);
     const referenceRows = ensureArray(references);
     const referencedBytes =
       referenceRows.length > 0
-        ? referenceRows.reduce((total: number, ref: any) => total + (Number(ref.bytes) || 0), 0)
+        ? referenceRows.reduce((total, ref) => total + (Number(ref.bytes) || 0), 0)
         : uniqueBytes;
     const stablePayload = {
       schema_version: 1,
@@ -390,8 +652,8 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function stableDecisionTaskQueueRows(queueRows: any) {
-    return ensureArray(queueRows).map((row: any) => {
+  function stableDecisionTaskQueueRows(queueRows: DecisionQueueRow | DecisionQueueRow[]) {
+    return ensureArray(queueRows).map((row) => {
       const next = cloneJson(row);
       if (next?.classification_workflow?.commands) {
         delete next.classification_workflow.commands.output_rows;
@@ -403,13 +665,13 @@ export function createDecisionTaskUtils({
     });
   }
 
-  function decisionTaskQueueSha256(queueRows: any) {
+  function decisionTaskQueueSha256(queueRows: DecisionQueueRow | DecisionQueueRow[]) {
     return sha256Text(JSON.stringify(stableDecisionTaskQueueRows(queueRows)));
   }
 
-  function decisionTaskProvenanceFileDetails(provenanceContext: any) {
+  function decisionTaskProvenanceFileDetails(provenanceContext: Record<string, ProvenanceEntry>) {
     return Object.fromEntries(
-      Object.entries(provenanceContext as Record<string, any>).map(([key, value]) => [
+      Object.entries(provenanceContext).map(([key, value]) => [
         key,
         {
           file: value?.file ?? null,
@@ -430,14 +692,24 @@ export function createDecisionTaskUtils({
     contractContext,
     provenanceContext,
     attachedInputRows,
-  }: any) {
+  }: {
+    taskKind: string;
+    taskPath: string;
+    outDir?: string | null;
+    sharedContextCacheDir?: unknown;
+    queuePath: string;
+    queueRows: DecisionQueueRow[];
+    contractContext: ContractContext;
+    provenanceContext: Record<string, ProvenanceEntry>;
+    attachedInputRows: AttachedInputRow[];
+  }) {
     const contextFiles = dedupeDecisionTaskContextFiles(contractContext.files);
     const contractFiles = contextFiles.map(decisionTaskContextFileSummary);
     const sharedContextBundle = writeDecisionTaskSharedContextBundle({
       outDir: outDir ?? path.dirname(taskPath),
       taskKind,
       files: contextFiles,
-      references: contextFiles.map((file: any) => ({
+      references: contextFiles.map((file) => ({
         kind: file.kind,
         path: file.path,
         sha256: file.sha256,
@@ -452,7 +724,7 @@ export function createDecisionTaskUtils({
       contract_context_files: contractFiles,
       missing_context_files: contractContext.missing,
       provenance_context: decisionTaskProvenanceFileDetails(provenanceContext),
-      attached_input_rows: attachedInputRows.map((row: any) => ({
+      attached_input_rows: attachedInputRows.map((row) => ({
         input_rows: row.input_rows,
         input_row_index: row.index,
         row_type: row.row_type,
@@ -472,14 +744,21 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function decisionAuthoringContext(contextBundle: any) {
+  function decisionAuthoringContext(contextBundle: {
+    task: string;
+    sha256: string;
+    contract_context_files: Array<{
+      kind: string;
+      path: string | null;
+      sha256: string;
+      bytes: number;
+    }>;
+  }) {
     return {
       task: contextBundle.task,
       context_bundle_sha256: contextBundle.sha256,
-      required_context_kinds: unique(
-        contextBundle.contract_context_files.map((file: any) => file.kind),
-      ),
-      context_files: contextBundle.contract_context_files.map((file: any) => ({
+      required_context_kinds: unique(contextBundle.contract_context_files.map((file) => file.kind)),
+      context_files: contextBundle.contract_context_files.map((file) => ({
         kind: file.kind,
         path: file.path,
         sha256: file.sha256,
@@ -487,7 +766,7 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function classificationDecisionTaskContextKind(kind: any, filePath: any) {
+  function classificationDecisionTaskContextKind(kind: string, filePath: unknown) {
     const baseName = path.basename(String(filePath || "")).toLowerCase();
     if (baseName === "schema.json") return "schema";
     if (baseName === "methodology.yaml" || baseName === "methodology.yml") {
@@ -501,8 +780,10 @@ export function createDecisionTaskUtils({
     return kind;
   }
 
-  function buildClassificationDecisionTaskContextFiles(options: any) {
-    const inputs = [
+  function buildClassificationDecisionTaskContextFiles(
+    options: DecisionTaskOptions,
+  ): ContractContext {
+    const inputs: Array<readonly [string, unknown]> = [
       ["schema", options.schemaFile],
       ["methodology_yaml", options.yamlFile],
       ["ruleset", options.rulesetFile],
@@ -510,8 +791,8 @@ export function createDecisionTaskUtils({
       ["classification_schema", options.classificationSchema],
       ["location_schema", options.locationSchema],
     ];
-    const files = [];
-    const missing = [];
+    const files: DecisionContextFile[] = [];
+    const missing: MissingContextFile[] = [];
     for (const [defaultKind, optionValue] of inputs) {
       for (const filePath of normalizedList(optionValue)) {
         const resolved = resolveRepoPath(filePath);
@@ -539,13 +820,17 @@ export function createDecisionTaskUtils({
     contractContext,
     requiredContextKinds,
     attachedInputRowCount,
-  }: any) {
+  }: {
+    kind: string;
+    queueRows: DecisionQueueRow[];
+    contractContext: ContractContext;
+    requiredContextKinds: string[];
+    attachedInputRowCount: number;
+  }) {
     if (queueRows.length === 0) return [];
-    const blockers = [];
+    const blockers: UnknownRecord[] = [];
     const availableKinds = new Set(
-      contractContext.files
-        .filter((file: any) => Number(file.bytes) > 0)
-        .map((file: any) => file.kind),
+      contractContext.files.filter((file) => Number(file.bytes) > 0).map((file) => file.kind),
     );
     for (const missingFile of contractContext.missing) {
       blockers.push({
@@ -588,13 +873,23 @@ export function createDecisionTaskUtils({
     return blockers;
   }
 
-  function decisionTaskBuildStatus({ queueRows, blockers, readyStatus, emptyStatus }: any) {
+  function decisionTaskBuildStatus({
+    queueRows,
+    blockers,
+    readyStatus,
+    emptyStatus,
+  }: {
+    queueRows: unknown[];
+    blockers: unknown[];
+    readyStatus: string;
+    emptyStatus: string;
+  }) {
     if (queueRows.length === 0) return emptyStatus;
     if (blockers.length > 0) return "blocked_missing_full_context";
     return readyStatus;
   }
 
-  function decisionTaskOptionPath(options: any, kind: any) {
+  function decisionTaskOptionPath(options: DecisionTaskOptions, kind: string) {
     if (kind === "classification") {
       return (
         options.decisionTask ||
@@ -613,18 +908,21 @@ export function createDecisionTaskUtils({
     );
   }
 
-  function decisionTaskOptionPaths(options: any, kind: any) {
+  function decisionTaskOptionPaths(options: DecisionTaskOptions, kind: string) {
     return normalizedList(decisionTaskOptionPath(options, kind));
   }
 
-  function readDecisionTaskSharedContextBundleProof(task: any, proofPath: any) {
+  function readDecisionTaskSharedContextBundleProof(
+    task: DecisionTaskInput,
+    proofPath: string,
+  ): SharedContextProof {
     const contextBundle = task?.context_bundle ?? task?.authoring_context ?? {};
     const sharedContext = task?.shared_context_bundle ?? contextBundle?.shared_context_bundle ?? {};
     const sharedPath = asText(sharedContext?.path ?? task?.files?.shared_context_bundle);
     const expectedSha256 = asText(
       sharedContext?.sha256 ?? contextBundle?.shared_context_bundle_sha256,
     );
-    const proof: any = {
+    const proof: SharedContextProof = {
       path: sharedPath || null,
       sha256: null,
       expected_sha256: expectedSha256 || null,
@@ -670,10 +968,14 @@ export function createDecisionTaskUtils({
     return proof;
   }
 
-  function readDecisionTaskProofFromPath(taskPathInput: any, kind: any, queuePath: any) {
+  function readDecisionTaskProofFromPath(
+    taskPathInput: unknown,
+    kind: string,
+    queuePath: string,
+  ): DecisionTaskProof | null {
     const taskPath = resolveRepoPath(taskPathInput);
     if (!taskPath) return null;
-    const proof: any = {
+    const proof: DecisionTaskProof = {
       path: repoRelativePath(taskPath),
       sha256: null,
       status: null,
@@ -697,7 +999,7 @@ export function createDecisionTaskUtils({
     try {
       const rawText = readText(taskPath);
       proof.sha256 = sha256Text(rawText);
-      const task = JSON.parse(rawText);
+      const task = JSON.parse(rawText) as DecisionTaskInput;
       const contextBundle = task.context_bundle ?? task.authoring_context;
       proof.status = asText(task.status);
       proof.task_kind = asText(task.task_kind);
@@ -710,7 +1012,7 @@ export function createDecisionTaskUtils({
       proof.source_queue = asText(
         kind === "classification" ? task.source_classification_queue : task.source_location_queue,
       );
-      proof.contract_context_files = ensureArray(task.contract_context_files);
+      proof.contract_context_files = ensureArray(task.contract_context_files) as ContextFileInput[];
       proof.missing_context_files = ensureArray(task.missing_context_files);
       proof.context_bundle = contextBundle ?? null;
       proof.shared_context_bundle = readDecisionTaskSharedContextBundleProof(task, proof.path);
@@ -773,18 +1075,18 @@ export function createDecisionTaskUtils({
     return proof;
   }
 
-  function readDecisionTaskProof(options: any, kind: any, queuePath: any) {
+  function readDecisionTaskProof(options: DecisionTaskOptions, kind: string, queuePath: string) {
     const [taskPath] = decisionTaskOptionPaths(options, kind);
     return taskPath ? readDecisionTaskProofFromPath(taskPath, kind, queuePath) : null;
   }
 
-  function readDecisionTaskProofs(options: any, kind: any, queuePath: any) {
+  function readDecisionTaskProofs(options: DecisionTaskOptions, kind: string, queuePath: string) {
     return decisionTaskOptionPaths(options, kind)
-      .map((taskPath: any) => readDecisionTaskProofFromPath(taskPath, kind, queuePath))
-      .filter(Boolean);
+      .map((taskPath) => readDecisionTaskProofFromPath(taskPath, kind, queuePath))
+      .filter((proof): proof is DecisionTaskProof => proof !== null);
   }
 
-  function decisionContextBundleSha256(decision: any) {
+  function decisionContextBundleSha256(decision: DecisionRecord) {
     return asText(
       decision?.authoring_context?.context_bundle_sha256 ??
         decision?.authoringContext?.contextBundleSha256 ??
@@ -794,11 +1096,11 @@ export function createDecisionTaskUtils({
     );
   }
 
-  function decisionCompletionStatus(decision: any) {
+  function decisionCompletionStatus(decision: DecisionRecord) {
     return asText(decision?.decision_status ?? decision?.decisionStatus ?? decision?.status);
   }
 
-  function decisionTaskReportPayload(proof: any) {
+  function decisionTaskReportPayload(proof: DecisionTaskProof | null) {
     if (!proof) return null;
     return {
       path: proof.path,
@@ -808,7 +1110,7 @@ export function createDecisionTaskUtils({
       queue: proof.queue,
       source_queue: proof.source_queue,
       context_bundle_sha256: proof.context_bundle_sha256,
-      contract_context_files: proof.contract_context_files.map((file: any) => ({
+      contract_context_files: proof.contract_context_files.map((file) => ({
         kind: file.kind,
         path: file.path,
         sha256: file.sha256,
@@ -826,12 +1128,18 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function decisionTaskProofList(proofOrProofs: any) {
-    return ensureArray(proofOrProofs).filter(Boolean);
+  function decisionTaskProofList(
+    proofOrProofs: DecisionTaskProof | DecisionTaskProof[] | null | undefined,
+  ) {
+    return ensureArray(proofOrProofs).filter(
+      (proof): proof is DecisionTaskProof => proof !== null && proof !== undefined,
+    );
   }
 
-  function decisionTaskContextBundleHashes(proofs: any) {
-    return unique(decisionTaskProofList(proofs).map((proof: any) => proof.context_bundle_sha256));
+  function decisionTaskContextBundleHashes(
+    proofs: DecisionTaskProof | DecisionTaskProof[] | null | undefined,
+  ) {
+    return unique(decisionTaskProofList(proofs).map((proof) => proof.context_bundle_sha256));
   }
 
   return {

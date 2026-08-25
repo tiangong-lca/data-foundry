@@ -1,6 +1,189 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createFileArtifactFact, createFoundryCommandSpec } from "./foundry-command-spec.ts";
+import type { FoundryCommandSpec } from "./foundry-command-spec.ts";
+
+type UnknownRecord = Record<string, unknown>;
+
+interface TextNode extends UnknownRecord {
+  "#text"?: unknown;
+}
+
+interface NamedReference extends UnknownRecord {
+  "common:shortDescription"?: unknown;
+  shortDescription?: unknown;
+  "@refObjectId"?: unknown;
+}
+
+interface FlowPropertyRecord extends UnknownRecord {
+  referenceToFlowPropertyDataSet?: NamedReference;
+}
+
+interface ExchangeRecord extends UnknownRecord {
+  "@dataSetInternalID"?: unknown;
+  referenceToFlowDataSet?: NamedReference;
+  exchangeDirection?: unknown;
+  inputGroup?: unknown;
+  outputGroup?: unknown;
+  meanAmount?: unknown;
+  resultingAmount?: unknown;
+  amount?: unknown;
+  meanValue?: unknown;
+}
+
+interface ProcessDataSetRecord extends UnknownRecord {
+  processInformation?: {
+    dataSetInformation?: UnknownRecord & {
+      name?: {
+        baseName?: TextNode;
+        treatmentStandardsRoutes?: TextNode;
+        mixAndLocationTypes?: TextNode;
+        functionalUnitFlowProperties?: TextNode;
+      };
+    };
+    quantitativeReference?: { referenceToReferenceFlow?: unknown };
+    geography?: {
+      locationOfOperationSupplyOrProduction?: {
+        "@location"?: unknown;
+        location?: unknown;
+      };
+    };
+  };
+  exchanges?: { exchange?: ExchangeRecord | ExchangeRecord[] };
+}
+
+interface FlowDataSetRecord extends UnknownRecord {
+  flowInformation?: {
+    dataSetInformation?: UnknownRecord & {
+      classificationInformation?: {
+        "common:elementaryFlowCategorization"?: {
+          "common:category"?: unknown;
+        };
+      };
+    };
+  };
+  flowProperties?: { flowProperty?: FlowPropertyRecord | FlowPropertyRecord[] };
+}
+
+interface DatasetPayload extends UnknownRecord {
+  processDataSet?: ProcessDataSetRecord;
+  flowDataSet?: FlowDataSetRecord;
+}
+
+interface SourceClassification extends UnknownRecord {
+  category?: unknown;
+  subCategory?: unknown;
+  localCategory?: unknown;
+  localSubCategory?: unknown;
+}
+
+interface AuthoringContext extends UnknownRecord {
+  source_unit?: unknown;
+  source_location?: unknown;
+  source_name?: unknown;
+  source_local_name?: unknown;
+  technology?: unknown;
+  included_processes?: unknown;
+}
+
+interface NameParts extends UnknownRecord {
+  base_name?: unknown;
+  treatment_standards_routes?: unknown;
+  mix_and_location_types?: unknown;
+  functional_unit_flow_properties?: unknown;
+}
+
+interface RemoteSearch extends UnknownRecord {
+  query: string;
+  data_source: string;
+  limit: number;
+  filter?: UnknownRecord | null;
+}
+
+interface EdgeSearchRequest extends UnknownRecord {
+  endpoint: string;
+  body: UnknownRecord;
+}
+
+interface IdentityIndexRemoteSearch extends UnknownRecord {
+  data_source: string;
+  limit: number;
+  filter: UnknownRecord | null;
+  query: string;
+  edge_request: EdgeSearchRequest;
+}
+
+interface IdentityIndexRow extends UnknownRecord {
+  request_file: string;
+  command: string;
+  command_spec: FoundryCommandSpec;
+  remote_search: IdentityIndexRemoteSearch;
+}
+
+interface IdentityArtifactIndex {
+  byIdentity: Map<string, IdentityIndexRow>;
+}
+
+interface IdentityQueueRow extends UnknownRecord {
+  dataset_type?: unknown;
+  dataset_id?: unknown;
+  dataset_version?: unknown;
+  identity_preflight_request_file?: string;
+  identity_preflight_command?: string;
+  remote_search?: UnknownRecord;
+}
+
+interface SourceIndexRow extends UnknownRecord {
+  dataset_type?: unknown;
+  type?: unknown;
+  dataset_id?: unknown;
+  entity_id?: unknown;
+  id?: unknown;
+  dataset_version?: unknown;
+  version?: unknown;
+  source_file?: unknown;
+  sourceFile?: unknown;
+}
+
+interface SourceIndexOptions extends UnknownRecord {
+  sourceIndex?: unknown;
+  sourceIndexes?: unknown;
+  sourceContextIndex?: unknown;
+  sourceContextIndexes?: unknown;
+}
+
+interface IdentityPreflightArtifactDependencies {
+  asText: (value: unknown) => string;
+  bundleClassificationPath: (payload: DatasetPayload, type: string) => string;
+  cleanEcoSpoldNameText: (value: unknown) => string;
+  collectSourceTracePayloads: (value: unknown) => unknown[];
+  datasetIdentity: (payload: DatasetPayload, type: string) => { id: string; version: string };
+  ensureArray: <Value>(value: Value | Value[] | null | undefined) => Value[];
+  fileExists: (filePath: string | null) => boolean;
+  flowNameParts: (payload: DatasetPayload) => NameParts;
+  flowTypeOfDataSet: (payload: DatasetPayload) => string;
+  isConvertedDefaultClassification: (classificationPath: string) => boolean;
+  jsonSha256: (value: unknown) => string;
+  normalizedList: (value: unknown) => string[];
+  processAuthoringContextFromTrace: (sourceTraces: unknown[]) => AuthoringContext;
+  processSourceClassificationSummary: (sourceTraces: unknown[]) => SourceClassification;
+  readJson: (filePath: string) => unknown;
+  readJsonLines: (filePath: string) => SourceIndexRow[];
+  repoRelativeMaybe: (filePath: unknown) => string | null;
+  repoRelativePath: (filePath: string) => string;
+  resolveRepoPath: (filePath: unknown) => string | null;
+  safeFileToken: (value: unknown, fallback: string) => string;
+  sha256Text: (value: unknown) => string;
+  shellQuote: (value: string) => string;
+  sourceTraceLocationCode: (sourceTraces: unknown[]) => unknown;
+  textValue: (value: unknown) => string;
+  writeJson: (filePath: string, value: unknown) => void;
+  writeJsonLines: (filePath: string, rows: UnknownRecord[]) => void;
+}
+
+function isUnknownRecord(value: unknown): value is UnknownRecord {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
 
 export function createIdentityPreflightArtifactUtils({
   asText,
@@ -29,8 +212,8 @@ export function createIdentityPreflightArtifactUtils({
   textValue,
   writeJson,
   writeJsonLines,
-}: any) {
-  function normalizedLookupKey(key: any) {
+}: IdentityPreflightArtifactDependencies) {
+  function normalizedLookupKey(key: unknown) {
     return String(key ?? "")
       .split(":")
       .pop()!
@@ -38,7 +221,11 @@ export function createIdentityPreflightArtifactUtils({
       .toLowerCase();
   }
 
-  function collectValuesByNormalizedKey(value: any, wantedKeys: Set<string>, output: any[] = []) {
+  function collectValuesByNormalizedKey(
+    value: unknown,
+    wantedKeys: Set<string>,
+    output: unknown[] = [],
+  ) {
     if (!value || typeof value !== "object") return output;
     if (Array.isArray(value)) {
       for (const item of value) collectValuesByNormalizedKey(item, wantedKeys, output);
@@ -51,7 +238,7 @@ export function createIdentityPreflightArtifactUtils({
     return output;
   }
 
-  function collectTextsFromValue(value: any, output: string[] = []) {
+  function collectTextsFromValue(value: unknown, output: string[] = []) {
     const direct = textValue(value);
     if (direct) {
       output.push(direct);
@@ -70,7 +257,7 @@ export function createIdentityPreflightArtifactUtils({
     return output;
   }
 
-  function isSearchNoiseText(value: any) {
+  function isSearchNoiseText(value: unknown) {
     const text = asText(value).normalize("NFKC").replace(/\s+/gu, " ").trim();
     if (!text) return true;
     if (
@@ -85,7 +272,7 @@ export function createIdentityPreflightArtifactUtils({
     return false;
   }
 
-  function sanitizeSearchText(value: any) {
+  function sanitizeSearchText(value: unknown) {
     return cleanEcoSpoldNameText(value)
       .replace(/\bGeography:\s*(?:Unspecified|Not specified|Not known)\b\.?/giu, "")
       .replace(/<null>/giu, "")
@@ -96,7 +283,7 @@ export function createIdentityPreflightArtifactUtils({
       .trim();
   }
 
-  function normalizeSearchText(value: any) {
+  function normalizeSearchText(value: unknown) {
     return asText(value)
       .normalize("NFKC")
       .toLowerCase()
@@ -105,8 +292,8 @@ export function createIdentityPreflightArtifactUtils({
       .trim();
   }
 
-  function uniqueSearchTexts(values: any, limit = 6) {
-    const byKey = new Map();
+  function uniqueSearchTexts(values: unknown[], limit = 6) {
+    const byKey = new Map<string, string>();
     for (const value of values.flat()) {
       for (const text of collectTextsFromValue(value)) {
         const cleaned = sanitizeSearchText(text);
@@ -118,7 +305,7 @@ export function createIdentityPreflightArtifactUtils({
     return [...byKey.values()].slice(0, limit);
   }
 
-  function truncateSearchText(value: any, maxChars = 240) {
+  function truncateSearchText(value: unknown, maxChars = 240) {
     const text = asText(value).replace(/\s+/gu, " ").trim();
     if (!text || text.length <= maxChars) return text;
     return `${text.slice(0, Math.max(0, maxChars - 1)).trim()}…`;
@@ -126,8 +313,8 @@ export function createIdentityPreflightArtifactUtils({
 
   function appendSearchBriefLine(
     lines: string[],
-    label: any,
-    values: any,
+    label: string,
+    values: unknown,
     limit = 6,
     maxChars = 240,
   ) {
@@ -137,12 +324,12 @@ export function createIdentityPreflightArtifactUtils({
     if (texts.length > 0) lines.push(`${label}: ${texts.join("; ")}`);
   }
 
-  function bundleClassificationPathForSearch(payload: any, type: any) {
+  function bundleClassificationPathForSearch(payload: DatasetPayload, type: string) {
     const classificationPath = bundleClassificationPath(payload, type);
     return isConvertedDefaultClassification(classificationPath) ? "" : classificationPath;
   }
 
-  function sourceClassificationTextsForSearch(sourceClassification: any) {
+  function sourceClassificationTextsForSearch(sourceClassification: SourceClassification) {
     return [
       sourceClassification.category,
       sourceClassification.subCategory,
@@ -151,7 +338,7 @@ export function createIdentityPreflightArtifactUtils({
     ];
   }
 
-  function processNameParts(payload: any) {
+  function processNameParts(payload: DatasetPayload) {
     const name = payload?.processDataSet?.processInformation?.dataSetInformation?.name ?? {};
     return {
       base_name: asText(name.baseName?.["#text"] ?? name.baseName),
@@ -167,22 +354,22 @@ export function createIdentityPreflightArtifactUtils({
     };
   }
 
-  function valuesByKeys(payload: any, keys: any[], limit = 6) {
+  function valuesByKeys(payload: DatasetPayload, keys: string[], limit = 6) {
     const wanted = new Set(keys.map(normalizedLookupKey));
     return uniqueSearchTexts(collectValuesByNormalizedKey(payload, wanted), limit);
   }
 
-  function isLikelyLocationCodeText(value: any) {
+  function isLikelyLocationCodeText(value: unknown) {
     const text = asText(value).trim();
     if (!text || /\s/u.test(text) || text.length > 24) return false;
     return /^[A-Za-z]{2,5}(?:-[A-Za-z0-9]{1,8})*$/u.test(text);
   }
 
-  function locationCodeSearchTexts(values: any, limit = 4) {
+  function locationCodeSearchTexts(values: unknown[], limit = 4) {
     return uniqueSearchTexts(values, limit).filter(isLikelyLocationCodeText);
   }
 
-  function processGeographySearchTexts(payload: any, sourceTraces: any[] = []) {
+  function processGeographySearchTexts(payload: DatasetPayload, sourceTraces: unknown[] = []) {
     const location =
       payload?.processDataSet?.processInformation?.geography?.locationOfOperationSupplyOrProduction;
     return locationCodeSearchTexts([
@@ -192,18 +379,21 @@ export function createIdentityPreflightArtifactUtils({
     ]);
   }
 
-  function elementaryFlowCategoryPath(payload: any) {
+  function elementaryFlowCategoryPath(payload: DatasetPayload) {
     const categories =
       payload?.flowDataSet?.flowInformation?.dataSetInformation?.classificationInformation?.[
         "common:elementaryFlowCategorization"
       ]?.["common:category"];
     return ensureArray(categories)
-      .map((entry: any) => textValue(entry))
+      .map((entry) => textValue(entry))
       .filter(Boolean)
       .join(" > ");
   }
 
-  function elementaryFlowCategoryPathForSearch(payload: any, sourceClassification: any) {
+  function elementaryFlowCategoryPathForSearch(
+    payload: DatasetPayload,
+    sourceClassification: SourceClassification,
+  ) {
     const categoryPath = elementaryFlowCategoryPath(payload);
     if (!categoryPath) return "";
     const sourceText = sourceClassificationTextsForSearch(sourceClassification)
@@ -219,7 +409,10 @@ export function createIdentityPreflightArtifactUtils({
     return categoryPath;
   }
 
-  function elementaryFlowCompartmentAliasesForSearch(payload: any, sourceClassification: any) {
+  function elementaryFlowCompartmentAliasesForSearch(
+    payload: DatasetPayload,
+    sourceClassification: SourceClassification,
+  ) {
     const categoryText = uniqueSearchTexts(
       [
         elementaryFlowCategoryPath(payload),
@@ -230,7 +423,7 @@ export function createIdentityPreflightArtifactUtils({
       .join(" ")
       .toLowerCase();
     if (!categoryText) return [];
-    const aliases = [];
+    const aliases: string[] = [];
     const isAir = /emissions?\s+to\s+air|air emissions?/iu.test(categoryText);
     if (
       isAir &&
@@ -279,11 +472,11 @@ export function createIdentityPreflightArtifactUtils({
     return uniqueSearchTexts(aliases, 8);
   }
 
-  function flowReferencePropertyTexts(payload: any) {
+  function flowReferencePropertyTexts(payload: DatasetPayload) {
     const flowProperties = ensureArray(payload?.flowDataSet?.flowProperties?.flowProperty);
     return uniqueSearchTexts(
       flowProperties.map(
-        (property: any) =>
+        (property) =>
           property?.referenceToFlowPropertyDataSet?.["common:shortDescription"] ??
           property?.referenceToFlowPropertyDataSet,
       ),
@@ -292,15 +485,15 @@ export function createIdentityPreflightArtifactUtils({
   }
 
   function referenceDescriptionTexts(
-    payload: any,
-    keyNames: any[],
+    payload: DatasetPayload,
+    keyNames: string[],
     limit = 8,
-    { includeIds = true }: any = {},
+    { includeIds = true }: { includeIds?: boolean } = {},
   ) {
     const wanted = new Set(keyNames.map(normalizedLookupKey));
     return uniqueSearchTexts(
       collectValuesByNormalizedKey(payload, wanted).map((reference) => {
-        if (reference && typeof reference === "object" && !Array.isArray(reference)) {
+        if (isUnknownRecord(reference)) {
           const descriptions = [reference["common:shortDescription"], reference.shortDescription];
           const descriptionTexts = uniqueSearchTexts(descriptions, 4);
           if (descriptionTexts.length > 0 || !includeIds) {
@@ -314,7 +507,7 @@ export function createIdentityPreflightArtifactUtils({
     );
   }
 
-  function processReferenceFlowSearchTexts(payload: any, limit = 4) {
+  function processReferenceFlowSearchTexts(payload: DatasetPayload, limit = 4) {
     const processDataSet = payload?.processDataSet ?? {};
     const referenceInternalIds = uniqueSearchTexts(
       ensureArray(
@@ -324,17 +517,17 @@ export function createIdentityPreflightArtifactUtils({
     );
     const internalIdSet = new Set(referenceInternalIds.map((id) => normalizeSearchText(id)));
     const exchanges = ensureArray(processDataSet?.exchanges?.exchange).filter(
-      (exchange: any) => exchange && typeof exchange === "object",
+      (exchange) => exchange && typeof exchange === "object",
     );
     const referenceExchanges =
       internalIdSet.size > 0
-        ? exchanges.filter((exchange: any) =>
+        ? exchanges.filter((exchange) =>
             internalIdSet.has(normalizeSearchText(exchange?.["@dataSetInternalID"])),
           )
         : [];
     const selected = referenceExchanges.length > 0 ? referenceExchanges : exchanges.slice(0, 1);
     return uniqueSearchTexts(
-      selected.flatMap((exchange: any) => {
+      selected.flatMap((exchange) => {
         const reference = exchange?.referenceToFlowDataSet ?? {};
         const descriptions = [reference?.["common:shortDescription"], reference?.shortDescription];
         const descriptionTexts = uniqueSearchTexts(descriptions, limit);
@@ -344,10 +537,10 @@ export function createIdentityPreflightArtifactUtils({
     );
   }
 
-  function processExchangeSearchSignature(payload: any, limit = 12) {
+  function processExchangeSearchSignature(payload: DatasetPayload, limit = 12) {
     const exchanges = ensureArray(payload?.processDataSet?.exchanges?.exchange);
     return uniqueSearchTexts(
-      exchanges.map((exchange: any) => {
+      exchanges.map((exchange) => {
         const reference = exchange?.referenceToFlowDataSet ?? {};
         const referenceText =
           textValue(reference?.["common:shortDescription"]) ||
@@ -387,7 +580,7 @@ export function createIdentityPreflightArtifactUtils({
     };
   }
 
-  function flowHybridSearchBrief(payload: any, sourceTraces: any[] = []) {
+  function flowHybridSearchBrief(payload: DatasetPayload, sourceTraces: unknown[] = []) {
     const authoringContext = processAuthoringContextFromTrace(sourceTraces);
     const sourceClassification = processSourceClassificationSummary(sourceTraces);
     const nameParts = flowNameParts(payload);
@@ -436,7 +629,7 @@ export function createIdentityPreflightArtifactUtils({
     return compactSearchBrief(lines);
   }
 
-  function processHybridSearchBrief(payload: any, sourceTraces: any[] = []) {
+  function processHybridSearchBrief(payload: DatasetPayload, sourceTraces: unknown[] = []) {
     const authoringContext = processAuthoringContextFromTrace(sourceTraces);
     const nameParts = processNameParts(payload);
     const lines: string[] = [];
@@ -513,7 +706,11 @@ export function createIdentityPreflightArtifactUtils({
     return compactSearchBrief(lines);
   }
 
-  function identityPreflightRemoteSearchRequest(type: any, payload: any, sourceTraces: any[] = []) {
+  function identityPreflightRemoteSearchRequest(
+    type: string,
+    payload: DatasetPayload,
+    sourceTraces: unknown[] = [],
+  ): RemoteSearch {
     const query =
       type === "process"
         ? processHybridSearchBrief(payload, sourceTraces)
@@ -536,7 +733,7 @@ export function createIdentityPreflightArtifactUtils({
     };
   }
 
-  function edgeSearchRequestPreview(type: any, remoteSearch: any) {
+  function edgeSearchRequestPreview(type: string, remoteSearch: RemoteSearch) {
     return {
       endpoint: type === "process" ? "process_hybrid_search" : "flow_hybrid_search",
       body: {
@@ -550,7 +747,11 @@ export function createIdentityPreflightArtifactUtils({
     };
   }
 
-  function identityPreflightProfileHints(type: any, payload: any, sourceTraces: any[] = []) {
+  function identityPreflightProfileHints(
+    type: string,
+    payload: DatasetPayload,
+    sourceTraces: unknown[] = [],
+  ) {
     const authoringContext = processAuthoringContextFromTrace(sourceTraces);
     const sourceClassification = processSourceClassificationSummary(sourceTraces);
     if (type === "flow") {
@@ -587,17 +788,27 @@ export function createIdentityPreflightArtifactUtils({
     );
   }
 
-  function readSourceTracesFromFile(sourceFile: any) {
+  function readSourceTracesFromFile(sourceFile: string | null | undefined) {
     if (!sourceFile || !fileExists(sourceFile)) return [];
     return collectSourceTracePayloads(readJson(sourceFile));
   }
 
-  function buildIdentityPreflightArtifacts({ rowsByType, sourceByType, outDir, cliBin }: any) {
+  function buildIdentityPreflightArtifacts({
+    rowsByType,
+    sourceByType,
+    outDir,
+    cliBin,
+  }: {
+    rowsByType: Record<"flow" | "process", Map<string, DatasetPayload>>;
+    sourceByType: Record<"flow" | "process", Map<string, string | null | undefined>>;
+    outDir: string;
+    cliBin: string | string[];
+  }) {
     const cliPrefix = Array.isArray(cliBin) ? cliBin : [cliBin];
     const requestsRoot = path.join(outDir, "identity-preflight-requests");
-    const indexRows: any[] = [];
-    const byIdentity = new Map<string, any>();
-    for (const type of ["flow", "process"]) {
+    const indexRows: IdentityIndexRow[] = [];
+    const byIdentity = new Map<string, IdentityIndexRow>();
+    for (const type of ["flow", "process"] as const) {
       const plural = type === "flow" ? "flows" : "processes";
       const requestDir = path.join(requestsRoot, plural);
       for (const [key, payload] of rowsByType[type].entries()) {
@@ -687,7 +898,7 @@ export function createIdentityPreflightArtifactUtils({
     };
   }
 
-  function identityPreflightSourceIndexPaths(options: any) {
+  function identityPreflightSourceIndexPaths(options: SourceIndexOptions) {
     return normalizedList(
       options.sourceIndex ||
         options.sourceIndexes ||
@@ -696,7 +907,7 @@ export function createIdentityPreflightArtifactUtils({
     ).map(resolveRepoPath);
   }
 
-  function identityPreflightSourceIndexKey(row: any) {
+  function identityPreflightSourceIndexKey(row: SourceIndexRow) {
     return [
       asText(row?.dataset_type || row?.type),
       asText(row?.dataset_id || row?.entity_id || row?.id),
@@ -704,9 +915,9 @@ export function createIdentityPreflightArtifactUtils({
     ].join(":");
   }
 
-  function loadIdentityPreflightSourceFileMap(indexPaths: any[]) {
+  function loadIdentityPreflightSourceFileMap(indexPaths: Array<string | null>) {
     const sourceFilesByIdentity = new Map<string, string>();
-    const blockers: any[] = [];
+    const blockers: UnknownRecord[] = [];
     let rowCount = 0;
     for (const indexPath of indexPaths) {
       if (!indexPath || !fileExists(indexPath)) {
@@ -735,7 +946,7 @@ export function createIdentityPreflightArtifactUtils({
           continue;
         }
         if (!sourceFilesByIdentity.has(key)) {
-          sourceFilesByIdentity.set(key, resolvedSourceFile);
+          sourceFilesByIdentity.set(key, resolvedSourceFile as string);
         }
       }
     }
@@ -746,7 +957,10 @@ export function createIdentityPreflightArtifactUtils({
     };
   }
 
-  function attachIdentityPreflightRows(queueRows: any[], identityArtifacts: any) {
+  function attachIdentityPreflightRows(
+    queueRows: IdentityQueueRow[],
+    identityArtifacts: IdentityArtifactIndex,
+  ) {
     for (const row of queueRows) {
       const match = identityArtifacts.byIdentity.get(
         `${row.dataset_type}:${row.dataset_id}:${row.dataset_version}`,
