@@ -274,8 +274,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
-lastReviewedNote: "Reviewed for Issue #68: the Worldsteel truth contract belongs in unit because it executes and freezes the adapter factory, verifies profile authorization, and rejects contradictory document semantics without invoking a command or production case."
+lastReviewedCommit: 6aa64f9243d715b194d93329be936ce874ec3920
+lastReviewedNote: "Reviewed for Issue #69: unit and scenario layers cover strict calendar classification, multi-row atomic cleanup, bundle rollover preservation, CLI failure and finalize downstream suppression."
 ---
 
 # Test Layout

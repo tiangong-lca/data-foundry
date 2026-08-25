@@ -149,8 +149,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 6d1f1dd4019f26024d4fd282f1b5ebba1e9271ca
-lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry/root parity, isolated Golden environments, suppression-resistant complete TS coverage, erasable syntax, clean builds and expanded cutover scanning change no runtime authority boundary."
+lastReviewedCommit: 6aa64f9243d715b194d93329be936ce874ec3920
+lastReviewedNote: "Reviewed for Issue #69: the current strict datetime fail-close supersedes the migration-era Date.parse rollover characterization without changing package, profile or remote-write authority."
 ---
 
 # TianGong LCA Data Foundry

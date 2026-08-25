@@ -231,8 +231,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 6d1f1dd4019f26024d4fd282f1b5ebba1e9271ca
-lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry/root parity, isolated Golden environments, suppression-resistant complete TS coverage, erasable syntax, clean builds and TS-aware cutover audit preserve exact behavior and authority boundaries."
+lastReviewedCommit: 6aa64f9243d715b194d93329be936ce874ec3920
+lastReviewedNote: "Reviewed for Issue #69: strict datetime preflight, blocker-only cleanup, bundle evidence preservation, nonzero CLI exit and finalize short-circuit remain Foundry-local and grant no remote-write authority."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

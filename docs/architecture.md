@@ -147,8 +147,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 6d1f1dd4019f26024d4fd282f1b5ebba1e9271ca
-lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry/root parity, isolated Golden environments, suppression-resistant complete TS coverage, erasable syntax, clean builds and TS-aware cutover audit remain Foundry-local delivery evidence."
+lastReviewedCommit: 6aa64f9243d715b194d93329be936ce874ec3920
+lastReviewedNote: "Reviewed for Issue #69: batch-wide datetime planning precedes every cleanup transform, blocked runs emit no cleaned rows, and finalize constructs no downstream write evidence."
 ---
 
 # Architecture

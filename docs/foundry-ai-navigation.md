@@ -137,8 +137,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
-lastReviewedNote: "Reviewed for Issue #68: navigation binds the Worldsteel factory, profile authorization, four active documents, retained evidence, and exact Golden migration while documenting the deliberate one-way Docpact route from dataset-specific paths."
+lastReviewedCommit: 6aa64f9243d715b194d93329be936ce874ec3920
+lastReviewedNote: "Reviewed for Issue #69: navigation identifies the strict datetime parser, bundle preservation edge, cleanup blocker runner, CLI exit owner, finalize short-circuit and focused contracts."
 ---
 
 # Foundry AI Navigation

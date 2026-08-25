@@ -86,8 +86,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
-lastReviewedNote: "Reviewed for Issue #68: Worldsteel's frozen adapter/profile support-mint truth remains Foundry-owned profile governance and moves no CLI, database, SDK, skill, or sibling-repository capability."
+lastReviewedCommit: 6aa64f9243d715b194d93329be936ce874ec3920
+lastReviewedNote: "Reviewed for Issue #69: strict prewrite datetime classification and local blocker orchestration stay in Data Foundry; Rust tidas schema ownership and CLI/database mutation authority do not move."
 ---
 
 # Capability Ownership Policy
