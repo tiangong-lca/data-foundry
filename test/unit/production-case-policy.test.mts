@@ -13,7 +13,7 @@ test("production test-account cases reject every accepted remote difference", ()
   });
   assert.deepEqual(acceptedRemoteDifferencePolicy({ accountMode: "ordinary" }), {
     traceHashOnly: true,
-    foreignStateZeroReference: true,
+    foreignStateZeroReference: false,
   });
 });
 
