@@ -17,7 +17,47 @@ import {
   sanitizeFileName,
 } from "./internal/runtime-io.ts";
 
-function snapshotAuthoringPackage(repoRoot, packagePath, snapshotDir) {
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface AuthoringTaskBuildOptions extends JsonRecord {
+  help?: unknown;
+  curationGateReport?: string | null;
+  gateReport?: string | null;
+  report?: string | null;
+  outDir?: string | null;
+  sharedContextCacheDir?: string | null;
+  contextCacheDir?: string | null;
+  includeReady?: boolean | string;
+  authoringPackage?: string | null;
+  package?: string | null;
+  input?: string | null;
+  patchFile?: string;
+  patch?: string;
+  patchedRows?: string;
+  out?: string;
+  applyDir?: string;
+}
+
+interface AuthoringTaskBuildArgs {
+  repoRoot?: string;
+  options?: AuthoringTaskBuildOptions;
+}
+
+interface AuthoringPackageEntry extends JsonRecord {
+  entity: unknown;
+  package_ref: unknown;
+  package_path: string | null;
+  task_dir_name: string;
+}
+
+function snapshotAuthoringPackage(
+  repoRoot: string | undefined,
+  packagePath: string,
+  snapshotDir: string,
+): string {
+  void repoRoot;
   const text = readText(packagePath);
   const sha256 = sha256Text(text);
   const parsed = path.parse(path.basename(packagePath));
@@ -32,7 +72,10 @@ function snapshotAuthoringPackage(repoRoot, packagePath, snapshotDir) {
   return snapshotPath;
 }
 
-export function runDatasetAuthoringTaskBuild({ repoRoot, options = {} } = {}) {
+export function runDatasetAuthoringTaskBuild({
+  repoRoot,
+  options = {},
+}: AuthoringTaskBuildArgs = {}): JsonRecord {
   if (options.help) {
     return {
       schema_version: 1,
@@ -50,21 +93,25 @@ export function runDatasetAuthoringTaskBuild({ repoRoot, options = {} } = {}) {
 
   const curationGateReportInput =
     options.curationGateReport ?? options.gateReport ?? options.report;
-  const curationGateReportPath = resolveRepoPath(repoRoot, curationGateReportInput);
+  const curationGateReportPath = resolveRepoPath(repoRoot!, curationGateReportInput);
   if (curationGateReportPath) {
     if (!fileExists(curationGateReportPath)) {
       throw new Error("--curation-gate-report must point to dataset-curation-gate-report.json.");
     }
     const outDir = resolveRepoPath(
-      repoRoot,
+      repoRoot!,
       options.outDir || ".foundry/workspaces/dataset-authoring-tasks",
     );
     const sharedContextCacheDir = resolveRepoPath(
-      repoRoot,
+      repoRoot!,
       options.sharedContextCacheDir || options.contextCacheDir,
     );
     const includeReady = options.includeReady === true || options.includeReady === "true";
-    const entries = authoringPackageEntriesFromGate(repoRoot, curationGateReportPath, includeReady);
+    const entries = authoringPackageEntriesFromGate(
+      repoRoot!,
+      curationGateReportPath,
+      includeReady,
+    ) as AuthoringPackageEntry[];
     const missingPackages = entries.filter(
       (entry) => !entry.package_path || !fileExists(entry.package_path),
     );
@@ -73,34 +120,34 @@ export function runDatasetAuthoringTaskBuild({ repoRoot, options = {} } = {}) {
         schema_version: 1,
         generated_at_utc: nowIso(),
         status: "blocked_missing_authoring_packages",
-        curation_gate_report: repoRelativePath(repoRoot, curationGateReportPath),
+        curation_gate_report: repoRelativePath(repoRoot!, curationGateReportPath),
         missing_packages: missingPackages.map((entry) => ({
           entity: entry.entity,
           authoring_package: entry.package_ref,
         })),
       };
     }
-    const snapshotDir = path.join(outDir, "authoring-package-snapshots");
+    const snapshotDir = path.join(outDir!, "authoring-package-snapshots");
     const snapshottedEntries = entries.map((entry) => ({
       ...entry,
       live_package_ref: entry.package_ref,
       live_package_path: entry.package_path,
-      package_path: snapshotAuthoringPackage(repoRoot, entry.package_path, snapshotDir),
+      package_path: snapshotAuthoringPackage(repoRoot, entry.package_path!, snapshotDir),
     }));
     const tasks = snapshottedEntries.map((entry) =>
       buildDatasetAuthoringTaskFromPackage({
-        repoRoot,
+        repoRoot: repoRoot!,
         packagePath: entry.package_path,
-        outDir: path.join(outDir, entry.task_dir_name),
+        outDir: path.join(outDir!, entry.task_dir_name),
         options: {},
       }),
     );
     return writeAuthoringTaskBatchManifest(
-      repoRoot,
-      outDir,
+      repoRoot!,
+      outDir!,
       tasks,
       {
-        curation_gate_report: repoRelativePath(repoRoot, curationGateReportPath),
+        curation_gate_report: repoRelativePath(repoRoot!, curationGateReportPath),
         include_ready: includeReady,
       },
       {
@@ -110,23 +157,24 @@ export function runDatasetAuthoringTaskBuild({ repoRoot, options = {} } = {}) {
   }
 
   const authoringPackageInput = options.authoringPackage ?? options.package ?? options.input;
-  const packagePath = resolveRepoPath(repoRoot, authoringPackageInput);
-  const packagePayload = packagePath && fileExists(packagePath) ? readJson(packagePath) : null;
+  const packagePath = resolveRepoPath(repoRoot!, authoringPackageInput);
+  const packagePayload =
+    packagePath && fileExists(packagePath) ? readJson<JsonRecord>(packagePath) : null;
   const datasetType = asText(packagePayload?.dataset_type);
   const entityId = asText(packagePayload?.entity_id ?? packagePayload?.process_id);
   const defaultOut = `.foundry/workspaces/dataset-authoring-task/${datasetType || "dataset"}-${sanitizeFileName(entityId || "entity")}`;
-  const outDir = resolveRepoPath(repoRoot, options.outDir || defaultOut);
+  const outDir = resolveRepoPath(repoRoot!, options.outDir || defaultOut);
   const snapshotPath = packagePath
     ? snapshotAuthoringPackage(
         repoRoot,
         packagePath,
-        path.join(outDir, "authoring-package-snapshots"),
+        path.join(outDir!, "authoring-package-snapshots"),
       )
     : packagePath;
   return buildDatasetAuthoringTaskFromPackage({
-    repoRoot,
-    packagePath: snapshotPath,
-    outDir,
+    repoRoot: repoRoot!,
+    packagePath: snapshotPath!,
+    outDir: outDir!,
     options,
   });
 }

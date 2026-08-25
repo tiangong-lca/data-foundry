@@ -339,6 +339,7 @@ test("active documentation and source contain no references to removed CLI spine
     "workflow-identity-preflight.mjs",
     "authoring-task-workflow.mjs",
     "authoring-patch-workflow.mjs",
+    "authoring-packages.mjs",
     "commands/import-ledger.mjs",
     "commands/tidas-workflow.mjs",
     "commands/identity-reference-rewrites.mjs",

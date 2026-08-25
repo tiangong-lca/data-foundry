@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { runDatasetAuthoringTaskBuild } from "../../scripts/lib/import-curation/authoring-packages.mjs";
+import { runDatasetAuthoringTaskBuild } from "../../scripts/lib/import-curation/authoring-packages.ts";
 
 type AuthoringTaskRunner = (args?: {
   repoRoot?: string;

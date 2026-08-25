@@ -1,4 +1,4 @@
-export { runDatasetAuthoringTaskBuild } from "./authoring-packages.mjs";
+export { runDatasetAuthoringTaskBuild } from "./authoring-packages.ts";
 export { runDatasetCurationCleanup } from "./curation-cleanup.mjs";
 export { runDatasetCurationGate } from "./curation-gate.mjs";
 export { runDatasetMutationManifest } from "./mutation-manifest.mjs";

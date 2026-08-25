@@ -75,7 +75,7 @@ scripts/foundry.mjs
   -> owner module in scripts/commands or scripts/lib/import-curation
 ```
 
-Public command owner paths must be at most two jumps from `scripts/foundry.mjs`. For semantic import-curation commands, prefer owner modules such as `profiles.mjs`, `curation-gate.mjs`, `authoring-packages.mjs`, `patch-collect.mjs`, `curation-cleanup.mjs`, `trace-summary.mjs`, and `mutation-manifest.mjs` over mechanical part names. Reusable import-curation logic should be exposed through focused workflow facets under `scripts/lib/import-curation/internal/*-workflow.{ts,mjs}` while migration remains incomplete.
+Public command owner paths must be at most two jumps from `scripts/foundry.mjs`. For semantic import-curation commands, prefer owner modules such as `profiles.mjs`, `curation-gate.mjs`, `authoring-packages.ts`, `patch-collect.mjs`, `curation-cleanup.mjs`, `trace-summary.mjs`, and `mutation-manifest.mjs` over mechanical part names. Reusable import-curation logic should be exposed through focused workflow facets under `scripts/lib/import-curation/internal/*-workflow.{ts,mjs}` while migration remains incomplete.
 
 ## Maintenance Rule
 

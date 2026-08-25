@@ -121,7 +121,7 @@ interface AuthoringTask extends JsonRecord {
 }
 
 interface SharedContextOptions extends JsonRecord {
-  sharedContextCacheDir?: string;
+  sharedContextCacheDir?: string | null;
 }
 
 interface SharedContextBundleRef extends JsonRecord {
@@ -628,7 +628,7 @@ export function buildSharedAuthoringContextBundle(
   repoRoot: string,
   outDir: string,
   tasks: AuthoringTask[],
-  source: string,
+  source: unknown,
   options: SharedContextOptions = {},
 ): SharedContextBuildResult {
   const fileMap = new Map<string, SharedContextFile>();
@@ -766,7 +766,7 @@ export function writeAuthoringTaskBatchManifest(
   repoRoot: string,
   outDir: string,
   tasks: AuthoringTask[],
-  source: string,
+  source: unknown,
   options: SharedContextOptions = {},
 ): JsonRecord {
   const manifestPath = path.join(outDir, "authoring-task-manifest.json");
