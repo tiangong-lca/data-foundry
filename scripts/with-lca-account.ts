@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { spawnSync, type SpawnSyncOptions } from "node:child_process";
 import fs from "node:fs";
+import { constants as osConstants } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { parseEnv } from "node:util";
@@ -311,6 +312,11 @@ function defaultResolveInstalledCli(): InstalledCli {
   };
 }
 
+function exitCodeForSignal(signal: NodeJS.Signals): number {
+  const signalNumber = osConstants.signals[signal];
+  return Number.isInteger(signalNumber) && signalNumber > 0 ? 128 + signalNumber : 1;
+}
+
 const defaultSpawnSync: SpawnSyncLike = (executable, argv, options) =>
   spawnSync(executable, [...argv], options);
 
@@ -437,9 +443,8 @@ export function runWithLcaAccount(
   if (commandResult.error) {
     throw new AccountWrapperError("Requested account command could not be started.");
   }
-  return commandResult.signal === null && typeof commandResult.status === "number"
-    ? commandResult.status
-    : 1;
+  if (commandResult.signal !== null) return exitCodeForSignal(commandResult.signal);
+  return typeof commandResult.status === "number" ? commandResult.status : 1;
 }
 
 export function main(argv: string[] = process.argv.slice(2)): number {
