@@ -4,11 +4,15 @@ import { spawnSync } from "node:child_process";
 import { createHash, randomUUID as nodeRandomUUID } from "node:crypto";
 import {
   chmodSync,
+  closeSync,
   existsSync,
+  fsyncSync,
   lstatSync,
   mkdtempSync,
   mkdirSync,
+  openSync,
   readFileSync,
+  readlinkSync,
   readdirSync,
   realpathSync,
   rmSync,
@@ -70,7 +74,9 @@ export type ProductionContactDraftRuntimeEvidence = {
   cliRuntimeSha256: string;
   runnerSha256: string;
   pnpmLockSha256: string;
+  pnpmInstallationSha256: string;
   foundrySourceSha256?: string;
+  verifyCurrent: () => void;
   cleanup: () => void;
 };
 
@@ -121,6 +127,7 @@ type ManifestScope = {
     package_version: string;
     entrypoint_sha256: string;
     runtime_sha256: string;
+    pnpm_installation_sha256: string;
   };
   foundry: {
     runner_sha256: string;
@@ -149,6 +156,7 @@ export type RunProductionContactDraftCaseDeps = {
   processEnv?: NodeJS.ProcessEnv;
   now?: () => Date;
   randomUUID?: () => string;
+  platform?: NodeJS.Platform;
   prepareRuntimeSnapshot?: () => ProductionContactDraftRuntimeEvidence;
   spawnImpl?: (
     command: string,
@@ -292,7 +300,39 @@ function repositoryRoot(): string {
   return fail("Could not resolve the trusted Foundry repository root.", "CASE_RUNTIME_INVALID", 2);
 }
 
+function assertGitIgnoredCaseOutDir(root: string, outDir: string): void {
+  const relative = path.relative(root, outDir);
+  if (!relative || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    return fail(
+      "Production case output must be a git-ignored per-run directory inside the repository.",
+      "CASE_OUTPUT_NOT_IGNORED",
+      2,
+    );
+  }
+  const result = spawnSync("git", ["check-ignore", "--quiet", "--no-index", "--", outDir], {
+    cwd: root,
+    env: systemEnv(process.env),
+    encoding: "utf8",
+    shell: false,
+    windowsHide: true,
+  });
+  if (result.status !== 0 || result.signal !== null || result.error) {
+    return fail(
+      "Production case output must be a git-ignored per-run directory inside the repository.",
+      "CASE_OUTPUT_NOT_IGNORED",
+      2,
+    );
+  }
+}
+
 type BufferedFile = { relativePath: string; bytes: Buffer };
+
+function comparePortablePaths(left: BufferedFile, right: BufferedFile): number {
+  return Buffer.compare(
+    Buffer.from(left.relativePath, "utf8"),
+    Buffer.from(right.relativePath, "utf8"),
+  );
+}
 
 function readRegularFile(filePath: string): Buffer {
   let stats;
@@ -329,7 +369,33 @@ function collectFiles(root: string): BufferedFile[] {
     }
   };
   visit(root);
-  return files.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
+  return files.sort(comparePortablePaths);
+}
+
+function collectPnpmInstallationFiles(root: string): BufferedFile[] {
+  const files: BufferedFile[] = [];
+  const visit = (directory: string): void => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      if (entry.name.startsWith(".foundry-contact-case-runtime-")) continue;
+      const entryPath = path.join(directory, entry.name);
+      const relativePath = path.relative(root, entryPath).replaceAll("\\", "/");
+      if (entry.isSymbolicLink()) {
+        files.push({
+          relativePath,
+          bytes: Buffer.from(`SYMLINK\0${readlinkSync(entryPath)}`, "utf8"),
+        });
+      } else if (entry.isDirectory()) visit(entryPath);
+      else if (entry.isFile()) files.push({ relativePath, bytes: readRegularFile(entryPath) });
+      else
+        return fail(
+          "pnpm installation contains an unsupported filesystem entry.",
+          "CASE_RUNTIME_INVALID",
+          2,
+        );
+    }
+  };
+  visit(root);
+  return files.sort(comparePortablePaths);
 }
 
 function hashBufferedFiles(files: BufferedFile[]): string {
@@ -387,6 +453,21 @@ function prepareRuntimeSnapshot(): ProductionContactDraftRuntimeEvidence {
     .replaceAll("\\", "/");
   const binFile = packageFiles.find((file) => file.relativePath === binRelativePath);
   if (!binFile) return fail("Installed CLI entrypoint is missing.", "CASE_RUNTIME_INVALID", 2);
+  const pnpmInstallationRoot = path.join(root, "node_modules", ".pnpm");
+  const pnpmInstallationSha256 = hashBufferedFiles(
+    collectPnpmInstallationFiles(pnpmInstallationRoot),
+  );
+  const verifyCurrent = (): void => {
+    if (
+      hashBufferedFiles(collectPnpmInstallationFiles(pnpmInstallationRoot)) !==
+      pnpmInstallationSha256
+    ) {
+      return fail(
+        "The installed pnpm dependency bytes changed during the production case.",
+        "CASE_RUNTIME_DRIFT",
+      );
+    }
+  };
 
   // Keep the private copy inside the installed package's pnpm dependency island.
   // ESM does not honor NODE_PATH, so moving the package under a generic cache
@@ -412,8 +493,16 @@ function prepareRuntimeSnapshot(): ProductionContactDraftRuntimeEvidence {
         .update(readRegularFile(fileURLToPath(import.meta.url)))
         .digest("hex"),
       pnpmLockSha256: createHash("sha256").update(lockBytes).digest("hex"),
+      pnpmInstallationSha256,
       foundrySourceSha256: sourceEvidence(root),
-      cleanup: () => rmSync(snapshotRoot, { recursive: true, force: true }),
+      verifyCurrent,
+      cleanup: () =>
+        rmSync(snapshotRoot, {
+          recursive: true,
+          force: true,
+          maxRetries: 3,
+          retryDelay: 50,
+        }),
     };
   } catch (error) {
     rmSync(snapshotRoot, { recursive: true, force: true });
@@ -432,13 +521,30 @@ function validateRuntimeEvidence(
     !SHA256_PATTERN.test(evidence.cliRuntimeSha256) ||
     !SHA256_PATTERN.test(evidence.runnerSha256) ||
     !SHA256_PATTERN.test(evidence.pnpmLockSha256) ||
+    !SHA256_PATTERN.test(evidence.pnpmInstallationSha256) ||
     (evidence.foundrySourceSha256 !== undefined &&
       !SHA256_PATTERN.test(evidence.foundrySourceSha256)) ||
+    typeof evidence.verifyCurrent !== "function" ||
     typeof evidence.cleanup !== "function"
   ) {
     return fail("Production case runtime evidence is invalid.", "CASE_RUNTIME_INVALID", 2);
   }
   return evidence;
+}
+
+function assertReceiptRuntime(
+  receipt: ReturnType<typeof parseFreshIntentBoundAuthReceipt>,
+  runtime: ProductionContactDraftRuntimeEvidence,
+): void {
+  if (
+    receipt.cli.package_name !== runtime.cliPackageName ||
+    receipt.cli.package_version !== runtime.cliPackageVersion
+  ) {
+    return fail(
+      "The identity receipt CLI does not match the pinned runtime.",
+      "CASE_RECEIPT_RUNTIME_MISMATCH",
+    );
+  }
 }
 
 function readCaseEnv(envFile: string): CaseEnv {
@@ -518,8 +624,25 @@ function remoteEnv(source: NodeJS.ProcessEnv, caseEnv: CaseEnv): NodeJS.ProcessE
 }
 
 function writePrivateFile(filePath: string, text: string, mode = 0o600): void {
-  writeFileSync(filePath, text, { encoding: "utf8", flag: "wx", mode });
+  const descriptor = openSync(filePath, "wx", mode);
+  try {
+    writeFileSync(descriptor, text, { encoding: "utf8" });
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
   if (process.platform !== "win32") chmodSync(filePath, mode);
+}
+
+function overwritePrivateFile(filePath: string, text: string): void {
+  const descriptor = openSync(filePath, "w", 0o600);
+  try {
+    writeFileSync(descriptor, text, { encoding: "utf8" });
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
+  if (process.platform !== "win32") chmodSync(filePath, 0o600);
 }
 
 function writePrivateJson(filePath: string, value: unknown, mode = 0o600): void {
@@ -626,6 +749,16 @@ function safeChildCode(stderr: string): string {
   } catch {
     return "CASE_CHILD_FAILED";
   }
+}
+
+function signalExitCode(signal: NodeJS.Signals): number {
+  if (signal === "SIGINT") return 130;
+  if (signal === "SIGTERM") return 143;
+  return 128;
+}
+
+function containsSecretMaterial(value: string, secrets: string[]): boolean {
+  return secrets.some((secret) => secret.length > 0 && value.includes(secret));
 }
 
 function fileFact(filePath: string, relativeTo: string): ArtifactFact {
@@ -856,6 +989,7 @@ function validatePostwriteVerify(
     numberAt(counts.root_readback_checks, "root readbacks") !== 1 ||
     numberAt(counts.root_payload_mismatches, "payload mismatches") !== 0 ||
     blockers.length !== 0 ||
+    checks.some((check) => check.status !== "ok") ||
     readbacks.length !== 1 ||
     readback?.row_index !== 0 ||
     readback.table !== "contacts" ||
@@ -868,14 +1002,17 @@ function validatePostwriteVerify(
     readback.remote_payload_sha256 !== payloadSha256
   ) {
     return fail(
-      "Postwrite verification did not prove the unique owner draft.",
+      checks.some((check) => check.status !== "ok")
+        ? "Postwrite verification contains a non-ok verification check."
+        : "Postwrite verification did not prove the unique owner draft.",
       "CASE_READBACK_FAILED",
     );
   }
 }
 
-function redactSecrets(root: string, secrets: string[]): void {
-  if (!existsSync(root)) return;
+function redactSecrets(root: string, secrets: string[]): string[] {
+  if (!existsSync(root)) return [];
+  const changedPaths: string[] = [];
   const visit = (directory: string): void => {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const entryPath = path.join(directory, entry.name);
@@ -889,11 +1026,15 @@ function redactSecrets(root: string, secrets: string[]): void {
             changed = true;
           }
         }
-        if (changed) writeFileSync(entryPath, text, { encoding: "utf8", mode: 0o600 });
+        if (changed) {
+          overwritePrivateFile(entryPath, text);
+          changedPaths.push(entryPath);
+        }
       }
     }
   };
   visit(root);
+  return changedPaths.sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)));
 }
 
 function hardenTree(root: string): void {
@@ -924,7 +1065,9 @@ function artifactInventory(root: string): ArtifactFact[] {
     }
   };
   visit(root);
-  return facts.sort((left, right) => left.path.localeCompare(right.path));
+  return facts.sort((left, right) =>
+    Buffer.compare(Buffer.from(left.path, "utf8"), Buffer.from(right.path, "utf8")),
+  );
 }
 
 function writeFailure(
@@ -934,6 +1077,8 @@ function writeFailure(
     code: string;
     mutationDispatchCount: number;
     contactId: string | null;
+    runtimeCleanupErrorCode: string | null;
+    redactionErrorCode: string | null;
   },
 ): void {
   if (!existsSync(outDir) || existsSync(path.join(outDir, "case-failure.json"))) return;
@@ -944,6 +1089,8 @@ function writeFailure(
     error_code: input.code,
     mutation_dispatch_count: input.mutationDispatchCount,
     contact_id: input.contactId,
+    runtime_cleanup_error_code: input.runtimeCleanupErrorCode,
+    redaction_error_code: input.redactionErrorCode,
     automatic_retry_performed: false,
   });
 }
@@ -953,14 +1100,29 @@ export async function runProductionContactDraftCase(
   deps: RunProductionContactDraftCaseDeps = {},
 ): Promise<ProductionContactDraftCaseManifest> {
   const options = normalizeOptions(rawOptions);
+  const platform = deps.platform ?? process.platform;
+  if (platform === "win32") {
+    return fail(
+      "Secure private case storage is unsupported on Windows without a verified user-exclusive ACL.",
+      "CASE_PLATFORM_PRIVATE_STORAGE_UNSUPPORTED",
+      2,
+    );
+  }
+  const root = repositoryRoot();
+  assertGitIgnoredCaseOutDir(root, options.outDir);
   const runtime = validateRuntimeEvidence(
     (deps.prepareRuntimeSnapshot ?? prepareRuntimeSnapshot)(),
   );
   let cleanupAttempted = false;
+  let runtimeCleanupErrorCode: string | null = null;
   const cleanup = (): void => {
     if (cleanupAttempted) return;
     cleanupAttempted = true;
-    runtime.cleanup();
+    try {
+      runtime.cleanup();
+    } catch {
+      runtimeCleanupErrorCode = "CASE_RUNTIME_CLEANUP_FAILED";
+    }
   };
   const now = deps.now ?? (() => new Date());
   const processEnv = deps.processEnv ?? process.env;
@@ -1008,9 +1170,13 @@ export async function runProductionContactDraftCase(
     contactId = assertCanonicalUuid((deps.randomUUID ?? nodeRandomUUID)(), "Generated contact id");
     const candidate = contactPayload(contactId, now());
     const candidatePath = path.join(options.outDir, "contact.jsonl");
-    writePrivateFile(candidatePath, `${JSON.stringify(candidate)}\n`);
+    const candidateText = `${JSON.stringify(candidate)}\n`;
+    const candidateBytes = Buffer.from(candidateText, "utf8");
+    writePrivateFile(candidatePath, candidateText);
     const rootProbePath = path.join(options.outDir, "contact-root-probe.jsonl");
     writePrivateFile(rootProbePath, `${JSON.stringify(contactRootProbe(contactId))}\n`);
+    chmodSync(candidatePath, 0o400);
+    chmodSync(rootProbePath, 0o400);
     const candidatePayloadSha256 = sha256Json(candidate);
 
     const invoke = (
@@ -1034,18 +1200,69 @@ export async function runProductionContactDraftCase(
       };
       let child: SpawnResult;
       try {
+        runtime.verifyCurrent();
         child = spawnImpl(process.execPath, [runtime.entrypoint, ...argv], spawnOptions);
       } catch {
-        return fail(`CLI spawn failed at ${stageName}.`, "CASE_CHILD_SPAWN_FAILED");
+        return fail(
+          stageName === "commit-contact-draft" && mutationDispatchCount > 0
+            ? `CLI failed at ${stageName} with an ambiguous mutation outcome.`
+            : `CLI spawn failed at ${stageName}.`,
+          stageName === "commit-contact-draft" && mutationDispatchCount > 0
+            ? "CASE_MUTATION_OUTCOME_AMBIGUOUS"
+            : "CASE_CHILD_SPAWN_FAILED",
+          stageName === "commit-contact-draft" && mutationDispatchCount > 0 ? 70 : 1,
+        );
+      }
+      try {
+        runtime.verifyCurrent();
+      } catch {
+        return fail(
+          stageName === "commit-contact-draft" && mutationDispatchCount > 0
+            ? `CLI failed at ${stageName} with an ambiguous mutation outcome.`
+            : `Runtime evidence drifted at ${stageName}.`,
+          stageName === "commit-contact-draft" && mutationDispatchCount > 0
+            ? "CASE_MUTATION_OUTCOME_AMBIGUOUS"
+            : "CASE_RUNTIME_DRIFT",
+          stageName === "commit-contact-draft" && mutationDispatchCount > 0 ? 70 : 1,
+        );
       }
       if (child.error || child.status !== 0 || child.signal !== null || child.stderr !== "") {
+        if (stageName === "commit-contact-draft" && mutationDispatchCount > 0) {
+          return fail(
+            `CLI failed at ${stageName} with an ambiguous mutation outcome.`,
+            "CASE_MUTATION_OUTCOME_AMBIGUOUS",
+            70,
+          );
+        }
+        if (child.signal) {
+          return fail(
+            `CLI was cancelled at ${stageName}.`,
+            "CASE_CHILD_CANCELLED",
+            signalExitCode(child.signal),
+          );
+        }
         return fail(
           `CLI failed at ${stageName}.`,
           child.error ? "CASE_CHILD_SPAWN_FAILED" : safeChildCode(child.stderr),
         );
       }
+      if (
+        containsSecretMaterial(child.stdout, secrets) ||
+        containsSecretMaterial(child.stderr, secrets)
+      ) {
+        return fail(
+          "Secret material was detected in production case child output.",
+          "CASE_SECRET_MATERIAL_DETECTED",
+        );
+      }
       const report = parseSingleJsonLine(child.stdout, stageName);
       const diskFact = diskReportPath ? requireDiskReport(diskReportPath, report, stageName) : null;
+      if (diskReportPath && containsSecretMaterial(readFileSync(diskReportPath, "utf8"), secrets)) {
+        return fail(
+          "Secret material was detected in a production case disk report.",
+          "CASE_SECRET_MATERIAL_DETECTED",
+        );
+      }
       stages.push({
         stage: stageName,
         argv,
@@ -1122,6 +1339,7 @@ export async function runProductionContactDraftCase(
       expectedUserId: options.expectedUserId,
       requireFreshSignin: true,
     });
+    assertReceiptRuntime(firstReceipt, runtime);
     const firstReceiptPath = path.join(options.outDir, "identity-receipt-before-reads.json");
     writePrivateJson(firstReceiptPath, firstReceipt);
 
@@ -1183,6 +1401,7 @@ export async function runProductionContactDraftCase(
       expectedUserId: options.expectedUserId,
       requireFreshSignin: true,
     });
+    assertReceiptRuntime(secondReceipt, runtime);
     if (Date.parse(secondReceipt.captured_at_utc) < Date.parse(firstReceipt.captured_at_utc)) {
       return fail("Write receipt predates the read receipt.", "CASE_RECEIPT_ORDER_INVALID");
     }
@@ -1190,6 +1409,13 @@ export async function runProductionContactDraftCase(
     writePrivateJson(secondReceiptPath, secondReceipt);
 
     const commitDir = path.join(options.outDir, "commit-contact-draft");
+    const currentCandidateBytes = readRegularFile(candidatePath);
+    if (!currentCandidateBytes.equals(candidateBytes)) {
+      return fail(
+        "The candidate bytes changed before mutation dispatch.",
+        "CASE_CANDIDATE_ARTIFACT_DRIFT",
+      );
+    }
     mutationDispatchCount += 1;
     const commit = invoke(
       "commit-contact-draft",
@@ -1242,7 +1468,16 @@ export async function runProductionContactDraftCase(
     );
 
     cleanup();
-    redactSecrets(options.outDir, secrets);
+    if (runtimeCleanupErrorCode) {
+      return fail("The private runtime snapshot could not be cleaned up.", runtimeCleanupErrorCode);
+    }
+    const redactedPaths = redactSecrets(options.outDir, secrets);
+    if (redactedPaths.length > 0) {
+      return fail(
+        "Secret material was detected in persisted production case artifacts.",
+        "CASE_SECRET_MATERIAL_DETECTED",
+      );
+    }
     hardenTree(options.outDir);
     const candidateFact = fileFact(candidatePath, options.outDir);
     const firstReceiptFact = fileFact(firstReceiptPath, options.outDir);
@@ -1261,6 +1496,7 @@ export async function runProductionContactDraftCase(
         package_version: runtime.cliPackageVersion,
         entrypoint_sha256: runtime.cliEntrypointSha256,
         runtime_sha256: runtime.cliRuntimeSha256,
+        pnpm_installation_sha256: runtime.pnpmInstallationSha256,
       },
       foundry: {
         runner_sha256: runtime.runnerSha256,
@@ -1299,7 +1535,12 @@ export async function runProductionContactDraftCase(
     return manifest;
   } catch (error) {
     cleanup();
-    redactSecrets(options.outDir, secrets);
+    let redactionErrorCode: string | null = null;
+    try {
+      redactSecrets(options.outDir, secrets);
+    } catch {
+      redactionErrorCode = "CASE_SECRET_REDACTION_FAILED";
+    }
     const code =
       error instanceof ProductionContactDraftCaseError ? error.code : "CASE_UNEXPECTED_FAILURE";
     writeFailure(options.outDir, {
@@ -1307,6 +1548,8 @@ export async function runProductionContactDraftCase(
       code,
       mutationDispatchCount,
       contactId,
+      runtimeCleanupErrorCode,
+      redactionErrorCode,
     });
     hardenTree(options.outDir);
     throw error;
@@ -1345,7 +1588,20 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
 }
 
 function isDirectEntry(importMetaUrl: string, argv1: string | undefined): boolean {
-  return Boolean(argv1) && importMetaUrl === pathToFileURL(path.resolve(argv1 as string)).href;
+  if (!argv1) return false;
+  let invokedPath = path.resolve(argv1);
+  let modulePath = fileURLToPath(importMetaUrl);
+  try {
+    invokedPath = realpathSync(invokedPath);
+  } catch {
+    // A missing invoked path cannot be the loaded module.
+  }
+  try {
+    modulePath = realpathSync(modulePath);
+  } catch {
+    // Keep the canonical URL path when a test virtualizes the module.
+  }
+  return pathToFileURL(invokedPath).href === pathToFileURL(modulePath).href;
 }
 
 export const __testInternals = { contactPayload, contactRootProbe, prepareRuntimeSnapshot };
