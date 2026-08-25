@@ -3,6 +3,67 @@ import path from "node:path";
 import process from "node:process";
 import { runSurfaceAudit } from "../lib/surface-audit.ts";
 
+type JsonRecord = Record<string, unknown>;
+
+interface CapabilityRecord extends JsonRecord {
+  id: string;
+  class: string;
+  owner_project: string;
+}
+
+interface CapabilityRegistry extends JsonRecord {
+  schema_version?: number;
+  capabilities?: CapabilityRecord[];
+}
+
+interface FileLocationEntry extends JsonRecord {
+  id?: string;
+  status?: string;
+  current_path?: string;
+  referenced_by?: string[];
+}
+
+interface FileLocationRegistry extends JsonRecord {
+  entries?: FileLocationEntry[];
+}
+
+interface CoreOptions extends JsonRecord {
+  kind?: unknown;
+  taskKind?: unknown;
+  datasetType?: unknown;
+  type?: unknown;
+  requiredGates?: unknown;
+  classes?: unknown;
+  capabilityClasses?: unknown;
+  taskId?: unknown;
+  id?: unknown;
+  class?: unknown;
+  owner?: unknown;
+}
+
+interface CoreCommandDependencies {
+  ensureArray: (value: unknown) => CapabilityRecord[];
+  fileExists: (filePath: string) => boolean;
+  isPlaceholderEnvValue: (value: unknown) => boolean;
+  listImportProfiles: (options: { repoRoot: string }) => unknown;
+  normalizedList: (value: unknown) => string[];
+  nowIso: () => string;
+  readJson: (filePath: string) => JsonRecord;
+  readText: (filePath: string) => string;
+  repoRelativePath: (filePath: string) => string;
+  repoRoot: string;
+  resolveRepoPath: (filePath: unknown) => string;
+  splitFrontmatter: (text: string) => { frontmatter: string; body: string };
+  unique: <T>(values: T[]) => T[];
+  writeJson: (filePath: string, value: unknown) => void;
+}
+
+interface EnvAssignment {
+  line: number;
+  key: string;
+  value: string;
+}
+
 const capabilityRegistryPath = "specs/automated-lca-capability-registry.json";
 const runtimeDirs = [
   ".foundry/logs",
@@ -56,7 +117,7 @@ const envExampleForbiddenKeys = new Map([
   ["GITHUB_TOKEN", "Tracker or GitHub credentials do not belong in the public env example."],
 ]);
 
-const taskKindRoutes = {
+const taskKindRoutes: Record<string, string[]> = {
   "external-dataset-curated-import": [
     "import-orchestration",
     "tidas-contract-context",
@@ -81,7 +142,7 @@ const taskKindRoutes = {
   ],
 };
 
-const gateRoutes = {
+const gateRoutes: Record<string, string[]> = {
   orchestration: ["import-orchestration"],
   context: ["tidas-contract-context"],
   contract: ["tidas-contract-context"],
@@ -98,39 +159,43 @@ const gateRoutes = {
   verification: ["remote-verification"],
 };
 
-function envExampleKeyAllowed(key) {
+function envExampleKeyAllowed(key: string): boolean {
   return (
     envExampleAllowedKeys.has(key) ||
     envExampleAllowedPrefixes.some((prefix) => key.startsWith(prefix))
   );
 }
 
-function parseEnvAssignments(filePath, { fileExists, readText }) {
+function parseEnvAssignments(
+  filePath: string,
+  { fileExists, readText }: Pick<CoreCommandDependencies, "fileExists" | "readText">,
+): EnvAssignment[] {
   if (!fileExists(filePath)) return [];
-  return readText(filePath)
+  const assignments: EnvAssignment[] = [];
+  readText(filePath)
     .split(/\r?\n/u)
-    .map((raw, index) => ({ raw: raw.trim(), line: index + 1 }))
-    .filter(({ raw }) => raw && !raw.startsWith("#"))
-    .map(({ raw, line }) => ({
-      line,
-      match: raw.replace(/^export\s+/u, "").match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/u),
-    }))
-    .filter(({ match }) => match)
-    .map(({ line, match }) => ({ line, key: match[1], value: match[2] ?? "" }));
+    .forEach((source, index) => {
+      const raw = source.trim();
+      if (!raw || raw.startsWith("#")) return;
+      const match = raw.replace(/^export\s+/u, "").match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/u);
+      if (!match) return;
+      assignments.push({ line: index + 1, key: match[1], value: match[2] ?? "" });
+    });
+  return assignments;
 }
 
-function qaClassForType(datasetType) {
+function qaClassForType(datasetType: string): string {
   if (datasetType === "process") return "process-qa";
   if (datasetType === "flow") return "flow-qa";
   if (datasetType === "lifecyclemodel") return "lifecyclemodel-qa";
   return "qa";
 }
 
-function expandRouteClass(className, datasetType) {
+function expandRouteClass(className: string, datasetType: string): string[] {
   return className === "qa" ? [qaClassForType(datasetType)] : [className];
 }
 
-function capabilityMatchesDatasetType(capability, datasetType) {
+function capabilityMatchesDatasetType(capability: CapabilityRecord, datasetType: string): boolean {
   if (!datasetType || datasetType === "all") return true;
   const id = String(capability.id ?? "");
   if (datasetType === "process")
@@ -157,18 +222,18 @@ export function createCoreCommands({
   splitFrontmatter,
   unique,
   writeJson,
-}) {
+}: CoreCommandDependencies) {
   const workflowPath = path.join(repoRoot, "WORKFLOW.md");
 
-  function parseEnv(filePath) {
+  function parseEnv(filePath: string): EnvAssignment[] {
     return parseEnvAssignments(filePath, { fileExists, readText });
   }
 
   function envExampleSurfaceCheck() {
     const envExamplePath = path.join(repoRoot, ".env.example");
-    const errors = [];
-    const warnings = [];
-    const seen = new Map();
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const seen = new Map<string, number>();
     if (!fileExists(envExamplePath)) {
       errors.push(".env.example is missing.");
     }
@@ -232,10 +297,12 @@ export function createCoreCommands({
     const allowedRootMarkdown = new Set(["AGENTS.md", "README.md", "WORKFLOW.md"]);
     const errors = [];
     const warnings = [];
-    const registry = fileExists(registryPath) ? readJson(registryPath) : null;
+    const registry = fileExists(registryPath)
+      ? (readJson(registryPath) as FileLocationRegistry)
+      : null;
     if (!registry) errors.push("docs/file-location-registry.json is missing or invalid.");
     const entries = Array.isArray(registry?.entries) ? registry.entries : [];
-    const ids = new Set();
+    const ids = new Set<string>();
     for (const entry of entries) {
       if (!entry?.id) {
         errors.push("file-location registry entry is missing id");
@@ -370,11 +437,11 @@ export function createCoreCommands({
     };
   }
 
-  function readCapabilityRegistry() {
+  function readCapabilityRegistry(): CapabilityRegistry {
     return readJson(path.join(repoRoot, capabilityRegistryPath));
   }
 
-  function buildRoutePlan(options = {}) {
+  function buildRoutePlan(options: CoreOptions = {}) {
     const registry = readCapabilityRegistry();
     const kind = String(options.kind || options.taskKind || "external-dataset-curated-import");
     const datasetType = String(options.datasetType || options.type || "all")
@@ -397,10 +464,11 @@ export function createCoreCommands({
     const capabilities = ensureArray(registry.capabilities)
       .filter((capability) => requiredClasses.includes(capability.class))
       .filter((capability) => capabilityMatchesDatasetType(capability, datasetType));
-    const byClass = new Map();
+    const byClass = new Map<string, CapabilityRecord[]>();
     for (const capability of capabilities) {
-      if (!byClass.has(capability.class)) byClass.set(capability.class, []);
-      byClass.get(capability.class).push(capability);
+      const classCapabilities = byClass.get(capability.class);
+      if (classCapabilities) classCapabilities.push(capability);
+      else byClass.set(capability.class, [capability]);
     }
     const routes = requiredClasses.map((className) => ({
       class: className,
@@ -433,7 +501,7 @@ export function createCoreCommands({
     };
   }
 
-  function writeRoutePlan(plan, outDir) {
+  function writeRoutePlan(plan: JsonRecord, outDir?: string) {
     if (!outDir) return plan;
     const resolvedOutDir = resolveRepoPath(outDir);
     writeJson(path.join(resolvedOutDir, "capability-route-plan.json"), plan);
@@ -447,7 +515,7 @@ export function createCoreCommands({
     };
   }
 
-  function capabilitiesList(options = {}) {
+  function capabilitiesList(options: CoreOptions = {}) {
     const registry = readCapabilityRegistry();
     const classFilter = options.class ? String(options.class) : null;
     const ownerFilter = options.owner ? String(options.owner) : null;

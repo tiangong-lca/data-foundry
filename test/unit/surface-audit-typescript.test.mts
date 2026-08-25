@@ -225,7 +225,7 @@ test("metadata and surface audit leaves are native TypeScript with updated consu
     assert.equal(fs.existsSync(path.join(repoRoot, `scripts/lib/${stem}.mjs`)), false);
   }
   const expectedImports = [
-    ["scripts/commands/core.mjs", "../lib/surface-audit.ts"],
+    ["scripts/commands/core.ts", "../lib/surface-audit.ts"],
     ["scripts/lib/surface-audit.ts", "./foundry-command-metadata.ts"],
     [
       "test/unit/foundry-command-metadata.test.mts",

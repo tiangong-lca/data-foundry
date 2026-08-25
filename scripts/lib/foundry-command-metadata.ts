@@ -48,7 +48,7 @@ const importCurationEntryContract = nodeTest(
   "import-curation entry preserves the complete owner namespace and live references",
 );
 
-const coreOwner = "scripts/commands/core.mjs";
+const coreOwner = "scripts/commands/core.ts";
 const taskOwner = "scripts/commands/tasks.ts";
 const tidasOwner = "scripts/commands/tidas-workflow.ts";
 const typedImportOwner = (moduleName: string): string =>

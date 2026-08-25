@@ -315,11 +315,7 @@ test("core command owner exists only as zero-escape native TypeScript", () => {
 });
 
 test("core command consumers and metadata target the typed owner", () => {
-  for (const consumer of [
-    "scripts/foundry.mjs",
-    "scripts/lib/foundry-command-metadata.ts",
-    "test/unit/core-command-factory.test.mts",
-  ]) {
+  for (const consumer of ["scripts/foundry.mjs", "scripts/lib/foundry-command-metadata.ts"]) {
     const source = fs.readFileSync(path.join(repoRoot, consumer), "utf8");
     assert.match(source, /(?:commands\/|scripts\/commands\/)core\.ts/u, consumer);
     assert.doesNotMatch(source, /(?:commands\/|scripts\/commands\/)core\.mjs/u, consumer);

@@ -9,7 +9,7 @@ import { createBafuProcessScopeE2eCommands } from "./commands/bafu-process-scope
 import { createBundleSampleRowsCommands } from "./commands/bundle-sample-rows.mjs";
 import { createCliWrapperCommands } from "./commands/cli-wrappers.ts";
 import { createCommitHandoffCommands } from "./commands/commit-handoff.ts";
-import { createCoreCommands } from "./commands/core.mjs";
+import { createCoreCommands } from "./commands/core.ts";
 import { createExecutionCapsuleCommands } from "./commands/execution-capsule.ts";
 import { createIdentityDecisionTaskCommands } from "./commands/identity-decision-task.ts";
 import { createIdentityDecisionCommands } from "./commands/identity-decisions.ts";
