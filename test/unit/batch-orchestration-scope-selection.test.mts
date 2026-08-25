@@ -204,18 +204,10 @@ test("estimated weight preserves precedence, ties, and unknown-last ordering", (
       ...scope("derived-tie"),
       dependency_counts: { flow_count: 1, support: 2, process_count: 1 },
     },
-    scope("unknown"),
+    scope("default-process-weight"),
   ];
 
   assert.deepEqual(scopes.map(scopeEstimatedWeight), [5, 2, 4, 4, 1]);
-  const unknownScope = {
-    ...scope("actually-unknown"),
-    dependency_counts: {},
-    checkpoint: {},
-  };
-  delete unknownScope.dependency_counts;
-  assert.equal(scopeEstimatedWeight(unknownScope), 1);
-
   const noCounts = { process_id: "no-counts", process_version: version };
   assert.equal(scopeEstimatedWeight(noCounts), 1);
 
@@ -232,7 +224,14 @@ test("estimated weight preserves precedence, ties, and unknown-last ordering", (
   });
   assert.deepEqual(
     ordered.scopes.map((row) => row.process_id),
-    ["checkpoint", "derived-first", "derived-tie", "direct", "unknown", "invalid-counts"],
+    [
+      "default-process-weight",
+      "checkpoint",
+      "derived-first",
+      "derived-tie",
+      "direct",
+      "invalid-counts",
+    ],
   );
   assert.equal(selectionOrderOption("weight-desc"), "estimated-weight-desc");
   assert.throws(() => selectionOrderOption("random"), /Unsupported --selection-order "random"/u);

@@ -5,12 +5,18 @@ import path from "node:path";
 import process from "node:process";
 import {
   bafuFamilyPlanFields,
-  bafuFamilySelectionRank,
   bafuFamilySignatureForScope,
   buildBafuFamilySignatureIndex,
   compactBafuFamilySignature,
   summarizeBafuFamilyScopes,
 } from "../lib/bafu-family-signatures.ts";
+import {
+  buildClassificationDecisionIndex,
+  preflightPlanRows,
+  scopeKey,
+  selectScopesForRun,
+  selectionOrderOption,
+} from "../lib/batch-orchestration/scope-selection.ts";
 import { acceptTraceHashOnlyRemoteVerificationMismatch } from "../lib/remote-verification-accepted-diff.ts";
 import {
   assertFoundryCommandSpecArtifactsCurrent,
@@ -200,25 +206,6 @@ interface FlowVerificationPartition {
   verifiedIdentities: JsonRecord[];
 }
 
-interface ScopeSelectionCandidate extends JsonRecord {
-  scope: JsonRecord;
-  index: number;
-  weight: number | null;
-  familySignature: BafuFamilySignature;
-  classificationPreflight: JsonRecord;
-}
-
-interface ScopeSelectionResult {
-  scopes: JsonRecord[];
-  stats: JsonRecord;
-}
-
-interface ClassificationDecisionIndex {
-  row_count: number;
-  indexed_decisions: number;
-  byKey: Map<string, JsonRecord>;
-}
-
 interface ClassificationRepairResult extends JsonRecord {
   unresolved: JsonRecord[];
   unresolvedPath: string;
@@ -347,6 +334,11 @@ function jsonRecord(value: unknown): JsonRecord {
 
 function recordArray(value: unknown): JsonRecord[] {
   return Array.isArray(value) ? value.map(jsonRecord) : [];
+}
+
+function asArray(value: unknown): unknown[] {
+  if (value == null) return [];
+  return Array.isArray(value) ? value : [value];
 }
 
 const { entryRepoRelativePath: foundryEntryPath, repoRoot } = resolveFoundryRuntimePaths(
@@ -3225,346 +3217,6 @@ function loadActiveBlockedScopeSetFromFiles(
   return set;
 }
 
-function scopeKey(scope: JsonRecord): string {
-  return `${scope.process_id || scope.id}@${scope.process_version || scope.version || "00.00.001"}`;
-}
-
-function finiteNumber(value: unknown): number | null {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function scopeEstimatedWeight(scope: JsonRecord): number | null {
-  const checkpoint = jsonRecord(scope.checkpoint);
-  const direct = [
-    scope.estimated_weight,
-    scope.estimatedWeight,
-    scope.weight,
-    checkpoint.estimated_weight,
-    checkpoint.estimatedWeight,
-    checkpoint.weight,
-  ];
-  for (const value of direct) {
-    const parsed = finiteNumber(value);
-    if (parsed != null) return parsed;
-  }
-  const counts = jsonRecord(scope.dependency_counts ?? checkpoint.dependency_counts);
-  const flowCount = finiteNumber(counts.flows ?? counts.flow_count ?? scope?.flow_count);
-  const supportCount = finiteNumber(
-    counts.support_rows ?? counts.support ?? counts.sources ?? scope?.support_count,
-  );
-  const processCount = finiteNumber(counts.processes ?? counts.process_count ?? 1);
-  if (flowCount != null || supportCount != null || processCount != null) {
-    return (flowCount ?? 0) + (supportCount ?? 0) + (processCount ?? 0);
-  }
-  return null;
-}
-
-function asArray(value: unknown): unknown[] {
-  if (value == null) return [];
-  return Array.isArray(value) ? value : [value];
-}
-
-function classificationDecisionKey({
-  datasetType,
-  datasetId,
-  datasetVersion,
-  categoryType,
-}: {
-  datasetType: unknown;
-  datasetId: unknown;
-  datasetVersion: unknown;
-  categoryType: unknown;
-}): string | null {
-  const type = asText(datasetType);
-  const id = asText(datasetId);
-  const version = asText(datasetVersion) || "00.00.001";
-  const category = asText(categoryType);
-  return type && id && category ? `${type}:${id}@${version}:${category}` : null;
-}
-
-function loadClassificationDecisionIndex(filePath: string | null): ClassificationDecisionIndex {
-  const byKey = new Map<string, JsonRecord>();
-  const rows = readJsonLines(filePath);
-  for (const row of rows) {
-    const key = classificationDecisionKey({
-      datasetType: row?.dataset_type,
-      datasetId: row?.dataset_id,
-      datasetVersion: row?.dataset_version,
-      categoryType: row?.category_type,
-    });
-    if (key) byKey.set(key, row);
-  }
-  return {
-    row_count: rows.length,
-    indexed_decisions: byKey.size,
-    byKey,
-  };
-}
-
-function isLeafClassificationDecision(row: JsonRecord | null | undefined): boolean {
-  return Boolean(
-    row &&
-    asText(row.decision_status || "completed") === "completed" &&
-    asText(row.classification_decision_level) === "leaf" &&
-    Boolean(asText(row.selected_code ?? row.code)),
-  );
-}
-
-function scopeClassificationRequirements(scope: JsonRecord): JsonRecord[] {
-  const processId = asText(scope?.process_id ?? scope?.id);
-  const processVersion = asText(scope?.process_version ?? scope?.version) || "00.00.001";
-  const requirements: JsonRecord[] = [];
-  if (processId) {
-    requirements.push({
-      dataset_type: "process",
-      dataset_id: processId,
-      dataset_version: processVersion,
-      category_type: "process",
-    });
-  }
-  const dependencies = jsonRecord(scope.dependency_ids);
-  for (const flow of asArray(dependencies.flows).map(jsonRecord)) {
-    const flowType = asText(flow.flow_type);
-    if (flowType && flowType !== "Product flow") continue;
-    const flowId = asText(flow.id ?? flow.dataset_id);
-    if (!flowId) continue;
-    requirements.push({
-      dataset_type: "flow",
-      dataset_id: flowId,
-      dataset_version: asText(flow.version ?? flow.dataset_version) || "00.00.001",
-      category_type: "flow-product",
-    });
-  }
-  return requirements;
-}
-
-function scopeClassificationPreflight(
-  scope: JsonRecord,
-  classificationDecisionIndex: ClassificationDecisionIndex,
-): JsonRecord {
-  const requirements = scopeClassificationRequirements(scope);
-  const missing: JsonRecord[] = [];
-  const notLeaf: JsonRecord[] = [];
-  for (const requirement of requirements) {
-    const key = classificationDecisionKey({
-      datasetType: requirement.dataset_type,
-      datasetId: requirement.dataset_id,
-      datasetVersion: requirement.dataset_version,
-      categoryType: requirement.category_type,
-    });
-    const decision = key ? classificationDecisionIndex.byKey.get(key) : null;
-    if (!decision) {
-      missing.push(requirement);
-      continue;
-    }
-    if (!isLeafClassificationDecision(decision)) {
-      notLeaf.push({
-        ...requirement,
-        selected_code: asText(decision.selected_code ?? decision.code) || null,
-        classification_decision_level: asText(decision.classification_decision_level) || null,
-        decision_status: asText(decision.decision_status) || null,
-      });
-    }
-  }
-  const status = missing.length > 0 ? "missing" : notLeaf.length > 0 ? "not_leaf" : "leaf";
-  return {
-    status,
-    checked_decisions: requirements.length,
-    missing_decisions: missing.length,
-    not_leaf_decisions: notLeaf.length,
-    first_missing: missing[0] ?? null,
-    first_not_leaf: notLeaf[0] ?? null,
-  };
-}
-
-function selectionOrderOption(value: unknown): string {
-  const normalized = asText(value || "input");
-  const aliases: Record<string, string> = {
-    family: "family-master-first",
-    "family-master": "family-master-first",
-    weight: "estimated-weight-asc",
-    "weight-asc": "estimated-weight-asc",
-    "weight-desc": "estimated-weight-desc",
-    estimated_weight_asc: "estimated-weight-asc",
-    estimated_weight_desc: "estimated-weight-desc",
-  };
-  const order = aliases[normalized] ?? normalized;
-  if (
-    ![
-      "input",
-      "estimated-weight-asc",
-      "estimated-weight-desc",
-      "family-master-first",
-      "family-master-first-weight-asc",
-    ].includes(order)
-  ) {
-    throw new Error(
-      `Unsupported --selection-order ${JSON.stringify(normalized)}. Use input, estimated-weight-asc, estimated-weight-desc, family-master-first, or family-master-first-weight-asc.`,
-    );
-  }
-  return order;
-}
-
-function compareSelectionRows(
-  left: ScopeSelectionCandidate,
-  right: ScopeSelectionCandidate,
-  selectionOrder: string,
-): number {
-  if (selectionOrder.startsWith("family-master-first")) {
-    const leftRank = bafuFamilySelectionRank(left.familySignature);
-    const rightRank = bafuFamilySelectionRank(right.familySignature);
-    if (leftRank !== rightRank) return leftRank - rightRank;
-    const leftGroup = asText(left.familySignature?.family_group_key);
-    const rightGroup = asText(right.familySignature?.family_group_key);
-    if (leftGroup !== rightGroup) return leftGroup.localeCompare(rightGroup);
-    if (selectionOrder === "family-master-first-weight-asc") {
-      const leftWeight = left.weight;
-      const rightWeight = right.weight;
-      const leftUnknown = leftWeight == null;
-      const rightUnknown = rightWeight == null;
-      if (leftUnknown !== rightUnknown) return leftUnknown ? 1 : -1;
-      if (leftWeight != null && rightWeight != null && leftWeight !== rightWeight) {
-        return leftWeight - rightWeight;
-      }
-    }
-    return left.index - right.index;
-  }
-  if (selectionOrder === "input") return left.index - right.index;
-  const leftWeight = left.weight;
-  const rightWeight = right.weight;
-  const leftUnknown = leftWeight == null;
-  const rightUnknown = rightWeight == null;
-  if (leftUnknown !== rightUnknown) return leftUnknown ? 1 : -1;
-  if (leftWeight != null && rightWeight != null && leftWeight !== rightWeight) {
-    return selectionOrder === "estimated-weight-desc"
-      ? rightWeight - leftWeight
-      : leftWeight - rightWeight;
-  }
-  return left.index - right.index;
-}
-
-function selectScopesForRun({
-  allScopes,
-  requestedProcessIds,
-  verifiedScopes,
-  blockedScopes,
-  pendingOnly,
-  force,
-  selectionOrder,
-  limit,
-  familySignatureIndex,
-  classificationDecisionIndex,
-  requireLeafClassification,
-}: {
-  allScopes: JsonRecord[];
-  requestedProcessIds: Set<string>;
-  verifiedScopes: Set<string>;
-  blockedScopes: Set<string>;
-  pendingOnly: boolean;
-  force: boolean;
-  selectionOrder: string;
-  limit: number | null;
-  familySignatureIndex: BafuFamilyIndex;
-  classificationDecisionIndex: ClassificationDecisionIndex;
-  requireLeafClassification: boolean;
-}): ScopeSelectionResult {
-  const explicit = requestedProcessIds.size > 0;
-  const stats = {
-    input_scopes: allScopes.length,
-    matched_scopes: 0,
-    filtered_already_verified: 0,
-    filtered_already_blocked: 0,
-    filtered_classification_missing: 0,
-    filtered_classification_not_leaf: 0,
-    candidate_scopes_before_limit: 0,
-    selected_scopes: 0,
-  };
-  const candidates: ScopeSelectionCandidate[] = [];
-  for (const [index, scope] of allScopes.entries()) {
-    const processId = asText(scope.process_id || scope.id);
-    if (explicit && !requestedProcessIds.has(processId)) continue;
-    stats.matched_scopes += 1;
-    const key = scopeKey(scope);
-    if (pendingOnly && !force && verifiedScopes.has(key)) {
-      stats.filtered_already_verified += 1;
-      continue;
-    }
-    if (pendingOnly && !force && !explicit && blockedScopes.has(key)) {
-      stats.filtered_already_blocked += 1;
-      continue;
-    }
-    const classificationPreflight = scopeClassificationPreflight(
-      scope,
-      classificationDecisionIndex,
-    );
-    if (requireLeafClassification && classificationPreflight.status !== "leaf") {
-      if (classificationPreflight.status === "missing") {
-        stats.filtered_classification_missing += 1;
-      } else {
-        stats.filtered_classification_not_leaf += 1;
-      }
-      continue;
-    }
-    candidates.push({
-      scope,
-      index,
-      weight: scopeEstimatedWeight(scope),
-      familySignature: bafuFamilySignatureForScope(familySignatureIndex, scope),
-      classificationPreflight,
-    });
-  }
-  candidates.sort((left, right) => compareSelectionRows(left, right, selectionOrder));
-  stats.candidate_scopes_before_limit = candidates.length;
-  const limited = limit == null ? candidates : candidates.slice(0, limit);
-  stats.selected_scopes = limited.length;
-  return {
-    scopes: limited.map((entry) => entry.scope),
-    stats,
-  };
-}
-
-function preflightPlanRows({
-  scopes,
-  verifiedScopes,
-  blockedScopes,
-  familySignatureIndex,
-  classificationDecisionIndex,
-}: {
-  scopes: JsonRecord[];
-  verifiedScopes: Set<string>;
-  blockedScopes: Set<string>;
-  familySignatureIndex: BafuFamilyIndex;
-  classificationDecisionIndex: ClassificationDecisionIndex;
-}): JsonRecord[] {
-  return scopes.map((scope, index) => {
-    const key = scopeKey(scope);
-    const familySignature = bafuFamilySignatureForScope(familySignatureIndex, scope);
-    const classificationPreflight = scopeClassificationPreflight(
-      scope,
-      classificationDecisionIndex,
-    );
-    return {
-      schema_version: 1,
-      index,
-      process_id: scope.process_id || scope.id,
-      process_version: scope.process_version || scope.version || "00.00.001",
-      scope_key: key,
-      estimated_weight: scopeEstimatedWeight(scope),
-      already_verified: verifiedScopes.has(key),
-      already_blocked: blockedScopes.has(key),
-      closure_status: scope.closure_status ?? scope.status ?? null,
-      classification_preflight_status: classificationPreflight.status,
-      classification_preflight_checked_decisions: classificationPreflight.checked_decisions,
-      classification_preflight_missing_decisions: classificationPreflight.missing_decisions,
-      classification_preflight_not_leaf_decisions: classificationPreflight.not_leaf_decisions,
-      classification_preflight_first_missing: classificationPreflight.first_missing,
-      classification_preflight_first_not_leaf: classificationPreflight.first_not_leaf,
-      ...bafuFamilyPlanFields(familySignature),
-    };
-  });
-}
-
 function batchRunStatus(
   results: JsonRecord[],
   {
@@ -5941,8 +5593,8 @@ export function createBafuBatchImportRunCommands(
           readJson,
         })
       : ({ summary: {}, entries: [], byScopeKey: new Map() } as unknown as BafuFamilyIndex);
-    const classificationDecisionIndex = loadClassificationDecisionIndex(
-      paths.libraryClassificationDecisions,
+    const classificationDecisionIndex = buildClassificationDecisionIndex(
+      readJsonLines(paths.libraryClassificationDecisions),
     );
     const selection = selectScopesForRun({
       allScopes,
@@ -5953,7 +5605,7 @@ export function createBafuBatchImportRunCommands(
       force,
       selectionOrder,
       limit,
-      familySignatureIndex,
+      familySignaturesByScopeKey: familySignatureIndex.byScopeKey,
       classificationDecisionIndex,
       requireLeafClassification,
     });
@@ -6065,7 +5717,7 @@ export function createBafuBatchImportRunCommands(
           scopes,
           verifiedScopes,
           blockedScopes,
-          familySignatureIndex,
+          familySignaturesByScopeKey: familySignatureIndex.byScopeKey,
           classificationDecisionIndex,
         }),
       );
