@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
+import type { SpawnSyncOptions } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 import test from "node:test";
 
-import { runWithLcaAccount } from "../../scripts/with-lca-account.ts";
+import {
+  runWithLcaAccount,
+  type WithLcaAccountDependencies,
+} from "../../scripts/with-lca-account.ts";
 
 const require = createRequire(import.meta.url);
 const cliAuth = require("@tiangong-lca/cli/dist/src/lib/auth-identity-receipt.js") as {
@@ -28,16 +32,7 @@ const NOW_MS = Date.parse("2026-08-25T02:00:00.000Z");
 type SpawnCall = {
   executable: string;
   argv: string[];
-  options: {
-    cwd?: string;
-    env?: NodeJS.ProcessEnv;
-    shell?: boolean;
-    encoding?: string;
-    stdio?: unknown;
-    timeout?: number;
-    maxBuffer?: number;
-    windowsHide?: boolean;
-  };
+  options: SpawnSyncOptions;
 };
 
 function receipt(overrides: Record<string, unknown> = {}) {
@@ -111,7 +106,12 @@ function writeProfile(
   return { profileDir, profilePath };
 }
 
-function baseDeps(root: string, profileDir: string, calls: SpawnCall[], receiptValue = receipt()) {
+function baseDeps(
+  root: string,
+  profileDir: string,
+  calls: SpawnCall[],
+  receiptValue = receipt(),
+): WithLcaAccountDependencies {
   return {
     repoRoot: root,
     cwd: path.join(root, "work"),
@@ -298,7 +298,7 @@ test("Codex thread account guards require the same profile, project, and user", 
   fs.mkdirSync(path.join(root, "work"));
   const calls: SpawnCall[] = [];
   const deps = baseDeps(root, profileDir, calls);
-  deps.processEnv.CODEX_THREAD_ID = "thread-1";
+  (deps.processEnv as NodeJS.ProcessEnv).CODEX_THREAD_ID = "thread-1";
   try {
     assert.throws(
       () => runWithLcaAccount(["production-test", "--", process.execPath, "command.mjs"], deps),
