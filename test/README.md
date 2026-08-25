@@ -279,4 +279,4 @@ Toolchain and migration contracts must pass in a clean arbitrary Git worktree af
 - `pnpm test:unit`: run pure logic and metadata tests.
 - `pnpm test:commands`: run command contract tests.
 - `pnpm test:scenarios`: run workflow scenario tests.
-- `node --test test/unit/tidas-adapter.test.mjs`: verify 0.2.x handshake, invocation precedence, stable report/exit mapping, validation-batch compatibility, cancellation, cleanup, and rollback at the Foundry boundary.
+- `node --test test/unit/tidas-adapter.test.mts`: verify 0.2.x handshake, invocation precedence, stable report/exit mapping, validation-batch compatibility, cancellation, cleanup, and rollback at the Foundry boundary.

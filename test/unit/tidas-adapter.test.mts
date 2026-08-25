@@ -22,7 +22,7 @@ function isolatedFixture() {
   return { root, bin };
 }
 
-function withEnvironment(values, fn) {
+function withEnvironment<T>(values: Record<string, string | undefined>, fn: () => T): T {
   const previous = new Map(Object.keys(values).map((key) => [key, process.env[key]]));
   for (const [key, value] of Object.entries(values)) {
     if (value === undefined) delete process.env[key];
@@ -157,14 +157,15 @@ test("adapter preserves every stable nonzero Rust exit class", () => {
   const input = path.join(root, "source");
   fs.mkdirSync(input);
   try {
-    for (const [exitClass, exitCode] of [
+    const exitCases: Array<[string, number]> = [
       ["data-issues", 2],
       ["usage", 64],
       ["unavailable", 69],
       ["internal", 70],
       ["io", 74],
       ["cancelled", 130],
-    ]) {
+    ];
+    for (const [exitClass, exitCode] of exitCases) {
       const output = path.join(root, `output-${exitClass}`);
       const result = withEnvironment({ TIDAS_BIN: bin, FAKE_TIDAS_EXIT_CLASS: exitClass }, () =>
         runTidasImport({ repoRoot: root, options: { input, output } }),
@@ -192,6 +193,7 @@ test("row validation maps official batch evidence into Foundry compatibility rep
           options: { rowsFile, type: "process", outDir },
         }),
     );
+    assert.ok("rust_exit_code" in invalid);
     assert.equal(invalid.rust_exit_code, 0);
     assert.equal(invalid.exit_code, 2);
     assert.deepEqual(invalid.report.counts, {

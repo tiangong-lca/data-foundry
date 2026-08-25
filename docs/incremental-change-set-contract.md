@@ -17,7 +17,7 @@ checkPaths:
   - scripts/commands/incremental-change-set.mjs
   - test/fixtures/incremental-change-set-fixtures.ts
   - test/unit/incremental-fixture-migration.test.mts
-  - test/unit/incremental-change-set.test.mjs
+  - test/unit/incremental-change-set.test.mts
   - test/commands/incremental-change-set.test.mjs
   - test/scenarios/incremental-change-set-handoff.test.mjs
   - docs/execution-capsule-contract.md

@@ -203,7 +203,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     inputs: ["Rust tidas executable", "optional TIDAS_CONFIG"],
     outputs: ["compatible 0.2.x binary and tidas.operation-report.v1 handshake"],
     keyTests: [
-      nodeTest("test/unit/tidas-adapter.test.mjs", "0.2.x version and operation-report handshake"),
+      nodeTest("test/unit/tidas-adapter.test.mts", "0.2.x version and operation-report handshake"),
     ],
   }),
   "dataset-tidas-import": metadata({
@@ -218,7 +218,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/unit/tidas-adapter.test.mjs",
+        "test/unit/tidas-adapter.test.mts",
         "native import, stable exit mapping, cancellation, and cleanup",
       ),
     ],
@@ -234,7 +234,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/unit/tidas-adapter.test.mjs",
+        "test/unit/tidas-adapter.test.mts",
         "official batch validation report mapping and rollback cleanup",
       ),
     ],
@@ -314,7 +314,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/unit/incremental-change-set.test.mjs",
+        "test/unit/incremental-change-set.test.mts",
         "three-way merge and canonical CLI hashes preserve owner changes only through explicit policy",
       ),
       nodeTest(
@@ -343,7 +343,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/unit/topology-convergence.test.mjs",
+        "test/unit/topology-convergence.test.mts",
         "occurrence keys and language overlays prevent global flow-id replacement",
       ),
       nodeTest(

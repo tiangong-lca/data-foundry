@@ -9,7 +9,7 @@ import {
 } from "../../scripts/commands/topology-convergence.mjs";
 import { assert } from "../fixtures/foundry-core.ts";
 
-function exchange(number, flow) {
+function exchange(number: string, flow: string) {
   return {
     referenceToFlowDataSet: { "@refObjectId": flow, "@version": "00.00.001" },
     "common:other": {
@@ -22,7 +22,7 @@ function exchange(number, flow) {
   };
 }
 
-function traceFreeExchange(number, flow) {
+function traceFreeExchange(number: string, flow: string) {
   return {
     referenceToFlowDataSet: { "@refObjectId": flow, "@version": "00.00.001" },
     generalComment: {
