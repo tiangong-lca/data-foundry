@@ -53,7 +53,7 @@
     "prepush:gate": "pnpm lint && pnpm test:toolchain && pnpm test && pnpm golden:diff && pnpm surface:audit && pnpm build && pnpm audit:high"
   },
   "engines": {
-    "node": ">=24 <25",
+    "node": ">=24.19.0 <25",
     "pnpm": "11.23.0"
   },
   "license": "MIT",
@@ -74,7 +74,7 @@
     ]
   },
   "dependencies": {
-    "@tiangong-lca/cli": "0.1.0",
+    "@tiangong-lca/cli": "0.1.1",
     "ajv": "8.20.0"
   }
 }
