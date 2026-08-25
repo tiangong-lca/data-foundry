@@ -19,8 +19,8 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - scripts/commands/core.mjs
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1d094b7e0d9a05b1660052f704e8f7f3ca4f8e6e
-lastReviewedNote: "Reviewed for Issue #67 Wave 16 freshness: the pnpm acceptance loop and ignored report policy remain unchanged while the typed migration inventory decreases monotonically."
+lastReviewedCommit: c8b3cd4f2624367d833a3811d19752e9eb99a602
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 barrel freshness: the pnpm acceptance loop, Stop-hook relationship, and ignored report policy remain unchanged while the typed migration inventory decreases monotonically."
 related:
   - docs/file-organization.md
   - docs/codex-stop-hook.md
