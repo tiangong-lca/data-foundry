@@ -22,6 +22,9 @@ checkPaths:
   - prettier.config.cjs
   - specs/typescript-migration-inventory.json
   - scripts/lib/foundry-args.ts
+  - scripts/commands/identity-decisions.ts
+  - scripts/commands/classification-decisions.ts
+  - scripts/commands/location-decisions.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
@@ -126,13 +129,18 @@ checkPaths:
   - test/unit/wave24-curation-gate-runner-migration.test.mts
   - test/unit/curation-cleanup-runner-contract.test.mts
   - test/unit/wave24-curation-cleanup-runner-migration.test.mts
+  - test/unit/wave25-identity-decision-command-migration.test.mts
+  - test/unit/wave25-classification-location-command-migration.test.mts
+  - test/commands/classification-decisions.test.mjs
+  - test/commands/location-decisions.test.mjs
+  - test/scenarios/flow-identity-decisions.test.mjs
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 B3: tests cover curation facade live references, gate entity/blocker/context/package/report order and bytes, cleanup deep-clone/JSONL/sentinel/trace/proof/count contracts, and native errors."
+lastReviewedCommit: 680409f8462336748e8c0c68533c2f6ee7464297
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: migration tests pin three zero-escape TS factories, consumers, metadata, and exact help bytes; existing command/scenario fixtures pin aliases, paths, order, queue/blocker, CLI-stage, write-boundary, and native-error behavior."
 ---
 
 # Test Layout
@@ -205,6 +213,8 @@ Wave 22 uses three RED/GREEN families that match the runtime topology. `unit/wor
 Wave 23 covers the authoring entry layer. `unit/authoring-workflow-facades-contract.test.mts` pins exact namespaces and reference equality to the typed SCC owners. `unit/authoring-packages-runner-contract.test.mts` uses a real gate manifest to pin entry/task order, snapshot filename SHA, source bytes, task directories and exact manifest/JSONL bytes. `unit/patch-collect-runner-contract.test.mts` pins task-order blocker and invalid-JSON classes, patch-file/set/operation order, exact ready batch bytes, blocker-free writes and native malformed-manifest errors. The paired migration tests pin `.ts` ownership, static consumers and type-escape guards.
 
 Wave 24 B3 covers curation planning without entering command-family semantics. `unit/curation-gate-workflow-facade-contract.test.mts` pins the exact live aggregate closure; `unit/curation-gate-runner-contract.test.mts` uses a realistic blocked two-process fixture to pin entity, schema/QA blocker, context, authoring-package, alias and report/JSONL byte order plus native JSON failure; `unit/curation-cleanup-runner-contract.test.mts` pins input preservation, deep-cloned row order, annual sentinel, trace externalization, output-only exchange proof, locator redaction, timestamps, counts, exact bytes and native JSON failure. The paired migration tests require native zero-escape TypeScript and every consumer update.
+
+Wave 25 covers the three decision command factories. `unit/wave25-identity-decision-command-migration.test.mts` and `unit/wave25-classification-location-command-migration.test.mts` pin native-only sources, exact export identity, zero explicit type escapes or suppressions, every dispatcher/metadata consumer, and exact serialized help reports. The realistic command/scenario fixtures continue to pin option aliases/defaults, queue and row path order, task-context and unclosed-item blockers, CLI argv/stage short-circuiting, identity output partitioning, report/JSONL writes, and native malformed-artifact failures.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

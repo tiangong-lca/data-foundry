@@ -16,8 +16,8 @@ checkPaths:
   - docs/import-profiles/uslci/**
   - scripts/lib/import-curation/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2b66448599df0106ee8e03da94e6f6eeb5a878e
-lastReviewedNote: "Reviewed for Issue #67 Wave 22b: the USLCI wrapper's TypeScript path and frozen injected profile do not change this historical cleanup evidence or its current-owner interpretation."
+lastReviewedCommit: 680409f8462336748e8c0c68533c2f6ee7464297
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: native decision command paths do not change this historical BAFU/USLCI cleanup evidence, its owner routing, or the interpretation of classification and identity decision rounds."
 related:
   - docs/import-profiles/bafu/profile.md
   - docs/import-profiles/uslci/profile.md

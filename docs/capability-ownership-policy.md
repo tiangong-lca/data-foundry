@@ -46,8 +46,8 @@ checkPaths:
   - scripts/lib/import-curation/curation-gate.ts
   - scripts/lib/import-curation/curation-cleanup.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 B3: typing the curation aggregate, local gate and deterministic cleanup runners changes no capability owner, remote operation, search behavior, profile authority, Worldsteel semantics, or sibling boundary."
+lastReviewedCommit: 680409f8462336748e8c0c68533c2f6ee7464297
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: typing identity/classification/location decision factories changes no capability owner, remote operation, schema/search behavior, profile authority, Worldsteel semantics, or sibling boundary."
 ---
 
 # Capability Ownership Policy

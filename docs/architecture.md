@@ -25,6 +25,9 @@ checkPaths:
   - specs/automated-lca-capability-registry.json
   - specs/typescript-migration-inventory.json
   - scripts/lib/foundry-args.ts
+  - scripts/commands/identity-decisions.ts
+  - scripts/commands/classification-decisions.ts
+  - scripts/commands/location-decisions.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
@@ -85,8 +88,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 B3: typed curation aggregate/gate/cleanup remain local evidence, transformation and report adapters; ordering, bytes and deterministic proof semantics do not move CLI, schema, search or database authority."
+lastReviewedCommit: 680409f8462336748e8c0c68533c2f6ee7464297
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: typed identity/classification/location factories remain local decision validation, projection, report, and owner-CLI adapters; exact ordering, blockers, argv, bytes, and errors do not move schema, search, or database authority."
 ---
 
 # Architecture
@@ -169,6 +172,8 @@ The typed decision-full-context boundary evaluates existing classification, loca
 The typed authoring facades expose that SCC without wrapping or duplicating it. The package runner copies immutable content-addressed authoring snapshots and writes ordered local task manifests; the patch runner classifies local task outputs and writes an ordered batch only after every blocker check passes. Both are filesystem-only Foundry adapters and neither applies patches, invokes the CLI, or grants mutation authority.
 
 The typed curation planning boundary follows those authoring layers. `curation-gate-workflow.ts` is a live-reference aggregate; `curation-gate.ts` reads local rows and evidence into ordered blockers, authoring packages and reports; `curation-cleanup.ts` deep-clones rows and performs the already-governed deterministic sentinel, trace, proof and redaction transforms. Their byte/order contracts are local Foundry evidence only and do not execute or authorize a database mutation.
+
+The typed decision command boundary now includes `identity-decisions.ts`, `classification-decisions.ts`, and `location-decisions.ts`. Identity validation partitions local rows into write candidates, reference reuse, and unresolved evidence without executing a remote mutation. Classification and location validate task-bound decisions, preserve queue grouping and schema/path order, and delegate deterministic apply through the existing CLI argv boundary only after blockers are empty. Their reports and artifacts remain Foundry-local evidence; schema vocabularies, search, mutation, and readback authority remain with their existing owners.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

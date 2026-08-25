@@ -22,6 +22,9 @@ checkPaths:
   - prettier.config.cjs
   - tsconfig*.json
   - scripts/foundry.mjs
+  - scripts/commands/identity-decisions.ts
+  - scripts/commands/classification-decisions.ts
+  - scripts/commands/location-decisions.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -84,8 +87,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 B3: curation aggregate/gate/cleanup are native zero-escape TS7 with export identity, blocker/entity/context/package order, exact report/JSONL bytes, deterministic cleanup proofs, and native errors unchanged."
+lastReviewedCommit: 680409f8462336748e8c0c68533c2f6ee7464297
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: identity, classification, and location decision command factories are native zero-escape TS7 with exact help, alias/default/path/order, queue/blocker, CLI-stage, artifact-write, and native-error behavior unchanged."
 ---
 
 # TianGong LCA Data Foundry
@@ -153,6 +156,8 @@ Wave 22 follows the real dependency topology rather than treating connected modu
 Wave 23 migrates the authoring facade and runner layer above that SCC. `authoring-task-workflow.ts` and `authoring-patch-workflow.ts` remain pure live-reference facades; `authoring-packages.ts` preserves gate-entry/task order, content-addressed snapshot names, original package bytes, task directories and exact manifest/JSONL output; `patch-collect.ts` preserves task/blocker classification, patch-file/set/operation order, exact ready batch bytes and native manifest errors. Only a blocker-free collection writes a fresh batch. Inventory moves 105→101 without changing help, profiles, Golden artifacts or remote-write authority.
 
 Wave 24 B3 migrates the curation planning boundary in topology order. `curation-gate-workflow.ts` remains a pure live-reference aggregate; `curation-gate.ts` preserves blocked entity, schema/QA/context/action ordering, authoring-package hashes and report/process aliases; `curation-cleanup.ts` preserves deep-cloned row order, exact JSONL/report bytes, annual sentinel and trace transforms, source-only-output proof, redaction counts and native failures. Inventory moves 101→98 without changing profiles, command help, Golden artifacts, Worldsteel semantics or remote-write authority.
+
+Wave 25 migrates the three decision command factories in dependency order: standalone `identity-decisions.ts` first, then the shared-dispatch `classification-decisions.ts` and `location-decisions.ts` family. Characterization preserves exact help/report bytes, input aliases and defaults, row/path/order semantics, decision-task and queue closure blockers, deterministic CLI argv/stage failure behavior, read-only identity splitting, artifact write boundaries, and native JSON/filesystem errors. Inventory moves 98→95 without changing command names, profile defaults, Worldsteel behavior, or remote-write authority.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

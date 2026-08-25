@@ -44,8 +44,8 @@ checkPaths:
   - scripts/lib/import-curation/curation-gate.ts
   - scripts/lib/import-curation/curation-cleanup.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 B3: curation aggregate/gate/cleanup remain Foundry-local and preserve cross-repository ownership, CLI routing, profile, search, Worldsteel, and execution boundaries."
+lastReviewedCommit: 680409f8462336748e8c0c68533c2f6ee7464297
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: decision validation/projection remains Foundry-local, deterministic classification/location apply remains CLI-routed, and profile, search, Worldsteel, and execution ownership boundaries are unchanged."
 ---
 
 # Workspace Project Map

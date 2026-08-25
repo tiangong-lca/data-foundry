@@ -19,6 +19,9 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/commands/identity-decisions.ts
+  - scripts/commands/classification-decisions.ts
+  - scripts/commands/location-decisions.ts
   - scripts/lib/bafu-family-signatures.ts
   - scripts/lib/import-ledger.ts
   - scripts/lib/canonical-support-rewrites.ts
@@ -32,9 +35,11 @@ checkPaths:
   - scripts/lib/import-curation/curation-cleanup.ts
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
+  - test/unit/wave25-identity-decision-command-migration.test.mts
+  - test/unit/wave25-classification-location-command-migration.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 B3: typing curation aggregate/gate/cleanup changes no command category, owner/export identity, help, exit mapping, profile default, artifact contract, Worldsteel semantics, or remote-write mode."
+lastReviewedCommit: 680409f8462336748e8c0c68533c2f6ee7464297
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: moving identity/classification/location owners to native TS changes no command name/category, export identity, exact help, exit mapping, artifact contract, profile default, Worldsteel behavior, or remote-write mode."
 ---
 
 # Foundry Command Surface
@@ -49,6 +54,8 @@ Foundry CLI-spine and command governance has three checked contracts:
 The metadata module must cover every command returned by `node scripts/foundry.mjs help`. It records each command category, owner module, owner export, input artifacts, output artifacts, workflow entry audit state, and key behavior checks.
 
 Issue #63 does not change the public command categories or behavior. It introduces the Node.js 24 / pnpm 11.23 / TypeScript 7.0.2 typed spine underneath the same surface. The argument parser and command registry are native TypeScript leaves; `test/unit/foundry-cli-spine.test.mts` fixes their scalar/argv parsing, exact help JSON, exit mapping, and static consumer contract. Later migration work must preserve the registered command name, help, stdout, exit code, stage contract, input/output artifacts, and remote-write mode before removing a JavaScript implementation from `specs/typescript-migration-inventory.json`. Use focused characterization and real cases; do not treat an extension rename as command migration.
+
+Wave 25 moves the existing identity, classification, and location owner factories to `.ts` without changing their command metadata or dispatcher topology. The migration tests fix owner/export identity and exact help bytes, while the existing command/scenario fixtures remain the behavior authority for aliases, defaults, queue/path order, blockers, deterministic CLI apply stages, local artifacts, and fail-closed errors.
 
 The Wave 8 BAFU family-signature and import-ledger migrations remain supporting typed leaves beneath the existing `dataset-bafu-batch-import-run` and `dataset-import-ledger-report` owners. Their command registry and metadata entries, help JSON, artifact schemas, exit mapping, and remote-write modes are unchanged.
 

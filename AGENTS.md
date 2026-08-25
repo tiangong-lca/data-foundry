@@ -98,8 +98,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 B3: the typed curation aggregate, gate runner, and cleanup runner preserve live exports, entity/blocker/context/package order, exact report/JSONL bytes, deterministic cleanup proofs, counts, and native failures without credentials or remote execution."
+lastReviewedCommit: 680409f8462336748e8c0c68533c2f6ee7464297
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: native identity/classification/location decision factories preserve Foundry-local validation, queue and blocker order, deterministic owner-CLI delegation, artifact bytes, and native failures without credentials or remote execution."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
