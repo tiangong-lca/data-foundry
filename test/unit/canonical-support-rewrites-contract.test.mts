@@ -552,6 +552,7 @@ test("canonical rewrite fails closed on missing, non-finite, zero, and negative 
           options: {
             canonicalSupportCache: cacheFile,
             blockOnUnscaledCanonicalSupport: true,
+            allowAccountLocalSupportAndElementary: label === "missing",
           },
         });
         assert.equal(blocked.status, "blocked");

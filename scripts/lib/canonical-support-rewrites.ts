@@ -51,6 +51,7 @@ type RewriteStats = {
   canonical_unit_group_reference_proofs: number;
   amount_scaling_required_rewrites: number;
   amount_scaling_blocked: number;
+  amount_scaling_unresolved: number;
 };
 
 type RewriteContext = {
@@ -393,6 +394,7 @@ export function createCanonicalSupportRewriteUtils({
           const amountScale = resolveAmountScale(mapping, unit, normalizedUnit);
           const scaleResolved = amountScale !== null && Number.isFinite(amountScale);
           const needsScaling = scaleResolved && amountScale !== 1;
+          const scaleInvalid = !scaleResolved || amountScale <= 0;
           rewriteRows.push({
             relation: "flow_property_reference_to_canonical_support",
             dataset_type: datasetType,
@@ -419,7 +421,32 @@ export function createCanonicalSupportRewriteUtils({
             mapping_reason: mapping.reason ?? null,
             legacy_support_note: mapping.legacy_support_note ?? null,
           });
-          if (needsScaling) {
+          if (blockOnUnscaled && scaleInvalid) {
+            stats.amount_scaling_unresolved = Number(stats.amount_scaling_unresolved ?? 0) + 1;
+            const unresolvedRequirement = {
+              dataset_type: datasetType,
+              dataset_id: datasetIdentityCache?.id ?? null,
+              dataset_version: datasetIdentityCache?.version ?? null,
+              row_index: rowIndex,
+              source_file: repoRelativeMaybe(sourceFile),
+              path: pathExpression(childPath),
+              source_unit: unit,
+              canonical_reference_unit: mapping.canonical_reference_unit ?? null,
+              amount_scale_to_canonical_reference: null,
+              configured_amount_scale_to_canonical_reference: scaleResolved ? amountScale : null,
+              scale_resolution_status: "unresolved_scale",
+              note: "The canonical mapping does not provide a finite positive amount scale for this source unit. The reference may be rewritten for evidence, but the scope must remain blocked because no physically valid conversion factor is proven.",
+            };
+            scalingRequirements.push(unresolvedRequirement);
+            blockers.push({
+              code: "canonical_support_amount_scale_unresolved",
+              message:
+                "Canonical Flow Property mapping is missing a finite positive amount scale for the source unit; block before write because the rewritten reference cannot prove physical quantity equivalence.",
+              ...unresolvedRequirement,
+              required_resolution:
+                "Add a finite positive source_unit_scales value backed by the canonical Unit Group conversion, refresh the support cache, and rerun with --block-on-unscaled-canonical-support.",
+            });
+          } else if (needsScaling) {
             stats.amount_scaling_required_rewrites =
               Number(stats.amount_scaling_required_rewrites ?? 0) + 1;
             const requirement = {
@@ -537,6 +564,7 @@ export function createCanonicalSupportRewriteUtils({
       canonical_unit_group_reference_proofs: 0,
       amount_scaling_required_rewrites: 0,
       amount_scaling_blocked: 0,
+      amount_scaling_unresolved: 0,
     };
     const rewriteRows: JsonRecord[] = [];
     const blockers: JsonRecord[] = [];
@@ -639,6 +667,9 @@ export function createCanonicalSupportRewriteUtils({
         canonical_unit_group_reference_proofs: stats.canonical_unit_group_reference_proofs,
         amount_scaling_required_rewrites: stats.amount_scaling_required_rewrites,
         amount_scaling_blocked: stats.amount_scaling_blocked,
+        ...(stats.amount_scaling_unresolved > 0
+          ? { amount_scaling_unresolved: stats.amount_scaling_unresolved }
+          : {}),
         blockers: hardBlockers.length,
         deferred_blockers: deferBlockedRows ? blockers.length : 0,
       },

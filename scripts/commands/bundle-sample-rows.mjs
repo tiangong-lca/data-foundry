@@ -708,6 +708,7 @@ export function createBundleSampleRowsCommands({
       canonical_unit_group_reference_proofs: 0,
       amount_scaling_required_rewrites: 0,
       amount_scaling_blocked: 0,
+      amount_scaling_unresolved: 0,
     };
     const sourceClassificationRepairRows = [];
     const templateContact = findFirstBundleContactTemplate(selection.selected);
@@ -1098,6 +1099,9 @@ export function createBundleSampleRowsCommands({
     if (canonicalSupportStats.amount_scaling_blocked > 0) {
       sanitizeStats.amount_scaling_blocked = canonicalSupportStats.amount_scaling_blocked;
     }
+    if (canonicalSupportStats.amount_scaling_unresolved > 0) {
+      sanitizeStats.amount_scaling_unresolved = canonicalSupportStats.amount_scaling_unresolved;
+    }
 
     const rowFiles = {};
     const countsByType = {};
@@ -1416,7 +1420,7 @@ export function createBundleSampleRowsCommands({
         ...(canonicalSupportScalingRequirements.length > 0 || blockOnUnscaledCanonicalSupport
           ? {
               canonical_support_amount_scaling:
-                "Canonical support rewrites never convert amounts. Scale!=1 requirements remain explicit local evidence and block bundle materialization only when --block-on-unscaled-canonical-support is supplied.",
+                "Canonical support rewrites never convert amounts. Scale!=1 requirements remain explicit local evidence; under --block-on-unscaled-canonical-support, known positive factors use canonical_support_amount_scaling_required while missing, non-finite, zero, or negative factors use canonical_support_amount_scale_unresolved.",
             }
           : {}),
         true_source_classification_repair:

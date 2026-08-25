@@ -10,6 +10,7 @@
 - `specs/canonical-support/flow-properties-unit-groups.json` — 同步上述（rewrite 实际读取此缓存，不读 .mjs）。
 - `scripts/lib/canonical-support-rewrites.ts` — rewrite 变 scale-aware：在 rewrite 行与报告中记录 `amount_scale_to_canonical_reference`；当 scale≠1 写入 `canonical-support-amount-scaling.jsonl` 与 `amount_scaling_requirements`；`--block-on-unscaled-canonical-support` 时升级为硬 blocker；pending mapping 产出 `canonical_support_pending_upstream` blocker。
 - `dataset-bundle-sample-rows` — materialization 必须把同一 scaling requirement、block flag 和 blocker 传入 canonical rewrite；一旦提前把源 FP 改为 canonical UUID，后续 finalize 已无法从 canonical 引用恢复原始单位尺度。带 flag 的 scale≠1 scope 会进入 `process-scope-ledger.jsonl` 的 `needs_ai_authoring`，并保留独立 scaling JSONL。
+- blocking flag 下 scale 合同 fail-closed：已知、有限且为正的非 1 因子使用 `canonical_support_amount_scaling_required`；缺失、NaN、无限、0 或负数使用 `canonical_support_amount_scale_unresolved`。后者不得被当作普通 scale≠1，也不得用 account-local override 放行。
 - `test/commands/canonical-support-rewrites.test.mjs` — 覆盖 scale 记录 / 阻断 flag / factor=1 不触发 / pending blocker。
 
 ---
