@@ -4,6 +4,10 @@ import {
   createBafuProcessScopeE2eCommands,
 } from "../../scripts/commands/bafu-process-scope-e2e.mjs";
 import {
+  createFileArtifactFact,
+  createFoundryCommandSpec,
+} from "../../scripts/lib/foundry-command-spec.ts";
+import {
   assert,
   fs,
   path,
@@ -341,9 +345,27 @@ test("BAFU process scope helper reads verified support identities for handoff re
   try {
     const handoffPlan = {
       commands: {
-        commit: `node scripts/foundry.mjs dataset save-draft --type auto --input '${rel(
-          supportRowsFile,
-        )}'`,
+        commit: createFoundryCommandSpec({
+          executable: process.execPath,
+          argv: [
+            "scripts/foundry.mjs",
+            "dataset",
+            "save-draft",
+            "--type",
+            "auto",
+            "--input",
+            rel(supportRowsFile),
+          ],
+          binding: {
+            artifacts: [
+              createFileArtifactFact({
+                role: "final_rows",
+                path: rel(supportRowsFile),
+                filePath: supportRowsFile,
+              }),
+            ],
+          },
+        }),
       },
     };
     const identities = bafuProcessScopeE2eTestHooks.supportIdentityKeysFromHandoffPlan(handoffPlan);

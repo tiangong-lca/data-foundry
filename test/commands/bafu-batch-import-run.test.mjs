@@ -5,6 +5,10 @@ import {
   filterAuthoringTaskManifestToRows,
 } from "../../scripts/commands/bafu-batch-import-run.mjs";
 import {
+  createFileArtifactFact,
+  createFoundryCommandSpec,
+} from "../../scripts/lib/foundry-command-spec.ts";
+import {
   assert,
   fs,
   path,
@@ -2058,7 +2062,27 @@ test("supportIdentityKeysFromHandoffPlan extracts minted FP/UG keys only under t
   ]);
   const handoffPlan = {
     commands: {
-      commit: `tiangong-lca dataset save-draft --type auto --input ${supportRowsFile} --commit`,
+      commit: createFoundryCommandSpec({
+        executable: "tiangong-lca",
+        argv: [
+          "dataset",
+          "save-draft",
+          "--type",
+          "auto",
+          "--input",
+          supportRowsFile,
+          "--commit",
+        ],
+        binding: {
+          artifacts: [
+            createFileArtifactFact({
+              role: "final_rows",
+              path: supportRowsFile,
+              filePath: supportRowsFile,
+            }),
+          ],
+        },
+      }),
     },
   };
   try {
