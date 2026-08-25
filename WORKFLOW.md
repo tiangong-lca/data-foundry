@@ -269,7 +269,7 @@ checkPaths:
   - test/README.md
 lastReviewedAt: 2026-08-26
 lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
-lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: focused Oxlint AST contracts guard decision/preflight and source/row/reference families while established cases preserve exact artifacts/order/hashes/errors, CommandSpecs, first-binding and fail-closed authority."
+lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: Oxlint AST contracts guard decision/preflight, source/row/reference and proof/signature/trace families while established cases preserve dependency order, exact artifacts/hashes/errors, CommandSpecs, first-binding and fail-closed authority."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

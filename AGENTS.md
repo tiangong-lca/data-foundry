@@ -220,7 +220,7 @@ checkPaths:
   - specs/**
 lastReviewedAt: 2026-08-26
 lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
-lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: decision/preflight plus source/row/reference boundaries use concrete interfaces or narrowed unknown while preserving exact selection, bytes/order/hashes/errors, first-binding and fail-closed authority without credentials."
+lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: decision/preflight, source/row/reference and proof/signature/trace boundaries use semantic interfaces, narrowed unknown and Oxlint AST evidence while preserving exact artifacts/order/hashes/native errors and fail-closed authority without credentials."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

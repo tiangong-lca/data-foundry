@@ -12,7 +12,7 @@ import {
   resolveTiangongLcaCliRuntimeCommand,
 } from "../../scripts/lib/foundry-runtime-utils.ts";
 
-type JsonObject = Record<string, any>;
+type JsonObject = Record<string, unknown>;
 
 function withTempRoot(name: string, body: (root: string) => void): void {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), `${name}-`));

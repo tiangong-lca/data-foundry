@@ -3,7 +3,11 @@ import fs from "node:fs";
 import test from "node:test";
 import { createLocationQualityUtils } from "../../scripts/lib/location-quality-utils.ts";
 
-type JsonObject = Record<string, any>;
+type JsonObject = Record<string, unknown>;
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
 
 const bundleRowTypes = {
   contact: { plural: "contacts" },
@@ -30,24 +34,25 @@ function makeUtils({
   directoryExists?: (directory: string) => boolean;
   readJson?: (filePath: string) => JsonObject;
 } = {}) {
-  const asText = (value: any): string => {
+  const asText = (value: unknown): string => {
     if (value == null) return "";
     if (typeof value === "string" || typeof value === "number") return String(value).trim();
-    if (typeof value === "object") return asText(value["#text"] ?? value.value ?? "");
+    if (isJsonObject(value)) return asText(value["#text"] ?? value.value ?? "");
     return "";
   };
   return createLocationQualityUtils({
     asText,
     bundleRowTypes,
     datasetIdentity: (payload: unknown, type: string) => {
-      const record = payload as JsonObject;
+      const record = isJsonObject(payload) ? payload : {};
+      const identity = isJsonObject(record.__identity) ? record.__identity : {};
       return {
-        id: record.__identity?.id ?? `${type}-id`,
-        version: record.__identity?.version ?? "00.00.001",
+        id: asText(identity.id) || `${type}-id`,
+        version: asText(identity.version) || "00.00.001",
       };
     },
     directoryExists,
-    ensureArray: (value: any) => (Array.isArray(value) ? value : value == null ? [] : [value]),
+    ensureArray: (value: unknown) => (Array.isArray(value) ? value : value == null ? [] : [value]),
     fileExists,
     pathExpression: (parts: Array<string | number>) => parts.join("."),
     readJson,

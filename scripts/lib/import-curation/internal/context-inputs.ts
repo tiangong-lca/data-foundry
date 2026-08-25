@@ -13,7 +13,11 @@ import {
   resolveRepoPath,
 } from "./runtime-io.ts";
 
-type JsonRecord = Record<string, any>;
+type JsonRecord = Record<string, unknown>;
+
+function asJsonRecord(value: unknown): JsonRecord {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
+}
 
 export type ContextFile = {
   kind: string;
@@ -29,6 +33,19 @@ export type FullContextAiCompletion = {
   proof: string;
 };
 
+export type FullContextGateItem = {
+  source: "full_context";
+  code: "full_context_required_kind_missing" | "full_context_required_file_missing";
+  path: null;
+  message: string;
+  action_kind: "context_pack_required";
+  required_owner: "foundry_context_pack";
+  ai_required: false;
+  required_kind?: string;
+  required_file_pattern?: string;
+  instruction: string;
+};
+
 export const tidasSchemaSearchRoots = ["@tiangong-lca/cli@0.1.1/assets/tidas-schemas"];
 
 export function tidasSchemaPath(repoRoot: string, schemaFile: string): string | null {
@@ -37,12 +54,12 @@ export function tidasSchemaPath(repoRoot: string, schemaFile: string): string | 
   return fileExists(candidate) ? candidate : null;
 }
 
-export function loadTidasSchema(repoRoot: string, schemaFile: string): any {
+export function loadTidasSchema(repoRoot: string, schemaFile: string): unknown {
   const schemaPath = tidasSchemaPath(repoRoot, schemaFile);
   return schemaPath ? readJson(schemaPath) : null;
 }
 
-export function collectExplicitContextFiles(options: JsonRecord): Array<[string, any]> {
+export function collectExplicitContextFiles(options: JsonRecord): Array<[string, unknown]> {
   return (
     [
       ["contract_context", options.contractContext ?? options.contextFile],
@@ -50,7 +67,7 @@ export function collectExplicitContextFiles(options: JsonRecord): Array<[string,
       ["methodology_yaml", options.yamlFile],
       ["ruleset", options.rulesetFile],
       ["contract", options.contractFile],
-    ] as Array<[string, any]>
+    ] as Array<[string, unknown]>
   ).filter(([, filePath]) => Boolean(filePath));
 }
 
@@ -123,8 +140,8 @@ export function readContextFiles(
   return { files, missing };
 }
 
-export function normalizeFullContextAiCompletion(value: any): FullContextAiCompletion {
-  const config = value && typeof value === "object" ? value : {};
+export function normalizeFullContextAiCompletion(value: unknown): FullContextAiCompletion {
+  const config = asJsonRecord(value);
   return {
     required: Boolean(config.required ?? config.require ?? false),
     datasetTypes: ensureArray(config.dataset_types ?? config.datasetTypes)
@@ -145,11 +162,20 @@ export function normalizeFullContextAiCompletion(value: any): FullContextAiCompl
 }
 
 export function fullContextAiCompletionRequirement(
-  profile: any,
+  profile: unknown,
   datasetType: string,
   repoRoot?: string,
 ): FullContextAiCompletion | null {
-  const requirement = profile?.fullContextAiCompletion ?? normalizeFullContextAiCompletion(null);
+  const profileRecord = asJsonRecord(profile);
+  const configuredRequirement = asJsonRecord(profileRecord.fullContextAiCompletion);
+  const requirement: FullContextAiCompletion =
+    typeof configuredRequirement.required === "boolean" &&
+    Array.isArray(configuredRequirement.datasetTypes) &&
+    Array.isArray(configuredRequirement.requiredContextKinds) &&
+    Array.isArray(configuredRequirement.requiredContextFilePatterns) &&
+    typeof configuredRequirement.proof === "string"
+      ? (configuredRequirement as FullContextAiCompletion)
+      : normalizeFullContextAiCompletion(null);
   if (!requirement.required) return null;
   if (requirement.datasetTypes.length > 0 && !requirement.datasetTypes.includes(datasetType)) {
     return null;
@@ -188,20 +214,23 @@ export function fullContextAiCompletionRequirement(
 }
 
 export function contextFileDetails(
-  files: any,
+  files: unknown,
 ): Array<{ kind: string; path: string | null; sha256: string; bytes: number }> {
-  return ensureArray(files).map((file) => ({
-    kind: asText(file?.kind) || "context",
-    path: asText(file?.path) || null,
-    sha256: sha256Text(file?.text ?? ""),
-    bytes: Buffer.byteLength(String(file?.text ?? ""), "utf8"),
-  }));
+  return ensureArray(files).map((value) => {
+    const file = asJsonRecord(value);
+    return {
+      kind: asText(file.kind) || "context",
+      path: asText(file.path) || null,
+      sha256: sha256Text(file.text ?? ""),
+      bytes: Buffer.byteLength(String(file.text ?? ""), "utf8"),
+    };
+  });
 }
 
-export function contextHasFilePattern(files: any, pattern: unknown): boolean {
+export function contextHasFilePattern(files: unknown, pattern: unknown): boolean {
   const needle = String(pattern).toLowerCase();
-  return ensureArray(files).some((file) =>
-    String(file?.path ?? "")
+  return ensureArray(files).some((value) =>
+    String(asJsonRecord(value).path ?? "")
       .toLowerCase()
       .includes(needle),
   );
@@ -211,15 +240,17 @@ export function fullContextGateItems({
   contractContext,
   requirement,
 }: {
-  contractContext: { files: any[] };
+  contractContext: { files: unknown[] };
   requirement: Pick<
     FullContextAiCompletion,
     "requiredContextKinds" | "requiredContextFilePatterns"
   > | null;
-}): JsonRecord[] {
+}): FullContextGateItem[] {
   if (!requirement) return [];
-  const kinds = new Set(contractContext.files.map((file) => asText(file.kind)).filter(Boolean));
-  const items: JsonRecord[] = [];
+  const kinds = new Set(
+    contractContext.files.map((file) => asText(asJsonRecord(file).kind)).filter(Boolean),
+  );
+  const items: FullContextGateItem[] = [];
   for (const kind of requirement.requiredContextKinds) {
     if (!kinds.has(kind)) {
       items.push({

@@ -3,7 +3,7 @@ import { asText, ensureArray } from "./runtime-io.ts";
 
 export type CollectedTraceEntry = {
   path: string;
-  entry: any;
+  entry: unknown;
 };
 
 export type CompactFoundryTraceEntry = {
@@ -20,23 +20,26 @@ export type CompactFoundryTraceEntry = {
   blocked_path: string | null;
   reason: string | null;
   next_action: string | null;
-  evidence: any;
+  evidence: unknown;
   trace_sha256: string;
 };
 
 export function traceSummaryCount(value: unknown): number {
   let count = 0;
-  const visit = (node: any): void => {
+  const visit = (node: unknown): void => {
     if (!node || typeof node !== "object") return;
     if (Array.isArray(node)) {
       for (const item of node) visit(item);
       return;
     }
-    const other = node["common:other"];
+    const record = node as Record<string, unknown>;
+    const other = record["common:other"];
     if (other && typeof other === "object" && !Array.isArray(other)) {
-      count += ensureArray(other["tiangongfoundry:importTraceSummary"]).length;
+      count += ensureArray(
+        (other as Record<string, unknown>)["tiangongfoundry:importTraceSummary"],
+      ).length;
     }
-    for (const child of Object.values(node)) visit(child);
+    for (const child of Object.values(record)) visit(child);
   };
   visit(value);
   return count;
@@ -48,15 +51,16 @@ export function collectCommonOtherTraceEntries(
   basePath = "$",
 ): CollectedTraceEntry[] {
   const entries: CollectedTraceEntry[] = [];
-  const visit = (node: any, currentPath: string): void => {
+  const visit = (node: unknown, currentPath: string): void => {
     if (!node || typeof node !== "object") return;
     if (Array.isArray(node)) {
       node.forEach((item, index) => visit(item, `${currentPath}[${index}]`));
       return;
     }
-    const other = node["common:other"];
+    const record = node as Record<string, unknown>;
+    const other = record["common:other"];
     if (other && typeof other === "object" && !Array.isArray(other)) {
-      const traceValue = other[traceKey];
+      const traceValue = (other as Record<string, unknown>)[traceKey];
       if (traceValue !== undefined) {
         ensureArray(traceValue).forEach((entry, index) => {
           entries.push({
@@ -66,7 +70,7 @@ export function collectCommonOtherTraceEntries(
         });
       }
     }
-    Object.entries(node).forEach(([key, child]) => {
+    Object.entries(record).forEach(([key, child]) => {
       if (key === "common:other") return;
       visit(child, `${currentPath}.${key}`);
     });
@@ -87,11 +91,11 @@ export function compactFoundryTraceEntry({
   identity: { id: unknown; version: unknown };
   rowIndex: number;
   traceKind: string;
-  trace: CollectedTraceEntry | { path?: string | null; entry?: any };
+  trace: CollectedTraceEntry | { path?: string | null; entry?: unknown };
 }): CompactFoundryTraceEntry {
-  const entry =
+  const entry: Record<string, unknown> =
     trace?.entry && typeof trace.entry === "object" && !Array.isArray(trace.entry)
-      ? trace.entry
+      ? (trace.entry as Record<string, unknown>)
       : { value: trace?.entry ?? null };
   return {
     dataset_type: datasetType,

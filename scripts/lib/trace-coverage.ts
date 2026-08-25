@@ -1,12 +1,52 @@
+type JsonRecord = Record<string, unknown>;
+
+interface TraceIdentity {
+  id: unknown;
+  version: unknown;
+}
+
+interface TraceCoverageRow extends JsonRecord {
+  dataset_type?: unknown;
+  entity_id?: unknown;
+  version?: unknown;
+  row_index?: unknown;
+  trace_kind?: unknown;
+  path?: unknown;
+  status?: unknown;
+  action_item_code?: unknown;
+  blocked_path?: unknown;
+  trace_sha256?: unknown;
+}
+
+interface FoundryTraceSummary {
+  unresolved_traces: TraceCoverageRow[];
+  source_exchange_completeness: TraceCoverageRow[];
+}
+
+type TraceCoverageBlocker = JsonRecord;
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function asTraceCoverageRow(value: unknown): TraceCoverageRow {
+  return isJsonRecord(value) ? value : {};
+}
+
 export type TraceCoverageDependencies = {
-  asText: (value: any) => string;
-  datasetIdentity: (row: any, datasetType: string) => { id: any; version: any };
-  fileExists: (filePath: any) => boolean;
-  foundryTraceSummary: (options: any) => any;
-  readJsonLines: (filePath: string) => any[];
-  readRowsFile: (filePath: string) => any[];
+  asText: (value: unknown) => string;
+  datasetIdentity: (row: JsonRecord, datasetType: string) => TraceIdentity;
+  fileExists: (filePath: string) => boolean;
+  foundryTraceSummary: (options: {
+    datasetType: string;
+    identity: TraceIdentity;
+    row: JsonRecord;
+    rowIndex: number;
+  }) => FoundryTraceSummary;
+  readJsonLines: (filePath: string) => unknown[];
+  readRowsFile: (filePath: string) => unknown[];
   repoRelativePath: (filePath: string) => string;
-  resolveRepoPath: (filePath: any) => string | null;
+  resolveRepoPath: (filePath: string | null | undefined) => string | null;
 };
 
 export function createTraceCoverageUtils({
@@ -19,31 +59,34 @@ export function createTraceCoverageUtils({
   repoRelativePath,
   resolveRepoPath,
 }: TraceCoverageDependencies) {
-  function closeoutTraceDatasetType(row: any, fallbackType: any) {
+  function closeoutTraceDatasetType(row: unknown, fallbackType: unknown): string {
     const fallback = asText(fallbackType).toLowerCase();
     if (fallback && fallback !== "support") return fallback;
-    if (row?.contactDataSet) return "contact";
-    if (row?.sourceDataSet) return "source";
-    if (row?.flowDataSet) return "flow";
-    if (row?.processDataSet) return "process";
-    if (row?.lifeCycleModelDataSet) return "lifecyclemodel";
-    if (row?.unitGroupDataSet) return "unitgroup";
-    if (row?.flowPropertyDataSet) return "flowproperty";
+    const record = isJsonRecord(row) ? row : {};
+    if (record.contactDataSet) return "contact";
+    if (record.sourceDataSet) return "source";
+    if (record.flowDataSet) return "flow";
+    if (record.processDataSet) return "process";
+    if (record.lifeCycleModelDataSet) return "lifecyclemodel";
+    if (record.unitGroupDataSet) return "unitgroup";
+    if (record.flowPropertyDataSet) return "flowproperty";
     return fallback || "support";
   }
 
-  function closeoutTraceIdentity(row: any, datasetType: string, rowIndex: number) {
+  function closeoutTraceIdentity(row: JsonRecord, datasetType: string, rowIndex: number) {
     const identity = datasetIdentity(row, datasetType);
+    const record = row;
     return {
       id:
         identity.id ||
-        asText(row?.dataset_id ?? row?.entity_id ?? row?.id) ||
+        asText(record.dataset_id ?? record.entity_id ?? record.id) ||
         `row-${rowIndex + 1}`,
-      version: identity.version || asText(row?.dataset_version ?? row?.version) || "00.00.001",
+      version: identity.version || asText(record.dataset_version ?? record.version) || "00.00.001",
     };
   }
 
-  function traceQueueCoverageKey(trace: any) {
+  function traceQueueCoverageKey(traceValue: unknown): string {
+    const trace = asTraceCoverageRow(traceValue);
     return JSON.stringify([
       asText(trace?.dataset_type).toLowerCase(),
       asText(trace?.entity_id),
@@ -58,11 +101,18 @@ export function createTraceCoverageUtils({
     ]);
   }
 
-  function expectedTraceRowsFromFinalRows({ datasetType, finalRowsFile }: any) {
+  function expectedTraceRowsFromFinalRows({
+    datasetType,
+    finalRowsFile,
+  }: {
+    datasetType: string;
+    finalRowsFile: string;
+  }) {
     const rows = readRowsFile(finalRowsFile);
-    const unresolved: any[] = [];
-    const sourceExchangeCompleteness: any[] = [];
-    rows.forEach((row: any, rowIndex: number) => {
+    const unresolved: TraceCoverageRow[] = [];
+    const sourceExchangeCompleteness: TraceCoverageRow[] = [];
+    rows.forEach((rowValue, rowIndex) => {
+      const row = asTraceCoverageRow(rowValue);
       const effectiveType = closeoutTraceDatasetType(row, datasetType);
       const identity = closeoutTraceIdentity(row, effectiveType, rowIndex);
       const summary = foundryTraceSummary({
@@ -86,10 +136,16 @@ export function createTraceCoverageUtils({
     expectedRows,
     queuePath,
     blockers,
-  }: any) {
+  }: {
+    traceQueue: string;
+    traceKind: string;
+    expectedRows: TraceCoverageRow[];
+    queuePath: string | null | undefined;
+    blockers: TraceCoverageBlocker[];
+  }): void {
     const resolved = resolveRepoPath(queuePath);
     if (!resolved || !fileExists(resolved)) return;
-    const actualRows = readJsonLines(resolved);
+    const actualRows = readJsonLines(resolved).map(asTraceCoverageRow);
     if (actualRows.length !== expectedRows.length) {
       blockers.push({
         code: "trace_queue_final_rows_count_mismatch",
@@ -102,14 +158,14 @@ export function createTraceCoverageUtils({
     }
 
     const actualKeys = new Map<string, number[]>();
-    actualRows.forEach((row: any, index: number) => {
+    actualRows.forEach((row, index) => {
       const key = traceQueueCoverageKey(row);
       const entries = actualKeys.get(key) ?? [];
       entries.push(index);
       actualKeys.set(key, entries);
     });
     const expectedKeys = new Map<string, number[]>();
-    expectedRows.forEach((row: any, index: number) => {
+    expectedRows.forEach((row, index) => {
       const key = traceQueueCoverageKey(row);
       const entries = expectedKeys.get(key) ?? [];
       entries.push(index);
@@ -128,7 +184,7 @@ export function createTraceCoverageUtils({
         });
       }
     });
-    actualRows.forEach((row: any, index: number) => {
+    actualRows.forEach((row, index) => {
       const key = traceQueueCoverageKey(row);
       if (!expectedKeys.has(key)) {
         blockers.push({
@@ -153,7 +209,19 @@ export function createTraceCoverageUtils({
     traceQueues,
     counts,
     blockers,
-  }: any) {
+  }: {
+    datasetType: string;
+    finalRowsFile: string;
+    traceQueues: {
+      unresolved_traces?: string | null;
+      source_exchange_completeness_traces?: string | null;
+    };
+    counts: {
+      unresolved_trace_entries: number;
+      source_exchange_completeness_entries: number;
+    };
+    blockers: TraceCoverageBlocker[];
+  }): void {
     const expected = expectedTraceRowsFromFinalRows({
       datasetType,
       finalRowsFile,

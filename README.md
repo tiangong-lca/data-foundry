@@ -142,7 +142,7 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-26
 lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
-lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: decision/preflight and source/row/reference leaves plus their cases reject explicit any while preserving profiles, exact artifacts, bytes/order/hashes/errors and authority boundaries."
+lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: all remaining decision, source and proof leaves plus coupled cases use semantic interfaces, narrowed unknown and AST ratchets while preserving profiles, exact artifacts/bytes/order/hashes/errors and authority boundaries."
 ---
 
 # TianGong LCA Data Foundry

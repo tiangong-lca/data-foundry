@@ -5,6 +5,9 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+// Explicit TypeScript AnyKeyword closures are enforced by Oxlint; this suite remains the
+// permanent boundary against reintroducing first-party JavaScript compatibility paths.
+
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
 

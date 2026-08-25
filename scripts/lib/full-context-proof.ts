@@ -1,3 +1,69 @@
+type JsonRecord = Record<string, unknown>;
+
+interface JsonArtifact {
+  path: string;
+  value: unknown;
+}
+
+interface FullContextRequirement extends JsonRecord {
+  profile_id: unknown;
+  dataset_type: string | null;
+  required_context_kinds: string[];
+  required_context_file_patterns: string[];
+}
+
+interface ProofBlocker extends JsonRecord {
+  code: string;
+  message: string;
+}
+
+interface AuthoringPackageProof extends JsonRecord {
+  source: unknown;
+  path: unknown;
+  sha256: string | null;
+  expected_sha256: string | null;
+  contract_context_files: unknown[];
+  missing_context_files: unknown[];
+  blockers: ProofBlocker[];
+}
+
+interface FullContextProofDependencies {
+  asText: (value: unknown) => string;
+  classificationDecisionUsedContextKinds: (row: unknown) => string[];
+  decisionCompletionStatus: (row: unknown) => string;
+  decisionContextBundleSha256: (row: unknown) => string;
+  ensureArray: (value: unknown) => unknown[];
+  fileExists: (filePath: string) => boolean;
+  listImportProfiles: (options: { repoRoot: string }) => unknown;
+  normalizedList: (value: unknown) => string[];
+  readJson: (filePath: string) => unknown;
+  readJsonArtifactOption: (value: unknown) => JsonArtifact | null;
+  readJsonLines: (filePath: string) => unknown[];
+  readText: (filePath: string) => string;
+  repoRelativePath: (filePath: string) => string;
+  resolveRepoPath: (value: unknown) => string | null;
+  repoRoot: string;
+  sha256Text: (value: unknown) => string;
+  unique: <T>(values: T[]) => T[];
+}
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function asJsonRecord(value: unknown): JsonRecord {
+  return isJsonRecord(value) ? value : {};
+}
+
+function nestedValue(value: unknown, ...keys: string[]): unknown {
+  let current = value;
+  for (const key of keys) {
+    if (!isJsonRecord(current)) return undefined;
+    current = current[key];
+  }
+  return current;
+}
+
 export function createFullContextProofUtils({
   asText,
   classificationDecisionUsedContextKinds,
@@ -16,23 +82,26 @@ export function createFullContextProofUtils({
   repoRoot,
   sha256Text,
   unique,
-}: any) {
-  function profileFullContextRequirement(profileId: any, datasetType: any) {
-    const listing = listImportProfiles({ repoRoot });
+}: FullContextProofDependencies) {
+  function profileFullContextRequirement(
+    profileId: unknown,
+    datasetType: unknown,
+  ): FullContextRequirement | null {
+    const listing = asJsonRecord(listImportProfiles({ repoRoot }));
     const requestedProfileId = asText(
       profileId || listing.default_profile || "generic",
     ).toLowerCase();
     const defaultProfileId = asText(listing.default_profile || "generic").toLowerCase();
-    const profile =
-      listing.profiles?.[requestedProfileId] ??
-      listing.profiles?.[defaultProfileId] ??
-      listing.profiles?.generic;
-    const requirement = profile?.full_context_ai_completion;
-    if (requirement?.required !== true) return null;
+    const profiles = asJsonRecord(listing.profiles);
+    const profile = asJsonRecord(
+      profiles[requestedProfileId] ?? profiles[defaultProfileId] ?? profiles.generic,
+    );
+    const requirement = asJsonRecord(profile.full_context_ai_completion);
+    if (requirement.required !== true) return null;
 
     const requiredDatasetTypes = normalizedList(
       requirement.dataset_types ?? requirement.datasetTypes,
-    ).map((value: any) => value.toLowerCase());
+    ).map((value) => value.toLowerCase());
     const normalizedDatasetType = asText(datasetType).toLowerCase();
     if (requiredDatasetTypes.length > 0 && !requiredDatasetTypes.includes(normalizedDatasetType)) {
       return null;
@@ -50,33 +119,40 @@ export function createFullContextProofUtils({
     };
   }
 
-  function taskProfileId(task: any) {
+  function taskProfileId(task: unknown): string {
     return asText(
-      task?.meta?.profile ??
-        task?.meta?.import_profile ??
-        task?.meta?.importProfile ??
-        task?.meta?.dataset_profile ??
-        task?.meta?.datasetProfile,
+      nestedValue(task, "meta", "profile") ??
+        nestedValue(task, "meta", "import_profile") ??
+        nestedValue(task, "meta", "importProfile") ??
+        nestedValue(task, "meta", "dataset_profile") ??
+        nestedValue(task, "meta", "datasetProfile"),
     );
   }
 
-  function taskDatasetType(task: any) {
-    return asText(task?.meta?.dataset_type ?? task?.meta?.datasetType);
+  function taskDatasetType(task: unknown): string {
+    return asText(
+      nestedValue(task, "meta", "dataset_type") ?? nestedValue(task, "meta", "datasetType"),
+    );
   }
 
-  function fullContextCount(counts: any, key: any) {
-    const value = Number(counts?.[key] ?? 0);
+  function fullContextCount(counts: unknown, key: string): number {
+    const value = Number(asJsonRecord(counts)[key] ?? 0);
     return Number.isFinite(value) && value > 0 ? value : 0;
   }
 
-  function normalizeProofRows(value: any) {
+  function normalizeProofRows(value: unknown): unknown[] {
     if (Array.isArray(value)) return value.filter(Boolean);
-    if (Array.isArray(value?.decisions)) return value.decisions.filter(Boolean);
-    if (Array.isArray(value?.rows)) return value.rows.filter(Boolean);
+    const record = asJsonRecord(value);
+    if (Array.isArray(record.decisions)) return record.decisions.filter(Boolean);
+    if (Array.isArray(record.rows)) return record.rows.filter(Boolean);
     return value && typeof value === "object" ? [value] : [];
   }
 
-  function readJsonOrJsonlRowsArtifact(value: any) {
+  function readJsonOrJsonlRowsArtifact(value: unknown): {
+    path: string | null;
+    rows: unknown[];
+    error: string | null;
+  } {
     const resolved = resolveRepoPath(value);
     if (!resolved || !fileExists(resolved)) {
       return { path: resolved, rows: [], error: "missing" };
@@ -108,15 +184,15 @@ export function createFullContextProofUtils({
     "deferred_to_common_other",
   ]);
 
-  function patchEvidenceResolution(entry: any) {
-    return entry?.resolution && typeof entry.resolution === "object" ? entry.resolution : {};
+  function patchEvidenceResolution(entry: unknown): JsonRecord {
+    return asJsonRecord(asJsonRecord(entry).resolution);
   }
 
-  function patchEvidenceResolutionMode(entry: any) {
+  function patchEvidenceResolutionMode(entry: unknown): string {
     return asText(patchEvidenceResolution(entry).mode);
   }
 
-  function patchEvidenceResolutionContextKinds(entry: any) {
+  function patchEvidenceResolutionContextKinds(entry: unknown): string[] {
     return unique(
       normalizedList(
         patchEvidenceResolution(entry).used_context_kinds ??
@@ -129,9 +205,13 @@ export function createFullContextProofUtils({
     packageRef,
     expectedSha256 = null,
     source = null,
-  }: any) {
+  }: {
+    packageRef: unknown;
+    expectedSha256?: unknown;
+    source?: unknown;
+  }): AuthoringPackageProof {
     const packagePath = resolveRepoPath(packageRef);
-    const proof: any = {
+    const proof: AuthoringPackageProof = {
       source,
       path: packageRef || null,
       sha256: null,
@@ -150,7 +230,7 @@ export function createFullContextProofUtils({
       return proof;
     }
     proof.path = repoRelativePath(packagePath);
-    let payload = null;
+    let payload: unknown = null;
     try {
       const rawText = readText(packagePath);
       proof.sha256 = sha256Text(rawText);
@@ -164,8 +244,9 @@ export function createFullContextProofUtils({
       });
       return proof;
     }
-    proof.contract_context_files = ensureArray(payload?.contract_context_files);
-    proof.missing_context_files = ensureArray(payload?.missing_context_files);
+    const payloadRecord = asJsonRecord(payload);
+    proof.contract_context_files = ensureArray(payloadRecord.contract_context_files);
+    proof.missing_context_files = ensureArray(payloadRecord.missing_context_files);
     if (proof.expected_sha256 && proof.expected_sha256 !== proof.sha256) {
       proof.blockers.push({
         code: "authoring_package_hash_mismatch",
@@ -180,37 +261,46 @@ export function createFullContextProofUtils({
     return proof;
   }
 
-  function authoringPackageProofsFromPatchCollect(patchCollectArtifact: any) {
-    const manifestRef = patchCollectArtifact?.value?.task_manifest;
+  function authoringPackageProofsFromPatchCollect(
+    patchCollectArtifact: JsonArtifact | null | undefined,
+  ): AuthoringPackageProof[] {
+    const manifestRef = nestedValue(patchCollectArtifact?.value, "task_manifest");
     const manifestArtifact = readJsonArtifactOption(manifestRef);
     if (!manifestArtifact) return [];
-    return ensureArray(manifestArtifact.value?.tasks)
-      .map((task: any) => {
-        const packageRef = asText(task?.files?.authoring_package ?? task?.files?.authoringPackage);
+    return ensureArray(nestedValue(manifestArtifact.value, "tasks"))
+      .map((taskValue) => {
+        const task = asJsonRecord(taskValue);
+        const packageRef = asText(
+          nestedValue(task, "files", "authoring_package") ??
+            nestedValue(task, "files", "authoringPackage"),
+        );
         if (!packageRef) return null;
         return readAuthoringPackageProofForFullContext({
           packageRef,
-          expectedSha256: task?.context?.authoring_package_sha256,
+          expectedSha256: nestedValue(task, "context", "authoring_package_sha256"),
           source: "patch_collect_task_manifest",
         });
       })
-      .filter(Boolean);
+      .filter((proof): proof is AuthoringPackageProof => proof !== null);
   }
 
-  function authoringPackageProofsFromCurationGate(mutationManifest: any) {
-    const curationGateArtifact = readJsonArtifactOption(
-      mutationManifest?.evidence?.curation_gate_report,
-    );
+  function authoringPackageProofsFromCurationGate(
+    mutationManifest: unknown,
+  ): AuthoringPackageProof[] {
+    const manifest = asJsonRecord(mutationManifest);
+    const evidence = asJsonRecord(manifest.evidence);
+    const curationGateArtifact = readJsonArtifactOption(evidence.curation_gate_report);
     if (!curationGateArtifact) return [];
     const entities = ensureArray(
-      curationGateArtifact.value?.entities ??
-        curationGateArtifact.value?.processes ??
-        curationGateArtifact.value?.flows ??
-        curationGateArtifact.value?.items,
+      nestedValue(curationGateArtifact.value, "entities") ??
+        nestedValue(curationGateArtifact.value, "processes") ??
+        nestedValue(curationGateArtifact.value, "flows") ??
+        nestedValue(curationGateArtifact.value, "items"),
     );
     return entities
-      .map((entity: any) => {
-        const packageRef = asText(entity?.authoring_package ?? entity?.authoringPackage);
+      .map((entityValue) => {
+        const entity = asJsonRecord(entityValue);
+        const packageRef = asText(entity.authoring_package ?? entity.authoringPackage);
         if (!packageRef) return null;
         return readAuthoringPackageProofForFullContext({
           packageRef,
@@ -218,7 +308,7 @@ export function createFullContextProofUtils({
           source: "curation_gate",
         });
       })
-      .filter(Boolean);
+      .filter((proof): proof is AuthoringPackageProof => proof !== null);
   }
 
   function fullContextEvidenceArtifactBlocker({
@@ -227,7 +317,13 @@ export function createFullContextProofUtils({
     suffix,
     message,
     details = {},
-  }: any) {
+  }: {
+    prefix: JsonRecord;
+    codePrefix: string;
+    suffix: string;
+    message: string;
+    details?: JsonRecord;
+  }): JsonRecord {
     return {
       ...prefix,
       code: `${codePrefix}_full_context_${suffix}`,
@@ -236,19 +332,22 @@ export function createFullContextProofUtils({
     };
   }
 
-  function decisionApplyTasksFromReport(report: any) {
-    const tasks = ensureArray(report?.decision_tasks ?? report?.decisionTasks);
+  function decisionApplyTasksFromReport(reportValue: unknown): unknown[] {
+    const report = asJsonRecord(reportValue);
+    const tasks = ensureArray(report.decision_tasks ?? report.decisionTasks);
     if (tasks.length > 0) return tasks;
     return report?.decision_task || report?.decisionTask
       ? [report.decision_task ?? report.decisionTask]
       : [];
   }
 
-  function decisionTaskReferencePath(task: any) {
-    return asText(task?.path ?? task?.task ?? task?.decision_task ?? task?.decisionTask);
+  function decisionTaskReferencePath(taskValue: unknown): string {
+    const task = asJsonRecord(taskValue);
+    return asText(task.path ?? task.task ?? task.decision_task ?? task.decisionTask);
   }
 
-  function readDecisionTaskArtifactForProof(task: any) {
+  function readDecisionTaskArtifactForProof(taskValue: unknown) {
+    const task = asJsonRecord(taskValue);
     const taskRef = decisionTaskReferencePath(task);
     const artifact = readJsonArtifactOption(taskRef);
     if (!artifact) {
@@ -270,14 +369,15 @@ export function createFullContextProofUtils({
     }
     const rawText = readText(artifact.path);
     const sha256 = sha256Text(rawText);
-    const contextBundle = artifact.value?.context_bundle ?? artifact.value?.authoring_context ?? {};
+    const artifactValue = asJsonRecord(artifact.value);
+    const contextBundle = asJsonRecord(
+      artifactValue.context_bundle ?? artifactValue.authoring_context,
+    );
     const expectedSha256 = asText(task?.sha256);
     const expectedContextBundleSha256 = asText(
       task?.context_bundle_sha256 ?? task?.contextBundleSha256,
     );
-    const contextBundleSha256 = asText(
-      contextBundle?.sha256 ?? contextBundle?.context_bundle_sha256,
-    );
+    const contextBundleSha256 = asText(contextBundle.sha256 ?? contextBundle.context_bundle_sha256);
     const blockers = [];
     if (expectedSha256 && expectedSha256 !== sha256) {
       blockers.push({
@@ -308,13 +408,17 @@ export function createFullContextProofUtils({
       artifact,
       sha256,
       context_bundle_sha256: contextBundleSha256,
-      status: asText(artifact.value?.status),
-      task_kind: asText(artifact.value?.task_kind),
+      status: asText(artifactValue.status),
+      task_kind: asText(artifactValue.task_kind),
       blockers,
     };
   }
 
-  function decisionApplyReportRefs(evidence: any, reportKey: any, kind: any) {
+  function decisionApplyReportRefs(
+    evidence: JsonRecord,
+    reportKey: string,
+    kind: string,
+  ): string[] {
     const values =
       kind === "identity"
         ? [
@@ -322,7 +426,7 @@ export function createFullContextProofUtils({
             ...ensureArray(evidence[reportKey]),
           ]
         : ensureArray(evidence[reportKey]);
-    return unique(values.map((value: any) => asText(value)));
+    return unique(values.map((value) => asText(value)));
   }
 
   function buildDecisionApplyProofBlockers({
@@ -332,11 +436,18 @@ export function createFullContextProofUtils({
     codePrefix,
     kind,
     expectedCount,
-  }: any) {
+  }: {
+    mutationArtifact: JsonArtifact;
+    requirement: FullContextRequirement | null;
+    prefix: JsonRecord;
+    codePrefix: string;
+    kind: "classification" | "location" | "identity";
+    expectedCount: number;
+  }): JsonRecord[] {
     if (expectedCount <= 0) return [];
-    const blockers: any[] = [];
-    const mutationManifest = mutationArtifact?.value ?? {};
-    const evidence = mutationManifest.evidence ?? {};
+    const blockers: JsonRecord[] = [];
+    const mutationManifest = asJsonRecord(mutationArtifact.value);
+    const evidence = asJsonRecord(mutationManifest.evidence);
     const reportKey =
       kind === "identity"
         ? "identity_decision_apply_report"
@@ -357,8 +468,8 @@ export function createFullContextProofUtils({
         : "ready_for_ai_classification_decisions";
     const reportRefs = decisionApplyReportRefs(evidence, reportKey, kind);
     const reportArtifacts = reportRefs
-      .map((reportRef: any) => readJsonArtifactOption(reportRef))
-      .filter(Boolean);
+      .map((reportRef) => readJsonArtifactOption(reportRef))
+      .filter((artifact): artifact is JsonArtifact => artifact !== null);
     const reportArtifact = reportArtifacts[0] ?? null;
     if (!reportArtifact) {
       return [
@@ -378,9 +489,9 @@ export function createFullContextProofUtils({
       ];
     }
 
-    const report = reportArtifact.value ?? {};
+    const report = asJsonRecord(reportArtifact.value);
     for (const candidateReportArtifact of reportArtifacts) {
-      const candidateReportStatus = asText(candidateReportArtifact.value?.status);
+      const candidateReportStatus = asText(asJsonRecord(candidateReportArtifact.value).status);
       if (candidateReportStatus !== "completed") {
         blockers.push(
           fullContextEvidenceArtifactBlocker({
@@ -413,10 +524,10 @@ export function createFullContextProofUtils({
       }
     }
 
-    const decisionRows = [];
-    const decisionFiles = [];
+    const decisionRows: unknown[] = [];
+    const decisionFiles: string[] = [];
     for (const candidateReportArtifact of reportArtifacts) {
-      const candidateReport = candidateReportArtifact.value ?? {};
+      const candidateReport = asJsonRecord(candidateReportArtifact.value);
       const decisionsRef = candidateReport.decisions_file ?? candidateReport.decisionsFile;
       const decisionsArtifact = readJsonOrJsonlRowsArtifact(decisionsRef);
       if (decisionsArtifact.error) {
@@ -436,7 +547,7 @@ export function createFullContextProofUtils({
         );
       } else {
         decisionRows.push(...decisionsArtifact.rows);
-        decisionFiles.push(repoRelativePath(decisionsArtifact.path));
+        decisionFiles.push(repoRelativePath(decisionsArtifact.path!));
       }
     }
     const decisionsArtifact = { rows: decisionRows };
@@ -450,7 +561,7 @@ export function createFullContextProofUtils({
             "Decision rows referenced by the apply report are fewer than the mutation manifest semantic evidence count.",
           details: {
             report: repoRelativePath(reportArtifact.path),
-            reports: reportArtifacts.map((artifact: any) => repoRelativePath(artifact.path)),
+            reports: reportArtifacts.map((artifact) => repoRelativePath(artifact.path)),
             decisions_files: decisionFiles,
             expected_decision_entries: expectedCount,
             actual_decision_entries: decisionsArtifact.rows.length,
@@ -462,7 +573,7 @@ export function createFullContextProofUtils({
     const taskProofs =
       kind === "identity"
         ? []
-        : decisionApplyTasksFromReport(report).map((task: any) =>
+        : decisionApplyTasksFromReport(report).map((task) =>
             readDecisionTaskArtifactForProof(task),
           );
     if (kind !== "identity" && taskProofs.length === 0) {
@@ -541,7 +652,7 @@ export function createFullContextProofUtils({
       }
     }
 
-    const contextBundleHashes = unique(taskProofs.map((proof: any) => proof.context_bundle_sha256));
+    const contextBundleHashes = unique(taskProofs.map((proof) => proof.context_bundle_sha256));
     const missingCompletedStatus = decisionsArtifact.rows.filter(
       (decision) => decisionCompletionStatus(decision) !== "completed",
     );
@@ -560,9 +671,10 @@ export function createFullContextProofUtils({
         }),
       );
     }
-    const missingEvidence = decisionsArtifact.rows.filter(
-      (decision) => !decision?.evidence || typeof decision.evidence !== "object",
-    );
+    const missingEvidence = decisionsArtifact.rows.filter((decision) => {
+      const evidenceValue = asJsonRecord(decision).evidence;
+      return !evidenceValue || typeof evidenceValue !== "object";
+    });
     if (missingEvidence.length > 0) {
       blockers.push(
         fullContextEvidenceArtifactBlocker({
@@ -634,11 +746,17 @@ export function createFullContextProofUtils({
     prefix,
     codePrefix,
     expectedCount,
-  }: any) {
+  }: {
+    mutationArtifact: JsonArtifact;
+    requirement: FullContextRequirement | null;
+    prefix: JsonRecord;
+    codePrefix: string;
+    expectedCount: number;
+  }): JsonRecord[] {
     if (expectedCount <= 0) return [];
-    const blockers: any[] = [];
-    const mutationManifest = mutationArtifact?.value ?? {};
-    const evidence = mutationManifest.evidence ?? {};
+    const blockers: JsonRecord[] = [];
+    const mutationManifest = asJsonRecord(mutationArtifact.value);
+    const evidence = asJsonRecord(mutationManifest.evidence);
     const patchCollectArtifact = readJsonArtifactOption(evidence.patch_collect_report);
     if (!patchCollectArtifact) {
       blockers.push(
@@ -654,13 +772,13 @@ export function createFullContextProofUtils({
           },
         }),
       );
-    } else if (patchCollectArtifact.value?.status !== "ready_for_patch_apply") {
+    } else if (asJsonRecord(patchCollectArtifact.value).status !== "ready_for_patch_apply") {
       blockers.push(
         fullContextEvidenceArtifactBlocker({
           prefix,
           codePrefix,
           suffix: "patch_collect_not_ready",
-          message: `Patch collect report status is ${patchCollectArtifact.value?.status ?? "missing"}.`,
+          message: `Patch collect report status is ${asJsonRecord(patchCollectArtifact.value).status ?? "missing"}.`,
           details: { report: repoRelativePath(patchCollectArtifact.path) },
         }),
       );
@@ -700,19 +818,20 @@ export function createFullContextProofUtils({
       );
       return blockers;
     }
-    if (patchApplyArtifact.value?.status !== "completed") {
+    const patchApplyReport = asJsonRecord(patchApplyArtifact.value);
+    if (patchApplyReport.status !== "completed") {
       blockers.push(
         fullContextEvidenceArtifactBlocker({
           prefix,
           codePrefix,
           suffix: "patch_apply_not_completed",
-          message: `Patch apply report status is ${patchApplyArtifact.value?.status ?? "missing"}.`,
+          message: `Patch apply report status is ${patchApplyReport.status ?? "missing"}.`,
           details: { report: repoRelativePath(patchApplyArtifact.path) },
         }),
       );
     }
     const patchEvidenceFile =
-      evidence.patch_evidence_file ?? patchApplyArtifact.value?.files?.patch_evidence;
+      evidence.patch_evidence_file ?? nestedValue(patchApplyReport, "files", "patch_evidence");
     const patchEvidenceArtifact = readJsonOrJsonlRowsArtifact(patchEvidenceFile);
     if (patchEvidenceArtifact.error) {
       blockers.push(
@@ -739,7 +858,7 @@ export function createFullContextProofUtils({
             "Patch evidence rows are fewer than the mutation manifest AI patch evidence count.",
           details: {
             report: repoRelativePath(patchApplyArtifact.path),
-            patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path),
+            patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path!),
             expected_patch_evidence_entries: expectedCount,
             actual_patch_evidence_entries: patchEvidenceArtifact.rows.length,
           },
@@ -749,7 +868,7 @@ export function createFullContextProofUtils({
     if (!patchEvidenceArtifact.error) {
       const patchEvidenceRows = patchEvidenceArtifact.rows;
       const missingPackageHash = patchEvidenceRows.filter(
-        (entry: any) => !asText(entry?.authoring_package_sha256),
+        (entry) => !asText(asJsonRecord(entry).authoring_package_sha256),
       );
       if (missingPackageHash.length > 0) {
         blockers.push(
@@ -761,7 +880,7 @@ export function createFullContextProofUtils({
               "Every retained AI patch evidence row must still include authoring_package_sha256.",
             details: {
               report: repoRelativePath(patchApplyArtifact.path),
-              patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path),
+              patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path!),
               count: missingPackageHash.length,
             },
           }),
@@ -770,8 +889,8 @@ export function createFullContextProofUtils({
       const knownPackageHashes = new Set(
         authoringPackageProofs.map((proof) => asText(proof.sha256)).filter(Boolean),
       );
-      const unknownPackageHash = patchEvidenceRows.filter((entry: any) => {
-        const hash = asText(entry?.authoring_package_sha256);
+      const unknownPackageHash = patchEvidenceRows.filter((entry) => {
+        const hash = asText(asJsonRecord(entry).authoring_package_sha256);
         return hash && !knownPackageHashes.has(hash);
       });
       if (unknownPackageHash.length > 0) {
@@ -784,14 +903,14 @@ export function createFullContextProofUtils({
               "Every retained AI patch evidence authoring_package_sha256 must match a readable full-context authoring package from patch collect or curation gate evidence.",
             details: {
               report: repoRelativePath(patchApplyArtifact.path),
-              patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path),
+              patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path!),
               count: unknownPackageHash.length,
             },
           }),
         );
       }
       const missingClosures = patchEvidenceRows.filter(
-        (entry: any) => ensureArray(entry?.closes_action_items).length === 0,
+        (entry) => ensureArray(asJsonRecord(entry).closes_action_items).length === 0,
       );
       if (missingClosures.length > 0) {
         blockers.push(
@@ -803,15 +922,16 @@ export function createFullContextProofUtils({
               "Every retained AI patch evidence row must still close at least one authoring action item.",
             details: {
               report: repoRelativePath(patchApplyArtifact.path),
-              patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path),
+              patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path!),
               count: missingClosures.length,
             },
           }),
         );
       }
-      const missingEvidence = patchEvidenceRows.filter(
-        (entry: any) => !entry?.evidence || typeof entry.evidence !== "object",
-      );
+      const missingEvidence = patchEvidenceRows.filter((entry) => {
+        const evidenceValue = asJsonRecord(entry).evidence;
+        return !evidenceValue || typeof evidenceValue !== "object";
+      });
       if (missingEvidence.length > 0) {
         blockers.push(
           fullContextEvidenceArtifactBlocker({
@@ -821,14 +941,14 @@ export function createFullContextProofUtils({
             message: "Every retained AI patch evidence row must still include structured evidence.",
             details: {
               report: repoRelativePath(patchApplyArtifact.path),
-              patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path),
+              patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path!),
               count: missingEvidence.length,
             },
           }),
         );
       }
       const missingResolution = patchEvidenceRows.filter(
-        (entry: any) => !patchEvidenceResolutionMode(entry),
+        (entry) => !patchEvidenceResolutionMode(entry),
       );
       if (missingResolution.length > 0) {
         blockers.push(
@@ -839,13 +959,13 @@ export function createFullContextProofUtils({
             message: "Every retained AI patch evidence row must still include resolution.mode.",
             details: {
               report: repoRelativePath(patchApplyArtifact.path),
-              patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path),
+              patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path!),
               count: missingResolution.length,
             },
           }),
         );
       }
-      const invalidResolutionMode = patchEvidenceRows.filter((entry: any) => {
+      const invalidResolutionMode = patchEvidenceRows.filter((entry) => {
         const mode = patchEvidenceResolutionMode(entry);
         return mode && !fullContextPatchResolutionModes.has(mode);
       });
@@ -858,7 +978,7 @@ export function createFullContextProofUtils({
             message: "Retained AI patch evidence contains unsupported resolution.mode values.",
             details: {
               report: repoRelativePath(patchApplyArtifact.path),
-              patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path),
+              patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path!),
               count: invalidResolutionMode.length,
             },
           }),
@@ -883,7 +1003,7 @@ export function createFullContextProofUtils({
               "Retained AI patch evidence resolution.used_context_kinds must still include every required full-context kind.",
             details: {
               report: repoRelativePath(patchApplyArtifact.path),
-              patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path),
+              patch_evidence_file: repoRelativePath(patchEvidenceArtifact.path!),
               count: missingContextKinds.length,
               required_context_kinds: requirement?.required_context_kinds ?? [],
             },
@@ -899,9 +1019,15 @@ export function createFullContextProofUtils({
     requirement,
     prefix,
     codePrefix,
-  }: any) {
-    const mutationManifest = mutationArtifact?.value ?? null;
-    if (!mutationManifest?.evidence?.full_context_ai_completion_required) {
+  }: {
+    mutationArtifact: JsonArtifact;
+    requirement: FullContextRequirement | null;
+    prefix: JsonRecord;
+    codePrefix: string;
+  }): JsonRecord[] {
+    const mutationManifest = asJsonRecord(mutationArtifact.value);
+    const evidence = asJsonRecord(mutationManifest.evidence);
+    if (!evidence.full_context_ai_completion_required) {
       return [];
     }
     const counts = mutationManifest.counts ?? {};
@@ -947,13 +1073,20 @@ export function createFullContextProofUtils({
     closeoutCounts = null,
     mutationArtifact = null,
     codePrefix = "completion",
-  }: any) {
-    const mutationManifest = mutationArtifact?.value ?? null;
+  }: {
+    prefix?: JsonRecord;
+    profileId?: unknown;
+    datasetType?: unknown;
+    closeoutCounts?: unknown;
+    mutationArtifact?: JsonArtifact | null;
+    codePrefix?: string;
+  }): { required: boolean; blockers: JsonRecord[] } {
+    const mutationManifest = mutationArtifact ? asJsonRecord(mutationArtifact.value) : null;
+    const mutationEvidence = asJsonRecord(mutationManifest?.evidence);
     const profileRequirement = profileId
       ? profileFullContextRequirement(profileId, datasetType)
       : null;
-    const mutationMarkedRequired =
-      mutationManifest?.evidence?.full_context_ai_completion_required === true;
+    const mutationMarkedRequired = mutationEvidence.full_context_ai_completion_required === true;
     if (!profileRequirement && !mutationMarkedRequired) {
       return { required: false, blockers: [] };
     }
@@ -963,15 +1096,20 @@ export function createFullContextProofUtils({
       profile: profileRequirement?.profile_id ?? (asText(profileId) || null),
       dataset_type: profileRequirement?.dataset_type ?? (asText(datasetType).toLowerCase() || null),
     };
-    const semanticEvidenceCount = (counts: any) =>
-      (Number(counts?.ai_patch_evidence_entries ?? 0) || 0) +
-      (Number(counts?.ai_classification_decision_entries ?? 0) || 0) +
-      (Number(counts?.ai_location_decision_entries ?? 0) || 0) +
-      (Number(counts?.ai_identity_decision_entries ?? 0) || 0) +
-      (Number(counts?.source_contact_rewrite_semantic_evidence_entries ?? 0) || 0);
-    const blockers: any[] = [];
+    const semanticEvidenceCount = (countsValue: unknown) => {
+      const counts = asJsonRecord(countsValue);
+      return (
+        (Number(counts.ai_patch_evidence_entries ?? 0) || 0) +
+        (Number(counts.ai_classification_decision_entries ?? 0) || 0) +
+        (Number(counts.ai_location_decision_entries ?? 0) || 0) +
+        (Number(counts.ai_identity_decision_entries ?? 0) || 0) +
+        (Number(counts.source_contact_rewrite_semantic_evidence_entries ?? 0) || 0)
+      );
+    };
+    const blockers: JsonRecord[] = [];
     if (closeoutCounts) {
-      if (closeoutCounts.full_context_ai_completion_required !== true) {
+      const closeoutCountRecord = asJsonRecord(closeoutCounts);
+      if (closeoutCountRecord.full_context_ai_completion_required !== true) {
         blockers.push({
           ...blockerPrefix,
           code: `${codePrefix}_full_context_scope_missing`,
@@ -979,7 +1117,7 @@ export function createFullContextProofUtils({
             "This committed scope belongs to a profile or manifest that requires full schema/YAML/context AI completion, but the closeout does not mark the scope as full-context completed.",
         });
       }
-      if (semanticEvidenceCount(closeoutCounts) <= 0) {
+      if (semanticEvidenceCount(closeoutCountRecord) <= 0) {
         blockers.push({
           ...blockerPrefix,
           code: `${codePrefix}_full_context_semantic_evidence_missing`,
@@ -997,7 +1135,7 @@ export function createFullContextProofUtils({
       });
       return { required: true, blockers };
     }
-    if (mutationManifest?.evidence?.full_context_ai_completion_required !== true) {
+    if (mutationEvidence.full_context_ai_completion_required !== true) {
       blockers.push({
         ...blockerPrefix,
         code: `${codePrefix}_full_context_mutation_requirement_missing`,
@@ -1005,7 +1143,7 @@ export function createFullContextProofUtils({
         mutation_manifest: repoRelativePath(mutationArtifact.path),
       });
     }
-    if (!mutationManifest?.evidence?.full_context_ai_completion_proof) {
+    if (!mutationEvidence.full_context_ai_completion_proof) {
       blockers.push({
         ...blockerPrefix,
         code: `${codePrefix}_full_context_mutation_proof_missing`,
@@ -1034,11 +1172,16 @@ export function createFullContextProofUtils({
     return { required: true, blockers };
   }
 
-  function completionFullContextBlockers({ task, completionReport }: any) {
-    const blockers: any[] = [];
-    const closeouts = ensureArray(completionReport?.closeouts).filter(
-      (closeout: any) => closeout && typeof closeout === "object" && !Array.isArray(closeout),
-    );
+  function completionFullContextBlockers({
+    task,
+    completionReport,
+  }: {
+    task: unknown;
+    completionReport: unknown;
+  }): JsonRecord[] {
+    const blockers: JsonRecord[] = [];
+    const completion = asJsonRecord(completionReport);
+    const closeouts = ensureArray(completion.closeouts).filter(isJsonRecord);
     const taskProfile = taskProfileId(task);
     const taskType = taskDatasetType(task);
     const taskRequirement = taskProfile
@@ -1056,7 +1199,7 @@ export function createFullContextProofUtils({
       });
     }
 
-    closeouts.forEach((closeout: any, index: number) => {
+    closeouts.forEach((closeout, index) => {
       const profileId = asText(closeout.profile) || taskProfile;
       const datasetType = asText(closeout.dataset_type) || taskType;
       const mutationArtifact = readJsonArtifactOption(closeout.mutation_manifest);
@@ -1074,7 +1217,7 @@ export function createFullContextProofUtils({
       if (!fullContextCheck.required) return;
       requiredCloseoutCount += 1;
       blockers.push(
-        ...fullContextCheck.blockers.map((blocker: any) => ({
+        ...fullContextCheck.blockers.map((blocker) => ({
           ...blocker,
           closeout_index: index,
           closeout_report: closeout.closeout_report ?? null,
@@ -1082,7 +1225,9 @@ export function createFullContextProofUtils({
       );
     });
 
-    const reportFullContextScopes = Number(completionReport?.counts?.full_context_scopes ?? 0);
+    const reportFullContextScopes = Number(
+      nestedValue(completion, "counts", "full_context_scopes") ?? 0,
+    );
     if (requiredCloseoutCount > 0 && reportFullContextScopes < requiredCloseoutCount) {
       blockers.push({
         code: "completion_full_context_scope_count_incomplete",

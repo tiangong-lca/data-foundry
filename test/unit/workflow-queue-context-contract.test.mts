@@ -5,9 +5,13 @@ import path from "node:path";
 import test from "node:test";
 import * as queueModule from "../../scripts/lib/import-curation/internal/workflow-queue-context.ts";
 
-type JsonObject = Record<string, any>;
+type JsonObject = Record<string, unknown>;
 
-const queue = queueModule as any;
+const queue = queueModule;
+
+function asJsonObject(value: unknown): JsonObject {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonObject) : {};
+}
 
 function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -173,6 +177,7 @@ test("curation queue loading preserves task order, filtering, duplicate-map beha
 
     const { queueDir, tasks } = createQueueFixture(root);
     const context = queue.readCurationQueueContext(root, { queueDir: "queue" });
+    assert.ok(context);
     assert.equal(context.queueDir, queueDir);
     assert.equal(context.tasks.length, 4);
     assert.deepEqual(
@@ -188,7 +193,9 @@ test("queue task paths, summaries, rows, exact identity preference, and id fallb
   withTempRoot("queue-context-task", (root) => {
     createQueueFixture(root);
     const context = queue.readCurationQueueContext(root, { queueDir: "queue" });
+    assert.ok(context);
     const task = context.tasksById.get("process-main");
+    assert.ok(task);
     assert.equal(
       queue.queueFilePath(root, context, task.input_rows_file),
       path.join(root, "queue", "tasks", "process-main", "input.jsonl"),
@@ -237,11 +244,16 @@ test("queue authoring context preserves not-applicable, missing, closure depende
   withTempRoot("queue-context-authoring", (root) => {
     createQueueFixture(root);
     const context = queue.readCurationQueueContext(root, { queueDir: "queue" });
-    assert.equal(queue.buildQueueAuthoringContext(root, null, "process", { id: "x" }), null);
+    assert.ok(context);
+    assert.equal(
+      queue.buildQueueAuthoringContext(root, null, "process", { id: "x", version: "1" }),
+      null,
+    );
     const lifecycle = queue.buildQueueAuthoringContext(root, context, "lifecyclemodel", {
       id: "model",
       version: "1",
     });
+    assert.ok(lifecycle);
     assert.equal(lifecycle.status, "not_applicable");
     assert.equal(
       lifecycle.reason,
@@ -251,6 +263,7 @@ test("queue authoring context preserves not-applicable, missing, closure depende
       id: "missing",
       version: "1",
     });
+    assert.ok(missing);
     assert.deepEqual(
       {
         status: missing.status,
@@ -265,6 +278,7 @@ test("queue authoring context preserves not-applicable, missing, closure depende
       id: "process-id",
       version: "01.00.000",
     });
+    assert.ok(attached);
     assert.equal(attached.status, "attached");
     assert.equal(attached.queue_dir, "queue");
     assert.equal(attached.manifest_file, "queue/outputs/curation-queue-manifest.json");
@@ -272,11 +286,14 @@ test("queue authoring context preserves not-applicable, missing, closure depende
     assert.deepEqual(attached.queue_blockers, [{ code: "queue-warning" }]);
     assert.equal(attached.closure_file, "queue/tasks/process-main/closure.json");
     assert.deepEqual(
-      attached.dependency_rows.map((row: JsonObject) => ({
-        ref: row.ref,
-        task_id: row.task?.task_id ?? null,
-        input_rows: row.input_rows,
-      })),
+      (Array.isArray(attached.dependency_rows) ? attached.dependency_rows : []).map((value) => {
+        const row = asJsonObject(value);
+        return {
+          ref: row.ref,
+          task_id: asJsonObject(row.task).task_id ?? null,
+          input_rows: row.input_rows,
+        };
+      }),
       [
         {
           ref: "flow-ref",
@@ -287,10 +304,13 @@ test("queue authoring context preserves not-applicable, missing, closure depende
       ],
     );
     assert.deepEqual(
-      attached.support_rows.map((row: JsonObject) => ({
-        task_id: row.task.task_id,
-        input_rows: row.input_rows,
-      })),
+      (Array.isArray(attached.support_rows) ? attached.support_rows : []).map((value) => {
+        const row = asJsonObject(value);
+        return {
+          task_id: asJsonObject(row.task).task_id,
+          input_rows: row.input_rows,
+        };
+      }),
       [
         {
           task_id: "support",
@@ -323,14 +343,15 @@ test("authoring queue context preserves JSONL order, object filtering, last exac
       { id: "", marker: "missing-id" },
     ]);
     const context = queue.readAuthoringQueueContext(root, "classification.jsonl", "classification");
+    assert.ok(context);
     assert.equal(context.kind, "classification");
     assert.equal(context.path, queuePath);
     assert.deepEqual(
       context.rows.map((row: JsonObject) => row.marker),
       ["first", "second-version", "last-exact", "default-version", "missing-id"],
     );
-    assert.equal(context.rowsByIdentity.get("entity@@01.00.000").marker, "last-exact");
-    assert.equal(context.rowsByIdentity.get("other@@00.00.001").marker, "default-version");
+    assert.equal(context.rowsByIdentity.get("entity@@01.00.000")?.marker, "last-exact");
+    assert.equal(context.rowsByIdentity.get("other@@00.00.001")?.marker, "default-version");
     assert.equal(context.rowsByIdentity.has("@@00.00.001"), false);
     assert.deepEqual(
       queue
@@ -347,7 +368,10 @@ test("authoring queue context preserves JSONL order, object filtering, last exac
         .map((row: JsonObject) => row.marker),
       ["first", "second-version", "last-exact"],
     );
-    assert.deepEqual(queue.authoringQueueRowsForIdentity(null, { id: "entity" }), []);
+    assert.deepEqual(
+      queue.authoringQueueRowsForIdentity(null, { id: "entity", version: "00.00.001" }),
+      [],
+    );
 
     const invalidPath = path.join(root, "invalid.jsonl");
     fs.writeFileSync(invalidPath, '{"ok":true}\n{bad}\n');

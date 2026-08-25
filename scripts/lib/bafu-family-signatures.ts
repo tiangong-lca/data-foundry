@@ -2,13 +2,92 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-function textValue(value: any): string {
+type JsonRecord = Record<string, unknown>;
+
+type BafuOptimizationKind = "same_amount_vector" | "same_skeleton" | "standard";
+type BafuOptimizationRole =
+  | "same_amount_master"
+  | "same_amount_variant"
+  | "same_skeleton_master"
+  | "same_skeleton_variant"
+  | "standard";
+
+export interface BafuFamilyBaseEntry extends JsonRecord {
+  schema_version: 1;
+  process_id: string;
+  process_version: string;
+  scope_index: number;
+  source_file: string | null;
+  process_name: string;
+  location: string;
+  family_name: string;
+  family_hash: string;
+  exchange_count: number;
+  exchange_skeleton_hash: string;
+  exchange_flow_template_hash: string;
+  exchange_amount_vector_hash: string;
+}
+
+export interface BafuFamilyEntry extends BafuFamilyBaseEntry {
+  family_group_key: string;
+  optimization_kind: BafuOptimizationKind;
+  optimization_role: BafuOptimizationRole;
+  master_process_id: string;
+  family_group_size: number;
+  skeleton_group_size: number;
+  reuse_policy: string;
+}
+
+interface MissingBafuFamilyEntry extends JsonRecord {
+  schema_version: 1;
+  process_id: string;
+  process_version: string;
+  reason: string;
+}
+
+export interface BafuFamilySignatureIndex {
+  schema_version: 1;
+  entries: BafuFamilyEntry[];
+  missing: MissingBafuFamilyEntry[];
+  byScopeKey: Map<string, BafuFamilyEntry>;
+  summary: ReturnType<typeof summarizeBafuFamilySignatures>;
+}
+
+interface BafuFamilyEntryOptions {
+  filePath?: string | null;
+  processId?: string | null;
+  version?: string | null;
+  scopeIndex?: number;
+  locationTokens?: unknown[];
+}
+
+interface BuildBafuFamilySignatureIndexOptions {
+  scopes?: unknown;
+  processBundlesDir?: string | null;
+  processesDir?: string | null;
+  readJson?: (filePath: string) => unknown;
+}
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function nestedValue(value: unknown, ...keys: string[]): unknown {
+  let current = value;
+  for (const key of keys) {
+    if (!isJsonRecord(current)) return undefined;
+    current = current[key];
+  }
+  return current;
+}
+
+function textValue(value: unknown): string {
   if (value == null) return "";
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
     return String(value).trim();
   }
   if (Array.isArray(value)) return value.map(textValue).filter(Boolean).join("; ");
-  if (typeof value === "object") {
+  if (isJsonRecord(value)) {
     return textValue(
       value["#text"] ??
         value.value ??
@@ -21,37 +100,37 @@ function textValue(value: any): string {
   return "";
 }
 
-function ensureArray(value: any): any[] {
+function ensureArray<T>(value: T | T[] | null | undefined): T[] {
   if (value == null) return [];
   return Array.isArray(value) ? value : [value];
 }
 
-function stableValue(value: any): any {
+function stableValue(value: unknown): unknown {
   if (value == null || typeof value !== "object") return value;
   if (Array.isArray(value)) return value.map(stableValue);
   return Object.fromEntries(
-    Object.entries(value)
+    Object.entries(value as JsonRecord)
       .filter(([, entry]) => entry !== undefined)
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, entry]) => [key, stableValue(entry)]),
   );
 }
 
-function hashJson(value: any): string {
+function hashJson(value: unknown): string {
   return crypto
     .createHash("sha256")
     .update(JSON.stringify(stableValue(value)))
     .digest("hex");
 }
 
-function normalizeText(value: any): string {
+function normalizeText(value: unknown): string {
   return String(value ?? "")
     .normalize("NFKC")
     .replace(/\s+/gu, " ")
     .trim();
 }
 
-function normalizeAmount(value: any): string | number {
+function normalizeAmount(value: unknown): string | number {
   const text = normalizeText(value);
   if (!text) return "";
   const parsed = Number(text);
@@ -59,37 +138,79 @@ function normalizeAmount(value: any): string | number {
   return Number(parsed.toPrecision(15));
 }
 
-function processIdentity(row: any) {
-  const dataSetInformation = row?.processDataSet?.processInformation?.dataSetInformation ?? {};
-  const publication = row?.processDataSet?.administrativeInformation?.publicationAndOwnership ?? {};
+function processIdentity(row: unknown): { id: string; version: string } {
+  const dataSetInformation = nestedValue(
+    row,
+    "processDataSet",
+    "processInformation",
+    "dataSetInformation",
+  );
+  const publication = nestedValue(
+    row,
+    "processDataSet",
+    "administrativeInformation",
+    "publicationAndOwnership",
+  );
+  const informationRecord = isJsonRecord(dataSetInformation) ? dataSetInformation : {};
+  const publicationRecord = isJsonRecord(publication) ? publication : {};
   return {
-    id: textValue(dataSetInformation["common:UUID"] ?? dataSetInformation.UUID),
+    id: textValue(informationRecord["common:UUID"] ?? informationRecord.UUID),
     version:
-      textValue(publication["common:dataSetVersion"] ?? publication.dataSetVersion) || "00.00.001",
+      textValue(publicationRecord["common:dataSetVersion"] ?? publicationRecord.dataSetVersion) ||
+      "00.00.001",
   };
 }
 
-function processName(row: any): string {
-  return textValue(row?.processDataSet?.processInformation?.dataSetInformation?.name?.baseName);
+function processName(row: unknown): string {
+  return textValue(
+    nestedValue(
+      row,
+      "processDataSet",
+      "processInformation",
+      "dataSetInformation",
+      "name",
+      "baseName",
+    ),
+  );
 }
 
-function processLocation(row: any): string {
-  const process = row?.processDataSet ?? {};
+function processLocation(row: unknown): string {
   const location =
-    process?.processInformation?.geography?.locationOfOperationSupplyOrProduction?.["@location"] ??
-    process?.processInformation?.geography?.locationOfOperationSupplyOrProduction?.location ??
-    process?.processInformation?.dataSetInformation?.name?.mixAndLocationTypes;
+    nestedValue(
+      row,
+      "processDataSet",
+      "processInformation",
+      "geography",
+      "locationOfOperationSupplyOrProduction",
+      "@location",
+    ) ??
+    nestedValue(
+      row,
+      "processDataSet",
+      "processInformation",
+      "geography",
+      "locationOfOperationSupplyOrProduction",
+      "location",
+    ) ??
+    nestedValue(
+      row,
+      "processDataSet",
+      "processInformation",
+      "dataSetInformation",
+      "name",
+      "mixAndLocationTypes",
+    );
   return textValue(location);
 }
 
-function escapeRegExp(value: any): string {
+function escapeRegExp(value: unknown): string {
   return String(value).replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 }
 
 const contextualLocationPattern =
   "(?:[A-Z]{2,3}|RoW|RoE|RER|GLO|RNA|RAF|RAS|RLA|RME|Europe without Switzerland)";
 
-function isBafuLocationToken(token: any): boolean {
+function isBafuLocationToken(token: unknown): boolean {
   const text = normalizeText(token);
   if (text.length < 2 || text.length > 40) return false;
   if (/^\d+(?:\.\d+)?$/u.test(text)) return false;
@@ -98,15 +219,15 @@ function isBafuLocationToken(token: any): boolean {
   return /^(?:Europe without Switzerland|[A-Z][A-Za-z]+(?:\s+[A-Za-z]+){1,4})$/u.test(text);
 }
 
-function locationTokensFromText(value: any): string[] {
+function locationTokensFromText(value: unknown): string[] {
   return [...String(value ?? "").matchAll(/\{([^}]+)\}/gu)]
     .map((match) => normalizeText(match[1]))
     .filter(isBafuLocationToken);
 }
 
-const locationTokenRegexCache = new WeakMap<any[], RegExp | null>();
+const locationTokenRegexCache = new WeakMap<unknown[], RegExp | null>();
 
-function knownLocationTokensRegex(locationTokens: any): RegExp | null {
+function knownLocationTokensRegex(locationTokens: unknown): RegExp | null {
   if (!Array.isArray(locationTokens) || locationTokens.length === 0) return null;
   const cached = locationTokenRegexCache.get(locationTokens);
   if (cached !== undefined) return cached;
@@ -124,9 +245,9 @@ function knownLocationTokensRegex(locationTokens: any): RegExp | null {
 }
 
 export function normalizeBafuFamilyName(
-  name: any,
-  location: any,
-  { locationTokens = [] }: any = {},
+  name: unknown,
+  location: unknown,
+  { locationTokens = [] }: { locationTokens?: unknown[] } = {},
 ): string {
   let normalized = normalizeText(name).replace(/\{[^}]+\}/gu, "{<LOC>}");
   const locationText = normalizeText(location);
@@ -149,50 +270,53 @@ export function normalizeBafuFamilyName(
 }
 
 function flowShortDescription(
-  referenceToFlowDataSet: any,
-  location: any,
-  locationTokens: any[],
+  referenceToFlowDataSet: unknown,
+  location: unknown,
+  locationTokens: unknown[],
 ): string {
+  const reference = isJsonRecord(referenceToFlowDataSet) ? referenceToFlowDataSet : {};
   const shortDescription =
-    textValue(referenceToFlowDataSet?.["common:shortDescription"]) ||
-    textValue(referenceToFlowDataSet?.shortDescription);
+    textValue(reference["common:shortDescription"]) || textValue(reference.shortDescription);
   if (shortDescription)
     return normalizeBafuFamilyName(shortDescription, location, { locationTokens });
-  return textValue(referenceToFlowDataSet?.["@refObjectId"]);
+  return textValue(reference["@refObjectId"]);
 }
 
-function exchangeRows(row: any): any[] {
-  return ensureArray(row?.processDataSet?.exchanges?.exchange);
+function exchangeRows(row: unknown): unknown[] {
+  return ensureArray(nestedValue(row, "processDataSet", "exchanges", "exchange"));
 }
 
-function exchangeSkeleton(exchange: any) {
+function exchangeSkeleton(exchange: unknown) {
+  const record = isJsonRecord(exchange) ? exchange : {};
   return {
-    direction: textValue(exchange?.exchangeDirection),
-    has_mean_amount: exchange?.meanAmount != null,
-    has_resulting_amount: exchange?.resultingAmount != null,
-    uncertainty_distribution_type: textValue(exchange?.uncertaintyDistributionType),
-    data_derivation_type_status: textValue(exchange?.dataDerivationTypeStatus),
+    direction: textValue(record.exchangeDirection),
+    has_mean_amount: record.meanAmount != null,
+    has_resulting_amount: record.resultingAmount != null,
+    uncertainty_distribution_type: textValue(record.uncertaintyDistributionType),
+    data_derivation_type_status: textValue(record.dataDerivationTypeStatus),
   };
 }
 
-function exchangeFlowTemplate(exchange: any, location: any, locationTokens: any[]) {
-  const flowRef = exchange?.referenceToFlowDataSet ?? {};
+function exchangeFlowTemplate(exchange: unknown, location: unknown, locationTokens: unknown[]) {
+  const record = isJsonRecord(exchange) ? exchange : {};
+  const flowRef = record.referenceToFlowDataSet;
   return {
     ...exchangeSkeleton(exchange),
     flow: flowShortDescription(flowRef, location, locationTokens),
   };
 }
 
-function exchangeAmount(exchange: any) {
+function exchangeAmount(exchange: unknown) {
+  const record = isJsonRecord(exchange) ? exchange : {};
   return {
     ...exchangeSkeleton(exchange),
-    mean_amount: normalizeAmount(exchange?.meanAmount),
-    resulting_amount: normalizeAmount(exchange?.resultingAmount),
+    mean_amount: normalizeAmount(record.meanAmount),
+    resulting_amount: normalizeAmount(record.resultingAmount),
   };
 }
 
-function groupBy(entries: any[], keyFn: (entry: any) => string | null): Map<string, any[]> {
-  const groups = new Map<string, any[]>();
+function groupBy<T>(entries: T[], keyFn: (entry: T) => string | null): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
   for (const entry of entries) {
     const key = keyFn(entry);
     if (!key) continue;
@@ -202,12 +326,12 @@ function groupBy(entries: any[], keyFn: (entry: any) => string | null): Map<stri
   return groups;
 }
 
-function stableEntrySort(left: any, right: any): number {
+function stableEntrySort(left: BafuFamilyBaseEntry, right: BafuFamilyBaseEntry): number {
   if (left.scope_index !== right.scope_index) return left.scope_index - right.scope_index;
   return String(left.process_id).localeCompare(String(right.process_id));
 }
 
-function classifyEntries(entries: any[]): any[] {
+function classifyEntries(entries: BafuFamilyBaseEntry[]): BafuFamilyEntry[] {
   const amountGroups = groupBy(
     entries,
     (entry) => `${entry.family_hash}:${entry.exchange_amount_vector_hash}`,
@@ -268,11 +392,14 @@ function classifyEntries(entries: any[]): any[] {
   });
 }
 
-function groupCount(entries: any[], predicate: (entry: any) => boolean, key: string): number {
-  return new Set(entries.filter(predicate).map((entry) => entry[key])).size;
+function groupCount<T>(entries: T[], key: (entry: T) => unknown): number {
+  return new Set(entries.map(key)).size;
 }
 
-export function summarizeBafuFamilySignatures(entries: any[], missingEntries: any[] = []) {
+export function summarizeBafuFamilySignatures(
+  entries: BafuFamilyEntry[],
+  missingEntries: unknown[] = [],
+) {
   const sameAmountEntries = entries.filter(
     (entry) => entry.optimization_kind === "same_amount_vector",
   );
@@ -281,7 +408,8 @@ export function summarizeBafuFamilySignatures(entries: any[], missingEntries: an
     (entry) => entry.optimization_kind === "same_skeleton",
   );
   const standardEntries = entries.filter((entry) => entry.optimization_kind === "standard");
-  const skeletonGroupKey = (entry: any) => `${entry.family_hash}:${entry.exchange_skeleton_hash}`;
+  const skeletonGroupKey = (entry: BafuFamilyEntry) =>
+    `${entry.family_hash}:${entry.exchange_skeleton_hash}`;
   const skeletonGroupKeys = new Set(sameSkeletonEntries.map(skeletonGroupKey));
   return {
     schema_version: 1,
@@ -289,7 +417,7 @@ export function summarizeBafuFamilySignatures(entries: any[], missingEntries: an
     usable_signatures: entries.length,
     missing_signatures: missingEntries.length,
     families: new Set(entries.map((entry) => entry.family_hash)).size,
-    same_amount_vector_groups: groupCount(sameAmountEntries, () => true, "family_group_key"),
+    same_amount_vector_groups: groupCount(sameAmountEntries, (entry) => entry.family_group_key),
     same_amount_vector_scopes: sameAmountEntries.length,
     same_amount_vector_variant_scopes: sameAmountEntries.filter((entry) =>
       entry.optimization_role.endsWith("_variant"),
@@ -297,7 +425,10 @@ export function summarizeBafuFamilySignatures(entries: any[], missingEntries: an
     same_skeleton_groups: skeletonGroupKeys.size,
     same_skeleton_scopes: sameSkeletonEntries.length,
     same_skeleton_variant_scopes: sameSkeletonEntries.length - skeletonGroupKeys.size,
-    same_skeleton_only_groups: groupCount(sameSkeletonOnlyEntries, () => true, "family_group_key"),
+    same_skeleton_only_groups: groupCount(
+      sameSkeletonOnlyEntries,
+      (entry) => entry.family_group_key,
+    ),
     same_skeleton_only_scopes: sameSkeletonOnlyEntries.length,
     same_skeleton_only_variant_scopes: sameSkeletonOnlyEntries.filter((entry) =>
       entry.optimization_role.endsWith("_variant"),
@@ -306,11 +437,11 @@ export function summarizeBafuFamilySignatures(entries: any[], missingEntries: an
   };
 }
 
-function processLocationTokens(row: any): string[] {
+function processLocationTokens(row: unknown): string[] {
   const name = processName(row);
   const location = processLocation(row);
   const exchangeTexts = exchangeRows(row).map((exchange) =>
-    textValue(exchange?.referenceToFlowDataSet?.["common:shortDescription"]),
+    textValue(nestedValue(exchange, "referenceToFlowDataSet", "common:shortDescription")),
   );
   return [
     location,
@@ -322,15 +453,15 @@ function processLocationTokens(row: any): string[] {
 }
 
 export function bafuFamilyEntryFromProcess(
-  row: any,
+  row: unknown,
   {
     filePath = null,
     processId = null,
     version = null,
     scopeIndex = 0,
     locationTokens = [],
-  }: any = {},
-) {
+  }: BafuFamilyEntryOptions = {},
+): BafuFamilyBaseEntry {
   const identity = processIdentity(row);
   const id = processId || identity.id;
   const processVersion = version || identity.version || "00.00.001";
@@ -363,7 +494,11 @@ function processFileCandidates({
   processId,
   processBundlesDir = null,
   processesDir = null,
-}: any): string[] {
+}: {
+  processId: string;
+  processBundlesDir?: string | null;
+  processesDir?: string | null;
+}): string[] {
   const candidates: string[] = [];
   if (processesDir) candidates.push(path.join(processesDir, `${processId}.json`));
   if (processBundlesDir) {
@@ -383,14 +518,15 @@ function firstExistingFile(candidates: Array<string | null | undefined>): string
   );
 }
 
-function scopeIdentity(scope: any) {
+function scopeIdentity(scope: unknown): { id: string; version: string } {
+  const record = isJsonRecord(scope) ? scope : {};
   return {
-    id: textValue(scope?.process_id ?? scope?.id),
-    version: textValue(scope?.process_version ?? scope?.version) || "00.00.001",
+    id: textValue(record.process_id ?? record.id),
+    version: textValue(record.process_version ?? record.version) || "00.00.001",
   };
 }
 
-export function bafuScopeKey(scope: any): string | null {
+export function bafuScopeKey(scope: unknown): string | null {
   const identity = scopeIdentity(scope);
   return identity.id ? `${identity.id}@${identity.version}` : null;
 }
@@ -400,10 +536,15 @@ export function buildBafuFamilySignatureIndex({
   processBundlesDir = null,
   processesDir = null,
   readJson = (filePath: string) => JSON.parse(fs.readFileSync(filePath, "utf8")),
-}: any = {}) {
-  const entries: any[] = [];
-  const missing: any[] = [];
-  const loaded: any[] = [];
+}: BuildBafuFamilySignatureIndexOptions = {}): BafuFamilySignatureIndex {
+  const entries: BafuFamilyBaseEntry[] = [];
+  const missing: MissingBafuFamilyEntry[] = [];
+  const loaded: Array<{
+    row: unknown;
+    filePath: string;
+    identity: { id: string; version: string };
+    scopeIndex: number;
+  }> = [];
   for (const [scopeIndex, scope] of ensureArray(scopes).entries()) {
     const identity = scopeIdentity(scope);
     if (!identity.id) continue;
@@ -455,14 +596,17 @@ export function buildBafuFamilySignatureIndex({
   };
 }
 
-export function bafuFamilySignatureForScope(index: any, scope: any): any {
+export function bafuFamilySignatureForScope(
+  index: BafuFamilySignatureIndex | null | undefined,
+  scope: unknown,
+): BafuFamilyEntry | null {
   const key = bafuScopeKey(scope);
   return key ? (index?.byScopeKey?.get(key) ?? null) : null;
 }
 
 export function compactBafuFamilySignature(
-  entry: any,
-  repoRelative: (value: any) => any = (value) => value,
+  entry: BafuFamilyEntry | null | undefined,
+  repoRelative: (value: string) => string | null = (value) => value,
 ) {
   if (!entry) return null;
   return {
@@ -483,11 +627,11 @@ export function compactBafuFamilySignature(
     family_group_size: entry.family_group_size,
     skeleton_group_size: entry.skeleton_group_size,
     reuse_policy: entry.reuse_policy,
-    source_file: repoRelative(entry.source_file),
+    source_file: repoRelative(entry.source_file as string),
   };
 }
 
-export function bafuFamilyPlanFields(entry: any) {
+export function bafuFamilyPlanFields(entry: BafuFamilyEntry | null | undefined) {
   if (!entry) {
     return {
       bafu_family_optimization_kind: "unknown",
@@ -507,7 +651,7 @@ export function bafuFamilyPlanFields(entry: any) {
   };
 }
 
-export function bafuFamilySelectionRank(entry: any): number {
+export function bafuFamilySelectionRank(entry: BafuFamilyEntry | null | undefined): number {
   switch (entry?.optimization_role) {
     case "same_amount_master":
       return 0;
@@ -524,10 +668,13 @@ export function bafuFamilySelectionRank(entry: any): number {
   }
 }
 
-export function summarizeBafuFamilyScopes(scopes: any, index: any) {
+export function summarizeBafuFamilyScopes(
+  scopes: unknown,
+  index: BafuFamilySignatureIndex | null | undefined,
+) {
   const entries = ensureArray(scopes)
     .map((scope) => bafuFamilySignatureForScope(index, scope))
-    .filter(Boolean);
+    .filter((entry): entry is BafuFamilyEntry => entry !== null);
   const missing = ensureArray(scopes)
     .filter((scope) => !bafuFamilySignatureForScope(index, scope))
     .map((scope) => {

@@ -140,7 +140,7 @@ checkPaths:
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-26
 lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
-lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: concrete decision/preflight and source/row/reference types remain Foundry-local evidence and move no CLI, schema, Edge search, filesystem-error or database authority."
+lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: concrete decision, source and proof types plus AST ratchets remain Foundry-local evidence and move no CLI, schema, Edge search, filesystem-error, profile or database authority."
 ---
 
 # Architecture

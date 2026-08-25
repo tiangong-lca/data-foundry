@@ -31,6 +31,68 @@
   "plugins": ["typescript"],
   "overrides": [
     {
+      "files": [
+        "scripts/lib/import-curation/internal/artifact-inputs.ts",
+        "scripts/lib/import-curation/internal/context-inputs.ts",
+        "scripts/lib/import-curation/internal/dataset-payload.ts",
+        "scripts/lib/import-curation/internal/trace-summary.ts"
+      ],
+      "rules": {
+        "typescript/no-explicit-any": "error"
+      }
+    },
+    {
+      "files": ["scripts/lib/remote-verification-accepted-diff.ts"],
+      "rules": {
+        "typescript/no-explicit-any": "error"
+      }
+    },
+    {
+      "files": [
+        "scripts/lib/bafu-family-signatures.ts",
+        "test/unit/bafu-family-signatures-contract.test.mts"
+      ],
+      "rules": {
+        "typescript/no-explicit-any": "error"
+      }
+    },
+    {
+      "files": [
+        "scripts/lib/bundle-sample-utils.ts",
+        "test/unit/bundle-sample-utils-contract.test.mts"
+      ],
+      "rules": {
+        "typescript/no-explicit-any": "error"
+      }
+    },
+    {
+      "files": ["scripts/lib/trace-coverage.ts"],
+      "rules": {
+        "typescript/no-explicit-any": "error"
+      }
+    },
+    {
+      "files": ["scripts/lib/full-context-proof.ts"],
+      "rules": {
+        "typescript/no-explicit-any": "error"
+      }
+    },
+    {
+      "files": [
+        "test/unit/bundle-dataset-types.test.mts",
+        "test/unit/canonical-support-rewrites-contract.test.mts",
+        "test/unit/dataset-payload.test.mts",
+        "test/unit/foundry-runtime-utils-contract.test.mts",
+        "test/unit/import-ledger-contract.test.mts",
+        "test/unit/location-quality-utils-contract.test.mts",
+        "test/unit/prewrite-cleanup-contract.test.mts",
+        "test/unit/workflow-queue-context-contract.test.mts"
+      ],
+      "rules": {
+        "typescript/no-explicit-any": "error"
+      }
+    },
+    {
       "files": ["test/**/*.{js,mjs,cjs,ts,mts,cts}"],
       "rules": {
         "typescript/no-floating-promises": "off",
