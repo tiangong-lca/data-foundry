@@ -313,7 +313,7 @@ function loadProcessCategorySchema(schemaPath) {
     resolveRepoPath(schemaPath) || installedCliSchemaPath("tidas_processes_category.json");
   if (!resolved || !fs.existsSync(resolved)) {
     throw new Error(
-      "--process-category-schema is required unless the installed @tiangong-lca/cli@0.1.0 process category schema exists.",
+      "--process-category-schema is required unless the installed @tiangong-lca/cli@0.1.1 process category schema exists.",
     );
   }
   const schema = readJson(resolved);
@@ -348,7 +348,7 @@ function loadFlowProductCategorySchema(schemaPath) {
     resolveRepoPath(schemaPath) || installedCliSchemaPath("tidas_flows_product_category.json");
   if (!resolved || !fs.existsSync(resolved)) {
     throw new Error(
-      "--flow-product-category-schema is required unless the installed @tiangong-lca/cli@0.1.0 flow product category schema exists.",
+      "--flow-product-category-schema is required unless the installed @tiangong-lca/cli@0.1.1 flow product category schema exists.",
     );
   }
   const entries = collectCategorySchemaEntries(readJson(resolved));

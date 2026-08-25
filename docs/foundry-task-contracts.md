@@ -19,8 +19,8 @@ checkPaths:
   - specs/import-profiles.json
   - tasks/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
-lastReviewedNote: "Reviewed for Issue #63: pnpm/TS7 toolchain changes do not alter task workspace, checkpoint, artifact, or remote-write evidence contracts."
+lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
+lastReviewedNote: "Reviewed for Issue #65: handoff CommandSpecs and final-row artifact facts extend the remote-write evidence contract."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -83,6 +83,8 @@ Foundry owns a small task ledger. It records what should happen, which profile a
 ```
 
 `write_policy.mode=dry-run` remains the default until a task explicitly permits commit. When `remote_commit=profile_gated_batch`, a runner may execute generated CLI commit commands only for exact scopes whose queue verify, finalize report, mutation manifest, commit handoff, and readback closeout gates pass. `.env` values can supply credentials or command defaults, but they do not replace `source-manifest.json`, `profile-lock.json`, account/write guard reports, or checkpoint evidence.
+
+Executable handoff evidence uses `tiangong-foundry.command-spec.v1`. The plan records `final_rows_artifact.path`, `bytes`, and `sha256`; both commit and verify specs bind that fact. `display` is informational only. A runner must parse exact keys, reject duplicated safety-critical flags, recheck the bound bytes, and call only `executable` plus `argv` with `shell=false`.
 
 `execution_policy.max_parallelism` controls queue workers. Workers must claim tasks through CLI queue locks and dependency checkpoints. Blocked entities are written to the task blocker ledger with affected dependency closures and rerun instructions; unrelated ready scopes may continue and may commit if the write policy allows it.
 

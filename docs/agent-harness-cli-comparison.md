@@ -19,8 +19,8 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - scripts/commands/core.mjs
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
-lastReviewedNote: "Reviewed for Issue #63: pnpm acceptance and clean arbitrary-worktree toolchain evidence."
+lastReviewedCommit: 53872009a1a0d0871cb66761c7bf0ab4b3388b28
+lastReviewedNote: "Reviewed for Issue #65: the pnpm acceptance loop remains unchanged while receipt, CommandSpec, production-case, cache, and typed-surface evidence are enforced by the canonical prepush gate."
 related:
   - docs/file-organization.md
   - docs/codex-stop-hook.md

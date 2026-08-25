@@ -18,10 +18,10 @@ checkPaths:
   - scripts/lib/foundry-command-registry.mjs
   - scripts/lib/foundry-command-metadata.mjs
   - docs/incremental-change-set-contract.md
-  - test/unit/foundry-command-metadata.test.mjs
+  - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
-lastReviewedNote: "Reviewed for Issue #63: pnpm/TS7 command-surface preservation, typed-spine migration, and clean-worktree gates."
+lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
+lastReviewedNote: "Reviewed for Issue #65: CommandSpec handoff artifacts and typed metadata tests."
 ---
 
 # Foundry Command Surface
@@ -51,6 +51,8 @@ Every command must have `workflowEntry.status: "active"` and at least one key be
 
 `dataset-topology-convergence-compose` is a `workflow-internal` offline F/P/D planner. Its contract lives in `docs/topology-convergence-contract.md`; it validates a fresh census and exact candidate closure, reconstructs exchanges by source number plus occurrence, preserves approved multilingual nodes, emits separate flow-create/process-save contracts, and leaves obsolete flows behind a later all-visible zero-inbound delete barrier. It has no network, database, CLI, or DML dispatch and never grants production authority.
 
+`dataset-commit-handoff-plan` emits authoritative `tiangong-foundry.command-spec.v1` objects for commit and post-write verify. Each spec carries a strict executable/argv contract, reader-only display, SHA-256, and the exact final-row artifact fact. Batch runners reject malformed specs, duplicate critical flags, or artifact drift before spawning without a shell.
+
 ## Navigation Contract
 
 Every command must be reachable through this path:
@@ -73,7 +75,7 @@ When a command is added, removed, renamed, moved, or reclassified, update both:
 Then run:
 
 ```bash
-pnpm exec node --test test/unit/foundry-command-metadata.test.mjs
+pnpm exec node --test test/unit/foundry-command-metadata.test.mts
 pnpm surface:audit
 pnpm test:commands
 pnpm golden:diff

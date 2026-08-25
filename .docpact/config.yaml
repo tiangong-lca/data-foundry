@@ -6,8 +6,10 @@ layout: repo
 # Review note, 2026-07-27: Issue #50's Rust tidas cutover adds an explicit self-governance rule for retained Python-era import plans so they cannot silently regain executable authority.
 # Review note, 2026-07-30: Issue #54 aligns identity-preflight requests to one lexical_weight plus semantic_weight without changing Foundry ownership or remote mutation authority.
 # Review note, 2026-08-25: Issue #63 establishes the pnpm 11.23 / Node 24 / TypeScript 7.0.2 typed spine, explicit JavaScript migration inventory, Oxlint boundary, CLI 0.1.0 command pin, and clean arbitrary-worktree validation. Existing ownership and routing semantics are unchanged.
+# Review note, 2026-08-25: Issue #65 removes the foreign/RLS-hidden state-0 missing-dataset accepted-diff path from the helper, shared batch runner, and worldsteel config; legitimate root traceHash-only normalization remains, and the touched helper/test migrate to TypeScript.
+# Review note, 2026-08-25: Issue #65 adds the typed CommandSpec envelope, authoritative executable/argv handoffs, final-row byte/SHA binding, and shell-free BAFU execution. Ownership and routing semantics are unchanged.
 lastReviewedAt: "2026-08-25"
-lastReviewedCommit: "c996633832ea23bf7883c7b219f524bf28e6ce7e"
+lastReviewedCommit: "e94db0428e3508e68617bb1878c7e8dbec904def"
 
 catalog:
   repos:

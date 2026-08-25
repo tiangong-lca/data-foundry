@@ -21,8 +21,9 @@ checkPaths:
   - docs/import-profiles/bafu/constraints.md
   - specs/automated-lca-capability-registry.json
   - specs/workspace-capability-adapters.md
-lastReviewedAt: 2026-06-05
-lastReviewedCommit: 18b9caed641add8f7c82f4d7abc5c9e34e50c29d
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
+lastReviewedNote: "Reviewed for Issue #65: authoritative argv handoffs bind final-row bytes, and foreign/RLS-hidden state-0 missing rows never count as successful readback."
 ---
 
 # Safety Policy
@@ -67,11 +68,14 @@ Remote database writes are blocked unless:
 - when `common:other.tiangongfoundry:unresolvedTrace` or `sourceExchangeCompleteness` entries exist, the mutation manifest exports them as JSONL follow-up queues for later database-side curation
 - mutation-manifest evidence reports point to the exact write rows: schema and remote verification `input_path` match the rows file, cleanup `cleaned_rows_file` matches the rows file, and AI patch apply output chains into cleanup input when AI patching was used
 - `dataset-commit-handoff-plan` reports `ready_for_explicit_commit` for the exact finalize report, mutation manifest, final rows file, target user id, and expected state_code
+- commit and post-write verify are authoritative `tiangong-foundry.command-spec.v1` objects; their SHA-256 binds executable, argv, and the same final-row path/bytes/SHA-256, while display is never executed and every runner rechecks artifact bytes before `shell=false` spawn
 - insert/versioned writes have explicit reasons
 - state_code=100 rows have source-review records instead of direct overwrite
 - a dry-run artifact exists
 - the configured remote/readback verification gate passes
 - after commit, `tiangong-lca dataset verify-remote --compare-root-payload --target-user-id <id> --state-code <code>` passes for the exact committed rows
+- explicit production case TDD runs only through a named `case:production:*` script outside ordinary CI. The designated test account may exercise every capability that account is authorized to use only on its isolated, unreviewed, unpublished rows; public production reads are allowed, while foreign/public/shared mutation and review/publish transitions are forbidden. Each write case requires a fresh intent-bound identity receipt, an exact argv/artifact binding, at most one mutation dispatch, and a unique owner/state/payload readback; transport ambiguity stops at read-only investigation without an automatic retry.
+- `missing_dataset` for a foreign or RLS-hidden `state_code=0` reference is always a hard blocker; another account's observation, a static trusted key, or a profile exception cannot rewrite the check/report to passed. Production-test accounts accept no post-write difference. Ordinary runs may normalize only an exact root payload mismatch proven to differ solely at `tiangongfoundry:importTraceSummary.traceHash` after a fresh CLI readback.
 - after commit and readback, Foundry `dataset-post-write-closeout` reports `completed`; it must prove the handoff was ready, the CLI commit report was a real commit with no row failures, post-write verification used the same final rows, root readback checks have equal local/remote payload hashes, owner/state_code match the handoff, profile-required full schema/YAML/context AI proof and evidence counts remain attached, and any `common:other` trace queues remain attached
 - for a task with one or more committed scopes, Foundry `dataset-import-completion-report` reports `completed` after aggregating every closeout report required by the task; missing closeouts, duplicate closeouts for the same dataset type/final rows, non-completed closeouts, mismatched finalize/mutation scopes, missing profile-required full-context proof or evidence counts, unreadable trace queues, or missing required dataset types keep the task blocked
 - for resumable batch imports, Foundry `dataset-import-ledger-report` must be able to summarize the append-only import ledger into `resume.skipped-verified.jsonl` and `resume.plan.jsonl`, preserving ready-only execution across reruns

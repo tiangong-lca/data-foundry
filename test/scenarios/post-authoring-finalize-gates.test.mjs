@@ -15,11 +15,15 @@ import {
   runFoundry,
   scopeBlockerCodes,
   targetUserId,
+  writeJson,
   writeJsonLines,
   writeText,
 } from "../fixtures/foundry-core.mjs";
 import { writeContextPackFiles } from "../fixtures/full-context-fixtures.mjs";
-import { writeCompletedIdentityPreflightIndex } from "../fixtures/identity-fixtures.mjs";
+import {
+  testAuthIdentityReceipt,
+  writeCompletedIdentityPreflightIndex,
+} from "../fixtures/identity-fixtures.mjs";
 import {
   flowRow,
   flowRowWithClassification,
@@ -174,6 +178,8 @@ process.exit(2);
 `,
   );
   fs.chmodSync(fakeCli, 0o755);
+  const authReceiptFile = path.join(root, "auth-identity-receipt.json");
+  writeJson(authReceiptFile, testAuthIdentityReceipt());
 
   try {
     const finalize = runFoundry(
@@ -187,6 +193,12 @@ process.exit(2);
         rel(rowsFile),
         "--target-user-id",
         targetUserId,
+        "--auth-receipt",
+        rel(authReceiptFile),
+        "--expected-project-ref",
+        "qgzvkongdjqiiamzbbts",
+        "--expected-user-id",
+        "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
         "--state-code",
         "0",
         "--out-dir",
@@ -195,6 +207,8 @@ process.exit(2);
       {
         env: {
           TIANGONG_LCA_CLI_BIN: fakeCli,
+          FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
+          FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
           FOUNDRY_FAKE_CLI_CALLS: callsFile,
         },
       },
@@ -256,6 +270,8 @@ test("post-authoring finalize auto-builds curation queue context from sibling pr
       name: "Natural gas",
     },
   ]);
+  const authReceiptFile = path.join(root, "auth-identity-receipt.json");
+  writeJson(authReceiptFile, testAuthIdentityReceipt());
   const fakeCli = path.join(root, "bin", "fake-identity-preflight.cjs");
   writeText(
     fakeCli,
@@ -450,17 +466,29 @@ process.stdout.write(JSON.stringify(report));
         rel(context.rulesetFile),
         "--target-user-id",
         targetUserId,
+        "--auth-receipt",
+        rel(authReceiptFile),
+        "--expected-project-ref",
+        "qgzvkongdjqiiamzbbts",
+        "--expected-user-id",
+        "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
         "--out-dir",
         rel(path.join(root, "finalize")),
       ],
-      { env: { TIANGONG_LCA_CLI_BIN: fakeCli } },
+      {
+        env: {
+          TIANGONG_LCA_CLI_BIN: fakeCli,
+          FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
+          FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+        },
+      },
     );
 
     assert.equal(finalize.code, 1);
     assert.equal(finalize.json.status, "blocked");
     assert.equal(finalize.json.counts.identity_preflight_run_selected, 2);
-    assert.equal(finalize.json.counts.identity_preflight_run_completed, 1);
-    assert.equal(finalize.json.counts.identity_preflight_run_skipped_existing, 1);
+    assert.equal(finalize.json.counts.identity_preflight_run_completed, 2);
+    assert.equal(finalize.json.counts.identity_preflight_run_skipped_existing, 0);
     assert.equal(finalize.json.counts.identity_preflight_refresh_required, true);
     assert.equal(
       finalize.json.counts.identity_preflight_refresh_reason,
@@ -547,31 +575,47 @@ test("post-authoring finalize skips forced identity preflight refresh when curre
       name: "Natural gas",
     },
   ]);
+  const authReceiptFile = path.join(root, "auth-identity-receipt.json");
+  writeJson(authReceiptFile, testAuthIdentityReceipt());
 
   try {
-    const finalize = runFoundry([
-      "dataset-post-authoring-finalize",
-      "--type",
-      "process",
-      "--profile",
-      "bafu",
-      "--rows-file",
-      rel(rowsFile),
-      "--identity-preflight-index",
-      rel(identityPreflightIndex),
-      "--run-identity-preflight",
-      "--refresh-identity-preflight",
-      "--schema-file",
-      rel(context.schemaFile),
-      "--yaml-file",
-      rel(context.yamlFile),
-      "--ruleset-file",
-      rel(context.rulesetFile),
-      "--target-user-id",
-      targetUserId,
-      "--out-dir",
-      rel(path.join(root, "finalize")),
-    ]);
+    const finalize = runFoundry(
+      [
+        "dataset-post-authoring-finalize",
+        "--type",
+        "process",
+        "--profile",
+        "bafu",
+        "--rows-file",
+        rel(rowsFile),
+        "--identity-preflight-index",
+        rel(identityPreflightIndex),
+        "--run-identity-preflight",
+        "--refresh-identity-preflight",
+        "--schema-file",
+        rel(context.schemaFile),
+        "--yaml-file",
+        rel(context.yamlFile),
+        "--ruleset-file",
+        rel(context.rulesetFile),
+        "--target-user-id",
+        targetUserId,
+        "--auth-receipt",
+        rel(authReceiptFile),
+        "--expected-project-ref",
+        "qgzvkongdjqiiamzbbts",
+        "--expected-user-id",
+        "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+        "--out-dir",
+        rel(path.join(root, "finalize")),
+      ],
+      {
+        env: {
+          FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
+          FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+        },
+      },
+    );
 
     assert.equal(finalize.json.counts.identity_preflight_refresh_required, false);
     assert.equal(finalize.json.counts.identity_preflight_refresh_forced, false);

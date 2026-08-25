@@ -1,4 +1,6 @@
+import fs from "node:fs";
 import path from "node:path";
+import { createFileArtifactFact, createFoundryCommandSpec } from "./foundry-command-spec.ts";
 
 export function createIdentityPreflightArtifactUtils({
   asText,
@@ -21,6 +23,7 @@ export function createIdentityPreflightArtifactUtils({
   repoRelativePath,
   resolveRepoPath,
   safeFileToken,
+  sha256Text,
   shellQuote,
   sourceTraceLocationCode,
   textValue,
@@ -612,7 +615,7 @@ export function createIdentityPreflightArtifactUtils({
           "outputs",
           "identity-candidate-sources.json",
         );
-        const command = [
+        const commandTokens = [
           ...cliPrefix,
           type,
           "identity-preflight",
@@ -621,14 +624,16 @@ export function createIdentityPreflightArtifactUtils({
           "--out-dir",
           outputDir,
           "--json",
-        ]
-          .map(shellQuote)
-          .join(" ");
+        ];
+        const command = commandTokens.map(shellQuote).join(" ");
+        const requestText = fs.readFileSync(requestPath, "utf8");
         const indexRow = {
           dataset_type: type,
           dataset_id: identity.id,
           dataset_version: identity.version,
           target_sha256: jsonSha256(payload),
+          request_bytes_sha256: sha256Text(requestText),
+          request_json_sha256: jsonSha256(request),
           source_file: repoRelativeMaybe(sourceFile),
           request_file: repoRelativePath(requestPath),
           output_dir: repoRelativePath(outputDir),
@@ -636,6 +641,19 @@ export function createIdentityPreflightArtifactUtils({
           expected_candidates_file: repoRelativePath(expectedCandidatesFile),
           expected_candidate_sources_file: repoRelativePath(expectedCandidateSourcesFile),
           command,
+          command_spec: createFoundryCommandSpec({
+            executable: commandTokens[0],
+            argv: commandTokens.slice(1),
+            binding: {
+              artifacts: [
+                createFileArtifactFact({
+                  role: "identity_preflight_request",
+                  path: repoRelativePath(requestPath),
+                  filePath: requestPath,
+                }),
+              ],
+            },
+          }),
           remote_search: {
             data_source: remoteSearch.data_source,
             limit: remoteSearch.limit,

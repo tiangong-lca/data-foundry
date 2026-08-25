@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const tiangongLcaCliPackageName = "@tiangong-lca/cli";
-const tiangongLcaCliPackageVersion = "0.1.0";
+const tiangongLcaCliPackageVersion = "0.1.1";
 const tiangongLcaCliBinName = "tiangong-lca";
 const foundryRepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 

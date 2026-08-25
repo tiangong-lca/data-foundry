@@ -6,9 +6,11 @@ import { knownCommands } from "./foundry-command-registry.mjs";
 const commandHandlerHelpKeys = new Set(["help", "--help", "-h"]);
 const deprecatedNamePattern = /\b(?:legacy|deprecated|compat|compatibility|alias|old)\b/iu;
 const scriptEntrypoints = new Set([
+  "scripts/check-tidas-cutover.mjs",
   "scripts/foundry.mjs",
   "scripts/foundry-golden-diff.mjs",
-  "scripts/with-lca-account.mjs",
+  "scripts/cases/production-contact-draft.ts",
+  "scripts/with-lca-account.ts",
 ]);
 
 function portablePath(filePath) {
@@ -184,24 +186,24 @@ function auditOrphanDocs(repoRoot) {
 
 function importedModulePaths(repoRoot) {
   const imported = new Set();
-  const jsFiles = [
-    ...walkFiles(repoRoot, "scripts", (file) => file.endsWith(".mjs")),
-    ...walkFiles(repoRoot, "test", (file) => file.endsWith(".mjs")),
+  const sourceFiles = [
+    ...walkFiles(repoRoot, "scripts", (file) => /\.(?:[cm]?[jt]s)$/u.test(file)),
   ];
-  for (const file of jsFiles) {
+  for (const file of sourceFiles) {
     const text = readTextIfExists(repoRoot, file);
     for (const match of text.matchAll(/(?:from\s+|import\s*\()\s*["']([^"']+)["']/gu)) {
       const specifier = match[1];
       if (!specifier.startsWith(".")) continue;
-      const resolved = portablePath(
-        path.normalize(
-          path.join(
-            path.dirname(file),
-            specifier.endsWith(".mjs") ? specifier : `${specifier}.mjs`,
-          ),
-        ),
+      const base = portablePath(path.normalize(path.join(path.dirname(file), specifier)));
+      const candidates = /\.(?:[cm]?[jt]s)$/u.test(base)
+        ? [base]
+        : base.endsWith(".js")
+          ? [base, base.replace(/\.js$/u, ".ts")]
+          : [base, ...[".ts", ".mts", ".mjs", ".cts", ".cjs"].map((suffix) => `${base}${suffix}`)];
+      const resolved = candidates.find((candidate) =>
+        fs.existsSync(path.join(repoRoot, candidate)),
       );
-      imported.add(resolved);
+      if (resolved) imported.add(resolved);
     }
   }
   return imported;
@@ -210,7 +212,7 @@ function importedModulePaths(repoRoot) {
 function auditInboundModules(repoRoot) {
   const errors = [];
   const warnings = [];
-  const modules = walkFiles(repoRoot, "scripts", (file) => file.endsWith(".mjs")).sort();
+  const modules = walkFiles(repoRoot, "scripts", (file) => /\.(?:mjs|mts|ts)$/u.test(file)).sort();
   const imported = importedModulePaths(repoRoot);
   const metadataOwnerModules = new Set(
     Object.values(commandMetadata).map((entry) => entry.ownerModule),

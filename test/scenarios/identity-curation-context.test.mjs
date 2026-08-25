@@ -17,7 +17,11 @@ import {
   writeJsonLines,
 } from "../fixtures/foundry-core.mjs";
 import { writeContextPackFiles } from "../fixtures/full-context-fixtures.mjs";
-import { writeCompletedIdentityPreflightIndex } from "../fixtures/identity-fixtures.mjs";
+import { readIdentityPreflightIndexRow } from "../../scripts/lib/import-curation/internal/workflow-identity-preflight.mjs";
+import {
+  writeCompletedIdentityPreflightIndex,
+  writeIdentityPreflightExecutionFixture,
+} from "../fixtures/identity-fixtures.mjs";
 import {
   flowRow,
   flowRowWithClassification,
@@ -464,6 +468,18 @@ test("curation gate authoring package carries full contract text and queue depen
         decision_hint: "reuse",
       },
     ]);
+    writeIdentityPreflightExecutionFixture({
+      datasetType: "process",
+      id: processId,
+      requestFile: processRequest,
+      reportFile: processPreflightReport,
+    });
+    writeIdentityPreflightExecutionFixture({
+      datasetType: "flow",
+      id: flowId,
+      requestFile: flowRequest,
+      reportFile: flowPreflightReport,
+    });
     const identityPreflightIndex = path.join(
       identityPreflightRequestsRoot,
       "identity-preflight-requests.jsonl",
@@ -623,6 +639,19 @@ test("curation gate authoring package carries full contract text and queue depen
       JSON.stringify(authoringPackage.curation_queue_context.support_rows[0].input_rows),
       new RegExp(sourceId, "u"),
     );
+    writeJsonLines(flowCandidates, [
+      {
+        id: "tampered-unbound-candidate",
+        version: "99.99.999",
+        names: ["Tampered candidate export"],
+      },
+    ]);
+    const flowIndexRow = readJsonLines(identityPreflightIndex).find(
+      (row) => row.dataset_type === "flow",
+    );
+    const reread = readIdentityPreflightIndexRow(repoRoot, identityPreflightIndex, flowIndexRow);
+    assert.equal(reread.result.candidates[0].id, "ffffffff-1111-4222-8333-444444444444");
+    assert.notEqual(reread.result.candidates[0].id, "tampered-unbound-candidate");
   } finally {
     fs.rmSync(packageContextFixtureRoot, { recursive: true, force: true });
   }
@@ -735,6 +764,12 @@ test("curation gate can require completed identity preflight before full-context
       next_action: "materialize_new_payload",
       files: {},
     });
+    writeIdentityPreflightExecutionFixture({
+      datasetType: "process",
+      id: processId,
+      requestFile,
+      reportFile,
+    });
     const indexFile = path.join(
       root,
       "identity-preflight-requests",
@@ -819,12 +854,15 @@ test("curation gate can require completed identity preflight before full-context
     );
     assert.equal(
       staleAuthoringPackage.deterministic_cleanup_items[0].code,
-      "identity_preflight_current_scope_stale",
+      "identity_preflight_current_result_pending",
     );
     assert.equal(
-      staleAuthoringPackage.identity_preflight_context.current.freshness
-        .current_payload_matches_request,
-      false,
+      staleAuthoringPackage.identity_preflight_context.current.execution_evidence.status,
+      "invalid_or_missing",
+    );
+    assert.equal(
+      staleAuthoringPackage.identity_preflight_context.current.execution_evidence.code,
+      "identity_preflight_manifest_dataset_mismatch",
     );
     writeJson(requestFile, {
       schema_version: 1,
@@ -970,6 +1008,18 @@ test("bafu curation gate rejects refreshed identity preflight that drops source 
       files: {},
     });
   }
+  writeIdentityPreflightExecutionFixture({
+    datasetType: "process",
+    id: processId,
+    requestFile: processRequest,
+    reportFile: processReport,
+  });
+  writeIdentityPreflightExecutionFixture({
+    datasetType: "flow",
+    id: flowId,
+    requestFile: flowRequest,
+    reportFile: flowReport,
+  });
   const indexFile = path.join(requestRoot, "identity-preflight-requests.jsonl");
   writeJsonLines(indexFile, [
     {

@@ -1,4 +1,5 @@
 import { fixtureRoot, mutationFixtureRoot } from "./fixture-roots.mjs";
+import { canonicalPayloadSha256 } from "../../scripts/lib/post-write-root-proof.ts";
 import {
   fs,
   fullContextKinds,
@@ -15,8 +16,27 @@ export function createFixture() {
   fs.rmSync(fixtureRoot, { recursive: true, force: true });
   fs.mkdirSync(fixtureRoot, { recursive: true });
 
+  const rows = ["p1", "p2"].map((id) => ({
+    processDataSet: {
+      processInformation: {
+        dataSetInformation: {
+          "common:UUID": id,
+        },
+      },
+      administrativeInformation: {
+        publicationAndOwnership: {
+          "common:dataSetVersion": "00.00.001",
+        },
+      },
+    },
+  }));
   const rowsFile = path.join(fixtureRoot, "processes.jsonl");
-  writeText(rowsFile, '{"id":"p1"}\n{"id":"p2"}\n');
+  writeJsonLines(rowsFile, rows);
+  const finalRowsArtifact = {
+    path: rel(rowsFile),
+    bytes: fs.readFileSync(rowsFile).byteLength,
+    sha256: sha256Text(fs.readFileSync(rowsFile)),
+  };
 
   const checksFile = path.join(fixtureRoot, "remote-verification.jsonl");
   writeText(
@@ -25,10 +45,13 @@ export function createFixture() {
       .map((rowIndex) =>
         JSON.stringify({
           role: "root",
+          table: "processes",
+          id: `p${rowIndex + 1}`,
+          version: "00.00.001",
           path: `processes/${rowIndex}#readback`,
           status: "ok",
-          local_payload_sha256: `hash-${rowIndex}`,
-          remote_payload_sha256: `hash-${rowIndex}`,
+          local_payload_sha256: canonicalPayloadSha256(rows[rowIndex]),
+          remote_payload_sha256: canonicalPayloadSha256(rows[rowIndex]),
           remote_user_id: targetUserId,
           remote_state_code: 0,
           row_index: rowIndex,
@@ -195,6 +218,7 @@ export function createFixture() {
     finalize_report: rel(finalizeReport),
     mutation_manifest: rel(mutationMissingProof),
     final_rows_file: rel(rowsFile),
+    final_rows_artifact: finalRowsArtifact,
     target_user_id: targetUserId,
     expected_state_code: "0",
     counts: {
@@ -217,6 +241,7 @@ export function createFixture() {
     finalize_report: rel(finalizeReport),
     mutation_manifest: rel(mutationWithProof),
     final_rows_file: rel(rowsFile),
+    final_rows_artifact: finalRowsArtifact,
     target_user_id: targetUserId,
     expected_state_code: "0",
     counts: {

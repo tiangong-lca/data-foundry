@@ -1,4 +1,5 @@
 import test from "node:test";
+import { canonicalPayloadSha256 } from "../../scripts/lib/post-write-root-proof.ts";
 import { fixtureRoot } from "../fixtures/fixture-roots.mjs";
 import {
   assert,
@@ -18,6 +19,7 @@ import {
   writeText,
 } from "../fixtures/foundry-core.mjs";
 import { createFixture } from "../fixtures/full-context-fixtures.mjs";
+import { assertFoundryCommandSpecArtifactsCurrent } from "../../scripts/lib/foundry-command-spec.ts";
 
 test("full-context import completion gates block missing proof and pass evidenced BAFU scopes", () => {
   const fixture = createFixture();
@@ -344,13 +346,17 @@ test("post-write closeout requires common:other trace queues to match final rows
     },
   ]);
   const checksFile = path.join(root, "remote-verification.jsonl");
+  const rowPayloadSha256 = canonicalPayloadSha256(readJsonLines(rowsFile)[0]);
   writeJsonLines(checksFile, [
     {
       role: "root",
+      table: "processes",
+      id: processId,
+      version: "00.00.001",
       path: "processes/0#readback",
       status: "ok",
-      local_payload_sha256: "hash-0",
-      remote_payload_sha256: "hash-0",
+      local_payload_sha256: rowPayloadSha256,
+      remote_payload_sha256: rowPayloadSha256,
       remote_user_id: targetUserId,
       remote_state_code: 0,
       row_index: 0,
@@ -516,6 +522,11 @@ test("post-write closeout requires common:other trace queues to match final rows
     finalize_report: rel(finalizeReport),
     mutation_manifest: rel(mutationReport),
     final_rows_file: rel(rowsFile),
+    final_rows_artifact: {
+      path: rel(rowsFile),
+      bytes: fs.readFileSync(rowsFile).byteLength,
+      sha256: sha256Text(fs.readFileSync(rowsFile)),
+    },
     target_user_id: targetUserId,
     expected_state_code: "0",
     counts: {
@@ -709,14 +720,23 @@ test("flow commit handoff includes target user id on publish-version command", (
     ]);
     assert.equal(handoff.code, 0, JSON.stringify(handoff.json, null, 2));
     assert.equal(handoff.json.status, "ready_for_explicit_commit");
-    assert.match(handoff.json.commands.commit, / flow publish-version /);
-    assert.match(handoff.json.commands.commit, new RegExp(`--target-user-id ${targetUserId}`));
-    assert.doesNotMatch(handoff.json.commands.commit, /--state-code/);
+    assert.equal(handoff.json.commands.commit.schema, "tiangong-foundry.command-spec.v1");
+    assert.match(handoff.json.commands.commit.display, / flow publish-version /);
+    assert.ok(handoff.json.commands.commit.argv.includes(targetUserId));
+    assert.equal(handoff.json.commands.commit.argv.includes("--state-code"), false);
     assert.match(
-      handoff.json.commands.post_write_verify,
+      handoff.json.commands.post_write_verify.display,
       new RegExp(`--target-user-id ${targetUserId}`),
     );
-    assert.match(handoff.json.commands.post_write_verify, /--state-code 0/);
+    assert.match(handoff.json.commands.post_write_verify.display, /--state-code 0/);
+    assert.deepEqual(handoff.json.final_rows_artifact, {
+      path: rel(rowsFile),
+      bytes: fs.readFileSync(rowsFile).byteLength,
+      sha256: sha256Text(fs.readFileSync(rowsFile)),
+    });
+    assert.deepEqual(handoff.json.commands.commit.binding.artifacts, [
+      { role: "final_rows", ...handoff.json.final_rows_artifact },
+    ]);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -789,18 +809,31 @@ test("process commit handoff defaults draft state code and records account guard
     assert.equal(handoff.json.status, "ready_for_explicit_commit");
     assert.equal(handoff.json.expected_state_code, "0");
     assert.equal(handoff.json.expected_state_code_source, "default_draft_write_state");
-    assert.match(handoff.json.commands.commit, / process save-draft /);
-    assert.match(handoff.json.commands.commit, new RegExp(`--target-user-id ${targetUserId}`));
-    assert.doesNotMatch(handoff.json.commands.commit, /--state-code/);
+    assert.match(handoff.json.commands.commit.display, / process save-draft /);
+    assert.ok(handoff.json.commands.commit.argv.includes(targetUserId));
+    assert.equal(handoff.json.commands.commit.argv.includes("--state-code"), false);
     assert.match(
-      handoff.json.commands.post_write_verify,
+      handoff.json.commands.post_write_verify.display,
       new RegExp(`--target-user-id ${targetUserId}`),
     );
-    assert.match(handoff.json.commands.post_write_verify, /--state-code 0/);
+    assert.match(handoff.json.commands.post_write_verify.display, /--state-code 0/);
     assert.equal(handoff.json.account_write_guard.commit_command_supports_target_user_id, true);
     assert.equal(
       handoff.json.account_write_guard.commit_account_binding,
       "target_user_id_cli_argument",
+    );
+    assert.doesNotThrow(() =>
+      assertFoundryCommandSpecArtifactsCurrent(handoff.json.commands.commit, (artifactPath) =>
+        path.join(repoRoot, artifactPath),
+      ),
+    );
+    fs.appendFileSync(rowsFile, '{"same_path":"drift"}\n');
+    assert.throws(
+      () =>
+        assertFoundryCommandSpecArtifactsCurrent(handoff.json.commands.commit, (artifactPath) =>
+          path.join(repoRoot, artifactPath),
+        ),
+      /artifact.*drift|bytes|sha-?256/iu,
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

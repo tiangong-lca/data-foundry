@@ -17,7 +17,8 @@
     "task:route": "node scripts/foundry.mjs route-task",
     "task:status": "node scripts/foundry.mjs tasks-check",
     "env:check": "node scripts/foundry.mjs env-check",
-    "account:run": "node scripts/with-lca-account.mjs",
+    "account:run": "node scripts/with-lca-account.ts",
+    "case:production:contact-draft": "pnpm build && node dist/scripts/cases/production-contact-draft.js",
     "workflow:check": "node scripts/foundry.mjs workflow-check",
     "storage:check": "node scripts/foundry.mjs storage-check",
     "surface:audit": "node scripts/foundry.mjs surface-audit",
@@ -53,7 +54,7 @@
     "prepush:gate": "pnpm lint && pnpm test:toolchain && pnpm test && pnpm golden:diff && pnpm surface:audit && pnpm build && pnpm audit:high"
   },
   "engines": {
-    "node": ">=24 <25",
+    "node": ">=24.19.0 <25",
     "pnpm": "11.23.0"
   },
   "license": "MIT",
@@ -74,7 +75,7 @@
     ]
   },
   "dependencies": {
-    "@tiangong-lca/cli": "0.1.0",
+    "@tiangong-lca/cli": "0.1.1",
     "ajv": "8.20.0"
   }
 }

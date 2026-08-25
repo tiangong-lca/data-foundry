@@ -17,9 +17,10 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - docs/env-surface-policy.md
   - scripts/foundry.mjs
+  - scripts/with-lca-account.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
-lastReviewedNote: "Reviewed for Issue #63: pnpm acceptance commands and credential-free clean-worktree toolchain checks."
+lastReviewedCommit: 097eeb85d08167c87aef8b0efb8270311fc6baa8
+lastReviewedNote: "Reviewed for Issue #65 after final four-platform validation: account profiles, receipt bindings, the restricted TS7 child environment, and credential-free Golden baseline isolation remain aligned."
 ---
 
 # Environment Surface Policy
@@ -65,6 +66,8 @@ When a variable is needed by more than one project, record the owner before docu
 - CLI runtime variables should be public CLI contract variables, not CLI internal test controls;
 - skills should consume CLI variables through wrapper contracts and should not introduce database credentials or private transport variables;
 - private operator convenience variables stay in local `.env` and must not become reusable project examples.
+
+The account wrapper reads credential and expected project/user intent only from the selected ignored account profile. `FOUNDRY_AUTH_RECEIPT_*` values are safe, wrapper-generated child bindings and must not be configured in `.env` or account profiles. `FOUNDRY_ACCOUNT_PROFILE_SKIP_AUTH_CHECK` and equivalent bypass variables are unsupported and must not be documented or propagated.
 
 ## Automatic Check
 

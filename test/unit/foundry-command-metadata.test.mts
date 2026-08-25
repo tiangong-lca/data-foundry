@@ -15,12 +15,23 @@ import {
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 const allowedCategories = new Set(commandCategories);
+type MetadataEntry = {
+  category: string;
+  ownerModule: string;
+  ownerExport: string;
+  navigationPath: string[];
+  inputs: string[];
+  outputs: string[];
+  keyTests: Array<{ kind: string; path?: string; assertion?: string }>;
+  workflowEntry: { status: string; entry_kind: string };
+};
+const metadataByCommand = commandMetadata as unknown as Record<string, MetadataEntry>;
 
-function repoFileExists(filePath) {
+function repoFileExists(filePath: string): boolean {
   return fs.existsSync(path.join(repoRoot, filePath));
 }
 
-function readRepoFile(filePath) {
+function readRepoFile(filePath: string): string {
   return fs.readFileSync(path.join(repoRoot, filePath), "utf8");
 }
 
@@ -33,14 +44,14 @@ test("foundry command metadata covers every registered command", () => {
 test("foundry command metadata classifies public and dataset commands", () => {
   for (const command of publicCommands) {
     assert.equal(
-      commandMetadata[command].category,
+      metadataByCommand[command].category,
       "public",
       `${command} should remain classified as a public command`,
     );
   }
   for (const command of datasetPolicyCommands) {
     assert.notEqual(
-      commandMetadata[command].category,
+      metadataByCommand[command].category,
       "public",
       `${command} should not be classified as a public command`,
     );
@@ -93,7 +104,7 @@ test("foundry command metadata is navigable and evidence backed", () => {
 
 test("public command implementation paths are at most two jumps from the CLI entrypoint", () => {
   for (const command of publicCommands) {
-    const pathLength = commandMetadata[command].navigationPath.length;
+    const pathLength = metadataByCommand[command].navigationPath.length;
     assert.ok(
       pathLength <= 3,
       `${command} should be reachable as foundry.mjs -> foundry-cli.mjs -> owner`,
@@ -110,4 +121,17 @@ test("command owners do not depend on removed compatibility modules", () => {
       `${entry.command} owner must not import removed legacy implementation`,
     );
   }
+});
+
+test("commit handoff metadata declares authoritative CommandSpec and final-row binding evidence", () => {
+  const handoff = metadataByCommand["dataset-commit-handoff-plan"];
+  assert.ok(handoff.outputs.some((output) => /CommandSpec/u.test(output)));
+  assert.ok(handoff.outputs.some((output) => /final rows.*bytes.*SHA-256/iu.test(output)));
+  assert.ok(
+    handoff.keyTests.some(
+      (keyTest) =>
+        keyTest.path === "test/unit/foundry-command-spec.test.mts" &&
+        /artifact byte drift/iu.test(keyTest.assertion ?? ""),
+    ),
+  );
 });

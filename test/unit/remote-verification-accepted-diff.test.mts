@@ -3,23 +3,24 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
-import {
-  acceptTraceHashOnlyRemoteVerificationMismatch,
-  acceptTrustedExternalReferenceMissingDataset,
-} from "../../scripts/lib/remote-verification-accepted-diff.mjs";
+import * as acceptedDiffModule from "../../scripts/lib/remote-verification-accepted-diff.ts";
 
-function writeJson(filePath, value) {
+const { acceptTraceHashOnlyRemoteVerificationMismatch } = acceptedDiffModule;
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function writeJsonLines(filePath, rows) {
+function writeJsonLines(filePath: string, rows: unknown[]): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, rows.map((row) => JSON.stringify(row)).join("\n") + "\n");
+  fs.writeFileSync(filePath, rows.map((row: unknown) => JSON.stringify(row)).join("\n") + "\n");
 }
 
-function flowPayload(traceHash) {
+function flowPayload(traceHash: string) {
   return {
     flowDataSet: {
       flowInformation: {
@@ -190,150 +191,21 @@ test("rejects payload mismatches that still differ after traceHash normalization
   assert.equal(result.reason, "payloads_still_differ_after_trace_hash_normalization");
 });
 
-function trustedRefReport({ reportPath, checksPath, blockersPath, blocker }) {
-  const b = {
-    code: "missing_dataset",
-    severity: "error",
-    role: "reference",
-    table: "flows",
-    id: "3c4b0e5d-6500-4ada-9a2c-58e43ac96500",
-    version: "00.00.001",
-    latest_version: null,
-    path: "/processDataSet/exchanges/exchange/2152/referenceToFlowDataSet",
-    ...blocker,
-  };
-  writeJsonLines(checksPath, [
-    {
-      role: "root",
-      table: "processes",
-      id: "p",
-      version: "00.00.001",
-      row_index: 0,
-      status: "ok",
-      path: "/processDataSet#readback",
-    },
-    {
-      role: "reference",
-      table: b.table,
-      id: b.id,
-      version: b.version,
-      status: b.code,
-      path: b.path,
-    },
-  ]);
-  writeJsonLines(blockersPath, [b]);
-  writeJson(reportPath, {
-    status: "blocked_remote_verification",
-    input_path: `${reportPath}.input`,
-    counts: {
-      rows: 1,
-      references: 2549,
-      checked: 2550,
-      blockers: 1,
-      root_readback_checks: 1,
-      root_payload_mismatches: 0,
-      by_status: { ok: 2549, missing_dataset: 1 },
-    },
-    blockers: [b],
-    files: { report: reportPath, checks: checksPath, blockers: blockersPath },
-  });
-}
+test("foreign or RLS-hidden state-0 missing_dataset cannot be accepted by any caller", () => {
+  assert.equal("acceptTrustedExternalReferenceMissingDataset" in acceptedDiffModule, false);
 
-test("accepts a missing_dataset reference blocker for a trusted external (USLCI state-0) flow", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-trusted-ref-"));
-  const verifyOut = path.join(root, "post-write-verify", "outputs");
-  const reportPath = path.join(verifyOut, "remote-verification-report.json");
-  trustedRefReport({
-    reportPath,
-    checksPath: path.join(verifyOut, "remote-verification.jsonl"),
-    blockersPath: path.join(verifyOut, "blockers.jsonl"),
-  });
-
-  const result = acceptTrustedExternalReferenceMissingDataset({
-    verifyReportPath: reportPath,
-    outDir: root,
-    repoRoot: root,
-    trustedReferenceKeys: new Set(["flows 3c4b0e5d-6500-4ada-9a2c-58e43ac96500 00.00.001"]),
-  });
-
-  assert.equal(result.accepted, true);
-  assert.equal(result.evidence.length, 1);
-  const acceptedReport = JSON.parse(fs.readFileSync(result.verifyReportPath, "utf8"));
-  assert.equal(acceptedReport.status, "passed_remote_verification");
-  assert.equal(acceptedReport.blockers.length, 0);
-  assert.equal(acceptedReport.counts.blockers, 0);
-  assert.equal(acceptedReport.counts.by_status.missing_dataset, 0);
-  const acceptedChecks = fs
-    .readFileSync(acceptedReport.files.checks, "utf8")
-    .trim()
-    .split(/\r?\n/u)
-    .map((line) => JSON.parse(line));
-  const refCheck = acceptedChecks.find((c) => c.role === "reference");
-  assert.equal(refCheck.status, "ok");
-  assert.equal(refCheck.foundry_verification_mode, "accepted_trusted_external_reference");
-});
-
-test("rejects a missing_dataset reference blocker that is NOT in the trusted set", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-trusted-ref-reject-"));
-  const verifyOut = path.join(root, "post-write-verify", "outputs");
-  const reportPath = path.join(verifyOut, "remote-verification-report.json");
-  trustedRefReport({
-    reportPath,
-    checksPath: path.join(verifyOut, "remote-verification.jsonl"),
-    blockersPath: path.join(verifyOut, "blockers.jsonl"),
-  });
-
-  const result = acceptTrustedExternalReferenceMissingDataset({
-    verifyReportPath: reportPath,
-    outDir: root,
-    repoRoot: root,
-    // a different flow is trusted; the report's 3c4b0e5d is not -> must reject
-    trustedReferenceKeys: new Set(["flows 11111111-1111-4111-8111-111111111111 00.00.001"]),
-  });
-  assert.equal(result.accepted, false);
-  assert.equal(result.reason, "reference_not_in_trusted_set");
-});
-
-test("rejects when a non-missing_dataset blocker is present even if a trusted ref is set", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-trusted-ref-versioned-"));
-  const verifyOut = path.join(root, "post-write-verify", "outputs");
-  const reportPath = path.join(verifyOut, "remote-verification-report.json");
-  // a version_outdated blocker (canonical drift) must NOT be silenced by the trusted-ref accept
-  trustedRefReport({
-    reportPath,
-    checksPath: path.join(verifyOut, "remote-verification.jsonl"),
-    blockersPath: path.join(verifyOut, "blockers.jsonl"),
-    blocker: {
-      code: "version_outdated",
-      id: "fe0acd60-3ddc-11dd-a826-0050c2490048",
-      version: "03.00.004",
-    },
-  });
-  const result = acceptTrustedExternalReferenceMissingDataset({
-    verifyReportPath: reportPath,
-    outDir: root,
-    repoRoot: root,
-    trustedReferenceKeys: new Set(["flows fe0acd60-3ddc-11dd-a826-0050c2490048 03.00.004"]),
-  });
-  assert.equal(result.accepted, false);
-  assert.equal(result.reason, "verify_report_has_non_trusted_blockers");
-});
-
-test("does nothing without trusted reference keys (BAFU/USLCI unchanged)", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-trusted-ref-empty-"));
-  const verifyOut = path.join(root, "post-write-verify", "outputs");
-  const reportPath = path.join(verifyOut, "remote-verification-report.json");
-  trustedRefReport({
-    reportPath,
-    checksPath: path.join(verifyOut, "remote-verification.jsonl"),
-    blockersPath: path.join(verifyOut, "blockers.jsonl"),
-  });
-  const result = acceptTrustedExternalReferenceMissingDataset({
-    verifyReportPath: reportPath,
-    outDir: root,
-    repoRoot: root,
-    trustedReferenceKeys: new Set(),
-  });
-  assert.equal(result.accepted, false);
-  assert.equal(result.reason, "no_trusted_reference_keys");
+  const batchSource = fs.readFileSync(
+    path.join(repoRoot, "scripts/commands/bafu-batch-import-run.mjs"),
+    "utf8",
+  );
+  const worldsteelSource = fs.readFileSync(
+    path.join(repoRoot, "scripts/commands/worldsteel-batch-import-run.mjs"),
+    "utf8",
+  );
+  for (const source of [batchSource, worldsteelSource]) {
+    assert.doesNotMatch(source, /acceptTrustedExternalReferenceMissingDataset/u);
+    assert.doesNotMatch(source, /trustedExternalReferenceFlows/u);
+    assert.doesNotMatch(source, /accepted_trusted_reference/u);
+    assert.doesNotMatch(source, /3c4b0e5d-6500-4ada-9a2c-58e43ac96500/u);
+  }
 });

@@ -12,25 +12,24 @@ import {
   compactBafuFamilySignature,
   summarizeBafuFamilyScopes,
 } from "../lib/bafu-family-signatures.mjs";
+import { acceptTraceHashOnlyRemoteVerificationMismatch } from "../lib/remote-verification-accepted-diff.ts";
 import {
-  acceptTraceHashOnlyRemoteVerificationMismatch,
-  acceptTrustedExternalReferenceMissingDataset,
-} from "../lib/remote-verification-accepted-diff.mjs";
+  assertFoundryCommandSpecArtifactsCurrent,
+  assertFoundryCommandSpecBindsArtifact,
+  commandSpecOptionValue,
+} from "../lib/foundry-command-spec.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.mjs";
 import { stageContract } from "../lib/stage-contract.ts";
+import {
+  assertReceiptBoundHandoffAccount,
+  traceHashNormalizationAllowed,
+} from "../lib/production-case-policy.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const commandName = "dataset-bafu-batch-import-run";
 const coverageCommandName = "dataset-bafu-universe-coverage-report";
 let supportCommitQueue = Promise.resolve();
 const verifiedSupportIdentities = new Set();
-// Trusted external reference flows: `${table}\0${id}\0${version}` keys for datasets that
-// exist remotely but are invisible to the importing account through RLS (worldsteel
-// references to USLCI-account state_code=0 flows, verified present via the USLCI token and
-// reused by governance rule). The post-write verify's RLS-scoped readback falsely reports
-// these as missing_dataset; executeHandoff accepts that single blocker class for these
-// keys only. Empty for BAFU/USLCI, so their runs are unchanged.
-const trustedExternalReferenceFlows = new Set();
 const bafuBatchStageContract = {
   remote_write_mode: "explicit-commit-only",
   stage_pipeline: stageContract([
@@ -125,15 +124,6 @@ function installBafuBatchRuntime(deps, config = {}) {
   }
   bafuBatchRuntime = deps;
   bafuBatchConfig = config || {};
-  trustedExternalReferenceFlows.clear();
-  for (const ref of Array.isArray(bafuBatchConfig.trustedExternalReferenceFlows)
-    ? bafuBatchConfig.trustedExternalReferenceFlows
-    : []) {
-    const table = String(ref?.table || "flows");
-    const id = String(ref?.id || "");
-    const version = String(ref?.version || "00.00.001");
-    if (id) trustedExternalReferenceFlows.add(`${table} ${id} ${version}`);
-  }
 }
 
 function runtime() {
@@ -454,54 +444,6 @@ function uniqueExistingPaths(paths) {
   return [...new Set((paths ?? []).map(resolveRepoPath).filter(fileExists))];
 }
 
-function shellTokens(command) {
-  const tokens = [];
-  let current = "";
-  let quote = null;
-  const text = String(command ?? "");
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-    if (quote) {
-      if (char === quote) {
-        quote = null;
-      } else {
-        current += char;
-      }
-      continue;
-    }
-    if (char === "'" || char === '"') {
-      quote = char;
-      continue;
-    }
-    if (char === "\\" && index + 1 < text.length) {
-      const next = text[index + 1];
-      if (/\s/u.test(next) || next === "\\" || next === "'" || next === '"') {
-        index += 1;
-        current += next;
-      } else {
-        current += char;
-      }
-      continue;
-    }
-    if (/\s/u.test(char)) {
-      if (current) {
-        tokens.push(current);
-        current = "";
-      }
-      continue;
-    }
-    current += char;
-  }
-  if (current) tokens.push(current);
-  return tokens;
-}
-
-function commandOptionValue(command, optionName) {
-  const tokens = shellTokens(command);
-  const index = tokens.indexOf(optionName);
-  return index >= 0 ? tokens[index + 1] || null : null;
-}
-
 function datasetTypeFromRow(row) {
   if (row?.contactDataSet) return "contact";
   if (row?.sourceDataSet) return "source";
@@ -513,12 +455,15 @@ function datasetTypeFromRow(row) {
 }
 
 function supportIdentityKeysFromHandoffPlan(handoffPlan) {
-  const inputPath = resolveRepoPath(commandOptionValue(handoffPlan?.commands?.commit, "--input"));
+  const inputPath = resolveRepoPath(
+    commandSpecOptionValue(handoffPlan?.commands?.commit, "--input") ||
+      commandSpecOptionValue(handoffPlan?.commands?.commit, "--input-file"),
+  );
   if (!fileExists(inputPath)) return [];
   return readRows(inputPath)
     .map((row) => {
       const type =
-        datasetTypeFromRow(row) || commandOptionValue(handoffPlan?.commands?.commit, "--type");
+        datasetTypeFromRow(row) || commandSpecOptionValue(handoffPlan?.commands?.commit, "--type");
       if (!supportIdentityTypes().includes(type)) return null;
       const identity = datasetIdentity(row, type);
       return identity.id ? `${type}:${identity.id}@${identity.version}` : null;
@@ -813,7 +758,7 @@ function stageTimeoutMs(stage) {
 }
 
 async function runArgvStage({ stage, argv, logDir, reportPath }) {
-  const result = await runStage({ stage, logDir, command: argv, shell: false });
+  const result = await runStage({ stage, logDir, command: argv });
   const resolvedReport = resolveRepoPath(reportPath);
   if (fileExists(resolvedReport)) {
     result.json = readJson(resolvedReport);
@@ -822,15 +767,20 @@ async function runArgvStage({ stage, argv, logDir, reportPath }) {
   return result;
 }
 
-function runShellStage({ stage, command, logDir }) {
-  return runStage({ stage, logDir, command, shell: true });
+function runCommandSpecStage({ stage, commandSpec, logDir }) {
+  const spec = assertFoundryCommandSpecArtifactsCurrent(commandSpec, resolveRepoPath);
+  return runStage({
+    stage,
+    logDir,
+    command: [spec.executable, ...spec.argv],
+  });
 }
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function runStage({ stage, command, logDir, shell }) {
+function runStage({ stage, command, logDir }) {
   fs.mkdirSync(logDir, { recursive: true });
   const safeStage = stage.replace(/[^A-Za-z0-9_.-]+/gu, "-");
   const stdoutLog = path.join(logDir, `${safeStage}.stdout.log`);
@@ -842,9 +792,11 @@ function runStage({ stage, command, logDir, shell }) {
     let closed = false;
     const childEnv = { ...process.env };
     delete childEnv.TIANGONG_LCA_FORCE_REAUTH;
-    const child = shell
-      ? spawn(command, { cwd: repoRoot, env: childEnv, shell: true })
-      : spawn(command[0], command.slice(1), { cwd: repoRoot, env: childEnv });
+    const child = spawn(command[0], command.slice(1), {
+      cwd: repoRoot,
+      env: childEnv,
+      shell: false,
+    });
     const timeout = setTimeout(() => {
       timedOut = true;
       stderr += `Stage timed out after ${timeoutMs} ms.\n`;
@@ -872,7 +824,7 @@ function runStage({ stage, command, logDir, shell }) {
       fs.writeFileSync(stderrLog, stderr);
       resolve({
         stage,
-        command: shell ? command : commandString(command),
+        command: commandString(command),
         exit_code: timedOut ? 124 : typeof code === "number" ? code : 1,
         signal: signal ?? null,
         timed_out: timedOut,
@@ -1102,13 +1054,44 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
       handoffPlan,
     };
   }
-  if (!handoffPlan.commands?.commit || !handoffPlan.commands?.post_write_verify) {
+  try {
+    assertReceiptBoundHandoffAccount(handoffPlan, process.env);
+  } catch (error) {
     return {
       status: "blocked",
       blockers: [
         {
-          code: "handoff_commands_missing",
-          message: `${label} handoff plan must include commit and post_write_verify commands.`,
+          code: "handoff_account_evidence_mismatch",
+          message: String(error?.message || error),
+          handoff_plan: repoRelative(handoffPlanPath),
+        },
+      ],
+      stages,
+      handoffPlan,
+    };
+  }
+  let commitSpec;
+  let verifySpec;
+  try {
+    const requiredFinalRowsArtifact = {
+      role: "final_rows",
+      ...handoffPlan.final_rows_artifact,
+    };
+    commitSpec = assertFoundryCommandSpecBindsArtifact(
+      handoffPlan.commands?.commit,
+      requiredFinalRowsArtifact,
+    );
+    verifySpec = assertFoundryCommandSpecBindsArtifact(
+      handoffPlan.commands?.post_write_verify,
+      requiredFinalRowsArtifact,
+    );
+  } catch (error) {
+    return {
+      status: "blocked",
+      blockers: [
+        {
+          code: "handoff_command_spec_invalid",
+          message: `${label} handoff plan must include valid authoritative commit and post_write_verify CommandSpecs: ${String(error?.message || error)}`,
           handoff_plan: repoRelative(handoffPlanPath),
         },
       ],
@@ -1117,11 +1100,21 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
     };
   }
 
-  const commitStage = await runShellStage({
-    stage: `${label}.commit`,
-    command: handoffPlan.commands.commit,
-    logDir,
-  });
+  let commitStage;
+  try {
+    commitStage = await runCommandSpecStage({
+      stage: `${label}.commit`,
+      commandSpec: commitSpec,
+      logDir,
+    });
+  } catch (error) {
+    blockers.push({
+      code: "commit_handoff_artifact_binding_failed",
+      message: `${label} commit CommandSpec artifact binding failed before spawn: ${String(error?.message || error)}`,
+      handoff_plan: repoRelative(handoffPlanPath),
+    });
+    return { status: "failed", blockers, stages, handoffPlan };
+  }
   const commitReportPath = commitReportForHandoffPlan(handoffPlan);
   stages.push({ ...commitStage, report: repoRelative(commitReportPath) });
   if (commitStage.exit_code !== 0 || !commitReportPath) {
@@ -1157,11 +1150,21 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
   for (let attempt = 1; attempt <= maxVerifyAttempts; attempt += 1) {
     const verifyStageName =
       attempt === 1 ? `${label}.post_write_verify` : `${label}.post_write_verify.retry_${attempt}`;
-    const verifyStage = await runShellStage({
-      stage: verifyStageName,
-      command: handoffPlan.commands.post_write_verify,
-      logDir,
-    });
+    let verifyStage;
+    try {
+      verifyStage = await runCommandSpecStage({
+        stage: verifyStageName,
+        commandSpec: verifySpec,
+        logDir,
+      });
+    } catch (error) {
+      blockers.push({
+        code: "post_write_verify_artifact_binding_failed",
+        message: `${label} verify CommandSpec artifact binding failed before spawn: ${String(error?.message || error)}`,
+        handoff_plan: repoRelative(handoffPlanPath),
+      });
+      return { status: "failed", blockers, stages, handoffPlan };
+    }
     verifyReportPath = verifyReportForHandoffPlan(handoffPlan);
     verifyExitCode = verifyStage.exit_code;
     verifyAttempts = attempt;
@@ -1173,7 +1176,11 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
     };
     stages.push(stageRecord);
     verifyAccepted = verifyStage.exit_code === 0 && Boolean(verifyReportPath);
-    if (verifyStage.exit_code !== 0 && verifyReportPath) {
+    if (
+      verifyStage.exit_code !== 0 &&
+      verifyReportPath &&
+      traceHashNormalizationAllowed(handoffPlan)
+    ) {
       const acceptedVerify = acceptTraceHashOnlyRemoteVerificationMismatch({
         verifyReportPath,
         outDir,
@@ -1187,27 +1194,6 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
           status: "accepted",
           report: repoRelative(acceptedVerify.acceptanceReportPath),
           accepted_differences: acceptedVerify.evidence.length,
-        });
-      }
-    }
-    if (!verifyAccepted && verifyReportPath && trustedExternalReferenceFlows.size > 0) {
-      // Accept a readback whose ONLY blockers are missing_dataset on reference-role rows
-      // that point at pre-verified trusted external datasets (worldsteel -> USLCI
-      // state_code=0 flows, reused by reference and invisible to worldsteel via RLS).
-      const acceptedTrusted = acceptTrustedExternalReferenceMissingDataset({
-        verifyReportPath,
-        outDir,
-        repoRoot,
-        trustedReferenceKeys: trustedExternalReferenceFlows,
-      });
-      if (acceptedTrusted.accepted) {
-        verifyReportPath = acceptedTrusted.verifyReportPath;
-        verifyAccepted = true;
-        stages.push({
-          stage: `${label}.post_write_verify.accepted_trusted_reference`,
-          status: "accepted",
-          report: repoRelative(acceptedTrusted.acceptanceReportPath),
-          accepted_trusted_references: acceptedTrusted.evidence.length,
         });
       }
     }
@@ -1233,7 +1219,7 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
   }
 
   const closeoutDir = path.join(outDir, "closeout");
-  const closeoutCommand = commandString([
+  const closeoutArgv = [
     process.execPath,
     "scripts/foundry.mjs",
     "dataset-post-write-closeout",
@@ -1247,10 +1233,10 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
     repoRelative(closeoutDir),
     "--ledger-dir",
     repoRelative(ledgerDir),
-  ]);
-  const closeoutStage = await runShellStage({
+  ];
+  const closeoutStage = await runArgvStage({
     stage: `${label}.closeout`,
-    command: closeoutCommand,
+    argv: closeoutArgv,
     logDir,
   });
   const closeoutReportPath = path.join(closeoutDir, "dataset-post-write-closeout-report.json");
@@ -1388,13 +1374,36 @@ function invalidateIdentityPreflightResultCacheEntry(identityKey) {
   const raw = process.env.BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE;
   if (!raw || !identityKey) return false;
   const cacheDir = resolveRepoPath(raw);
-  const entryDir = path.join(cacheDir, identityKey.replace(/[^A-Za-z0-9_.@-]+/gu, "-"));
+  const match = String(identityKey).match(/^([^:]+):(.+)@([^@]+)$/u);
+  if (!match || !directoryExists(cacheDir)) return false;
+  const [, datasetType, datasetId, datasetVersion] = match;
+  let removed = 0;
   try {
-    fs.rmSync(entryDir, { recursive: true, force: true });
+    for (const entry of fs.readdirSync(cacheDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const entryDir = path.join(cacheDir, entry.name);
+      const manifestPath = path.join(entryDir, "foundry-identity-preflight-execution.json");
+      if (!fileExists(manifestPath)) continue;
+      let manifest;
+      try {
+        manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+      } catch {
+        continue;
+      }
+      const dataset = manifest?.binding?.dataset;
+      if (
+        dataset?.type === datasetType &&
+        dataset?.id === datasetId &&
+        String(dataset?.version || "00.00.001") === datasetVersion
+      ) {
+        fs.rmSync(entryDir, { recursive: true, force: true });
+        removed += 1;
+      }
+    }
   } catch {
     /* best-effort invalidation */
   }
-  return true;
+  return removed > 0;
 }
 
 function identityDecisionSourceFiles(runDir) {
@@ -5133,23 +5142,6 @@ export function createBafuBatchImportRunCommands(deps, config = {}) {
       applyResolutionRewrites() && libraryResolutionDir
         ? loadResolutionRewritesByProcess(libraryResolutionDir)
         : new Map();
-    // Mega-scope speed-up: when applying the library resolution, also expose its
-    // exchange-reference-rewrites to every per-scope finalize as
-    // IDENTITY_PREFLIGHT_REUSE_MAP. The finalize stage then PRE-SEEDS a reuse decision
-    // for each reuse-proven flow and SKIPS the redundant per-flow REMOTE identity
-    // preflight (the dominant cost on worldsteel's ~2,000-2,543-exchange mega-scopes).
-    // The finalize subprocess inherits process.env. Respect an operator-set value; no-op
-    // for BAFU (applyResolutionRewrites off) and when the rewrites file is absent.
-    if (
-      applyResolutionRewrites() &&
-      libraryResolutionDir &&
-      !asText(process.env.IDENTITY_PREFLIGHT_REUSE_MAP)
-    ) {
-      const reuseMapFile = path.join(libraryResolutionDir, "exchange-reference-rewrites.jsonl");
-      if (fs.existsSync(reuseMapFile)) {
-        process.env.IDENTITY_PREFLIGHT_REUSE_MAP = reuseMapFile;
-      }
-    }
     const pauseFile = asText(options.pauseFile) ? resolveRepoPath(options.pauseFile) : null;
     const stopAfterBlocked =
       options.stopAfterBlocked == null
@@ -5604,6 +5596,7 @@ export const bafuBatchImportRunTestHooks = {
   enforceSharedContextCacheCap,
   flowRowsPendingVerification,
   identityUnresolvedReferenceBlocker,
+  invalidateIdentityPreflightResultCacheEntry,
   mergeCompletedReusableIdentityDecisions,
   postWriteVerifyRetryReason,
   preFinalizeRecoveryBlocker,

@@ -444,92 +444,16 @@ export function createPostAuthoringFinalizeUtils({
     };
   }
 
-  // Resolution-reuse seed (opt-in via IDENTITY_PREFLIGHT_REUSE_MAP pointing at the library
-  // resolution's exchange-reference-rewrites.jsonl): for every flow the resolution ALREADY
-  // PROVES reuses a canonical, synthesize the block_duplicate/stop_duplicate identity-decision
-  // directly (the gate reads the decision file + the refresh-built request sha; it never re-runs
-  // the remote search to produce it). This collapses a mega-scope's per-flow remote hybrid search
-  // — the remote caps concurrency at ~2x — to only the genuinely-new flows. Writes only where no
-  // real decision exists, so it never clobbers fresh evidence; a flow with no resolution proof is
-  // left pending and searched normally. A flow's canonical is process-independent, so the map is
-  // keyed by source_flow_id. Unset env → no seeding → byte-identical (BAFU and any non-resolution
-  // run). Runs BEFORE the run/shard stage so onlyPending then skips the seeded flows.
   function preseedResolutionReuseDecisions({ index }) {
     const mapFile = resolveRepoPath(process.env.IDENTITY_PREFLIGHT_REUSE_MAP);
     if (!mapFile || !fileExists(mapFile) || !index || !fileExists(index)) {
       return { enabled: false, seeded: 0 };
     }
-    const reuse = new Map();
-    for (const row of readRowsFile(mapFile)) {
-      const src = asText(row?.source_flow_id);
-      const cid = asText(row?.canonical_flow_id);
-      if (!src || !cid || reuse.has(src)) continue;
-      reuse.set(src, { id: cid, version: asText(row?.canonical_flow_version) || "00.00.001" });
-    }
-    if (reuse.size === 0) return { enabled: true, seeded: 0 };
-    let seeded = 0;
-    for (const row of readRowsFile(index)) {
-      if (asText(row?.dataset_type ?? row?.type) !== "flow") continue;
-      const id = asText(row?.dataset_id ?? row?.id);
-      const canonical = id ? reuse.get(id) : null;
-      if (!canonical) continue;
-      const reportRel =
-        row?.expected_report_file ||
-        row?.identity_decision_file ||
-        row?.identityDecisionFile ||
-        row?.report_file ||
-        row?.reportFile;
-      const reportFile = reportRel ? resolveRepoPath(reportRel) : null;
-      if (!reportFile || fileExists(reportFile)) continue;
-      let target = null;
-      const reqFile = row?.request_file ? resolveRepoPath(row.request_file) : null;
-      if (reqFile && fileExists(reqFile)) {
-        try {
-          target = JSON.parse(fs.readFileSync(reqFile, "utf8")).target ?? null;
-        } catch {
-          target = null;
-        }
-      }
-      const version = asText(row?.dataset_version ?? row?.version) || "00.00.001";
-      const decision = {
-        schema_version: 1,
-        kind: "flow",
-        status: "blocked",
-        decision: "block_duplicate",
-        confidence: "high",
-        next_action: "stop_duplicate",
-        target: target ?? { id, version },
-        candidates: [
-          {
-            index: 0,
-            id: canonical.id,
-            version: canonical.version,
-            state_code: null,
-            names: target?.names ?? null,
-            fields: target?.fields ?? null,
-            exchange_signature: [],
-            match_score: 1,
-            match_reasons: ["library_resolution_proven_reuse"],
-            decision_hint: "reuse",
-          },
-        ],
-        candidate_sources: [{ kind: "library_resolution", endpoint: "library-resolution" }],
-        findings: [],
-        blockers: [
-          {
-            code: "flow_duplicate_candidate",
-            severity: "blocker",
-            message: `Library resolution proves reuse of canonical ${canonical.id}@${canonical.version}; remote identity search skipped.`,
-            candidate_index: 0,
-          },
-        ],
-        files: null,
-      };
-      fs.mkdirSync(path.dirname(reportFile), { recursive: true });
-      fs.writeFileSync(reportFile, JSON.stringify(decision));
-      seeded += 1;
-    }
-    return { enabled: true, seeded, reuse_map_size: reuse.size };
+    return {
+      enabled: false,
+      seeded: 0,
+      reason: "bound_library_resolution_seed_manifest_required",
+    };
   }
 
   function runFinalizeIdentityPreflightStage({ rowsFile, outDir, options }) {
@@ -616,9 +540,9 @@ export function createPostAuthoringFinalizeUtils({
         merge_report_file: repoRelativeMaybe(resolveRepoPath(mergeReport.files?.report)),
       };
     }
-    // Resolution-reuse seed (opt-in): synthesize block_duplicate decisions for flows the library
-    // resolution already proves reusable, so the run/shards below skip their remote search via
-    // onlyPending. No-op when IDENTITY_PREFLIGHT_REUSE_MAP is unset (BAFU/non-resolution unchanged).
+    // Unbound synthetic reports are intentionally disabled. A future optimization must bind the
+    // request, library-resolution bytes, canonical target, and producer provenance in a dedicated
+    // seed manifest before onlyPending may skip the live identity search.
     const reuseSeed = preseedResolutionReuseDecisions({ index: indexPath });
     // Best-effort parallel pre-pass (opt-in): populate the REMAINING per-flow decisions concurrently
     // so the in-process run below skips them via onlyPending. No-op when IDENTITY_PREFLIGHT_CONCURRENCY
@@ -642,6 +566,20 @@ export function createPostAuthoringFinalizeUtils({
       maxAttempts:
         options.identityPreflightMaxAttempts || options.identityPreflightRetryAttempts || 3,
       dryRun: options.identityPreflightDryRun || options.dryRunIdentityPreflight,
+      authReceipt:
+        options.identityPreflightAuthReceipt ||
+        options.authReceipt ||
+        options.authIdentityReceipt ||
+        options.accountReceipt,
+      expectedProjectRef:
+        options.identityPreflightExpectedProjectRef ||
+        options.expectedProjectRef ||
+        options.expectedProject ||
+        options.projectRef,
+      expectedUserId:
+        options.identityPreflightExpectedUserId || options.expectedUserId || options.targetUserId,
+      authReceiptMaxAgeMs:
+        options.identityPreflightAuthReceiptMaxAgeMs || options.authReceiptMaxAgeMs,
     });
     return {
       stage: "identity_preflight_run",

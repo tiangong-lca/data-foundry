@@ -1,15 +1,23 @@
 import path from "node:path";
+import { createFileArtifactFact } from "../lib/foundry-command-spec.ts";
+import { normalizeAllowedTraceHashDifference } from "../lib/remote-verification-accepted-diff.ts";
+import {
+  canonicalPayloadSha256,
+  validateUniqueRootReadbacks,
+} from "../lib/post-write-root-proof.ts";
 
 export function createPostWriteCloseoutCommands({
   asText,
   countJsonLinesFile,
   countRowsFile,
+  datasetIdentity,
   ensureArray,
   fileExists,
   fullContextProofCheck,
   nowIso,
   readJsonArtifactOption,
   readJsonLines,
+  readRowsFile,
   repoRelativeMaybe,
   repoRelativePath,
   reportInputPath,
@@ -98,6 +106,8 @@ export function createPostWriteCloseoutCommands({
     expectedRows,
     targetUserId,
     expectedStateCode,
+    intendedRoots,
+    allowTraceHashOnlyNormalization,
     blockers,
   }) {
     const inputPath = resolveRepoPath(reportInputPath(verifyReport));
@@ -135,12 +145,12 @@ export function createPostWriteCloseoutCommands({
     }
     if (
       !Number.isFinite(rootReadbackCount) ||
-      rootReadbackCount < expectedRows ||
+      rootReadbackCount !== expectedRows ||
       expectedRows <= 0
     ) {
       blockers.push({
         code: "post_write_verify_root_readback_incomplete",
-        message: `Post-write verification has ${Number.isFinite(rootReadbackCount) ? rootReadbackCount : "unknown"} root readback checks; expected ${expectedRows}.`,
+        message: `Post-write verification has ${Number.isFinite(rootReadbackCount) ? rootReadbackCount : "unknown"} root readback checks; expected exactly ${expectedRows}.`,
         post_write_verify_report: repoRelativePath(verifyReportPath),
       });
     }
@@ -161,17 +171,17 @@ export function createPostWriteCloseoutCommands({
         post_write_verify_report: repoRelativePath(verifyReportPath),
         checks_file: verifyReport.files?.checks ?? null,
       });
-      return { checksFile: null, readbackChecks: [] };
+      return { checksFile: null, readbackChecks: [], uniqueReadbackCount: 0 };
     }
 
     const checks = readJsonLines(checksFile);
     const readbackChecks = checks.filter(
       (check) => check?.role === "root" && String(check?.path ?? "").endsWith("#readback"),
     );
-    if (readbackChecks.length < expectedRows) {
+    if (readbackChecks.length !== expectedRows) {
       blockers.push({
         code: "post_write_verify_readback_check_rows_missing",
-        message: `Post-write check file contains ${readbackChecks.length} root readback checks; expected ${expectedRows}.`,
+        message: `Post-write check file contains ${readbackChecks.length} root readback checks; expected exactly ${expectedRows}.`,
         checks_file: repoRelativePath(checksFile),
       });
     }
@@ -215,8 +225,20 @@ export function createPostWriteCloseoutCommands({
         });
       }
     }
+    const uniqueProof = validateUniqueRootReadbacks({
+      intended: intendedRoots,
+      checks: readbackChecks,
+      targetUserId,
+      expectedStateCode,
+      allowTraceHashOnlyNormalization,
+    });
+    blockers.push(...uniqueProof.blockers);
 
-    return { checksFile, readbackChecks };
+    return {
+      checksFile,
+      readbackChecks,
+      uniqueReadbackCount: uniqueProof.uniqueReadbackCount,
+    };
   }
 
   function validateTraceQueuesForCloseout({
@@ -326,6 +348,83 @@ export function createPostWriteCloseoutCommands({
     };
   }
 
+  function rootTypeAndTable(row, fallbackType) {
+    if (row?.contactDataSet) return { type: "contact", table: "contacts" };
+    if (row?.sourceDataSet) return { type: "source", table: "sources" };
+    if (row?.flowPropertyDataSet) return { type: "flowproperty", table: "flowproperties" };
+    if (row?.unitGroupDataSet) return { type: "unitgroup", table: "unitgroups" };
+    if (row?.flowDataSet) return { type: "flow", table: "flows" };
+    if (row?.processDataSet) return { type: "process", table: "processes" };
+    if (row?.lifeCycleModelDataSet || row?.lifecycleModelDataSet) {
+      return { type: "lifecyclemodel", table: "lifecyclemodels" };
+    }
+    const table =
+      fallbackType === "process"
+        ? "processes"
+        : fallbackType === "flow"
+          ? "flows"
+          : fallbackType === "contact"
+            ? "contacts"
+            : fallbackType === "source"
+              ? "sources"
+              : fallbackType === "lifecyclemodel"
+                ? "lifecyclemodels"
+                : "";
+    return { type: fallbackType, table };
+  }
+
+  function validateHandoffFinalRowsArtifact({ handoffPlan, finalRowsFile, blockers }) {
+    const artifact = handoffPlan.final_rows_artifact;
+    if (
+      !artifact ||
+      typeof artifact !== "object" ||
+      Array.isArray(artifact) ||
+      typeof artifact.path !== "string" ||
+      !Number.isSafeInteger(artifact.bytes) ||
+      artifact.bytes < 0 ||
+      typeof artifact.sha256 !== "string" ||
+      !/^[a-f0-9]{64}$/u.test(artifact.sha256)
+    ) {
+      blockers.push({
+        code: "handoff_final_rows_artifact_missing_or_invalid",
+        message: "Post-write closeout requires handoff final_rows_artifact path/bytes/SHA-256.",
+      });
+      return null;
+    }
+    const artifactPath = resolveRepoPath(artifact.path);
+    if (!artifactPath || !sameResolvedPath(artifactPath, finalRowsFile)) {
+      blockers.push({
+        code: "handoff_final_rows_artifact_path_mismatch",
+        message: "Handoff final_rows_artifact path must resolve to the exact final rows file.",
+        expected_rows: repoRelativeMaybe(finalRowsFile),
+        artifact_path: artifact.path,
+      });
+      return null;
+    }
+    const current = createFileArtifactFact({
+      role: "final_rows",
+      path: artifact.path,
+      filePath: finalRowsFile,
+    });
+    if (current.bytes !== artifact.bytes) {
+      blockers.push({
+        code: "handoff_final_rows_artifact_bytes_drift",
+        message: "Final rows byte length changed after commit handoff.",
+        expected_bytes: artifact.bytes,
+        actual_bytes: current.bytes,
+      });
+    }
+    if (current.sha256 !== artifact.sha256) {
+      blockers.push({
+        code: "handoff_final_rows_artifact_sha256_drift",
+        message: "Final rows bytes changed after commit handoff.",
+        expected_sha256: artifact.sha256,
+        actual_sha256: current.sha256,
+      });
+    }
+    return current;
+  }
+
   function runDatasetPostWriteCloseout(options) {
     if (options.help) {
       return {
@@ -394,6 +493,18 @@ export function createPostWriteCloseoutCommands({
         ? null
         : Number(expectedStateCodeText);
     const blockers = [];
+    const handoffAccountMode = asText(handoffPlan.account_mode).toLowerCase() || "ordinary";
+    const environmentAccountMode = asText(process.env.FOUNDRY_ACCOUNT_MODE).toLowerCase();
+    if (environmentAccountMode && environmentAccountMode !== handoffAccountMode) {
+      blockers.push({
+        code: "handoff_account_mode_mismatch",
+        message: "Post-write closeout account mode must match the receipt-bound handoff mode.",
+      });
+    }
+    const productionTestAccount =
+      handoffAccountMode === "production-test" ||
+      environmentAccountMode === "production-test" ||
+      ["1", "true"].includes(String(options.productionCase || ""));
 
     if (handoffPlan.status !== "ready_for_explicit_commit") {
       blockers.push({
@@ -409,6 +520,10 @@ export function createPostWriteCloseoutCommands({
         final_rows_file: handoffPlan.final_rows_file ?? null,
       });
     }
+    const finalRowsArtifact =
+      finalRowsFile && fileExists(finalRowsFile)
+        ? validateHandoffFinalRowsArtifact({ handoffPlan, finalRowsFile, blockers })
+        : null;
     if (!targetUserId) {
       blockers.push({
         code: "target_user_id_missing",
@@ -496,6 +611,34 @@ export function createPostWriteCloseoutCommands({
 
     const expectedRows =
       finalRowsFile && fileExists(finalRowsFile) ? countRowsFile(finalRowsFile) : 0;
+    const intendedRoots = [];
+    if (finalRowsFile && fileExists(finalRowsFile)) {
+      readRowsFile(finalRowsFile).forEach((row, rowIndex) => {
+        const rootType = rootTypeAndTable(row, datasetType);
+        const identity = datasetIdentity(row, rootType.type);
+        if (!rootType.table || !identity.id || !identity.version) {
+          blockers.push({
+            code: "intended_root_identity_missing",
+            message: `Final row ${rowIndex} does not expose one supported root identity.`,
+            row_index: rowIndex,
+          });
+          return;
+        }
+        const acceptedNormalization = normalizeAllowedTraceHashDifference(row);
+        intendedRoots.push({
+          rowIndex,
+          table: rootType.table,
+          id: identity.id,
+          version: identity.version,
+          payloadSha256: canonicalPayloadSha256(row),
+          acceptedNormalizedPayloadSha256:
+            acceptedNormalization.removed_paths.length > 0
+              ? acceptedNormalization.normalized_sha256
+              : null,
+          acceptedNormalizedRemovedPaths: acceptedNormalization.removed_paths,
+        });
+      });
+    }
     if (expectedRows <= 0) {
       blockers.push({
         code: "final_rows_empty",
@@ -504,6 +647,7 @@ export function createPostWriteCloseoutCommands({
       });
     }
 
+    let rootProof = { checksFile: null, readbackChecks: [], uniqueReadbackCount: 0 };
     if (finalRowsFile && fileExists(finalRowsFile)) {
       validateCommitReportForCloseout({
         commitReport: commitArtifact.value,
@@ -513,13 +657,15 @@ export function createPostWriteCloseoutCommands({
         expectedRows,
         blockers,
       });
-      validatePostWriteVerifyForCloseout({
+      rootProof = validatePostWriteVerifyForCloseout({
         verifyReport: verifyArtifact.value,
         verifyReportPath: verifyArtifact.path,
         finalRowsFile,
         expectedRows,
         targetUserId,
         expectedStateCode,
+        intendedRoots,
+        allowTraceHashOnlyNormalization: !productionTestAccount,
         blockers,
       });
     }
@@ -547,6 +693,13 @@ export function createPostWriteCloseoutCommands({
       commit_report: repoRelativePath(commitArtifact.path),
       post_write_verify_report: repoRelativePath(verifyArtifact.path),
       final_rows_file: repoRelativeMaybe(finalRowsFile),
+      final_rows_artifact: finalRowsArtifact
+        ? {
+            path: finalRowsArtifact.path,
+            bytes: finalRowsArtifact.bytes,
+            sha256: finalRowsArtifact.sha256,
+          }
+        : null,
       target_user_id: targetUserId || null,
       expected_state_code: expectedStateCode,
       policy: {
@@ -554,6 +707,7 @@ export function createPostWriteCloseoutCommands({
         commit_boundary:
           "This closeout is read-only. It accepts only an already executed explicit CLI commit plus post-write root payload readback evidence.",
         compare_root_payload_required: true,
+        accepted_trace_hash_only_normalization: !productionTestAccount,
         closeout_completion:
           "completed means Foundry handoff was ready, CLI commit completed without row failures, post-write verify proved owner, state_code, and local/remote payload hash equality for the same final rows, and profile-required full schema/YAML/context AI proof remained attached.",
       },
@@ -571,6 +725,7 @@ export function createPostWriteCloseoutCommands({
             verifyArtifact.value.counts?.blockers ?? verifyArtifact.value.blockers?.length ?? 0,
           ) || 0,
         root_readback_checks: Number(verifyArtifact.value.counts?.root_readback_checks ?? 0) || 0,
+        unique_root_readback_checks: rootProof.uniqueReadbackCount,
         root_payload_mismatches: Number(verifyArtifact.value.counts?.root_payload_mismatches ?? -1),
         unresolved_trace_entries: traceQueues.counts.unresolved_trace_entries,
         source_exchange_completeness_entries:

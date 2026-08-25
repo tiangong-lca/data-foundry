@@ -1,4 +1,5 @@
 import path from "node:path";
+import { validateIdentityPreflightEvidence } from "../../identity-preflight-proof.ts";
 import { readJsonLinesIfExists, resolveArtifactPath } from "./artifact-inputs.mjs";
 import {
   dataSetInformation,
@@ -12,6 +13,7 @@ import {
   fileExists,
   readJson,
   readJsonIfExists,
+  readText,
   repoRelativePath,
   resolveRepoPath,
 } from "./runtime-io.mjs";
@@ -53,16 +55,6 @@ export function identityPreflightResultFile(repoRoot, indexPath, row) {
   return resolveRepoPath(repoRoot, path.join(outputDir, "outputs", "identity-decision.json"));
 }
 
-export function identityPreflightCandidatesFile(repoRoot, indexPath, row, result) {
-  const baseDir = path.dirname(indexPath);
-  const explicit =
-    row?.expected_candidates_file ??
-    row?.identity_candidates_file ??
-    row?.identityCandidatesFile ??
-    result?.files?.candidates;
-  return explicit ? resolveArtifactPath(repoRoot, explicit, baseDir) : null;
-}
-
 export function readIdentityPreflightIndexRow(repoRoot, indexPath, row) {
   const baseDir = path.dirname(indexPath);
   const datasetType = asText(row?.dataset_type ?? row?.type);
@@ -71,10 +63,38 @@ export function readIdentityPreflightIndexRow(repoRoot, indexPath, row) {
   if (!datasetType || !datasetId) return null;
   const requestPath = resolveArtifactPath(repoRoot, row?.request_file, baseDir);
   const request = readJsonIfExists(requestPath);
+  const requestText = requestPath && fileExists(requestPath) ? readText(requestPath) : null;
   const resultPath = identityPreflightResultFile(repoRoot, indexPath, row);
   const result = readJsonIfExists(resultPath);
-  const candidatesPath = identityPreflightCandidatesFile(repoRoot, indexPath, row, result);
-  const candidateRows = readJsonLinesIfExists(candidatesPath);
+  const resultText = resultPath && fileExists(resultPath) ? readText(resultPath) : null;
+  const executionManifestPath =
+    resolveArtifactPath(
+      repoRoot,
+      row?.execution_manifest_file ?? row?.executionManifestFile,
+      baseDir,
+    ) ??
+    (resultPath
+      ? path.join(path.dirname(resultPath), "foundry-identity-preflight-execution.json")
+      : null);
+  const executionManifest = readJsonIfExists(executionManifestPath);
+  const targetSha256 =
+    row?.target_sha256 ??
+    row?.targetSha256 ??
+    (request ? sha256Json(request.target ?? null) : null);
+  const executionEvidence = validateIdentityPreflightEvidence(executionManifest, {
+    requestText,
+    reportText: resultText,
+    datasetType,
+    datasetId,
+    datasetVersion,
+    targetSha256: asText(targetSha256),
+    expectedProjectRef: asText(row?.expected_project_ref ?? row?.expectedProjectRef) || null,
+    expectedUserId: asText(row?.expected_user_id ?? row?.expectedUserId) || null,
+  });
+  const completedResult = result && executionEvidence.ok ? result : null;
+  // Candidate files are convenience exports and are not covered by the bound
+  // execution manifest. Downstream semantic evidence comes only from the
+  // manifest-bound identity-decision report.
   const outputDir = row?.output_dir
     ? (resolveArtifactPath(repoRoot, row.output_dir, baseDir) ??
       resolveRepoPath(repoRoot, row.output_dir))
@@ -92,8 +112,7 @@ export function readIdentityPreflightIndexRow(repoRoot, indexPath, row) {
       ? {
           schema_version: request.schema_version ?? null,
           remote_candidate_search: request.remote_candidate_search ?? null,
-          target_sha256:
-            row?.target_sha256 ?? row?.targetSha256 ?? sha256Json(request.target ?? null),
+          target_sha256: targetSha256,
         }
       : row?.target_sha256 || row?.targetSha256
         ? {
@@ -102,21 +121,29 @@ export function readIdentityPreflightIndexRow(repoRoot, indexPath, row) {
             target_sha256: row?.target_sha256 ?? row?.targetSha256,
           }
         : null,
-    result: result
+    result: completedResult
       ? {
-          status: result.status ?? null,
-          decision: result.decision ?? null,
-          confidence: result.confidence ?? null,
-          next_action: result.next_action ?? null,
-          target: result.target ?? null,
-          candidates: candidateRows.length > 0 ? candidateRows : ensureArray(result.candidates),
-          candidate_sources: result.candidate_sources ?? null,
-          findings: result.findings ?? [],
-          blockers: result.blockers ?? [],
-          files: result.files ?? null,
+          status: completedResult.status ?? null,
+          decision: completedResult.decision ?? null,
+          confidence: completedResult.confidence ?? null,
+          next_action: completedResult.next_action ?? null,
+          target: completedResult.target ?? null,
+          candidates: ensureArray(completedResult.candidates),
+          candidate_sources: completedResult.candidate_sources ?? null,
+          findings: completedResult.findings ?? [],
+          blockers: completedResult.blockers ?? [],
+          files: completedResult.files ?? null,
         }
       : null,
-    status: result ? "completed" : "pending_execution",
+    execution_evidence: {
+      status: executionEvidence.ok ? "verified" : "invalid_or_missing",
+      code: executionEvidence.code ?? null,
+      manifest_file:
+        executionManifestPath && fileExists(executionManifestPath)
+          ? repoRelativePath(repoRoot, executionManifestPath)
+          : null,
+    },
+    status: completedResult ? "completed" : "pending_execution",
   };
 }
 

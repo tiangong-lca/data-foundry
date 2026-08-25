@@ -89,6 +89,32 @@
       "notes": "Records the Issue #63 JavaScript baseline and the staged TypeScript 7 migration boundary; update it in the same change that moves a module across the typed spine."
     },
     {
+      "id": "foundry-command-spec",
+      "status": "active",
+      "classification": "typed-handoff-contract",
+      "current_path": "scripts/lib/foundry-command-spec.ts",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "AGENTS.md",
+        "README.md",
+        "WORKFLOW.md",
+        "docs/architecture.md",
+        "docs/capability-ownership-policy.md",
+        "docs/foundry-ai-navigation.md",
+        "docs/foundry-command-surface.md",
+        "docs/foundry-task-contracts.md",
+        "docs/safety-policy.md",
+        "scripts/commands/commit-handoff.mjs",
+        "scripts/commands/bafu-batch-import-run.mjs",
+        "scripts/commands/bafu-process-scope-e2e.mjs",
+        "test/unit/foundry-command-spec.test.mts"
+      ],
+      "sensitivity": "non-sensitive typed executable/argv and artifact-fact contract; contains no credentials or runtime payloads",
+      "tracked": true,
+      "notes": "Defines exact-key CommandSpec parsing, critical-flag uniqueness, reader-only display rendering, command hashing, final-row artifact facts, and pre-spawn byte drift checks."
+    },
+    {
       "id": "import-profiles",
       "status": "active",
       "classification": "machine-readable-import-profile-registry",
