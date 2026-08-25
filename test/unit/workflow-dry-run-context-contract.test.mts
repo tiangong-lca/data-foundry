@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import * as dryRun from "../../scripts/lib/import-curation/internal/workflow-dry-run-context.mjs";
+import * as dryRun from "../../scripts/lib/import-curation/internal/workflow-dry-run-context.ts";
 
 type JsonRecord = Record<string, unknown>;
 
