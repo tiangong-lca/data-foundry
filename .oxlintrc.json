@@ -48,6 +48,15 @@
       }
     },
     {
+      "files": [
+        "scripts/lib/bafu-family-signatures.ts",
+        "test/unit/bafu-family-signatures-contract.test.mts"
+      ],
+      "rules": {
+        "typescript/no-explicit-any": "error"
+      }
+    },
+    {
       "files": ["test/**/*.{js,mjs,cjs,ts,mts,cts}"],
       "rules": {
         "typescript/no-floating-promises": "off",
