@@ -186,6 +186,9 @@ test("account wrapper obtains a fresh intent-bound CLI receipt before exact argv
     assert.equal(calls[1].options.env?.UNRELATED_SECRET, undefined);
     assert.equal(calls[1].options.env?.FOUNDRY_AUTH_RECEIPT_PROJECT_REF, PROJECT_REF);
     assert.equal(calls[1].options.env?.FOUNDRY_AUTH_RECEIPT_USER_ID, USER_ID);
+    assert.equal(calls[1].options.env?.FOUNDRY_VERIFIED_PROJECT_REF, PROJECT_REF);
+    assert.equal(calls[1].options.env?.FOUNDRY_VERIFIED_USER_ID, USER_ID);
+    assert.equal(calls[1].options.env?.FOUNDRY_ACCOUNT_MODE, "ordinary");
     assert.equal(
       calls[1].options.env?.FOUNDRY_AUTH_RECEIPT_SCOPE_SHA256,
       receipt().receipt_scope_sha256,

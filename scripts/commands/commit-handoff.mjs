@@ -252,6 +252,10 @@ export function createCommitHandoffCommands({
         finalizeReport.target_user_id ||
         process.env.FOUNDRY_TARGET_USER_ID,
     );
+    const verifiedProjectRef = asText(process.env.FOUNDRY_VERIFIED_PROJECT_REF);
+    const verifiedUserId = asText(process.env.FOUNDRY_VERIFIED_USER_ID);
+    const accountMode =
+      asText(options.accountMode || process.env.FOUNDRY_ACCOUNT_MODE).toLowerCase() || "ordinary";
     const explicitStateCode = asText(options.stateCode ?? options.expectedStateCode);
     const stateCode = explicitStateCode || "0";
     const stateCodeSource = explicitStateCode ? "explicit_option" : "default_draft_write_state";
@@ -300,6 +304,18 @@ export function createCommitHandoffCommands({
         code: "target_user_id_required",
         message:
           "Commit handoff requires explicit target_user_id evidence from mutation manifest or options.",
+      });
+    }
+    if (verifiedUserId && verifiedUserId !== targetUserId) {
+      blockers.push({
+        code: "verified_account_target_user_mismatch",
+        message: "Commit handoff target_user_id must match the receipt-verified account user.",
+      });
+    }
+    if (!["ordinary", "production-test"].includes(accountMode)) {
+      blockers.push({
+        code: "account_mode_invalid",
+        message: `Unsupported receipt-bound account mode: ${accountMode}.`,
       });
     }
     const handoffFullContextCheck = fullContextProofCheck({
@@ -417,6 +433,9 @@ export function createCommitHandoffCommands({
           }
         : null,
       target_user_id: targetUserId || null,
+      verified_project_ref: verifiedProjectRef || null,
+      verified_user_id: verifiedUserId || null,
+      account_mode: accountMode,
       expected_state_code: stateCode || null,
       expected_state_code_source: stateCodeSource,
       account_write_guard: {

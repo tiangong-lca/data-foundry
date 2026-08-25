@@ -4,6 +4,21 @@ export type AuthoritativeCommand = {
   display?: string;
 };
 
+export type FoundryAccountMode = "ordinary" | "production-test";
+
+const PRODUCTION_TEST_IDENTITIES = new Set([
+  "qgzvkongdjqiiamzbbts:c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+]);
+
+export function accountModeForVerifiedIdentity(input: {
+  projectRef: string;
+  userId: string;
+}): FoundryAccountMode {
+  return PRODUCTION_TEST_IDENTITIES.has(`${input.projectRef}:${input.userId}`)
+    ? "production-test"
+    : "ordinary";
+}
+
 export function acceptedRemoteDifferencePolicy(input: { accountMode: string }): {
   traceHashOnly: boolean;
   foreignStateZeroReference: boolean;

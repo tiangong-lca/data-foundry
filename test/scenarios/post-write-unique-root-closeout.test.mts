@@ -13,6 +13,7 @@ import {
   runFoundry,
   sha256Text,
   targetUserId,
+  writeJson,
   writeJsonLines,
 } from "../fixtures/foundry-core.mjs";
 
@@ -126,4 +127,29 @@ test("post-write closeout accepts CLI canonical payload hashes for non-lexical T
   ]);
   assert.equal(closeout.code, 0, JSON.stringify(closeout.json));
   assert.equal(closeout.json.counts.unique_root_readback_checks, 2);
+});
+
+test("production-test session cannot resume an ordinary-mode handoff", () => {
+  const fixture = createFixture();
+  const handoff = readJson(fixture.handoffWithProof);
+  handoff.account_mode = "ordinary";
+  const handoffPath = path.join(repoRoot, "tmp", "production-mode-handoff.json");
+  writeJson(handoffPath, handoff);
+  const closeout = runFoundry(
+    [
+      "dataset-post-write-closeout",
+      "--handoff-plan",
+      rel(handoffPath),
+      "--commit-report",
+      rel(fixture.commitReport),
+      "--post-write-verify-report",
+      rel(fixture.verifyReport),
+      "--out-dir",
+      rel(path.join(repoRoot, "tmp", "production-mode-closeout")),
+    ],
+    { env: { FOUNDRY_ACCOUNT_MODE: "production-test" } },
+  );
+  assert.equal(closeout.code, 1);
+  assert.ok(blockerCodes(closeout.json).has("handoff_account_mode_mismatch"));
+  assert.equal(closeout.json.policy.accepted_trace_hash_only_normalization, false);
 });

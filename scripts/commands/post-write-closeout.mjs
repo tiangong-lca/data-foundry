@@ -493,9 +493,18 @@ export function createPostWriteCloseoutCommands({
         ? null
         : Number(expectedStateCodeText);
     const blockers = [];
+    const handoffAccountMode = asText(handoffPlan.account_mode).toLowerCase() || "ordinary";
+    const environmentAccountMode = asText(process.env.FOUNDRY_ACCOUNT_MODE).toLowerCase();
+    if (environmentAccountMode && environmentAccountMode !== handoffAccountMode) {
+      blockers.push({
+        code: "handoff_account_mode_mismatch",
+        message: "Post-write closeout account mode must match the receipt-bound handoff mode.",
+      });
+    }
     const productionTestAccount =
-      String(options.accountMode || handoffPlan.account_mode || "").toLowerCase() ===
-        "production-test" || ["1", "true"].includes(String(options.productionCase || ""));
+      handoffAccountMode === "production-test" ||
+      environmentAccountMode === "production-test" ||
+      ["1", "true"].includes(String(options.productionCase || ""));
 
     if (handoffPlan.status !== "ready_for_explicit_commit") {
       blockers.push({

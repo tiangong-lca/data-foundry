@@ -2,11 +2,26 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  accountModeForVerifiedIdentity,
   acceptedRemoteDifferencePolicy,
   assertAuthoritativeCommand,
 } from "../../scripts/lib/production-case-policy.ts";
 
 test("production test-account cases reject every accepted remote difference", () => {
+  assert.equal(
+    accountModeForVerifiedIdentity({
+      projectRef: "qgzvkongdjqiiamzbbts",
+      userId: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+    }),
+    "production-test",
+  );
+  assert.equal(
+    accountModeForVerifiedIdentity({
+      projectRef: "another-project",
+      userId: "11111111-1111-4111-8111-111111111111",
+    }),
+    "ordinary",
+  );
   assert.deepEqual(acceptedRemoteDifferencePolicy({ accountMode: "production-test" }), {
     traceHashOnly: false,
     foreignStateZeroReference: false,

@@ -12,6 +12,7 @@ import {
   type AuthIdentityReceipt,
 } from "./lib/identity-preflight-proof.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "./lib/foundry-runtime-utils.mjs";
+import { accountModeForVerifiedIdentity } from "./lib/production-case-policy.ts";
 
 const DEFAULT_RECEIPT_TIMEOUT_MS = 10_000;
 const RECEIPT_PROCESS_TIMEOUT_MS = 20_000;
@@ -274,6 +275,12 @@ function buildRestrictedEnvironment(input: {
   if (input.profile.label) env.FOUNDRY_ACCOUNT_LABEL = input.profile.label;
   if (input.threadGuardPath) env.FOUNDRY_THREAD_ACCOUNT_GUARD = input.threadGuardPath;
   if (input.receipt) {
+    env.FOUNDRY_ACCOUNT_MODE = accountModeForVerifiedIdentity({
+      projectRef: input.receipt.project.project_ref,
+      userId: input.receipt.identity.user_id,
+    });
+    env.FOUNDRY_VERIFIED_PROJECT_REF = input.receipt.project.project_ref;
+    env.FOUNDRY_VERIFIED_USER_ID = input.receipt.identity.user_id;
     env.FOUNDRY_AUTH_RECEIPT_PROJECT_REF = input.receipt.project.project_ref;
     env.FOUNDRY_AUTH_RECEIPT_USER_ID = input.receipt.identity.user_id;
     env.FOUNDRY_AUTH_RECEIPT_SCOPE_SHA256 = input.receipt.receipt_scope_sha256;
