@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import * as fullContext from "../../scripts/lib/import-curation/internal/full-context-proof.mjs";
+import * as fullContext from "../../scripts/lib/import-curation/internal/full-context-proof.ts";
 import { sha256Json, sha256Text } from "../../scripts/lib/import-curation/internal/hash-utils.ts";
 
 type JsonRecord = Record<string, unknown>;
@@ -143,7 +143,7 @@ test("authoring package proofs preserve exact bytes, path/order, aliases, blocke
     assert.deepEqual(proof.payload, packagePayload);
     assert.deepEqual(proof.contract_context_files, contextFiles);
     assert.deepEqual(
-      proof.contract_context_file_details.map((file: JsonRecord) => ({
+      proof.contract_context_file_details.map((file) => ({
         kind: file.kind,
         path: file.path,
         bytes: file.bytes,
@@ -328,6 +328,7 @@ test("decision task and shared bundle proofs preserve hashes, file order, aliase
       },
       "single",
     );
+    assert.ok(single);
     assert.equal(single.source, "single");
     assert.equal(
       single.blockers[0].code,

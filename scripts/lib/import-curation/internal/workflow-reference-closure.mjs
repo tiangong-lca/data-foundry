@@ -13,7 +13,7 @@ import {
   evidenceResolutionContextKinds,
   evidenceResolutionMode,
   fullContextPackageProofBlockers,
-} from "./full-context-proof.mjs";
+} from "./full-context-proof.ts";
 import { externalizeImportTraceMetadata } from "./prewrite-cleanup.ts";
 import {
   asText,

@@ -17,16 +17,174 @@ import {
   resolveRepoPath,
 } from "./runtime-io.ts";
 
-export function curationGateContextHasKind(curationGateArtifact, kind) {
-  const details = ensureArray(curationGateArtifact?.value?.context?.contract_context_file_details);
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface ContextFile extends JsonRecord {
+  kind?: unknown;
+  path?: unknown;
+  text?: unknown;
+}
+
+interface ContextFileDetail extends JsonRecord {
+  kind: string;
+  path: string | null;
+  sha256: string;
+  bytes: number;
+}
+
+interface ProofBlocker extends JsonRecord {
+  code: string;
+  stage: string;
+  message: string;
+}
+
+interface ArtifactEnvelope<TValue extends JsonRecord = JsonRecord> {
+  path?: unknown;
+  value?: TValue | null;
+}
+
+interface CurationGateContextValue extends JsonRecord {
+  context?: {
+    contract_context_file_details?: unknown;
+    contract_context_files?: unknown;
+  } | null;
+  entities?: unknown;
+  processes?: unknown;
+  flows?: unknown;
+  items?: unknown;
+}
+
+interface AuthoringPackagePayload extends JsonRecord {
+  contract_context_files?: unknown;
+  missing_context_files?: unknown;
+}
+
+interface AuthoringPackageEntity extends JsonRecord {
+  authoring_package?: unknown;
+  authoringPackage?: unknown;
+  authoring_package_sha256?: unknown;
+}
+
+interface PatchCollectTask extends JsonRecord {
+  files?: {
+    authoring_package?: unknown;
+    authoringPackage?: unknown;
+  } | null;
+  context?: {
+    authoring_package_sha256?: unknown;
+  } | null;
+}
+
+export interface AuthoringPackageProof {
+  source: unknown;
+  path: string | null;
+  exists: boolean;
+  sha256: string | null;
+  expected_sha256: string | null;
+  payload: AuthoringPackagePayload | null;
+  contract_context_files: ContextFile[];
+  contract_context_file_details: ContextFileDetail[];
+  blockers: ProofBlocker[];
+}
+
+interface DecisionTaskReference extends JsonRecord {
+  path?: unknown;
+  task?: unknown;
+  decision_task?: unknown;
+  decisionTask?: unknown;
+  sha256?: unknown;
+  context_bundle_sha256?: unknown;
+  contextBundleSha256?: unknown;
+}
+
+interface DecisionTaskPayload extends JsonRecord {
+  status?: unknown;
+  task_kind?: unknown;
+  context_bundle?: unknown;
+  authoring_context?: unknown;
+  shared_context_bundle?: unknown;
+  contract_context_files?: unknown;
+  missing_context_files?: unknown;
+  schema_types?: unknown;
+  schemaTypes?: unknown;
+  row_types?: unknown;
+  rowTypes?: unknown;
+  files?: unknown;
+}
+
+export interface SharedContextBundleProof {
+  path: string | null;
+  sha256: string | null;
+  expected_sha256: string | null;
+  files: ContextFile[];
+  blockers: ProofBlocker[];
+}
+
+export interface DecisionTaskProof {
+  source: unknown;
+  path: string | null;
+  exists: boolean;
+  sha256: string | null;
+  expected_sha256: string | null;
+  expected_context_bundle_sha256: string | null;
+  payload: DecisionTaskPayload | null;
+  status: string | null;
+  task_kind: string | null;
+  context_bundle_sha256: string | null;
+  contract_context_files: ContextFile[];
+  contract_context_file_details: ContextFileDetail[];
+  missing_context_files: unknown[];
+  shared_context_bundle: SharedContextBundleProof | null;
+  blockers: ProofBlocker[];
+}
+
+export interface FullContextRequirement {
+  requiredContextKinds: string[];
+  requiredContextFilePatterns: string[];
+}
+
+interface FullContextBlockerOptions<TProof> {
+  requirement: FullContextRequirement;
+  proof: TProof;
+}
+
+interface DecisionTaskEvidence {
+  blockers: JsonRecord[];
+  payload: DecisionTaskPayload | null;
+  path?: unknown;
+  source?: unknown;
+  task_kind?: unknown;
+  status?: unknown;
+  contract_context_files?: unknown;
+  missing_context_files: unknown[];
+  context_bundle_sha256?: unknown;
+}
+
+interface DecisionTaskBlockerOptions extends FullContextBlockerOptions<DecisionTaskEvidence | null> {
+  label: string;
+}
+
+function contextFileArray(value: unknown): ContextFile[] {
+  return ensureArray(value) as ContextFile[];
+}
+
+export function curationGateContextHasKind(
+  curationGateArtifact: ArtifactEnvelope<CurationGateContextValue> | null | undefined,
+  kind: unknown,
+): boolean {
+  const details = contextFileArray(
+    curationGateArtifact?.value?.context?.contract_context_file_details,
+  );
   if (details.some((file) => asText(file?.kind) === kind)) return true;
   const contextPaths = ensureArray(curationGateArtifact?.value?.context?.contract_context_files);
-  const expectedFileByKind = {
+  const expectedFileByKind: Record<PropertyKey, string> = {
     schema: "schema.json",
     methodology_yaml: "methodology.yaml",
     ruleset: "runtime-ruleset.json",
   };
-  const expected = expectedFileByKind[kind];
+  const expected = expectedFileByKind[kind as PropertyKey];
   return Boolean(
     expected &&
     contextPaths.some((filePath) =>
@@ -37,13 +195,18 @@ export function curationGateContextHasKind(curationGateArtifact, kind) {
   );
 }
 
-export function curationGateContextHasPattern(curationGateArtifact, pattern) {
-  const details = ensureArray(curationGateArtifact?.value?.context?.contract_context_file_details);
+export function curationGateContextHasPattern(
+  curationGateArtifact: ArtifactEnvelope<CurationGateContextValue> | null | undefined,
+  pattern: unknown,
+): boolean {
+  const details = contextFileArray(
+    curationGateArtifact?.value?.context?.contract_context_file_details,
+  );
   if (
     details.some((file) =>
       String(file?.path ?? "")
         .toLowerCase()
-        .includes(pattern.toLowerCase()),
+        .includes((pattern as string).toLowerCase()),
     )
   ) {
     return true;
@@ -52,23 +215,24 @@ export function curationGateContextHasPattern(curationGateArtifact, pattern) {
   return contextPaths.some((filePath) =>
     String(filePath ?? "")
       .toLowerCase()
-      .includes(pattern.toLowerCase()),
+      .includes((pattern as string).toLowerCase()),
   );
 }
 
-export function evidenceResolution(entry) {
-  return entry?.resolution &&
-    typeof entry.resolution === "object" &&
-    !Array.isArray(entry.resolution)
-    ? entry.resolution
+export function evidenceResolution(entry: unknown): JsonRecord | null {
+  const typedEntry = entry as { resolution?: unknown } | null | undefined;
+  return typedEntry?.resolution &&
+    typeof typedEntry.resolution === "object" &&
+    !Array.isArray(typedEntry.resolution)
+    ? (typedEntry.resolution as JsonRecord)
     : null;
 }
 
-export function evidenceResolutionMode(entry) {
+export function evidenceResolutionMode(entry: unknown): string {
   return asText(evidenceResolution(entry)?.mode);
 }
 
-export function evidenceResolutionContextKinds(entry) {
+export function evidenceResolutionContextKinds(entry: unknown): string[] {
   return ensureArray(
     evidenceResolution(entry)?.used_context_kinds ?? evidenceResolution(entry)?.usedContextKinds,
   )
@@ -76,19 +240,19 @@ export function evidenceResolutionContextKinds(entry) {
     .filter(Boolean);
 }
 
-export function contextFileHasNonEmptyText(file) {
+export function contextFileHasNonEmptyText(file: ContextFile | null | undefined): boolean {
   return Buffer.byteLength(String(file?.text ?? ""), "utf8") > 0;
 }
 
-export function contextFilesHaveKind(files, kind) {
-  return ensureArray(files).some(
+export function contextFilesHaveKind(files: unknown, kind: unknown): boolean {
+  return contextFileArray(files).some(
     (file) => asText(file?.kind) === kind && contextFileHasNonEmptyText(file),
   );
 }
 
-export function contextFilesHavePattern(files, pattern) {
+export function contextFilesHavePattern(files: unknown, pattern: unknown): boolean {
   const needle = String(pattern).toLowerCase();
-  return ensureArray(files).some(
+  return contextFileArray(files).some(
     (file) =>
       String(file?.path ?? "")
         .toLowerCase()
@@ -97,13 +261,13 @@ export function contextFilesHavePattern(files, pattern) {
 }
 
 export function readAuthoringPackageProof(
-  repoRoot,
-  packageRef,
-  expectedSha256 = null,
-  source = null,
-) {
-  const packagePath = resolveRepoPath(repoRoot, packageRef);
-  const proof = {
+  repoRoot: string,
+  packageRef: unknown,
+  expectedSha256: unknown = null,
+  source: unknown = null,
+): AuthoringPackageProof {
+  const packagePath = resolveRepoPath(repoRoot, packageRef as string | null | undefined);
+  const proof: AuthoringPackageProof = {
     source,
     path: packageRef ? repoRelativeArtifactPath(repoRoot, packageRef) : null,
     exists: false,
@@ -130,7 +294,7 @@ export function readAuthoringPackageProof(
   try {
     rawText = readText(packagePath);
     proof.sha256 = sha256Text(rawText);
-    proof.payload = JSON.parse(rawText);
+    proof.payload = JSON.parse(rawText) as AuthoringPackagePayload;
   } catch (error) {
     proof.blockers.push({
       code: "full_context_authoring_package_invalid",
@@ -151,7 +315,7 @@ export function readAuthoringPackageProof(
     });
     return proof;
   }
-  proof.contract_context_files = ensureArray(proof.payload.contract_context_files);
+  proof.contract_context_files = contextFileArray(proof.payload.contract_context_files);
   proof.contract_context_file_details = contextFileDetails(proof.contract_context_files);
   if (proof.expected_sha256 && proof.sha256 && proof.expected_sha256 !== proof.sha256) {
     proof.blockers.push({
@@ -168,13 +332,16 @@ export function readAuthoringPackageProof(
   return proof;
 }
 
-export function authoringPackageProofsFromCurationGate(repoRoot, curationGateArtifact) {
+export function authoringPackageProofsFromCurationGate(
+  repoRoot: string,
+  curationGateArtifact: ArtifactEnvelope<CurationGateContextValue> | null | undefined,
+): AuthoringPackageProof[] {
   const entities = ensureArray(
     curationGateArtifact?.value?.entities ??
       curationGateArtifact?.value?.processes ??
       curationGateArtifact?.value?.flows ??
       curationGateArtifact?.value?.items,
-  );
+  ) as Array<AuthoringPackageEntity | null | undefined>;
   return entities
     .map((entity) => {
       const packageRef = asText(entity?.authoring_package ?? entity?.authoringPackage);
@@ -186,21 +353,24 @@ export function authoringPackageProofsFromCurationGate(repoRoot, curationGateArt
         "curation_gate",
       );
     })
-    .filter(Boolean);
+    .filter(Boolean) as AuthoringPackageProof[];
 }
 
 // part-09.mjs
-export function authoringPackageProofsFromPatchCollect(repoRoot, patchCollectArtifact) {
+export function authoringPackageProofsFromPatchCollect(
+  repoRoot: string,
+  patchCollectArtifact: ArtifactEnvelope | null | undefined,
+): AuthoringPackageProof[] {
   const manifestRef = patchCollectArtifact?.value?.task_manifest;
-  const manifestPath = resolveRepoPath(repoRoot, manifestRef);
+  const manifestPath = resolveRepoPath(repoRoot, manifestRef as string | null | undefined);
   if (!manifestRef || !manifestPath || !fileExists(manifestPath)) return [];
-  let manifest;
+  let manifest: JsonRecord;
   try {
-    manifest = readJson(manifestPath);
+    manifest = readJson<JsonRecord>(manifestPath);
   } catch {
     return [];
   }
-  return ensureArray(manifest?.tasks)
+  return (ensureArray(manifest.tasks) as Array<PatchCollectTask | null | undefined>)
     .map((task) => {
       const packageRef = asText(task?.files?.authoring_package ?? task?.files?.authoringPackage);
       if (!packageRef) return null;
@@ -211,10 +381,13 @@ export function authoringPackageProofsFromPatchCollect(repoRoot, patchCollectArt
         "patch_collect_task_manifest",
       );
     })
-    .filter(Boolean);
+    .filter(Boolean) as AuthoringPackageProof[];
 }
 
-export function fullContextPackageProofBlockers({ requirement, proof }) {
+export function fullContextPackageProofBlockers({
+  requirement,
+  proof,
+}: FullContextBlockerOptions<AuthoringPackageProof>): ProofBlocker[] {
   const blockers = [...proof.blockers];
   if (blockers.length > 0 || !proof.payload) return blockers;
   for (const kind of requirement.requiredContextKinds) {
@@ -255,22 +428,23 @@ export function fullContextPackageProofBlockers({ requirement, proof }) {
   return blockers;
 }
 
-export function normalizeClassificationDecisionRows(value) {
+export function normalizeClassificationDecisionRows(value: unknown): unknown[] {
+  const record = value as { decisions?: unknown; rows?: unknown } | null | undefined;
   if (Array.isArray(value)) return value.filter(Boolean);
-  if (Array.isArray(value?.decisions)) return value.decisions.filter(Boolean);
-  if (Array.isArray(value?.rows)) return value.rows.filter(Boolean);
+  if (Array.isArray(record?.decisions)) return record.decisions.filter(Boolean);
+  if (Array.isArray(record?.rows)) return record.rows.filter(Boolean);
   return value && typeof value === "object" ? [value] : [];
 }
 
 export function readDecisionTaskProof(
-  repoRoot,
-  taskRef,
-  expectedSha256 = null,
-  expectedContextBundleSha256 = null,
-  source = null,
-) {
-  const taskPath = resolveRepoPath(repoRoot, taskRef);
-  const proof = {
+  repoRoot: string,
+  taskRef: unknown,
+  expectedSha256: unknown = null,
+  expectedContextBundleSha256: unknown = null,
+  source: unknown = null,
+): DecisionTaskProof {
+  const taskPath = resolveRepoPath(repoRoot, taskRef as string | null | undefined);
+  const proof: DecisionTaskProof = {
     source,
     path: taskRef ? repoRelativeArtifactPath(repoRoot, taskRef) : null,
     exists: false,
@@ -303,7 +477,7 @@ export function readDecisionTaskProof(
   try {
     rawText = readText(taskPath);
     proof.sha256 = sha256Text(rawText);
-    proof.payload = JSON.parse(rawText);
+    proof.payload = JSON.parse(rawText) as DecisionTaskPayload;
   } catch (error) {
     proof.blockers.push({
       code: "full_context_decision_task_invalid",
@@ -324,7 +498,9 @@ export function readDecisionTaskProof(
     });
     return proof;
   }
-  const contextBundle = proof.payload.context_bundle ?? proof.payload.authoring_context ?? {};
+  const contextBundle = (proof.payload.context_bundle ??
+    proof.payload.authoring_context ??
+    {}) as JsonRecord;
   proof.status = asText(proof.payload.status);
   proof.task_kind = asText(proof.payload.task_kind);
   proof.context_bundle_sha256 = asText(contextBundle.sha256 ?? contextBundle.context_bundle_sha256);
@@ -335,7 +511,7 @@ export function readDecisionTaskProof(
   );
   proof.blockers.push(...proof.shared_context_bundle.blockers);
   proof.contract_context_files = [
-    ...ensureArray(proof.payload.contract_context_files),
+    ...contextFileArray(proof.payload.contract_context_files),
     ...proof.shared_context_bundle.files,
   ];
   proof.contract_context_file_details = contextFileDetails(proof.contract_context_files);
@@ -369,8 +545,13 @@ export function readDecisionTaskProof(
   return proof;
 }
 
-export function decisionTaskProofFromApplyReport(repoRoot, report, source) {
-  const task = report?.decision_task ?? report?.decisionTask;
+export function decisionTaskProofFromApplyReport(
+  repoRoot: string,
+  report: JsonRecord | null | undefined,
+  source: unknown,
+): DecisionTaskProof | null {
+  const task = (report?.decision_task ?? report?.decisionTask) as
+    DecisionTaskReference | null | undefined;
   const taskRef = asText(task?.path ?? task?.task ?? task?.decision_task ?? task?.decisionTask);
   if (!taskRef) return null;
   return readDecisionTaskProof(
@@ -382,15 +563,21 @@ export function decisionTaskProofFromApplyReport(repoRoot, report, source) {
   );
 }
 
-export function readDecisionTaskSharedContextBundleProof(repoRoot, payload, taskPath) {
-  const contextBundle = payload?.context_bundle ?? payload?.authoring_context ?? {};
-  const sharedContext =
-    payload?.shared_context_bundle ?? contextBundle?.shared_context_bundle ?? {};
-  const sharedPath = asText(sharedContext?.path ?? payload?.files?.shared_context_bundle);
+export function readDecisionTaskSharedContextBundleProof(
+  repoRoot: string,
+  payload: DecisionTaskPayload | null | undefined,
+  taskPath: unknown,
+): SharedContextBundleProof {
+  const contextBundle = (payload?.context_bundle ?? payload?.authoring_context ?? {}) as JsonRecord;
+  const sharedContext = (payload?.shared_context_bundle ??
+    contextBundle.shared_context_bundle ??
+    {}) as JsonRecord;
+  const payloadFiles = payload?.files as JsonRecord | null | undefined;
+  const sharedPath = asText(sharedContext?.path ?? payloadFiles?.shared_context_bundle);
   const expectedSha256 = asText(
     sharedContext?.sha256 ?? contextBundle?.shared_context_bundle_sha256,
   );
-  const proof = {
+  const proof: SharedContextBundleProof = {
     path: sharedPath ? repoRelativeArtifactPath(repoRoot, sharedPath) : null,
     sha256: null,
     expected_sha256: expectedSha256 || null,
@@ -410,9 +597,9 @@ export function readDecisionTaskSharedContextBundleProof(repoRoot, payload, task
     return proof;
   }
   try {
-    const bundle = readJson(bundlePath);
+    const bundle = readJson<JsonRecord | null>(bundlePath);
     proof.sha256 = asText(bundle?.sha256);
-    proof.files = ensureArray(bundle?.files);
+    proof.files = contextFileArray(bundle?.files);
     if (expectedSha256 && proof.sha256 !== expectedSha256) {
       proof.blockers.push({
         code: "full_context_decision_task_shared_context_bundle_hash_mismatch",
@@ -436,8 +623,14 @@ export function readDecisionTaskSharedContextBundleProof(repoRoot, payload, task
   return proof;
 }
 
-export function decisionTaskProofsFromApplyReport(repoRoot, report, source) {
-  const tasks = ensureArray(report?.decision_tasks ?? report?.decisionTasks);
+export function decisionTaskProofsFromApplyReport(
+  repoRoot: string,
+  report: JsonRecord | null | undefined,
+  source: unknown,
+): DecisionTaskProof[] {
+  const tasks = ensureArray(
+    report?.decision_tasks ?? report?.decisionTasks,
+  ) as DecisionTaskReference[];
   if (tasks.length === 0) {
     const single = decisionTaskProofFromApplyReport(repoRoot, report, source);
     return single ? [single] : [];
@@ -454,13 +647,17 @@ export function decisionTaskProofsFromApplyReport(repoRoot, report, source) {
         source,
       );
     })
-    .filter(Boolean);
+    .filter(Boolean) as DecisionTaskProof[];
 }
 
-export function payloadSha256ByIdentityForRows(repoRoot, rowFiles, fallbackDatasetType = null) {
-  const map = new Map();
+export function payloadSha256ByIdentityForRows(
+  repoRoot: string,
+  rowFiles: unknown,
+  fallbackDatasetType: string | null = null,
+): Map<string, string> {
+  const map = new Map<string, string>();
   for (const rowFile of ensureArray(rowFiles)) {
-    const resolved = resolveRepoPath(repoRoot, rowFile);
+    const resolved = resolveRepoPath(repoRoot, rowFile as string | null | undefined);
     if (!resolved || !fileExists(resolved)) continue;
     readRows(resolved).forEach((row, index) => {
       const datasetType = detectDatasetType(row, fallbackDatasetType);
@@ -473,7 +670,11 @@ export function payloadSha256ByIdentityForRows(repoRoot, rowFiles, fallbackDatas
   return map;
 }
 
-export function fullContextDecisionTaskProofBlockers({ requirement, proof, label }) {
+export function fullContextDecisionTaskProofBlockers({
+  requirement,
+  proof,
+  label,
+}: DecisionTaskBlockerOptions): JsonRecord[] {
   if (!proof) {
     return [
       {
@@ -567,7 +768,11 @@ export function fullContextDecisionTaskProofBlockers({ requirement, proof, label
   return blockers;
 }
 
-export function decisionTaskRequiredContextFilePatterns({ requirement, proof, label }) {
+export function decisionTaskRequiredContextFilePatterns({
+  requirement,
+  proof,
+  label,
+}: DecisionTaskBlockerOptions): string[] {
   const profilePatterns = ensureArray(requirement.requiredContextFilePatterns);
   if (label === "location") {
     return profilePatterns.filter((pattern) =>
@@ -581,7 +786,7 @@ export function decisionTaskRequiredContextFilePatterns({ requirement, proof, la
   }
   if (label !== "classification") return profilePatterns;
 
-  const schemaTypeToFile = {
+  const schemaTypeToFile: Record<string, string> = {
     contact: "tidas_contacts_category.json",
     contacts: "tidas_contacts_category.json",
     flowproperty: "tidas_flowproperties_category.json",

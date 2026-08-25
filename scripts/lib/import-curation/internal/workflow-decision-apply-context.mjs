@@ -2,7 +2,7 @@ import {
   decisionTaskProofsFromApplyReport,
   normalizeClassificationDecisionRows,
   payloadSha256ByIdentityForRows,
-} from "./full-context-proof.mjs";
+} from "./full-context-proof.ts";
 import { asText, ensureArray, fileExists, readJsonOrJsonl, resolveRepoPath } from "./runtime-io.ts";
 
 export function readClassificationDecisionApplyContext(

@@ -2,7 +2,7 @@ import {
   fullContextDecisionTaskProofBlockers,
   fullContextPackageProofBlockers,
   payloadSha256ByIdentityForRows,
-} from "./full-context-proof.mjs";
+} from "./full-context-proof.ts";
 import {
   asText,
   ensureArray,

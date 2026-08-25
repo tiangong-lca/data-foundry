@@ -162,7 +162,7 @@ The current internal dependency direction is:
 semantic import-curation modules
   -> internal/*-workflow.mjs
   -> internal/workflow-*.mjs
-  -> internal/full-context-proof.mjs
+  -> internal/full-context-proof.ts
   -> internal/profiles-config.mjs
   -> internal/trace-summary.ts
   -> internal/dataset-payload.ts
@@ -178,7 +178,7 @@ Layer rules:
 - `profiles-config.mjs`: import profile loading, normalization, listing, and lookup.
 - `trace-summary.ts`: Foundry trace entry collection and compact trace summaries.
 - `prewrite-cleanup.ts`: deterministic write-preparation transforms such as annual-supply sentinel completion, import trace externalization, Foundry trace namespace repair, local locator redaction, and timestamp normalization.
-- `full-context-proof.mjs`: full-context package/task proof loading and blocker construction.
+- `full-context-proof.ts`: full-context package/task proof loading and blocker construction.
 - `authoring-task-workflow.mjs`: AI authoring package to task manifest/template preparation helpers.
 - `authoring-patch-workflow.mjs`: AI patch collection, patch-set validation, and full-context readiness helpers.
 - `curation-gate-workflow.mjs`: curation gate queue, identity-preflight, QA/schema action, and authoring context helpers.

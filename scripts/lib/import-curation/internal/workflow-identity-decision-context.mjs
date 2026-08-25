@@ -4,7 +4,7 @@ import {
   normalizeClassificationDecisionRows,
   payloadSha256ByIdentityForRows,
   readAuthoringPackageProof,
-} from "./full-context-proof.mjs";
+} from "./full-context-proof.ts";
 import {
   asText,
   ensureArray,

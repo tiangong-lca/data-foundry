@@ -1,6 +1,6 @@
 import { readJsonLinesIfExists } from "./artifact-inputs.ts";
 import { datasetIdentity, identityFreshnessIdentityKey } from "./dataset-payload.ts";
-import { payloadSha256ByIdentityForRows } from "./full-context-proof.mjs";
+import { payloadSha256ByIdentityForRows } from "./full-context-proof.ts";
 import { sha256Json, sha256Text } from "./hash-utils.ts";
 import {
   asText,
