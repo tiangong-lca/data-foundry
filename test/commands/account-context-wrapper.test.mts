@@ -152,7 +152,7 @@ test("account wrapper obtains a fresh intent-bound CLI receipt before exact argv
   const calls: SpawnCall[] = [];
   try {
     const exitCode = runWithLcaAccount(
-      ["production-test", "--", process.execPath, "trusted-command.mjs", "--help"],
+      ["--", "production-test", "--", process.execPath, "trusted-command.mjs", "--help"],
       baseDeps(root, profileDir, calls),
     );
 
