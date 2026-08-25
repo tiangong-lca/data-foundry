@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { testAuthIdentityReceipt } from "../fixtures/identity-fixtures.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const fixtureRoot = path.join(repoRoot, "tmp", "bundle-sample-rows-test");
@@ -1034,6 +1035,8 @@ test("dataset-identity-preflight-run retains nonzero identity findings but fails
   const fakeCli = path.join(runRoot, "fake-tiangong-lca.cjs");
   const requestRoot = path.join(runRoot, "identity-preflight-requests");
   const outputRoot = path.join(runRoot, "identity-preflight");
+  const authReceiptFile = path.join(runRoot, "auth-identity-receipt.json");
+  writeJson(authReceiptFile, testAuthIdentityReceipt());
   const processRequest = path.join(requestRoot, "processes", `${processId}.json`);
   const flowRequest = path.join(requestRoot, "flows", `${flowId}.json`);
   writeJson(processRequest, {
@@ -1149,6 +1152,12 @@ process.exit(blocked ? 1 : 0);
       rel(path.join(runRoot, "batch-report")),
       "--timeout-ms",
       "45000",
+      "--auth-receipt",
+      rel(authReceiptFile),
+      "--expected-project-ref",
+      "qgzvkongdjqiiamzbbts",
+      "--expected-user-id",
+      "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
     ],
     1,
     { TIANGONG_LCA_CLI_BIN: fakeCli },

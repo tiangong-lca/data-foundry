@@ -57,8 +57,6 @@ export type IdentityPreflightBinding = {
   account: {
     project_ref: string;
     user_id: string;
-    receipt_scope_sha256: string;
-    captured_at_utc: string;
   } | null;
   relevant_input_hashes: Record<string, string>;
   binding_sha256: string;
@@ -71,6 +69,12 @@ export type ExecutionManifest = {
   schema: "tiangong-foundry.identity-preflight-execution.v1";
   binding_sha256: string;
   binding: IdentityPreflightBindingEvidence;
+  producer_auth: {
+    project_ref: string;
+    user_id: string;
+    receipt_scope_sha256: string;
+    captured_at_utc: string;
+  };
   report: {
     bytes_sha256: string;
     canonical_sha256: string;
@@ -215,11 +219,6 @@ export function createIdentityPreflightBinding(
       ? {
           project_ref: input.authReceipt.project.project_ref,
           user_id: input.authReceipt.identity.user_id,
-          receipt_scope_sha256: validatedHash(
-            input.authReceipt.receipt_scope_sha256,
-            "receipt_scope_sha256",
-          ),
-          captured_at_utc: input.authReceipt.captured_at_utc,
         }
       : null,
     relevant_input_hashes: relevantInputHashes,
@@ -302,10 +301,23 @@ export function validateIdentityPreflightExecution(input: {
       `Identity-preflight report status ${status || "missing"} is not accepted.`,
     );
   }
+  const authReceipt = input.binding.inputs.authReceipt;
+  if (!authReceipt || !input.binding.account) {
+    return failure(
+      "identity_preflight_auth_receipt_missing",
+      "Identity-preflight execution requires account receipt evidence.",
+    );
+  }
   const manifestScope = {
     schema: "tiangong-foundry.identity-preflight-execution.v1" as const,
     binding_sha256: input.binding.binding_sha256,
     binding: bindingEvidence(input.binding),
+    producer_auth: {
+      project_ref: authReceipt.project.project_ref,
+      user_id: authReceipt.identity.user_id,
+      receipt_scope_sha256: validatedHash(authReceipt.receipt_scope_sha256, "receipt_scope_sha256"),
+      captured_at_utc: authReceipt.captured_at_utc,
+    },
     report: {
       bytes_sha256: sha256Text(input.diskReportText ?? ""),
       canonical_sha256: sha256Json(diskReport),
@@ -334,6 +346,7 @@ export function validateBoundExecutionManifest(
     schema: value.schema,
     binding_sha256: value.binding_sha256,
     binding: value.binding,
+    producer_auth: value.producer_auth,
     report: value.report,
     completed_at_utc: value.completed_at_utc,
   };
@@ -347,6 +360,17 @@ export function validateBoundExecutionManifest(
     report.bytes_sha256 !== sha256Text(reportText)
   ) {
     return { ok: false, code: "identity_preflight_manifest_binding_mismatch" };
+  }
+  if (
+    !isRecord(value.producer_auth) ||
+    value.producer_auth.project_ref !== binding.account?.project_ref ||
+    value.producer_auth.user_id !== binding.account?.user_id ||
+    typeof value.producer_auth.receipt_scope_sha256 !== "string" ||
+    !SHA256_PATTERN.test(value.producer_auth.receipt_scope_sha256) ||
+    typeof value.producer_auth.captured_at_utc !== "string" ||
+    !Number.isFinite(Date.parse(value.producer_auth.captured_at_utc))
+  ) {
+    return { ok: false, code: "identity_preflight_manifest_account_mismatch" };
   }
   try {
     if (report.canonical_sha256 !== sha256Json(JSON.parse(reportText))) {
@@ -374,7 +398,7 @@ export function validateIdentityPreflightEvidence(
   if (!isRecord(value) || value.schema !== "tiangong-foundry.identity-preflight-execution.v1") {
     return { ok: false, code: "identity_preflight_manifest_invalid" };
   }
-  if (!isRecord(value.binding) || !isRecord(value.report)) {
+  if (!isRecord(value.binding) || !isRecord(value.producer_auth) || !isRecord(value.report)) {
     return { ok: false, code: "identity_preflight_manifest_invalid" };
   }
   const binding = value.binding;
@@ -384,10 +408,25 @@ export function validateIdentityPreflightEvidence(
     !isRecord(binding.request) ||
     !isRecord(binding.command) ||
     !isRecord(binding.cli) ||
+    !isRecord(binding.account) ||
     !isRecord(binding.relevant_input_hashes) ||
     typeof binding.binding_sha256 !== "string"
   ) {
     return { ok: false, code: "identity_preflight_manifest_binding_invalid" };
+  }
+  if (
+    typeof binding.account.project_ref !== "string" ||
+    !binding.account.project_ref ||
+    typeof binding.account.user_id !== "string" ||
+    !binding.account.user_id ||
+    value.producer_auth.project_ref !== binding.account.project_ref ||
+    value.producer_auth.user_id !== binding.account.user_id ||
+    typeof value.producer_auth.receipt_scope_sha256 !== "string" ||
+    !SHA256_PATTERN.test(value.producer_auth.receipt_scope_sha256) ||
+    typeof value.producer_auth.captured_at_utc !== "string" ||
+    !Number.isFinite(Date.parse(value.producer_auth.captured_at_utc))
+  ) {
+    return { ok: false, code: "identity_preflight_manifest_account_invalid" };
   }
   const bindingScope = {
     schema: binding.schema,
@@ -448,6 +487,7 @@ export function validateIdentityPreflightEvidence(
     schema: value.schema,
     binding_sha256: value.binding_sha256,
     binding: value.binding,
+    producer_auth: value.producer_auth,
     report: value.report,
     completed_at_utc: value.completed_at_utc,
   };
@@ -461,7 +501,6 @@ export function validateIdentityPreflightEvidence(
   }
   if (input.expectedProjectRef || input.expectedUserId) {
     if (
-      !isRecord(binding.account) ||
       (input.expectedProjectRef && binding.account.project_ref !== input.expectedProjectRef) ||
       (input.expectedUserId && binding.account.user_id !== input.expectedUserId)
     ) {

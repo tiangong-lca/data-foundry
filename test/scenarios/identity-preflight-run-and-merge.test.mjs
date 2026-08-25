@@ -13,6 +13,7 @@ import {
   writeJsonLines,
   writeText,
 } from "../fixtures/foundry-core.mjs";
+import { testAuthIdentityReceipt } from "../fixtures/identity-fixtures.mjs";
 
 test("identity preflight batch runner records timed-out CLI rows without hanging", () => {
   fs.rmSync(identityPreflightRunFixtureRoot, { recursive: true, force: true });
@@ -36,8 +37,10 @@ test("identity preflight batch runner records timed-out CLI rows without hanging
     "identity-preflight-requests.jsonl",
   );
   const fakeCli = path.join(identityPreflightRunFixtureRoot, "bin", "fake-cli.js");
+  const authReceiptFile = path.join(identityPreflightRunFixtureRoot, "auth-receipt.json");
   writeText(fakeCli, ["#!/usr/bin/env node", "setTimeout(() => {}, 10_000);", ""].join("\n"));
   fs.chmodSync(fakeCli, 0o755);
+  writeJson(authReceiptFile, testAuthIdentityReceipt());
   writeJson(requestFile, {
     schema_version: 1,
     target: {
@@ -77,6 +80,12 @@ test("identity preflight batch runner records timed-out CLI rows without hanging
         rel(path.join(identityPreflightRunFixtureRoot, "run")),
         "--timeout-ms",
         "20",
+        "--auth-receipt",
+        rel(authReceiptFile),
+        "--expected-project-ref",
+        "qgzvkongdjqiiamzbbts",
+        "--expected-user-id",
+        "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
       ],
       {
         env: {

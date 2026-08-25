@@ -642,6 +642,20 @@ export function createPostAuthoringFinalizeUtils({
       maxAttempts:
         options.identityPreflightMaxAttempts || options.identityPreflightRetryAttempts || 3,
       dryRun: options.identityPreflightDryRun || options.dryRunIdentityPreflight,
+      authReceipt:
+        options.identityPreflightAuthReceipt ||
+        options.authReceipt ||
+        options.authIdentityReceipt ||
+        options.accountReceipt,
+      expectedProjectRef:
+        options.identityPreflightExpectedProjectRef ||
+        options.expectedProjectRef ||
+        options.expectedProject ||
+        options.projectRef,
+      expectedUserId:
+        options.identityPreflightExpectedUserId || options.expectedUserId || options.targetUserId,
+      authReceiptMaxAgeMs:
+        options.identityPreflightAuthReceiptMaxAgeMs || options.authReceiptMaxAgeMs,
     });
     return {
       stage: "identity_preflight_run",

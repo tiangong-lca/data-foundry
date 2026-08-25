@@ -135,6 +135,8 @@ test("production auth receipts must be fresh, exact, intent-bound signins", () =
 
 test("identity preflight binding changes with request, argv, CLI, account, or input hashes", () => {
   const baseline = binding();
+  const baselineReceipt = baseline.inputs.authReceipt;
+  assert.ok(baselineReceipt);
   assert.equal(baseline.schema, "tiangong-foundry.identity-preflight-binding.v1");
   for (const changed of [
     createIdentityPreflightBinding({ ...baseline.inputs, requestText: "{}\n" }),
@@ -150,9 +152,28 @@ test("identity preflight binding changes with request, argv, CLI, account, or in
       ...baseline.inputs,
       relevantInputHashes: { source: "3".repeat(64) },
     }),
+    createIdentityPreflightBinding({
+      ...baseline.inputs,
+      authReceipt: {
+        ...baselineReceipt,
+        identity: {
+          ...baselineReceipt.identity,
+          user_id: "11111111-1111-4111-8111-111111111111",
+        },
+      },
+    }),
   ]) {
     assert.notEqual(changed.binding_sha256, baseline.binding_sha256);
   }
+  const refreshedReceipt = createIdentityPreflightBinding({
+    ...baseline.inputs,
+    authReceipt: {
+      ...baselineReceipt,
+      captured_at_utc: "2026-08-25T01:00:00.000Z",
+      receipt_scope_sha256: "f".repeat(64),
+    },
+  });
+  assert.equal(refreshedReceipt.binding_sha256, baseline.binding_sha256);
 });
 
 test("identity preflight execution fails closed on every enumerated output vector", () => {

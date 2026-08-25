@@ -17,6 +17,7 @@ import {
   writeJsonLines,
 } from "../fixtures/foundry-core.mjs";
 import { writeContextPackFiles } from "../fixtures/full-context-fixtures.mjs";
+import { readIdentityPreflightIndexRow } from "../../scripts/lib/import-curation/internal/workflow-identity-preflight.mjs";
 import {
   writeCompletedIdentityPreflightIndex,
   writeIdentityPreflightExecutionFixture,
@@ -638,6 +639,19 @@ test("curation gate authoring package carries full contract text and queue depen
       JSON.stringify(authoringPackage.curation_queue_context.support_rows[0].input_rows),
       new RegExp(sourceId, "u"),
     );
+    writeJsonLines(flowCandidates, [
+      {
+        id: "tampered-unbound-candidate",
+        version: "99.99.999",
+        names: ["Tampered candidate export"],
+      },
+    ]);
+    const flowIndexRow = readJsonLines(identityPreflightIndex).find(
+      (row) => row.dataset_type === "flow",
+    );
+    const reread = readIdentityPreflightIndexRow(repoRoot, identityPreflightIndex, flowIndexRow);
+    assert.equal(reread.result.candidates[0].id, "ffffffff-1111-4222-8333-444444444444");
+    assert.notEqual(reread.result.candidates[0].id, "tampered-unbound-candidate");
   } finally {
     fs.rmSync(packageContextFixtureRoot, { recursive: true, force: true });
   }

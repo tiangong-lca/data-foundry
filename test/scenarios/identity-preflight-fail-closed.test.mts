@@ -14,6 +14,7 @@ import {
   writeJsonLines,
   writeText,
 } from "../fixtures/foundry-core.mjs";
+import { testAuthIdentityReceipt } from "../fixtures/identity-fixtures.mjs";
 
 const root = path.join(repoRoot, "tmp", "identity-preflight-fail-closed");
 const FLOW_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
@@ -31,6 +32,7 @@ function prepare(mode: string) {
   const indexFile = path.join(caseRoot, "index", "identity-preflight-requests.jsonl");
   const fakeCli = path.join(caseRoot, "bin", "fake-cli.cjs");
   const marker = path.join(caseRoot, "executions.txt");
+  const authReceiptFile = path.join(caseRoot, "auth-identity-receipt.json");
   const requestText = `${JSON.stringify({ schema_version: 1, target: { id: FLOW_ID } }, null, 2)}\n`;
   writeText(requestFile, requestText);
   writeJsonLines(indexFile, [
@@ -52,6 +54,14 @@ function prepare(mode: string) {
 const fs = require("node:fs");
 const path = require("node:path");
 const args = process.argv.slice(2);
+if (args[0] === "auth" && args[1] === "identity-receipt") {
+  const receipts = JSON.parse(fs.readFileSync(process.env.FAKE_AUTH_RECEIPTS, "utf8"));
+  const authMarker = process.env.FAKE_AUTH_MARKER;
+  const count = fs.existsSync(authMarker) ? Number(fs.readFileSync(authMarker, "utf8")) : 0;
+  fs.writeFileSync(authMarker, String(count + 1));
+  process.stdout.write(JSON.stringify(receipts[Math.min(count, receipts.length - 1)]) + "\\n");
+  process.exit(0);
+}
 const outDir = args[args.indexOf("--out-dir") + 1];
 const mode = process.env.FAKE_MODE;
 const marker = process.env.FAKE_MARKER;
@@ -66,7 +76,28 @@ process.exit(mode === "nonzero" ? 1 : 0);
 `,
   );
   fs.chmodSync(fakeCli, 0o755);
-  return { caseRoot, requestFile, outputDir, reportFile, indexFile, fakeCli, marker };
+  writeJson(authReceiptFile, testAuthIdentityReceipt());
+  return {
+    caseRoot,
+    requestFile,
+    outputDir,
+    reportFile,
+    indexFile,
+    fakeCli,
+    marker,
+    authReceiptFile,
+  };
+}
+
+function receiptArgs(fixture: ReturnType<typeof prepare>): string[] {
+  return [
+    "--auth-receipt",
+    rel(fixture.authReceiptFile),
+    "--expected-project-ref",
+    "qgzvkongdjqiiamzbbts",
+    "--expected-user-id",
+    "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+  ];
 }
 
 function runCase(mode: string, extraArgs: string[] = []) {
@@ -88,6 +119,7 @@ function runCase(mode: string, extraArgs: string[] = []) {
       rel(fixture.indexFile),
       "--out-dir",
       rel(path.join(fixture.caseRoot, "run")),
+      ...receiptArgs(fixture),
       ...extraArgs,
     ],
     {
@@ -135,6 +167,7 @@ test("only-pending skips only an exact bound execution manifest", () => {
       "--out-dir",
       rel(path.join(fixture.caseRoot, "run-2")),
       "--only-pending",
+      ...receiptArgs(fixture),
     ],
     {
       env: {
@@ -166,6 +199,7 @@ test("only-pending skips only an exact bound execution manifest", () => {
       "--out-dir",
       rel(path.join(fixture.caseRoot, "run-3")),
       "--only-pending",
+      ...receiptArgs(fixture),
     ],
     {
       env: {
@@ -178,4 +212,44 @@ test("only-pending skips only an exact bound execution manifest", () => {
   assert.equal(rerun.code, 0);
   assert.equal(rerun.json.counts.skipped_bound_execution, 0);
   assert.equal(fs.readFileSync(fixture.marker, "utf8").trim().split(/\r?\n/u).length, 2);
+});
+
+test("fresh receipt rotation preserves account-bound only-pending reuse", () => {
+  const fixture = prepare("rotating-receipt");
+  const receiptsFile = path.join(fixture.caseRoot, "rotating-auth-receipts.json");
+  const authMarker = path.join(fixture.caseRoot, "auth-executions.txt");
+  const now = Date.now();
+  writeJson(receiptsFile, [
+    testAuthIdentityReceipt({ capturedAtUtc: new Date(now - 2_000).toISOString() }),
+    testAuthIdentityReceipt({ capturedAtUtc: new Date(now - 1_000).toISOString() }),
+  ]);
+  const args = [
+    "dataset-identity-preflight-run",
+    "--index",
+    rel(fixture.indexFile),
+    "--expected-project-ref",
+    "qgzvkongdjqiiamzbbts",
+    "--expected-user-id",
+    "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+  ];
+  const env = {
+    TIANGONG_LCA_CLI_BIN: fixture.fakeCli,
+    FAKE_MODE: "valid",
+    FAKE_MARKER: fixture.marker,
+    FAKE_AUTH_RECEIPTS: receiptsFile,
+    FAKE_AUTH_MARKER: authMarker,
+  };
+  const first = runFoundry([...args, "--out-dir", rel(path.join(fixture.caseRoot, "run"))], {
+    env,
+  });
+  assert.equal(first.code, 0, JSON.stringify(first.json));
+
+  const second = runFoundry(
+    [...args, "--out-dir", rel(path.join(fixture.caseRoot, "run-2")), "--only-pending"],
+    { env },
+  );
+  assert.equal(second.code, 0, JSON.stringify(second.json));
+  assert.equal(second.json.counts.skipped_bound_execution, 1);
+  assert.equal(fs.readFileSync(fixture.marker, "utf8").trim().split(/\r?\n/u).length, 1);
+  assert.equal(fs.readFileSync(authMarker, "utf8"), "2");
 });

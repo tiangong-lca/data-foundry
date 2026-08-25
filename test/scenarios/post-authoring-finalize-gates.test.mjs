@@ -15,11 +15,15 @@ import {
   runFoundry,
   scopeBlockerCodes,
   targetUserId,
+  writeJson,
   writeJsonLines,
   writeText,
 } from "../fixtures/foundry-core.mjs";
 import { writeContextPackFiles } from "../fixtures/full-context-fixtures.mjs";
-import { writeCompletedIdentityPreflightIndex } from "../fixtures/identity-fixtures.mjs";
+import {
+  testAuthIdentityReceipt,
+  writeCompletedIdentityPreflightIndex,
+} from "../fixtures/identity-fixtures.mjs";
 import {
   flowRow,
   flowRowWithClassification,
@@ -174,6 +178,8 @@ process.exit(2);
 `,
   );
   fs.chmodSync(fakeCli, 0o755);
+  const authReceiptFile = path.join(root, "auth-identity-receipt.json");
+  writeJson(authReceiptFile, testAuthIdentityReceipt());
 
   try {
     const finalize = runFoundry(
@@ -187,6 +193,12 @@ process.exit(2);
         rel(rowsFile),
         "--target-user-id",
         targetUserId,
+        "--auth-receipt",
+        rel(authReceiptFile),
+        "--expected-project-ref",
+        "qgzvkongdjqiiamzbbts",
+        "--expected-user-id",
+        "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
         "--state-code",
         "0",
         "--out-dir",
@@ -256,6 +268,8 @@ test("post-authoring finalize auto-builds curation queue context from sibling pr
       name: "Natural gas",
     },
   ]);
+  const authReceiptFile = path.join(root, "auth-identity-receipt.json");
+  writeJson(authReceiptFile, testAuthIdentityReceipt());
   const fakeCli = path.join(root, "bin", "fake-identity-preflight.cjs");
   writeText(
     fakeCli,
@@ -450,6 +464,12 @@ process.stdout.write(JSON.stringify(report));
         rel(context.rulesetFile),
         "--target-user-id",
         targetUserId,
+        "--auth-receipt",
+        rel(authReceiptFile),
+        "--expected-project-ref",
+        "qgzvkongdjqiiamzbbts",
+        "--expected-user-id",
+        "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
         "--out-dir",
         rel(path.join(root, "finalize")),
       ],
@@ -547,6 +567,8 @@ test("post-authoring finalize skips forced identity preflight refresh when curre
       name: "Natural gas",
     },
   ]);
+  const authReceiptFile = path.join(root, "auth-identity-receipt.json");
+  writeJson(authReceiptFile, testAuthIdentityReceipt());
 
   try {
     const finalize = runFoundry([
@@ -569,6 +591,12 @@ test("post-authoring finalize skips forced identity preflight refresh when curre
       rel(context.rulesetFile),
       "--target-user-id",
       targetUserId,
+      "--auth-receipt",
+      rel(authReceiptFile),
+      "--expected-project-ref",
+      "qgzvkongdjqiiamzbbts",
+      "--expected-user-id",
+      "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
       "--out-dir",
       rel(path.join(root, "finalize")),
     ]);

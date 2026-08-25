@@ -103,7 +103,10 @@ export function readIdentityPreflightIndexRow(repoRoot, indexPath, row) {
   });
   const completedResult = result && executionEvidence.ok ? result : null;
   const candidatesPath = identityPreflightCandidatesFile(repoRoot, indexPath, row, result);
-  const candidateRows = readJsonLinesIfExists(candidatesPath);
+  // Candidate files are convenience exports and are not covered by the bound
+  // execution manifest. Downstream semantic evidence comes only from the
+  // manifest-bound identity-decision report.
+  void candidatesPath;
   const outputDir = row?.output_dir
     ? (resolveArtifactPath(repoRoot, row.output_dir, baseDir) ??
       resolveRepoPath(repoRoot, row.output_dir))
@@ -137,8 +140,7 @@ export function readIdentityPreflightIndexRow(repoRoot, indexPath, row) {
           confidence: completedResult.confidence ?? null,
           next_action: completedResult.next_action ?? null,
           target: completedResult.target ?? null,
-          candidates:
-            candidateRows.length > 0 ? candidateRows : ensureArray(completedResult.candidates),
+          candidates: ensureArray(completedResult.candidates),
           candidate_sources: completedResult.candidate_sources ?? null,
           findings: completedResult.findings ?? [],
           blockers: completedResult.blockers ?? [],

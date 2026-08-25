@@ -272,24 +272,76 @@ export function createIdentityPreflightRunCommands({
     const authReceiptPath = resolveRepoPath(
       options.authReceipt || options.authIdentityReceipt || options.accountReceipt,
     );
+    const expectedProjectRef = asText(
+      options.expectedProjectRef ||
+        options.expectedProject ||
+        options.projectRef ||
+        process.env.FOUNDRY_VERIFIED_PROJECT_REF ||
+        process.env.FOUNDRY_EXPECTED_PROJECT_REF,
+    );
+    const expectedUserId = asText(
+      options.expectedUserId ||
+        options.targetUserId ||
+        process.env.FOUNDRY_VERIFIED_USER_ID ||
+        process.env.FOUNDRY_EXPECTED_USER_ID,
+    );
     let authReceipt = null;
-    if (authReceiptPath) {
-      if (!fileExists(authReceiptPath)) {
-        throw new Error("--auth-receipt must point to a readable CLI AuthIdentityReceipt.");
-      }
-      const expectedProjectRef = asText(
-        options.expectedProjectRef || options.expectedProject || options.projectRef,
-      );
-      const expectedUserId = asText(options.expectedUserId || options.targetUserId);
+    if (!dryRun && selectedRows.length > 0) {
       if (!expectedProjectRef || !expectedUserId) {
-        throw new Error("--auth-receipt requires --expected-project-ref and --expected-user-id.");
+        throw new Error(
+          "Identity-preflight execution requires --expected-project-ref and --expected-user-id (or receipt-bound Foundry account env).",
+        );
       }
-      authReceipt = parseFreshIntentBoundAuthReceipt(readJson(authReceiptPath), {
+      let receiptValue;
+      if (authReceiptPath) {
+        if (!fileExists(authReceiptPath)) {
+          throw new Error("--auth-receipt must point to a readable CLI AuthIdentityReceipt.");
+        }
+        receiptValue = readJson(authReceiptPath);
+      } else {
+        const receiptArgs = [
+          ...cli.args,
+          "auth",
+          "identity-receipt",
+          "--expected-project-ref",
+          expectedProjectRef,
+          "--expected-user-id",
+          expectedUserId,
+          "--json",
+        ];
+        const receiptResult = spawnSync(cli.command, receiptArgs, {
+          cwd: repoRoot,
+          env: {
+            ...process.env,
+            TIANGONG_LCA_DISABLE_SESSION_CACHE: "true",
+            TIANGONG_LCA_FORCE_REAUTH: "true",
+          },
+          encoding: "utf8",
+          maxBuffer: 256 * 1024,
+          timeout: 30_000,
+          killSignal: "SIGTERM",
+          shell: false,
+          windowsHide: true,
+        });
+        if (
+          receiptResult.error ||
+          receiptResult.status !== 0 ||
+          receiptResult.signal !== null ||
+          receiptResult.stderr !== ""
+        ) {
+          throw new Error("CLI auth identity-receipt failed before identity-preflight execution.");
+        }
+        receiptValue = parseJsonMaybe(String(receiptResult.stdout || "").trim());
+        if (!receiptValue) {
+          throw new Error("CLI auth identity-receipt did not emit one JSON receipt.");
+        }
+      }
+      authReceipt = parseFreshIntentBoundAuthReceipt(receiptValue, {
         nowMs: Date.now(),
         maxAgeMs: positiveIntegerOption(options.authReceiptMaxAgeMs, 300_000),
         expectedProjectRef,
         expectedUserId,
-        requireFreshSignin: booleanOption(options.productionCase || options.requireFreshSignin),
+        requireFreshSignin: true,
       });
     }
     const logDir = path.join(outDir, "logs");
