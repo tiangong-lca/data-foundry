@@ -77,7 +77,7 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2b66448599df0106ee8e03da94e6f6eeb5a878e
+lastReviewedCommit: 847498c5a8c4c9eb40cee59273b876ace3d65882
 lastReviewedNote: "Reviewed across Issue #67 Wave 22 and 22b: decision proof, the authoring SCC, identity preflight, and five command factories are native zero-escape TS7 with hashes, receipts, aliases, ordering, help, dependency forwarding, report projection, and profile constants unchanged."
 ---
 

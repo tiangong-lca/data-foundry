@@ -37,7 +37,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
   - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2b66448599df0106ee8e03da94e6f6eeb5a878e
+lastReviewedCommit: 847498c5a8c4c9eb40cee59273b876ace3d65882
 lastReviewedNote: "Reviewed across Issue #67 Wave 22 and 22b: decision/authoring/preflight proof and native command factories remain Foundry-local and preserve cross-repository ownership, Foundry-to-tidas/CLI routing, profile selection, search, and execution boundaries."
 ---
 

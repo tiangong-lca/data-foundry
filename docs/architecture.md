@@ -78,7 +78,7 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2b66448599df0106ee8e03da94e6f6eeb5a878e
+lastReviewedCommit: 847498c5a8c4c9eb40cee59273b876ace3d65882
 lastReviewedNote: "Reviewed across Issue #67 Wave 22 and 22b: typed decision/authoring/preflight boundaries and five command factories remain thin Foundry-local adapters; proof, report, and profile semantics do not move tidas, CLI, search, or database authority."
 ---
 

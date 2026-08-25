@@ -39,7 +39,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
   - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2b66448599df0106ee8e03da94e6f6eeb5a878e
+lastReviewedCommit: 847498c5a8c4c9eb40cee59273b876ace3d65882
 lastReviewedNote: "Reviewed across Issue #67 Wave 22 and 22b: typed decision/authoring/preflight proof and five command factories change no capability owner, remote operation, search behavior, profile authority, or sibling implementation boundary."
 ---
 

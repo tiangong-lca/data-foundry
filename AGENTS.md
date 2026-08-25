@@ -85,7 +85,7 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: f9d2a1e94a04e5b0cf3153100bfd8ddd031b2b93
+lastReviewedCommit: 847498c5a8c4c9eb40cee59273b876ace3d65882
 lastReviewedNote: "Reviewed across Issue #67 Wave 22 and 22b: decision full-context, the closed authoring SCC, identity preflight, and five command factories are native zero-escape TS7; receipt/hash/order/blocker behavior and injected-stub command/profile contracts remain unchanged without credentials or owner-runtime execution."
 ---
 
