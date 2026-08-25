@@ -2,6 +2,153 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
+interface LooseRecord {
+  [key: string]: LooseRecord | undefined;
+}
+
+interface ContextFile {
+  kind?: string;
+  path: string;
+  sha256?: string;
+  bytes?: number;
+}
+
+interface ContractContext {
+  files: ContextFile[];
+  missing: Array<Record<string, unknown>>;
+}
+
+interface ProvenanceFile {
+  file: string | null;
+}
+
+interface ProvenanceContext {
+  source_semantics: ProvenanceFile;
+  process_source_references: ProvenanceFile;
+  source_reference_rewrites: ProvenanceFile;
+  [key: string]: unknown;
+}
+
+interface DecisionContextBundle {
+  task?: string;
+  sha256: string;
+  contract_context_files?: ContextFile[];
+  shared_context_bundle: { path: string; [key: string]: unknown };
+  [key: string]: unknown;
+}
+
+interface DecisionTaskProof {
+  path: string;
+  blockers: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+}
+
+interface QueueSelection {
+  source_queue_rows: number;
+  matched_queue_rows: number;
+  selected_queue_rows: number;
+  source_queue_row_indices: number[];
+  input_rows_override?: string | null;
+  chunk_label?: string;
+  [key: string]: unknown;
+}
+
+interface SelectedQueueRow {
+  row: LooseRecord;
+  sourceIndex: number;
+}
+
+interface AttachedInputRow {
+  index: number;
+  row_type: string;
+  dataset_id: string;
+  dataset_version: string;
+  input_rows: string;
+  payload: LooseRecord;
+}
+
+interface DecisionTemplateRow {
+  evidence: {
+    input_row_payload: LooseRecord | null;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+interface RuntimeStage {
+  exit_code: number;
+  report?: LooseRecord;
+  report_file?: string | null;
+  [key: string]: unknown;
+}
+
+interface StageSummary {
+  stderr?: string;
+  [key: string]: unknown;
+}
+
+interface LocationDecisionDependencies {
+  asText: (value: unknown) => string;
+  buildClassificationDecisionTaskContextFiles: (options: LooseRecord) => ContractContext;
+  buildClassificationTaskProvenanceContext: (queuePath: string) => ProvenanceContext;
+  buildDecisionTaskContextBundle: (options: Record<string, unknown>) => DecisionContextBundle;
+  classificationDecisionCode: (decision: LooseRecord | undefined) => string;
+  classificationDecisionSchemaType: (decision: LooseRecord) => string;
+  classificationDecisionUsedContextKinds: (decision: LooseRecord) => string[];
+  compactStageReport: (stage: RuntimeStage) => StageSummary;
+  datasetIdentity: (row: LooseRecord, datasetType: string) => { id: string; version: string };
+  decisionAuthoringContext: (contextBundle: DecisionContextBundle) => Record<string, unknown>;
+  decisionCompletionStatus: (decision: LooseRecord | undefined) => string;
+  decisionContextBundleSha256: (decision: LooseRecord) => string;
+  decisionTaskBuildStatus: (options: Record<string, unknown>) => string;
+  decisionTaskChunkLabel: (
+    options: LooseRecord,
+    selection: QueueSelection,
+    fallback: string,
+  ) => string;
+  decisionTaskContextBlockers: (options: Record<string, unknown>) => Array<Record<string, unknown>>;
+  decisionTaskContextBundleHashes: (proofs: DecisionTaskProof[]) => string[];
+  decisionTaskContextFileSummary: (file: ContextFile) => unknown;
+  decisionTaskInputRowsOverride: (options: LooseRecord) => string | null;
+  decisionTaskProofList: (proof: unknown) => DecisionTaskProof[];
+  decisionTaskReportPayload: (proof: DecisionTaskProof | null) => unknown;
+  ensureArray: (value: unknown) => LooseRecord[];
+  fileExists: (filePath: string | null | undefined) => boolean;
+  hasQueueSelectionOptions: (options: LooseRecord) => boolean;
+  hasUnresolvedAiPlaceholder: (value: unknown) => boolean;
+  nowIso: () => string;
+  readDecisionTaskProofs: (
+    options: LooseRecord,
+    kind: string,
+    queuePath: string,
+  ) => DecisionTaskProof[];
+  readJsonOrJsonLines: (filePath: string) => LooseRecord[];
+  repoRelativeMaybe: (filePath: string | null | undefined) => string | null;
+  repoRelativePath: (filePath: string) => string;
+  repoRoot: string;
+  resolveRepoPath: (filePath: unknown) => string | null;
+  rewriteDecisionTaskQueueRowsForChunk: (options: Record<string, unknown>) => LooseRecord[];
+  runTiangongJsonStage: (stage: string, argv: string[]) => RuntimeStage;
+  selectDecisionTaskQueueRows: (
+    queueRows: LooseRecord[],
+    options: LooseRecord,
+    schemaTypeForRow: (row: LooseRecord) => string,
+  ) => { selection: QueueSelection; selected: SelectedQueueRow[] };
+  shellQuote: (value: string) => string;
+  unique: <T>(values: T[]) => T[];
+  writeJson: (filePath: string, value: unknown) => void;
+  writeJsonLines: (filePath: string, rows: readonly unknown[]) => void;
+}
+
+function recordArray(value: unknown): LooseRecord[] {
+  return Array.isArray(value)
+    ? value.filter(
+        (item): item is LooseRecord =>
+          Boolean(item) && typeof item === "object" && !Array.isArray(item),
+      )
+    : [];
+}
+
 export function createLocationDecisionCommands({
   asText,
   buildClassificationDecisionTaskContextFiles,
@@ -41,22 +188,22 @@ export function createLocationDecisionCommands({
   unique,
   writeJson,
   writeJsonLines,
-}) {
-  function locationQueueInputRows(row) {
+}: LocationDecisionDependencies) {
+  function locationQueueInputRows(row: LooseRecord): string {
     return asText(row?.location_workflow?.commands?.input_rows);
   }
 
-  function locationQueueOutputRows(row) {
+  function locationQueueOutputRows(row: LooseRecord): string {
     return asText(row?.location_workflow?.commands?.output_rows);
   }
 
-  function locationQueueTargetKey(row) {
+  function locationQueueTargetKey(row: LooseRecord): string {
     return `location::${asText(row?.dataset_id)}::${asText(
       row?.dataset_version,
     )}::${asText(row?.path)}`;
   }
 
-  function locationDecisionTargetPath(decision) {
+  function locationDecisionTargetPath(decision: LooseRecord): string {
     return asText(
       decision?.target_path ??
         decision?.targetPath ??
@@ -66,7 +213,7 @@ export function createLocationDecisionCommands({
     );
   }
 
-  function locationDecisionTargetKey(decision) {
+  function locationDecisionTargetKey(decision: LooseRecord): string {
     return `location::${asText(
       decision?.dataset_id ?? decision?.datasetId ?? decision?.id,
     )}::${asText(
@@ -74,8 +221,10 @@ export function createLocationDecisionCommands({
     )}::${locationDecisionTargetPath(decision)}`;
   }
 
-  function buildLocationTaskInputRowLookup(queueRows) {
-    const byInput = new Map();
+  function buildLocationTaskInputRowLookup(
+    queueRows: LooseRecord[],
+  ): Map<string, AttachedInputRow> {
+    const byInput = new Map<string, LooseRecord[]>();
     for (const queueRow of queueRows) {
       const inputRows = locationQueueInputRows(queueRow);
       if (!inputRows) continue;
@@ -85,7 +234,7 @@ export function createLocationDecisionCommands({
         byInput.set(resolved, readJsonOrJsonLines(resolved));
       }
     }
-    const lookup = new Map();
+    const lookup = new Map<string, AttachedInputRow>();
     for (const [inputFile, rows] of byInput.entries()) {
       for (const queueRow of queueRows) {
         if (resolveRepoPath(locationQueueInputRows(queueRow)) !== inputFile) {
@@ -114,7 +263,11 @@ export function createLocationDecisionCommands({
     return lookup;
   }
 
-  function locationTaskEvidenceForQueueRow(row, index, rowLookup) {
+  function locationTaskEvidenceForQueueRow(
+    row: LooseRecord,
+    index: number,
+    rowLookup: Map<string, AttachedInputRow>,
+  ) {
     const inputRow = rowLookup.get(locationQueueTargetKey(row)) ?? null;
     return {
       source: "location-authoring-queue",
@@ -137,10 +290,10 @@ export function createLocationDecisionCommands({
   }
 
   function buildLocationDecisionTemplateRows(
-    queueRows,
-    rowLookup = new Map(),
-    contextBundle = null,
-  ) {
+    queueRows: LooseRecord[],
+    rowLookup = new Map<string, AttachedInputRow>(),
+    contextBundle: DecisionContextBundle | null = null,
+  ): DecisionTemplateRow[] {
     const authoringContext = contextBundle ? decisionAuthoringContext(contextBundle) : null;
     return queueRows.map((row, index) => ({
       dataset_id: row.dataset_id,
@@ -156,7 +309,7 @@ export function createLocationDecisionCommands({
     }));
   }
 
-  function runDatasetLocationDecisionTaskBuild(options) {
+  function runDatasetLocationDecisionTaskBuild(options: LooseRecord) {
     if (options.help) {
       return {
         schema_version: 1,
@@ -176,7 +329,7 @@ export function createLocationDecisionCommands({
         "--location-queue is required and must point to location-authoring-queue.jsonl.",
       );
     }
-    const outDir = resolveRepoPath(options.outDir || ".foundry/workspaces/location-decision-task");
+    const outDir = resolveRepoPath(options.outDir || ".foundry/workspaces/location-decision-task")!;
     const sharedContextCacheDir = resolveRepoPath(
       options.sharedContextCacheDir || options.contextCacheDir,
     );
@@ -187,7 +340,7 @@ export function createLocationDecisionCommands({
     const shouldDeriveQueue = useSelection || Boolean(inputRowsOverride);
     let queueRows = sourceQueueRows;
     let taskQueuePath = queuePath;
-    let selection = {
+    let selection: QueueSelection = {
       source_queue_rows: sourceQueueRows.length,
       matched_queue_rows: sourceQueueRows.length,
       selected_queue_rows: sourceQueueRows.length,
@@ -340,18 +493,20 @@ export function createLocationDecisionCommands({
   }
 
   function validateLocationDecisionsForQueue(
-    queueRows,
-    decisions,
-    { decisionTaskProof = null } = {},
+    queueRows: LooseRecord[],
+    decisions: LooseRecord[],
+    { decisionTaskProof = null }: { decisionTaskProof?: unknown } = {},
   ) {
-    const blockers = [];
+    const blockers: Array<Record<string, unknown>> = [];
     const decisionTaskProofs = decisionTaskProofList(decisionTaskProof);
     for (const proof of decisionTaskProofs) {
       blockers.push(...proof.blockers);
     }
     const contextBundleHashes = decisionTaskContextBundleHashes(decisionTaskProofs);
-    const queueByKey = new Map(queueRows.map((row) => [locationQueueTargetKey(row), row]));
-    const decisionsByKey = new Map();
+    const queueByKey = new Map<string, LooseRecord>(
+      queueRows.map((row) => [locationQueueTargetKey(row), row] as const),
+    );
+    const decisionsByKey = new Map<string, unknown>();
     for (const [index, decision] of decisions.entries()) {
       const key = locationDecisionTargetKey(decision);
       if (hasUnresolvedAiPlaceholder(decision)) {
@@ -474,9 +629,9 @@ export function createLocationDecisionCommands({
     return { blockers, decisionsByKey };
   }
 
-  function locationDecisionTaskAuthoringContext(task, taskPath) {
+  function locationDecisionTaskAuthoringContext(task: LooseRecord, taskPath: string) {
     const contextBundle = task?.context_bundle ?? task?.contextBundle;
-    const contractFiles = contextBundle?.contract_context_files ?? [];
+    const contractFiles = recordArray(contextBundle?.contract_context_files);
     return {
       task: contextBundle?.task ?? repoRelativePath(taskPath),
       context_bundle_sha256: asText(contextBundle?.sha256),
@@ -491,16 +646,16 @@ export function createLocationDecisionCommands({
     };
   }
 
-  function locationSchemaCodeSet(options) {
+  function locationSchemaCodeSet(options: LooseRecord): Set<string> | null {
     const schemaPath = resolveRepoPath(options.locationSchema || options.locationCategorySchema);
     if (!schemaPath || !fileExists(schemaPath)) return null;
     const schemaRows = readJsonOrJsonLines(schemaPath);
     const schema = Array.isArray(schemaRows) && schemaRows.length === 1 ? schemaRows[0] : {};
-    const oneOf = Array.isArray(schema?.oneOf) ? schema.oneOf : [];
+    const oneOf = recordArray(schema?.oneOf);
     return new Set(oneOf.map((entry) => asText(entry?.const)).filter(Boolean));
   }
 
-  function collectSuggestedLocationCodes(queueRow) {
+  function collectSuggestedLocationCodes(queueRow: LooseRecord): string[] {
     const values = [
       queueRow?.suggested_location_code,
       queueRow?.suggestedLocationCode,
@@ -516,7 +671,7 @@ export function createLocationDecisionCommands({
     return unique(values.map(asText).filter(Boolean));
   }
 
-  function runDatasetLocationDecisionsSuggest(options) {
+  function runDatasetLocationDecisionsSuggest(options: LooseRecord) {
     if (options.help) {
       return {
         schema_version: 1,
@@ -544,7 +699,7 @@ export function createLocationDecisionCommands({
         "--decision-task is required so suggested decisions can bind to the exact full-context task bundle.",
       );
     }
-    const outDir = resolveRepoPath(options.outDir || ".foundry/workspaces/location-decisions");
+    const outDir = resolveRepoPath(options.outDir || ".foundry/workspaces/location-decisions")!;
     const queueRows = readJsonOrJsonLines(queuePath);
     const decisionTask = readJsonOrJsonLines(decisionTaskPath);
     const taskPayload = Array.isArray(decisionTask) ? decisionTask[0] : decisionTask;
@@ -559,8 +714,8 @@ export function createLocationDecisionCommands({
       "location_authoring_queue",
     ]);
     const validCodes = locationSchemaCodeSet(options);
-    const decisions = [];
-    const manualReview = [];
+    const decisions: Array<Record<string, unknown>> = [];
+    const manualReview: Array<Record<string, unknown>> = [];
 
     for (const [index, queueRow] of queueRows.entries()) {
       const candidates = collectSuggestedLocationCodes(queueRow);
@@ -664,15 +819,20 @@ export function createLocationDecisionCommands({
     return report;
   }
 
-  function outputRowsForLocationGroup(rows, outDir, inputRows, options) {
-    if (options.out && rows.length > 0) return resolveRepoPath(options.out);
+  function outputRowsForLocationGroup(
+    rows: LooseRecord[],
+    outDir: string,
+    inputRows: string,
+    options: LooseRecord,
+  ): string {
+    if (options.out && rows.length > 0) return resolveRepoPath(options.out)!;
     const outputRows = unique(rows.map(locationQueueOutputRows)).filter(Boolean);
-    if (outputRows.length === 1) return resolveRepoPath(outputRows[0]);
+    if (outputRows.length === 1) return resolveRepoPath(outputRows[0])!;
     const inputBase = path.basename(inputRows).replace(/\.(jsonl|json)$/iu, "");
     return path.join(outDir, "rows", `${inputBase}.located.jsonl`);
   }
 
-  function runDatasetLocationDecisionsApply(options) {
+  function runDatasetLocationDecisionsApply(options: LooseRecord) {
     if (options.help) {
       return {
         schema_version: 1,
@@ -701,7 +861,7 @@ export function createLocationDecisionCommands({
     }
     const outDir = resolveRepoPath(
       options.outDir || ".foundry/workspaces/location-decisions-apply",
-    );
+    )!;
     const reportPath = path.join(outDir, "location-decisions-apply-report.json");
     const queueRows = readJsonOrJsonLines(queuePath);
     const decisions = readJsonOrJsonLines(decisionsPath);
@@ -710,12 +870,12 @@ export function createLocationDecisionCommands({
     const { blockers, decisionsByKey } = validateLocationDecisionsForQueue(queueRows, decisions, {
       decisionTaskProof: decisionTaskProofs,
     });
-    const stages = [];
-    const inputRows = [];
-    const outputRows = [];
+    const stages: RuntimeStage[] = [];
+    const inputRows: string[] = [];
+    const outputRows: string[] = [];
 
     if (blockers.length === 0 && queueRows.length > 0) {
-      const queueRowsByInput = new Map();
+      const queueRowsByInput = new Map<string, { inputRows: string; rows: LooseRecord[] }>();
       for (const row of queueRows) {
         const inputRows = resolveRepoPath(
           options.rowsFile || options.inputRows || locationQueueInputRows(row),

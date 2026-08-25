@@ -1,6 +1,6 @@
 import process from "node:process";
-import { createClassificationDecisionCommands } from "../commands/classification-decisions.mjs";
-import { createLocationDecisionCommands } from "../commands/location-decisions.mjs";
+import { createClassificationDecisionCommands } from "../commands/classification-decisions.ts";
+import { createLocationDecisionCommands } from "../commands/location-decisions.ts";
 
 export function runFoundryCli({ argv = process.argv, commandDeps, decisionDeps, runtime }) {
   runFoundryCliMain({ argv, commandDeps, decisionDeps, runtime }).catch((error) => {

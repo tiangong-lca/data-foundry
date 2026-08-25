@@ -151,7 +151,7 @@ related:
 
 每个 process 能否导入由两个杠杆决定（取代早期"931+139 永久非可导入尾巴"框架）：
 
-- **杠杆 1 — classification 授权**（唯一硬必须的 AI 工作）：3,750 个 leaf 决策（process→ISIC4 + flow-product→CPC4-5；NAICS 仅弱提示），走 generic `dataset-classification-decisions.mjs`。0.0.34 转换器现在原生写 `@name` + 支持多体系，但 leaf code 不变，决策契约沿用。
+- **杠杆 1 — classification 授权**（唯一硬必须的 AI 工作）：3,750 个 leaf 决策（process→ISIC4 + flow-product→CPC4-5；NAICS 仅弱提示），走 generic `dataset-classification-decisions.ts`。0.0.34 转换器现在原生写 `@name` + 支持多体系，但 leaf code 不变，决策契约沿用。
 - **杠杆 2 — account-local "My Data" override**（profile 数据驱动通用能力，零 gate 代码改动）：`specs/import-profiles.json` 的 `allow_account_local_support_and_elementary`（uslci `enabled:true`，D4 已授权）。把无公共 canonical 匹配的 elementary flow / 本地 FP / UG 铸为 account-local（state_code=0），而非留作非可导入。
   - elementary：remap-first（FEDEFL trace 全候选池 re-judge）/ mint-last。
   - FP/UG：按 §6 P1a 在依赖 flow 前 mint-once 并提交为 support。

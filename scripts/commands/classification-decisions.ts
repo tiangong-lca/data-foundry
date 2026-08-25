@@ -2,6 +2,158 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
+interface LooseRecord {
+  [key: string]: LooseRecord | undefined;
+}
+
+interface ContextFile {
+  kind?: string;
+  path: string;
+  sha256?: string;
+  bytes?: number;
+}
+
+interface ContractContext {
+  files: ContextFile[];
+  missing: Array<Record<string, unknown>>;
+}
+
+interface ProvenanceFile {
+  file: string | null;
+}
+
+interface ProvenanceContext {
+  source_semantics: ProvenanceFile;
+  process_source_references: ProvenanceFile;
+  source_reference_rewrites: ProvenanceFile;
+  [key: string]: unknown;
+}
+
+interface DecisionContextBundle {
+  task?: string;
+  sha256: string;
+  contract_context_files?: ContextFile[];
+  shared_context_bundle: { path: string; [key: string]: unknown };
+  [key: string]: unknown;
+}
+
+interface DecisionTaskProof {
+  path: string;
+  blockers: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+}
+
+interface QueueSelection {
+  source_queue_rows: number;
+  matched_queue_rows: number;
+  selected_queue_rows: number;
+  source_queue_row_indices: number[];
+  input_rows_override?: string | null;
+  chunk_label?: string;
+  [key: string]: unknown;
+}
+
+interface SelectedQueueRow {
+  row: LooseRecord;
+  sourceIndex: number;
+}
+
+interface AttachedInputRow {
+  index: number;
+  row_type: string;
+  dataset_id: string;
+  dataset_version: string;
+  input_rows: string;
+  payload: LooseRecord;
+}
+
+interface DecisionTemplateRow {
+  evidence: {
+    input_row_payload: LooseRecord | null;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+interface RuntimeStage {
+  exit_code: number;
+  report?: LooseRecord;
+  report_file?: string | null;
+  [key: string]: unknown;
+}
+
+interface StageSummary {
+  stderr?: string;
+  [key: string]: unknown;
+}
+
+interface ClassificationDecisionDependencies {
+  asText: (value: unknown) => string;
+  buildClassificationDecisionTaskContextFiles: (options: LooseRecord) => ContractContext;
+  buildClassificationTaskProvenanceContext: (queuePath: string) => ProvenanceContext;
+  buildDecisionTaskContextBundle: (options: Record<string, unknown>) => DecisionContextBundle;
+  classificationDecisionCode: (decision: LooseRecord | undefined) => string;
+  classificationDecisionSchemaType: (decision: LooseRecord) => string;
+  classificationDecisionTargetKey: (decision: LooseRecord) => string;
+  classificationDecisionUsedContextKinds: (decision: LooseRecord) => string[];
+  classificationQueueInputRows: (row: LooseRecord) => string;
+  classificationQueueOutputRows: (row: LooseRecord) => string;
+  classificationQueueRowType: (row: LooseRecord) => string;
+  classificationQueueSchemaType: (row: LooseRecord) => string;
+  classificationQueueTargetKey: (row: LooseRecord) => string;
+  compactStageReport: (stage: RuntimeStage) => StageSummary;
+  datasetIdentity: (row: LooseRecord, datasetType: string) => { id: string; version: string };
+  decisionAuthoringContext: (contextBundle: DecisionContextBundle) => Record<string, unknown>;
+  decisionCompletionStatus: (decision: LooseRecord | undefined) => string;
+  decisionContextBundleSha256: (decision: LooseRecord) => string;
+  decisionTaskBuildStatus: (options: Record<string, unknown>) => string;
+  decisionTaskChunkLabel: (
+    options: LooseRecord,
+    selection: QueueSelection,
+    fallback: string,
+  ) => string;
+  decisionTaskContextBlockers: (options: Record<string, unknown>) => Array<Record<string, unknown>>;
+  decisionTaskContextBundleHashes: (proofs: DecisionTaskProof[]) => string[];
+  decisionTaskContextFileSummary: (file: ContextFile) => unknown;
+  decisionTaskInputRowsOverride: (options: LooseRecord) => string | null;
+  decisionTaskProofList: (proof: unknown) => DecisionTaskProof[];
+  decisionTaskReportPayload: (proof: DecisionTaskProof | null) => unknown;
+  fileExists: (filePath: string | null | undefined) => boolean;
+  hasQueueSelectionOptions: (options: LooseRecord) => boolean;
+  hasUnresolvedAiPlaceholder: (value: unknown) => boolean;
+  nowIso: () => string;
+  readDecisionTaskProofs: (
+    options: LooseRecord,
+    kind: string,
+    queuePath: string,
+  ) => DecisionTaskProof[];
+  readJsonOrJsonLines: (filePath: string) => LooseRecord[];
+  repoRelativeMaybe: (filePath: string | null | undefined) => string | null;
+  repoRelativePath: (filePath: string) => string;
+  repoRoot: string;
+  resolveRepoPath: (filePath: unknown) => string | null;
+  rewriteDecisionTaskQueueRowsForChunk: (options: Record<string, unknown>) => LooseRecord[];
+  runTiangongJsonStage: (stage: string, argv: string[]) => RuntimeStage;
+  selectDecisionTaskQueueRows: (
+    queueRows: LooseRecord[],
+    options: LooseRecord,
+    schemaTypeForRow: (row: LooseRecord) => string,
+  ) => { selection: QueueSelection; selected: SelectedQueueRow[] };
+  shellQuote: (value: string) => string;
+  unique: <T>(values: T[]) => T[];
+  writeJson: (filePath: string, value: unknown) => void;
+  writeJsonLines: (filePath: string, rows: readonly unknown[]) => void;
+}
+
+function recordArray(value: unknown): LooseRecord[] {
+  return Array.isArray(value)
+    ? value.filter(
+        (item): item is LooseRecord =>
+          Boolean(item) && typeof item === "object" && !Array.isArray(item),
+      )
+    : [];
+}
+
 export function createClassificationDecisionCommands({
   asText,
   buildClassificationDecisionTaskContextFiles,
@@ -46,8 +198,8 @@ export function createClassificationDecisionCommands({
   unique,
   writeJson,
   writeJsonLines,
-}) {
-  function classificationTaskQueueKey(row) {
+}: ClassificationDecisionDependencies) {
+  function classificationTaskQueueKey(row: LooseRecord): string {
     return [
       asText(row?.dataset_id),
       asText(row?.dataset_version),
@@ -56,7 +208,7 @@ export function createClassificationDecisionCommands({
     ].join("::");
   }
 
-  function classificationTaskRowTypeForQueueRow(row) {
+  function classificationTaskRowTypeForQueueRow(row: LooseRecord): string {
     const schemaType = classificationQueueSchemaType(row);
     if (schemaType === "flow-product" || schemaType === "flow-elementary") {
       return "flow";
@@ -64,7 +216,11 @@ export function createClassificationDecisionCommands({
     return classificationQueueRowType(row) || asText(row?.dataset_type);
   }
 
-  function classificationTaskInputRowIdentity(row, queueRow, index) {
+  function classificationTaskInputRowIdentity(
+    row: LooseRecord,
+    queueRow: LooseRecord,
+    index: number,
+  ) {
     const rowType = classificationTaskRowTypeForQueueRow(queueRow);
     const identity = datasetIdentity(row, rowType);
     return {
@@ -75,8 +231,10 @@ export function createClassificationDecisionCommands({
     };
   }
 
-  function buildClassificationTaskInputRowLookup(queueRows) {
-    const byInput = new Map();
+  function buildClassificationTaskInputRowLookup(
+    queueRows: LooseRecord[],
+  ): Map<string, AttachedInputRow> {
+    const byInput = new Map<string, LooseRecord[]>();
     for (const queueRow of queueRows) {
       const inputRows = classificationQueueInputRows(queueRow);
       if (!inputRows) continue;
@@ -86,7 +244,7 @@ export function createClassificationDecisionCommands({
         byInput.set(resolved, readJsonOrJsonLines(resolved));
       }
     }
-    const lookup = new Map();
+    const lookup = new Map<string, AttachedInputRow>();
     for (const [inputFile, rows] of byInput.entries()) {
       for (const queueRow of queueRows) {
         if (resolveRepoPath(classificationQueueInputRows(queueRow)) !== inputFile) {
@@ -111,7 +269,11 @@ export function createClassificationDecisionCommands({
     return lookup;
   }
 
-  function classificationTaskEvidenceForQueueRow(row, index, rowLookup) {
+  function classificationTaskEvidenceForQueueRow(
+    row: LooseRecord,
+    index: number,
+    rowLookup: Map<string, AttachedInputRow>,
+  ) {
     const inputRow = rowLookup.get(classificationTaskQueueKey(row)) ?? null;
     return {
       source: "classification-authoring-queue",
@@ -135,10 +297,10 @@ export function createClassificationDecisionCommands({
   }
 
   function buildClassificationDecisionTemplateRows(
-    queueRows,
-    rowLookup = new Map(),
-    contextBundle = null,
-  ) {
+    queueRows: LooseRecord[],
+    rowLookup = new Map<string, AttachedInputRow>(),
+    contextBundle: DecisionContextBundle | null = null,
+  ): DecisionTemplateRow[] {
     const authoringContext = contextBundle ? decisionAuthoringContext(contextBundle) : null;
     return queueRows.map((row, index) => ({
       dataset_id: row.dataset_id,
@@ -153,7 +315,7 @@ export function createClassificationDecisionCommands({
     }));
   }
 
-  function runDatasetClassificationDecisionTaskBuild(options) {
+  function runDatasetClassificationDecisionTaskBuild(options: LooseRecord) {
     if (options.help) {
       return {
         schema_version: 1,
@@ -177,7 +339,7 @@ export function createClassificationDecisionCommands({
     }
     const outDir = resolveRepoPath(
       options.outDir || ".foundry/workspaces/classification-decision-task",
-    );
+    )!;
     const sharedContextCacheDir = resolveRepoPath(
       options.sharedContextCacheDir || options.contextCacheDir,
     );
@@ -188,7 +350,7 @@ export function createClassificationDecisionCommands({
     const shouldDeriveQueue = useSelection || Boolean(inputRowsOverride);
     let queueRows = sourceQueueRows;
     let taskQueuePath = queuePath;
-    let selection = {
+    let selection: QueueSelection = {
       source_queue_rows: sourceQueueRows.length,
       matched_queue_rows: sourceQueueRows.length,
       selected_queue_rows: sourceQueueRows.length,
@@ -349,18 +511,23 @@ export function createClassificationDecisionCommands({
   }
 
   function validateClassificationDecisionsForQueue(
-    queueRows,
-    decisions,
-    { decisionTaskProof = null, decisionKind = "classification" } = {},
+    queueRows: LooseRecord[],
+    decisions: LooseRecord[],
+    {
+      decisionTaskProof = null,
+      decisionKind = "classification",
+    }: { decisionTaskProof?: unknown; decisionKind?: string } = {},
   ) {
-    const blockers = [];
+    const blockers: Array<Record<string, unknown>> = [];
     const decisionTaskProofs = decisionTaskProofList(decisionTaskProof);
     for (const proof of decisionTaskProofs) {
       blockers.push(...proof.blockers);
     }
     const contextBundleHashes = decisionTaskContextBundleHashes(decisionTaskProofs);
-    const queueByKey = new Map(queueRows.map((row) => [classificationQueueTargetKey(row), row]));
-    const decisionsByKey = new Map();
+    const queueByKey = new Map<string, LooseRecord>(
+      queueRows.map((row) => [classificationQueueTargetKey(row), row] as const),
+    );
+    const decisionsByKey = new Map<string, unknown>();
     for (const [index, decision] of decisions.entries()) {
       const schemaType = classificationDecisionSchemaType(decision);
       const key = classificationDecisionTargetKey(decision);
@@ -479,18 +646,22 @@ export function createClassificationDecisionCommands({
     return { blockers, decisionsByKey };
   }
 
-  function libraryClassificationDecisionCode(row) {
+  function libraryClassificationDecisionCode(row: LooseRecord | undefined): string {
     return asText(row?.selected_code ?? row?.selectedCode ?? classificationDecisionCode(row));
   }
 
-  function libraryClassificationDecisionKey(row) {
+  function libraryClassificationDecisionKey(row: LooseRecord): string {
     const schemaType = classificationDecisionSchemaType(row);
     const datasetId = asText(row?.dataset_id ?? row?.datasetId ?? row?.id ?? row?.uuid);
     const version = asText(row?.dataset_version ?? row?.datasetVersion ?? row?.version);
     return `${schemaType}::${datasetId}::${version}`;
   }
 
-  function classificationDecisionIsTooBroad(queueRow, decision, code) {
+  function classificationDecisionIsTooBroad(
+    queueRow: LooseRecord,
+    decision: LooseRecord,
+    code: string,
+  ): boolean {
     const schemaType = classificationQueueSchemaType(queueRow);
     if (!["process", "flow-product"].includes(schemaType)) return false;
     const level = asText(
@@ -501,9 +672,9 @@ export function createClassificationDecisionCommands({
     return /^\d{1,3}$/u.test(code);
   }
 
-  function decisionTaskAuthoringContext(task, taskPath) {
+  function decisionTaskAuthoringContext(task: LooseRecord, taskPath: string) {
     const contextBundle = task?.context_bundle ?? task?.contextBundle;
-    const contractFiles = contextBundle?.contract_context_files ?? [];
+    const contractFiles = recordArray(contextBundle?.contract_context_files);
     return {
       task: contextBundle?.task ?? repoRelativePath(taskPath),
       context_bundle_sha256: asText(contextBundle?.sha256),
@@ -518,7 +689,7 @@ export function createClassificationDecisionCommands({
     };
   }
 
-  function runDatasetLibraryClassificationDecisionsProject(options) {
+  function runDatasetLibraryClassificationDecisionsProject(options: LooseRecord) {
     if (options.help) {
       return {
         schema_version: 1,
@@ -561,7 +732,7 @@ export function createClassificationDecisionCommands({
 
     const outDir = resolveRepoPath(
       options.outDir || ".foundry/workspaces/library-classification-decisions-project",
-    );
+    )!;
     const queueRows = readJsonOrJsonLines(queuePath);
     const libraryRows = readJsonOrJsonLines(libraryDecisionsPath);
     const decisionTask = readJsonOrJsonLines(decisionTaskPath);
@@ -575,8 +746,8 @@ export function createClassificationDecisionCommands({
       "classification_schema",
       "location_schema",
     ]);
-    const libraryByKey = new Map(
-      libraryRows.map((row) => [libraryClassificationDecisionKey(row), row]),
+    const libraryByKey = new Map<string, LooseRecord>(
+      libraryRows.map((row) => [libraryClassificationDecisionKey(row), row] as const),
     );
     const projected = [];
     const manualReview = [];
@@ -718,15 +889,20 @@ export function createClassificationDecisionCommands({
     return report;
   }
 
-  function outputRowsForClassificationGroup(rows, outDir, inputRows, options) {
-    if (options.out && rows.length > 0) return resolveRepoPath(options.out);
+  function outputRowsForClassificationGroup(
+    rows: LooseRecord[],
+    outDir: string,
+    inputRows: string,
+    options: LooseRecord,
+  ): string {
+    if (options.out && rows.length > 0) return resolveRepoPath(options.out)!;
     const outputRows = unique(rows.map(classificationQueueOutputRows)).filter(Boolean);
-    if (outputRows.length === 1) return resolveRepoPath(outputRows[0]);
+    if (outputRows.length === 1) return resolveRepoPath(outputRows[0])!;
     const inputBase = path.basename(inputRows).replace(/\.(jsonl|json)$/iu, "");
     return path.join(outDir, "rows", `${inputBase}.classified.jsonl`);
   }
 
-  function runDatasetClassificationDecisionsApply(options) {
+  function runDatasetClassificationDecisionsApply(options: LooseRecord) {
     if (options.help) {
       return {
         schema_version: 1,
@@ -755,7 +931,7 @@ export function createClassificationDecisionCommands({
     }
     const outDir = resolveRepoPath(
       options.outDir || ".foundry/workspaces/classification-decisions-apply",
-    );
+    )!;
     const reportPath = path.join(outDir, "classification-decisions-apply-report.json");
     const queueRows = readJsonOrJsonLines(queuePath);
     const decisions = readJsonOrJsonLines(decisionsPath);
@@ -766,12 +942,12 @@ export function createClassificationDecisionCommands({
       decisions,
       { decisionTaskProof: decisionTaskProofs, decisionKind: "classification" },
     );
-    const stages = [];
-    const inputRowsFiles = [];
-    const outputRows = [];
+    const stages: RuntimeStage[] = [];
+    const inputRowsFiles: string[] = [];
+    const outputRows: string[] = [];
 
     if (blockers.length === 0 && queueRows.length > 0) {
-      const queueRowsByInput = new Map();
+      const queueRowsByInput = new Map<string, { inputRows: string; rows: LooseRecord[] }>();
       for (const row of queueRows) {
         const inputRows = resolveRepoPath(
           options.rowsFile || options.inputRows || classificationQueueInputRows(row),
