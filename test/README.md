@@ -112,7 +112,7 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 2b2d7e6f9890fbfc9de583a1f27ad20842657716
+lastReviewedCommit: 86bb319934e25e4084e2e6a31b9eec14a6ee6079
 lastReviewedNote: "Reviewed for Issue #67 Wave 22: tests cover decision proof, atomic authoring SCC behavior/imports, and preflight aliases, receipt/hash freshness, source context, blocker order, and native errors."
 ---
 
