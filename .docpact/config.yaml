@@ -11,8 +11,9 @@ layout: repo
 # Review note, 2026-08-25: Issue #67 Wave 24 B3 migrates the curation aggregate, gate runner, and cleanup runner under the existing scripts/** and test/** ownership/rule coverage. No catalog, routing, rule, profile, environment, or remote-authority semantics change.
 # Review note, 2026-08-25: Issue #67 Wave 24 migrates five existing command-owner paths to TypeScript with local characterization. Existing control-plane, test-layout, ownership, and documentation routes already cover the moved paths; no rule or authority boundary changes.
 # Review note, 2026-08-26: Issue #68 adds a narrow Worldsteel wrapper/test/document route to the profile index, current docs, and retained evidence. The monolithic specs/import-profiles.json stays under the generic import-profile trigger so unrelated profile edits do not fan out to Worldsteel; the executable truth test is the cross-file backstop for its Worldsteel subtree.
+# Review note, 2026-08-26: Issue #69 adds a narrow strict prewrite-datetime route across bundle preservation, atomic cleanup blockers, finalize short-circuiting, CLI exit behavior, and their focused contracts. It also closes the existing control-plane coverage gap for specs/prewrite-content-policy.json without changing ownership or mutation authority.
 lastReviewedAt: "2026-08-26"
-lastReviewedCommit: "da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6"
+lastReviewedCommit: "c7f2c034ec470e46b12ca8f466bcb7f17835ce31"
 
 catalog:
   repos:
@@ -68,6 +69,7 @@ ownership:
           - specs/canonical-support/**
           - specs/capability-ownership-rules.json
           - specs/data-foundry-service.md
+          - specs/prewrite-content-policy.json
           - specs/schemas/**
           - test/unit/zero-javascript-ratchet.test.mts
           - specs/workspace-capability-adapters.md
@@ -158,6 +160,7 @@ routing:
         - specs/canonical-support/**
         - specs/capability-ownership-rules.json
         - specs/data-foundry-service.md
+        - specs/prewrite-content-policy.json
         - specs/schemas/**
         - test/unit/zero-javascript-ratchet.test.mts
         - specs/workspace-capability-adapters.md
@@ -287,6 +290,8 @@ rules:
         kind: ownership-rules
       - path: specs/data-foundry-service.md
         kind: service-contract
+      - path: specs/prewrite-content-policy.json
+        kind: prewrite-content-policy
       - path: specs/schemas/**
         kind: artifact-schema-contract
       - path: specs/typescript-migration-*.json
@@ -363,6 +368,46 @@ rules:
       - path: docs/import-profiles/worldsteel/import-coverage.md
         mode: review_or_update
     reason: Changes from the Worldsteel wrapper, truth test, or profile-doc subtree must review the frozen adapter policy, profile authorization, current constraints and plan, and retained coverage evidence together; the monolithic profile index keeps its generic trigger to avoid unrelated fan-out.
+  - id: foundry-prewrite-datetime-contract
+    scope: repo
+    repo: data-foundry
+    triggers:
+      - path: scripts/lib/import-curation/internal/prewrite-cleanup.ts
+        kind: strict-prewrite-datetime-owner
+      - path: scripts/lib/import-curation/curation-cleanup.ts
+        kind: cleanup-blocker-runner
+      - path: scripts/lib/bundle-sample-utils.ts
+        kind: bundle-datetime-preservation
+      - path: scripts/commands/post-authoring-finalize.ts
+        kind: finalize-cleanup-short-circuit
+      - path: scripts/lib/foundry-command-registry.ts
+        kind: cleanup-cli-exit-contract
+      - path: test/unit/prewrite-cleanup-contract.test.mts
+        kind: strict-datetime-unit-contract
+      - path: test/unit/curation-cleanup-runner-contract.test.mts
+        kind: cleanup-atomic-fail-close-contract
+      - path: test/unit/bundle-sample-utils-contract.test.mts
+        kind: bundle-rollover-regression-contract
+      - path: test/unit/foundry-cli-spine.test.mts
+        kind: cleanup-exit-code-contract
+      - path: test/scenarios/curation-cleanup-quality-gates.test.mts
+        kind: cleanup-cli-scenario
+      - path: test/scenarios/post-authoring-finalize-gates.test.mts
+        kind: finalize-short-circuit-scenario
+    requiredDocs:
+      - path: AGENTS.md
+        mode: review_or_update
+      - path: README.md
+        mode: review_or_update
+      - path: WORKFLOW.md
+        mode: review_or_update
+      - path: docs/architecture.md
+        mode: review_or_update
+      - path: docs/foundry-ai-navigation.md
+        mode: review_or_update
+      - path: test/README.md
+        mode: review_or_update
+    reason: Strict datetime parsing, upstream evidence preservation, atomic cleanup blockers, CLI failure, finalize short-circuiting, and AI/test navigation must remain synchronized.
   - id: foundry-execution-capsule-contract
     scope: repo
     repo: data-foundry
