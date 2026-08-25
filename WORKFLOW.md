@@ -32,6 +32,9 @@ checkPaths:
   - scripts/commands/cli-wrappers.ts
   - scripts/commands/execution-capsule.ts
   - scripts/commands/post-write-closeout.ts
+  - scripts/commands/core.ts
+  - scripts/commands/identity-preflight-run.ts
+  - scripts/commands/post-authoring-finalize.ts
   - scripts/commands/identity-decisions.ts
   - scripts/commands/classification-decisions.ts
   - scripts/commands/location-decisions.ts
@@ -175,14 +178,17 @@ checkPaths:
   - test/unit/cli-wrapper-command-factory.test.mts
   - test/unit/execution-capsule-command-factory.test.mts
   - test/unit/post-write-closeout-command-factory.test.mts
+  - test/unit/core-command-factory.test.mts
+  - test/unit/identity-preflight-run-command-factory.test.mts
+  - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/unit/wave25-identity-decision-command-migration.test.mts
   - test/unit/wave25-classification-location-command-migration.test.mts
   - test/unit/import-curation-leaf-barrels-migration.test.mts
   - test/unit/import-curation-entry-barrels-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation planning, runtime commands, decision factories, and import-curation re-exports preserve proof/order/bytes/hashes, fail-closed authority, process/capsule/closeout contracts, decision queues/stages, complete namespaces/live identity, consumer topology, and Node 24 source/emitted loading."
+lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 final commands: typed core, identity-preflight runner, and post-authoring finalize preserve exact help, local diagnostics, receipt/argv/cache/hash evidence, ordered rewrites and gates, mutation/handoff proof, native errors, and fail-closed read-only authority."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -254,6 +260,8 @@ The task/completion, commit-handoff/identity-task, and support-cache command own
 The mutation reference stack is native TypeScript. Preserve reference DFS and table resolution, planned-self/public-remote/proven/unresolved/foreign closure partitions, explicit-before-default source rewrite selection, public-canonical source proof filtering, write/reference/blocked item order and report/items bytes. A blocked manifest must keep write-candidates empty; rendered plans and evidence never become mutation authority.
 
 CLI wrappers, execution-capsule admission, and post-write closeout are native TypeScript. Wrappers must pass executable plus argv arrays directly, retain the existing environment/CWD/stdout/stderr/exit contract, and surface native spawn errors without executing display text. Capsule admission stays offline and unattempted until exact external dispatch evidence exists. Closeout stays read-only and requires one exact owner/state/payload readback per intended root; production-test mode accepts no traceHash normalization, and foreign or RLS-hidden missing rows never pass.
+
+Core commands, the identity-preflight runner, and post-authoring finalize are native TypeScript. Core must retain runtime directory, workflow, storage, environment, surface, route, doctor and exact help behavior. Identity preflight must keep receipt-bound executable/argv arrays, request/target/binding hashes, positive-only cache reuse, stale disk and stdout/disk mismatch failures, nonzero exit handling and only-pending fail-close without a shell. Finalize must preserve identity/source/contact/canonical rewrite order, cleanup and validation gates, mutation evidence and read-only commit-handoff preparation; a blocked prerequisite never becomes dry-run or write authority.
 
 The identity, classification, and location decision command factories are native TypeScript. Preserve their existing option aliases and defaults, queue/task/path encounter order, exact help and report bytes, decision-context and unclosed-queue blockers, deterministic classification/location CLI argv, stage failure short-circuiting, and identity read-only output split. Validation blockers must prevent owner-command stages; missing or malformed local artifacts retain native failures, and no factory gains direct remote-write authority.
 

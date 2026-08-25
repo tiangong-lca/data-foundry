@@ -32,6 +32,9 @@ checkPaths:
   - scripts/commands/cli-wrappers.ts
   - scripts/commands/execution-capsule.ts
   - scripts/commands/post-write-closeout.ts
+  - scripts/commands/core.ts
+  - scripts/commands/identity-preflight-run.ts
+  - scripts/commands/post-authoring-finalize.ts
   - scripts/lib/foundry-args.ts
   - scripts/commands/identity-decisions.ts
   - scripts/commands/classification-decisions.ts
@@ -104,8 +107,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation, runtime-command, decision, and import-curation entry adapters preserve exact evidence/order/bytes/hashes, argv/seals/closeout, queues/blockers, deterministic delegation, and identity-preserving navigation without moving orchestration, CLI, schema, search, profile, Worldsteel, database, or production authority."
+lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 final commands: typed core, identity-preflight runner, and post-authoring finalize preserve diagnostics, exact help, receipt/argv/cache/hash evidence, ordered rewrites/gates/manifests/handoffs, and fail-closed read-only authority without moving CLI, schema, search, profile, Worldsteel, database, or production ownership."
 ---
 
 # Architecture
@@ -194,6 +197,8 @@ The typed command-owner layer now includes filesystem task/completion aggregatio
 The typed mutation reference stack remains an offline planning boundary. Reference closure classifies local roots and externally proven dependencies without querying or mutating the database; source context admits only ordered, in-scope public-canonical proofs; mutation manifest aggregates exact evidence and writes JSON/JSONL partitions. If any item is blocked, no write-candidate payload is emitted for execution.
 
 The typed runtime-command layer also includes CLI wrappers, offline capsule admission and post-write closeout. Wrappers delegate to the installed CLI with an executable and argv array; capsule admission writes immutable local evidence with zero dispatch; closeout aggregates already-produced commit/readback proof without issuing a remote operation. Unique-root, owner/state/payload, accepted-diff and production-test rules remain in their typed proof owners rather than moving into transport code.
+
+The typed command-owner layer now also includes `core.ts`, `identity-preflight-run.ts`, and `post-authoring-finalize.ts`. Core owns local runtime/bootstrap and diagnostic projection. Identity preflight invokes only the published read-only CLI through receipt-bound executable/argv arrays and content-bound request evidence. Finalize orders existing rewrite, cleanup, validation, curation, dry-run, mutation-manifest and handoff adapters. None of these owners implement schema/search semantics, direct database mutation, review, or publication.
 
 The typed decision command boundary now includes `identity-decisions.ts`, `classification-decisions.ts`, and `location-decisions.ts`. Identity validation partitions local rows into write candidates, reference reuse, and unresolved evidence without executing a remote mutation. Classification and location validate task-bound decisions, preserve queue grouping and schema/path order, and delegate deterministic apply through the existing CLI argv boundary only after blockers are empty. Their reports and artifacts remain Foundry-local evidence; schema vocabularies, search, mutation, and readback authority remain with their existing owners.
 

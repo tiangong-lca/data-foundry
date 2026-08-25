@@ -17,9 +17,10 @@ checkPaths:
   - .codex/hooks.json
   - .codex/hooks/run-foundry-acceptance-check.sh
   - package.json
+  - scripts/commands/core.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration freshness: reference/mutation, runtime-command, decision, and import-curation entry typing changes no Stop-hook registration, pnpm acceptance invocation, output, artifacts, or recursion guard; local acceptance remains blocked only by the pre-existing missing USLCI source-package path."
+lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 final commands: core acceptance aggregation moves to native TS7 without changing Stop-hook registration, pnpm invocation, output, artifacts, or recursion guard; the existing local acceptance inputs remain authoritative."
 ---
 
 # Codex Stop Hook

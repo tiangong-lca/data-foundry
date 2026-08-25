@@ -31,6 +31,9 @@ checkPaths:
   - scripts/commands/cli-wrappers.ts
   - scripts/commands/execution-capsule.ts
   - scripts/commands/post-write-closeout.ts
+  - scripts/commands/core.ts
+  - scripts/commands/identity-preflight-run.ts
+  - scripts/commands/post-authoring-finalize.ts
   - scripts/commands/identity-decisions.ts
   - scripts/commands/classification-decisions.ts
   - scripts/commands/location-decisions.ts
@@ -65,8 +68,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typing reference/mutation planning, runtime commands, decision factories, and identity-preserving import-curation re-exports changes no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse semantics, or sibling boundary."
+lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 final commands: typing core diagnostics, identity-preflight execution evidence, and post-authoring finalize orchestration changes no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse semantics, or sibling boundary."
 ---
 
 # Capability Ownership Policy

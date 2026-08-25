@@ -17,10 +17,10 @@ checkPaths:
   - docs/codex-stop-hook.md
   - .codex/hooks.json
   - .codex/hooks/run-foundry-acceptance-check.sh
-  - scripts/commands/core.mjs
+  - scripts/commands/core.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration freshness: the pnpm acceptance loop, Stop-hook continuation/relationship, and ignored report policy remain unchanged while runtime commands, decisions, and import-curation entries migrate to typed, locally characterized boundaries and inventory decreases monotonically."
+lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 final commands: core acceptance aggregation moves to native TS7 with exact report/help characterization; the pnpm Stop-hook invocation, continuation relationship, ignored report policy, environment checks, and failure-artifact boundary remain unchanged."
 related:
   - docs/file-organization.md
   - docs/codex-stop-hook.md
@@ -38,6 +38,8 @@ Useful pattern:
 - blocking failures point the agent at concrete missing or inconsistent files.
 
 The pnpm/TS7 migration extends the same evidence model: `pnpm test:toolchain` checks the single lock/compiler graph and migration inventory, while a clean arbitrary-worktree run proves the project did not borrow dependencies, credentials, or ignored runtime state from the developer checkout.
+
+`scripts/commands/core.ts` owns the local acceptance aggregation invoked by the existing package script. Its TypeScript migration preserves workflow, storage, environment and surface-check order plus the same `.foundry/state/acceptance/latest.json` artifact; it does not change Stop-hook registration or introduce a remote check.
 
 Run:
 

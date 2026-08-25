@@ -34,6 +34,9 @@ checkPaths:
   - scripts/commands/cli-wrappers.ts
   - scripts/commands/execution-capsule.ts
   - scripts/commands/post-write-closeout.ts
+  - scripts/commands/core.ts
+  - scripts/commands/identity-preflight-run.ts
+  - scripts/commands/post-authoring-finalize.ts
   - scripts/commands/identity-decisions.ts
   - scripts/commands/classification-decisions.ts
   - scripts/commands/location-decisions.ts
@@ -95,6 +98,9 @@ checkPaths:
   - test/fixtures/finalize-fixtures.ts
   - test/unit/import-ledger-type-contract.test.mts
   - test/unit/fixture-helpers-contract.test.mts
+  - test/unit/core-command-factory.test.mts
+  - test/unit/identity-preflight-run-command-factory.test.mts
+  - test/unit/post-authoring-finalize-command-factory.test.mts
   - docs/architecture.md
   - docs/runtime-skill-management.md
   - docs/foundry-task-contracts.md
@@ -103,8 +109,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: native TS7 reference/mutation, runtime, decision, and import-curation entry owners preserve exact proof/order/bytes/hashes, fail-closed authority, argv/capsule/closeout contracts, decision queues/stages, namespace/live identity, consumer metadata, and Node 24 source/emitted loading."
+lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 final commands: native TS7 core, identity-preflight runner, and post-authoring finalize preserve exact help, diagnostics, receipt/argv/cache/hash evidence, rewrite/gate/manifest/handoff order, native errors, and read-only authority."
 ---
 
 # TianGong LCA Data Foundry
@@ -184,6 +190,8 @@ Wave 25 migrates three runtime command owners. `cli-wrappers.ts` preserves insta
 Wave 25 migrates the three decision command factories in dependency order: standalone `identity-decisions.ts` first, then the shared-dispatch `classification-decisions.ts` and `location-decisions.ts` family. Characterization preserves exact help/report bytes, input aliases and defaults, row/path/order semantics, decision-task and queue closure blockers, deterministic CLI argv/stage failure behavior, read-only identity splitting, artifact write boundaries, and native JSON/filesystem errors. Inventory moves 98→95 without changing command names, profile defaults, Worldsteel behavior, or remote-write authority.
 
 Wave 25 migrates the import-curation re-export topology without wrappers. `profiles.ts` and `trace-summary.ts` retain their exact namespaces and owner function identity; `import-curation/index.ts` and the public `import-curation.ts` entry retain the complete eight-export namespace and direct references to the semantic owners. Node 24 loads both source and emitted entry layers, and command metadata continues to route each command to its semantic owner. Inventory moves 93→89 without changing runtime behavior, command help, profiles, Worldsteel semantics, or remote-write authority.
+
+Wave 26 migrates the three remaining non-entry command owners. `core.ts` preserves runtime-directory order, workflow/storage/environment diagnostics, surface aggregation, route artifacts and exact help. `identity-preflight-run.ts` preserves receipt-bound CLI argv, request/target/binding hashes, positive-only cache reuse, stale or mismatched disk/stdout failure, nonzero exits and only-pending semantics without shell authority. `post-authoring-finalize.ts` preserves identity, unresolved-exchange, source/contact and canonical-support rewrite order; cleanup, preflight, queue, schema, QA, location, curation and dry-run gates; mutation evidence and read-only handoff planning. Inventory moves 79→76 without changing profiles, Worldsteel or Date.parse behavior, or remote-write authority.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

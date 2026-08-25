@@ -29,6 +29,9 @@ checkPaths:
   - scripts/commands/cli-wrappers.ts
   - scripts/commands/execution-capsule.ts
   - scripts/commands/post-write-closeout.ts
+  - scripts/commands/core.ts
+  - scripts/commands/identity-preflight-run.ts
+  - scripts/commands/post-authoring-finalize.ts
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
@@ -57,8 +60,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation and runtime-command owners preserve fail-closed foreign/reference gates, exact partitions/bytes/hashes, empty writes on blockers, shell-free argv, zero-dispatch capsule admission, unique-root readback, production accepted-diff restrictions, and native errors without broadening write authority."
+lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 final commands: typed core, identity-preflight runner, and post-authoring finalize preserve fail-closed environment/account evidence, shell-free receipt-bound argv, request/cache/report hashes, ordered prewrite blockers, mutation/handoff proof, and native errors without broadening write authority."
 ---
 
 # Safety Policy

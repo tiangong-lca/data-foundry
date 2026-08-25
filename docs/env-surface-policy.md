@@ -17,11 +17,12 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - docs/env-surface-policy.md
   - scripts/foundry.mjs
+  - scripts/commands/core.ts
   - scripts/with-lca-account.ts
   - scripts/lib/foundry-runtime-utils.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: curation planners add no environment reads; typing five command factories adds or removes no variable, and support-cache retains the existing API-base/publishable-key/user-key read-only refresh surface while tests use local stubs and no repository credentials."
+lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 final commands: typing core env/doctor/workspace diagnostics and the identity-preflight/finalize owners adds or removes no environment variable; tests manipulate explicit process values only and never read repository credentials."
 ---
 
 # Environment Surface Policy
