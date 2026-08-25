@@ -22,6 +22,7 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-utils.ts
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
   - scripts/lib/import-curation/internal/hash-utils.ts
@@ -49,8 +50,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: dc43513aff4191082c5290d9b8bc726bdce14cb1
-lastReviewedNote: "Reviewed for Issue #67 follow-up: navigation records strict ledger JSON/state/result types and typed shared fixture roots/finalize report builders."
+lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
+lastReviewedNote: "Reviewed for Issue #67 Wave 10: navigation records the typed installed-CLI, filesystem/path, frontmatter/env-file, option, stage/blocker and local subprocess runtime boundary."
 ---
 
 # Foundry AI Navigation
@@ -113,6 +114,8 @@ The typed family/ledger leaves are `bafu-family-signatures.ts` and `import-ledge
 The typed canonical/materialization leaves are `canonical-support-rewrites.ts` and `bundle-sample-utils.ts`. Navigate to the former for normalized source-unit lookup, canonical FP/UG proof, stale-version and account-local precedence, exact rewrite/blocker/scaling artifacts, or deferred rows. Navigate to the latter for source traces and field repair, classification/elementary queues, profile-safe library contacts, bundle selection, and identity-key dedupe. Bundle sampling must pass the same scaling accumulator and block flag into canonical rewrites before the original source-unit reference is lost; known non-1 and unresolved invalid scales have distinct blocker codes.
 
 `import-ledger.ts` exports the typed ledger vocabulary as well as its factory. Navigate there for recursive JSON values, dependency injection, closeout/finalize discriminators, verified/blocked/dependency/retry/resume rows, manifests, write results, and read-only report results. `import-ledger-type-contract.test.mts` compiles positive and negative usage outside the main tsconfig; behavioral tests remain authoritative for bytes and ordering. Test-only shared paths/default report builders live in `test/fixtures/fixture-roots.ts` and `finalize-fixtures.ts`.
+
+The typed runtime leaf is `foundry-runtime-utils.ts`. Navigate there for the pinned installed CLI manifest/bin/schema contract, `TIANGONG_LCA_CLI_BIN` precedence and command rendering, generic text/JSON/JSONL/path/count/search helpers, task frontmatter and scalar fields, explicit env-file loading, list/option/hash/UUID helpers, stage blocker aggregation and CLI JSON subprocess envelopes. `foundry-runtime-utils-contract.test.mts` covers all returned helpers without invoking `loadRuntimeEnv()`; `wave10-runtime-migration.test.mts` pins the zero-any source and every static consumer.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 

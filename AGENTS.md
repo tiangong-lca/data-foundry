@@ -38,6 +38,7 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-utils.ts
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
   - scripts/lib/import-curation/internal/hash-utils.ts
@@ -67,8 +68,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: dc43513aff4191082c5290d9b8bc726bdce14cb1
-lastReviewedNote: "Reviewed for Issue #67 follow-up: import-ledger now exports strict zero-any JSON/report/row/result contracts, and shared root/finalize fixtures are native TS7 with behavior and consumers unchanged."
+lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
+lastReviewedNote: "Reviewed for Issue #67 Wave 10: the high-fan-in runtime utility boundary is native zero-any TS7 with pinned CLI resolution, path/JSON/frontmatter/env-file/stage behavior and consumers unchanged."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -105,6 +106,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - The characterized TypeScript leaves include the CLI/data/evidence spine plus canonical-support rewrite and bundle-sampling factories. Focused tests pin mapping lookup and traversal order, scale/pending/Unit Group proof blockers, account-local/stale-version precedence, source-trace cleanup, contact/profile fallbacks, support/reference closure materialization, deterministic sampling/dedupe, invalid inputs, and every static consumer.
 - Canonical FP rewrites never convert amounts. When bundle sampling uses `--block-on-unscaled-canonical-support`, a known finite positive non-1 factor emits `canonical_support_amount_scaling_required`; a missing, non-finite, zero, or negative factor emits `canonical_support_amount_scale_unresolved`. Both remain in the scaling JSONL, command report, and process-scope ledger before any later stage can lose the source-unit evidence.
 - `import-ledger.ts` is a strict compile-time boundary rather than an extension-only migration: it exports recursive JSON types, dependency interfaces, discriminated closeout/finalize reports, verified/blocked/retry/resume row contracts, manifest/write/report results, and uses `unknown` narrowing plus a generic latest-by-key helper with no explicit `any`. The fixture type contract must compile while every JSONL/hash/order/error behavior test stays byte-identical.
+- `foundry-runtime-utils.ts` is the typed shared runtime boundary. It preserves the exact installed `@tiangong-lca/cli@0.1.1` package/bin/schema resolution, environment override command prefix, synchronous text/JSON/JSONL and portable path helpers, task frontmatter/scalar parsing, explicit env-file precedence, stage/blocker envelopes, local CLI subprocess JSON parsing, hashes and deterministic UUIDs. Tests must use an explicit temporary env file and local Node subprocess; they must not call `loadRuntimeEnv()` or read repository credentials.
 - Toolchain and migration tests must pass from a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. They must not depend on the superproject checkout, another worktree's `node_modules`, absolute developer paths, ignored `.foundry` state, or credentials.
 - The Golden gate must compare against a non-`HEAD` merge-base with full Git history and a Node-native comparator. Cross-platform fixtures use executable-plus-argv dispatch; a `.js`/`.mjs`/`.cjs` test script must run through `process.execPath`, not OS executable-bit behavior. `.gitattributes` keeps repository text at LF on every runner; only Windows launcher files may opt into CRLF.
 - Foundry artifact-to-scope matching and transitional command parsers must accept both path separators. Durable JSON/JSONL writers flush the writable descriptor they opened; POSIX permission-bit assertions are not imposed on Windows filesystems.

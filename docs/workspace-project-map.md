@@ -22,8 +22,8 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: dc43513aff4191082c5290d9b8bc726bdce14cb1
-lastReviewedNote: "Reviewed for Issue #67 follow-up: zero-any import-ledger contracts and native TS shared fixtures remain Foundry-local evidence/delivery tooling; no cross-repository owner or normal execution surface changes."
+lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
+lastReviewedNote: "Reviewed for Issue #67 Wave 10: zero-any runtime helpers remain Foundry-local process/file/package delivery tooling; no cross-repository owner or normal execution surface changes."
 ---
 
 # Workspace Project Map

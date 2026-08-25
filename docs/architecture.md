@@ -28,6 +28,7 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-utils.ts
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
   - scripts/lib/import-curation/internal/hash-utils.ts
@@ -60,8 +61,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: dc43513aff4191082c5290d9b8bc726bdce14cb1
-lastReviewedNote: "Reviewed for Issue #67 follow-up: strict import-ledger contracts and typed test fixtures remain local evidence/harness boundaries and do not alter command or CLI authority."
+lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
+lastReviewedNote: "Reviewed for Issue #67 Wave 10: typed runtime utilities remain Foundry-local process/file/package adapters and do not absorb CLI session, command, schema, or remote authority."
 ---
 
 # Architecture
@@ -114,6 +115,8 @@ The typed BAFU family and import-ledger leaves preserve two local control-plane 
 The typed canonical-support and bundle-sampling leaves own local reference rewriting and source-package materialization, not amount conversion or remote execution. Canonical scale evidence is collected before the package-local FP reference is replaced: the explicit blocking flag distinguishes a known positive non-1 factor from an unresolved missing/non-finite/non-positive factor, and projects either blocker into the report and process-scope ledger. Without that flag, existing profile behavior remains compatible.
 
 The typed import-ledger boundary now models its JSON graph, external dependencies, report state unions, every emitted row family, manifest and write results directly. Unknown external values are narrowed at the boundary and no explicit `any` remains; the emitted append-only schema and byte/order/hash behavior are unchanged. Typed fixture roots/finalize builders remain test-only delivery infrastructure and do not enter the runtime dependency graph.
+
+The high-fan-in runtime utility boundary is native TypeScript and owns only Foundry-local file/path/frontmatter/env-file/stage mechanics plus exact installed-package discovery. It resolves the pinned CLI package bin/schema assets or an explicit operator/test binary override, but the published CLI still owns sessions and remote behavior. Runtime tests execute only a local Node JSON subprocess and explicit temporary env files; production credentials and repository `.env` remain outside the test boundary.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

@@ -18,9 +18,10 @@ checkPaths:
   - docs/env-surface-policy.md
   - scripts/foundry.mjs
   - scripts/with-lca-account.ts
+  - scripts/lib/foundry-runtime-utils.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 097eeb85d08167c87aef8b0efb8270311fc6baa8
-lastReviewedNote: "Reviewed for Issue #65 after final four-platform validation: account profiles, receipt bindings, the restricted TS7 child environment, and credential-free Golden baseline isolation remain aligned."
+lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
+lastReviewedNote: "Reviewed for Issue #67 Wave 10: typed runtime env helpers retain explicit-file precedence and placeholder behavior; tests use only a temporary env file and never read repository credentials."
 ---
 
 # Environment Surface Policy

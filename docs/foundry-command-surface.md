@@ -26,8 +26,8 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: dc43513aff4191082c5290d9b8bc726bdce14cb1
-lastReviewedNote: "Reviewed for Issue #67 follow-up: strict ledger type exports and typed test fixtures change no command category, owner, help, artifact schema, exit mapping, or remote-write mode."
+lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
+lastReviewedNote: "Reviewed for Issue #67 Wave 10: typing the shared runtime utility layer changes no command category, owner/export metadata, help, artifact schema, exit mapping, or remote-write mode."
 ---
 
 # Foundry Command Surface

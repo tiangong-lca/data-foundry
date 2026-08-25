@@ -25,6 +25,7 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-utils.ts
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
   - scripts/lib/import-curation/internal/hash-utils.ts
@@ -56,13 +57,15 @@ checkPaths:
   - test/unit/wave9-canonical-bundle-migration.test.mts
   - test/unit/import-ledger-type-contract.test.mts
   - test/unit/fixture-helpers-contract.test.mts
+  - test/unit/foundry-runtime-utils-contract.test.mts
+  - test/unit/wave10-runtime-migration.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: dc43513aff4191082c5290d9b8bc726bdce14cb1
-lastReviewedNote: "Reviewed for Issue #67 follow-up: compile tests enforce zero-any ledger unions, fixture tests pin all root/default/report bytes, and direct consumers target native TS7 helpers."
+lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
+lastReviewedNote: "Reviewed for Issue #67 Wave 10: tests cover all 49 runtime helpers, pinned CLI resolution, bytes/paths/frontmatter/options/stages/local subprocesses and the zero-any consumer migration."
 ---
 
 # Test Layout
@@ -105,6 +108,8 @@ Every behavior or migration slice starts with a failing focused test or a realis
 `unit/canonical-support-rewrites-contract.test.mts` and `unit/bundle-sample-utils-contract.test.mts` characterize Wave 9 independently: normalized cache lookup, traversal/rewrite order, known/unresolved scale contracts, pending/proof/override/stale/defer behavior, exact artifacts/errors, then trace DFS/sanitization, process evidence repair, classification/elementary queues, canonical contact reference proof, profile fallbacks, seeded selection, and identity-key conflicts. `commands/bundle-sample-rows.test.mjs` proves real materialization keeps scaling facts in the report and scope ledger before the source-unit FP is replaced; `unit/wave9-canonical-bundle-migration.test.mts` pins native files, consumers, and exports.
 
 `unit/import-ledger-type-contract.test.mts` runs an isolated TS7 compile fixture for the public ledger type surface and rejects explicit `any`; the existing ledger behavior tests still pin exact schemas, JSONL bytes, hashes, ordering, paths, dedupe, and errors. `unit/fixture-helpers-contract.test.mts` pins all shared root names against the worktree-local test run id plus ready-finalize mutation/report bytes, defaults, overrides, native `.ts` paths, and consumers.
+
+`unit/foundry-runtime-utils-contract.test.mts` characterizes pinned installed-CLI discovery and override rendering, the exact 49-helper factory surface, synchronous file/JSON/JSONL bytes and errors, row counts/search/path portability, scalar/frontmatter/options/hash/UUID behavior, explicit temporary env-file precedence, stage/blocker/artifact envelopes, and local Node subprocess JSON. It intentionally does not call `loadRuntimeEnv()` or read `.env`. `unit/wave10-runtime-migration.test.mts` requires the zero-any native `.ts` module, exact exports, toolchain reference and all static imports.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

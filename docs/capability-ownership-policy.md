@@ -24,8 +24,8 @@ checkPaths:
   - docs/safety-policy.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: dc43513aff4191082c5290d9b8bc726bdce14cb1
-lastReviewedNote: "Reviewed for Issue #67 follow-up: strict import-ledger types and typed shared test fixtures remain Foundry-owned evidence/harness boundaries and add no sibling CLI, SDK, converter, database, or Edge behavior."
+lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
+lastReviewedNote: "Reviewed for Issue #67 Wave 10: typed runtime file/path/package/env-file/stage helpers remain Foundry-owned adapters and add no sibling CLI session, SDK, converter, database, or Edge behavior."
 ---
 
 # Capability Ownership Policy

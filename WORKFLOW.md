@@ -28,6 +28,7 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-utils.ts
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
   - scripts/lib/import-curation/internal/hash-utils.ts
@@ -76,10 +77,12 @@ checkPaths:
   - test/unit/wave9-canonical-bundle-migration.test.mts
   - test/unit/import-ledger-type-contract.test.mts
   - test/unit/fixture-helpers-contract.test.mts
+  - test/unit/foundry-runtime-utils-contract.test.mts
+  - test/unit/wave10-runtime-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: dc43513aff4191082c5290d9b8bc726bdce14cb1
-lastReviewedNote: "Reviewed for Issue #67 follow-up: strict ledger state types and typed shared fixtures reinforce characterization-first JSONL/report and test-harness contracts without changing workflow order."
+lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
+lastReviewedNote: "Reviewed for Issue #67 Wave 10: typed runtime helpers preserve package/path/env-file/stage execution order and characterization without reading the repository .env in tests."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

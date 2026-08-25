@@ -26,6 +26,7 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-utils.ts
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
   - scripts/lib/import-curation/internal/hash-utils.ts
@@ -59,8 +60,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: dc43513aff4191082c5290d9b8bc726bdce14cb1
-lastReviewedNote: "Reviewed for Issue #67 follow-up: import-ledger exposes strict zero-any TS contracts and shared root/finalize fixtures are native TS7 without JSONL, path, default, or consumer drift."
+lastReviewedCommit: 680a7a5e5046c40cf1da4ec7aeb070c0cb3da3f5
+lastReviewedNote: "Reviewed for Issue #67 Wave 10: shared runtime utilities are native zero-any TS7 with pinned CLI, JSON/path/frontmatter/env-file/stage contracts and all static consumers preserved."
 ---
 
 # TianGong LCA Data Foundry
@@ -98,6 +99,8 @@ The family/ledger slice migrates BAFU family signatures and the append-only impo
 The canonical/bundle slice migrates canonical FlowProperty reference rewrites and bundle sampling utilities. Characterization preserves normalized mapping lookup, scale/pending/proof/stale-version decisions, support/source/contact/profile fallbacks, source-trace field repair, reference-closure materialization, deterministic selection/dedupe, exact report ordering, and native errors. Bundle sampling also carries the existing scale contract end to end: under the explicit blocking flag, known non-1 factors and unresolved invalid factors use distinct blockers and remain visible in scaling/report/scope-ledger artifacts; scale 1 and no-flag defaults do not change.
 
 The ledger hardening follow-up removes every explicit `any` from `import-ledger.ts` and publishes concrete JSON, dependency, blocker, manifest, report, row, write-option/result, and report-result types. A separate TypeScript compile fixture proves valid state unions and rejects invalid discriminators or numeric paths, while behavior tests preserve exact JSONL bytes, hashes, ordering, dedupe, paths, and errors. The first test-fixture slice also migrates shared fixture roots and ready-finalize builders with all direct consumers updated; inventory accounting therefore moves from 130 to 128 without changing production code.
+
+The runtime wave migrates `foundry-runtime-utils.ts`, the high-fan-in helper used by the entrypoint, account wrapper, context discovery, BAFU commands, location/remote verification and shared tests. Characterization pins the installed CLI package contract, override command rendering, all 49 factory helpers, exact file/JSON/JSONL/frontmatter/env-file/stage behavior, portable paths, errors, hashes, UUIDs and local subprocess reports. The runtime source has no explicit `any`; migration inventory moves from 128 to 127 without reading `.env` or accessing production.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 
