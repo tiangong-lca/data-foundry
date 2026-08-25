@@ -17,10 +17,10 @@ checkPaths:
   - WORKFLOW.md
   - package.json
   - scripts/with-lca-account.ts
-  - scripts/commands/commit-handoff.mjs
+  - scripts/commands/commit-handoff.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 2a3ec74528d9377bd37ab7cc0808ce286a3d6d09
-lastReviewedNote: "Reviewed for Issue #65: the TS7 wrapper requires a fresh CLI 0.1.1 intent-bound receipt and has no authentication bypass."
+lastReviewedCommit: a0ae6af1fd9f4a3334307d5a7caed50a2b6b96d8
+lastReviewedNote: "Reviewed for Issue #67 Wave 24: the typed commit-handoff owner preserves receipt-bound target-user/account-mode checks, current-session binding for unsupported commands, exact CommandSpec artifacts, and no authentication bypass."
 ---
 
 # Account Context Policy

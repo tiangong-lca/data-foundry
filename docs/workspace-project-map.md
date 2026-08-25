@@ -21,6 +21,11 @@ checkPaths:
   - specs/capability-ownership-rules.json
   - specs/workspace-capability-adapters.md
   - docs/incremental-change-set-contract.md
+  - scripts/commands/tasks.ts
+  - scripts/commands/import-completion.ts
+  - scripts/commands/commit-handoff.ts
+  - scripts/commands/identity-decision-task.ts
+  - scripts/commands/support-cache.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
@@ -41,8 +46,8 @@ checkPaths:
   - scripts/lib/import-curation/authoring-packages.ts
   - scripts/lib/import-curation/patch-collect.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 7d8ab3800fba3269830a58036d38a443e13d3d70
-lastReviewedNote: "Reviewed for Issue #67 Wave 23: authoring facades and package/patch artifact runners remain Foundry-local and preserve cross-repository ownership, CLI routing, profile, search, and execution boundaries."
+lastReviewedCommit: a0ae6af1fd9f4a3334307d5a7caed50a2b6b96d8
+lastReviewedNote: "Reviewed for Issue #67 Wave 24: typed task/completion, handoff/identity, and support-cache owners remain Foundry-local and preserve cross-repository ownership, CLI routing, profile, search, and execution boundaries."
 ---
 
 # Workspace Project Map

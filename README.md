@@ -22,6 +22,11 @@ checkPaths:
   - prettier.config.cjs
   - tsconfig*.json
   - scripts/foundry.mjs
+  - scripts/commands/tasks.ts
+  - scripts/commands/import-completion.ts
+  - scripts/commands/commit-handoff.ts
+  - scripts/commands/identity-decision-task.ts
+  - scripts/commands/support-cache.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -81,8 +86,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 7d8ab3800fba3269830a58036d38a443e13d3d70
-lastReviewedNote: "Reviewed for Issue #67 Wave 23: authoring facades/package/patch runners are native zero-escape TS7 with export identity, snapshot/manifest bytes, task/patch order, blocker classes, and native errors unchanged."
+lastReviewedCommit: a0ae6af1fd9f4a3334307d5a7caed50a2b6b96d8
+lastReviewedNote: "Reviewed for Issue #67 Wave 24: task/completion, handoff/identity, and support-cache command factories are native TS7 with exact bytes, SHA/argv binding, order, blockers, read-only request shape, and native errors preserved."
 ---
 
 # TianGong LCA Data Foundry
@@ -148,6 +153,8 @@ Wave 21 batches two independent low-fan-in families. `workflow-dry-run-context.t
 Wave 22 follows the real dependency topology rather than treating connected modules as independent leaves. `workflow-decision-full-context.ts` moves first; the mutually dependent `workflow-authoring-tasks.ts`, `workflow-semantic-actions.ts`, and `workflow-patch-evidence.ts` move as one cycle-safe atomic SCC; `workflow-identity-preflight.ts` follows only after that typed closure exists. Characterization preserves proof relevance and row chains, patch/action/trace ordering, full-context and shared-bundle hashes, identity result aliases, exact-version lookup, execution-receipt fail-close, payload freshness, source context, policy blockers and native JSON/filesystem errors. Inventory moves 115→110 without changing command help, Golden artifacts, profile defaults, or remote-write authority.
 
 Wave 23 migrates the authoring facade and runner layer above that SCC. `authoring-task-workflow.ts` and `authoring-patch-workflow.ts` remain pure live-reference facades; `authoring-packages.ts` preserves gate-entry/task order, content-addressed snapshot names, original package bytes, task directories and exact manifest/JSONL output; `patch-collect.ts` preserves task/blocker classification, patch-file/set/operation order, exact ready batch bytes and native manifest errors. Only a blocker-free collection writes a fresh batch. Inventory moves 105→101 without changing help, profiles, Golden artifacts or remote-write authority.
+
+Wave 24 migrates five command factories in three RED/GREEN families. `tasks.ts` and `import-completion.ts` preserve queue/file order, full-context completion gates, task moves and exact Markdown/JSON bytes. `commit-handoff.ts` and `identity-decision-task.ts` preserve final-row artifact SHA/bytes, authoritative CommandSpec argv, package snapshots, action encounter/dedupe order and fail-closed blockers. `support-cache.ts` preserves auth-then-read request order, pagination, public cache row order, unit mapping/manual-block order and native errors; tests stub HTTP locally and read no credentials. Inventory moves 101→96 without changing help, remote-write mode, profiles, or production authority.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

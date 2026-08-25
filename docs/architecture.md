@@ -24,6 +24,11 @@ checkPaths:
   - specs/capability-ownership-rules.json
   - specs/automated-lca-capability-registry.json
   - specs/typescript-migration-inventory.json
+  - scripts/commands/tasks.ts
+  - scripts/commands/import-completion.ts
+  - scripts/commands/commit-handoff.ts
+  - scripts/commands/identity-decision-task.ts
+  - scripts/commands/support-cache.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -82,8 +87,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 7d8ab3800fba3269830a58036d38a443e13d3d70
-lastReviewedNote: "Reviewed for Issue #67 Wave 23: typed authoring facades/package/patch runners remain local artifact adapters; snapshot, manifest, blocker and batch semantics do not move CLI, schema, search or database authority."
+lastReviewedCommit: a0ae6af1fd9f4a3334307d5a7caed50a2b6b96d8
+lastReviewedNote: "Reviewed for Issue #67 Wave 24: typed task/completion, handoff/identity, and support-cache owners remain thin local adapters; exact bytes, hashes, order, blockers, and read-only requests move no CLI, schema, search, or database authority."
 ---
 
 # Architecture
@@ -164,6 +169,8 @@ The typed dry-run context projects owner-command result files into local identit
 The typed decision-full-context boundary evaluates existing classification, location, identity and deterministic transform proof without applying decisions. Authoring task, semantic action and patch evidence helpers form one existing, characterized SCC; they are compiled as a single native-TypeScript closure so no `.mjs`/`.ts` dual track can split their runtime identity. The typed identity-preflight boundary resolves local request/report artifacts, validates execution receipts and payload freshness, and projects read-only candidate evidence into curation blockers. These modules preserve hashes, encounter order and fail-closed errors; Edge/database search and CLI execution remain outside Foundry.
 
 The typed authoring facades expose that SCC without wrapping or duplicating it. The package runner copies immutable content-addressed authoring snapshots and writes ordered local task manifests; the patch runner classifies local task outputs and writes an ordered batch only after every blocker check passes. Both are filesystem-only Foundry adapters and neither applies patches, invokes the CLI, or grants mutation authority.
+
+The typed command-owner layer now includes filesystem task/completion aggregation, commit handoff and identity task preparation, and canonical support-cache refresh/autofill. These factories keep their injected/local orchestration boundaries: task/report bytes and order remain content-stable, handoff only emits artifact-bound CommandSpecs, identity tasks only snapshot and package local evidence, and support refresh performs authenticated read-only queries. No factory implements CLI mutation, database semantics, review, or publication.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

@@ -24,6 +24,11 @@ checkPaths:
   - specs/automated-lca-capability-registry.json
   - specs/capability-ownership-rules.json
   - scripts/with-lca-account.ts
+  - scripts/commands/tasks.ts
+  - scripts/commands/import-completion.ts
+  - scripts/commands/commit-handoff.ts
+  - scripts/commands/identity-decision-task.ts
+  - scripts/commands/support-cache.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -139,8 +144,8 @@ checkPaths:
   - test/unit/wave23-patch-collect-runner-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 7d8ab3800fba3269830a58036d38a443e13d3d70
-lastReviewedNote: "Reviewed for Issue #67 Wave 23: typed authoring facades and runners preserve export identity, package SHA/bytes/task order, patch blocker classification, patch/operation order, blocker-free batch writes, and native failures."
+lastReviewedCommit: a0ae6af1fd9f4a3334307d5a7caed50a2b6b96d8
+lastReviewedNote: "Reviewed for Issue #67 Wave 24: typed task/completion, handoff/identity, and support-cache factories preserve exact help/reports, ordering, hashes, argv, blockers, read-only requests, and native failures."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -204,6 +209,8 @@ Dry-run artifacts and exact-scope evidence remain separate checks: dry-run reade
 Decision full-context, patch authoring, semantic actions, patch evidence, and identity-preflight now execute from native TypeScript. The three authoring modules form one characterized SCC and must cross migration/build boundaries atomically. Preserve action/trace/blocker encounter order, shared-context and authoring-package hashes, exact-version identity lookup before id-only fallback, execution-receipt and target-payload freshness checks, source-context requirements, and native parse/filesystem failures; missing or stale evidence never becomes AI completion or write authority.
 
 The authoring facade/runner layer is also native TypeScript. Facades must re-export the exact live owner functions without wrappers. Package builds preserve gate-entry order, snapshot filename SHA, source bytes, task directory names and manifest/JSONL bytes. Patch collection preserves blocker class and task order, then patch-file, patch-set and operation order; malformed task JSON is reported as a blocker, malformed manifest JSON retains its native failure, and a fresh batch is written only when blockers are empty.
+
+The task/completion, commit-handoff/identity-task, and support-cache command owners are native TypeScript. Preserve queue and closeout order, exact task/report/snapshot bytes, final-row artifact facts, authoritative CommandSpec argv, identity action dedupe, support-cache paging and row order, and every established blocker/native error. Credential-bearing support refresh remains a read-only operator command; ordinary tests must use local HTTP stubs and must not read `.env` or access production.
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 

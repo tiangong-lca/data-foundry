@@ -21,6 +21,11 @@ checkPaths:
   - docs/import-profiles/bafu/constraints.md
   - specs/automated-lca-capability-registry.json
   - specs/workspace-capability-adapters.md
+  - scripts/commands/tasks.ts
+  - scripts/commands/import-completion.ts
+  - scripts/commands/commit-handoff.ts
+  - scripts/commands/identity-decision-task.ts
+  - scripts/commands/support-cache.ts
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
@@ -42,8 +47,8 @@ checkPaths:
   - scripts/lib/import-curation/authoring-packages.ts
   - scripts/lib/import-curation/patch-collect.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 7d8ab3800fba3269830a58036d38a443e13d3d70
-lastReviewedNote: "Reviewed for Issue #67 Wave 23: typed authoring package/patch runners preserve content-addressed inputs, blocker ordering, blocker-free batch writes, and native errors without broadening write authority."
+lastReviewedCommit: a0ae6af1fd9f4a3334307d5a7caed50a2b6b96d8
+lastReviewedNote: "Reviewed for Issue #67 Wave 24: typed completion, handoff/identity, and support-cache owners preserve fail-closed completion/write gates, exact artifact binding, read-only cache refresh, and native errors without broadening write authority."
 ---
 
 # Safety Policy
