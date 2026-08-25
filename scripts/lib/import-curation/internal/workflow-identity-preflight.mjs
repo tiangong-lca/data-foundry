@@ -55,16 +55,6 @@ export function identityPreflightResultFile(repoRoot, indexPath, row) {
   return resolveRepoPath(repoRoot, path.join(outputDir, "outputs", "identity-decision.json"));
 }
 
-export function identityPreflightCandidatesFile(repoRoot, indexPath, row, result) {
-  const baseDir = path.dirname(indexPath);
-  const explicit =
-    row?.expected_candidates_file ??
-    row?.identity_candidates_file ??
-    row?.identityCandidatesFile ??
-    result?.files?.candidates;
-  return explicit ? resolveArtifactPath(repoRoot, explicit, baseDir) : null;
-}
-
 export function readIdentityPreflightIndexRow(repoRoot, indexPath, row) {
   const baseDir = path.dirname(indexPath);
   const datasetType = asText(row?.dataset_type ?? row?.type);
@@ -102,11 +92,9 @@ export function readIdentityPreflightIndexRow(repoRoot, indexPath, row) {
     expectedUserId: asText(row?.expected_user_id ?? row?.expectedUserId) || null,
   });
   const completedResult = result && executionEvidence.ok ? result : null;
-  const candidatesPath = identityPreflightCandidatesFile(repoRoot, indexPath, row, result);
   // Candidate files are convenience exports and are not covered by the bound
   // execution manifest. Downstream semantic evidence comes only from the
   // manifest-bound identity-decision report.
-  void candidatesPath;
   const outputDir = row?.output_dir
     ? (resolveArtifactPath(repoRoot, row.output_dir, baseDir) ??
       resolveRepoPath(repoRoot, row.output_dir))

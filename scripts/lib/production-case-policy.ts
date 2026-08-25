@@ -1,9 +1,3 @@
-export type AuthoritativeCommand = {
-  executable: string;
-  argv: string[];
-  display?: string;
-};
-
 export type FoundryAccountMode = "ordinary" | "production-test";
 
 const PRODUCTION_TEST_IDENTITIES = new Set([
@@ -19,27 +13,8 @@ export function accountModeForVerifiedIdentity(input: {
     : "ordinary";
 }
 
-export function acceptedRemoteDifferencePolicy(input: { accountMode: string }): {
-  traceHashOnly: boolean;
-  foreignStateZeroReference: boolean;
-} {
-  const productionTest = input.accountMode === "production-test";
-  return {
-    traceHashOnly: !productionTest,
-    foreignStateZeroReference: false,
-  };
-}
-
-export function assertAuthoritativeCommand(value: AuthoritativeCommand): {
-  executable: string;
-  argv: string[];
-} {
-  const executable = String(value?.executable ?? "").trim();
-  const argv = Array.isArray(value?.argv) ? value.argv.map((item) => String(item)) : [];
-  if (!executable || argv.length === 0 || argv.some((item) => !item)) {
-    throw new Error("Executable command requires a non-empty executable and argv array.");
-  }
-  return { executable, argv };
+export function traceHashNormalizationAllowed(handoffPlan: Record<string, unknown>): boolean {
+  return String(handoffPlan.account_mode ?? "ordinary") !== "production-test";
 }
 
 export function assertReceiptBoundHandoffAccount(
@@ -49,11 +24,13 @@ export function assertReceiptBoundHandoffAccount(
   const verifiedProjectRef = String(env.FOUNDRY_VERIFIED_PROJECT_REF ?? "").trim();
   const verifiedUserId = String(env.FOUNDRY_VERIFIED_USER_ID ?? "").trim();
   const environmentMode = String(env.FOUNDRY_ACCOUNT_MODE ?? "").trim();
-  if (!verifiedProjectRef && !verifiedUserId && !environmentMode) return;
   const planProjectRef = String(handoffPlan.verified_project_ref ?? "").trim();
   const planUserId = String(handoffPlan.verified_user_id ?? "").trim();
   const targetUserId = String(handoffPlan.target_user_id ?? "").trim();
   const planMode = String(handoffPlan.account_mode ?? "ordinary").trim();
+  const planBound = Boolean(planProjectRef || planUserId || planMode === "production-test");
+  const environmentBound = Boolean(verifiedProjectRef || verifiedUserId || environmentMode);
+  if (!planBound && !environmentBound) return;
   if (
     !verifiedProjectRef ||
     !verifiedUserId ||

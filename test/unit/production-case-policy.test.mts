@@ -3,12 +3,11 @@ import test from "node:test";
 
 import {
   accountModeForVerifiedIdentity,
-  acceptedRemoteDifferencePolicy,
-  assertAuthoritativeCommand,
   assertReceiptBoundHandoffAccount,
+  traceHashNormalizationAllowed,
 } from "../../scripts/lib/production-case-policy.ts";
 
-test("production test-account cases reject every accepted remote difference", () => {
+test("verified test accounts disable traceHash normalization", () => {
   assert.equal(
     accountModeForVerifiedIdentity({
       projectRef: "qgzvkongdjqiiamzbbts",
@@ -23,32 +22,8 @@ test("production test-account cases reject every accepted remote difference", ()
     }),
     "ordinary",
   );
-  assert.deepEqual(acceptedRemoteDifferencePolicy({ accountMode: "production-test" }), {
-    traceHashOnly: false,
-    foreignStateZeroReference: false,
-  });
-  assert.deepEqual(acceptedRemoteDifferencePolicy({ accountMode: "ordinary" }), {
-    traceHashOnly: true,
-    foreignStateZeroReference: false,
-  });
-});
-
-test("case and handoff commands require an argv array; display text is never executable", () => {
-  assert.deepEqual(
-    assertAuthoritativeCommand({
-      executable: "node",
-      argv: ["cli.js", "dataset", "verify-remote", "--json"],
-      display: "node cli.js dataset verify-remote --json",
-    }),
-    { executable: "node", argv: ["cli.js", "dataset", "verify-remote", "--json"] },
-  );
-  assert.throws(() =>
-    assertAuthoritativeCommand({
-      executable: "",
-      argv: [],
-      display: "node cli.js dataset verify-remote --json",
-    }),
-  );
+  assert.equal(traceHashNormalizationAllowed({ account_mode: "production-test" }), false);
+  assert.equal(traceHashNormalizationAllowed({ account_mode: "ordinary" }), true);
 });
 
 test("receipt-bound runners reject stale or cross-account handoff plans", () => {
@@ -64,6 +39,18 @@ test("receipt-bound runners reject stale or cross-account handoff plans", () => 
     account_mode: env.FOUNDRY_ACCOUNT_MODE,
   };
   assert.doesNotThrow(() => assertReceiptBoundHandoffAccount(plan, env));
+  assert.throws(() => assertReceiptBoundHandoffAccount(plan, {}));
+  assert.doesNotThrow(() =>
+    assertReceiptBoundHandoffAccount(
+      {
+        verified_project_ref: null,
+        verified_user_id: null,
+        target_user_id: "legacy-user",
+        account_mode: "ordinary",
+      },
+      {},
+    ),
+  );
   for (const changed of [
     { ...plan, account_mode: "ordinary" },
     { ...plan, verified_project_ref: null },

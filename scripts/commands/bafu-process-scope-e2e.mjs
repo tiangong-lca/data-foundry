@@ -11,7 +11,10 @@ import {
   commandSpecOptionValue,
   executeFoundryCommandSpecSync,
 } from "../lib/foundry-command-spec.ts";
-import { assertReceiptBoundHandoffAccount } from "../lib/production-case-policy.ts";
+import {
+  assertReceiptBoundHandoffAccount,
+  traceHashNormalizationAllowed,
+} from "../lib/production-case-policy.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const commandName = "dataset-bafu-process-scope-e2e";
@@ -636,7 +639,11 @@ function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, label }) {
     stageReport.max_attempts = maxVerifyAttempts;
     stages.push(stageReport);
     verifyAccepted = verifyStage.result.status === 0 && Boolean(verifyReportPath);
-    if (verifyStage.result.status !== 0 && verifyReportPath) {
+    if (
+      verifyStage.result.status !== 0 &&
+      verifyReportPath &&
+      traceHashNormalizationAllowed(handoffPlan)
+    ) {
       const acceptedVerify = acceptTraceHashOnlyRemoteVerificationMismatch({
         verifyReportPath,
         outDir,

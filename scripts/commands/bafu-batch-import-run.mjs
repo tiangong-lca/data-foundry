@@ -20,7 +20,10 @@ import {
 } from "../lib/foundry-command-spec.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.mjs";
 import { stageContract } from "../lib/stage-contract.ts";
-import { assertReceiptBoundHandoffAccount } from "../lib/production-case-policy.ts";
+import {
+  assertReceiptBoundHandoffAccount,
+  traceHashNormalizationAllowed,
+} from "../lib/production-case-policy.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const commandName = "dataset-bafu-batch-import-run";
@@ -1173,7 +1176,11 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
     };
     stages.push(stageRecord);
     verifyAccepted = verifyStage.exit_code === 0 && Boolean(verifyReportPath);
-    if (verifyStage.exit_code !== 0 && verifyReportPath) {
+    if (
+      verifyStage.exit_code !== 0 &&
+      verifyReportPath &&
+      traceHashNormalizationAllowed(handoffPlan)
+    ) {
       const acceptedVerify = acceptTraceHashOnlyRemoteVerificationMismatch({
         verifyReportPath,
         outDir,
