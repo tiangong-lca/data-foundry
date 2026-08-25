@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import * as evidenceScope from "../../scripts/lib/import-curation/internal/workflow-evidence-scope.mjs";
+import * as evidenceScope from "../../scripts/lib/import-curation/internal/workflow-evidence-scope.ts";
 
 type JsonRecord = Record<string, unknown>;
 

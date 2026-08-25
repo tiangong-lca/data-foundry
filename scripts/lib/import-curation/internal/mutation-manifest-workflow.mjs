@@ -30,7 +30,7 @@ export {
   readProcessDryRunArtifacts,
   remoteVerifyBlockerKeys,
 } from "./workflow-dry-run-context.ts";
-export { buildEvidenceScopeBlockers, evidenceScopeBlocker } from "./workflow-evidence-scope.mjs";
+export { buildEvidenceScopeBlockers, evidenceScopeBlocker } from "./workflow-evidence-scope.ts";
 export {
   identityDecisionUnresolvedReferenceKeys,
   readIdentityDecisionApplyContexts,

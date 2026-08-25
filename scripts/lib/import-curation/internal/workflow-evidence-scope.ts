@@ -15,6 +15,90 @@ import {
   rowsFileReachableThroughTransformChain,
 } from "./workflow-row-transform-context.ts";
 
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface ArtifactFiles extends JsonRecord {
+  input?: unknown;
+  input_rows?: unknown;
+  source_rows?: unknown;
+  selected_rows_input?: unknown;
+  cleaned_rows?: unknown;
+  patched_rows?: unknown;
+  batch_patch?: unknown;
+}
+
+interface ArtifactValue extends JsonRecord {
+  input_path?: unknown;
+  inputPath?: unknown;
+  input_file?: unknown;
+  inputFile?: unknown;
+  rows_file?: unknown;
+  rowsFile?: unknown;
+  source_rows_file?: unknown;
+  sourceRowsFile?: unknown;
+  source_path?: unknown;
+  sourcePath?: unknown;
+  status?: string;
+  qa_report?: string;
+  schema_report?: unknown;
+  cleaned_rows_file?: unknown;
+  out_path?: unknown;
+  patch_path?: unknown;
+  files?: ArtifactFiles | null;
+}
+
+interface ArtifactEnvelope {
+  path?: string;
+  value?: ArtifactValue | null;
+}
+
+interface EvidenceScopeBlockerOptions {
+  code: unknown;
+  stage: unknown;
+  message: unknown;
+  expected: unknown;
+  actual: unknown;
+  artifact: string | null | undefined;
+  repoRoot: string;
+}
+
+interface PatchApplyContext {
+  evidenceRows: unknown[];
+}
+
+interface TransformContextLike {
+  status?: unknown;
+  inputRowsFile?: string | null;
+  outputRowsFile?: string | null;
+  inputRows?: string[];
+  outputRows?: string[];
+  inputPayloadSha256ByIdentity?: Map<string, string>;
+  outputPayloadSha256ByIdentity?: Map<string, string>;
+}
+
+interface BuildEvidenceScopeOptions {
+  repoRoot: string;
+  rowsFile: unknown;
+  schemaReportArtifact?: ArtifactEnvelope | null;
+  curationGateArtifact?: ArtifactEnvelope | null;
+  dryRunReportArtifact?: ArtifactEnvelope | null;
+  cleanupArtifact?: ArtifactEnvelope | null;
+  patchApplyArtifact?: ArtifactEnvelope | null;
+  patchApplyContext?: PatchApplyContext | null;
+  patchCollectArtifact?: ArtifactEnvelope | null;
+  requirePatchCollectReport?: unknown;
+  requireCurationGate?: boolean;
+  remoteVerifyArtifact?: ArtifactEnvelope | null;
+  identityDecisionApplyContext?: TransformContextLike | null;
+  identityReferenceRewriteContext?: TransformContextLike | null;
+  unresolvedExchangeExternalizationContext?: TransformContextLike | null;
+  sourceContactRewriteContext?: TransformContextLike | null;
+  canonicalSupportRewriteContext?: TransformContextLike | null;
+  cleanupContext?: TransformContextLike | null;
+}
+
 export function evidenceScopeBlocker({
   code,
   stage,
@@ -23,7 +107,7 @@ export function evidenceScopeBlocker({
   actual,
   artifact,
   repoRoot,
-}) {
+}: EvidenceScopeBlockerOptions): JsonRecord {
   return {
     code,
     stage,
@@ -34,22 +118,24 @@ export function evidenceScopeBlocker({
   };
 }
 
-export function dryRunReportRowsFile(report) {
+export function dryRunReportRowsFile(report: unknown): unknown {
+  const record = report as ArtifactValue | null | undefined;
+  const files = record?.files;
   return (
-    report?.input_path ??
-    report?.inputPath ??
-    report?.input_file ??
-    report?.inputFile ??
-    report?.rows_file ??
-    report?.rowsFile ??
-    report?.source_rows_file ??
-    report?.sourceRowsFile ??
-    report?.source_path ??
-    report?.sourcePath ??
-    report?.files?.input ??
-    report?.files?.input_rows ??
-    report?.files?.source_rows ??
-    report?.files?.selected_rows_input
+    record?.input_path ??
+    record?.inputPath ??
+    record?.input_file ??
+    record?.inputFile ??
+    record?.rows_file ??
+    record?.rowsFile ??
+    record?.source_rows_file ??
+    record?.sourceRowsFile ??
+    record?.source_path ??
+    record?.sourcePath ??
+    files?.input ??
+    files?.input_rows ??
+    files?.source_rows ??
+    files?.selected_rows_input
   );
 }
 
@@ -69,12 +155,12 @@ export function buildEvidenceScopeBlockers({
   identityDecisionApplyContext,
   identityReferenceRewriteContext,
   unresolvedExchangeExternalizationContext,
-  sourceContactRewriteContext,
+  sourceContactRewriteContext: _sourceContactRewriteContext,
   canonicalSupportRewriteContext,
-  cleanupContext,
-}) {
-  const blockers = [];
-  const finalRowsFile = path.resolve(rowsFile);
+  cleanupContext: _cleanupContext,
+}: BuildEvidenceScopeOptions): JsonRecord[] {
+  const blockers: JsonRecord[] = [];
+  const finalRowsFile = path.resolve(rowsFile as string);
   const schemaInput = schemaReportArtifact?.value?.input_path;
   if (!schemaInput) {
     blockers.push(
@@ -139,12 +225,16 @@ export function buildEvidenceScopeBlockers({
         }),
       );
     }
-    if (!["ready", "ready_with_profile_waivers"].includes(curationGateArtifact.value?.status)) {
+    if (
+      !["ready", "ready_with_profile_waivers"].includes(
+        curationGateArtifact.value?.status as string,
+      )
+    ) {
       blockers.push({
         code: "curation_gate_report_not_ready",
         stage: "foundry_curation",
         message: `Curation gate report status is ${curationGateArtifact.value?.status ?? "missing"}.`,
-        artifact: repoRelativePath(repoRoot, curationGateArtifact.path),
+        artifact: repoRelativePath(repoRoot, curationGateArtifact.path!),
       });
     }
     if (!curationGateArtifact.value?.qa_report) {
@@ -153,7 +243,7 @@ export function buildEvidenceScopeBlockers({
         stage: "foundry_curation",
         message:
           "Curation gate report must record the deterministic QA report used for final prewrite curation.",
-        artifact: repoRelativePath(repoRoot, curationGateArtifact.path),
+        artifact: repoRelativePath(repoRoot, curationGateArtifact.path!),
       });
     } else {
       const qaReportPath = resolveRepoPath(repoRoot, curationGateArtifact.value.qa_report);
@@ -162,12 +252,12 @@ export function buildEvidenceScopeBlockers({
           code: "curation_gate_qa_report_not_readable",
           stage: "foundry_curation",
           message: "Curation gate qa_report file is not readable.",
-          artifact: repoRelativePath(repoRoot, curationGateArtifact.path),
+          artifact: repoRelativePath(repoRoot, curationGateArtifact.path!),
           qa_report: repoRelativeArtifactPath(repoRoot, curationGateArtifact.value.qa_report),
         });
       } else {
         try {
-          const qaReport = readJson(qaReportPath);
+          const qaReport = readJson<JsonRecord>(qaReportPath!);
           const qaRowsFile = qaReport.rows_file ?? qaReport.input_path ?? qaReport.inputPath;
           if (!qaRowsFile) {
             blockers.push({
@@ -175,8 +265,8 @@ export function buildEvidenceScopeBlockers({
               stage: "foundry_curation",
               message:
                 "Final deterministic QA report must record rows_file or input_path for exact rows-file scope verification.",
-              artifact: repoRelativePath(repoRoot, curationGateArtifact.path),
-              qa_report: repoRelativePath(repoRoot, qaReportPath),
+              artifact: repoRelativePath(repoRoot, curationGateArtifact.path!),
+              qa_report: repoRelativePath(repoRoot, qaReportPath!),
             });
           } else if (!sameArtifactPath(repoRoot, qaRowsFile, finalRowsFile)) {
             blockers.push(
@@ -197,8 +287,8 @@ export function buildEvidenceScopeBlockers({
             code: "curation_gate_qa_report_invalid",
             stage: "foundry_curation",
             message: error instanceof Error ? error.message : String(error),
-            artifact: repoRelativePath(repoRoot, curationGateArtifact.path),
-            qa_report: repoRelativePath(repoRoot, qaReportPath),
+            artifact: repoRelativePath(repoRoot, curationGateArtifact.path!),
+            qa_report: repoRelativePath(repoRoot, qaReportPath!),
           });
         }
       }
@@ -341,7 +431,7 @@ export function buildEvidenceScopeBlockers({
         stage: "ai_patch_apply",
         message:
           "AI-authored patch apply report was provided, but no patch evidence rows were found.",
-        patch_apply_report: repoRelativePath(repoRoot, patchApplyArtifact.path),
+        patch_apply_report: repoRelativePath(repoRoot, patchApplyArtifact.path!),
       });
     }
   }
@@ -361,7 +451,7 @@ export function buildEvidenceScopeBlockers({
         code: "patch_collect_not_ready",
         stage: "ai_patch_collect",
         message: `dataset-authoring-patch-collect status is ${patchCollectArtifact.value?.status ?? "missing"}.`,
-        artifact: repoRelativePath(repoRoot, patchCollectArtifact.path),
+        artifact: repoRelativePath(repoRoot, patchCollectArtifact.path!),
       });
     }
     const batchPatch = patchCollectArtifact.value?.files?.batch_patch;

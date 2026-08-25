@@ -25,7 +25,7 @@ test("every static row transform context consumer targets the typed module", () 
     "scripts/lib/import-curation/internal/curation-gate-workflow.mjs",
     "scripts/lib/import-curation/internal/mutation-manifest-workflow.mjs",
     "scripts/lib/import-curation/internal/workflow-decision-full-context.mjs",
-    "scripts/lib/import-curation/internal/workflow-evidence-scope.mjs",
+    "scripts/lib/import-curation/internal/workflow-evidence-scope.ts",
     "scripts/lib/import-curation/internal/workflow-identity-preflight.mjs",
     "scripts/lib/import-curation/internal/workflow-reference-closure.mjs",
     "test/scenarios/mutation-lineage-helpers.test.mjs",
