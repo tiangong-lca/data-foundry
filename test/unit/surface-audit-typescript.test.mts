@@ -12,7 +12,9 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 type AuditFinding = {
   code?: string;
   command?: string;
+  message?: string;
   path?: string;
+  script?: string;
 };
 
 type AuditCheck = {
@@ -120,6 +122,19 @@ test("surface audit report preserves its exact top-level and check ordering cont
     errors: report.checks.flatMap((check) => check.errors).length,
     warnings: report.checks.flatMap((check) => check.warnings).length,
   });
+});
+
+test("deprecated package-script warnings use package-manager-neutral wording", () => {
+  const report = auditFixture({
+    "package.json": '{"scripts":{"legacy-task":"node task.mjs"}}\n',
+  });
+  assert.deepEqual(reportCheck(report, "legacy_aliases").warnings, [
+    {
+      code: "deprecated_npm_script_name",
+      message: "Package script name looks like a legacy/deprecated compatibility alias.",
+      script: "legacy-task",
+    },
+  ]);
 });
 
 test("surface audit resolves explicit TypeScript and dynamic imports", () => {

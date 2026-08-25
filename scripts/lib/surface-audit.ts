@@ -126,7 +126,7 @@ function auditLegacyAliases(repoRoot: string): SurfaceAuditCheck {
     if (deprecatedNamePattern.test(scriptName)) {
       warnings.push({
         code: "deprecated_npm_script_name",
-        message: "NPM script name looks like a legacy/deprecated compatibility alias.",
+        message: "Package script name looks like a legacy/deprecated compatibility alias.",
         script: scriptName,
       });
     }
