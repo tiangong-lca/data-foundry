@@ -22,9 +22,10 @@ checkPaths:
   - specs/automated-lca-capability-registry.json
   - specs/workspace-capability-adapters.md
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
+  - scripts/lib/import-curation/internal/workflow-queue-context.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8217c918603fad89ec64b92e91d397707f3e0920
-lastReviewedNote: "Reviewed for Issue #67 Wave 12: typed prewrite cleanup preserves source-exchange proof hashes, trace externalization-before-delete and local locator redaction without broadening write authority."
+lastReviewedCommit: 910fdbdc5e575a19fc05ae26984e65b44a6eaa44
+lastReviewedNote: "Reviewed for Issue #67 Wave 13: typed queue context preserves missing/malformed evidence failures and does not turn local queue attachment into remote-write authority."
 ---
 
 # Safety Policy

@@ -36,6 +36,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/dataset-types.ts
   - scripts/lib/import-curation/internal/runtime-io.ts
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
+  - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -63,8 +64,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8217c918603fad89ec64b92e91d397707f3e0920
-lastReviewedNote: "Reviewed for Issue #67 Wave 12: typed prewrite cleanup remains Foundry-local deterministic evidence preparation and does not alter schema, source, CLI or database authority."
+lastReviewedCommit: 910fdbdc5e575a19fc05ae26984e65b44a6eaa44
+lastReviewedNote: "Reviewed for Issue #67 Wave 13: typed queue context remains Foundry-local authoring evidence assembly and does not alter schema, CLI, profile or database authority."
 ---
 
 # Architecture
@@ -123,6 +124,8 @@ The high-fan-in runtime utility boundary is native TypeScript and owns only Foun
 The typed location-quality boundary reads the installed CLI location vocabulary and discovers only schema/fallback-declared location fields. It creates local authoring commands, queue context and blockers; the CLI owns classification lookup/apply and the schema package owns valid codes. Missing schema evidence yields an empty valid-code map rather than approving unknown values, and invalid targets remain blocking before finalize.
 
 The typed prewrite-cleanup boundary performs deterministic transformations only after authoring evidence exists: required-field sentinel completion, metadata normalization, source/final exchange proof, import-only trace externalization, namespace repair and local locator redaction. Source and final exchange signatures exclude only permitted flow-reference rewrites; their array and object order remains content-addressed. It cannot invent source evidence or grant write authority.
+
+The typed workflow-queue-context boundary reads local queue manifests, task rows, closure dependencies and optional authoring JSONL indexes without changing their encounter order or evidence bytes. It attaches that evidence to curation packages using exact-version then id-only lookup and retains native missing, malformed and invalid-dependency failures; it does not execute queue work or expand remote-write authority.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

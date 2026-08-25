@@ -21,9 +21,10 @@ checkPaths:
   - specs/capability-ownership-rules.json
   - specs/workspace-capability-adapters.md
   - docs/incremental-change-set-contract.md
+  - scripts/lib/import-curation/internal/workflow-queue-context.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8217c918603fad89ec64b92e91d397707f3e0920
-lastReviewedNote: "Reviewed for Issue #67 Wave 12: zero-any prewrite evidence cleanup remains Foundry-local deterministic tooling; no cross-repository owner or normal execution surface changes."
+lastReviewedCommit: 910fdbdc5e575a19fc05ae26984e65b44a6eaa44
+lastReviewedNote: "Reviewed for Issue #67 Wave 13: zero-any queue context assembly remains Foundry-local orchestration; no cross-repository owner or normal execution surface changes."
 ---
 
 # Workspace Project Map

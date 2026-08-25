@@ -33,6 +33,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/dataset-types.ts
   - scripts/lib/import-curation/internal/runtime-io.ts
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
+  - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -65,13 +66,16 @@ checkPaths:
   - test/unit/wave11-location-migration.test.mts
   - test/unit/prewrite-cleanup-contract.test.mts
   - test/unit/wave12-prewrite-migration.test.mts
+  - test/unit/workflow-queue-context-contract.test.mts
+  - test/unit/workflow-queue-context-native-errors.test.mts
+  - test/unit/wave13-queue-context-migration.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8217c918603fad89ec64b92e91d397707f3e0920
-lastReviewedNote: "Reviewed for Issue #67 Wave 12: tests cover datetime/sentinel/source identity/proof order and hashes, trace externalization errors, namespace and locator-redaction contracts."
+lastReviewedCommit: 910fdbdc5e575a19fc05ae26984e65b44a6eaa44
+lastReviewedNote: "Reviewed for Issue #67 Wave 13: tests cover queue action envelopes, manifest/JSONL/task traversal order, path fallback, identity selection and native fail-closed errors."
 ---
 
 # Test Layout
@@ -120,6 +124,8 @@ Every behavior or migration slice starts with a failing focused test or a realis
 `unit/location-quality-utils-contract.test.mts` characterizes classification/location command plans, installed and missing schema maps, fallback/schema location keys, nested `#text` paths, depth-first/ascending-array order, exact counters, queue context, blocker order and invalid row-type errors. `unit/wave11-location-migration.test.mts` pins the zero-any factory, named export and static consumers; bundle/location/finalize command scenarios retain integration coverage.
 
 `unit/prewrite-cleanup-contract.test.mts` characterizes UTC rollover/offset bytes, recursive array/object normalization, annual sentinel variants, source-row map precedence, output-only exchange proof and order-sensitive hashes, duplicate proof suppression, trace summary/hash/error behavior, namespace repair and exact local-locator SHA redaction. `unit/wave12-prewrite-migration.test.mts` pins the zero-any native module, ten exports and all six internal consumers.
+
+`unit/workflow-queue-context-contract.test.mts` characterizes annual-supply actions, queue manifest filtering/order/map behavior, task paths and summaries, exact-version then id-only selection, closure dependency/support order, authoring JSONL filtering/last-row binding and identity-preflight paths. `unit/workflow-queue-context-native-errors.test.mts` locks the legacy non-null-object task traversal and native `TypeError` for a null dependency; `unit/wave13-queue-context-migration.test.mts` pins the zero-any native module, exact runtime exports and all static consumers.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

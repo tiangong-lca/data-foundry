@@ -26,8 +26,8 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8217c918603fad89ec64b92e91d397707f3e0920
-lastReviewedNote: "Reviewed for Issue #67 Wave 12: typing deterministic prewrite evidence helpers changes no command category, owner/export metadata, help, artifact schema, exit mapping, or remote-write mode."
+lastReviewedCommit: 910fdbdc5e575a19fc05ae26984e65b44a6eaa44
+lastReviewedNote: "Reviewed for Issue #67 Wave 13: typing the internal queue context changes no command category, owner/export metadata, help, artifact schema, exit mapping, profile default, or remote-write mode."
 ---
 
 # Foundry Command Surface
