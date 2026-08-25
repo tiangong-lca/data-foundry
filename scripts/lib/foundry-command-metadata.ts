@@ -384,7 +384,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-authoring-plan": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/authoring-plan.mjs",
+    ownerModule: "scripts/commands/authoring-plan.ts",
     ownerExport: "createAuthoringPlanCommands().runDatasetAuthoringPlan",
     inputs: ["curation gate reports", "authoring task manifests", "decision task manifests"],
     outputs: ["dataset-authoring-plan JSON report"],

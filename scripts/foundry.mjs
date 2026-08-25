@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createAuthoringPlanCommands } from "./commands/authoring-plan.mjs";
+import { createAuthoringPlanCommands } from "./commands/authoring-plan.ts";
 import { createBafuAutoAuthoringCommands } from "./commands/bafu-auto-authoring.mjs";
 import { createBafuBatchImportRunCommands } from "./commands/bafu-batch-import-run.mjs";
 import { createBafuLeafClassificationTaskCommands } from "./commands/bafu-leaf-classification-tasks.mjs";

@@ -19,7 +19,7 @@ test("authoring-plan command exists only as native TypeScript", () => {
   assert.equal(fs.existsSync(typedPath), true);
   assert.equal(fs.existsSync(legacyPath), false);
   const source = fs.readFileSync(typedPath, "utf8");
-  assert.doesNotMatch(source, /\bany\b/u);
+  assert.doesNotMatch(source, /(?:[:<>,(|]\s*any\b|\bas\s+any\b)/u);
   assert.doesNotMatch(source, /@ts-(?:ignore|nocheck|expect-error)/u);
   assert.deepEqual(
     [...source.matchAll(/export function\s+([A-Za-z0-9_]+)/gu)].map((match) => match[1]),

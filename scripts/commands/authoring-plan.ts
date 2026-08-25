@@ -3,6 +3,95 @@ import path from "node:path";
 import process from "node:process";
 import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
+interface LooseRecord {
+  [key: string]: LooseRecord | undefined;
+}
+
+interface ExistingArtifact {
+  path: string;
+  value: LooseRecord;
+}
+
+interface ArtifactStatus {
+  exists: boolean;
+  path: string | null;
+  status: string;
+  counts?: LooseRecord | null;
+  completed?: boolean;
+}
+
+interface ContextPaths {
+  schema: string | null;
+  methodology_yaml: string | null;
+  ruleset: string | null;
+  classification_schema: string[];
+  location_schema: string | null;
+}
+
+interface GateScope {
+  dataset_type: string;
+  dataset_ids: string[];
+}
+
+interface PhaseStatus {
+  status: string;
+  required: boolean;
+  [key: string]: unknown;
+}
+
+interface PhaseLike {
+  status: string;
+  required: boolean;
+  [key: string]: unknown;
+}
+
+interface MutablePhase extends PhaseLike {
+  commands: Record<string, unknown>;
+}
+
+interface ChunkBuildArgs {
+  datasetType: string;
+  offset: number;
+  limit: number;
+  chunkLabel: string;
+}
+
+interface IdentityApplyCommand {
+  dataset_type: string;
+  rows_file: string;
+  authoring_package_dir: string | null;
+  output_rows?: string | null;
+  command: string;
+}
+
+interface AuthoringPlanDependencies {
+  appendOption: (args: unknown[], flag: string, value: unknown) => void;
+  appendRepeatedOptions: (args: unknown[], flag: string, values: unknown) => void;
+  asText: (value: unknown) => string;
+  datasetRowsFileStem: (datasetType: string) => string;
+  decisionTaskChunkLabel: (
+    options: LooseRecord,
+    selection: Record<string, unknown>,
+    fallback: string,
+  ) => string;
+  ensureArray: (value: unknown) => LooseRecord[];
+  fileExists: (filePath: string | null | undefined) => boolean;
+  hasUnresolvedAiPlaceholder: (value: unknown) => boolean;
+  normalizedList: (value: unknown) => string[];
+  nowIso: () => string;
+  positiveIntegerOption: (value: unknown, fallback: number | null) => number | null;
+  readJson: (filePath: string) => LooseRecord;
+  readJsonOrJsonLines: (filePath: string) => LooseRecord[];
+  repoRelativeMaybe: (filePath: string | null | undefined) => string | null;
+  repoRelativePath: (filePath: string) => string;
+  repoRoot: string;
+  resolveRepoPath: (filePath: unknown) => string;
+  safeFileToken: (value: unknown, fallback: string) => string;
+  shellQuote: (value: unknown) => string;
+  unique: <T>(values: T[]) => T[];
+  writeJson: (filePath: string, value: unknown) => void;
+}
+
 const authoringPlanStageContract = readOnlyStageContract([
   {
     stage: "load_curation_scope",
@@ -63,27 +152,27 @@ export function createAuthoringPlanCommands({
   shellQuote,
   unique,
   writeJson,
-}) {
-  function foundryCommand(args) {
+}: AuthoringPlanDependencies) {
+  function foundryCommand(args: readonly unknown[]): string {
     return [process.execPath, path.join(repoRoot, "scripts", "foundry.mjs"), ...args]
       .map(shellQuote)
       .join(" ");
   }
 
-  function authoringPlanWorkspaceDir(curationGateReportPath, options) {
+  function authoringPlanWorkspaceDir(curationGateReportPath: string, options: LooseRecord): string {
     const explicit = resolveRepoPath(options.workspaceDir || options.workspace);
     if (explicit) return explicit;
     const curationDir = path.dirname(curationGateReportPath);
     return path.basename(curationDir) === "curation-gate" ? path.dirname(curationDir) : curationDir;
   }
 
-  function existingArtifact(filePath) {
+  function existingArtifact(filePath: unknown): ExistingArtifact | null {
     const resolved = resolveRepoPath(filePath);
     if (!resolved || !fileExists(resolved)) return null;
     return { path: resolved, value: readJson(resolved) };
   }
 
-  function artifactStatus(filePath) {
+  function artifactStatus(filePath: unknown): ArtifactStatus {
     const artifact = existingArtifact(filePath);
     if (!artifact) {
       return {
@@ -100,7 +189,10 @@ export function createAuthoringPlanCommands({
     };
   }
 
-  function aiRowsFileStatus(filePath, { requireCompletedDecision = false } = {}) {
+  function aiRowsFileStatus(
+    filePath: unknown,
+    { requireCompletedDecision = false }: { requireCompletedDecision?: boolean } = {},
+  ) {
     const resolved = resolveRepoPath(filePath);
     if (!resolved || !fileExists(resolved)) {
       return {
@@ -132,9 +224,9 @@ export function createAuthoringPlanCommands({
     };
   }
 
-  function authoringPlanContextPaths(curationGateReport) {
+  function authoringPlanContextPaths(curationGateReport: LooseRecord): ContextPaths {
     const details = ensureArray(curationGateReport?.context?.contract_context_file_details);
-    const byKind = new Map();
+    const byKind = new Map<string, string[]>();
     for (const detail of details) {
       const kind = asText(detail?.kind);
       const filePath = asText(detail?.path);
@@ -152,7 +244,7 @@ export function createAuthoringPlanCommands({
     };
   }
 
-  function appendContextOptions(args, contextPaths) {
+  function appendContextOptions(args: unknown[], contextPaths: ContextPaths): void {
     appendOption(args, "--schema-file", contextPaths.schema);
     appendOption(args, "--yaml-file", contextPaths.methodology_yaml);
     appendOption(args, "--ruleset-file", contextPaths.ruleset);
@@ -160,7 +252,7 @@ export function createAuthoringPlanCommands({
     appendOption(args, "--location-schema", contextPaths.location_schema);
   }
 
-  function authoringPlanGateScope(curationGateReport) {
+  function authoringPlanGateScope(curationGateReport: LooseRecord): GateScope {
     const datasetType = asText(curationGateReport?.dataset_type);
     const entities = ensureArray(
       curationGateReport?.entities ??
@@ -182,7 +274,7 @@ export function createAuthoringPlanCommands({
     };
   }
 
-  function appendAuthoringPlanGateScopeOptions(args, scope) {
+  function appendAuthoringPlanGateScopeOptions(args: unknown[], scope: GateScope): void {
     appendOption(args, "--dataset-type", scope?.dataset_type);
     appendRepeatedOptions(args, "--dataset-id", scope?.dataset_ids ?? []);
   }
@@ -193,7 +285,13 @@ export function createAuthoringPlanCommands({
     originalQueue,
     scope,
     kind,
-  }) {
+  }: {
+    taskPath: string;
+    taskQueueKey: string;
+    originalQueue: string;
+    scope: GateScope;
+    kind: string;
+  }): string {
     const taskQueue = asText(existingArtifact(taskPath)?.value?.[taskQueueKey]);
     if (taskQueue) return taskQueue;
     if (scope?.dataset_type) {
@@ -213,7 +311,7 @@ export function createAuthoringPlanCommands({
     return originalQueue;
   }
 
-  function authoringPlanDefaultPaths(workspaceDir) {
+  function authoringPlanDefaultPaths(workspaceDir: string) {
     return {
       identityTask: path.join(
         workspaceDir,
@@ -274,7 +372,7 @@ export function createAuthoringPlanCommands({
     };
   }
 
-  function authoringPlanApplyStatus(reportPath) {
+  function authoringPlanApplyStatus(reportPath: unknown): ArtifactStatus {
     const artifact = artifactStatus(reportPath);
     return {
       ...artifact,
@@ -290,7 +388,15 @@ export function createAuthoringPlanCommands({
     decisionsPath,
     applyReportPath,
     applyReportPaths = null,
-  }) {
+  }: {
+    required: boolean;
+    taskPath: string;
+    readyStatus: string;
+    emptyStatus: string;
+    decisionsPath: string;
+    applyReportPath?: string;
+    applyReportPaths?: string[] | null;
+  }): PhaseStatus {
     if (!required) {
       return { status: "not_required", required: false };
     }
@@ -341,7 +447,12 @@ export function createAuthoringPlanCommands({
     manifestPath,
     patchCollectReportPath,
     patchApplyReportPath,
-  }) {
+  }: {
+    required: boolean;
+    manifestPath: string;
+    patchCollectReportPath: string;
+    patchApplyReportPath: string;
+  }): PhaseStatus {
     if (!required) {
       return { status: "not_required", required: false };
     }
@@ -391,7 +502,7 @@ export function createAuthoringPlanCommands({
     };
   }
 
-  function authoringPlanOverallStatus(phases) {
+  function authoringPlanOverallStatus(phases: PhaseLike[]): string {
     const required = phases.filter((phase) => phase.required);
     if (required.length === 0) return "ready_no_authoring_actions";
     if (required.some((phase) => phase.status === "blocked_task_not_ready")) {
@@ -416,7 +527,7 @@ export function createAuthoringPlanCommands({
     return "ready_for_post_authoring_finalize";
   }
 
-  function authoringPlanChunkSize(options, kind) {
+  function authoringPlanChunkSize(options: LooseRecord, kind: string): number {
     return (
       positiveIntegerOption(options[`${kind}ChunkSize`], null) ??
       positiveIntegerOption(options.decisionChunkSize, null) ??
@@ -424,13 +535,13 @@ export function createAuthoringPlanCommands({
     );
   }
 
-  function authoringPlanDecisionRows(taskPath, key) {
+  function authoringPlanDecisionRows(taskPath: string, key: string): LooseRecord[] {
     const task = existingArtifact(taskPath)?.value;
     return ensureArray(task?.[key]);
   }
 
-  function groupedRowsByDatasetType(rows) {
-    const groups = new Map();
+  function groupedRowsByDatasetType(rows: LooseRecord[]) {
+    const groups = new Map<string, LooseRecord[]>();
     for (const row of rows) {
       const datasetType = asText(row?.dataset_type) || "all";
       const current = groups.get(datasetType) ?? [];
@@ -443,7 +554,17 @@ export function createAuthoringPlanCommands({
     }));
   }
 
-  function authoringPlanDecisionChunkPlan({ kind, rows, chunkSize, buildArgsForChunk }) {
+  function authoringPlanDecisionChunkPlan({
+    kind,
+    rows,
+    chunkSize,
+    buildArgsForChunk,
+  }: {
+    kind: string;
+    rows: LooseRecord[];
+    chunkSize: number;
+    buildArgsForChunk: (args: ChunkBuildArgs) => unknown[];
+  }) {
     if (rows.length === 0) {
       return {
         recommended: false,
@@ -452,7 +573,7 @@ export function createAuthoringPlanCommands({
         commands: [],
       };
     }
-    const commands = [];
+    const commands: Array<Record<string, unknown>> = [];
     for (const group of groupedRowsByDatasetType(rows)) {
       for (let offset = 0; offset < group.rows.length; offset += chunkSize) {
         const selectedRows = group.rows.slice(offset, offset + chunkSize);
@@ -486,7 +607,10 @@ export function createAuthoringPlanCommands({
     };
   }
 
-  function authoringPlanIdentityDatasetTypes(taskPath, curationGateReport) {
+  function authoringPlanIdentityDatasetTypes(
+    taskPath: string,
+    curationGateReport: LooseRecord,
+  ): string[] {
     const task = existingArtifact(taskPath)?.value;
     const taskTypes = normalizedList(task?.dataset_types ?? task?.datasetTypes);
     if (taskTypes.length > 0) return taskTypes;
@@ -494,11 +618,15 @@ export function createAuthoringPlanCommands({
     return reportType ? [reportType] : ["<flow-or-process>"];
   }
 
-  function authoringPlanRowsFileForDatasetType(datasetType, workspaceDir, curationGateReport) {
+  function authoringPlanRowsFileForDatasetType(
+    datasetType: unknown,
+    workspaceDir: string,
+    curationGateReport: LooseRecord,
+  ): string {
     const reportType = asText(curationGateReport?.dataset_type).toLowerCase();
     const normalizedType = asText(datasetType).toLowerCase();
     if (normalizedType && normalizedType === reportType && curationGateReport?.rows_file) {
-      return curationGateReport.rows_file;
+      return curationGateReport.rows_file as unknown as string;
     }
     const queueManifest = existingArtifact(
       curationGateReport?.context?.curation_queue?.manifest_file,
@@ -522,7 +650,7 @@ export function createAuthoringPlanCommands({
     );
   }
 
-  function authoringPlanAuthoringPackageDir(curationGateReport) {
+  function authoringPlanAuthoringPackageDir(curationGateReport: LooseRecord): string | null {
     const packageDirs = unique(
       ensureArray(
         curationGateReport?.entities ??
@@ -537,7 +665,11 @@ export function createAuthoringPlanCommands({
     return packageDirs.length === 1 ? packageDirs[0] : null;
   }
 
-  function authoringPlanIdentityApplyReports(workspaceDir, datasetTypes, explicitReportPath) {
+  function authoringPlanIdentityApplyReports(
+    workspaceDir: string,
+    datasetTypes: string[],
+    explicitReportPath: string | null,
+  ): string[] {
     if (explicitReportPath && datasetTypes.length <= 1) return [explicitReportPath];
     if (datasetTypes.length <= 1) {
       return [
@@ -561,7 +693,14 @@ export function createAuthoringPlanCommands({
     decisionsPath,
     applyReportPaths,
     authoringPackageDir,
-  }) {
+  }: {
+    workspaceDir: string;
+    curationGateReport: LooseRecord;
+    datasetTypes: string[];
+    decisionsPath: string;
+    applyReportPaths: string[];
+    authoringPackageDir: string | null;
+  }): IdentityApplyCommand[] {
     return datasetTypes.map((datasetType, index) => {
       const reportPath = applyReportPaths[index];
       const rowsFile = authoringPlanRowsFileForDatasetType(
@@ -590,30 +729,30 @@ export function createAuthoringPlanCommands({
     });
   }
 
-  function authoringPlanRowsFileRef(fileRef) {
+  function authoringPlanRowsFileRef(fileRef: unknown): string | null {
     const text = asText(fileRef);
     if (!text) return null;
     const resolved = resolveRepoPath(text);
     return resolved ? repoRelativePath(resolved) : text;
   }
 
-  function authoringPlanRowsFiles(values) {
+  function authoringPlanRowsFiles(values: unknown): string[] {
     return unique(
       ensureArray(values)
         .flatMap((value) => ensureArray(value))
         .map(authoringPlanRowsFileRef)
-        .filter(Boolean),
+        .filter((value): value is string => Boolean(value)),
     );
   }
 
-  function authoringPlanSingleRowsFile(values) {
+  function authoringPlanSingleRowsFile(values: unknown): string | null {
     const rowsFiles = authoringPlanRowsFiles(values);
     return rowsFiles.length === 1 ? rowsFiles[0] : null;
   }
 
-  function authoringPlanCompletedOutputRows(reportPath, kind) {
+  function authoringPlanCompletedOutputRows(reportPath: string, kind: string): string[] {
     const artifact = existingArtifact(reportPath);
-    if (!artifact || artifact.value?.status !== "completed") return [];
+    if (!artifact || (artifact.value.status as unknown as string) !== "completed") return [];
     const report = artifact.value;
     if (kind === "patch") {
       return authoringPlanRowsFiles([
@@ -626,7 +765,11 @@ export function createAuthoringPlanCommands({
     return authoringPlanRowsFiles([report.files?.output_rows, report.output_rows]);
   }
 
-  function authoringPlanPlannedTransformOutputRows(currentRows, reportPath, suffix) {
+  function authoringPlanPlannedTransformOutputRows(
+    currentRows: string,
+    reportPath: string,
+    suffix: string,
+  ): string | null {
     const resolvedReport = resolveRepoPath(reportPath);
     const resolvedCurrentRows = resolveRepoPath(currentRows);
     if (!resolvedReport || !resolvedCurrentRows) return null;
@@ -636,11 +779,17 @@ export function createAuthoringPlanCommands({
     );
   }
 
-  function authoringPlanPlannedPatchOutputRows(currentRows, patchApplyReportPath) {
+  function authoringPlanPlannedPatchOutputRows(
+    currentRows: string,
+    patchApplyReportPath: string,
+  ): string | null {
     return authoringPlanPlannedTransformOutputRows(currentRows, patchApplyReportPath, "patched");
   }
 
-  function authoringPlanPlannedIdentityOutputRows(identityApplyReportPath, datasetType) {
+  function authoringPlanPlannedIdentityOutputRows(
+    identityApplyReportPath: string,
+    datasetType: unknown,
+  ): string | null {
     const resolvedReport = resolveRepoPath(identityApplyReportPath);
     const normalizedType = asText(datasetType);
     if (!resolvedReport || !normalizedType) return null;
@@ -659,7 +808,14 @@ export function createAuthoringPlanCommands({
     inputRows,
     outputRows,
     reportPath,
-  }) {
+  }: {
+    queue: string;
+    decisionsPath: string;
+    taskPath: string;
+    inputRows: string | null;
+    outputRows: string | null;
+    reportPath: string;
+  }): string | null {
     if (!inputRows || !outputRows) return null;
     return foundryCommand([
       "dataset-classification-decisions-apply",
@@ -685,7 +841,14 @@ export function createAuthoringPlanCommands({
     inputRows,
     outputRows,
     reportPath,
-  }) {
+  }: {
+    queue: string;
+    decisionsPath: string;
+    taskPath: string;
+    inputRows: string | null;
+    outputRows: string | null;
+    reportPath: string;
+  }): string | null {
     if (!inputRows || !outputRows) return null;
     return foundryCommand([
       "dataset-location-decisions-apply",
@@ -710,7 +873,13 @@ export function createAuthoringPlanCommands({
     authoringPackageDir,
     inputRows,
     outputRows,
-  }) {
+  }: {
+    manifestPath: string;
+    patchApplyReportPath: string;
+    authoringPackageDir: string | null;
+    inputRows: string | null;
+    outputRows: string | null;
+  }): string | null {
     const manifest = existingArtifact(manifestPath)?.value;
     const patchFile = authoringPlanRowsFileRef(
       manifest?.batch_patch_contract?.output_patch_file ||
@@ -740,7 +909,13 @@ export function createAuthoringPlanCommands({
     applyReportPaths,
     authoringPackageDir,
     inputRows,
-  }) {
+  }: {
+    datasetTypes: string[];
+    decisionsPath: string;
+    applyReportPaths: string[];
+    authoringPackageDir: string | null;
+    inputRows: string | null;
+  }): IdentityApplyCommand[] {
     if (!inputRows || datasetTypes.length !== 1) return [];
     return datasetTypes.map((datasetType, index) => {
       const reportPath = applyReportPaths[index];
@@ -786,14 +961,34 @@ export function createAuthoringPlanCommands({
     identityDatasetTypes,
     identityDecisionsPath,
     identityApplyReportPaths,
+  }: {
+    baseRows: unknown;
+    classificationPhase: PhaseLike;
+    classificationApplyReportPath: string;
+    classificationApplyQueue: string;
+    classificationDecisionsPath: string;
+    classificationTaskPath: string;
+    locationPhase: PhaseLike;
+    locationApplyReportPath: string;
+    locationApplyQueue: string;
+    locationDecisionsPath: string;
+    locationTaskPath: string;
+    patchPhase: PhaseLike;
+    authoringTaskManifestPath: string;
+    patchApplyReportPath: string;
+    authoringPackageDir: string | null;
+    identityPhase: PhaseLike;
+    identityDatasetTypes: string[];
+    identityDecisionsPath: string;
+    identityApplyReportPaths: string[];
   }) {
     let currentRows = authoringPlanRowsFileRef(baseRows);
-    const steps = [];
-    const commands = {};
-    const blockers = [];
-    const pending = [];
+    const steps: Array<Record<string, unknown>> = [];
+    const commands: Record<string, Record<string, unknown>> = {};
+    const blockers: Array<Record<string, unknown>> = [];
+    const pending: Array<Record<string, unknown>> = [];
 
-    function requireCurrentRows(phase) {
+    function requireCurrentRows(phase: string): boolean {
       if (currentRows) return true;
       blockers.push({
         code: "authoring_rows_chain_current_rows_missing",
@@ -803,7 +998,7 @@ export function createAuthoringPlanCommands({
       return false;
     }
 
-    function recordNoChange(phase, status) {
+    function recordNoChange(phase: string, status: string): void {
       steps.push({
         phase,
         status,
@@ -821,7 +1016,14 @@ export function createAuthoringPlanCommands({
       outputSuffix,
       outputKind,
       buildCommand,
-    }) {
+    }: {
+      phaseName: string;
+      phase: PhaseLike;
+      reportPath: string;
+      outputSuffix: string;
+      outputKind: string;
+      buildCommand: (rows: { inputRows: string; outputRows: string | null }) => string | null;
+    }): void {
       if (!phase.required) {
         recordNoChange(phaseName, phase.status);
         return;
@@ -830,7 +1032,7 @@ export function createAuthoringPlanCommands({
         recordNoChange(phaseName, phase.status);
         return;
       }
-      const inputRows = currentRows;
+      const inputRows = currentRows!;
       if (!requireCurrentRows(phaseName)) return;
       if (phase.status === "completed") {
         const outputRows = authoringPlanSingleRowsFile(
@@ -1053,7 +1255,7 @@ export function createAuthoringPlanCommands({
     };
   }
 
-  function runDatasetAuthoringPlan(options) {
+  function runDatasetAuthoringPlan(options: LooseRecord) {
     if (options.help) {
       return {
         schema_version: 1,
@@ -1225,7 +1427,7 @@ export function createAuthoringPlanCommands({
         )
       : null;
 
-    const identityPhase = {
+    const identityPhase: MutablePhase = {
       phase: "identity_decisions",
       action_items: identityActionItems,
       ...phaseStatusFromTaskDecision({
@@ -1266,7 +1468,7 @@ export function createAuthoringPlanCommands({
         apply_decisions_by_type: identityApplyCommands,
       },
     };
-    const classificationPhase = {
+    const classificationPhase: MutablePhase = {
       phase: "classification_decisions",
       queue_rows: classificationRows,
       ...phaseStatusFromTaskDecision({
@@ -1320,7 +1522,7 @@ export function createAuthoringPlanCommands({
         ]),
       },
     };
-    const locationPhase = {
+    const locationPhase: MutablePhase = {
       phase: "location_decisions",
       queue_rows: locationRows,
       ...phaseStatusFromTaskDecision({
@@ -1371,7 +1573,7 @@ export function createAuthoringPlanCommands({
         ]),
       },
     };
-    const patchPhase = {
+    const patchPhase: MutablePhase = {
       phase: "field_patches",
       action_items: fieldActionItems,
       ...phaseStatusFromPatchAuthoring({
@@ -1421,12 +1623,15 @@ export function createAuthoringPlanCommands({
       identityDecisionsPath,
       identityApplyReportPaths,
     });
-    if (rowsChain.commands.classification_decisions?.command) {
-      classificationPhase.commands.apply_decisions =
-        rowsChain.commands.classification_decisions.command;
+    const chainedClassification = rowsChain.commands.classification_decisions as
+      { command?: string } | undefined;
+    if (chainedClassification?.command) {
+      classificationPhase.commands.apply_decisions = chainedClassification.command;
     }
-    if (rowsChain.commands.location_decisions?.command) {
-      locationPhase.commands.apply_decisions = rowsChain.commands.location_decisions.command;
+    const chainedLocation = rowsChain.commands.location_decisions as
+      { command?: string } | undefined;
+    if (chainedLocation?.command) {
+      locationPhase.commands.apply_decisions = chainedLocation.command;
     }
     const manifestPatchApplyCommand = patchPhase.commands.apply_patches;
     if (manifestPatchApplyCommand) {
@@ -1438,7 +1643,7 @@ export function createAuthoringPlanCommands({
       patchPhase.required &&
       rowsChain.steps.some(
         (step) =>
-          ["classification_decisions", "location_decisions"].includes(step.phase) &&
+          ["classification_decisions", "location_decisions"].includes(asText(step.phase)) &&
           step.required &&
           !step.output_rows,
       )
@@ -1447,8 +1652,10 @@ export function createAuthoringPlanCommands({
       patchPhase.commands.apply_patches_unavailable_reason =
         "Earlier classification/location phases have not produced a current rows file yet; rerun dataset-authoring-plan after those applies complete.";
     }
-    if (rowsChain.commands.identity_decisions?.commands?.length > 0) {
-      const chainedIdentityCommands = rowsChain.commands.identity_decisions.commands;
+    const chainedIdentityGroup = rowsChain.commands.identity_decisions as
+      { commands?: IdentityApplyCommand[] } | undefined;
+    if ((chainedIdentityGroup?.commands?.length ?? 0) > 0) {
+      const chainedIdentityCommands = chainedIdentityGroup!.commands!;
       identityPhase.commands.apply_decisions =
         chainedIdentityCommands.length === 1 ? chainedIdentityCommands[0].command : null;
       identityPhase.commands.apply_decisions_by_type = chainedIdentityCommands;
