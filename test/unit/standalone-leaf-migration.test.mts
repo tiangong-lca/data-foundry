@@ -29,7 +29,7 @@ test("four standalone leaves are native TypeScript with updated consumers", () =
     assert.equal(fs.existsSync(typedPath.replace(/\.ts$/u, ".mjs")), false);
   }
   const expectedConsumers = [
-    ["scripts/commands/support-cache.mjs", "../lib/canonical-support-mappings.ts"],
+    ["scripts/commands/support-cache.ts", "../lib/canonical-support-mappings.ts"],
     ["scripts/foundry.mjs", "./lib/source-semantics.ts"],
     ["scripts/foundry.mjs", "./lib/trace-coverage.ts"],
     ["scripts/foundry.mjs", "./lib/tidas-row-utils.ts"],

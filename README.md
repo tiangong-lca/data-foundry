@@ -22,6 +22,11 @@ checkPaths:
   - prettier.config.cjs
   - tsconfig*.json
   - scripts/foundry.mjs
+  - scripts/commands/tasks.ts
+  - scripts/commands/import-completion.ts
+  - scripts/commands/commit-handoff.ts
+  - scripts/commands/identity-decision-task.ts
+  - scripts/commands/support-cache.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -85,7 +90,7 @@ checkPaths:
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
 lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 B3: curation aggregate/gate/cleanup are native zero-escape TS7 with export identity, blocker/entity/context/package order, exact report/JSONL bytes, deterministic cleanup proofs, and native errors unchanged."
+lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: curation aggregate/gate/cleanup and task/completion/handoff/identity/support-cache factories are native zero-escape TS7 with exact order/bytes, deterministic proofs, SHA/argv binding, blockers, read-only requests, and native errors preserved."
 ---
 
 # TianGong LCA Data Foundry
@@ -153,6 +158,10 @@ Wave 22 follows the real dependency topology rather than treating connected modu
 Wave 23 migrates the authoring facade and runner layer above that SCC. `authoring-task-workflow.ts` and `authoring-patch-workflow.ts` remain pure live-reference facades; `authoring-packages.ts` preserves gate-entry/task order, content-addressed snapshot names, original package bytes, task directories and exact manifest/JSONL output; `patch-collect.ts` preserves task/blocker classification, patch-file/set/operation order, exact ready batch bytes and native manifest errors. Only a blocker-free collection writes a fresh batch. Inventory moves 105→101 without changing help, profiles, Golden artifacts or remote-write authority.
 
 Wave 24 B3 migrates the curation planning boundary in topology order. `curation-gate-workflow.ts` remains a pure live-reference aggregate; `curation-gate.ts` preserves blocked entity, schema/QA/context/action ordering, authoring-package hashes and report/process aliases; `curation-cleanup.ts` preserves deep-cloned row order, exact JSONL/report bytes, annual sentinel and trace transforms, source-only-output proof, redaction counts and native failures. Inventory moves 101→98 without changing profiles, command help, Golden artifacts, Worldsteel semantics or remote-write authority.
+
+Wave 24 migrates five command factories in three RED/GREEN families. `tasks.ts` and `import-completion.ts` preserve queue/file order, full-context completion gates, task moves and exact Markdown/JSON bytes. `commit-handoff.ts` and `identity-decision-task.ts` preserve final-row artifact SHA/bytes, authoritative CommandSpec argv, package snapshots, action encounter/dedupe order and fail-closed blockers. `support-cache.ts` preserves auth-then-read request order, pagination, public cache row order, unit mapping/manual-block order and native errors; tests stub HTTP locally and read no credentials. Inventory moves 101→96 without changing help, remote-write mode, profiles, or production authority.
+
+Together the parallel Wave 24 lanes reduce the inventory from 101 to 93 without changing public help, Golden artifacts, profiles, Worldsteel semantics, or remote-write authority.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

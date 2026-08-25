@@ -23,6 +23,11 @@ checkPaths:
   - scripts/lib/import-ledger.ts
   - scripts/lib/canonical-support-rewrites.ts
   - scripts/lib/bundle-sample-utils.ts
+  - scripts/commands/tasks.ts
+  - scripts/commands/import-completion.ts
+  - scripts/commands/commit-handoff.ts
+  - scripts/commands/identity-decision-task.ts
+  - scripts/commands/support-cache.ts
   - scripts/lib/import-curation/internal/authoring-task-workflow.ts
   - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
   - scripts/lib/import-curation/internal/curation-gate-workflow.ts
@@ -34,7 +39,7 @@ checkPaths:
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
 lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 B3: typing curation aggregate/gate/cleanup changes no command category, owner/export identity, help, exit mapping, profile default, artifact contract, Worldsteel semantics, or remote-write mode."
+lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: curation planners and five command owners move to TS7 without changing command names/categories, owner exports, help, report bytes, artifacts, exit mapping, profile defaults, Worldsteel semantics, or remote-write modes."
 ---
 
 # Foundry Command Surface
@@ -53,6 +58,8 @@ Issue #63 does not change the public command categories or behavior. It introduc
 The Wave 8 BAFU family-signature and import-ledger migrations remain supporting typed leaves beneath the existing `dataset-bafu-batch-import-run` and `dataset-import-ledger-report` owners. Their command registry and metadata entries, help JSON, artifact schemas, exit mapping, and remote-write modes are unchanged.
 
 Wave 9 keeps `dataset-bundle-sample-rows` under its existing command owner and read-only mode. Its metadata now advertises the conditional `canonical-support-amount-scaling.jsonl` artifact and its command test: the explicit blocking flag retains known or unresolved scale evidence in the report and process-scope ledger rather than letting an early canonical-reference rewrite erase the source-unit safety decision.
+
+Wave 24 moves `tasks`, `import-completion`, `commit-handoff`, `identity-decision-task`, and `support-cache` to native TypeScript. Their registered command names, help payloads, owner exports, artifact lists, output ordering, fail-closed states, and read-only modes are unchanged. Focused tests pin exact Markdown/JSON/JSONL bytes, CommandSpec final-row binding and argv, identity snapshot/dedupe order, support-cache HTTP read order and native errors.
 
 ## Categories
 

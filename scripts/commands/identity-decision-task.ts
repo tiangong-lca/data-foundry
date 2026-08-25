@@ -2,6 +2,143 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
+type JsonRecord = Record<string, unknown>;
+
+type ContractContextFile = JsonRecord & {
+  kind?: unknown;
+  text?: unknown;
+};
+
+type IdentityEvidence = JsonRecord & {
+  remote_search?: unknown;
+  target?: unknown;
+  top_candidates?: unknown;
+};
+
+type IdentityActionItem = JsonRecord & {
+  code?: unknown;
+  dependency_type?: unknown;
+  dependency_id?: unknown;
+  dependency_version?: unknown;
+  target_dataset_type?: unknown;
+  target_dataset_id?: unknown;
+  target_dataset_version?: unknown;
+  dataset_type?: unknown;
+  dataset_id?: unknown;
+  dataset_version?: unknown;
+  relation?: unknown;
+  evidence?: IdentityEvidence;
+};
+
+type AuthoringPackage = JsonRecord & {
+  dataset_type?: unknown;
+  entity_id?: unknown;
+  version?: unknown;
+  action_items?: unknown;
+  contract_context_files?: unknown;
+  missing_context_files?: unknown;
+  full_context_ai_completion?: unknown;
+  fullContextAiCompletion?: unknown;
+};
+
+type PackageProof = {
+  entity: JsonRecord;
+  package_ref: string | null;
+  package_path: string | null;
+  package_sha256: string | null;
+  expected_sha256: string | null;
+  package: AuthoringPackage | null;
+  blockers: JsonRecord[];
+  live_package_ref?: string | null;
+  live_package_path?: string | null;
+};
+
+type AuthoringEntity = {
+  dataset_type: string;
+  entity_id: string;
+  version: string;
+};
+
+type IdentityTaskRow = JsonRecord & {
+  dataset_type: string;
+  dataset_id: string;
+  dataset_version: string;
+  relation: string;
+  action_item_code: string;
+  action_item_index: number;
+  authoring_package: string | null;
+  authoring_package_sha256: string | null;
+  authoring_entity: AuthoringEntity;
+  action_item: IdentityActionItem;
+  package: AuthoringPackage;
+  package_proof: PackageProof;
+  source_task_rows?: IdentityTaskRow[];
+  source_action_items?: JsonRecord[];
+  action_item_codes?: string[];
+  related_authoring_packages?: JsonRecord[];
+  source_action_item_count?: number;
+};
+
+type SharedContextBundle = JsonRecord & {
+  path: string;
+  sha256: string;
+};
+
+export type IdentityDecisionTaskOptions = Record<string, unknown> & {
+  help?: unknown;
+  curationGateReport?: unknown;
+  report?: unknown;
+  input?: unknown;
+  outDir?: unknown;
+  sharedContextCacheDir?: unknown;
+  contextCacheDir?: unknown;
+  rowsFile?: unknown;
+};
+
+export type IdentityDecisionTaskFactoryDependencies = {
+  asText: (value: unknown) => string;
+  datasetRowsFileStem: (datasetType: string) => string;
+  decisionAuthoringContext: (contextBundle: JsonRecord) => JsonRecord;
+  decisionTaskBuildStatus: (input: {
+    queueRows: IdentityTaskRow[];
+    blockers: JsonRecord[];
+    readyStatus: string;
+    emptyStatus: string;
+  }) => string;
+  decisionTaskContextFileSummary: (file: unknown) => JsonRecord;
+  dedupeDecisionTaskContextFiles: (files: ContractContextFile[]) => ContractContextFile[];
+  ensureArray: <T>(value: T | T[] | null | undefined) => T[];
+  fileExists: (filePath: string) => boolean;
+  hasQueueSelectionOptions: (options: IdentityDecisionTaskOptions) => boolean;
+  normalizedList: (value: unknown) => string[];
+  nowIso: () => string;
+  readJson: (filePath: string) => JsonRecord;
+  readText: (filePath: string) => string;
+  repoRelativePath: (filePath: string) => string;
+  repoRoot: string;
+  resolveRepoPath: (value: unknown) => string | null;
+  selectDecisionTaskQueueRows: (
+    rows: IdentityTaskRow[],
+    options: IdentityDecisionTaskOptions,
+    codeForRow: (row: IdentityTaskRow) => string,
+  ) => {
+    selected: Array<{ row: IdentityTaskRow; index?: number }>;
+    selection: JsonRecord;
+  };
+  sha256Text: (text: string) => string;
+  shellQuote: (value: unknown) => string;
+  unique: <T>(values: T[]) => T[];
+  writeDecisionTaskSharedContextBundle: (input: {
+    outDir: string;
+    taskKind: string;
+    files: ContractContextFile[];
+    references: JsonRecord[];
+    cacheDir: string | null;
+  }) => SharedContextBundle;
+  writeJson: (filePath: string, value: unknown) => unknown;
+  writeJsonLines: (filePath: string, rows: unknown[]) => unknown;
+};
+
 export function createIdentityDecisionTaskCommands({
   asText,
   datasetRowsFileStem,
@@ -26,20 +163,23 @@ export function createIdentityDecisionTaskCommands({
   writeDecisionTaskSharedContextBundle,
   writeJson,
   writeJsonLines,
-}) {
+}: IdentityDecisionTaskFactoryDependencies) {
   const identityDecisionActionCodes = new Set([
     "identity_preflight_manual_review",
     "elementary_flow_identity_manual_review",
   ]);
 
-  function curationGateEntities(report) {
-    return ensureArray(report?.entities ?? report?.processes ?? report?.flows ?? report?.items);
+  function curationGateEntities(report: JsonRecord): JsonRecord[] {
+    return ensureArray<JsonRecord>(
+      (report.entities ?? report.processes ?? report.flows ?? report.items) as
+        JsonRecord | JsonRecord[] | null | undefined,
+    );
   }
 
-  function readAuthoringPackageForIdentityTask(entity) {
+  function readAuthoringPackageForIdentityTask(entity: JsonRecord): PackageProof {
     const packageRef = asText(entity?.authoring_package ?? entity?.authoringPackage);
     const packagePath = resolveRepoPath(packageRef);
-    const proof = {
+    const proof: PackageProof = {
       entity,
       package_ref: packageRef || null,
       package_path: packagePath,
@@ -59,7 +199,7 @@ export function createIdentityDecisionTaskCommands({
     const text = readText(packagePath);
     proof.package_sha256 = sha256Text(text);
     try {
-      proof.package = JSON.parse(text);
+      proof.package = JSON.parse(text) as AuthoringPackage;
     } catch (error) {
       proof.blockers.push({
         code: "identity_decision_authoring_package_invalid",
@@ -81,16 +221,16 @@ export function createIdentityDecisionTaskCommands({
     return proof;
   }
 
-  function snapshotAuthoringPackageProof(proof, snapshotDir) {
+  function snapshotAuthoringPackageProof(proof: PackageProof, snapshotDir: string): PackageProof {
     if (!proof?.package || proof.blockers.length > 0) return proof;
     fs.mkdirSync(snapshotDir, { recursive: true });
-    const parsed = path.parse(path.basename(proof.package_path || proof.package_ref));
+    const parsed = path.parse(path.basename((proof.package_path || proof.package_ref)!));
     const snapshotPath = path.join(
       snapshotDir,
       `${parsed.name}.${proof.package_sha256}.snapshot${parsed.ext || ".json"}`,
     );
     if (!fileExists(snapshotPath)) {
-      fs.copyFileSync(proof.package_path, snapshotPath);
+      fs.copyFileSync(proof.package_path!, snapshotPath);
     }
     return {
       ...proof,
@@ -102,24 +242,26 @@ export function createIdentityDecisionTaskCommands({
     };
   }
 
-  function contractContextKindsForPackage(packagePayload) {
+  function contractContextKindsForPackage(packagePayload: AuthoringPackage): Set<string> {
     return new Set(
-      ensureArray(packagePayload?.contract_context_files)
-        .filter((file) => asText(file?.kind) && asText(file?.text))
+      ensureArray<ContractContextFile>(
+        packagePayload.contract_context_files as ContractContextFile | ContractContextFile[],
+      )
+        .filter((file) => asText(file.kind) && asText(file.text))
         .map((file) => asText(file.kind)),
     );
   }
 
-  function requiredIdentityContextKinds(packagePayload) {
-    const fullContext =
-      packagePayload?.full_context_ai_completion ?? packagePayload?.fullContextAiCompletion;
+  function requiredIdentityContextKinds(packagePayload: AuthoringPackage): string[] {
+    const fullContext = (packagePayload.full_context_ai_completion ??
+      packagePayload.fullContextAiCompletion) as JsonRecord | undefined;
     const required = normalizedList(
       fullContext?.required_context_kinds ?? fullContext?.requiredContextKinds,
     );
     return required.length > 0 ? required : ["schema", "methodology_yaml", "ruleset"];
   }
 
-  function identityTaskPackageContextBlockers(proof) {
+  function identityTaskPackageContextBlockers(proof: PackageProof): JsonRecord[] {
     const blockers = [...proof.blockers];
     const packagePayload = proof.package;
     if (!packagePayload) return blockers;
@@ -147,14 +289,21 @@ export function createIdentityDecisionTaskCommands({
     return blockers;
   }
 
-  function identityActionItemsFromPackage(proof) {
+  function identityActionItemsFromPackage(
+    proof: PackageProof,
+  ): Array<{ item: IdentityActionItem; actionIndex: number }> {
     const packagePayload = proof.package ?? {};
-    return ensureArray(packagePayload.action_items)
+    return ensureArray<IdentityActionItem>(
+      packagePayload.action_items as IdentityActionItem | IdentityActionItem[],
+    )
       .map((item, actionIndex) => ({ item, actionIndex }))
       .filter(({ item }) => identityDecisionActionCodes.has(asText(item?.code)));
   }
 
-  function identityDecisionTargetForAction(packagePayload, actionItem) {
+  function identityDecisionTargetForAction(
+    packagePayload: AuthoringPackage,
+    actionItem: IdentityActionItem,
+  ) {
     const dependencyType = asText(actionItem?.dependency_type);
     const dependencyId = asText(actionItem?.dependency_id);
     const dependencyVersion = asText(actionItem?.dependency_version);
@@ -178,8 +327,8 @@ export function createIdentityDecisionTaskCommands({
     };
   }
 
-  function identityDecisionTaskRowsFromPackages(packageProofs) {
-    const rows = [];
+  function identityDecisionTaskRowsFromPackages(packageProofs: PackageProof[]): IdentityTaskRow[] {
+    const rows: IdentityTaskRow[] = [];
     for (const proof of packageProofs) {
       const packagePayload = proof.package;
       if (!packagePayload) continue;
@@ -208,7 +357,7 @@ export function createIdentityDecisionTaskCommands({
     return rows;
   }
 
-  function identityDecisionTaskRowKey(row) {
+  function identityDecisionTaskRowKey(row: IdentityTaskRow): string {
     return JSON.stringify([
       asText(row?.dataset_type).toLowerCase(),
       asText(row?.dataset_id),
@@ -216,7 +365,7 @@ export function createIdentityDecisionTaskCommands({
     ]);
   }
 
-  function identityDecisionTaskSourceItem(row) {
+  function identityDecisionTaskSourceItem(row: IdentityTaskRow): JsonRecord {
     return {
       dataset_type: row.dataset_type,
       dataset_id: row.dataset_id,
@@ -231,8 +380,8 @@ export function createIdentityDecisionTaskCommands({
     };
   }
 
-  function identityDecisionTaskPackageRefs(rows) {
-    const byKey = new Map();
+  function identityDecisionTaskPackageRefs(rows: IdentityTaskRow[]): JsonRecord[] {
+    const byKey = new Map<string, JsonRecord>();
     for (const row of ensureArray(rows)) {
       const key = JSON.stringify([row.authoring_package, row.authoring_package_sha256]);
       if (!byKey.has(key)) {
@@ -246,11 +395,11 @@ export function createIdentityDecisionTaskCommands({
     return [...byKey.values()];
   }
 
-  function identityDecisionTaskRawRows(row) {
-    return ensureArray(row?.source_task_rows).length > 0 ? row.source_task_rows : ensureArray(row);
+  function identityDecisionTaskRawRows(row: IdentityTaskRow): IdentityTaskRow[] {
+    return ensureArray(row.source_task_rows).length > 0 ? row.source_task_rows! : ensureArray(row);
   }
 
-  function identityDecisionTaskActionCodes(row) {
+  function identityDecisionTaskActionCodes(row: IdentityTaskRow): string[] {
     const rawRows = identityDecisionTaskRawRows(row);
     return unique(
       [
@@ -261,14 +410,14 @@ export function createIdentityDecisionTaskCommands({
     );
   }
 
-  function primaryIdentityDecisionActionCode(codes) {
+  function primaryIdentityDecisionActionCode(codes: string[]): string {
     return codes.includes("elementary_flow_identity_manual_review")
       ? "elementary_flow_identity_manual_review"
       : codes[0] || "identity_preflight_manual_review";
   }
 
-  function mergeIdentityDecisionTaskRows(rows) {
-    const byKey = new Map();
+  function mergeIdentityDecisionTaskRows(rows: IdentityTaskRow[]): IdentityTaskRow[] {
+    const byKey = new Map<string, IdentityTaskRow>();
     for (const row of rows) {
       const key = identityDecisionTaskRowKey(row);
       if (!byKey.has(key)) {
@@ -281,13 +430,13 @@ export function createIdentityDecisionTaskCommands({
           related_authoring_packages: [],
         });
       }
-      const merged = byKey.get(key);
+      const merged = byKey.get(key)!;
       const previousPrimaryCode = merged.action_item_code;
-      merged.source_task_rows.push(row);
-      merged.source_action_items.push(identityDecisionTaskSourceItem(row));
-      merged.action_item_codes = unique([...merged.action_item_codes, row.action_item_code]);
-      merged.related_authoring_packages = identityDecisionTaskPackageRefs(merged.source_task_rows);
-      merged.source_action_item_count = merged.source_action_items.length;
+      merged.source_task_rows!.push(row);
+      merged.source_action_items!.push(identityDecisionTaskSourceItem(row));
+      merged.action_item_codes = unique([...merged.action_item_codes!, row.action_item_code]);
+      merged.related_authoring_packages = identityDecisionTaskPackageRefs(merged.source_task_rows!);
+      merged.source_action_item_count = merged.source_action_items!.length;
       merged.action_item_code = primaryIdentityDecisionActionCode(merged.action_item_codes);
       if (
         previousPrimaryCode !== merged.action_item_code &&
@@ -306,7 +455,10 @@ export function createIdentityDecisionTaskCommands({
     return [...byKey.values()];
   }
 
-  function buildIdentityDecisionTemplateRows(taskRows, contextBundle = null) {
+  function buildIdentityDecisionTemplateRows(
+    taskRows: IdentityTaskRow[],
+    contextBundle: JsonRecord | null = null,
+  ): JsonRecord[] {
     const authoringContext = contextBundle ? decisionAuthoringContext(contextBundle) : null;
     return taskRows.map((row, index) => {
       const actionCodes = identityDecisionTaskActionCodes(row);
@@ -351,7 +503,7 @@ export function createIdentityDecisionTaskCommands({
     });
   }
 
-  function runDatasetIdentityDecisionTaskBuild(options) {
+  function runDatasetIdentityDecisionTaskBuild(options: IdentityDecisionTaskOptions): JsonRecord {
     if (options.help) {
       return {
         schema_version: 1,
@@ -372,7 +524,7 @@ export function createIdentityDecisionTaskCommands({
         "--curation-gate-report is required and must point to dataset-curation-gate-report.json.",
       );
     }
-    const outDir = resolveRepoPath(options.outDir || ".foundry/workspaces/identity-decision-task");
+    const outDir = resolveRepoPath(options.outDir || ".foundry/workspaces/identity-decision-task")!;
     const sharedContextCacheDir = resolveRepoPath(
       options.sharedContextCacheDir || options.contextCacheDir,
     );
@@ -412,13 +564,21 @@ export function createIdentityDecisionTaskCommands({
     const decisionFile = path.join(outDir, "identity-decisions.jsonl");
     const reportPath = path.join(outDir, "identity-decision-task-report.json");
     const contractContext = {
-      files: selectedRawRows.flatMap((row) => ensureArray(row.package?.contract_context_files)),
+      files: selectedRawRows.flatMap((row) =>
+        ensureArray<ContractContextFile>(
+          row.package.contract_context_files as
+            ContractContextFile | ContractContextFile[] | null | undefined,
+        ),
+      ),
       missing: selectedRawRows.flatMap((row) => ensureArray(row.package?.missing_context_files)),
     };
     const identityContextFiles = dedupeDecisionTaskContextFiles(contractContext.files);
     const identityContextReferences = selectedRows.flatMap((row) =>
       identityDecisionTaskRawRows(row).flatMap((rawRow) =>
-        ensureArray(rawRow.package?.contract_context_files).map((file) => {
+        ensureArray<ContractContextFile>(
+          rawRow.package.contract_context_files as
+            ContractContextFile | ContractContextFile[] | null | undefined,
+        ).map((file) => {
           const summary = decisionTaskContextFileSummary(file);
           return {
             ...summary,

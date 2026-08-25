@@ -23,6 +23,11 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - docs/safety-policy.md
   - docs/incremental-change-set-contract.md
+  - scripts/commands/tasks.ts
+  - scripts/commands/import-completion.ts
+  - scripts/commands/commit-handoff.ts
+  - scripts/commands/identity-decision-task.ts
+  - scripts/commands/support-cache.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
@@ -47,7 +52,7 @@ checkPaths:
   - scripts/lib/import-curation/curation-cleanup.ts
 lastReviewedAt: 2026-08-25
 lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 B3: typing the curation aggregate, local gate and deterministic cleanup runners changes no capability owner, remote operation, search behavior, profile authority, Worldsteel semantics, or sibling boundary."
+lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: typing curation planners plus task/completion/handoff/identity/support-cache factories changes no capability owner, remote operation, search behavior, profile authority, Worldsteel semantics, or sibling boundary."
 ---
 
 # Capability Ownership Policy

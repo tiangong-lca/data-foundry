@@ -21,6 +21,11 @@ checkPaths:
   - docs/import-profiles/bafu/constraints.md
   - specs/automated-lca-capability-registry.json
   - specs/workspace-capability-adapters.md
+  - scripts/commands/tasks.ts
+  - scripts/commands/import-completion.ts
+  - scripts/commands/commit-handoff.ts
+  - scripts/commands/identity-decision-task.ts
+  - scripts/commands/support-cache.ts
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
@@ -46,7 +51,7 @@ checkPaths:
   - scripts/lib/import-curation/curation-cleanup.ts
 lastReviewedAt: 2026-08-25
 lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 B3: typed curation aggregate/gate/cleanup preserve fail-closed blocker ordering, content-bound package/report bytes, deterministic cleanup proof and native errors without broadening write authority."
+lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: typed curation planners and typed completion/handoff/identity/support-cache owners preserve fail-closed gates, exact artifact binding, deterministic cleanup, read-only cache refresh, and native errors without broadening write authority."
 ---
 
 # Safety Policy
