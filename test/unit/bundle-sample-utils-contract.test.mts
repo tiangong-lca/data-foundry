@@ -6,9 +6,22 @@ import path from "node:path";
 import test from "node:test";
 import * as bundleSampleModule from "../../scripts/lib/bundle-sample-utils.ts";
 
-type JsonObject = Record<string, any>;
+type JsonObject = Record<string, unknown>;
 
-const { createBundleSampleUtils } = bundleSampleModule as Record<string, (...args: any[]) => any>;
+const { createBundleSampleUtils } = bundleSampleModule;
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function nestedValue(value: unknown, ...keys: string[]): unknown {
+  let current = value;
+  for (const key of keys) {
+    if (!isJsonObject(current)) return undefined;
+    current = current[key];
+  }
+  return current;
+}
 
 function toPosix(value: string): string {
   return value.replaceAll("\\", "/");
@@ -33,69 +46,99 @@ function withTempRoot(name: string, body: (root: string) => void): void {
 }
 
 function makeUtils(root: string, canonicalFormatReference: JsonObject | null = null) {
-  const asText = (value: any): string => {
+  const asText = (value: unknown): string => {
     if (value == null) return "";
     if (typeof value === "string" || typeof value === "number") return String(value).trim();
-    if (typeof value === "object") return asText(value["#text"] ?? value.value ?? "");
+    if (isJsonObject(value)) return asText(value["#text"] ?? value.value ?? "");
     return "";
   };
   const multiLang = (text: string, language = "en") => ({
     "@xml:lang": language,
     "#text": text,
   });
-  const datasetIdentity = (payload: any, type: string) => {
-    if (payload?.__identity) return payload.__identity;
+  const datasetIdentity = (payload: JsonObject | null, type: string) => {
+    const payloadRecord = isJsonObject(payload) ? payload : {};
+    if (isJsonObject(payloadRecord.__identity)) {
+      return {
+        id: typeof payloadRecord.__identity.id === "string" ? payloadRecord.__identity.id : null,
+        version:
+          typeof payloadRecord.__identity.version === "string"
+            ? payloadRecord.__identity.version
+            : null,
+      };
+    }
     const roots: Record<string, [string, string]> = {
       contact: ["contactDataSet", "contactInformation"],
       flow: ["flowDataSet", "flowInformation"],
       process: ["processDataSet", "processInformation"],
     };
     const [rootKey, informationKey] = roots[type] ?? ["", ""];
-    const root = payload?.[rootKey] ?? {};
-    const information = root?.[informationKey]?.dataSetInformation ?? {};
+    const root = isJsonObject(payloadRecord[rootKey]) ? payloadRecord[rootKey] : {};
+    const information = isJsonObject(nestedValue(root, informationKey, "dataSetInformation"))
+      ? (nestedValue(root, informationKey, "dataSetInformation") as JsonObject)
+      : {};
     return {
-      id: information["common:UUID"] ?? null,
+      id: typeof information["common:UUID"] === "string" ? information["common:UUID"] : null,
       version:
-        root?.administrativeInformation?.publicationAndOwnership?.["common:dataSetVersion"] ?? null,
+        typeof nestedValue(
+          root,
+          "administrativeInformation",
+          "publicationAndOwnership",
+          "common:dataSetVersion",
+        ) === "string"
+          ? (nestedValue(
+              root,
+              "administrativeInformation",
+              "publicationAndOwnership",
+              "common:dataSetVersion",
+            ) as string)
+          : null,
     };
   };
-  const sourceReferenceSnapshot = (reference: any) => ({
-    ref_object_id: reference?.["@refObjectId"] ?? null,
-    version: reference?.["@version"] ?? null,
-    short_description: asText(reference?.["common:shortDescription"]),
+  const sourceReferenceSnapshot = (reference: JsonObject) => ({
+    ref_object_id: typeof reference["@refObjectId"] === "string" ? reference["@refObjectId"] : null,
+    version: typeof reference["@version"] === "string" ? reference["@version"] : null,
+    short_description: asText(reference["common:shortDescription"]),
   });
   return createBundleSampleUtils({
     asText,
-    bundleClassificationPath: (payload: any) => payload?.__classification ?? null,
+    bundleClassificationPath: (payload: JsonObject) => payload.__classification ?? null,
     canonicalSourceReferenceForRelation: (relation: string) =>
       relation === "dataset_format_source" ? canonicalFormatReference : null,
-    cloneJson: (value: any) => JSON.parse(JSON.stringify(value)),
-    contactGlobalReference: ({ id, version, shortDescription, language }: JsonObject) => ({
-      "@type": "contact data set",
-      "@refObjectId": id,
-      "@version": version,
-      "@uri": `../contacts/${id}.json`,
-      "common:shortDescription": multiLang(shortDescription, language),
-    }),
+    cloneJson: <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T,
+    contactGlobalReference: (options: JsonObject) => {
+      const id = String(options.id ?? "");
+      const version = String(options.version ?? "");
+      const shortDescription = String(options.shortDescription ?? "");
+      const language = typeof options.language === "string" ? options.language : undefined;
+      return {
+        "@type": "contact data set",
+        "@refObjectId": id,
+        "@version": version,
+        "@uri": `../contacts/${id}.json`,
+        "common:shortDescription": multiLang(shortDescription, language),
+      };
+    },
     datasetIdentity,
     deterministicUuid: (seed: string) => `deterministic-${sha256Json(seed).slice(0, 16)}`,
     directoryExists: (directory: string | null) =>
       Boolean(directory) && fs.existsSync(directory!) && fs.statSync(directory!).isDirectory(),
-    ensureArray: (value: any) => (Array.isArray(value) ? value : value == null ? [] : [value]),
+    ensureArray: (value: unknown) => (Array.isArray(value) ? value : value == null ? [] : [value]),
     fileExists: (filePath: string | null) =>
       Boolean(filePath) && fs.existsSync(filePath!) && fs.statSync(filePath!).isFile(),
-    flowClassificationSchemaType: (payload: any) => payload?.__schema_type ?? "flow-product",
-    flowTypeOfDataSet: (payload: any) => payload?.__flow_type ?? "Product flow",
-    isConvertedDefaultClassification: (classification: any) =>
+    flowClassificationSchemaType: (payload: JsonObject) =>
+      typeof payload.__schema_type === "string" ? payload.__schema_type : "flow-product",
+    flowTypeOfDataSet: (payload: JsonObject) =>
+      typeof payload.__flow_type === "string" ? payload.__flow_type : "Product flow",
+    isConvertedDefaultClassification: (classification: unknown) =>
       classification === "converted-default",
-    isObjectEmpty: (value: any) =>
-      Boolean(value) && typeof value === "object" && Object.keys(value).length === 0,
+    isObjectEmpty: (value: unknown) => isJsonObject(value) && Object.keys(value).length === 0,
     jsonSha256: sha256Json,
     languageForText: () => "en",
     multiLang,
-    normalizedList: (value: any) =>
+    normalizedList: (value: unknown) =>
       (Array.isArray(value) ? value : value == null ? [] : String(value).split(","))
-        .map((entry: any) => String(entry).trim())
+        .map((entry: unknown) => String(entry).trim())
         .filter(Boolean),
     nowIso: () => "2026-08-25T10:11:12.000Z",
     pathExpression: (parts: Array<string | number>) => parts.join("."),
@@ -103,8 +146,11 @@ function makeUtils(root: string, canonicalFormatReference: JsonObject | null = n
     repoRelativeMaybe: (filePath: string | null) =>
       filePath ? toPosix(path.relative(root, filePath)) : null,
     repoRelativePath: (filePath: string) => toPosix(path.relative(root, filePath)),
-    resolveRepoPath: (filePath: string | null | undefined) =>
-      filePath ? (path.isAbsolute(filePath) ? filePath : path.join(root, filePath)) : null,
+    resolveRepoPath: (filePath: unknown) => {
+      if (!filePath) return null;
+      const text = String(filePath);
+      return path.isAbsolute(text) ? text : path.join(root, text);
+    },
     sanitizePlaceholderText: (text: string, _path: unknown, stats: JsonObject) => {
       if (text === "<placeholder>") {
         stats.placeholder_sanitizations = Number(stats.placeholder_sanitizations ?? 0) + 1;
@@ -117,7 +163,7 @@ function makeUtils(root: string, canonicalFormatReference: JsonObject | null = n
   });
 }
 
-function sourceTrace(overrides: JsonObject = {}): JsonObject {
+function sourceTrace(overrides: JsonObject = {}) {
   return {
     sourceClassification: {
       category: "Materials",
@@ -141,7 +187,7 @@ function sourceTrace(overrides: JsonObject = {}): JsonObject {
   };
 }
 
-function processPayload(id = "process-1", version = "00.00.001"): JsonObject {
+function processPayload(id = "process-1", version = "00.00.001") {
   return {
     processDataSet: {
       "@xmlns:tidasimport": "https://example.invalid/tidasimport",
@@ -171,7 +217,7 @@ function processPayload(id = "process-1", version = "00.00.001"): JsonObject {
   };
 }
 
-function flowPayload(id: string, schemaType: string, classification: string): JsonObject {
+function flowPayload(id: string, schemaType: string, classification: string) {
   return {
     __schema_type: schemaType,
     __classification: classification,
@@ -339,7 +385,8 @@ test("bundle classification and elementary reuse findings retain queue order and
     };
     const traces = [sourceTrace()];
     const process = processPayload("process-default");
-    process.__classification = "converted-default";
+    (process as typeof process & { __classification?: string }).__classification =
+      "converted-default";
     const product = flowPayload("flow-default", "flow-product", "converted-default");
 
     for (const [payload, type, sourceFile] of [
@@ -359,13 +406,18 @@ test("bundle classification and elementary reuse findings retain queue order and
     }
 
     assert.deepEqual(
-      classificationQueueRows.map((row) => ({
-        code: row.code,
-        dataset_type: row.dataset_type,
-        dataset_id: row.dataset_id,
-        schema_type: row.classification_workflow.schema_type,
-        commands: row.classification_workflow.commands,
-      })),
+      classificationQueueRows.map((row) => {
+        const workflow = isJsonObject(row.classification_workflow)
+          ? row.classification_workflow
+          : {};
+        return {
+          code: row.code,
+          dataset_type: row.dataset_type,
+          dataset_id: row.dataset_id,
+          schema_type: workflow.schema_type,
+          commands: workflow.commands,
+        };
+      }),
       [
         {
           code: "process_classification_requires_authoring",
@@ -540,9 +592,13 @@ test("library contact materialization preserves canonical format proof, self own
       "2025-01-01T00:00:00.000Z",
     );
     assert.equal(
-      bafuRoot.administrativeInformation.dataEntryBy["common:referenceToDataSetFormat"][
-        "@refObjectId"
-      ],
+      nestedValue(
+        bafuRoot,
+        "administrativeInformation",
+        "dataEntryBy",
+        "common:referenceToDataSetFormat",
+        "@refObjectId",
+      ),
       "16938856-0a35-5654-8aff-56c17e61da4d",
     );
     assert.equal(

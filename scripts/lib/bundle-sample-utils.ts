@@ -2,7 +2,24 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-type JsonRecord = Record<string, any>;
+type JsonRecord = Record<string, unknown>;
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function asJsonRecord(value: unknown): JsonRecord {
+  return isJsonRecord(value) ? value : {};
+}
+
+function nestedValue(value: unknown, ...keys: string[]): unknown {
+  let current = value;
+  for (const key of keys) {
+    if (!isJsonRecord(current)) return undefined;
+    current = current[key];
+  }
+  return current;
+}
 
 type DatasetIdentity = {
   id: string | null;
@@ -188,17 +205,21 @@ export function createBundleSampleUtils({
   }
 
   function flowNameParts(payload: JsonRecord | null) {
-    const name = payload?.flowDataSet?.flowInformation?.dataSetInformation?.name ?? {};
+    const name = asJsonRecord(
+      nestedValue(payload, "flowDataSet", "flowInformation", "dataSetInformation", "name"),
+    );
+    const baseName = asJsonRecord(name.baseName);
+    const treatmentStandardsRoutes = asJsonRecord(name.treatmentStandardsRoutes);
+    const mixAndLocationTypes = asJsonRecord(name.mixAndLocationTypes);
+    const functionalUnitFlowProperties = asJsonRecord(name.functionalUnitFlowProperties);
     return {
-      base_name: asText(name.baseName?.["#text"] ?? name.baseName),
+      base_name: asText(baseName["#text"] ?? name.baseName),
       treatment_standards_routes: asText(
-        name.treatmentStandardsRoutes?.["#text"] ?? name.treatmentStandardsRoutes,
+        treatmentStandardsRoutes["#text"] ?? name.treatmentStandardsRoutes,
       ),
-      mix_and_location_types: asText(
-        name.mixAndLocationTypes?.["#text"] ?? name.mixAndLocationTypes,
-      ),
+      mix_and_location_types: asText(mixAndLocationTypes["#text"] ?? name.mixAndLocationTypes),
       functional_unit_flow_properties: asText(
-        name.functionalUnitFlowProperties?.["#text"] ?? name.functionalUnitFlowProperties,
+        functionalUnitFlowProperties["#text"] ?? name.functionalUnitFlowProperties,
       ),
     };
   }
@@ -278,8 +299,8 @@ export function createBundleSampleUtils({
     }
     const record = value as JsonRecord;
     const sourceTrace = record["tidasimport:sourceTrace"];
-    if (sourceTrace && typeof sourceTrace === "object") {
-      traces.push((sourceTrace.payload ?? sourceTrace) as JsonRecord);
+    if (isJsonRecord(sourceTrace)) {
+      traces.push(asJsonRecord(sourceTrace.payload ?? sourceTrace));
     }
     for (const child of Object.values(record)) collectSourceTracePayloads(child, traces);
     return traces;
@@ -336,7 +357,7 @@ export function createBundleSampleUtils({
   function processSourceClassificationSummary(sourceTraces: JsonRecord[]) {
     for (const trace of sourceTraces) {
       const sourceClassification = trace?.sourceClassification;
-      if (sourceClassification && typeof sourceClassification === "object") {
+      if (isJsonRecord(sourceClassification)) {
         return {
           category: asText(sourceClassification.category),
           subCategory: asText(sourceClassification.subCategory),
@@ -415,16 +436,11 @@ export function createBundleSampleUtils({
     sourceTraces: JsonRecord[],
     stats: MutableStats,
   ): void {
-    const root = payload?.processDataSet;
-    if (!root || typeof root !== "object") return;
-    const processInformation =
-      root.processInformation && typeof root.processInformation === "object"
-        ? root.processInformation
-        : {};
-    const time =
-      processInformation.time && typeof processInformation.time === "object"
-        ? processInformation.time
-        : null;
+    if (!isJsonRecord(payload)) return;
+    const root = asJsonRecord(payload.processDataSet);
+    if (!isJsonRecord(payload.processDataSet)) return;
+    const processInformation = asJsonRecord(root.processInformation);
+    const time = isJsonRecord(processInformation.time) ? processInformation.time : null;
     if (time && time["common:referenceYear"] === 9999) {
       const year = sourceTraceYear(sourceTraces);
       if (year !== null && Number.isInteger(year) && year > 0 && year < 9999) {
@@ -433,15 +449,10 @@ export function createBundleSampleUtils({
       }
     }
 
-    const modelling =
-      root.modellingAndValidation && typeof root.modellingAndValidation === "object"
-        ? root.modellingAndValidation
-        : {};
-    const dataSources =
-      modelling.dataSourcesTreatmentAndRepresentativeness &&
-      typeof modelling.dataSourcesTreatmentAndRepresentativeness === "object"
-        ? modelling.dataSourcesTreatmentAndRepresentativeness
-        : null;
+    const modelling = asJsonRecord(root.modellingAndValidation);
+    const dataSources = isJsonRecord(modelling.dataSourcesTreatmentAndRepresentativeness)
+      ? modelling.dataSourcesTreatmentAndRepresentativeness
+      : null;
     if (!dataSources) return;
 
     const annualText = textItem(dataSources.annualSupplyOrProductionVolume);
@@ -640,16 +651,20 @@ export function createBundleSampleUtils({
     const stableTimestamp =
       asText(options.timestamp || options.timeStamp || options.generatedAt) ||
       (profile === "bafu" ? "2025-01-01T00:00:00.000Z" : nowIso());
-    const templateRoot = templateContact?.contactDataSet;
-    const templateDataEntryBy = templateRoot?.administrativeInformation?.dataEntryBy ?? {};
-    const originalReferenceToDataSetFormat = cloneJson(
-      templateDataEntryBy["common:referenceToDataSetFormat"] ?? {
-        "@type": "source data set",
-        "@refObjectId": "16938856-0a35-5654-8aff-56c17e61da4d",
-        "@version": "00.00.001",
-        "@uri": "../sources/16938856-0a35-5654-8aff-56c17e61da4d.json",
-        "common:shortDescription": multiLang("ILCD format", language),
-      },
+    const templateRoot = asJsonRecord(templateContact?.contactDataSet);
+    const templateDataEntryBy = asJsonRecord(
+      nestedValue(templateRoot, "administrativeInformation", "dataEntryBy"),
+    );
+    const originalReferenceToDataSetFormat = asJsonRecord(
+      cloneJson(
+        templateDataEntryBy["common:referenceToDataSetFormat"] ?? {
+          "@type": "source data set",
+          "@refObjectId": "16938856-0a35-5654-8aff-56c17e61da4d",
+          "@version": "00.00.001",
+          "@uri": "../sources/16938856-0a35-5654-8aff-56c17e61da4d.json",
+          "common:shortDescription": multiLang("ILCD format", language),
+        },
+      ),
     );
     const referenceToDataSetFormat =
       canonicalSourceReferenceForRelation("dataset_format_source") ??
