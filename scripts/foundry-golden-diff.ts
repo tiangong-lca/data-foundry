@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
 import type { SpawnSyncReturns } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
@@ -64,6 +65,25 @@ const skillsCommandReferencePattern = new RegExp(
   `(?:${legacyPackageRunner} skills|pnpm dlx skills(?:@latest)?)`,
   "gu",
 );
+const worldsteelProfileContractMigrations = new Map<string, string>([
+  [
+    "3ea8f90134ab5cc6f19ea6825556d1ef21136011b7c35ecd3d949a266de023c7",
+    JSON.stringify([
+      "docs/import-profiles/worldsteel/profile.md",
+      "docs/import-profiles/worldsteel/constraints.md",
+      "docs/import-profiles/worldsteel/import-plan.md",
+    ]),
+  ],
+  [
+    "d8943c24ab3f7518451ac9db103e0faf7dd5f760872411910cc977c047049ab5",
+    JSON.stringify([
+      "docs/import-profiles/worldsteel/profile.md",
+      "docs/import-profiles/worldsteel/constraints.md",
+      "docs/import-profiles/worldsteel/import-plan.md",
+      "docs/import-profiles/worldsteel/import-coverage.md",
+    ]),
+  ],
+]);
 
 function resolveGoldenBase(): GoldenBase {
   const explicitBase = String(process.env.FOUNDRY_GOLDEN_BASE ?? "").trim();
@@ -652,7 +672,28 @@ function runSide(
   return environmentSnapshot;
 }
 
+function normalizeWorldsteelProfileContract(value: JsonRecord): JsonRecord | null {
+  if (
+    value.id !== "worldsteel" ||
+    typeof value.description !== "string" ||
+    !Array.isArray(value.docs) ||
+    !value.docs.every((item) => typeof item === "string")
+  ) {
+    return null;
+  }
+  const descriptionSha256 = createHash("sha256").update(value.description).digest("hex");
+  const expectedDocs = worldsteelProfileContractMigrations.get(descriptionSha256);
+  if (expectedDocs !== JSON.stringify(value.docs)) return null;
+  return {
+    ...value,
+    description: "<worldsteel-profile-truth-contract>",
+    docs: ["<worldsteel-profile-truth-contract>"],
+  };
+}
+
 function normalizeKnownContractMigration(value: JsonRecord): JsonRecord {
+  const normalizedWorldsteelProfile = normalizeWorldsteelProfileContract(value);
+  if (normalizedWorldsteelProfile) return normalizedWorldsteelProfile;
   if (value.id === "foundry.dataset.commit-handoff-plan") {
     return {
       ...value,

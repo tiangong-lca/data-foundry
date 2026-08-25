@@ -77,6 +77,19 @@ test("Golden baseline and current commands share one explicit credential-free en
   assert.doesNotMatch(source, /env:\s*options\.env\s*\?\?\s*process\.env/u);
 });
 
+test("Golden admits only the exact old and current Worldsteel profile-truth contracts", () => {
+  const source = fs.readFileSync(path.join(repoRoot, "scripts/foundry-golden-diff.ts"), "utf8");
+  assert.match(source, /worldsteelProfileContractMigrations/u);
+  for (const sha256 of [
+    "3ea8f90134ab5cc6f19ea6825556d1ef21136011b7c35ecd3d949a266de023c7",
+    "d8943c24ab3f7518451ac9db103e0faf7dd5f760872411910cc977c047049ab5",
+  ]) {
+    assert.match(source, new RegExp(sha256, "u"));
+  }
+  assert.match(source, /expectedDocs !== JSON\.stringify\(value\.docs\)/u);
+  assert.match(source, /<worldsteel-profile-truth-contract>/u);
+});
+
 test("Golden harness exists only as zero-escape native TypeScript", () => {
   const typedPath = path.join(repoRoot, "scripts/foundry-golden-diff.ts");
   assert.equal(fs.existsSync(typedPath), true);
