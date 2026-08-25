@@ -28,7 +28,7 @@ test("every static prewrite cleanup consumer targets the typed module", () => {
     "scripts/lib/import-curation/internal/workflow-authoring-tasks.ts",
     "scripts/lib/import-curation/internal/workflow-patch-collect.ts",
     "scripts/lib/import-curation/internal/workflow-queue-context.ts",
-    "scripts/lib/import-curation/internal/workflow-reference-closure.mjs",
+    "scripts/lib/import-curation/internal/workflow-reference-closure.ts",
     "scripts/lib/import-curation/internal/workflow-semantic-actions.ts",
     "test/unit/prewrite-cleanup-contract.test.mts",
   ];

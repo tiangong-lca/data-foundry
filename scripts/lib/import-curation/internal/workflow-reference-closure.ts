@@ -43,6 +43,169 @@ import {
 } from "./workflow-row-transform-context.ts";
 import { allowedPatchResolutionModes, jsonPointerToken } from "./workflow-semantic-actions.ts";
 
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface ArtifactEnvelope {
+  path: string;
+  value: JsonRecord;
+}
+
+interface ReferenceParts {
+  table?: unknown;
+  id?: unknown;
+  version?: unknown;
+}
+
+export interface DatasetReference {
+  table: string | null;
+  id: string;
+  version: string;
+  path: string;
+  type: string | null;
+  short_description: string | null;
+}
+
+interface RowsTransformContext extends JsonRecord {
+  status?: unknown;
+  inputRowsFile?: string | null;
+  outputRowsFile?: string | null;
+  counts?: JsonRecord;
+}
+
+interface DecisionApplyContext extends JsonRecord {
+  status?: unknown;
+  decisions: unknown[];
+}
+
+interface IdentityReferenceRewriteContext extends RowsTransformContext {
+  scopedRows?: unknown[];
+}
+
+interface PatchApplyContext extends JsonRecord {
+  status?: unknown;
+  evidenceRows?: unknown[];
+  globalBlockers?: JsonRecord[];
+  byIdentity: { get(key: string): unknown[] | undefined };
+  byRowIndex: { get(key: number): unknown[] | undefined };
+}
+
+interface SourceContactSemanticEvidenceOptions {
+  repoRoot: string;
+  datasetType: unknown;
+  rowsFile: string;
+  sourceContactRewriteContext?: RowsTransformContext | null;
+  canonicalSupportRewriteContext?: RowsTransformContext | null;
+  cleanupContext?: RowsTransformContext | null;
+}
+
+interface FullContextBlockerOptions {
+  repoRoot: string;
+  profile: unknown;
+  datasetType: string;
+  curationGateArtifact?: ArtifactEnvelope | null;
+  rowsFile: string;
+  patchApplyArtifact?: ArtifactEnvelope | null;
+  patchApplyContext?: PatchApplyContext | null;
+  patchCollectArtifact?: ArtifactEnvelope | null;
+  cleanupArtifact?: ArtifactEnvelope | null;
+  classificationDecisionApplyArtifact?: ArtifactEnvelope | null;
+  classificationDecisionApplyContext?: DecisionApplyContext | null;
+  locationDecisionApplyArtifact?: ArtifactEnvelope | null;
+  locationDecisionApplyContext?: DecisionApplyContext | null;
+  identityDecisionApplyArtifact?: ArtifactEnvelope | null;
+  identityDecisionApplyContext?: DecisionApplyContext | null;
+  identityReferenceRewriteContext?: IdentityReferenceRewriteContext | null;
+  unresolvedExchangeExternalizationContext?: RowsTransformContext | null;
+  sourceContactRewriteContext?: RowsTransformContext | null;
+  canonicalSupportRewriteContext?: RowsTransformContext | null;
+  cleanupContext?: RowsTransformContext | null;
+}
+
+interface RemoteVerifyArtifact {
+  value?: JsonRecord;
+}
+
+interface BuildReferenceClosureOptions {
+  repoRoot: string;
+  rows: unknown[];
+  datasetType: string;
+  remoteVerifyArtifact?: RemoteVerifyArtifact | null;
+  provenReferenceKeys?: Set<string>;
+  unresolvedReferenceKeys?: Set<string>;
+  allowAccountLocalSupportAndElementary?: boolean;
+}
+
+interface MapRows {
+  success?: Map<string, JsonRecord>;
+  prepared?: Map<string, JsonRecord>;
+  failures?: Map<string, JsonRecord>;
+}
+
+interface DryRunContexts {
+  flow?: MapRows | null;
+  process?: MapRows | null;
+  lifecyclemodel?: MapRows | null;
+  datasetSaveDraft?: MapRows | null;
+}
+
+interface WriteIdentity extends JsonRecord {
+  id: string;
+  version: string;
+  payload: unknown;
+  dataset_type?: string | null;
+  sourceRowsFile?: string | null;
+}
+
+interface WriteCandidateOptions {
+  repoRoot: string;
+  datasetType: string;
+  row: unknown;
+  identity: WriteIdentity;
+  rowIndex: number;
+  schemaRow?: JsonRecord | null;
+  curationEntity?: JsonRecord | null;
+  curationGateProvided: boolean;
+  dryRun: DryRunContexts;
+  remoteVerifyBlockers: Set<string>;
+  targetUserId: string;
+  cleanupStatus: unknown;
+  patchApplyContext?: PatchApplyContext | null;
+  sourceReferenceRewritesByKey?: Map<string, unknown[]> | null;
+  identityReferenceRewritesByKey?: Map<string, unknown[]> | null;
+  identityDecisionApplyContext?: DecisionApplyContext | null;
+  cleanupContext?: JsonRecord | null;
+  evidenceScopeBlockers?: JsonRecord[];
+  allowAccountLocalSupportAndElementary?: boolean;
+  profile?: unknown;
+}
+
+interface ReferenceReuseOptions {
+  repoRoot: string;
+  datasetType: string;
+  rows: unknown[];
+  writeCandidateKeys: Set<string>;
+  identityReferenceRewritesByKey?: Map<string, unknown[]> | null;
+}
+
+interface PartitionItem {
+  decision: string;
+  operation?: string | null;
+}
+
+type DecisionRelevanceOptions = Parameters<typeof decisionApplyContextRelevantToRowsFile>[0];
+type ClassificationFullContextOptions = Parameters<
+  typeof buildClassificationDecisionFullContextBlockers
+>[0];
+type LocationFullContextOptions = Parameters<typeof buildLocationDecisionFullContextBlockers>[0];
+type IdentityFullContextOptions = Parameters<typeof buildIdentityDecisionFullContextBlockers>[0];
+type TracePatchOptions = Parameters<typeof tracePatchEvidenceBlockers>[0];
+
+function asRecord(value: unknown): JsonRecord {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
+}
+
 // part-11.mjs
 export function sourceContactRewriteSemanticEvidenceCount({
   repoRoot,
@@ -51,7 +214,7 @@ export function sourceContactRewriteSemanticEvidenceCount({
   sourceContactRewriteContext,
   canonicalSupportRewriteContext,
   cleanupContext,
-}) {
+}: SourceContactSemanticEvidenceOptions): number {
   if (!["support", "source", "contact"].includes(asText(datasetType).toLowerCase())) return 0;
   if (sourceContactRewriteContext?.status !== "completed") return 0;
   if (!sourceContactRewriteContext?.inputRowsFile || !sourceContactRewriteContext?.outputRowsFile) {
@@ -98,10 +261,10 @@ export function buildFullContextAiCompletionBlockers({
   sourceContactRewriteContext,
   canonicalSupportRewriteContext,
   cleanupContext,
-}) {
+}: FullContextBlockerOptions): JsonRecord[] {
   const requirement = fullContextAiCompletionRequirement(profile, datasetType, repoRoot);
   if (!requirement) return [];
-  const blockers = [];
+  const blockers: JsonRecord[] = [];
   const curationPackageProofs = curationGateArtifact
     ? authoringPackageProofsFromCurationGate(repoRoot, curationGateArtifact)
     : [];
@@ -152,7 +315,7 @@ export function buildFullContextAiCompletionBlockers({
       repoRoot,
       rowsFile,
       cleanupArtifact,
-      context: classificationDecisionApplyContext,
+      context: classificationDecisionApplyContext as unknown as DecisionRelevanceOptions["context"],
     });
   const hasLocationDecisionProof =
     locationDecisionApplyArtifact &&
@@ -162,7 +325,7 @@ export function buildFullContextAiCompletionBlockers({
       repoRoot,
       rowsFile,
       cleanupArtifact,
-      context: locationDecisionApplyContext,
+      context: locationDecisionApplyContext as unknown as DecisionRelevanceOptions["context"],
     });
   const hasIdentityDecisionProof =
     identityDecisionApplyArtifact &&
@@ -172,7 +335,7 @@ export function buildFullContextAiCompletionBlockers({
       repoRoot,
       rowsFile,
       cleanupArtifact,
-      context: identityDecisionApplyContext,
+      context: identityDecisionApplyContext as unknown as DecisionRelevanceOptions["context"],
     });
   const hasDecisionProof =
     hasClassificationDecisionProof || hasLocationDecisionProof || hasIdentityDecisionProof;
@@ -193,11 +356,15 @@ export function buildFullContextAiCompletionBlockers({
       cleanupArtifact,
       requirement,
       classificationDecisionApplyArtifact,
-      classificationDecisionApplyContext,
-      locationDecisionApplyContext,
+      classificationDecisionApplyContext:
+        classificationDecisionApplyContext as unknown as ClassificationFullContextOptions["classificationDecisionApplyContext"],
+      locationDecisionApplyContext:
+        locationDecisionApplyContext as unknown as ClassificationFullContextOptions["locationDecisionApplyContext"],
       patchApplyContext,
-      identityDecisionApplyContext,
-      identityReferenceRewriteContext,
+      identityDecisionApplyContext:
+        identityDecisionApplyContext as unknown as ClassificationFullContextOptions["identityDecisionApplyContext"],
+      identityReferenceRewriteContext:
+        identityReferenceRewriteContext as unknown as ClassificationFullContextOptions["identityReferenceRewriteContext"],
       unresolvedExchangeExternalizationContext,
       sourceContactRewriteContext,
       canonicalSupportRewriteContext,
@@ -211,10 +378,13 @@ export function buildFullContextAiCompletionBlockers({
       cleanupArtifact,
       requirement,
       locationDecisionApplyArtifact,
-      locationDecisionApplyContext,
+      locationDecisionApplyContext:
+        locationDecisionApplyContext as unknown as LocationFullContextOptions["locationDecisionApplyContext"],
       patchApplyContext,
-      identityDecisionApplyContext,
-      identityReferenceRewriteContext,
+      identityDecisionApplyContext:
+        identityDecisionApplyContext as unknown as LocationFullContextOptions["identityDecisionApplyContext"],
+      identityReferenceRewriteContext:
+        identityReferenceRewriteContext as unknown as LocationFullContextOptions["identityReferenceRewriteContext"],
       unresolvedExchangeExternalizationContext,
       sourceContactRewriteContext,
       canonicalSupportRewriteContext,
@@ -228,9 +398,12 @@ export function buildFullContextAiCompletionBlockers({
       cleanupArtifact,
       requirement,
       identityDecisionApplyArtifact,
-      identityDecisionApplyContext,
-      classificationDecisionApplyContext,
-      identityReferenceRewriteContext,
+      identityDecisionApplyContext:
+        identityDecisionApplyContext as unknown as IdentityFullContextOptions["identityDecisionApplyContext"],
+      classificationDecisionApplyContext:
+        classificationDecisionApplyContext as unknown as IdentityFullContextOptions["classificationDecisionApplyContext"],
+      identityReferenceRewriteContext:
+        identityReferenceRewriteContext as unknown as IdentityFullContextOptions["identityReferenceRewriteContext"],
       unresolvedExchangeExternalizationContext,
       sourceContactRewriteContext,
       canonicalSupportRewriteContext,
@@ -275,7 +448,7 @@ export function buildFullContextAiCompletionBlockers({
     });
   }
 
-  const evidenceRows = ensureArray(patchApplyContext?.evidenceRows);
+  const evidenceRows = ensureArray(patchApplyContext?.evidenceRows) as JsonRecord[];
   if (patchApplyArtifact && evidenceRows.length === 0) {
     blockers.push({
       code: "full_context_ai_patch_evidence_required",
@@ -377,7 +550,7 @@ export function buildFullContextAiCompletionBlockers({
   return blockers;
 }
 
-export const referenceTableByTypeToken = [
+export const referenceTableByTypeToken: Array<readonly [string, string]> = [
   ["contact", "contacts"],
   ["compliance system", "sources"],
   ["compliancesystem", "sources"],
@@ -395,7 +568,7 @@ export const referenceTableByTypeToken = [
   ["unitgroup", "unitgroups"],
 ];
 
-export const referenceTableByPathToken = [
+export const referenceTableByPathToken: Array<readonly [string, string]> = [
   ["flowproperties", "flowproperties"],
   ["flowproperty", "flowproperties"],
   ["flowdataset", "flows"],
@@ -413,14 +586,14 @@ export const referenceTableByPathToken = [
   ["contact", "contacts"],
 ];
 
-export function referenceTableFromType(value) {
+export function referenceTableFromType(value: unknown): string | null {
   const text = asText(value).toLowerCase();
   if (!text) return null;
   const match = referenceTableByTypeToken.find(([token]) => text.includes(token));
   return match?.[1] ?? null;
 }
 
-export function referenceTableFromPath(pathSegments) {
+export function referenceTableFromPath(pathSegments: string[]): string | null {
   const text = pathSegments.join(".").toLowerCase();
   if (!text) return null;
   const compact = text.replace(/[^a-z0-9]/gu, "");
@@ -428,16 +601,16 @@ export function referenceTableFromPath(pathSegments) {
   return match?.[1] ?? null;
 }
 
-export function referenceKey({ table, id, version }) {
+export function referenceKey({ table, id, version }: ReferenceParts): string {
   return [asText(table), asText(id), asText(version)].join("\u0000");
 }
 
-export function plannedRootReferenceKeys(rows, datasetType) {
+export function plannedRootReferenceKeys(rows: unknown[], datasetType: string): Set<string> {
   return new Set(
     rows.map((row, index) => {
       const identity = datasetIdentity(row, index, datasetType);
       return referenceKey({
-        table: datasetTypePlural[identity.dataset_type || datasetType],
+        table: (datasetTypePlural as Record<string, string>)[identity.dataset_type || datasetType],
         id: identity.id,
         version: identity.version,
       });
@@ -445,13 +618,17 @@ export function plannedRootReferenceKeys(rows, datasetType) {
   );
 }
 
-export function plannedRootReferenceIds(rows, datasetType) {
+export function plannedRootReferenceIds(rows: unknown[], datasetType: string): Set<string> {
   return new Set(
     rows.map((row, index) => datasetIdentity(row, index, datasetType).id).filter(Boolean),
   );
 }
 
-export function collectDatasetReferences(value, pathSegments = [], refs = []) {
+export function collectDatasetReferences(
+  value: unknown,
+  pathSegments: string[] = [],
+  refs: DatasetReference[] = [],
+): DatasetReference[] {
   if (isFoundryTracePathSegments(pathSegments)) return refs;
   if (Array.isArray(value)) {
     value.forEach((item, index) =>
@@ -461,35 +638,37 @@ export function collectDatasetReferences(value, pathSegments = [], refs = []) {
   }
   if (!value || typeof value !== "object") return refs;
 
+  const record = asRecord(value);
   const id = asText(
-    value["@refObjectId"] ?? value.refObjectId ?? value.ref_object_id ?? value.ref_id,
+    record["@refObjectId"] ?? record.refObjectId ?? record.ref_object_id ?? record.ref_id,
   );
   if (id) {
     const version = asText(
-      value["@version"] ?? value.version ?? value.refVersion ?? value.ref_version,
+      record["@version"] ?? record.version ?? record.refVersion ?? record.ref_version,
     );
     const table =
-      referenceTableFromType(value["@type"] ?? value.type) ?? referenceTableFromPath(pathSegments);
+      referenceTableFromType(record["@type"] ?? record.type) ??
+      referenceTableFromPath(pathSegments);
     refs.push({
       table,
       id,
       version,
       path: pathSegments.length > 0 ? `/${pathSegments.map(jsonPointerToken).join("/")}` : "/",
-      type: asText(value["@type"] ?? value.type) || null,
+      type: asText(record["@type"] ?? record.type) || null,
       short_description:
-        asText(value["common:shortDescription"]?.["#text"]) ||
-        asText(value.shortDescription) ||
+        asText(asRecord(record["common:shortDescription"])["#text"]) ||
+        asText(record.shortDescription) ||
         null,
     });
   }
 
-  for (const [key, child] of Object.entries(value)) {
+  for (const [key, child] of Object.entries(record)) {
     collectDatasetReferences(child, [...pathSegments, key], refs);
   }
   return refs;
 }
 
-export function isFoundryTracePathSegments(pathSegments) {
+export function isFoundryTracePathSegments(pathSegments: string[]): boolean {
   return (
     pathSegments.includes("common:other") &&
     pathSegments.some(
@@ -499,19 +678,23 @@ export function isFoundryTracePathSegments(pathSegments) {
   );
 }
 
-export function remoteVerifyChecks(repoRoot, remoteVerifyArtifact) {
-  const checks = ensureArray(remoteVerifyArtifact?.value?.checks);
+export function remoteVerifyChecks(
+  repoRoot: string,
+  remoteVerifyArtifact?: RemoteVerifyArtifact | null,
+): JsonRecord[] {
+  const value = remoteVerifyArtifact?.value;
+  const checks = ensureArray(value?.checks) as JsonRecord[];
   if (checks.length > 0) return checks;
-  const checksFile = remoteVerifyArtifact?.value?.files?.checks;
-  const checksPath = resolveRepoPath(repoRoot, checksFile);
-  return checksPath && fileExists(checksPath) ? readJsonLines(checksPath) : [];
+  const checksFile = asRecord(value?.files).checks;
+  const checksPath = resolveRepoPath(repoRoot, checksFile as string | null | undefined);
+  return checksPath && fileExists(checksPath) ? (readJsonLines(checksPath) as JsonRecord[]) : [];
 }
 
 export function remoteVerifiedReferenceKeys(
-  repoRoot,
-  remoteVerifyArtifact,
-  { acceptExactExistingOutdated = false } = {},
-) {
+  repoRoot: string,
+  remoteVerifyArtifact?: RemoteVerifyArtifact | null,
+  { acceptExactExistingOutdated = false }: { acceptExactExistingOutdated?: boolean } = {},
+): Set<string> {
   // `version_outdated` is returned by the CLI remote-verify ONLY when the exact
   // referenced version EXISTS remotely but a newer version is also published
   // (otherwise the status would be `missing_version`). For a *reference* row the
@@ -542,17 +725,26 @@ export function remoteVerifiedReferenceKeys(
   );
 }
 
-export function identityReferenceRewriteProofKeys(context) {
+export function identityReferenceRewriteProofKeys(
+  context?: IdentityReferenceRewriteContext | null,
+): Set<string> {
   return new Set(
     ensureArray(context?.scopedRows)
-      .map((row) => row?.canonical)
+      .map((row) => asRecord(row).canonical)
       .filter(Boolean)
       .map((canonical) => ({
-        table: asText(canonical?.table) || "flows",
-        id: asText(canonical?.ref_object_id ?? canonical?.refObjectId ?? canonical?.id),
+        table: asText(asRecord(canonical).table) || "flows",
+        id: asText(
+          asRecord(canonical).ref_object_id ??
+            asRecord(canonical).refObjectId ??
+            asRecord(canonical).id,
+        ),
         version:
-          asText(canonical?.version ?? canonical?.["@version"] ?? canonical?.ref_version) ||
-          "00.00.001",
+          asText(
+            asRecord(canonical).version ??
+              asRecord(canonical)["@version"] ??
+              asRecord(canonical).ref_version,
+          ) || "00.00.001",
       }))
       .filter((reference) => reference.id)
       .map(referenceKey),
@@ -567,12 +759,12 @@ export function buildReferenceClosureBlockers({
   provenReferenceKeys = new Set(),
   unresolvedReferenceKeys = new Set(),
   allowAccountLocalSupportAndElementary = false,
-}) {
+}: BuildReferenceClosureOptions): JsonRecord[] {
   const plannedRootKeys = plannedRootReferenceKeys(rows, datasetType);
   const remoteOkKeys = remoteVerifiedReferenceKeys(repoRoot, remoteVerifyArtifact, {
     acceptExactExistingOutdated: allowAccountLocalSupportAndElementary,
   });
-  const blockers = [];
+  const blockers: JsonRecord[] = [];
   const seen = new Set();
   rows.forEach((row, rowIndex) => {
     for (const ref of collectDatasetReferences(row)) {
@@ -624,28 +816,32 @@ export function buildReferenceClosureBlockers({
   return blockers;
 }
 
-export function failureReasons(row) {
-  return ensureArray(row?.reason ?? row?.reasons ?? row?.validation?.issues ?? row?.issues).map(
-    (item) => ({
-      code: item?.code ?? "failure",
-      stage: item?.stage ?? null,
-      path: item?.path ?? null,
-      message: item?.message ?? item?.error?.message ?? null,
-      validator: item?.validator ?? null,
-    }),
-  );
+export function failureReasons(row: unknown): JsonRecord[] {
+  const record = asRecord(row);
+  return ensureArray(
+    record.reason ?? record.reasons ?? asRecord(record.validation).issues ?? record.issues,
+  ).map((value) => {
+    const item = asRecord(value);
+    return {
+      code: item.code ?? "failure",
+      stage: item.stage ?? null,
+      path: item.path ?? null,
+      message: item.message ?? asRecord(item.error).message ?? null,
+      validator: item.validator ?? null,
+    };
+  });
 }
 
-export function decisionCounts(items) {
-  const counts = {};
+export function decisionCounts(items: PartitionItem[]): Record<string, number> {
+  const counts: Record<string, number> = {};
   for (const item of items) {
     counts[item.decision] = (counts[item.decision] ?? 0) + 1;
   }
   return counts;
 }
 
-export function operationCounts(items) {
-  const counts = {};
+export function operationCounts(items: PartitionItem[]): Record<string, number> {
+  const counts: Record<string, number> = {};
   for (const item of items) {
     if (!item.operation) continue;
     counts[item.operation] = (counts[item.operation] ?? 0) + 1;
@@ -674,9 +870,9 @@ export function buildWriteCandidateItem({
   evidenceScopeBlockers = [],
   allowAccountLocalSupportAndElementary = false,
   profile = null,
-}) {
+}: WriteCandidateOptions): JsonRecord {
   const key = identityKey(identity);
-  const blockers = [];
+  const blockers: JsonRecord[] = [];
   blockers.push(...evidenceScopeBlockers);
   const invalidDryRunReport = evidenceScopeBlockers.some(
     (blocker) => blocker?.code === "dry_run_report_is_commit_report",
@@ -707,7 +903,7 @@ export function buildWriteCandidateItem({
   blockers.push(
     ...prewriteIdentityBlockers(identity.payload, datasetType, repoRoot, {
       allowAccountLocalSupportAndElementary,
-      profile,
+      profile: profile as JsonRecord | null,
     }),
   );
 
@@ -719,7 +915,10 @@ export function buildWriteCandidateItem({
       message: "Curation gate report does not contain this write candidate.",
     });
   }
-  if (curationEntity && !["ready", "ready_with_profile_waivers"].includes(curationStatus)) {
+  if (
+    curationEntity &&
+    !["ready", "ready_with_profile_waivers"].includes(curationStatus as string)
+  ) {
     blockers.push({
       code: "curation_gate_not_ready",
       stage: "foundry_curation",
@@ -767,8 +966,8 @@ export function buildWriteCandidateItem({
   if (invalidDryRunReport) {
     dryRunStatus = "invalid_report";
   } else if (datasetType === "flow") {
-    const success = dryRun.flow?.success.get(key);
-    const failure = dryRun.flow?.failures.get(key);
+    const success = dryRun.flow?.success!.get(key);
+    const failure = dryRun.flow?.failures!.get(key);
     if (success) {
       dryRunStatus = "success";
       operation = normalizeDryRunOperation(success.operation);
@@ -784,8 +983,8 @@ export function buildWriteCandidateItem({
       dryRunEvidence = { reasons: failureReasons(failure) };
     }
   } else if (datasetType === "process") {
-    const prepared = dryRun.process?.prepared.get(key);
-    const failure = dryRun.process?.failures.get(key);
+    const prepared = dryRun.process?.prepared!.get(key);
+    const failure = dryRun.process?.failures!.get(key);
     if (prepared) {
       dryRunStatus = "success";
       operation = "save_draft_prepared";
@@ -801,8 +1000,8 @@ export function buildWriteCandidateItem({
       dryRunEvidence = { reasons: failureReasons(failure) };
     }
   } else if (datasetType === "lifecyclemodel") {
-    const prepared = dryRun.lifecyclemodel?.prepared.get(key);
-    const failure = dryRun.lifecyclemodel?.failures.get(key);
+    const prepared = dryRun.lifecyclemodel?.prepared!.get(key);
+    const failure = dryRun.lifecyclemodel?.failures!.get(key);
     if (prepared) {
       dryRunStatus = "success";
       operation = "save_draft_prepared";
@@ -825,8 +1024,8 @@ export function buildWriteCandidateItem({
     // account-local override (P1a), they are committed through the same
     // dataset save-draft (--type auto) dry-run as contacts/sources, so their
     // prepared/failure evidence lives in the datasetSaveDraft maps too.
-    const prepared = dryRun.datasetSaveDraft?.prepared.get(key);
-    const failure = dryRun.datasetSaveDraft?.failures.get(key);
+    const prepared = dryRun.datasetSaveDraft?.prepared!.get(key);
+    const failure = dryRun.datasetSaveDraft?.failures!.get(key);
     if (prepared) {
       dryRunStatus = "success";
       operation = normalizeDryRunOperation(prepared.operation);
@@ -860,7 +1059,7 @@ export function buildWriteCandidateItem({
   blockers.push(
     ...tracePatchEvidenceBlockers({
       traceSummary,
-      aiPatchEvidence,
+      aiPatchEvidence: aiPatchEvidence as unknown as TracePatchOptions["aiPatchEvidence"],
       identityDecisionApplyContext,
       cleanupContext,
       identity,
@@ -905,12 +1104,12 @@ export function buildWriteCandidateItem({
 }
 
 export function buildReferenceReuseItems({
-  repoRoot,
+  repoRoot: _repoRoot,
   datasetType,
   rows,
   writeCandidateKeys,
   identityReferenceRewritesByKey,
-}) {
+}: ReferenceReuseOptions): JsonRecord[] {
   return rows.map((row, index) => {
     const identity = datasetIdentity(row, index, datasetType);
     const key = identityKey(identity);
@@ -960,7 +1159,7 @@ export function buildReferenceReuseItems({
       identity_reference_rewrite_count: identityReferenceRewrites.length,
       identity_reference_rewrites: identityReferenceRewrites,
       canonical_references: identityReferenceRewrites
-        .map((rewrite) => rewrite.canonical)
+        .map((rewrite) => asRecord(rewrite).canonical)
         .filter(Boolean),
       trace_summary_count: traceSummary.import_trace_summary_count,
       unresolved_trace_count: traceSummary.unresolved_trace_count,

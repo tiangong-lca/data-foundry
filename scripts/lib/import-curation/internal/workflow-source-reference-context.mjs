@@ -4,7 +4,7 @@ import {
   normalizeSourceReferenceRewriteRow,
   readJsonLines,
 } from "./workflow-patch-collect.ts";
-import { referenceKey } from "./workflow-reference-closure.mjs";
+import { referenceKey } from "./workflow-reference-closure.ts";
 
 export function readSourceReferenceRewriteContext({ repoRoot, rowsFile, options, writeRows }) {
   const configuredFile = resolveRepoPath(

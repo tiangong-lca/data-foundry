@@ -26,7 +26,7 @@ test("every static internal full-context proof consumer targets the typed module
     "scripts/lib/import-curation/internal/workflow-decision-full-context.ts",
     "scripts/lib/import-curation/internal/workflow-identity-decision-context.ts",
     "scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts",
-    "scripts/lib/import-curation/internal/workflow-reference-closure.mjs",
+    "scripts/lib/import-curation/internal/workflow-reference-closure.ts",
     "scripts/lib/import-curation/internal/workflow-row-transform-context.ts",
     "test/unit/full-context-proof-contract.test.mts",
   ];

@@ -23,7 +23,7 @@ test("decision full-context exists only as native TypeScript", () => {
 test("every static decision full-context consumer targets the typed module", () => {
   const consumers = [
     "scripts/lib/import-curation/internal/mutation-manifest-workflow.mjs",
-    "scripts/lib/import-curation/internal/workflow-reference-closure.mjs",
+    "scripts/lib/import-curation/internal/workflow-reference-closure.ts",
     "test/scenarios/mutation-lineage-helpers.test.mjs",
     "test/unit/workflow-decision-full-context-contract.test.mts",
   ];

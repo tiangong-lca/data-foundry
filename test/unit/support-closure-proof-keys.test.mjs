@@ -1,5 +1,5 @@
 import test from "node:test";
-import { referenceKey } from "../../scripts/lib/import-curation/internal/workflow-reference-closure.mjs";
+import { referenceKey } from "../../scripts/lib/import-curation/internal/workflow-reference-closure.ts";
 import {
   sourceContactSupportCanonicalUnitGroupProofKeys,
   sourceContactSupportTrueSourceProofKeys,

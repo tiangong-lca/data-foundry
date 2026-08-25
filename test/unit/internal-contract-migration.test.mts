@@ -68,7 +68,7 @@ test("four internal contracts are native TypeScript with updated static consumer
   const expectedConsumers = [
     ["scripts/lib/import-curation/internal/curation-gate-workflow.ts", "./artifact-inputs.ts"],
     ["scripts/lib/import-curation/internal/prewrite-cleanup.ts", "./dataset-payload.ts"],
-    ["scripts/lib/import-curation/internal/workflow-reference-closure.mjs", "./trace-summary.ts"],
+    ["scripts/lib/import-curation/internal/workflow-reference-closure.ts", "./trace-summary.ts"],
     ["scripts/lib/import-curation/internal/full-context-proof.ts", "./context-inputs.ts"],
     [
       "test/scenarios/library-scope-workflow.test.mjs",

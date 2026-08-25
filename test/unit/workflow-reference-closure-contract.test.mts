@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import * as closureModule from "../../scripts/lib/import-curation/internal/workflow-reference-closure.mjs";
+import * as closureModule from "../../scripts/lib/import-curation/internal/workflow-reference-closure.ts";
 import {
   datasetIdentity,
   identityKey,
@@ -296,7 +296,7 @@ test("candidate, blocker, reuse, decision, and operation partitions retain encou
     evidenceScopeBlockers: [{ code: "scope-first" }],
   });
   assert.deepEqual(
-    blocked.blockers.map((blocker) => blocker.code),
+    (blocked.blockers as JsonRecord[]).map((blocker) => blocker.code),
     [
       "scope-first",
       "target_user_id_required",

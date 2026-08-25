@@ -21,7 +21,7 @@ test("every static identity-preflight consumer targets the typed module", () => 
   const consumers = [
     "docs/foundry-ai-navigation.md",
     "scripts/lib/import-curation/internal/curation-gate-workflow.ts",
-    "scripts/lib/import-curation/internal/workflow-reference-closure.mjs",
+    "scripts/lib/import-curation/internal/workflow-reference-closure.ts",
     "test/scenarios/bafu-mydata-override.test.mjs",
     "test/scenarios/identity-curation-context.test.mjs",
     "test/scenarios/mutation-lineage-helpers.test.mjs",

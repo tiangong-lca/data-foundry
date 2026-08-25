@@ -23,7 +23,7 @@ test("dry-run context exists only as native TypeScript", () => {
 test("every static dry-run context consumer targets the typed module", () => {
   const consumers = [
     "scripts/lib/import-curation/internal/mutation-manifest-workflow.mjs",
-    "scripts/lib/import-curation/internal/workflow-reference-closure.mjs",
+    "scripts/lib/import-curation/internal/workflow-reference-closure.ts",
     "test/unit/workflow-dry-run-context-contract.test.mts",
   ];
   for (const consumer of consumers) {
