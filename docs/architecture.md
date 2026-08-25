@@ -24,6 +24,10 @@ checkPaths:
   - specs/capability-ownership-rules.json
   - specs/automated-lca-capability-registry.json
   - specs/typescript-migration-inventory.json
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -94,8 +98,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: typed reference closure/source proof and mutation facade/runner remain local evidence/partition/report adapters; exact order/bytes/hashes, remote proofs and blockers move no CLI, schema, search or database authority."
+lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: typed TIDAS/finalize adapters and cutover/Golden tools preserve process/report/hash, resolution/order and audit/comparison behavior without moving CLI, schema, search or database authority."
 ---
 
 # Architecture
@@ -182,6 +186,8 @@ The typed curation planning boundary follows those authoring layers. `curation-g
 The typed command-owner layer now includes filesystem task/completion aggregation, commit handoff and identity task preparation, and canonical support-cache refresh/autofill. These factories keep their injected/local orchestration boundaries: task/report bytes and order remain content-stable, handoff only emits artifact-bound CommandSpecs, identity tasks only snapshot and package local evidence, and support refresh performs authenticated read-only queries. No factory implements CLI mutation, database semantics, review, or publication.
 
 The typed mutation reference stack remains an offline planning boundary. Reference closure classifies local roots and externally proven dependencies without querying or mutating the database; source context admits only ordered, in-scope public-canonical proofs; mutation manifest aggregates exact evidence and writes JSON/JSONL partitions. If any item is blocked, no write-candidate payload is emitted for execution.
+
+The typed adapter/tooling layer keeps external ownership explicit. `tidas-adapter.ts` only selects and validates the Rust machine contract; finalize utilities coordinate existing CLI/identity stages; cutover audit reads Git inventory; Golden comparison creates isolated worktrees and compares normalized local outputs. None owns converter rules, database behavior or production mutation.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

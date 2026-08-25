@@ -33,6 +33,8 @@ checkPaths:
   - prettier.config.cjs
   - tsconfig*.json
   - scripts/foundry.mjs
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
   - scripts/with-lca-account.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
@@ -44,6 +46,8 @@ checkPaths:
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
   - scripts/lib/foundry-runtime-utils.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/lib/location-quality-utils.ts
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
@@ -110,12 +114,16 @@ checkPaths:
   - test/unit/mutation-manifest-workflow-facade-contract.test.mts
   - test/unit/mutation-manifest-runner-contract.test.mts
   - test/unit/wave25-mutation-manifest-migration.test.mts
+  - test/unit/tidas-adapter-migration-contract.test.mts
+  - test/unit/post-authoring-finalize-utils-contract.test.mts
+  - test/unit/tidas-cutover-script-contract.test.mts
+  - test/unit/foundry-golden-diff-contract.test.mts
   - specs/typescript-migration-inventory.json
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: typed reference closure/source context and mutation facade/runner preserve self/public/foreign partitions, source fallback/order, remote proofs, candidate/reuse/blocker order, exact manifest/report bytes and hashes, native failures, and fail-closed write authority."
+lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: TIDAS/finalize adapters and cutover/Golden tooling are native zero-escape TS7; executable argv/env, operation reports, resolution/hash/order, audit stdout/exit and merge-base normalization remain locally characterized and fail-closed."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -169,6 +177,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - `authoring-task-workflow.ts` and `authoring-patch-workflow.ts` are reference-preserving typed facades over that SCC. `authoring-packages.ts` owns local package snapshots and task manifests; `patch-collect.ts` owns local patch admission and batch materialization. Snapshot bytes/SHA, task and operation order, blocker classification, and native JSON errors are stable contracts; blocked collection must not create a fresh executable batch.
 - `curation-gate-workflow.ts` is a reference-preserving typed aggregate over the existing evidence helpers. `curation-gate.ts` preserves source-row entity order, schema/QA/queue/context blocker order, authoring-package bytes and report aliases; `curation-cleanup.ts` preserves deep-cloned row order, JSONL bytes, annual sentinel completion, trace externalization, source-exchange proof, locator redaction and native errors. These remain local read/transform/report stages and grant no remote-write authority.
 - `workflow-reference-closure.ts` preserves reference discovery, planned-self, verified-public, proven, unresolved and foreign partition semantics plus write/reuse decision order. `workflow-source-reference-context.ts` preserves explicit/default rewrite-file priority and public-canonical proof filtering. `mutation-manifest-workflow.ts` remains a live-reference aggregate, while `mutation-manifest.ts` preserves ordered write/reference/blocked artifacts and omits executable write authority whenever any blocker remains.
+- `tidas-adapter.ts` preserves executable/config precedence, Node script argv, public performance environment, operation reports, version/asset fingerprints, batch manifests/events, atomic output replacement and native process errors. `post-authoring-finalize-utils.ts` preserves rewrite resolution, identity/reference reuse, exact-payload refresh, queue/finalization order and fail-close. `check-tidas-cutover.ts` and `foundry-golden-diff.ts` preserve their Git inventory/exit and non-HEAD normalized comparison contracts.
 - `scripts/commands/tasks.ts`, `import-completion.ts`, `commit-handoff.ts`, `identity-decision-task.ts`, and `support-cache.ts` are typed command-owner boundaries. They preserve queue/report ordering, exact report and snapshot bytes, CommandSpec executable/argv plus final-row byte/SHA binding, identity action dedupe, public-support cache ordering, fail-closed blockers, and native errors. Their tests use local filesystem fixtures, injected spies, and stubbed read-only HTTP responses only; migration grants no credential, mutation, review, or publish authority.
 - Toolchain and migration tests must pass from a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. They must not depend on the superproject checkout, another worktree's `node_modules`, absolute developer paths, ignored `.foundry` state, or credentials.
 - The Golden gate must compare against a non-`HEAD` merge-base with full Git history and a Node-native comparator. Cross-platform fixtures use executable-plus-argv dispatch; a `.js`/`.mjs`/`.cjs` test script must run through `process.execPath`, not OS executable-bit behavior. `.gitattributes` keeps repository text at LF on every runner; only Windows launcher files may opt into CRLF.

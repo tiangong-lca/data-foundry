@@ -23,6 +23,10 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - docs/safety-policy.md
   - docs/incremental-change-set-contract.md
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -55,8 +59,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: typing reference closure/source context and mutation manifest changes no capability owner, remote operation, search behavior, profile authority, Worldsteel/Date.parse semantics, or sibling boundary."
+lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: typing TIDAS/finalize adapters and cutover/Golden tools changes no capability owner, external tool, search, profile, Worldsteel/Date.parse or sibling boundary."
 ---
 
 # Capability Ownership Policy

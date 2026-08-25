@@ -21,6 +21,10 @@ checkPaths:
   - .prettierignore
   - prettier.config.cjs
   - specs/typescript-migration-inventory.json
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -145,13 +149,17 @@ checkPaths:
   - test/unit/mutation-manifest-workflow-facade-contract.test.mts
   - test/unit/mutation-manifest-runner-contract.test.mts
   - test/unit/wave25-mutation-manifest-migration.test.mts
+  - test/unit/tidas-adapter-migration-contract.test.mts
+  - test/unit/post-authoring-finalize-utils-contract.test.mts
+  - test/unit/tidas-cutover-script-contract.test.mts
+  - test/unit/foundry-golden-diff-contract.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: tests cover reference DFS/partition/remote algebra, source fallback/public proof order, mutation facade references, write/reference/blocked order, exact report/items bytes and hashes, native errors and fail-closed write authority."
+lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: tests cover controlled TIDAS process/report/hash/error behavior, finalize resolution/reuse/queue/preflight order, cutover inventory/stdout/exit behavior, and Golden merge-base/normalization/native failures."
 ---
 
 # Test Layout
@@ -228,6 +236,8 @@ Wave 24 B3 covers curation planning without entering command-family semantics. `
 Wave 24 covers five command factories in three RED/GREEN families. `unit/task-completion-command-factories.test.mts` pins queue/file order, duplicate diagnostics, task move bytes, closeout aggregation/dedupe and exact JSON. `unit/handoff-identity-task-command-factories.test.mts` pins final-row artifact SHA/bytes, authoritative CommandSpec argv, no-command blockers, identity snapshot names/bytes and action dedupe order. `unit/support-cache-command-factory.test.mts` uses local HTTP stubs to pin auth/read/paging order, cache summaries, mapping/manual-block order and native failures without reading credentials or production.
 
 Wave 25 covers the reference stack in three dependency-ordered RED/GREEN families. `unit/workflow-reference-closure-contract.test.mts` pins exact exports, DFS/table mapping, Foundry-trace exclusion, planned-self/public-remote/proven/unresolved/foreign closure partitions, write/reuse candidates and decision/operation order. `unit/workflow-source-reference-context-contract.test.mts` pins explicit/default source file precedence, scope/index order, public-canonical filtering and support proof order. `unit/mutation-manifest-workflow-facade-contract.test.mts` pins every live owner reference; `unit/mutation-manifest-runner-contract.test.mts` pins realistic write/reference/blocked partitions, remote proof, report/items and partition JSONL bytes/hashes, native JSON failure, and empty write output whenever the manifest is blocked. Migration tests require atomic native zero-escape TypeScript and every consumer update.
+
+Wave 26 covers adapters and repository tooling in four RED/GREEN families. `unit/tidas-adapter-migration-contract.test.mts` uses controlled local executables to pin argv, environment, operation reports, version gates, path resolution, hashes and native spawn failures. `unit/post-authoring-finalize-utils-contract.test.mts` pins rewrite resolution, identity reuse, queue/input order and fail-closed preflight behavior. `unit/tidas-cutover-script-contract.test.mts` pins the tracked inventory, exact stdout and exit contract. `unit/foundry-golden-diff-contract.test.mts` pins merge-base selection, normalization, cross-platform executable/argv handling, Node-native comparison, Golden diffs and failure exits. All four require zero-escape native TypeScript and prohibit real external TIDAS or production access.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

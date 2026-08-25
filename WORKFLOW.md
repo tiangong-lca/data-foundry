@@ -23,7 +23,11 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - specs/automated-lca-capability-registry.json
   - specs/capability-ownership-rules.json
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
   - scripts/with-lca-account.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -162,10 +166,14 @@ checkPaths:
   - test/unit/mutation-manifest-workflow-facade-contract.test.mts
   - test/unit/mutation-manifest-runner-contract.test.mts
   - test/unit/wave25-mutation-manifest-migration.test.mts
+  - test/unit/tidas-adapter-migration-contract.test.mts
+  - test/unit/post-authoring-finalize-utils-contract.test.mts
+  - test/unit/tidas-cutover-script-contract.test.mts
+  - test/unit/foundry-golden-diff-contract.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: typed reference closure/source proof and mutation facade/runner preserve partitions, fallback/order, remote proof, blocker/candidate/reuse order, exact bytes/hashes, native failures and fail-closed write authority."
+lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: typed TIDAS/finalize adapters and cutover/Golden tools preserve argv/env/process, reports/hashes, resolution/reuse/order, inventory/stdout/exit and merge-base normalization contracts."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -235,6 +243,8 @@ The curation planning boundary is native TypeScript as well. Its aggregate facad
 The task/completion, commit-handoff/identity-task, and support-cache command owners are native TypeScript. Preserve queue and closeout order, exact task/report/snapshot bytes, final-row artifact facts, authoritative CommandSpec argv, identity action dedupe, support-cache paging and row order, and every established blocker/native error. Credential-bearing support refresh remains a read-only operator command; ordinary tests must use local HTTP stubs and must not read `.env` or access production.
 
 The mutation reference stack is native TypeScript. Preserve reference DFS and table resolution, planned-self/public-remote/proven/unresolved/foreign closure partitions, explicit-before-default source rewrite selection, public-canonical source proof filtering, write/reference/blocked item order and report/items bytes. A blocked manifest must keep write-candidates empty; rendered plans and evidence never become mutation authority.
+
+The TIDAS adapter, finalize utility boundary, cutover audit and Golden harness are native TypeScript. Preserve direct executable-plus-argv invocation, allowed environment forwarding, operation/version/hash reports, finalize rewrite/reuse/freshness order, authoritative Git inventory JSON/exit, and non-HEAD Node-native Golden comparison. Tests use only controlled fake executables and local Git/filesystem fixtures.
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 

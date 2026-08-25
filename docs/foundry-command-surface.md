@@ -23,6 +23,10 @@ checkPaths:
   - scripts/lib/import-ledger.ts
   - scripts/lib/canonical-support-rewrites.ts
   - scripts/lib/bundle-sample-utils.ts
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -42,8 +46,8 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: reference closure/source proof and mutation facade/runner move to TS7 without changing command names/categories, owner exports, help, report/items bytes, artifacts, exit mapping, profiles, Worldsteel/Date.parse, or remote-write modes."
+lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: adapter/tool owners move to TS7 without changing command/help, process/report/exit, finalize artifacts, profiles, Worldsteel/Date.parse or remote-write modes."
 ---
 
 # Foundry Command Surface
@@ -64,6 +68,8 @@ The Wave 8 BAFU family-signature and import-ledger migrations remain supporting 
 Wave 9 keeps `dataset-bundle-sample-rows` under its existing command owner and read-only mode. Its metadata now advertises the conditional `canonical-support-amount-scaling.jsonl` artifact and its command test: the explicit blocking flag retains known or unresolved scale evidence in the report and process-scope ledger rather than letting an early canonical-reference rewrite erase the source-unit safety decision.
 
 Wave 24 moves `tasks`, `import-completion`, `commit-handoff`, `identity-decision-task`, and `support-cache` to native TypeScript. Their registered command names, help payloads, owner exports, artifact lists, output ordering, fail-closed states, and read-only modes are unchanged. Focused tests pin exact Markdown/JSON/JSONL bytes, CommandSpec final-row binding and argv, identity snapshot/dedupe order, support-cache HTTP read order and native errors.
+
+Wave 26 moves TIDAS/finalize adapters and the cutover/Golden entrypoints to native TypeScript. Public Foundry command names and help remain unchanged; package scripts now call the typed audit and Golden entrypoints while retaining the same JSON, exit, merge-base and normalized-diff contracts.
 
 ## Categories
 
