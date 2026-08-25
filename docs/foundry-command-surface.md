@@ -84,8 +84,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
-lastReviewedNote: "Reviewed for Issue #67 emitted-runtime hardening: all 63 source/emitted commands share the trusted repository root and active entry while help, categories, profiles, nested argv and remote-write modes remain stable."
+lastReviewedCommit: fdff8fa5fc60a08ae79d39761325c2deb45f4d9e
+lastReviewedNote: "Reviewed for Issue #69: strict datetime and local stale-artifact ownership do not change the 63-command surface, categories, profiles or remote-write modes."
 ---
 
 # Foundry Command Surface

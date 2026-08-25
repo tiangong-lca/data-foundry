@@ -137,8 +137,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: f8a64b9902788cde805ab7b4eb48d53ae0668793
-lastReviewedNote: "Reviewed for Issue #69: navigation identifies the strict datetime parser, bundle preservation edge, cleanup blocker runner, CLI exit owner, finalize short-circuit and focused contracts."
+lastReviewedCommit: fdff8fa5fc60a08ae79d39761325c2deb45f4d9e
+lastReviewedNote: "Reviewed for Issue #69: navigation identifies strict datetime, realpath/marker ownership, bundle preservation, blocked CLI/finalize control flow and focused contracts."
 ---
 
 # Foundry AI Navigation
@@ -248,7 +248,7 @@ The typed high-level orchestration path is `library-scope-workflow.ts` for profi
 
 The typed runtime command owners are `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts`. Navigate to the wrapper for direct executable/argv delegation and process diagnostics, to the capsule for offline immutable admission and attempt-state evidence, and to closeout for already-produced commit/readback aggregation. Root uniqueness and accepted-difference decisions remain in `post-write-root-proof.ts` and `remote-verification-accepted-diff.ts`.
 
-The typed final command owners are `scripts/commands/core.ts`, `identity-preflight-run.ts`, and `post-authoring-finalize.ts`. Navigate to core for local bootstrap, environment/workflow/storage/surface diagnostics and route artifacts; to identity preflight for receipt-bound CLI argv, request/target/binding hashes, positive-only cache and stdout/disk execution evidence; and to finalize for ordered rewrite, parent cleanup, nested support, validation, curation, dry-run, mutation-manifest and handoff aggregation. Finalize treats any non-completed cleanup or null cleaned artifact as `curation_cleanup_not_ready`, invalidates exact managed-root/prior-marker-bound downstream roots, reports unowned stale paths without deleting them, appends the blocked import ledger, writes no CommandSpec, and constructs no downstream stage. Finalize utilities live at `post-authoring-finalize-utils.ts`.
+The typed final command owners are `scripts/commands/core.ts`, `identity-preflight-run.ts`, and `post-authoring-finalize.ts`. Navigate to core for local bootstrap, environment/workflow/storage/surface diagnostics and route artifacts; to identity preflight for receipt-bound CLI argv, request/target/binding hashes, positive-only cache and stdout/disk execution evidence; and to finalize for ordered rewrite, parent cleanup, nested support, validation, curation, dry-run, mutation-manifest and handoff aggregation. Finalize treats any non-completed cleanup or null cleaned artifact as `curation_cleanup_not_ready`. It invalidates only realpath-contained managed roots or regular non-symlink markers bound to the same lexical and real output, refuses managed-path symlink escapes, reports unowned stale paths without deleting them, appends the blocked import ledger, writes no CommandSpec, and constructs no downstream stage. Finalize utilities live at `post-authoring-finalize-utils.ts`.
 
 The typed import-curation entry chain is `scripts/lib/import-curation.ts` → `import-curation/index.ts` → semantic owners. `profiles.ts` and `trace-summary.ts` are pure typed leaf barrels. Navigate through the public/index barrels to discover the complete namespace, but edit behavior only in the semantic owner named by command metadata.
 

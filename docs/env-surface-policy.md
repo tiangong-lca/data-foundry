@@ -24,8 +24,8 @@ checkPaths:
   - scripts/lib/foundry-runtime-utils.ts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
-lastReviewedNote: "Reviewed for Issue #67 Golden isolation: the internal filesystem-env-disabled child policy and allowlisted temporary HOME/config environment are not public .env inputs and forward no ambient credentials."
+lastReviewedCommit: fdff8fa5fc60a08ae79d39761325c2deb45f4d9e
+lastReviewedNote: "Reviewed for Issue #69: strict datetime and local realpath ownership checks add no environment input, credential forwarding or public .env surface."
 ---
 
 # Environment Surface Policy
