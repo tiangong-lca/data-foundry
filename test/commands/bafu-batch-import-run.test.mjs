@@ -2114,3 +2114,39 @@ test("enforceSharedContextCacheCap clears the cache only when over the cap", () 
   bafuBatchImportRunTestHooks.enforceSharedContextCacheCap(runDir, {}, 2);
   assert.equal(fs.readdirSync(cacheDir).length, 0);
 });
+
+test("minted flow invalidation removes every content-bound preflight cache entry", () => {
+  const root = path.join(fixtureRoot, "identity-binding-cache-invalidation");
+  const cacheDir = path.join(root, "cache");
+  fs.rmSync(root, { recursive: true, force: true });
+  const matching = ["a".repeat(64), "b".repeat(64)];
+  const unrelated = "c".repeat(64);
+  for (const [binding, id] of [
+    [matching[0], "flow-minted"],
+    [matching[1], "flow-minted"],
+    [unrelated, "flow-other"],
+  ]) {
+    writeJson(path.join(cacheDir, binding, "foundry-identity-preflight-execution.json"), {
+      schema: "tiangong-foundry.identity-preflight-execution.v1",
+      binding: {
+        dataset: { type: "flow", id, version: "00.00.001" },
+      },
+    });
+  }
+  const before = process.env.BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE;
+  process.env.BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE = cacheDir;
+  try {
+    assert.equal(
+      bafuBatchImportRunTestHooks.invalidateIdentityPreflightResultCacheEntry(
+        "flow:flow-minted@00.00.001",
+      ),
+      true,
+    );
+    assert.ok(matching.every((binding) => !fs.existsSync(path.join(cacheDir, binding))));
+    assert.equal(fs.existsSync(path.join(cacheDir, unrelated)), true);
+  } finally {
+    if (before === undefined) delete process.env.BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE;
+    else process.env.BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE = before;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
