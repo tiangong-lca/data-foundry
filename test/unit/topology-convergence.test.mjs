@@ -7,7 +7,7 @@ import {
   sha256Json,
   stableJson,
 } from "../../scripts/commands/topology-convergence.mjs";
-import { assert } from "../fixtures/foundry-core.mjs";
+import { assert } from "../fixtures/foundry-core.ts";
 
 function exchange(number, flow) {
   return {

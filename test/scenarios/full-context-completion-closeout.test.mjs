@@ -17,7 +17,7 @@ import {
   writeJson,
   writeJsonLines,
   writeText,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 import { createFixture } from "../fixtures/full-context-fixtures.mjs";
 import { assertFoundryCommandSpecArtifactsCurrent } from "../../scripts/lib/foundry-command-spec.ts";
 

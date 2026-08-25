@@ -14,12 +14,50 @@ const exitCodes = {
   cancelled: 130,
 };
 
-function option(name) {
+type ExitClass = keyof typeof exitCodes;
+
+interface OperationReport {
+  schema_version: string;
+  command: string;
+  status: string;
+  exit_class: string;
+  completeness: string;
+  invocation: {
+    schema_version: string;
+    config_source: string;
+    config_path: string | null;
+    log_level: string;
+    progress_mode: string;
+    progress_enabled: boolean;
+    memory_budget_bytes: number;
+    queue_capacity: number;
+    input_policy: string;
+    report_destination: string;
+    diagnostic_destination: string;
+  };
+  summary: Record<string, unknown>;
+  diagnostics: Array<Record<string, unknown>>;
+  artifacts: unknown[];
+  next_actions: unknown[];
+}
+
+interface ValidationManifestRow {
+  document_key: unknown;
+  identity: unknown;
+  category: unknown;
+  relative_path: unknown;
+}
+
+function option(name: string): string | null {
   const index = args.indexOf(name);
   return index >= 0 ? args[index + 1] : null;
 }
 
-function baseReport(commandName, status = "succeeded", exitClass = "success") {
+function baseReport(
+  commandName: string,
+  status = "succeeded",
+  exitClass = "success",
+): OperationReport {
   return {
     schema_version: "tidas.operation-report.v1",
     command: commandName,
@@ -86,7 +124,7 @@ if (command === "validate" && args.includes("--describe")) {
   process.exit(0);
 }
 
-const requestedExit = process.env.FAKE_TIDAS_EXIT_CLASS;
+const requestedExit = process.env.FAKE_TIDAS_EXIT_CLASS as ExitClass | undefined;
 if (requestedExit && requestedExit !== "success") {
   const status =
     requestedExit === "cancelled"
@@ -107,7 +145,7 @@ if (requestedExit && requestedExit !== "success") {
 }
 
 if (command === "import") {
-  const output = option("--output");
+  const output = option("--output") as string;
   fs.mkdirSync(path.join(output, "tidas", "processes"), { recursive: true });
   fs.mkdirSync(path.join(output, "process-bundles"), { recursive: true });
   fs.writeFileSync(path.join(output, "issues.jsonl"), "");
@@ -139,14 +177,14 @@ if (command === "import") {
 }
 
 if (command === "validate" && args.includes("--protocol")) {
-  const manifestPath = option("--input-manifest");
-  const eventsPath = option("--events");
+  const manifestPath = option("--input-manifest") as string;
+  const eventsPath = option("--events") as string;
   const manifest = fs
     .readFileSync(manifestPath, "utf8")
     .split(/\r?\n/u)
     .filter(Boolean)
-    .map((line) => JSON.parse(line));
-  const events = [];
+    .map((line) => JSON.parse(line) as ValidationManifestRow);
+  const events: Array<Record<string, unknown>> = [];
   if (process.env.FAKE_TIDAS_INVALID === "1" && manifest.length > 0) {
     events.push({
       type: "issue",

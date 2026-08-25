@@ -19,7 +19,7 @@ import {
   testTmpRoot,
   writeJson,
   writeJsonLines,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 
 const fixtureRoot = testTmpRoot("bafu-process-scope-e2e-test");
 const processId = "11111111-2222-4333-8444-555555555555";

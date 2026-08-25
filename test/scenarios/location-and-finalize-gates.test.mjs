@@ -18,7 +18,7 @@ import {
   targetUserId,
   writeJson,
   writeJsonLines,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 import { writeContextPackFiles } from "../fixtures/full-context-fixtures.mjs";
 import { processRowWithInvalidLocation } from "../fixtures/row-builders.mjs";
 

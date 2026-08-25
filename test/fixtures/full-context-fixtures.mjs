@@ -10,7 +10,7 @@ import {
   writeJson,
   writeJsonLines,
   writeText,
-} from "./foundry-core.mjs";
+} from "./foundry-core.ts";
 
 export function createFixture() {
   fs.rmSync(fixtureRoot, { recursive: true, force: true });

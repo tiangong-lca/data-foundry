@@ -1,6 +1,6 @@
 import test from "node:test";
 import { createSourceSemanticUtils } from "../../scripts/lib/source-semantics.ts";
-import { assert } from "../fixtures/foundry-core.mjs";
+import { assert } from "../fixtures/foundry-core.ts";
 
 function utils() {
   const asText = (value) => {

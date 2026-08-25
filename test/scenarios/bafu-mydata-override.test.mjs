@@ -7,7 +7,7 @@ import {
   flowPrewriteIdentityBlockers,
   prewriteIdentityBlockers,
 } from "../../scripts/lib/import-curation/internal/workflow-identity-preflight.ts";
-import { assert } from "../fixtures/foundry-core.mjs";
+import { assert } from "../fixtures/foundry-core.ts";
 
 // The override authorization flag must surface true ONLY for a profile that declares
 // allow_account_local_support_and_elementary.enabled, and false otherwise.

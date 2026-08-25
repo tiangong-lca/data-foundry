@@ -13,7 +13,7 @@ import {
   testTmpRoot,
   writeJson,
   writeJsonLines,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 
 const fixtureRoot = testTmpRoot("bafu-auto-authoring-test");
 const flowId = "11111111-2222-4333-8444-555555555555";

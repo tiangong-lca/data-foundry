@@ -10,7 +10,7 @@ import {
   writeJson,
   writeJsonLines,
   writeText,
-} from "./foundry-core.mjs";
+} from "./foundry-core.ts";
 import { contextFile } from "./full-context-fixtures.mjs";
 import { processRowWithDeferredTrace } from "./row-builders.mjs";
 

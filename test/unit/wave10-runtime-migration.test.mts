@@ -26,7 +26,7 @@ test("every static Foundry runtime consumer targets the typed module explicitly"
     ["scripts/lib/location-quality-utils.ts", "./foundry-runtime-utils.ts"],
     ["scripts/lib/remote-verification-accepted-diff.ts", "./foundry-runtime-utils.ts"],
     ["scripts/lib/import-curation/internal/context-inputs.ts", "../../foundry-runtime-utils.ts"],
-    ["test/fixtures/foundry-core.mjs", "../../scripts/lib/foundry-runtime-utils.ts"],
+    ["test/fixtures/foundry-core.ts", "../../scripts/lib/foundry-runtime-utils.ts"],
     [
       "test/scenarios/library-scope-workflow.test.mjs",
       "../../scripts/lib/foundry-runtime-utils.ts",

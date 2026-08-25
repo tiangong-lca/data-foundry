@@ -461,7 +461,7 @@ function runSide(label, root, fixture, cliPath) {
   foundryCommand(root, ["init"], path.join(commandOut, "setup-init.json"));
   const commonEnv = {
     TIANGONG_LCA_CLI_BIN: cliPath,
-    TIDAS_BIN: path.join(root, "test", "fixtures", "fake-tidas.mjs"),
+    TIDAS_BIN: path.join(root, "test", "fixtures", "fake-tidas.ts"),
   };
   foundryCommand(root, ["help"], path.join(commandOut, "help.json"), commonEnv);
   foundryCommand(root, ["doctor"], path.join(commandOut, "doctor.json"), commonEnv, 1);

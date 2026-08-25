@@ -10,7 +10,7 @@ import {
   writeReadyFinalizeFixture,
 } from "../fixtures/finalize-fixtures.ts";
 import * as fixtureRoots from "../fixtures/fixture-roots.ts";
-import { repoRoot, testRunId } from "../fixtures/foundry-core.mjs";
+import { repoRoot, testRunId } from "../fixtures/foundry-core.ts";
 
 const fixtureRootBasenames = {
   annualSupplyFixtureRoot: "annual-supply-deferral-test",

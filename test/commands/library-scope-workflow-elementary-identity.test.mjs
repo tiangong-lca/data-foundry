@@ -1,6 +1,6 @@
 import test from "node:test";
 import { createLibraryScopeWorkflowCommands } from "../../scripts/commands/library-scope-workflow.mjs";
-import { assert, fs, path, testTmpRoot } from "../fixtures/foundry-core.mjs";
+import { assert, fs, path, testTmpRoot } from "../fixtures/foundry-core.ts";
 
 const fixtureRoot = testTmpRoot("library-scope-workflow-elementary-identity-test");
 

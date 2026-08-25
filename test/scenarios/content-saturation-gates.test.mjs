@@ -13,7 +13,7 @@ import {
   runFoundry,
   writeJson,
   writeJsonLines,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 import { writeContextPackFiles } from "../fixtures/full-context-fixtures.mjs";
 
 const fixtureRoot = path.join(repoRoot, "tmp", "content-saturation-gates-test");

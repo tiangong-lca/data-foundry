@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { repoRoot, testTmpRoot, writeJson, writeJsonLines } from "./foundry-core.mjs";
+import { repoRoot, testTmpRoot, writeJson, writeJsonLines } from "./foundry-core.ts";
 
 const version = "01.00.000";
 const allTables = ["contacts", "unitgroups", "flowproperties", "sources", "flows", "processes"];

@@ -15,7 +15,7 @@ import {
   testTmpRoot,
   writeJson,
   writeJsonLines,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 import { writeContextPackFiles } from "../fixtures/full-context-fixtures.mjs";
 import { writeCompletedIdentityPreflightIndex } from "../fixtures/identity-fixtures.mjs";
 import { flowRowWithClassification, processRowWithFlowRef } from "../fixtures/row-builders.mjs";

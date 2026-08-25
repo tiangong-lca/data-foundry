@@ -1,5 +1,5 @@
 import test from "node:test";
-import { assert, path, readJson, rel, runFoundry } from "../fixtures/foundry-core.mjs";
+import { assert, path, readJson, rel, runFoundry } from "../fixtures/foundry-core.ts";
 import { createTopologyConvergenceFixture } from "../fixtures/topology-convergence-fixtures.mjs";
 
 test("topology package remains offline and requires capsule admission before F/P/D dispatch", () => {

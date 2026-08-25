@@ -1,4 +1,4 @@
-import { testTmpRoot } from "./foundry-core.mjs";
+import { testTmpRoot } from "./foundry-core.ts";
 
 export const fixtureRoot: string = testTmpRoot("full-context-gate-test");
 export const mutationFixtureRoot: string = testTmpRoot("mutation-manifest-trace-test");

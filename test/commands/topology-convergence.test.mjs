@@ -10,7 +10,7 @@ import {
   repoRoot,
   runFoundry,
   spawnSync,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 import {
   createTopologyConvergenceFixture,
   fixtureSha,

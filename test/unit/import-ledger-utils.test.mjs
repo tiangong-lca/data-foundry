@@ -10,7 +10,7 @@ import {
   testTmpRoot,
   writeJson,
   writeJsonLines,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 
 function asText(value) {
   return value === undefined || value === null ? "" : String(value).trim();

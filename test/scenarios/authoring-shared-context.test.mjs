@@ -12,7 +12,7 @@ import {
   sha256Text,
   writeJson,
   writeText,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 import { processRowWithInvalidLocation } from "../fixtures/row-builders.mjs";
 
 test("authoring task batch writes shared full-context bundle for repeated package context", () => {

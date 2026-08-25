@@ -107,7 +107,7 @@ export function resolveTidasInvocation(options = {}, env = process.env) {
 }
 
 export function resolveTidasProcessCommand(executable) {
-  if (/\.(?:cjs|js|mjs)$/iu.test(executable)) {
+  if (/\.(?:[cm]?[jt]s)$/iu.test(executable)) {
     return {
       command: process.execPath,
       prefixArgs: [executable],

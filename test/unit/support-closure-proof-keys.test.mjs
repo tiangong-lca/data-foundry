@@ -4,7 +4,7 @@ import {
   sourceContactSupportCanonicalUnitGroupProofKeys,
   sourceContactSupportTrueSourceProofKeys,
 } from "../../scripts/lib/import-curation/internal/workflow-source-reference-context.ts";
-import { assert } from "../fixtures/foundry-core.mjs";
+import { assert } from "../fixtures/foundry-core.ts";
 
 // CLASS 1: a minted (account-local) Flow Property whose reference Unit Group is a public
 // canonical UG is NOT written; its referenceToReferenceUnitGroup is rewritten to the

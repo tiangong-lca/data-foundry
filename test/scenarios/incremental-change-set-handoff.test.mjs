@@ -1,5 +1,5 @@
 import test from "node:test";
-import { assert, path, readJson, rel, runFoundry } from "../fixtures/foundry-core.mjs";
+import { assert, path, readJson, rel, runFoundry } from "../fixtures/foundry-core.ts";
 import { createIncrementalChangeSetFixture } from "../fixtures/incremental-change-set-fixtures.mjs";
 
 test("incremental change-set remains an offline candidate pending fresh reconciliation and capsule admission", () => {

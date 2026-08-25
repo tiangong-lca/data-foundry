@@ -14,7 +14,7 @@ import {
   writeJson,
   writeJsonLines,
   writeText,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 import { testAuthIdentityReceipt } from "../fixtures/identity-fixtures.mjs";
 
 const root = path.join(repoRoot, "tmp", "identity-preflight-fail-closed");

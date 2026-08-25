@@ -1,6 +1,6 @@
 import test from "node:test";
 import { createSourceSemanticUtils } from "../../scripts/lib/source-semantics.ts";
-import { assert } from "../fixtures/foundry-core.mjs";
+import { assert } from "../fixtures/foundry-core.ts";
 
 // Minimal-but-faithful dependency injection for the source-semantics factory. These match
 // the runtime utilities foundry.mjs wires in (asText/textValue/multiLang/pathExpression/

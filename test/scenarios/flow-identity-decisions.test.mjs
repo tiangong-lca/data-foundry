@@ -12,7 +12,7 @@ import {
   testTmpRoot,
   writeJson,
   writeJsonLines,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 import { writeCompletedIdentityPreflightIndex } from "../fixtures/identity-fixtures.mjs";
 import {
   flowRow,

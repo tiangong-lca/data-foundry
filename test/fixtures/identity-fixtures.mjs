@@ -4,7 +4,7 @@ import {
   validateIdentityPreflightExecution,
 } from "../../scripts/lib/identity-preflight-proof.ts";
 import { createRequire } from "node:module";
-import { fs, path, rel, writeJson, writeJsonLines } from "./foundry-core.mjs";
+import { fs, path, rel, writeJson, writeJsonLines } from "./foundry-core.ts";
 
 const require = createRequire(import.meta.url);
 const cliAuthInternals =

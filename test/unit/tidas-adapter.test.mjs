@@ -12,11 +12,11 @@ import {
 } from "../../scripts/lib/tidas-adapter.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
-const fixture = path.join(repoRoot, "test", "fixtures", "fake-tidas.mjs");
+const fixture = path.join(repoRoot, "test", "fixtures", "fake-tidas.ts");
 
 function isolatedFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-tidas-adapter-"));
-  const bin = path.join(root, "fake-tidas.mjs");
+  const bin = path.join(root, "fake-tidas.ts");
   fs.copyFileSync(fixture, bin);
   fs.chmodSync(bin, 0o755);
   return { root, bin };
@@ -76,7 +76,7 @@ test("executable/config precedence is option, environment, then PATH", () => {
 });
 
 test("script-backed TIDAS commands execute through Node on every platform", () => {
-  const script = path.join(repoRoot, "test", "fixtures", "fake-tidas.mjs");
+  const script = path.join(repoRoot, "test", "fixtures", "fake-tidas.ts");
   assert.deepEqual(resolveTidasProcessCommand(script), {
     command: process.execPath,
     prefixArgs: [script],

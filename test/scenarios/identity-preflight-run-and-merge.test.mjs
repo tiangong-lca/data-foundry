@@ -12,7 +12,7 @@ import {
   writeJson,
   writeJsonLines,
   writeText,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 import { testAuthIdentityReceipt } from "../fixtures/identity-fixtures.mjs";
 
 test("identity preflight batch runner records timed-out CLI rows without hanging", () => {
