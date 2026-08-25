@@ -903,7 +903,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-bafu-process-scope-e2e": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/bafu-process-scope-e2e.mjs",
+    ownerModule: "scripts/commands/bafu-process-scope-e2e.ts",
     ownerExport: "createBafuProcessScopeE2eCommands().runDatasetBafuProcessScopeE2e",
     inputs: [
       "one process rows file",

@@ -5,7 +5,7 @@ import { createAuthoringPlanCommands } from "./commands/authoring-plan.mjs";
 import { createBafuAutoAuthoringCommands } from "./commands/bafu-auto-authoring.ts";
 import { createBafuBatchImportRunCommands } from "./commands/bafu-batch-import-run.mjs";
 import { createBafuLeafClassificationTaskCommands } from "./commands/bafu-leaf-classification-tasks.ts";
-import { createBafuProcessScopeE2eCommands } from "./commands/bafu-process-scope-e2e.mjs";
+import { createBafuProcessScopeE2eCommands } from "./commands/bafu-process-scope-e2e.ts";
 import { createBundleSampleRowsCommands } from "./commands/bundle-sample-rows.mjs";
 import { createCliWrapperCommands } from "./commands/cli-wrappers.ts";
 import { createCommitHandoffCommands } from "./commands/commit-handoff.ts";

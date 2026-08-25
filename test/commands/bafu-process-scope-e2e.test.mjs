@@ -2,7 +2,7 @@ import test from "node:test";
 import {
   bafuProcessScopeE2eTestHooks,
   createBafuProcessScopeE2eCommands,
-} from "../../scripts/commands/bafu-process-scope-e2e.mjs";
+} from "../../scripts/commands/bafu-process-scope-e2e.ts";
 import {
   createFileArtifactFact,
   createFoundryCommandSpec,

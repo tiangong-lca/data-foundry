@@ -370,6 +370,7 @@ test("active documentation and source contain no references to removed CLI spine
     "commands/library-scope-workflow.mjs",
     "commands/bafu-leaf-classification-tasks.mjs",
     "commands/bafu-auto-authoring.mjs",
+    "commands/bafu-process-scope-e2e.mjs",
   ];
   const files = [
     "AGENTS.md",

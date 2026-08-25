@@ -10,11 +10,136 @@ import {
   assertFoundryCommandSpecBindsArtifact,
   commandSpecOptionValue,
   executeFoundryCommandSpecSync,
+  type FoundryArtifactFact,
+  type FoundryCommandSpec,
 } from "../lib/foundry-command-spec.ts";
 import {
   assertReceiptBoundHandoffAccount,
   traceHashNormalizationAllowed,
 } from "../lib/production-case-policy.ts";
+
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface BafuProcessScopeE2eRuntime {
+  nowIso: () => string;
+  resolveRepoPath: (value: unknown) => string | null;
+  repoRelativeMaybe: (filePath: string | null | undefined) => string | null;
+  fileExists: (filePath: string | null | undefined) => boolean;
+  readJson: (filePath: string) => unknown;
+  readJsonLines: (filePath: string) => unknown[];
+  readRowsFile: (filePath: string) => unknown[];
+  writeJson: (filePath: string, value: unknown) => void;
+  textValue: (value: unknown) => string;
+  booleanOption: (value: unknown) => boolean;
+  shellQuote: (value: string) => string;
+}
+
+interface CommandStage extends JsonRecord {
+  stage: string;
+  command: unknown;
+  exit_code: number;
+  signal?: NodeJS.Signals | null;
+  error?: string | null;
+  stdout_log?: string | null;
+  stderr_log?: string | null;
+  report?: unknown;
+  attempt?: number;
+  max_attempts?: number;
+  retry_reason?: string;
+  retry_next_delay_ms?: number;
+}
+
+interface CommandSpecStageInput {
+  stage: string;
+  commandSpec: FoundryCommandSpec;
+  cwd: string;
+  logDir: string;
+}
+
+interface ArgvStageInput {
+  stage: string;
+  argv: string[];
+  logDir: string;
+}
+
+interface CompactStageResult {
+  status: number | null;
+  signal?: NodeJS.Signals | null;
+  error?: Error;
+}
+
+interface FinalizeCommandResult {
+  argv: string[];
+  finalizeDir: string;
+  finalizeReportPath: string;
+}
+
+interface GateBlockerResult {
+  gateReport: JsonRecord | null;
+  blockers: JsonRecord[];
+}
+
+interface RecoveryInput {
+  finalizeReport: JsonRecord;
+  currentRowsFile: string;
+  outDir: string;
+  logDir: string;
+  attempt: number;
+}
+
+interface RecoveryResult extends JsonRecord {
+  status: string;
+  blocker?: JsonRecord;
+  rowsFile?: string;
+  identityApplyReport?: string | null;
+  patchCollectReport?: string | null;
+  patchApplyReport?: string | null;
+  stages?: JsonRecord[];
+}
+
+interface FinalizeReportInput {
+  processScope: JsonRecord;
+  outDir: string;
+  reportPath: string;
+  ledgerPath: string;
+  finalizeReport: JsonRecord;
+  finalizeReportPath: string;
+  finalizeCommand: string[];
+  mode: string;
+  sourceSupportRowsFile: string | null;
+  sourceRowsFile: string | null;
+}
+
+interface HandoffResult extends JsonRecord {
+  status: string;
+  blockers: JsonRecord[];
+  stages: JsonRecord[];
+  handoffPlan: JsonRecord;
+  closeoutReport?: JsonRecord | null;
+  commitReportPath?: string;
+  verifyReportPath?: string;
+  closeoutReportPath?: string;
+}
+
+interface ProcessScopeReport extends JsonRecord {
+  generated_at_utc: string;
+  status: string;
+  blockers: JsonRecord[];
+  counts: JsonRecord;
+  files: JsonRecord;
+  policy: JsonRecord;
+  handoff_stages?: JsonRecord[];
+}
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function jsonRecord(value: unknown): JsonRecord {
+  return isJsonRecord(value) ? value : {};
+}
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const commandName = "dataset-bafu-process-scope-e2e";
@@ -34,11 +159,11 @@ const bafuProcessScopeE2eRuntimeKeys = [
   "textValue",
   "booleanOption",
   "shellQuote",
-];
+] as const satisfies readonly (keyof BafuProcessScopeE2eRuntime)[];
 
-let bafuProcessScopeE2eRuntime = null;
+let bafuProcessScopeE2eRuntime: BafuProcessScopeE2eRuntime | null = null;
 
-function installBafuProcessScopeE2eRuntime(deps) {
+function installBafuProcessScopeE2eRuntime(deps: BafuProcessScopeE2eRuntime): void {
   const missing = bafuProcessScopeE2eRuntimeKeys.filter((key) => typeof deps?.[key] !== "function");
   if (missing.length > 0) {
     throw new Error(
@@ -48,138 +173,162 @@ function installBafuProcessScopeE2eRuntime(deps) {
   bafuProcessScopeE2eRuntime = deps;
 }
 
-function runtime() {
+function runtime(): BafuProcessScopeE2eRuntime {
   if (!bafuProcessScopeE2eRuntime) {
     throw new Error("createBafuProcessScopeE2eCommands must install command dependencies.");
   }
   return bafuProcessScopeE2eRuntime;
 }
 
-function nowIso() {
+function nowIso(): string {
   return runtime().nowIso();
 }
 
-function resolveRepoPath(value) {
+function resolveRepoPath(value: unknown): string | null {
   return runtime().resolveRepoPath(value);
 }
 
-function repoRelative(filePath) {
-  return runtime().repoRelativeMaybe(filePath);
+function repoRelative(filePath: string | null | undefined): string {
+  return runtime().repoRelativeMaybe(filePath) as string;
 }
 
-function fileExists(filePath) {
+function fileExists(filePath: string | null | undefined): boolean {
   return runtime().fileExists(filePath);
 }
 
-function readJson(filePath) {
-  return runtime().readJson(filePath);
+function readJson(filePath: string): JsonRecord {
+  return runtime().readJson(filePath) as JsonRecord;
 }
 
-function readJsonLines(filePath) {
-  return runtime().readJsonLines(filePath);
+function readJsonLines(filePath: string): JsonRecord[] {
+  return runtime().readJsonLines(filePath) as JsonRecord[];
 }
 
-function readRowsFile(filePath) {
-  return runtime().readRowsFile(filePath);
+function readRowsFile(filePath: string): JsonRecord[] {
+  return runtime().readRowsFile(filePath) as JsonRecord[];
 }
 
-function sha256File(filePath) {
+function sha256File(filePath: string): string {
   return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
 }
 
-function textValue(value) {
+function textValue(value: unknown): string {
   return runtime().textValue(value);
 }
 
-function processIdentity(row) {
-  const payload = row?.processDataSet ?? row;
+function processIdentity(row: JsonRecord): { id: string; version: string } {
+  const payload = jsonRecord(row.processDataSet ?? row);
   const dataSetInformation =
-    payload?.processInformation?.dataSetInformation ??
-    payload?.processInformation?.["common:dataSetInformation"] ??
+    jsonRecord(payload.processInformation).dataSetInformation ??
+    jsonRecord(payload.processInformation)["common:dataSetInformation"] ??
     {};
+  const information = jsonRecord(dataSetInformation);
   const publication =
-    payload?.administrativeInformation?.publicationAndOwnership ??
-    payload?.administrativeInformation?.["common:publicationAndOwnership"] ??
+    jsonRecord(payload.administrativeInformation).publicationAndOwnership ??
+    jsonRecord(payload.administrativeInformation)["common:publicationAndOwnership"] ??
     {};
+  const publicationRecord = jsonRecord(publication);
   return {
-    id:
-      textValue(dataSetInformation["common:UUID"]) ||
-      textValue(dataSetInformation.UUID) ||
-      textValue(row?.dataset_id) ||
-      textValue(row?.id),
-    version:
-      textValue(publication["common:dataSetVersion"]) ||
-      textValue(publication.dataSetVersion) ||
-      textValue(row?.dataset_version) ||
-      textValue(row?.version) ||
-      "00.00.001",
-  };
-}
-
-function datasetTypeFromRow(row) {
-  if (row?.contactDataSet) return "contact";
-  if (row?.sourceDataSet) return "source";
-  return null;
-}
-
-function supportIdentity(row, fallbackType) {
-  const type = datasetTypeFromRow(row) || fallbackType;
-  const root = type ? (row?.[`${type}DataSet`] ?? {}) : {};
-  const information =
-    root?.[`${type}Information`]?.dataSetInformation ??
-    root?.[`${type}Information`]?.["common:dataSetInformation"] ??
-    {};
-  const publication =
-    root?.administrativeInformation?.publicationAndOwnership ??
-    root?.administrativeInformation?.["common:publicationAndOwnership"] ??
-    {};
-  return {
-    type,
     id:
       textValue(information["common:UUID"]) ||
       textValue(information.UUID) ||
-      textValue(row?.dataset_id) ||
-      textValue(row?.id),
+      textValue(row.dataset_id) ||
+      textValue(row.id),
     version:
-      textValue(publication["common:dataSetVersion"]) ||
-      textValue(publication.dataSetVersion) ||
-      textValue(row?.dataset_version) ||
-      textValue(row?.version) ||
+      textValue(publicationRecord["common:dataSetVersion"]) ||
+      textValue(publicationRecord.dataSetVersion) ||
+      textValue(row.dataset_version) ||
+      textValue(row.version) ||
       "00.00.001",
   };
 }
 
-function supportIdentityKeysFromHandoffPlan(handoffPlan) {
-  const inputPath = resolveRepoPath(
-    commandSpecOptionValue(handoffPlan?.commands?.commit, "--input") ||
-      commandSpecOptionValue(handoffPlan?.commands?.commit, "--input-file"),
-  );
-  const fallbackType = commandSpecOptionValue(handoffPlan?.commands?.commit, "--type");
-  if (!fileExists(inputPath)) return [];
-  return readRowsFile(inputPath)
-    .map((row) => {
-      const identity = supportIdentity(row, fallbackType);
-      if (!["contact", "source"].includes(identity.type) || !identity.id) return null;
-      return `${identity.type}:${identity.id}@${identity.version}`;
-    })
-    .filter(Boolean);
+function datasetTypeFromRow(row: JsonRecord): string | null {
+  if (row.contactDataSet) return "contact";
+  if (row.sourceDataSet) return "source";
+  return null;
 }
 
-function supportIdentityKeyFromCacheRow(row) {
-  if (row?.identity_key) return String(row.identity_key);
-  const type = row?.dataset_type || row?.type || row?.table?.replace(/s$/u, "");
-  const id = row?.dataset_id || row?.id;
-  const version = row?.dataset_version || row?.version || "00.00.001";
+function supportIdentity(
+  row: JsonRecord,
+  fallbackType: string | null,
+): { type: string | null; id: string; version: string } {
+  const type = datasetTypeFromRow(row) || fallbackType;
+  const root = type ? jsonRecord(row[`${type}DataSet`]) : {};
+  const information =
+    jsonRecord(root[`${type}Information`]).dataSetInformation ??
+    jsonRecord(root[`${type}Information`])["common:dataSetInformation"] ??
+    {};
+  const informationRecord = jsonRecord(information);
+  const publication =
+    jsonRecord(root.administrativeInformation).publicationAndOwnership ??
+    jsonRecord(root.administrativeInformation)["common:publicationAndOwnership"] ??
+    {};
+  const publicationRecord = jsonRecord(publication);
+  return {
+    type,
+    id:
+      textValue(informationRecord["common:UUID"]) ||
+      textValue(informationRecord.UUID) ||
+      textValue(row.dataset_id) ||
+      textValue(row.id),
+    version:
+      textValue(publicationRecord["common:dataSetVersion"]) ||
+      textValue(publicationRecord.dataSetVersion) ||
+      textValue(row.dataset_version) ||
+      textValue(row.version) ||
+      "00.00.001",
+  };
+}
+
+function supportIdentityKeysFromHandoffPlan(handoffPlan: JsonRecord): string[] {
+  const commands = jsonRecord(handoffPlan.commands);
+  const inputPath = resolveRepoPath(
+    commandSpecOptionValue(commands.commit, "--input") ||
+      commandSpecOptionValue(commands.commit, "--input-file"),
+  );
+  const fallbackType = commandSpecOptionValue(commands.commit, "--type");
+  if (!fileExists(inputPath)) return [];
+  return readRowsFile(inputPath!)
+    .map((row) => {
+      const identity = supportIdentity(row, fallbackType);
+      if (!identity.type || !["contact", "source"].includes(identity.type) || !identity.id) {
+        return null;
+      }
+      return `${identity.type}:${identity.id}@${identity.version}`;
+    })
+    .filter((key): key is string => Boolean(key));
+}
+
+function supportIdentityKeyFromCacheRow(row: JsonRecord): string | null {
+  if (row.identity_key) return String(row.identity_key);
+  const type = textValue(row.dataset_type || row.type || textValue(row.table).replace(/s$/u, ""));
+  const id = row.dataset_id || row.id;
+  const version = row.dataset_version || row.version || "00.00.001";
   return ["contact", "source"].includes(type) && id ? `${type}:${id}@${version}` : null;
 }
 
-function loadVerifiedSupportIdentities(cacheFile) {
+function loadVerifiedSupportIdentities(cacheFile: unknown): Set<string> {
   const resolved = resolveRepoPath(cacheFile);
   if (!fileExists(resolved)) return new Set();
-  return new Set(readJsonLines(resolved).map(supportIdentityKeyFromCacheRow).filter(Boolean));
+  return new Set(
+    readJsonLines(resolved!)
+      .map(supportIdentityKeyFromCacheRow)
+      .filter((key): key is string => Boolean(key)),
+  );
 }
 
-function appendVerifiedSupportIdentities({ cacheFile, identityKeys, source, report }) {
+function appendVerifiedSupportIdentities({
+  cacheFile,
+  identityKeys,
+  source,
+  report,
+}: {
+  cacheFile: unknown;
+  identityKeys: string[];
+  source: string;
+  report: string;
+}): void {
   const resolved = resolveRepoPath(cacheFile);
   if (!resolved || identityKeys.length === 0) return;
   fs.mkdirSync(path.dirname(resolved), { recursive: true });
@@ -200,11 +349,11 @@ function appendVerifiedSupportIdentities({ cacheFile, identityKeys, source, repo
   }
 }
 
-function booleanOption(value) {
+function booleanOption(value: unknown): boolean {
   return runtime().booleanOption(value);
 }
 
-function appendOption(args, name, value) {
+function appendOption(args: string[], name: string, value: unknown): void {
   if (value === undefined || value === null || value === "") return;
   if (value === true) {
     args.push(name);
@@ -213,27 +362,37 @@ function appendOption(args, name, value) {
   args.push(name, String(value));
 }
 
-function appendPathOption(args, name, value) {
+function appendPathOption(args: string[], name: string, value: unknown): void {
   if (!value) return;
   appendOption(args, name, repoRelative(resolveRepoPath(value)));
 }
 
-function appendPathOptions(args, name, value) {
+function appendPathOptions(args: string[], name: string, value: unknown): void {
   const values = Array.isArray(value) ? value : String(value ?? "").split(",");
   for (const item of values.map((entry) => String(entry).trim()).filter(Boolean)) {
     appendPathOption(args, name, item);
   }
 }
 
-function shellQuote(value) {
+function shellQuote(value: string): string {
   return runtime().shellQuote(value);
 }
 
-function commandString(argv) {
+function commandString(argv: string[]): string {
   return argv.map(shellQuote).join(" ");
 }
 
-function helperRerunCommand({ rowsFile, outDir, sourceSupportRowsFile, sourceRowsFile }) {
+function helperRerunCommand({
+  rowsFile,
+  outDir,
+  sourceSupportRowsFile,
+  sourceRowsFile,
+}: {
+  rowsFile: string;
+  outDir: string;
+  sourceSupportRowsFile?: string | null;
+  sourceRowsFile?: string | null;
+}): string {
   const args = [
     "node",
     "scripts/foundry.mjs",
@@ -249,7 +408,7 @@ function helperRerunCommand({ rowsFile, outDir, sourceSupportRowsFile, sourceRow
   return commandString(args);
 }
 
-function ensureNoRemoteCommitFlags(options) {
+function ensureNoRemoteCommitFlags(options: JsonRecord): void {
   const forbidden = ["remoteCommit", "executeCommit", "allowRemoteCommit", "allowRemoteCommits"];
   const requested = forbidden.filter((key) => booleanOption(options[key]));
   if (requested.length > 0) {
@@ -261,21 +420,38 @@ function ensureNoRemoteCommitFlags(options) {
   }
 }
 
-function latestLedgerEntry(ledgerPath, predicate) {
+function latestLedgerEntry(
+  ledgerPath: string,
+  predicate: (row: JsonRecord) => boolean,
+): JsonRecord | null {
   if (!fileExists(ledgerPath)) return null;
   return readJsonLines(ledgerPath).reverse().find(predicate) ?? null;
 }
 
-function appendLedger(ledgerPath, row) {
+function appendLedger(ledgerPath: string, row: unknown): void {
   fs.mkdirSync(path.dirname(ledgerPath), { recursive: true });
   fs.appendFileSync(ledgerPath, `${JSON.stringify(row)}\n`);
 }
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   runtime().writeJson(filePath, value);
 }
 
-function compactCommandStage({ stage, command, result, stdoutLog, stderrLog, reportPath }) {
+function compactCommandStage({
+  stage,
+  command,
+  result,
+  stdoutLog,
+  stderrLog,
+  reportPath,
+}: {
+  stage: string;
+  command: unknown;
+  result: CompactStageResult;
+  stdoutLog: string;
+  stderrLog: string;
+  reportPath: string | null;
+}): CommandStage {
   return {
     stage,
     command,
@@ -288,7 +464,11 @@ function compactCommandStage({ stage, command, result, stdoutLog, stderrLog, rep
   };
 }
 
-function runCommandSpecStage({ stage, commandSpec, cwd, logDir }) {
+function runCommandSpecStage({ stage, commandSpec, cwd, logDir }: CommandSpecStageInput): {
+  result: ReturnType<typeof executeFoundryCommandSpecSync>;
+  stdoutLog: string;
+  stderrLog: string;
+} {
   fs.mkdirSync(logDir, { recursive: true });
   const stdoutLog = path.join(logDir, `${stage}.stdout.log`);
   const stderrLog = path.join(logDir, `${stage}.stderr.log`);
@@ -302,21 +482,21 @@ function runCommandSpecStage({ stage, commandSpec, cwd, logDir }) {
   return { result, stdoutLog, stderrLog };
 }
 
-function sleepSync(ms) {
+function sleepSync(ms: number): void {
   if (!ms || ms <= 0) return;
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
-function integerEnv(name, fallback) {
+function integerEnv(name: string, fallback: number): number {
   const parsed = Number.parseInt(String(process.env[name] ?? ""), 10);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function postWriteVerifyRetryAttempts() {
+function postWriteVerifyRetryAttempts(): number {
   return Math.max(1, Math.min(8, integerEnv("BAFU_POST_WRITE_VERIFY_ATTEMPTS", 3)));
 }
 
-function postWriteVerifyRetryDelayMs(attemptIndex) {
+function postWriteVerifyRetryDelayMs(attemptIndex: number): number {
   return Math.max(
     0,
     Math.min(
@@ -337,38 +517,48 @@ const postWriteVerifyRetryableCodes = new Set([
   "verify_report_missing",
 ]);
 
-function collectReportCodes(value, codes = new Set(), depth = 0) {
+function collectReportCodes(
+  value: unknown,
+  codes: Set<string> = new Set(),
+  depth = 0,
+): Set<string> {
   if (value == null || depth > 6) return codes;
   if (Array.isArray(value)) {
     for (const entry of value) collectReportCodes(entry, codes, depth + 1);
     return codes;
   }
   if (typeof value !== "object") return codes;
+  const record = jsonRecord(value);
   for (const key of ["code", "failure_code", "status_code", "readback_status"]) {
-    const text = textValue(value[key]);
+    const text = textValue(record[key]);
     if (text) codes.add(text);
   }
   for (const key of ["blockers", "findings", "checks", "results", "rows", "items"]) {
-    collectReportCodes(value[key], codes, depth + 1);
+    collectReportCodes(record[key], codes, depth + 1);
   }
   return codes;
 }
 
-function postWriteVerifyRetryReason(verifyReportPath) {
+function postWriteVerifyRetryReason(verifyReportPath: string | null): string | null {
   if (!verifyReportPath || !fileExists(verifyReportPath)) return "verify_report_missing";
   const report = readJson(verifyReportPath);
   const codes = collectReportCodes(report);
   for (const code of codes) {
     if (postWriteVerifyRetryableCodes.has(code)) return code;
   }
-  const byStatus = report?.counts?.by_status || report?.counts?.statuses || {};
+  const counts = jsonRecord(report.counts);
+  const byStatus = jsonRecord(counts.by_status || counts.statuses);
   for (const code of postWriteVerifyRetryableCodes) {
     if (Number(byStatus?.[code] ?? 0) > 0) return code;
   }
   return null;
 }
 
-function runArgvStage({ stage, argv, logDir }) {
+function runArgvStage({ stage, argv, logDir }: ArgvStageInput): {
+  result: ReturnType<typeof spawnSync>;
+  stdoutLog: string;
+  stderrLog: string;
+} {
   fs.mkdirSync(logDir, { recursive: true });
   const stdoutLog = path.join(logDir, `${stage}.stdout.log`);
   const stderrLog = path.join(logDir, `${stage}.stderr.log`);
@@ -382,15 +572,16 @@ function runArgvStage({ stage, argv, logDir }) {
   return { result, stdoutLog, stderrLog };
 }
 
-function optionPathList(value) {
+function optionPathList(value: unknown): string[] {
   const values = Array.isArray(value) ? value : String(value ?? "").split(",");
   return values
     .map((entry) => String(entry).trim())
     .filter(Boolean)
-    .map(resolveRepoPath);
+    .map(resolveRepoPath)
+    .filter((filePath): filePath is string => Boolean(filePath));
 }
 
-function processIdentityReportsFromOptions(options) {
+function processIdentityReportsFromOptions(options: JsonRecord): string[] {
   return optionPathList(
     options.identityDecisionApplyReports ||
       options.identityDecisionsApplyReports ||
@@ -399,17 +590,18 @@ function processIdentityReportsFromOptions(options) {
   );
 }
 
-function firstExistingPath(candidates) {
+function firstExistingPath(candidates: unknown[]): string | null {
   return candidates.map(resolveRepoPath).find(fileExists) ?? null;
 }
 
-function findReportFile(rootDir, predicate) {
+function findReportFile(rootDir: unknown, predicate: (filePath: string) => boolean): string | null {
   const resolved = resolveRepoPath(rootDir);
   if (!resolved || !fs.existsSync(resolved)) return null;
   const stack = [resolved];
-  const matches = [];
+  const matches: string[] = [];
   while (stack.length > 0) {
     const current = stack.pop();
+    if (!current) continue;
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const next = path.join(current, entry.name);
       if (entry.isDirectory()) {
@@ -422,8 +614,8 @@ function findReportFile(rootDir, predicate) {
   return matches.sort()[0] ?? null;
 }
 
-function commitReportForHandoffPlan(handoffPlan) {
-  const expectedDir = resolveRepoPath(handoffPlan?.files?.expected_commit_report_dir);
+function commitReportForHandoffPlan(handoffPlan: JsonRecord): string | null {
+  const expectedDir = resolveRepoPath(jsonRecord(handoffPlan.files).expected_commit_report_dir);
   return (
     firstExistingPath([
       path.join(
@@ -468,8 +660,8 @@ function commitReportForHandoffPlan(handoffPlan) {
   );
 }
 
-function verifyReportForHandoffPlan(handoffPlan) {
-  const expectedDir = resolveRepoPath(handoffPlan?.files?.expected_post_write_verify_dir);
+function verifyReportForHandoffPlan(handoffPlan: JsonRecord): string | null {
+  const expectedDir = resolveRepoPath(jsonRecord(handoffPlan.files).expected_post_write_verify_dir);
   return (
     firstExistingPath([
       path.join(expectedDir || "", "outputs", "remote-verification-report.json"),
@@ -481,12 +673,15 @@ function verifyReportForHandoffPlan(handoffPlan) {
   );
 }
 
-function readHandoffPlan(finalizeReport, key = "commit_handoff_plan") {
-  const handoffPath = resolveRepoPath(finalizeReport?.files?.[key]);
+function readHandoffPlan(
+  finalizeReport: JsonRecord,
+  key = "commit_handoff_plan",
+): { path: string | null; value: JsonRecord | null } {
+  const handoffPath = resolveRepoPath(jsonRecord(finalizeReport.files)[key]);
   if (!fileExists(handoffPath)) {
     return { path: null, value: null };
   }
-  return { path: handoffPath, value: readJson(handoffPath) };
+  return { path: handoffPath!, value: readJson(handoffPath!) };
 }
 
 function closeoutCommand({
@@ -495,7 +690,13 @@ function closeoutCommand({
   verifyReportPath,
   outDir,
   ledgerDir,
-}) {
+}: {
+  handoffPlanPath: string;
+  commitReportPath: string;
+  verifyReportPath: string;
+  outDir: string;
+  ledgerDir: string;
+}): string[] {
   const args = [
     process.execPath,
     "scripts/foundry.mjs",
@@ -514,10 +715,22 @@ function closeoutCommand({
   return args;
 }
 
-function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, label }) {
+function executeHandoff({
+  handoffPlanPath,
+  ledgerDir,
+  outDir,
+  logDir,
+  label,
+}: {
+  handoffPlanPath: string;
+  ledgerDir: string;
+  outDir: string;
+  logDir: string;
+  label: string;
+}): HandoffResult {
   const handoffPlan = readJson(handoffPlanPath);
-  const blockers = [];
-  const stages = [];
+  const blockers: JsonRecord[] = [];
+  const stages: JsonRecord[] = [];
   if (handoffPlan.status !== "ready_for_explicit_commit") {
     blockers.push({
       code: "handoff_plan_not_ready",
@@ -531,36 +744,37 @@ function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, label }) {
   } catch (error) {
     blockers.push({
       code: "handoff_account_evidence_mismatch",
-      message: String(error?.message || error),
+      message: String(error instanceof Error ? error.message : error),
       handoff_plan: repoRelative(handoffPlanPath),
     });
     return { status: "blocked", blockers, stages, handoffPlan };
   }
-  let commitSpec;
-  let verifySpec;
+  let commitSpec: FoundryCommandSpec;
+  let verifySpec: FoundryCommandSpec;
   try {
-    const requiredFinalRowsArtifact = {
+    const commands = jsonRecord(handoffPlan.commands);
+    const finalRowsArtifact = jsonRecord(handoffPlan.final_rows_artifact);
+    const requiredFinalRowsArtifact: FoundryArtifactFact = {
       role: "final_rows",
-      ...handoffPlan.final_rows_artifact,
+      path: textValue(finalRowsArtifact.path),
+      bytes: Number(finalRowsArtifact.bytes),
+      sha256: textValue(finalRowsArtifact.sha256),
     };
-    commitSpec = assertFoundryCommandSpecBindsArtifact(
-      handoffPlan.commands?.commit,
-      requiredFinalRowsArtifact,
-    );
+    commitSpec = assertFoundryCommandSpecBindsArtifact(commands.commit, requiredFinalRowsArtifact);
     verifySpec = assertFoundryCommandSpecBindsArtifact(
-      handoffPlan.commands?.post_write_verify,
+      commands.post_write_verify,
       requiredFinalRowsArtifact,
     );
   } catch (error) {
     blockers.push({
       code: "handoff_command_spec_invalid",
-      message: `Handoff plan must include valid authoritative commit and post_write_verify CommandSpecs: ${String(error?.message || error)}`,
+      message: `Handoff plan must include valid authoritative commit and post_write_verify CommandSpecs: ${String(error instanceof Error ? error.message : error)}`,
       handoff_plan: repoRelative(handoffPlanPath),
     });
     return { status: "blocked", blockers, stages, handoffPlan };
   }
 
-  let commitStage;
+  let commitStage: ReturnType<typeof runCommandSpecStage>;
   try {
     assertFoundryCommandSpecArtifactsCurrent(commitSpec, resolveRepoPath);
     commitStage = runCommandSpecStage({
@@ -572,7 +786,7 @@ function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, label }) {
   } catch (error) {
     blockers.push({
       code: "commit_handoff_artifact_binding_failed",
-      message: `Commit CommandSpec artifact binding failed before spawn: ${String(error?.message || error)}`,
+      message: `Commit CommandSpec artifact binding failed before spawn: ${String(error instanceof Error ? error.message : error)}`,
       handoff_plan: repoRelative(handoffPlanPath),
     });
     return { status: "failed", blockers, stages, handoffPlan };
@@ -608,7 +822,7 @@ function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, label }) {
   for (let attempt = 1; attempt <= maxVerifyAttempts; attempt += 1) {
     const verifyStageName =
       attempt === 1 ? `${label}.post_write_verify` : `${label}.post_write_verify.retry_${attempt}`;
-    let verifyStage;
+    let verifyStage: ReturnType<typeof runCommandSpecStage>;
     try {
       verifyStage = runCommandSpecStage({
         stage: verifyStageName,
@@ -619,7 +833,7 @@ function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, label }) {
     } catch (error) {
       blockers.push({
         code: "post_write_verify_artifact_binding_failed",
-        message: `Verify CommandSpec artifact binding failed before spawn: ${String(error?.message || error)}`,
+        message: `Verify CommandSpec artifact binding failed before spawn: ${String(error instanceof Error ? error.message : error)}`,
         handoff_plan: repoRelative(handoffPlanPath),
       });
       return { status: "failed", blockers, stages, handoffPlan };
@@ -729,7 +943,17 @@ function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, label }) {
   };
 }
 
-function buildFinalizeCommand({ options, rowsFile, outDir, importLedgerDir }) {
+function buildFinalizeCommand({
+  options,
+  rowsFile,
+  outDir,
+  importLedgerDir,
+}: {
+  options: JsonRecord;
+  rowsFile: string;
+  outDir: string;
+  importLedgerDir: string;
+}): FinalizeCommandResult {
   const finalizeDir = resolveRepoPath(options.finalizeDir) || path.join(outDir, "finalize");
   const args = [
     process.execPath,
@@ -802,9 +1026,9 @@ function buildFinalizeCommand({ options, rowsFile, outDir, importLedgerDir }) {
   };
 }
 
-function curationGateBlockers(finalizeReport) {
-  const blockers = [];
-  const gateReportPath = resolveRepoPath(finalizeReport?.files?.curation_gate_report);
+function curationGateBlockers(finalizeReport: JsonRecord): GateBlockerResult {
+  const blockers: JsonRecord[] = [];
+  const gateReportPath = resolveRepoPath(jsonRecord(finalizeReport.files).curation_gate_report);
   if (!fileExists(gateReportPath)) {
     if (finalizeReport?.status === "ready_for_remote_write") {
       blockers.push({
@@ -815,8 +1039,8 @@ function curationGateBlockers(finalizeReport) {
     }
     return { gateReport: null, blockers };
   }
-  const gateReport = readJson(gateReportPath);
-  const counts = gateReport.counts ?? {};
+  const gateReport = readJson(gateReportPath!);
+  const counts = jsonRecord(gateReport.counts);
   const actionItems = Number(counts.action_items ?? 0);
   if (actionItems > 0) {
     blockers.push({
@@ -829,7 +1053,13 @@ function curationGateBlockers(finalizeReport) {
       semantic_action_items: Number(counts.semantic_action_items ?? 0),
       classification_queue_action_items: Number(counts.classification_queue_action_items ?? 0),
       location_queue_action_items: Number(counts.location_queue_action_items ?? 0),
-      examples: (gateReport.entities ?? gateReport.processes ?? [])
+      examples: (Array.isArray(gateReport.entities)
+        ? gateReport.entities
+        : Array.isArray(gateReport.processes)
+          ? gateReport.processes
+          : []
+      )
+        .map(jsonRecord)
         .filter((entity) => Number(entity.action_item_count ?? 0) > 0)
         .slice(0, 5)
         .map((entity) => ({
@@ -861,11 +1091,11 @@ function curationGateBlockers(finalizeReport) {
   return { gateReport, blockers };
 }
 
-function canRunPostFinalizeIdentityRecovery(finalizeReport) {
-  const gateReportPath = resolveRepoPath(finalizeReport?.files?.curation_gate_report);
+function canRunPostFinalizeIdentityRecovery(finalizeReport: JsonRecord): boolean {
+  const gateReportPath = resolveRepoPath(jsonRecord(finalizeReport.files).curation_gate_report);
   if (!fileExists(gateReportPath)) return false;
-  const gateReport = readJson(gateReportPath);
-  const counts = gateReport.counts ?? {};
+  const gateReport = readJson(gateReportPath!);
+  const counts = jsonRecord(gateReport.counts);
   return (
     Number(counts.identity_action_items ?? 0) > 0 &&
     Number(counts.semantic_action_items ?? 0) === 0 &&
@@ -874,11 +1104,11 @@ function canRunPostFinalizeIdentityRecovery(finalizeReport) {
   );
 }
 
-function canRunPostFinalizeSemanticRecovery(finalizeReport) {
-  const gateReportPath = resolveRepoPath(finalizeReport?.files?.curation_gate_report);
+function canRunPostFinalizeSemanticRecovery(finalizeReport: JsonRecord): boolean {
+  const gateReportPath = resolveRepoPath(jsonRecord(finalizeReport.files).curation_gate_report);
   if (!fileExists(gateReportPath)) return false;
-  const gateReport = readJson(gateReportPath);
-  const counts = gateReport.counts ?? {};
+  const gateReport = readJson(gateReportPath!);
+  const counts = jsonRecord(gateReport.counts);
   return (
     Number(counts.semantic_action_items ?? 0) > 0 &&
     Number(counts.identity_action_items ?? 0) === 0 &&
@@ -893,8 +1123,8 @@ function runPostFinalizeIdentityRecovery({
   outDir,
   logDir,
   attempt,
-}) {
-  const gateReportPath = resolveRepoPath(finalizeReport?.files?.curation_gate_report);
+}: RecoveryInput): RecoveryResult {
+  const gateReportPath = resolveRepoPath(jsonRecord(finalizeReport.files).curation_gate_report);
   if (!fileExists(gateReportPath)) {
     return {
       status: "blocked",
@@ -945,7 +1175,7 @@ function runPostFinalizeIdentityRecovery({
     };
   }
   const identityTaskJson = readJson(identityTaskReport);
-  const stages = [
+  const stages: JsonRecord[] = [
     compactCommandStage({
       stage: `post-finalize-${attempt}.identity-task`,
       command: commandString([
@@ -1021,7 +1251,9 @@ function runPostFinalizeIdentityRecovery({
     };
   }
   const identityAutofillJson = readJson(identityAutofillReport);
-  if (!["completed", "completed_with_manual_review"].includes(identityAutofillJson.status)) {
+  if (
+    !["completed", "completed_with_manual_review"].includes(textValue(identityAutofillJson.status))
+  ) {
     return {
       status: "blocked",
       stages,
@@ -1089,7 +1321,7 @@ function runPostFinalizeIdentityRecovery({
   }
   return {
     status: "completed",
-    rowsFile: resolveRepoPath(identityApplyJson.files?.output_rows) || currentRowsFile,
+    rowsFile: resolveRepoPath(jsonRecord(identityApplyJson.files).output_rows) || currentRowsFile,
     identityApplyReport,
     stages,
   };
@@ -1101,8 +1333,8 @@ function runPostFinalizeSemanticRecovery({
   outDir,
   logDir,
   attempt,
-}) {
-  const gateReportPath = resolveRepoPath(finalizeReport?.files?.curation_gate_report);
+}: RecoveryInput): RecoveryResult {
+  const gateReportPath = resolveRepoPath(jsonRecord(finalizeReport.files).curation_gate_report);
   if (!fileExists(gateReportPath)) {
     return {
       status: "blocked",
@@ -1131,7 +1363,7 @@ function runPostFinalizeSemanticRecovery({
     argv: taskBuildArgv,
     logDir,
   });
-  const stages = [
+  const stages: JsonRecord[] = [
     compactCommandStage({
       stage: `post-finalize-${attempt}.semantic-task`,
       command: commandString(taskBuildArgv),
@@ -1211,7 +1443,9 @@ function runPostFinalizeSemanticRecovery({
     };
   }
   const patchAutofillJson = readJson(patchAutofillReport);
-  if (!["completed", "completed_no_supported_patches"].includes(patchAutofillJson.status)) {
+  if (
+    !["completed", "completed_no_supported_patches"].includes(textValue(patchAutofillJson.status))
+  ) {
     return {
       status: "blocked",
       stages,
@@ -1288,7 +1522,8 @@ function runPostFinalizeSemanticRecovery({
     repoRelative(currentRowsFile),
     "--patch",
     repoRelative(
-      patchCollectJson.files?.batch_patch || path.join(authoringDir, "ai-patches.batch.json"),
+      textValue(jsonRecord(patchCollectJson.files).batch_patch) ||
+        path.join(authoringDir, "ai-patches.batch.json"),
     ),
     "--out",
     repoRelative(patchedRowsFile),
@@ -1340,33 +1575,36 @@ function runPostFinalizeSemanticRecovery({
 
   return {
     status: "completed",
-    rowsFile: resolveRepoPath(patchApplyJson.files?.patched_rows) || patchedRowsFile,
+    rowsFile: resolveRepoPath(jsonRecord(patchApplyJson.files).patched_rows) || patchedRowsFile,
     patchCollectReport,
     patchApplyReport,
     stages,
   };
 }
 
-function finalizeBlockers(finalizeReport) {
-  const blockers = [];
-  if (finalizeReport?.status !== "ready_for_remote_write") {
+function finalizeBlockers(finalizeReport: JsonRecord): JsonRecord[] {
+  const blockers: JsonRecord[] = [];
+  const commitHandoff = jsonRecord(finalizeReport.commit_handoff);
+  if (finalizeReport.status !== "ready_for_remote_write") {
     blockers.push({
       code: "post_authoring_finalize_not_ready",
       severity: "error",
-      message: `Post-authoring finalize status is ${finalizeReport?.status || "missing"}.`,
-      finalize_status: finalizeReport?.status ?? null,
+      message: `Post-authoring finalize status is ${finalizeReport.status || "missing"}.`,
+      finalize_status: finalizeReport.status ?? null,
     });
   }
-  if (finalizeReport?.commit_handoff?.status !== "ready_for_explicit_commit") {
+  if (commitHandoff.status !== "ready_for_explicit_commit") {
     blockers.push({
       code: "commit_handoff_not_ready",
       severity: "error",
-      message: `Commit handoff status is ${finalizeReport?.commit_handoff?.status || "missing"}.`,
-      commit_handoff_status: finalizeReport?.commit_handoff?.status ?? null,
-      commit_handoff_blockers: finalizeReport?.commit_handoff?.blockers ?? [],
+      message: `Commit handoff status is ${commitHandoff.status || "missing"}.`,
+      commit_handoff_status: commitHandoff.status ?? null,
+      commit_handoff_blockers: commitHandoff.blockers ?? [],
     });
   }
-  return blockers.concat(finalizeReport?.blockers ?? []);
+  return blockers.concat(
+    Array.isArray(finalizeReport.blockers) ? finalizeReport.blockers.map(jsonRecord) : [],
+  );
 }
 
 function reportFromFinalize({
@@ -1380,10 +1618,14 @@ function reportFromFinalize({
   mode,
   sourceSupportRowsFile,
   sourceRowsFile,
-}) {
+}: FinalizeReportInput): ProcessScopeReport {
   const { gateReport, blockers: gateBlockers } = curationGateBlockers(finalizeReport);
   const otherBlockers = finalizeBlockers(finalizeReport);
   const blockers = [...gateBlockers, ...otherBlockers];
+  const gateCounts = jsonRecord(gateReport?.counts);
+  const finalizeCounts = jsonRecord(finalizeReport.counts);
+  const commitHandoff = jsonRecord(finalizeReport.commit_handoff);
+  const finalizeFiles = jsonRecord(finalizeReport.files);
   const unresolvedAi = gateBlockers.some(
     (blocker) => blocker.code === "unresolved_ai_curation_items",
   );
@@ -1412,16 +1654,16 @@ function reportFromFinalize({
     },
     counts: {
       blockers: blockers.length,
-      ai_action_items: Number(gateReport?.counts?.action_items ?? 0),
-      deterministic_cleanup_items: Number(gateReport?.counts?.deterministic_cleanup_items ?? 0),
-      finalize_blockers: Number(finalizeReport?.counts?.blockers ?? 0),
-      commit_handoff_blockers: Number(finalizeReport?.counts?.commit_handoff_blockers ?? 0),
+      ai_action_items: Number(gateCounts.action_items ?? 0),
+      deterministic_cleanup_items: Number(gateCounts.deterministic_cleanup_items ?? 0),
+      finalize_blockers: Number(finalizeCounts.blockers ?? 0),
+      commit_handoff_blockers: Number(finalizeCounts.commit_handoff_blockers ?? 0),
     },
     blockers,
     commands: {
       post_authoring_finalize: commandString(finalizeCommand),
-      commit_handoff: finalizeReport?.commit_handoff?.command ?? null,
-      post_write_verify: finalizeReport?.commit_handoff?.post_write_verify_command ?? null,
+      commit_handoff: commitHandoff.command ?? null,
+      post_write_verify: commitHandoff.post_write_verify_command ?? null,
     },
     inputs: {
       source_support_rows_file: repoRelative(sourceSupportRowsFile),
@@ -1431,14 +1673,14 @@ function reportFromFinalize({
       report: repoRelative(reportPath),
       run_ledger: repoRelative(ledgerPath),
       finalize_report: repoRelative(finalizeReportPath),
-      curation_gate_report: finalizeReport?.files?.curation_gate_report ?? null,
-      mutation_manifest: finalizeReport?.files?.mutation_manifest ?? null,
-      commit_handoff_plan: finalizeReport?.files?.commit_handoff_plan ?? null,
-      import_ledger: finalizeReport?.files?.import_ledger ?? null,
+      curation_gate_report: finalizeFiles.curation_gate_report ?? null,
+      mutation_manifest: finalizeFiles.mutation_manifest ?? null,
+      commit_handoff_plan: finalizeFiles.commit_handoff_plan ?? null,
+      import_ledger: finalizeFiles.import_ledger ?? null,
     },
     resume: {
       rerun_command: helperRerunCommand({
-        rowsFile: resolveRepoPath(finalizeReport?.rows_file),
+        rowsFile: resolveRepoPath(finalizeReport.rows_file)!,
         outDir,
         sourceSupportRowsFile,
         sourceRowsFile,
@@ -1448,7 +1690,7 @@ function reportFromFinalize({
   };
 }
 
-function runDatasetBafuProcessScopeE2e(options = {}) {
+function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
   if (options.help || options.h) {
     return {
       schema_version: 1,
@@ -1475,7 +1717,7 @@ function runDatasetBafuProcessScopeE2e(options = {}) {
   if (!fileExists(rowsFile)) {
     throw new Error("--rows-file is required and must point to one process row file.");
   }
-  const rows = readRowsFile(rowsFile);
+  const rows = readRowsFile(rowsFile!);
   if (rows.length !== 1) {
     throw new Error(`--rows-file must contain exactly one process row; found ${rows.length}.`);
   }
@@ -1486,13 +1728,13 @@ function runDatasetBafuProcessScopeE2e(options = {}) {
   const outDir = resolveRepoPath(
     options.outDir ||
       path.join(".foundry", "workspaces", "bafu-process-scope-e2e", processScope.id),
-  );
+  )!;
   fs.mkdirSync(outDir, { recursive: true });
   const reportPath = path.join(outDir, reportFileName);
   const ledgerPath = path.join(outDir, ledgerFileName);
   const importLedgerDir = resolveRepoPath(
     options.ledgerDir || options.importLedgerDir || path.join(outDir, "import-ledger"),
-  );
+  )!;
   const sourceSupportRowsFile = resolveRepoPath(options.sourceSupportRowsFile);
   if (options.sourceSupportRowsFile && !fileExists(sourceSupportRowsFile)) {
     throw new Error("--source-support-rows-file must point to a readable rows file.");
@@ -1502,13 +1744,13 @@ function runDatasetBafuProcessScopeE2e(options = {}) {
     throw new Error("--source-rows-file must point to a readable rows file when provided.");
   }
   const inputHashes = {
-    rows_file_sha256: sha256File(rowsFile),
+    rows_file_sha256: sha256File(rowsFile!),
     source_support_rows_file_sha256: sourceSupportRowsFile
       ? sha256File(sourceSupportRowsFile)
       : null,
     source_rows_file_sha256: sourceRowsFile ? sha256File(sourceRowsFile) : null,
   };
-  let currentRowsFile = rowsFile;
+  let currentRowsFile = rowsFile!;
   let currentIdentityReports = processIdentityReportsFromOptions(options);
   let currentPatchCollectReport = resolveRepoPath(
     options.patchCollectReport || options.authoringPatchCollectReport,
@@ -1529,15 +1771,16 @@ function runDatasetBafuProcessScopeE2e(options = {}) {
         ledgerPath,
         (row) =>
           row.stage === "post_authoring_finalize" &&
-          row.input_hashes?.rows_file_sha256 === inputHashes.rows_file_sha256 &&
-          row.input_hashes?.source_support_rows_file_sha256 ===
+          jsonRecord(row.input_hashes).rows_file_sha256 === inputHashes.rows_file_sha256 &&
+          jsonRecord(row.input_hashes).source_support_rows_file_sha256 ===
             inputHashes.source_support_rows_file_sha256 &&
-          row.input_hashes?.source_rows_file_sha256 === inputHashes.source_rows_file_sha256 &&
-          fileExists(resolveRepoPath(row.files?.finalize_report)),
+          jsonRecord(row.input_hashes).source_rows_file_sha256 ===
+            inputHashes.source_rows_file_sha256 &&
+          fileExists(resolveRepoPath(jsonRecord(row.files).finalize_report)),
       )
     : null;
   const existingFinalizeReportPath = previous
-    ? resolveRepoPath(previous.files.finalize_report)
+    ? resolveRepoPath(jsonRecord(previous.files).finalize_report)
     : fileExists(finalizeReportPath)
       ? finalizeReportPath
       : null;
@@ -1609,7 +1852,7 @@ function runDatasetBafuProcessScopeE2e(options = {}) {
       },
       resume: {
         rerun_command: helperRerunCommand({
-          rowsFile,
+          rowsFile: rowsFile!,
           outDir,
           sourceSupportRowsFile,
           sourceRowsFile,
@@ -1688,8 +1931,8 @@ function runDatasetBafuProcessScopeE2e(options = {}) {
     return failedReport;
   }
   let finalizeReport = readJson(finalizeReportPath);
-  const handoffStages = [];
-  const handoffBlockers = [];
+  const handoffStages: JsonRecord[] = [];
+  const handoffBlockers: JsonRecord[] = [];
   let supportCommitted = false;
   let supportReused = false;
   if (booleanOption(options.commitSupport)) {
@@ -1698,7 +1941,9 @@ function runDatasetBafuProcessScopeE2e(options = {}) {
       "source_contact_support_commit_handoff_plan",
     );
     if (supportHandoff.path) {
-      const supportIdentityKeys = supportIdentityKeysFromHandoffPlan(supportHandoff.value);
+      const supportIdentityKeys = supportIdentityKeysFromHandoffPlan(
+        jsonRecord(supportHandoff.value),
+      );
       const supportCacheFile =
         options.verifiedSupportIdentitiesFile || options.supportIdentityCache || null;
       const cachedSupportIdentities = loadVerifiedSupportIdentities(supportCacheFile);
@@ -1743,7 +1988,7 @@ function runDatasetBafuProcessScopeE2e(options = {}) {
             cacheFile: supportCacheFile,
             identityKeys: supportIdentityKeys,
             source: "process_scope_e2e.support_handoff",
-            report: supportResult.closeoutReportPath,
+            report: supportResult.closeoutReportPath!,
           });
         }
       }
@@ -1938,7 +2183,9 @@ function runDatasetBafuProcessScopeE2e(options = {}) {
   return report;
 }
 
-export function createBafuProcessScopeE2eCommands(deps) {
+export function createBafuProcessScopeE2eCommands(deps: BafuProcessScopeE2eRuntime): {
+  runDatasetBafuProcessScopeE2e: typeof runDatasetBafuProcessScopeE2e;
+} {
   installBafuProcessScopeE2eRuntime(deps);
   return {
     runDatasetBafuProcessScopeE2e,
