@@ -11,33 +11,20 @@ function readRepoFile(relativePath: string): string {
   return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 }
 
-test("Wave 8 large leaves exist only as native TypeScript", () => {
-  for (const stem of ["bafu-family-signatures", "import-ledger"]) {
-    assert.equal(
-      fs.existsSync(path.join(repoRoot, `scripts/lib/${stem}.ts`)),
-      true,
-      `${stem}.ts must exist`,
-    );
-    assert.equal(
-      fs.existsSync(path.join(repoRoot, `scripts/lib/${stem}.mjs`)),
-      false,
-      `${stem}.mjs must be removed`,
-    );
-  }
-});
+function assertTypedLeaf(stem: string): void {
+  assert.equal(
+    fs.existsSync(path.join(repoRoot, `scripts/lib/${stem}.ts`)),
+    true,
+    `${stem}.ts must exist`,
+  );
+  assert.equal(
+    fs.existsSync(path.join(repoRoot, `scripts/lib/${stem}.mjs`)),
+    false,
+    `${stem}.mjs must be removed`,
+  );
+}
 
-test("Wave 8 static consumers target the typed modules explicitly", () => {
-  const expectedImports = [
-    ["scripts/commands/bafu-batch-import-run.mjs", "../lib/bafu-family-signatures.ts"],
-    ["scripts/foundry.mjs", "./lib/import-ledger.ts"],
-    ["test/unit/bafu-family-signatures.test.mjs", "../../scripts/lib/bafu-family-signatures.ts"],
-    [
-      "test/unit/bafu-family-signatures-contract.test.mts",
-      "../../scripts/lib/bafu-family-signatures.ts",
-    ],
-    ["test/unit/import-ledger-utils.test.mjs", "../../scripts/lib/import-ledger.ts"],
-    ["test/unit/import-ledger-contract.test.mts", "../../scripts/lib/import-ledger.ts"],
-  ] as const;
+function assertStaticImports(expectedImports: ReadonlyArray<readonly [string, string]>): void {
   for (const [consumer, specifier] of expectedImports) {
     assert.match(
       readRepoFile(consumer),
@@ -45,14 +32,42 @@ test("Wave 8 static consumers target the typed modules explicitly", () => {
       `${consumer} must import ${specifier}`,
     );
   }
+}
+
+function exportedFunctions(relativePath: string): string[] {
+  return [...readRepoFile(relativePath).matchAll(/export function\s+([A-Za-z0-9_]+)/gu)].map(
+    (match) => match[1],
+  );
+}
+
+test("BAFU family signatures exist only as native TypeScript", () => {
+  assertTypedLeaf("bafu-family-signatures");
 });
 
-test("Wave 8 typed leaves retain their exact named export surfaces", () => {
-  const exportedFunctions = (relativePath: string): string[] =>
-    [...readRepoFile(relativePath).matchAll(/export function\s+([A-Za-z0-9_]+)/gu)].map(
-      (match) => match[1],
-    );
+test("import ledger exists only as native TypeScript", () => {
+  assertTypedLeaf("import-ledger");
+});
 
+test("BAFU family signature consumers target the typed module explicitly", () => {
+  assertStaticImports([
+    ["scripts/commands/bafu-batch-import-run.mjs", "../lib/bafu-family-signatures.ts"],
+    ["test/unit/bafu-family-signatures.test.mjs", "../../scripts/lib/bafu-family-signatures.ts"],
+    [
+      "test/unit/bafu-family-signatures-contract.test.mts",
+      "../../scripts/lib/bafu-family-signatures.ts",
+    ],
+  ]);
+});
+
+test("import ledger consumers target the typed module explicitly", () => {
+  assertStaticImports([
+    ["scripts/foundry.mjs", "./lib/import-ledger.ts"],
+    ["test/unit/import-ledger-utils.test.mjs", "../../scripts/lib/import-ledger.ts"],
+    ["test/unit/import-ledger-contract.test.mts", "../../scripts/lib/import-ledger.ts"],
+  ]);
+});
+
+test("typed BAFU family signatures retain their exact named export surface", () => {
   assert.deepEqual(exportedFunctions("scripts/lib/bafu-family-signatures.ts"), [
     "normalizeBafuFamilyName",
     "summarizeBafuFamilySignatures",
@@ -65,5 +80,8 @@ test("Wave 8 typed leaves retain their exact named export surfaces", () => {
     "bafuFamilySelectionRank",
     "summarizeBafuFamilyScopes",
   ]);
+});
+
+test("typed import ledger retains its exact named export surface", () => {
   assert.deepEqual(exportedFunctions("scripts/lib/import-ledger.ts"), ["createImportLedgerUtils"]);
 });

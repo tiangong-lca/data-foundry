@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import * as bafuFamilySignatures from "../../scripts/lib/bafu-family-signatures.mjs";
+import * as bafuFamilySignatures from "../../scripts/lib/bafu-family-signatures.ts";
 
 type JsonObject = Record<string, any>;
 

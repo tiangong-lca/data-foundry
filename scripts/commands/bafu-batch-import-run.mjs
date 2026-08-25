@@ -11,7 +11,7 @@ import {
   buildBafuFamilySignatureIndex,
   compactBafuFamilySignature,
   summarizeBafuFamilyScopes,
-} from "../lib/bafu-family-signatures.mjs";
+} from "../lib/bafu-family-signatures.ts";
 import { acceptTraceHashOnlyRemoteVerificationMismatch } from "../lib/remote-verification-accepted-diff.ts";
 import {
   assertFoundryCommandSpecArtifactsCurrent,
