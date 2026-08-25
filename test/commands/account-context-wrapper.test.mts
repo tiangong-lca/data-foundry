@@ -182,6 +182,7 @@ test("account wrapper obtains a fresh intent-bound CLI receipt before exact argv
     assert.equal(calls[1].executable, process.execPath);
     assert.deepEqual(calls[1].argv, ["trusted-command.mjs", "--help"]);
     assert.equal(calls[1].options.shell, false);
+    assert.equal(calls[1].options.stdio, "inherit");
     assert.equal(calls[1].options.env?.UNRELATED_SECRET, undefined);
     assert.equal(calls[1].options.env?.FOUNDRY_AUTH_RECEIPT_PROJECT_REF, PROJECT_REF);
     assert.equal(calls[1].options.env?.FOUNDRY_AUTH_RECEIPT_USER_ID, USER_ID);
@@ -192,6 +193,40 @@ test("account wrapper obtains a fresh intent-bound CLI receipt before exact argv
     assert.doesNotMatch(JSON.stringify({ exitCode }), new RegExp(API_KEY, "u"));
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("account wrapper maps requested child cancellation signals to stable shell exit codes", () => {
+  for (const [signal, expectedExitCode] of [
+    ["SIGINT", 130],
+    ["SIGTERM", 143],
+  ] as const) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), `foundry-account-${signal}-`));
+    const { profileDir } = writeProfile(root);
+    fs.mkdirSync(path.join(root, "work"));
+    const calls: SpawnCall[] = [];
+    const deps = baseDeps(root, profileDir, calls);
+    deps.spawnSyncImpl = (executable, argv, options) => {
+      calls.push({ executable, argv: [...argv], options });
+      if (calls.length === 1) {
+        return {
+          status: 0,
+          signal: null,
+          stdout: `${JSON.stringify(receipt())}\n`,
+          stderr: "",
+        };
+      }
+      return { status: null, signal, stdout: "", stderr: "" };
+    };
+    try {
+      assert.equal(
+        runWithLcaAccount(["production-test", "--", process.execPath, "trusted-command.mjs"], deps),
+        expectedExitCode,
+      );
+      assert.equal(calls.length, 2);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   }
 });
 
