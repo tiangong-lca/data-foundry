@@ -484,17 +484,17 @@ function commitFlowSupportInline(): boolean {
 // When true, the finalize lifts the scope's UNMATCHED (non-canonical) Unit Groups
 // and Flow Properties into the support commit set so they are minted as
 // account-local My Data once and committed before the flows that reference them
-// (P1a of the BAFU-cleanup backlog). USLCI-only: BAFU keeps FP/UG reference-only
-// and must not start minting them even though its profile also has the
-// account-local override enabled.
+// (P1a of the BAFU-cleanup backlog). Only adapters that freeze this flag on may use
+// the path (currently USLCI and Worldsteel); BAFU keeps FP/UG reference-only and must
+// not start minting them even though its profile also has the account-local override.
 function mintUnmatchedFpUgSupport(): boolean {
   return Boolean(bafuBatchConfig.mintUnmatchedFpUgSupport);
 }
-// The dataset types the runner tracks as account-local "support" identities. BAFU
-// (and every non-USLCI profile) commits only contacts + true sources as support, so
-// its support identity set, reuse-skip condition, cache, and cross-scope discovery
-// stay exactly contact|source — unchanged. Under --mint-unmatched-fp-ug-support
-// (USLCI only), minted Flow Properties and Unit Groups are ALSO account-local
+// The dataset types the runner tracks as account-local "support" identities. A profile
+// whose adapter leaves the mint flag off commits only contacts + true sources as support,
+// so its support identity set, reuse-skip condition, cache, and cross-scope discovery stay
+// exactly contact|source — unchanged. Under --mint-unmatched-fp-ug-support, minted Flow
+// Properties and Unit Groups are ALSO account-local
 // support: they must be tracked as support identities so the reuse-skip branch does
 // not falsely short-circuit the support commit (a contact already verified must not
 // hide an un-committed minted FP/UG), and so a committed FP/UG can be reused across
@@ -817,8 +817,8 @@ function supportIdentityKeysFromHandoffPlan(handoffPlan: JsonRecord): string[] {
 
 function splitSupportIdentityKey(identityKey: unknown): JsonRecord | null {
   // contact|source for every profile; unitgroup|flowproperty additionally under
-  // --mint-unmatched-fp-ug-support (USLCI). Parsing a wider key set is harmless for
-  // BAFU because BAFU never produces unitgroup/flowproperty support identity keys.
+  // --mint-unmatched-fp-ug-support. Parsing a wider key set is harmless for BAFU
+  // because BAFU never produces unitgroup/flowproperty support identity keys.
   const match = /^(contact|source|unitgroup|flowproperty):([^@]+)@(.+)$/u.exec(
     String(identityKey || ""),
   );
@@ -3875,14 +3875,14 @@ function buildFinalizeArgs({
     appendOption(args, "--library-contact-address", libraryContact.contactAddress);
     appendOption(args, "--library-central-contact-point", libraryContact.centralContactPoint);
     appendOption(args, "--library-description", libraryContact.description);
-    // Optional explicit identity to REUSE an existing packaged contact as the
-    // shared library contact (worldsteel reuses its packaged contact d5710976)
-    // instead of minting a synthetic deterministic foundry contact.
+    // Optional explicit identity to reuse an existing visible packaged contact as the
+    // shared library contact instead of deriving a deterministic owner-draft identity.
+    // Worldsteel intentionally omits these options because its packaged id is foreign/private.
     appendOption(args, "--library-contact-id", libraryContact.contactId);
     appendOption(args, "--library-contact-version", libraryContact.contactVersion);
   }
-  // P1a: USLCI-only — mint unmatched FP/UG as account-local support before the
-  // flows that reference them. Empty for BAFU (config flag off) so its finalize
+  // P1a: flag-enabled adapters mint unmatched FP/UG as account-local support before
+  // the flows that reference them. Empty for BAFU (config flag off) so its finalize
   // args and reference-only FP/UG policy are unchanged.
   if (mintUnmatchedFpUgSupport()) {
     args.push("--mint-unmatched-fp-ug-support");

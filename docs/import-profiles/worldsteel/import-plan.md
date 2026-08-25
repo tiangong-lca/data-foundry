@@ -1,10 +1,29 @@
 ---
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
+lastReviewedNote: "Reviewed for Issue #68: R1/R4 corrections and R5 supersede the unavailable-contact, native-row-version, and FP/UG reference-only assumptions."
 title: worldsteel EF3.1 ILCD Import Plan
 docType: plan
 scope: import-profile/worldsteel
 status: draft
-revision: 3 (decisions D1–D4 + refinements R1–R4 answered 2026-06-29; prerequisites implemented)
+authoritative: true
+revision: 4 (decisions D1–D4 + refinements R1–R5; R5 superseded FP/UG reference-only on 2026-07-01)
 owner: tiangong-lca-data-foundry
+language: en
+whenToUse:
+  - when executing or revising the sequenced Worldsteel import workflow
+  - when tracing a current decision back to D1-D4 or refinements R1-R5
+whenToUpdate:
+  - when a Worldsteel workflow stage, dependency, resolved decision, or operational blocker changes
+  - when a historical implementation path gains or loses current executable authority
+checkPaths:
+  - specs/import-profiles.json
+  - scripts/commands/worldsteel-batch-import-run.ts
+  - docs/import-profiles/worldsteel/profile.md
+  - docs/import-profiles/worldsteel/constraints.md
+  - docs/import-profiles/worldsteel/import-plan.md
+  - docs/import-profiles/worldsteel/import-coverage.md
+  - test/unit/worldsteel-support-mint-truth.test.mts
 created_utc: 2026-06-29
 related:
   - docs/uslci-import-plan.md
@@ -26,18 +45,18 @@ input_package: inputs/CUP2025-2_2022b_v10_worldsteel_products_Tiangong_v1 EF3.1 
 
 ## 0. TL;DR
 
-The worldsteel package is a **native ILCD 1.1 / EF3.1 package** (Sphera/GaBi origin, converted to EF/EPLCA ILCD) with a **small new payload** (33 steel processes + ~74 genuinely new flows + a thin worldsteel contact/source/flow-property overlay) sitting on a **large EF3.1 reference layer** (~1,315 reference elementary flows + most flowproperties/unitgroups + 25 LCIA methods + EF/PEF/OEF/ILCD compliance boilerplate). The reference layer is **reused, not minted**; only the new payload is authored.
+The worldsteel package is a **native ILCD 1.1 / EF3.1 package** (Sphera/GaBi origin, converted to EF/EPLCA ILCD) with a **small new payload** (33 steel processes + ~74 genuinely new flows + a thin worldsteel contact/source/flow-property overlay) sitting on a **large EF3.1 reference layer** (~1,315 reference elementary flows + most flowproperties/unitgroups + 25 LCIA methods + EF/PEF/OEF/ILCD compliance boilerplate). Canonical reference rows are **reused, not minted**. The new payload is authored, and a materialized FP/UG absent from the canonical-support cache may enter the separately gated account-local support path recorded by R5.
 
 The pipeline reuses the BAFU/USLCI foundry machinery almost entirely. **Two things block a literal copy of the USLCI plan, and they must be resolved first:**
 
 1. **There is no ILCD _source_ adapter** in tidas-tools or the CLI. `import-lca convert --from-format` only accepts `ecospold1|ecospold2|openlca-jsonld|openlca-process-xlsx|simapro-csv`; a native ILCD package auto-detects as `FORMAT_UNKNOWN` and exits 2. → **Build an ILCD→TIDAS source adapter in `tidas-tools/import_lca`** (the HiQLCD proposal already scoped this; worldsteel + HiQ + future EF3.1/ILCD packages justify the reusable capability). This is the single biggest work item and gates the whole pipeline.
 2. **External binary docs (`referenceToDigitalFile`) have no import-side handling.** The converter _deliberately drops_ the field (`tidas_json.py:493-498`); the only storage code is an **export-direction** S3 download. → Add attachment management **in `tiangong-lca-cli`** (NOT tidas-tools): a new command uploads the 13 binaries to the Supabase `external_docs` bucket **authenticated as the `data@worldsteel.org` account** (the same authenticated-user path the web app uses) and rewrites each source's `referenceToDigitalFile @uri` to `../external_docs/<key>`.
 
-Everything downstream is the proven generic chain. Confirmed decisions (D1–D4 + refinements R1–R4, see Decision Log): the canonical DB **already holds the EF3.1 flows under their original UUIDs**, so the ~1,315-flow reference layer is **reused by UUID**; governance is **reference-only for the reference layer**, with a **capped escape hatch to mint at most 17 GaBi/Sphera pseudo-elementary flows** (authored with full AI context) so the steel processes stay complete; the account is **`data@worldsteel.org`**; the packaged worldsteel contact `d5710976` is **reused** as the library contact; **source dataset versions are preserved** (not renumbered). All 33 processes are ~2,000–2,543-exchange mega-scopes. Deterministic resolution rewrites still reduce authoring work, but unbound synthetic preflight seeding is disabled; live identity-preflight remains required until a dedicated request/resolution/provenance-bound seed manifest exists.
+Everything downstream is the proven generic chain. Confirmed decisions (D1–D4 + refinements R1–R5, see Decision Log): the canonical DB **already holds the EF3.1 flows under their original UUIDs**, so the ~1,315-flow reference layer is **reused by UUID**; governance remains canonical-first, with a **capped escape hatch to mint at most 17 GaBi/Sphera pseudo-elementary flows** plus R5's profile-gated canonical-cache-miss FP/UG support path; the account is **`data@worldsteel.org`**; packaged contact id `d5710976` is unavailable, so one deterministic owner-draft contact carries the real World Steel Association identity; source versions remain in payload provenance while new owner-draft DB row keys use `00.00.001`. All 33 processes are ~2,000–2,543-exchange mega-scopes. Deterministic resolution rewrites still reduce authoring work, but unbound synthetic preflight seeding is disabled; live identity-preflight remains required until a dedicated request/resolution/provenance-bound seed manifest exists.
 
 > **Implementation status, corrected 2026-08-25:** conversion/upload/profile prerequisites are landed and tested. The former `IDENTITY_PREFLIGHT_REUSE_MAP` preseed wrote an unbound synthetic decision and is now fail-closed instead of masquerading as CLI execution evidence. Mega-scope optimization remains open until it emits a dedicated hash-bound library-resolution seed manifest; current runs perform live identity-preflight for rows without valid execution evidence.
 
-## Decision Log (answered 2026-06-29)
+## Decision Log (answered 2026-06-29; R5 added 2026-07-01)
 
 | # | Question | Answer |
 | --- | --- | --- |
@@ -45,10 +64,11 @@ Everything downstream is the proven generic chain. Confirmed decisions (D1–D4 
 | **D2** | `external_docs` write-auth + owner | Use the **`data@worldsteel.org` account's authenticated session** (same INSERT permission the web app's authenticated users have). Implement attachment upload **in `tiangong-lca-cli`**, **not** tidas-tools. |
 | **D3** | Land prerequisites before the import? | **Yes.** tidas-tools: **ILCD adapter** + **eilcd XSD fix**. tiangong-lca-cli: **external-doc upload** (NOT tidas-tools). foundry: **finalize perf optimization**. |
 | **D4** | Does the canonical DB hold EF3.1 flows under original UUIDs? | **Yes.** → **Reuse by UUID directly** (fastest); semantic matching is reserved only for the 17 GaBi/Sphera pseudo-elementary flows + any residual. |
-| **R1** | Library/attribution contact | **Directly reuse** the packaged worldsteel contact `d5710976-d600-11da-a94d-0800200c9a66` (World Steel Association, v20.20.002) as the single shared library contact — do not mint a synthetic foundry contact. |
+| **R1** | Library/attribution contact | **Corrected 2026-06-30:** packaged id `d5710976@20.20.002` is occupied by another account and is not public/visible. Omit explicit contact id/version so the runner derives one deterministic same-owner `00.00.001` contact from the real World Steel Association identity fields. |
 | **R2** | Source attribution | **Add a `worldsteel` branch** to `source-semantics.ts` `databaseFallbackSourceConfig` (synthesized `worldsteel LCI database` source), so processes never inherit the BAFU citation. |
-| **R3** | Residual elementary flows | **Allow minting at most 17 elementary flows** to keep the processes complete. These are NOT matched by UUID — give the AI full context to judge reuse-vs-mint. **Recommendation:** after the UUID-reuse pass, review how many actually remain, then decide the final count (set `enabled=false` if zero). |
-| **R4** | Version numbering | **Preserve the original dataset version** (`20.25.x` products / `03.00.004` reference) — do not renumber to `00.00.001`. |
+| **R3** | Residual elementary flows | **Allow minting at most 17 elementary flows** to keep the processes complete. These are NOT matched by UUID — give the AI full context to judge reuse-vs-mint. After the UUID-reuse pass, review how many remain; set the shared `enabled=false` only when both this R3 residual and R5 FP/UG support no longer require account-local authorization. |
+| **R4** | Version numbering | **Corrected 2026-06-30:** preserve source versions inside the ILCD/TIDAS payload for provenance; new Worldsteel-owned DB row keys use `00.00.001`, while reused canonical references retain their current published versions. |
+| **R5** | Unmatched FP/UG support | **Supersedes the earlier FP/UG reference-only plan.** Freeze `mintUnmatchedFpUgSupport=true`. A materialized FP/UG absent from the canonical-support cache enters the profile-authorized same-owner My Data support set at `00.00.001`; Unit Groups precede Flow Properties and dependent rows wait for support closeout/readback. The retained 10+10 LANCA gap motivated the decision, but the runtime has no LANCA name whitelist or numeric cap. Canonical matches are always reused. |
 
 ---
 
@@ -56,7 +76,7 @@ Everything downstream is the proven generic chain. Confirmed decisions (D1–D4 
 
 Input: `inputs/CUP2025-2_2022b_v10_worldsteel_products_Tiangong_v1 EF3.1 2026_01_27/` — standard ILCD zip (`META-INF/MANIFEST.MF` ILCD-Version 1.1). Counts: **processes 33, flows 1389, sources 76, contacts 44, flowproperties 198, unitgroups 146, lciamethods 25, external_docs 13.**
 
-### 1a. NEW payload — author / mint (reference-only governance still applies to support)
+### 1a. NEW payload — author / profile-gated account-local mint
 
 | Entity | Count | Notes |
 | --- | --- | --- |
@@ -163,12 +183,12 @@ Input: `inputs/CUP2025-2_2022b_v10_worldsteel_products_Tiangong_v1 EF3.1 2026_01
 
 | Decision | Decision (implemented) | Why |
 | --- | --- | --- |
-| **Reuse vs mint** | Reference-only for the ~1,315-flow reference layer + all FP/UG (`mintUnmatchedFpUgSupport:false`), reused by UUID. **R3:** a capped allowance to mint **≤17** GaBi/Sphera pseudo-elementary flows. | Worldsteel's FP/UG/reference elementary are EF3.1/ILCD **canonical** (1,061/1,332 use canonical Mass FP; ~95%+ FP edges canonical) — reused, not minted. Only the small Sphera-specific tail needs minting to keep processes whole. **Do not copy the BAFU/USLCI profile wholesale — they mint at scale.** |
-| **17 GaBi pseudo-elementary (R3)** | Reuse-match first **with full AI context** (NOT by UUID); mint the residual as account-local My Data (state_code=0), capped at ≤17. **Review the actual residual count after the UUID-reuse pass**, then finalize (set `enabled=false` if zero). | Keeps canonical clean while guaranteeing the 33 steel processes stay complete. |
-| **Profile** | `worldsteel` entry added to `specs/import-profiles.json`: `allow_account_local_support_and_elementary.enabled=true` (documented as the capped ≤17 escape hatch), `mintUnmatchedFpUgSupport=false`, `waived_qa_codes_by_type:{"process":["process_material_balance_deviation"]}`, and **`full_context_ai_completion.required:true`** for `flow`/`process`/`lifecyclemodel` (gives the AI the full context R3 calls for). | Pure data; only `.enabled`, QA waivers, and the full-context gate are read from JSON. |
+| **Reuse vs mint** | Canonical-first for the ~1,315-flow reference layer and FP/UG. **R3:** a capped allowance to mint **≤17** GaBi/Sphera pseudo-elementary flows. **R5:** `mintUnmatchedFpUgSupport=true` sends materialized FP/UG canonical-cache misses through the gated account-local support path. | Canonical rows are reused, never minted. R5 was prompted by the 10+10 LANCA gap but is enforced by cache-miss + profile/gate semantics, not a name/count whitelist. Support failure defers the dependent scope while independent ready scopes may continue. **Do not copy another profile wholesale.** |
+| **17 GaBi pseudo-elementary (R3)** | Reuse-match first **with full AI context** (NOT by UUID); mint the residual as account-local My Data (state_code=0), capped at ≤17. **Review the actual residual count after the UUID-reuse pass**; set the shared `enabled=false` only when both R3 elementary and R5 FP/UG support no longer require account-local authorization. | Keeps canonical clean while guaranteeing the 33 steel processes stay complete. |
+| **Profile** | `worldsteel` entry in `specs/import-profiles.json`: `allow_account_local_support_and_elementary.enabled=true`, R3/R5 write scopes, process QA waiver, and profile prose declaring `mintUnmatchedFpUgSupport=true`. The wrapper independently freezes that executable flag. | The contract test freezes runtime `true`, checks structured authorization, and compares the profile declaration against every active Worldsteel document without pretending an unconsumed JSON mirror is an execution gate. |
 | **Account** | **`data@worldsteel.org`** (dedicated). Create ignored `.foundry/account-profiles/worldsteel.env` with the three CLI credential values plus `FOUNDRY_EXPECTED_PROJECT_REF` and the canonical `FOUNDRY_EXPECTED_USER_ID`. Do not select accounts by commenting blocks in the repository `.env`. | Account identity is **not** in profile JSON; it lives in the runtime account profile, Codex thread guard when applicable, and the fresh CLI 0.1.1 intent-bound receipt. The same receipt-gated account context authenticates the external-doc upload (D2). |
-| **State / version (R4)** | `state_code=0` (My Data draft) for processes + worldsteel support; reused canonical refs stay `state_code=100`. **Preserve the source `dataSetVersion`** (`20.25.x` products / `03.00.004` reference) — do NOT renumber to `00.00.001`. | The adapter already preserves `dataSetVersion` into `raw["version"]`; downstream stages keep it. |
-| **Library/attribution contact (R1)** | **Reuse the packaged worldsteel contact `d5710976-d600-11da-a94d-0800200c9a66`** (World Steel Association, v20.20.002) as the single shared library contact — threaded via the runner's `libraryContact.contactId`/`contactVersion` (new `--library-contact-id`/`--library-contact-version` finalize flags). **Not** minted, **not** NREL/FOEN/GaBi-software. | The first-import bootstrap (`commitFlowSupportInline:true`) needs this contact pinned; reusing the package's own contact is the most faithful identity. |
+| **State / version (R4)** | `state_code=0` (My Data draft) and DB row-version key `00.00.001` for new Worldsteel-owned rows; reused canonical refs stay `state_code=100` at their published versions. Preserve the source `dataSetVersion` inside the payload as provenance. | Native DB slots are occupied by other accounts. Separating payload provenance from the DB row key preserves source evidence without collisions. |
+| **Library/attribution contact (R1)** | Mint one deterministic same-owner `00.00.001` contact from the runner's real World Steel Association identity fields; do not pass the unavailable packaged `d5710976` id/version and never use NREL/FOEN/GaBi-software defaults. | The first-import bootstrap (`commitFlowSupportInline:true`) needs a visible owner-draft contact; the deterministic identity is stable and faithful. |
 | **DB-fallback source (R2)** | `worldsteel` branch added to `source-semantics.ts databaseFallbackSourceConfig` (shortName "worldsteel LCI database", worldsteel citation, `worldsteel.org/lci/<id>` URI). | **Without it, worldsteel processes silently inherit the BAFU 2025 default fallback source — a data-integrity corruption, not an error.** |
 | **LCIA methods** | Out of scope (reference/provenance only). | Same rule as BAFU "must not write lciamethods inline." |
 
@@ -184,7 +204,7 @@ Input: `inputs/CUP2025-2_2022b_v10_worldsteel_products_Tiangong_v1 EF3.1 2026_01
 4. ✅ **`scripts/lib/source-semantics.ts`** (R2): `worldsteel` `databaseFallbackSourceConfig` branch (test added: "worldsteel database fallback source cites worldsteel, never BAFU").
 5. ✅ **`scripts/commands/post-authoring-finalize.ts`**: widened the `source_contact_rewrites` gate to include `'worldsteel'`.
 6. ✅ **`specs/import-profiles.json`** + **`docs/import-profiles/worldsteel/{profile.md,constraints.md}`**: `worldsteel` profile (capped ≤17 mint, full-context on) + docs. Test added (profile registration).
-7. ✅ **`scripts/commands/worldsteel-batch-import-run.ts`** + **`bundle-sample-utils.ts`** (R1): runner wrapper (`mintUnmatchedFpUgSupport:false`, `applyResolutionRewrites:true`, `libraryContact` reusing contact `d5710976` via new `--library-contact-id`/`--library-contact-version` finalize flags); registered in `foundry.mjs`, `foundry-cli.ts`, `foundry-command-registry.ts`, `foundry-command-metadata.ts`. Test added (contact reuse).
+7. ✅ **`scripts/commands/worldsteel-batch-import-run.ts`** + **`bundle-sample-utils.ts`** (R1/R5): runner wrapper (`mintUnmatchedFpUgSupport:true`, `applyResolutionRewrites:true`, real World Steel Association `libraryContact` fields with no explicit id/version so identity is derived deterministically); registered in `foundry.ts`, `foundry-cli.ts`, `foundry-command-registry.ts`, `foundry-command-metadata.ts`. Factory and profile-truth contracts cover the frozen value.
 8. ⏳ **Mega-scope speed-up (§8)**: unbound synthetic preseed reports are disabled. A replacement must bind request bytes, library-resolution bytes, canonical target, producer provenance, and report bytes before `onlyPending` may skip live identity-preflight.
 9. ⏳ **context-pack**: generate `tiangong-lca dataset context-pack --type process|flow --profile ai-import` outputs (schema.json/methodology.yaml/runtime-ruleset.json + `tidas_*_category.json`) for the classification round.
 
@@ -242,7 +262,7 @@ node scripts/foundry.ts dataset-library-index-build   # → $RUN/library-index-v
 - **3a. Identity preflight** — `dataset-identity-preflight-requests-build` → `-query-audit` → `dataset-identity-preflight-run` (CLI `flow|process identity-preflight`, semantic `flow_hybrid_search` on name + EF3.1 compartment path + CAS + reference FP) → `-index-merge`.
 - **3b. Elementary reuse (D4 = reuse-by-UUID confirmed):** the canonical DB already holds the EF3.1 reference flows under their **original UUIDs**, so:
   - **Reference layer (~1,315 flows) → deterministic reuse-by-UUID.** Build an offline library-resolution producing `exchange-reference-rewrites.jsonl`; each row must carry `canonical_short_description`. Apply rewrites with `applyResolutionRewrites:true`. Until a bound seed-manifest contract is implemented, do not treat the rewrite file as identity-preflight execution evidence: live preflight still runs where the workflow requires it.
-  - **17 GaBi/Sphera pseudo-elementary + any UUID miss → semantic + AI matching only.** Run identity-preflight + the **AI-first physical-equivalence round** (mirror `$RUN/ai-elementary-match-v1/`: slim ~14-candidate tasks, explicit per-batch id files, adversarial verify) for just this small tail. Residual with no canonical match → **blocked / externalized to a `common:other` trace** under reference-only governance (do not mint), unless the user authorizes a narrowly-scoped elementary mint for the ≤17 (see Open Questions).
+  - **17 GaBi/Sphera pseudo-elementary + any UUID miss → semantic + AI matching only.** Run identity-preflight + the **AI-first physical-equivalence round** (mirror `$RUN/ai-elementary-match-v1/`: slim ~14-candidate tasks, explicit per-batch id files, adversarial verify) for just this small tail. R3 already authorizes the residual with no canonical match as account-local My Data, capped at ≤17; it remains subject to the full profile/finalize gates.
 - **3c. Classification** (the one hard AI round): `context-pack --profile ai-import` → `dataset-bundle-sample-rows --profile worldsteel` → `dataset-classification-decision-task-build` → AI authors process→ISIC4 leaf, product-flow→CPC level-4 leaf → `dataset-library-classification-decisions-project` → `dataset-classification-decisions-apply`. **Keep the queue file byte-identical at build/project/apply** (sha binding → `classification_decision_task_queue_mismatch`). Note: worldsteel processes ship no CPC; classification is authored fresh.
 - **3d. Location** — `dataset-location-decision-task-build/-suggest/-apply` (GLO/Europe/EU; preserve, don't collapse).
 - **3e. Canonical-support** — `dataset-support-cache-refresh --out specs/canonical-support/flow-properties-unit-groups.json` (state_code=100 only) first; then reuse FP/UG by exact UUID via `canonical-support-rewrites.ts`. **Never** write account-local FP/UG UUIDs into the shared cache. Pass `--block-on-unscaled-canonical-support` through bundle sampling so any scale≠1 rewrite remains in `canonical-support-amount-scaling.jsonl`, the report, and the process-scope ledger; known positive non-1 factors use `canonical_support_amount_scaling_required`, while a missing/non-finite/non-positive factor uses `canonical_support_amount_scale_unresolved`. Watch `canonical_flow_property_unit_group_unproven` (EF3.1 FP family `93a60a56-a3c8-*` vs its reference UG family `93a60a57-a4c8-*`) and do not relax either scale blocker.
@@ -295,7 +315,7 @@ The canonical DB **already holds the EF3.1 reference flows under their original 
 
 - Cross-reference which of the 1,332 elementary flows are actually referenced by the 33 processes (rebar alone references ~2,496 reference-elementary exchanges, so coverage is near-total — confirm to size the resolution).
 - Spot-check version alignment on a ~20-flow sample (worldsteel ships _legacy_ ILCD versions like `03.00.004`; confirm the canonical rows carry a matching/expected version).
-- Audit the ~97 non-canonical chemical-content FPs / ~135 unitgroups + amount-scaling dimensions so the unmatched FP/UG tail is left **blocked, not minted** (reference-only). Known pending canonical gaps (Length·time, Time, Person·distance) stay blocked; keep `canonical_support_amount_scaling_required` active.
+- Audit the ~97 non-canonical chemical-content FPs / ~135 unitgroups + amount-scaling dimensions. Under R5, a materialized canonical-cache miss is a profile-authorized account-local candidate; there is no LANCA/name/count whitelist. Keep both `canonical_support_amount_scaling_required` and `canonical_support_amount_scale_unresolved` active, and defer the dependent scope on any support/closure/readback failure.
 
 ---
 
@@ -310,7 +330,7 @@ The vast majority of those exchanges point at EF3.1 reference flows that will re
 ## 9. Risk register (consolidated gotchas)
 
 - **Use the project-installed CLI** — leave `TIANGONG_LCA_CLI_BIN` blank so Foundry resolves exact `@tiangong-lca/cli@0.1.1`; an override is only for an explicit local test binary. Credential-scoped execution still goes through the receipt-gated `pnpm account:run` wrapper.
-- **Don't copy BAFU/USLCI profile wholesale** — they mint reference support at scale; worldsteel reuses by UUID and only mints the capped ≤17 tail (✅ profile authored accordingly).
+- **Don't copy BAFU/USLCI profile wholesale** — Worldsteel reuses every canonical row by UUID, caps the R3 elementary tail, and enables R5 only for materialized FP/UG canonical-cache misses behind the full account-local support gates.
 - **`databaseFallbackSourceConfig` silently inherits BAFU** for any unknown profile → ✅ worldsteel branch added.
 - **`source_contact_rewrites` gated to bafu/uslci** → ✅ widened to include `worldsteel`.
 - **Converter drops `referenceToDigitalFile`** → ✅ adapter preserves local refs + writer emits them; the CLI upload step runs before save-draft (ordering still matters operationally).
@@ -327,11 +347,11 @@ The vast majority of those exchanges point at EF3.1 reference flows that will re
 
 ## 10. Open questions
 
-**All resolved (Decision Log):** ✅ D1 account = `data@worldsteel.org` · ✅ D2 upload owner = `tiangong-lca-cli` + account session · ✅ D3 land prereqs first · ✅ D4 reuse-by-UUID · ✅ R1 reuse contact `d5710976` · ✅ R2 worldsteel source branch · ✅ R3 capped ≤17 elementary mint (count decided after the UUID-reuse pass) · ✅ R4 preserve source version.
+**All resolved (Decision Log):** ✅ D1 account = `data@worldsteel.org` · ✅ D2 upload owner = `tiangong-lca-cli` + account session · ✅ D3 land prereqs first · ✅ D4 reuse-by-UUID · ✅ R1 deterministic owner-draft World Steel Association contact (packaged id unavailable) · ✅ R2 worldsteel source branch · ✅ R3 capped ≤17 elementary mint (count decided after the UUID-reuse pass) · ✅ R4 source version in payload provenance + new DB row key `00.00.001` · ✅ R5 unmatched materialized FP/UG support mint enabled under canonical-first gates.
 
 **Remaining operational decisions (not blocking the build):**
 
-1. **Final residual mint count (R3 follow-up):** after the UUID-reuse pass + AI matching, review how many of the ≤17 GaBi/Sphera pseudo-elementary flows actually have no canonical match. If zero, flip `allow_account_local_support_and_elementary.enabled=false`.
+1. **Final residual mint count (R3 follow-up):** after the UUID-reuse pass + AI matching, review how many of the ≤17 GaBi/Sphera pseudo-elementary flows actually have no canonical match. Set `allow_account_local_support_and_elementary.enabled=false` only when both the R3 elementary residual and R5 unmatched FP/UG support no longer require account-local authorization.
 2. **`allow_remote_commit`:** stays human-gated until the pilot scope is verified end-to-end (dry-run → commit → readback).
 
 ---
@@ -341,9 +361,9 @@ The vast majority of those exchanges point at EF3.1 reference flows that will re
 1. [x] **tidas-tools** ILCD adapter + `detect.py FORMAT_ILCD` + `cli.py` dispatch + `--from-format ilcd`; preserves UUIDs/versions/classification/exchanges/`referenceToDigitalFile`; skips LCIA. Tests green; full worldsteel package → valid TIDAS.
 2. [x] **tidas-tools** eilcd XSD `xml:lang`/`name` default-attribute fix + writer `referenceToDigitalFile` emission. Validate regression test green.
 3. [x] **tiangong-lca-cli** `dataset source upload-attachments` — authenticated `external_docs` upload + `referenceToDigitalFile` rewrite. 25 tests, 100% coverage.
-4. [x] **foundry** `worldsteel` profile (capped ≤17 mint, full-context on) + docs; `source-semantics.ts` worldsteel branch; widened `post-authoring-finalize.ts` gate; `worldsteel-batch-import-run.ts` wrapper (reuses contact `d5710976`) + registrations. New tests green.
+4. [x] **foundry** `worldsteel` profile (R3 capped elementary mint + R5 unmatched FP/UG support, full-context policy) + docs; `source-semantics.ts` worldsteel branch; widened `post-authoring-finalize.ts` gate; `worldsteel-batch-import-run.ts` wrapper (deterministic owner-draft World Steel Association contact) + registrations. New tests green.
 5. [ ] Implement a dedicated hash-bound library-resolution seed manifest before restoring any identity-preflight skip; unbound synthetic decisions remain disabled.
-6. [ ] `.foundry/account-profiles/worldsteel.env` with the exact expected project ref and canonical expected user id for `data@worldsteel.org`; obtain a fresh CLI 0.1.1 intent-bound receipt before the run. Library contact = reuse `d5710976` (no separate creation needed). _(needs a live session)_
+6. [ ] `.foundry/account-profiles/worldsteel.env` with the exact expected project ref and canonical expected user id for `data@worldsteel.org`; obtain a fresh CLI 0.1.1 intent-bound receipt before the run. Library contact = deterministic same-owner World Steel Association identity at `00.00.001` (packaged id `d5710976` is unavailable). _(needs a live session)_
 7. [ ] Publish tidas-tools (≥ the version the CLI bundles) + the CLI, so the foundry run picks up the adapter + upload command. _(release action)_
 8. [ ] **Phase 1** convert (`--from-format ilcd`) → gates (0 error, LCIA=0 tolerated, extensions OK, Perc/CAS corrected, source versions preserved).
 9. [ ] **Phase 1.5** upload 13 external_docs + rewrite source URIs → signed-URL verify (CLI command, account-wrapped).

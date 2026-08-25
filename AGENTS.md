@@ -24,6 +24,8 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - docs/topology-convergence-contract.md
   - docs/import-profiles/bafu/leaf-process-classification-authoring.md
+  - docs/import-profiles/worldsteel/**
+  - specs/import-profiles.json
   - .nvmrc
   - .oxlintrc.json
   - .prettierignore
@@ -61,6 +63,7 @@ checkPaths:
   - scripts/commands/bafu-auto-authoring.ts
   - scripts/commands/bafu-process-scope-e2e.ts
   - scripts/commands/bafu-batch-import-run.ts
+  - scripts/commands/worldsteel-batch-import-run.ts
   - scripts/commands/authoring-plan.ts
   - scripts/commands/bundle-sample-rows.ts
   - scripts/commands/incremental-change-set.ts
@@ -77,6 +80,7 @@ checkPaths:
   - scripts/lib/location-quality-utils.ts
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
+  - test/unit/worldsteel-support-mint-truth.test.mts
   - scripts/lib/import-curation/internal/hash-utils.ts
   - scripts/lib/import-curation/internal/dataset-types.ts
   - scripts/lib/import-curation/internal/runtime-io.ts

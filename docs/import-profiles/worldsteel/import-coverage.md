@@ -1,8 +1,37 @@
+---
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
+lastReviewedNote: "Reviewed for Issue #68 as retained delivery evidence; 10+10 LANCA and 11+11 owner rows are historical observations, not runtime caps."
+title: worldsteel EF3.1 Import Coverage Evidence
+docType: report
+scope: import-profile/worldsteel
+status: retained
+authoritative: true
+owner: tiangong-lca-data-foundry
+language: en
+whenToUse:
+  - when establishing the retained 2026-07-01 reason for enabling unmatched FP/UG support
+  - when distinguishing historical owner inventory from current runtime policy and verification
+whenToUpdate:
+  - when a later durable delivery supersedes these retained counts or their interpretation
+  - when hardening changes whether any historical result still qualifies as current evidence
+checkPaths:
+  - specs/import-profiles.json
+  - scripts/commands/worldsteel-batch-import-run.ts
+  - docs/import-profiles/worldsteel/profile.md
+  - docs/import-profiles/worldsteel/constraints.md
+  - docs/import-profiles/worldsteel/import-plan.md
+  - docs/import-profiles/worldsteel/import-coverage.md
+  - test/unit/worldsteel-support-mint-truth.test.mts
+---
+
 # worldsteel EF3.1 import — coverage report
 
 Imported under account **data@worldsteel.org** (uid 7d6d550a). Generated 2026-07-01.
 
 > Historical pre-hardening report. It records the 2026-07-01 run, but its accepted foreign `state_code=0` reference is no longer valid verification evidence. Current runs must remain blocked until that dependency resolves to an allowed public or same-owner visible row.
+
+Current executable policy, reviewed 2026-08-26: `mintUnmatchedFpUgSupport=true`. This retained report supplies the delivery reason (10+10 LANCA rows) and observed owner inventory (11+11), not a runtime name whitelist or numeric cap. Runtime admits materialized FP/UG canonical-cache misses only as same-owner `state_code=0` support candidates; Unit Groups precede Flow Properties, canonical matches are reused, and any unit-scale, schema, QA, curation, closure, handoff, or readback failure defers the dependent scope while independent ready scopes may continue.
 
 ## Historical result: 33 / 33 processes committed; 1 reference no longer qualifies as verified
 

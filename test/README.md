@@ -22,6 +22,7 @@ checkPaths:
   - prettier.config.ts
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
+  - test/unit/worldsteel-support-mint-truth.test.mts
   - scripts/foundry-golden-diff.ts
   - scripts/check-tidas-cutover.ts
   - scripts/check-lint-suppressions.ts
@@ -272,8 +273,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 6d1f1dd4019f26024d4fd282f1b5ebba1e9271ca
-lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry parity, isolated Golden environments, suppression-resistant complete TS coverage and clean/type-error-no-emit builds add focused contracts without changing authority."
+lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
+lastReviewedNote: "Reviewed for Issue #68: the Worldsteel truth contract belongs in unit because it executes and freezes the adapter factory, verifies profile authorization, and rejects contradictory document semantics without invoking a command or production case."
 ---
 
 # Test Layout
@@ -300,6 +301,8 @@ The Issue #63 migration is complete. `unit/zero-javascript-ratchet.test.mts` per
 `unit/foundry-cli-spine.test.mts` characterizes the typed argument parser and command registry: scalar/argv parsing, exact command/help JSON order, exit-code families, and every static consumer import. Keep that focused contract green before relying on broader command or Golden gates.
 
 `unit/foundry-command-metadata.test.mts` and `unit/surface-audit-typescript.test.mts` characterize the typed metadata/audit leaves: every registered command's exact owner/export/artifact/key-test schema, TS import discovery, portable paths, test-only inbound exclusion, orphan/profile docs, declared entrypoints, hidden handlers, and report JSON. The spine guard rejects active docs or source that retain removed module names; immutable inventory history is outside that scan.
+
+`unit/worldsteel-support-mint-truth.test.mts` executes the frozen Worldsteel adapter factory, binds its unmatched FP/UG support flag to the structured profile authorization, and checks every profile-declared Worldsteel document. Keep the runtime, profile scope, canonical-cache-miss boundary, retained delivery evidence, and blocked-dependent/continue-independent batch semantics aligned.
 
 `unit/bundle-dataset-types.test.mts`, `unit/hash-utils.test.mts`, and `unit/tidas-language-utils.test.mts` characterize the low-level data leaves: exact root/information/table mappings and order, dataset aliases/plurals/support sets and root detection, the complete language-code enumeration and fallback rules, exact SHA-256 serialization, object insertion/array order, and stable invalid-input failures.
 

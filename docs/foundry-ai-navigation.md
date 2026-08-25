@@ -38,6 +38,7 @@ checkPaths:
   - scripts/commands/bafu-auto-authoring.ts
   - scripts/commands/bafu-process-scope-e2e.ts
   - scripts/commands/bafu-batch-import-run.ts
+  - scripts/commands/worldsteel-batch-import-run.ts
   - scripts/commands/authoring-plan.ts
   - scripts/commands/bundle-sample-rows.ts
   - scripts/commands/incremental-change-set.ts
@@ -56,6 +57,9 @@ checkPaths:
   - scripts/lib/location-quality-utils.ts
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
+  - specs/import-profiles.json
+  - docs/import-profiles/worldsteel/**
+  - test/unit/worldsteel-support-mint-truth.test.mts
   - scripts/lib/import-curation/internal/hash-utils.ts
   - scripts/lib/import-curation/internal/dataset-types.ts
   - scripts/lib/import-curation/internal/runtime-io.ts
@@ -132,8 +136,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
-lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: navigation exposes trusted source/emitted entry resolution, isolated Golden environments and suppression-resistant complete TS coverage without moving semantic ownership."
+lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
+lastReviewedNote: "Reviewed for Issue #68: navigation binds the Worldsteel factory, profile authorization, four active documents, retained evidence, and exact Golden migration while documenting the deliberate one-way Docpact route from dataset-specific paths."
 ---
 
 # Foundry AI Navigation
@@ -217,6 +221,8 @@ The typed decision apply leaf is `import-curation/internal/workflow-decision-app
 
 The typed profile leaf is `import-curation/internal/profiles-config.ts`. Navigate there for profile field alias precedence, full-context policy normalization, account-local override projection, config-file fallback, requested/default/generic lookup, operator-added docs/QA waivers and ordered profile listing. The public profiles facade plus curation and mutation facets consume it; profile defaults remain declarative in `specs/import-profiles.json`.
 
+Worldsteel's frozen adapter/profile policy is a governed cross-file contract. Start with `scripts/commands/worldsteel-batch-import-run.ts` for the executable batch-engine flags, then follow the `worldsteel.docs` list in `specs/import-profiles.json` for current policy, constraints, plan, and retained delivery evidence. `test/unit/worldsteel-support-mint-truth.test.mts` freezes runtime `true`, verifies the existing profile `enabled`/scope authorization and profile prose, and requires every declared Worldsteel document to state the same truth. The hard candidate boundary is a materialized canonical-cache miss behind the profile and finalize gates; LANCA names and historical counts are evidence, not a runtime allowlist. Docpact intentionally routes wrapper/test/Worldsteel-doc changes into that evidence set but leaves the monolithic profile index under its generic trigger so a BAFU/USLCI edit does not create Worldsteel noise; the truth test supplies the reverse cross-file check.
+
 The typed patch collect leaf is `import-curation/internal/workflow-patch-collect.ts`. Navigate there for patch-set admission blockers, action-item closure, resolution/context/evidence validation, JSON/JSONL and optional artifact readers, identity-apply report option aliases, default source-rewrite discovery and normalized source-rewrite evidence. Its nine workflow consumers span authoring, curation, mutation, dry-run, identity, evidence, reference closure and row transforms.
 
 The typed identity decision leaf is `import-curation/internal/workflow-identity-decision-context.ts`. Navigate there for identity-reference rewrite discovery/scoping, decision field and canonical-reference aliases, decision identity keys, apply artifact loading, authoring-package/payload proof, multi-report merge, completed-action/decision predicates and unresolved flow reference keys. It feeds curation, mutation, preflight, patch evidence and decision full-context gates.
@@ -245,7 +251,7 @@ The typed final command owners are `scripts/commands/core.ts`, `identity-preflig
 
 The typed import-curation entry chain is `scripts/lib/import-curation.ts` → `import-curation/index.ts` → semantic owners. `profiles.ts` and `trace-summary.ts` are pure typed leaf barrels. Navigate through the public/index barrels to discover the complete namespace, but edit behavior only in the semantic owner named by command metadata.
 
-The typed adapter/tooling owners are `tidas-adapter.ts` for the external Rust machine contract, `post-authoring-finalize-utils.ts` for finalize-stage path/reuse/preflight coordination, `check-tidas-cutover.ts` for authoritative cutover inventory, and `foundry-golden-diff.ts` for isolated non-HEAD normalized comparison. Tests use controlled executables and local Git/filesystem fixtures only.
+The typed adapter/tooling owners are `tidas-adapter.ts` for the external Rust machine contract, `post-authoring-finalize-utils.ts` for finalize-stage path/reuse/preflight coordination, `check-tidas-cutover.ts` for authoritative cutover inventory, and `foundry-golden-diff.ts` for isolated non-HEAD normalized comparison. Golden may admit an intentional contract migration only through an exact reviewed before/after hash-and-shape pair so later drift remains visible. Tests use controlled executables and local Git/filesystem fixtures only.
 
 The typed fixture chain starts at `test/fixtures/foundry-core.ts` and `row-builders.ts`, then branches into full-context/identity/mutation evidence and independent incremental/topology packages. Navigate to `fake-tidas.ts` only for the stable Rust operation-report/exit harness; dispatch it as `process.execPath` plus script argv. Fixture modules preserve runtime export namespaces and artifact bytes but are never semantic command owners.
 

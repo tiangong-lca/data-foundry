@@ -1737,7 +1737,7 @@ test("commitFailuresAllAlreadyExist accepts idempotent same-id-version conflicts
     counts: { selected: 1, failed: 1 },
     rows: [
       {
-        id: "d5710976-d600-11da-a94d-0800200c9a66",
+        id: "44444444-5555-4666-8777-888888888888",
         version: "20.20.002",
         status: "failed",
         error: {
@@ -2037,8 +2037,8 @@ test("support identity types stay contact|source for BAFU and add FP/UG only und
   const { setBafuBatchConfigForTest, supportIdentityTypes, splitSupportIdentityKey } =
     bafuBatchImportRunTestHooks;
   try {
-    // BAFU (and every non-USLCI profile): support identities are exactly contact|source,
-    // so the reuse-skip / cache / cross-scope discovery behavior is unchanged.
+    // With the adapter mint flag off (the BAFU default), support identities are exactly
+    // contact|source, so reuse-skip / cache / cross-scope discovery stay unchanged.
     setBafuBatchConfigForTest({});
     assert.deepEqual(supportIdentityTypes(), ["contact", "source"]);
     assert.equal(splitSupportIdentityKey("contact:c1@00.00.001")?.dataset_type, "contact");
@@ -2051,7 +2051,7 @@ test("support identity types stay contact|source for BAFU and add FP/UG only und
     assert.equal(splitSupportIdentityKey("unitgroup:ug1@00.00.001")?.dataset_type, "unitgroup");
     assert.equal(splitSupportIdentityKey("flow:f1@00.00.001"), null);
 
-    // USLCI (--mint-unmatched-fp-ug-support): minted FP/UG are account-local support, so
+    // A flag-enabled adapter (--mint-unmatched-fp-ug-support): minted FP/UG are support, so
     // they must be tracked as support identities — otherwise a contact already verified
     // would let the reuse-skip short-circuit an un-committed minted FP/UG and the
     // dependent flow/process never proves reference closure.
@@ -2128,7 +2128,7 @@ test("supportIdentityKeysFromHandoffPlan extracts minted FP/UG keys only under t
       `contact:${contactId}@00.00.001`,
     ]);
 
-    // USLCI: the minted FP and its reference UG are tracked alongside the contact, so the
+    // With the mint flag on, the FP and its reference UG are tracked with the contact, so the
     // support commit is not falsely skipped and the committed FP/UG are reusable.
     setBafuBatchConfigForTest({ mintUnmatchedFpUgSupport: true });
     assert.deepEqual(supportIdentityKeysFromHandoffPlan(handoffPlan).sort(), [

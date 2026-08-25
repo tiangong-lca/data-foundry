@@ -86,8 +86,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 6d1f1dd4019f26024d4fd282f1b5ebba1e9271ca
-lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry/root parity, isolated Golden environments, suppression-resistant complete TS coverage, erasable syntax, clean builds and TS-aware cutover audit remain Foundry-owned delivery tooling and move no sibling capability."
+lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
+lastReviewedNote: "Reviewed for Issue #68: Worldsteel's frozen adapter/profile support-mint truth remains Foundry-owned profile governance and moves no CLI, database, SDK, skill, or sibling-repository capability."
 ---
 
 # Capability Ownership Policy

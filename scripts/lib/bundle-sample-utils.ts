@@ -635,9 +635,9 @@ export function createBundleSampleUtils({
         bafuDefault("Library-level contact for the BAFU 2025 Version 2 LCA data package."),
     );
     // `library*`-prefixed alternates (libraryContactId/libraryContactVersion) let the
-    // cross-process finalize CLI pass an explicit existing contact identity to REUSE
-    // (e.g. worldsteel reuses its packaged contact d5710976 as the library contact)
-    // instead of minting a synthetic foundry contact.
+    // cross-process finalize CLI pass an explicit visible contact identity to reuse
+    // instead of deriving a deterministic owner-draft contact. Worldsteel omits these
+    // alternates because its packaged contact id is foreign/private.
     const version = asText(
       options.libraryContactVersion || options.contactVersion || options.version || "00.00.001",
     );
