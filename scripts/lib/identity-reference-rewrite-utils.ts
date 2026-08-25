@@ -1,6 +1,107 @@
 import fs from "node:fs";
 import path from "node:path";
 
+type UnknownRecord = Record<string, unknown>;
+type PathSegment = string | number;
+type DatasetIdentity = { id: string | null; version: string | null };
+
+type IdentityRewriteOptions = Record<string, unknown>;
+
+type IdentityPreflightCommands = {
+  identityPreflightRunReportFile: (row: UnknownRecord) => string | null;
+};
+
+type IdentityReferenceRewriteDependencies = {
+  asText: (value: unknown) => string;
+  cloneJson: <T>(value: T) => T;
+  countRowsFile: (filePath: string | null | undefined) => number;
+  datasetIdentity: (payload: unknown, type: string) => DatasetIdentity;
+  datasetRowsFileStem: (datasetType: unknown) => string;
+  ensureArray: (value: unknown) => unknown[];
+  fileExists: (filePath: string | null | undefined) => boolean;
+  foundryTraceNamespace: string;
+  identityPreflightCommands: IdentityPreflightCommands;
+  languageForText: (text: unknown, fallback?: unknown) => string;
+  multiLang: (text: unknown, language?: unknown) => UnknownRecord;
+  normalizedList: (value: unknown) => string[];
+  nowIso: () => string;
+  pathExpression: (parts: PathSegment[]) => string;
+  preferredSourceLanguageText: (values: unknown) => string;
+  readJson: (filePath: string) => UnknownRecord;
+  readJsonLines: (filePath: string) => UnknownRecord[];
+  readRowsFile: (filePath: string | null | undefined) => UnknownRecord[];
+  repoRelativeMaybe: (filePath: string | null | undefined) => string | null;
+  repoRelativePath: (filePath: string) => string;
+  resolveRepoPath: (filePath: unknown) => string | null;
+  supportText: (value: unknown) => string;
+  unique: <T>(values: T[]) => T[];
+  writeJson: (filePath: string, value: unknown) => void;
+  writeJsonLines: (filePath: string, rows: unknown[]) => void;
+};
+
+type FlowCandidate = UnknownRecord & {
+  id?: unknown;
+  version?: unknown;
+  names?: unknown;
+  name_en?: unknown;
+  name?: unknown;
+  match_reasons?: unknown;
+  decision_hint?: unknown;
+  index?: unknown;
+  match_score?: unknown;
+};
+
+type FlowReference = UnknownRecord & {
+  "@type"?: unknown;
+  "@refObjectId"?: unknown;
+  "@version"?: unknown;
+  "@uri"?: unknown;
+  "common:shortDescription"?: unknown;
+  shortDescription?: unknown;
+  refObjectId?: unknown;
+  version?: unknown;
+};
+
+type RewriteSource = UnknownRecord & {
+  file?: unknown;
+  relation?: unknown;
+  action?: unknown;
+  reason?: unknown;
+};
+
+type IdentityMapping = {
+  source: {
+    ref_object_id: string;
+    version: string;
+  };
+  canonical: {
+    table: string;
+    ref_object_id: string;
+    version: string;
+    short_description: string;
+  };
+  identity_preflight: unknown;
+  identity_decision?: unknown;
+  rewrite_source?: RewriteSource;
+};
+
+type UnresolvedIdentityMapping = {
+  source: {
+    ref_object_id: string;
+    version: string;
+    short_description: string;
+  };
+  identity_decision: unknown;
+  identity_evidence: UnknownRecord | null;
+  unresolved_source: RewriteSource;
+};
+
+type RewriteStats = {
+  rewrites: number;
+  unresolved_traces: number;
+  root_unresolved: number;
+};
+
 export function createIdentityReferenceRewriteUtils({
   asText,
   cloneJson,
@@ -27,8 +128,11 @@ export function createIdentityReferenceRewriteUtils({
   unique,
   writeJson,
   writeJsonLines,
-}: any) {
-  function identityReferenceRewriteIndexPath(options: any, rowsFile: any) {
+}: IdentityReferenceRewriteDependencies) {
+  function identityReferenceRewriteIndexPath(
+    options: IdentityRewriteOptions,
+    rowsFile: string | null | undefined,
+  ) {
     const explicit =
       options.identityPreflightIndex ||
       options.identityPreflightRequests ||
@@ -44,7 +148,7 @@ export function createIdentityReferenceRewriteUtils({
     return fileExists(defaultPath) ? defaultPath : null;
   }
 
-  function firstCandidateName(candidate: any) {
+  function firstCandidateName(candidate: FlowCandidate | null | undefined) {
     return (
       preferredSourceLanguageText(candidate?.names) ||
       asText(candidate?.name_en) ||
@@ -52,7 +156,15 @@ export function createIdentityReferenceRewriteUtils({
     );
   }
 
-  function flowGlobalReference({ id, version, shortDescription }: any) {
+  function flowGlobalReference({
+    id,
+    version,
+    shortDescription,
+  }: {
+    id: string;
+    version?: string | null;
+    shortDescription?: string | null;
+  }) {
     const description = shortDescription || id;
     return {
       "@type": "flow data set",
@@ -63,16 +175,19 @@ export function createIdentityReferenceRewriteUtils({
     };
   }
 
-  function referenceShortDescription(reference: any) {
-    const description = reference?.["common:shortDescription"] ?? reference?.shortDescription;
+  function referenceShortDescription(reference: unknown) {
+    const referenceRecord = reference as FlowReference | null | undefined;
+    const description =
+      referenceRecord?.["common:shortDescription"] ?? referenceRecord?.shortDescription;
     if (typeof description === "string") return description.trim();
     if (description && typeof description === "object" && !Array.isArray(description)) {
-      return asText(description["#text"] ?? description.value);
+      const descriptionRecord = description as UnknownRecord;
+      return asText(descriptionRecord["#text"] ?? descriptionRecord.value);
     }
     return "";
   }
 
-  function duplicateFlowCandidateFromReport(report: any) {
+  function duplicateFlowCandidateFromReport(report: UnknownRecord | null | undefined) {
     if (
       asText(report?.kind) !== "flow" ||
       asText(report?.decision) !== "block_duplicate" ||
@@ -81,7 +196,7 @@ export function createIdentityReferenceRewriteUtils({
       return null;
     }
     return (
-      ensureArray(report?.candidates).find((candidate: any) => {
+      (ensureArray(report?.candidates) as FlowCandidate[]).find((candidate) => {
         const reasons = ensureArray(candidate?.match_reasons).map(asText);
         return (
           asText(candidate?.decision_hint) === "block_duplicate" ||
@@ -92,8 +207,8 @@ export function createIdentityReferenceRewriteUtils({
     );
   }
 
-  function loadIdentityDuplicateFlowMappings(indexPath: any) {
-    const mappings = new Map<string, any>();
+  function loadIdentityDuplicateFlowMappings(indexPath: string | null) {
+    const mappings = new Map<string, IdentityMapping>();
     const rows = indexPath && fileExists(indexPath) ? readJsonLines(indexPath) : [];
     for (const row of rows) {
       const datasetType = asText(row.dataset_type || row.type);
@@ -106,6 +221,9 @@ export function createIdentityReferenceRewriteUtils({
       const candidate = duplicateFlowCandidateFromReport(report);
       const canonicalId = asText(candidate?.id);
       if (!canonicalId) continue;
+      const confirmedIndexPath = indexPath as string;
+      const confirmedReport = report as UnknownRecord;
+      const confirmedCandidate = candidate as FlowCandidate;
       const mapping = {
         source: {
           ref_object_id: sourceId,
@@ -118,14 +236,14 @@ export function createIdentityReferenceRewriteUtils({
           short_description: firstCandidateName(candidate) || canonicalId,
         },
         identity_preflight: {
-          index_file: repoRelativePath(indexPath),
+          index_file: repoRelativePath(confirmedIndexPath),
           report_file: repoRelativeMaybe(reportFile),
-          decision: report.decision,
-          status: report.status,
-          confidence: report.confidence ?? null,
-          candidate_index: candidate.index ?? null,
-          candidate_match_score: candidate.match_score ?? null,
-          candidate_match_reasons: ensureArray(candidate.match_reasons),
+          decision: confirmedReport.decision,
+          status: confirmedReport.status,
+          confidence: confirmedReport.confidence ?? null,
+          candidate_index: confirmedCandidate.index ?? null,
+          candidate_match_score: confirmedCandidate.match_score ?? null,
+          candidate_match_reasons: ensureArray(confirmedCandidate.match_reasons),
         },
       };
       mappings.set(`${sourceId}@@${sourceVersion}`, mapping);
@@ -134,12 +252,16 @@ export function createIdentityReferenceRewriteUtils({
     return { rows, mappings };
   }
 
-  function jsonLineFileHasRows(filePath: any) {
+  function jsonLineFileHasRows(filePath: string | null | undefined) {
     return Boolean(filePath && fileExists(filePath) && readJsonLines(filePath).length > 0);
   }
 
-  function identityReferenceRewriteInputFiles(options: any = {}) {
-    const files: any[] = [];
+  function existingFilePath(filePath: string | null): filePath is string {
+    return Boolean(filePath && fileExists(filePath));
+  }
+
+  function identityReferenceRewriteInputFiles(options: IdentityRewriteOptions = {}) {
+    const files: string[] = [];
     const directOptions = [
       options.identityReferenceRewrites,
       options.identityReferenceRewritesFile,
@@ -149,7 +271,7 @@ export function createIdentityReferenceRewriteUtils({
     for (const directOption of directOptions) {
       for (const item of normalizedList(directOption)) {
         const filePath = resolveRepoPath(item);
-        if (jsonLineFileHasRows(filePath)) files.push(filePath);
+        if (jsonLineFileHasRows(filePath)) files.push(filePath as string);
       }
     }
     const reportOptions = unique([
@@ -162,14 +284,15 @@ export function createIdentityReferenceRewriteUtils({
       const reportFile = resolveRepoPath(reportOption);
       if (!reportFile || !fileExists(reportFile)) continue;
       const report = readJson(reportFile);
-      const rewriteFile = resolveRepoPath(report.files?.identity_reference_rewrites);
-      if (jsonLineFileHasRows(rewriteFile)) files.push(rewriteFile);
+      const reportFiles = report.files as UnknownRecord | undefined;
+      const rewriteFile = resolveRepoPath(reportFiles?.identity_reference_rewrites);
+      if (jsonLineFileHasRows(rewriteFile)) files.push(rewriteFile as string);
     }
     return unique(files);
   }
 
-  function identityUnresolvedReferenceInputFiles(options: any = {}) {
-    const files: any[] = [];
+  function identityUnresolvedReferenceInputFiles(options: IdentityRewriteOptions = {}) {
+    const files: string[] = [];
     const directOptions = [
       options.identityUnresolvedReferences,
       options.identityUnresolvedReferencesFile,
@@ -191,21 +314,23 @@ export function createIdentityReferenceRewriteUtils({
       const reportFile = resolveRepoPath(reportOption);
       if (!reportFile || !fileExists(reportFile)) continue;
       const report = readJson(reportFile);
-      const unresolvedFile = resolveRepoPath(report.files?.identity_unresolved_references);
+      const reportFiles = report.files as UnknownRecord | undefined;
+      const unresolvedFile = resolveRepoPath(reportFiles?.identity_unresolved_references);
       if (unresolvedFile && fileExists(unresolvedFile)) files.push(unresolvedFile);
     }
     return unique(files);
   }
 
-  function loadIdentityReferenceRewriteMappings(rewriteFiles: any) {
-    const mappings = new Map<string, any>();
-    const rows: any[] = [];
-    for (const rewriteFile of ensureArray(rewriteFiles)) {
+  function loadIdentityReferenceRewriteMappings(rewriteFiles: unknown) {
+    const mappings = new Map<string, IdentityMapping>();
+    const rows: UnknownRecord[] = [];
+    for (const rewriteFileValue of ensureArray(rewriteFiles)) {
+      const rewriteFile = rewriteFileValue as string;
       if (!rewriteFile || !fileExists(rewriteFile)) continue;
       for (const row of readJsonLines(rewriteFile)) {
         rows.push(row);
-        const original = row?.original ?? {};
-        const canonical = row?.canonical ?? {};
+        const original = (row.original ?? {}) as UnknownRecord;
+        const canonical = (row.canonical ?? {}) as UnknownRecord;
         const sourceId = asText(
           original.ref_object_id ?? original.refObjectId ?? original.id ?? row?.dataset_id,
         );
@@ -250,14 +375,15 @@ export function createIdentityReferenceRewriteUtils({
     return { rows, mappings };
   }
 
-  function loadIdentityUnresolvedReferenceMappings(files: any) {
-    const mappings = new Map<string, any>();
-    const rows: any[] = [];
-    for (const filePath of ensureArray(files)) {
+  function loadIdentityUnresolvedReferenceMappings(files: unknown) {
+    const mappings = new Map<string, UnresolvedIdentityMapping>();
+    const rows: UnknownRecord[] = [];
+    for (const filePathValue of ensureArray(files)) {
+      const filePath = filePathValue as string;
       if (!filePath || !fileExists(filePath)) continue;
       for (const row of readJsonLines(filePath)) {
         rows.push(row);
-        const original = row?.original ?? {};
+        const original = (row.original ?? {}) as UnknownRecord;
         const sourceId = asText(
           original.ref_object_id ?? original.refObjectId ?? original.id ?? row?.dataset_id,
         );
@@ -277,7 +403,7 @@ export function createIdentityReferenceRewriteUtils({
               asText(original.short_description ?? original.shortDescription) || sourceId,
           },
           identity_decision: row.identity_decision ?? null,
-          identity_evidence: row.evidence ?? null,
+          identity_evidence: (row.evidence as UnknownRecord | undefined) ?? null,
           unresolved_source: {
             file: repoRelativePath(filePath),
             relation: row.relation ?? null,
@@ -292,21 +418,25 @@ export function createIdentityReferenceRewriteUtils({
     return { rows, mappings };
   }
 
-  function processDataSetInformation(row: any) {
-    return row?.processDataSet?.processInformation?.dataSetInformation ?? null;
+  function processDataSetInformation(row: unknown) {
+    const rowRecord = row as UnknownRecord | null | undefined;
+    const processDataSet = rowRecord?.processDataSet as UnknownRecord | undefined;
+    const processInformation = processDataSet?.processInformation as UnknownRecord | undefined;
+    return (processInformation?.dataSetInformation as UnknownRecord | undefined) ?? null;
   }
 
-  function ensureCommonOther(dataSetInformation: any) {
+  function ensureCommonOther(dataSetInformation: unknown): UnknownRecord | null {
     if (!dataSetInformation || typeof dataSetInformation !== "object") return null;
-    const current = dataSetInformation["common:other"];
+    const dataSetInformationRecord = dataSetInformation as UnknownRecord;
+    const current = dataSetInformationRecord["common:other"];
     if (current && typeof current === "object" && !Array.isArray(current)) {
-      return current;
+      return current as UnknownRecord;
     }
-    dataSetInformation["common:other"] = {};
-    return dataSetInformation["common:other"];
+    dataSetInformationRecord["common:other"] = {};
+    return dataSetInformationRecord["common:other"] as UnknownRecord;
   }
 
-  function appendUnresolvedFlowReferenceTrace(row: any, traceEntry: any) {
+  function appendUnresolvedFlowReferenceTrace(row: unknown, traceEntry: UnknownRecord) {
     const commonOther = ensureCommonOther(processDataSetInformation(row));
     if (!commonOther) return false;
     commonOther["@xmlns:tiangongfoundry"] =
@@ -323,18 +453,24 @@ export function createIdentityReferenceRewriteUtils({
     return true;
   }
 
-  function unresolvedFlowTraceReferenceId(trace: any) {
+  function unresolvedFlowTraceReferenceId(trace: unknown) {
+    const traceRecord = trace as UnknownRecord | null | undefined;
+    const evidence = traceRecord?.evidence as UnknownRecord | undefined;
+    const target = evidence?.target as UnknownRecord | undefined;
+    const identityDecision = evidence?.identity_decision as UnknownRecord | undefined;
+    const identityDecisionEvidence = identityDecision?.evidence as UnknownRecord | undefined;
+    const identityDecisionTarget = identityDecisionEvidence?.target as UnknownRecord | undefined;
     return asText(
-      trace?.reference_id ??
-        trace?.referenceId ??
-        trace?.evidence?.target?.id ??
-        trace?.evidence?.target?.["@refObjectId"] ??
-        trace?.evidence?.identity_decision?.evidence?.target?.id ??
-        trace?.evidence?.identity_decision?.evidence?.target?.["@refObjectId"],
+      traceRecord?.reference_id ??
+        traceRecord?.referenceId ??
+        target?.id ??
+        target?.["@refObjectId"] ??
+        identityDecisionTarget?.id ??
+        identityDecisionTarget?.["@refObjectId"],
     );
   }
 
-  function blockedFlowReferenceBlockerFiles(options: any = {}) {
+  function blockedFlowReferenceBlockerFiles(options: IdentityRewriteOptions = {}) {
     return normalizedList(
       options.blockedFlowReferenceBlockers ||
         options.blockedFlowReferenceBlockersFile ||
@@ -344,11 +480,11 @@ export function createIdentityReferenceRewriteUtils({
         options.canonicalSupportBlockersFile,
     )
       .map(resolveRepoPath)
-      .filter(fileExists);
+      .filter(existingFilePath);
   }
 
-  function blockedFlowReferenceBlockersById(options: any = {}) {
-    const byId = new Map<string, any[]>();
+  function blockedFlowReferenceBlockersById(options: IdentityRewriteOptions = {}) {
+    const byId = new Map<string, UnknownRecord[]>();
     for (const filePath of blockedFlowReferenceBlockerFiles(options)) {
       for (const blocker of readJsonLines(filePath)) {
         const datasetType = asText(blocker.dataset_type ?? blocker.datasetType ?? blocker.type);
@@ -378,7 +514,13 @@ export function createIdentityReferenceRewriteUtils({
     outFile,
     outDir,
     options = {},
-  }: any) {
+  }: {
+    datasetType: string;
+    rowsFile: string;
+    outFile: string;
+    outDir: string;
+    options?: IdentityRewriteOptions;
+  }) {
     const reportFile = path.join(outDir, "unresolved-exchange-externalization-report.json");
     const tracesFile = path.join(outDir, "unresolved-exchanges.jsonl");
     if (datasetType !== "process") {
@@ -406,20 +548,25 @@ export function createIdentityReferenceRewriteUtils({
 
     fs.mkdirSync(outDir, { recursive: true });
     const rows = readRowsFile(rowsFile);
-    const externalized: any[] = [];
+    const externalized: UnknownRecord[] = [];
     const blockedFlowReferencesById = blockedFlowReferenceBlockersById(options);
     let affectedRows = 0;
     let elementaryFlowExternalized = 0;
     let blockedDependencyExternalized = 0;
 
-    rows.forEach((row: any, rowIndex: number) => {
-      const processDataSet = row?.processDataSet ?? row?.json_ordered?.processDataSet;
-      const dataSetInformation = processDataSet?.processInformation?.dataSetInformation ?? null;
+    rows.forEach((row, rowIndex) => {
+      const jsonOrdered = row.json_ordered as UnknownRecord | undefined;
+      const processDataSet = (row.processDataSet ?? jsonOrdered?.processDataSet) as
+        UnknownRecord | undefined;
+      const processInformation = processDataSet?.processInformation as UnknownRecord | undefined;
+      const dataSetInformation = processInformation?.dataSetInformation ?? null;
       const commonOther = ensureCommonOther(dataSetInformation);
+      const commonOtherRecord = commonOther as UnknownRecord;
       const unresolvedTraces = ensureArray(commonOther?.["tiangongfoundry:unresolvedTrace"]);
-      const unresolvedById = new Map();
-      for (const trace of unresolvedTraces) {
-        if (trace?.action_item_code !== "elementary_flow_identity_manual_review") {
+      const unresolvedById = new Map<string, UnknownRecord>();
+      for (const traceValue of unresolvedTraces) {
+        const trace = traceValue as UnknownRecord;
+        if (trace.action_item_code !== "elementary_flow_identity_manual_review") {
           continue;
         }
         const referenceId = unresolvedFlowTraceReferenceId(trace);
@@ -431,12 +578,14 @@ export function createIdentityReferenceRewriteUtils({
         return;
       }
 
-      const exchanges = ensureArray(processDataSet?.exchanges?.exchange);
+      const exchangesRecord = processDataSet?.exchanges as UnknownRecord | undefined;
+      const exchanges = ensureArray(exchangesRecord?.exchange);
       if (exchanges.length === 0) return;
-      const kept = [];
+      const kept: unknown[] = [];
       let rowExternalized = 0;
-      for (const [exchangeIndex, exchange] of exchanges.entries()) {
-        const reference = exchange?.referenceToFlowDataSet;
+      for (const [exchangeIndex, exchangeValue] of exchanges.entries()) {
+        const exchange = exchangeValue as UnknownRecord;
+        const reference = exchange?.referenceToFlowDataSet as FlowReference | undefined;
         const referenceId = asText(reference?.["@refObjectId"] ?? reference?.refObjectId);
         const unresolvedTrace = referenceId ? unresolvedById.get(referenceId) : null;
         const blockedFlowReferenceBlockers = referenceId
@@ -447,8 +596,8 @@ export function createIdentityReferenceRewriteUtils({
           continue;
         }
 
-        commonOther["@xmlns:tiangongfoundry"] =
-          commonOther["@xmlns:tiangongfoundry"] ?? foundryTraceNamespace;
+        commonOtherRecord["@xmlns:tiangongfoundry"] =
+          commonOtherRecord["@xmlns:tiangongfoundry"] ?? foundryTraceNamespace;
         const actionItemCode = unresolvedTrace
           ? "elementary_flow_exchange_externalized"
           : "blocked_flow_dependency_exchange_externalized";
@@ -470,13 +619,13 @@ export function createIdentityReferenceRewriteUtils({
             : "Add the missing public canonical Flow Property or Unit Group support row, rerun flow finalization, then restore this process exchange in a later curated repair.",
         };
         const traceKey = "tiangongfoundry:unresolvedExchangeTrace";
-        const current = commonOther[traceKey];
+        const current = commonOtherRecord[traceKey];
         if (current === undefined) {
-          commonOther[traceKey] = [externalizedTrace];
+          commonOtherRecord[traceKey] = [externalizedTrace];
         } else if (Array.isArray(current)) {
           current.push(externalizedTrace);
         } else {
-          commonOther[traceKey] = [current, externalizedTrace];
+          commonOtherRecord[traceKey] = [current, externalizedTrace];
         }
         externalized.push({
           relation: unresolvedTrace
@@ -506,8 +655,9 @@ export function createIdentityReferenceRewriteUtils({
       }
       if (rowExternalized > 0) {
         affectedRows += 1;
-        processDataSet.exchanges = processDataSet.exchanges ?? {};
-        processDataSet.exchanges.exchange = kept;
+        const processDataSetRecord = processDataSet as UnknownRecord;
+        const nextExchanges = (processDataSetRecord.exchanges ??= {}) as UnknownRecord;
+        nextExchanges.exchange = kept;
       }
     });
 
@@ -541,7 +691,7 @@ export function createIdentityReferenceRewriteUtils({
   }
 
   function rewriteIdentityDuplicateFlowReferences(
-    value: any,
+    value: unknown,
     {
       mappings,
       unresolvedMappings,
@@ -552,7 +702,17 @@ export function createIdentityReferenceRewriteUtils({
       unresolvedRows,
       stats,
       pathSegments = [],
-    }: any,
+    }: {
+      mappings: Map<string, IdentityMapping>;
+      unresolvedMappings?: Map<string, UnresolvedIdentityMapping> | null;
+      datasetIdentityCache: DatasetIdentity | null;
+      rowRoot: UnknownRecord | null;
+      rowIndex: number;
+      rewriteRows: UnknownRecord[];
+      unresolvedRows: UnknownRecord[];
+      stats: RewriteStats;
+      pathSegments?: PathSegment[];
+    },
   ) {
     if (!value || typeof value !== "object") return;
     if (Array.isArray(value)) {
@@ -571,7 +731,8 @@ export function createIdentityReferenceRewriteUtils({
       );
       return;
     }
-    for (const [key, child] of Object.entries(value)) {
+    const valueRecord = value as UnknownRecord;
+    for (const [key, child] of Object.entries(valueRecord)) {
       const childPath = [...pathSegments, key];
       if (
         key === "referenceToFlowDataSet" &&
@@ -579,7 +740,7 @@ export function createIdentityReferenceRewriteUtils({
         typeof child === "object" &&
         !Array.isArray(child)
       ) {
-        const reference = child as any;
+        const reference = child as FlowReference;
         const originalId = asText(reference["@refObjectId"] ?? reference.refObjectId);
         const originalVersion = asText(reference["@version"] ?? reference.version) || "00.00.001";
         const mapping =
@@ -599,7 +760,7 @@ export function createIdentityReferenceRewriteUtils({
               ? originalShortDescription
               : mapping.canonical.short_description,
           });
-          value[key] = next;
+          valueRecord[key] = next;
           stats.rewrites += 1;
           rewriteRows.push({
             relation:
@@ -707,14 +868,21 @@ export function createIdentityReferenceRewriteUtils({
     outDir,
     options = {},
     allowMissingIndex = false,
-  }: any) {
+  }: {
+    datasetType: string;
+    rowsFile: string;
+    outFile?: string | null;
+    outDir?: string | null;
+    options?: IdentityRewriteOptions;
+    allowMissingIndex?: boolean;
+  }) {
     const indexPath = identityReferenceRewriteIndexPath(options, rowsFile);
     const explicitRewriteFiles = identityReferenceRewriteInputFiles(options);
     const unresolvedReferenceFiles = identityUnresolvedReferenceInputFiles(options);
     const explicitRewriteMappings = loadIdentityReferenceRewriteMappings(explicitRewriteFiles);
     const unresolvedReferenceMappings =
       loadIdentityUnresolvedReferenceMappings(unresolvedReferenceFiles);
-    const blockers: any[] = [];
+    const blockers: UnknownRecord[] = [];
     if (
       (!indexPath || !fileExists(indexPath)) &&
       explicitRewriteMappings.mappings.size === 0 &&
@@ -732,10 +900,10 @@ export function createIdentityReferenceRewriteUtils({
         rows_file: repoRelativePath(rowsFile),
         output_rows_file: repoRelativePath(rowsFile),
         identity_preflight_index: indexPath ? repoRelativePath(indexPath) : null,
-        identity_reference_rewrites_input: explicitRewriteFiles.map((file: any) =>
+        identity_reference_rewrites_input: explicitRewriteFiles.map((file) =>
           repoRelativePath(file),
         ),
-        identity_unresolved_references_input: unresolvedReferenceFiles.map((file: any) =>
+        identity_unresolved_references_input: unresolvedReferenceFiles.map((file) =>
           repoRelativePath(file),
         ),
         rewrite_rows: [],
@@ -759,19 +927,19 @@ export function createIdentityReferenceRewriteUtils({
     for (const [key, mapping] of explicitRewriteMappings.mappings) {
       mappings.set(key, mapping);
     }
-    const rewriteRows: any[] = [];
-    const unresolvedRows: any[] = [];
-    const referenceRows: any[] = [];
+    const rewriteRows: UnknownRecord[] = [];
+    const unresolvedRows: UnknownRecord[] = [];
+    const referenceRows: UnknownRecord[] = [];
     const stats = { rewrites: 0, unresolved_traces: 0, root_unresolved: 0 };
-    const rewrittenRows: any[] = [];
-    rows.forEach((row: any, rowIndex: number) => {
+    const rewrittenRows: UnknownRecord[] = [];
+    rows.forEach((row, rowIndex) => {
       const next = cloneJson(row);
       if (datasetType === "flow") {
         const identity = datasetIdentity(next, "flow");
         const unresolvedMapping =
           unresolvedReferenceMappings.mappings.get(
             `${identity.id}@@${identity.version || "00.00.001"}`,
-          ) ?? unresolvedReferenceMappings.mappings.get(identity.id);
+          ) ?? unresolvedReferenceMappings.mappings.get(identity.id as string);
         if (unresolvedMapping) {
           stats.unresolved_traces += 1;
           stats.root_unresolved += 1;
@@ -789,9 +957,25 @@ export function createIdentityReferenceRewriteUtils({
               version: identity.version || "00.00.001",
               short_description:
                 asText(
-                  next?.flowDataSet?.flowInformation?.dataSetInformation?.name?.baseName?.["#text"],
+                  (
+                    (
+                      (
+                        (
+                          (next.flowDataSet as UnknownRecord | undefined)?.flowInformation as
+                            UnknownRecord | undefined
+                        )?.dataSetInformation as UnknownRecord | undefined
+                      )?.name as UnknownRecord | undefined
+                    )?.baseName as UnknownRecord | undefined
+                  )?.["#text"],
                 ) ||
-                supportText(next?.flowDataSet?.flowInformation?.dataSetInformation?.name) ||
+                supportText(
+                  (
+                    (
+                      (next.flowDataSet as UnknownRecord | undefined)?.flowInformation as
+                        UnknownRecord | undefined
+                    )?.dataSetInformation as UnknownRecord | undefined
+                  )?.name,
+                ) ||
                 identity.id ||
                 null,
             },
@@ -808,7 +992,7 @@ export function createIdentityReferenceRewriteUtils({
         }
         const mapping =
           mappings.get(`${identity.id}@@${identity.version || "00.00.001"}`) ??
-          mappings.get(identity.id);
+          mappings.get(identity.id as string);
         if (mapping) {
           referenceRows.push(next);
           stats.rewrites += 1;
@@ -826,7 +1010,12 @@ export function createIdentityReferenceRewriteUtils({
               version: identity.version || "00.00.001",
               short_description:
                 referenceShortDescription(
-                  next?.flowDataSet?.flowInformation?.dataSetInformation?.name,
+                  (
+                    (
+                      (next.flowDataSet as UnknownRecord | undefined)?.flowInformation as
+                        UnknownRecord | undefined
+                    )?.dataSetInformation as UnknownRecord | undefined
+                  )?.name,
                 ) || null,
             },
             canonical: mapping.canonical,
@@ -883,10 +1072,10 @@ export function createIdentityReferenceRewriteUtils({
       identity_reference_rewrites_input: explicitRewriteFiles[0]
         ? repoRelativePath(explicitRewriteFiles[0])
         : null,
-      identity_reference_rewrites_inputs: explicitRewriteFiles.map((file: any) =>
+      identity_reference_rewrites_inputs: explicitRewriteFiles.map((file) =>
         repoRelativePath(file),
       ),
-      identity_unresolved_references_input: unresolvedReferenceFiles.map((file: any) =>
+      identity_unresolved_references_input: unresolvedReferenceFiles.map((file) =>
         repoRelativePath(file),
       ),
       rewrite_rows: rewriteRows,
