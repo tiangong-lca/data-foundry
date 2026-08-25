@@ -95,6 +95,14 @@ checkPaths:
   - scripts/lib/bundle-sample-utils.ts
   - test/fixtures/fixture-roots.ts
   - test/fixtures/finalize-fixtures.ts
+  - test/fixtures/fake-tidas.ts
+  - test/fixtures/foundry-core.ts
+  - test/fixtures/full-context-fixtures.ts
+  - test/fixtures/identity-fixtures.ts
+  - test/fixtures/incremental-change-set-fixtures.ts
+  - test/fixtures/mutation-fixtures.ts
+  - test/fixtures/row-builders.ts
+  - test/fixtures/topology-convergence-fixtures.ts
   - test/unit/foundry-cli-spine.test.mts
   - test/unit/foundry-command-metadata.test.mts
   - test/unit/surface-audit-typescript.test.mts
@@ -120,6 +128,11 @@ checkPaths:
   - test/unit/wave9-canonical-bundle-migration.test.mts
   - test/unit/import-ledger-type-contract.test.mts
   - test/unit/fixture-helpers-contract.test.mts
+  - test/unit/fixture-executable-core-migration.test.mts
+  - test/unit/row-builders-fixture-migration.test.mts
+  - test/unit/context-identity-mutation-fixture-migration.test.mts
+  - test/unit/incremental-fixture-migration.test.mts
+  - test/unit/topology-fixture-migration.test.mts
   - test/unit/foundry-runtime-utils-contract.test.mts
   - test/unit/wave10-runtime-migration.test.mts
   - test/unit/location-quality-utils-contract.test.mts
@@ -181,8 +194,8 @@ checkPaths:
   - test/unit/import-curation-entry-barrels-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation planning, runtime commands, decision factories, and import-curation re-exports preserve proof/order/bytes/hashes, fail-closed authority, process/capsule/closeout contracts, decision queues/stages, complete namespaces/live identity, consumer topology, and Node 24 source/emitted loading."
+lastReviewedCommit: 65b36d340ca7978a4d036ef72fa978fc856d5e6c
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: typed shared fixtures preserve exact namespaces, payload/report bytes and hashes, dependency order, isolated roots, native failures, and Node executable-plus-argv dispatch without changing workflow authority."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -258,6 +271,8 @@ CLI wrappers, execution-capsule admission, and post-write closeout are native Ty
 The identity, classification, and location decision command factories are native TypeScript. Preserve their existing option aliases and defaults, queue/task/path encounter order, exact help and report bytes, decision-context and unclosed-queue blockers, deterministic classification/location CLI argv, stage failure short-circuiting, and identity read-only output split. Validation blockers must prevent owner-command stages; missing or malformed local artifacts retain native failures, and no factory gains direct remote-write authority.
 
 The import-curation leaf, index, and public entry barrels are native TypeScript and must remain pure direct re-exports. Preserve the exact namespace keys and live function identity through both source and emitted Node 24 modules; do not add wrappers, initialization, hidden state, alternate owners, or a parallel `.mjs` entry. The CLI injection keys and metadata owner modules remain the authoritative command-consumer topology.
+
+All shared fixtures are native TypeScript. Keep `foundry-core.ts`, `row-builders.ts`, full-context/identity/mutation fixtures and incremental/topology packages deterministic and worktree-local. `fake-tidas.ts` must be invoked through `process.execPath` plus its script argv, never through an executable bit, shell, or platform-specific launcher; fixtures must not read credentials, `.env`, production state, or ignored historical artifacts.
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 

@@ -22,8 +22,8 @@ checkPaths:
   - test/scenarios/topology-convergence-handoff.test.mjs
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 4d415fac33799011d37094ac79122c1eef3a7855
-lastReviewedNote: "Reviewed for Issue #63: the stage-contract module moved to TypeScript without changing topology composition semantics or artifacts."
+lastReviewedCommit: 65b36d340ca7978a4d036ef72fa978fc856d5e6c
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: the native TS7 topology fixture preserves candidate graph/mapping order, admission binding, stable package/JSONL bytes and hashes, isolated roots and native errors without changing convergence semantics or authority."
 ---
 
 # Topology Convergence Contract

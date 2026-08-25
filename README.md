@@ -93,6 +93,14 @@ checkPaths:
   - scripts/lib/bundle-sample-utils.ts
   - test/fixtures/fixture-roots.ts
   - test/fixtures/finalize-fixtures.ts
+  - test/fixtures/fake-tidas.ts
+  - test/fixtures/foundry-core.ts
+  - test/fixtures/full-context-fixtures.ts
+  - test/fixtures/identity-fixtures.ts
+  - test/fixtures/incremental-change-set-fixtures.ts
+  - test/fixtures/mutation-fixtures.ts
+  - test/fixtures/row-builders.ts
+  - test/fixtures/topology-convergence-fixtures.ts
   - test/unit/import-ledger-type-contract.test.mts
   - test/unit/fixture-helpers-contract.test.mts
   - docs/architecture.md
@@ -103,8 +111,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: native TS7 reference/mutation, runtime, decision, and import-curation entry owners preserve exact proof/order/bytes/hashes, fail-closed authority, argv/capsule/closeout contracts, decision queues/stages, namespace/live identity, consumer metadata, and Node 24 source/emitted loading."
+lastReviewedCommit: 65b36d340ca7978a4d036ef72fa978fc856d5e6c
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: eight shared fixture owners are native zero-escape TS7 with exact namespaces, artifacts, hashes, ordering, isolated roots, native errors, and cross-platform Node executable dispatch."
 ---
 
 # TianGong LCA Data Foundry
@@ -184,6 +192,8 @@ Wave 25 migrates three runtime command owners. `cli-wrappers.ts` preserves insta
 Wave 25 migrates the three decision command factories in dependency order: standalone `identity-decisions.ts` first, then the shared-dispatch `classification-decisions.ts` and `location-decisions.ts` family. Characterization preserves exact help/report bytes, input aliases and defaults, row/path/order semantics, decision-task and queue closure blockers, deterministic CLI argv/stage failure behavior, read-only identity splitting, artifact write boundaries, and native JSON/filesystem errors. Inventory moves 98→95 without changing command names, profile defaults, Worldsteel behavior, or remote-write authority.
 
 Wave 25 migrates the import-curation re-export topology without wrappers. `profiles.ts` and `trace-summary.ts` retain their exact namespaces and owner function identity; `import-curation/index.ts` and the public `import-curation.ts` entry retain the complete eight-export namespace and direct references to the semantic owners. Node 24 loads both source and emitted entry layers, and command metadata continues to route each command to its semantic owner. Inventory moves 93→89 without changing runtime behavior, command help, profiles, Worldsteel semantics, or remote-write authority.
+
+Wave 26 migrates the remaining eight shared fixtures in dependency order: the fake-tidas/core executable boundary, pure row builders, full-context/identity/mutation evidence fixtures, and incremental/topology algorithm packages. Characterization preserves exact runtime namespaces and live Node references, JSON/JSONL bytes and hashes, row/graph/dependency order, worktree-local temporary isolation and native filesystem/argument failures. `fake-tidas.ts` has no executable-bit contract and is always launched through `process.execPath` plus argv. Inventory moves 79→71 without reading `.env`, accessing production, or changing command help, profiles, Worldsteel/Date.parse behavior, or remote-write authority.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

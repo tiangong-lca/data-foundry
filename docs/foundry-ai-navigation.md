@@ -86,12 +86,20 @@ checkPaths:
   - scripts/lib/bundle-sample-utils.ts
   - test/fixtures/fixture-roots.ts
   - test/fixtures/finalize-fixtures.ts
+  - test/fixtures/fake-tidas.ts
+  - test/fixtures/foundry-core.ts
+  - test/fixtures/full-context-fixtures.ts
+  - test/fixtures/identity-fixtures.ts
+  - test/fixtures/incremental-change-set-fixtures.ts
+  - test/fixtures/mutation-fixtures.ts
+  - test/fixtures/row-builders.ts
+  - test/fixtures/topology-convergence-fixtures.ts
   - scripts/commands/incremental-change-set.mjs
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: navigation records typed reference/mutation, runtime-command, decision, and import-curation entry owners; exact proof/order/bytes/hashes, argv/seals/closeout, decision queues/stages, complete namespaces/live identity, semantic metadata, and Node 24 source/emitted evidence remain explicit."
+lastReviewedCommit: 65b36d340ca7978a4d036ef72fa978fc856d5e6c
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: navigation records the native typed core/row/workflow/algorithm fixture topology, exact namespace and artifact contracts, isolated roots, native failures, and cross-platform Node process boundary."
 ---
 
 # Foundry AI Navigation
@@ -192,6 +200,8 @@ The typed mutation reference stack starts at `workflow-reference-closure.ts` for
 The typed runtime command owners are `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts`. Navigate to the wrapper for direct executable/argv delegation and process diagnostics, to the capsule for offline immutable admission and attempt-state evidence, and to closeout for already-produced commit/readback aggregation. Root uniqueness and accepted-difference decisions remain in `post-write-root-proof.ts` and `remote-verification-accepted-diff.ts`.
 
 The typed import-curation entry chain is `scripts/lib/import-curation.ts` → `import-curation/index.ts` → semantic owners. `profiles.ts` and `trace-summary.ts` are pure typed leaf barrels. Navigate through the public/index barrels to discover the complete namespace, but edit behavior only in the semantic owner named by command metadata.
+
+The typed fixture chain starts at `test/fixtures/foundry-core.ts` and `row-builders.ts`, then branches into full-context/identity/mutation evidence and independent incremental/topology packages. Navigate to `fake-tidas.ts` only for the stable Rust operation-report/exit harness; dispatch it as `process.execPath` plus script argv. Fixture modules preserve runtime export namespaces and artifact bytes but are never semantic command owners.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 

@@ -95,6 +95,14 @@ checkPaths:
   - scripts/lib/bundle-sample-utils.ts
   - test/fixtures/fixture-roots.ts
   - test/fixtures/finalize-fixtures.ts
+  - test/fixtures/fake-tidas.ts
+  - test/fixtures/foundry-core.ts
+  - test/fixtures/full-context-fixtures.ts
+  - test/fixtures/identity-fixtures.ts
+  - test/fixtures/incremental-change-set-fixtures.ts
+  - test/fixtures/mutation-fixtures.ts
+  - test/fixtures/row-builders.ts
+  - test/fixtures/topology-convergence-fixtures.ts
   - .prettierignore
   - package.json
   - pnpm-lock.yaml
@@ -104,8 +112,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation, runtime-command, decision, and import-curation entry adapters preserve exact evidence/order/bytes/hashes, argv/seals/closeout, queues/blockers, deterministic delegation, and identity-preserving navigation without moving orchestration, CLI, schema, search, profile, Worldsteel, database, or production authority."
+lastReviewedCommit: 65b36d340ca7978a4d036ef72fa978fc856d5e6c
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: the typed fixture layer remains test-only local infrastructure; exact payload/report bytes, graph/dependency order, native errors and Node dispatch move no orchestration, CLI, schema, search, database, or production authority."
 ---
 
 # Architecture
@@ -198,6 +206,8 @@ The typed runtime-command layer also includes CLI wrappers, offline capsule admi
 The typed decision command boundary now includes `identity-decisions.ts`, `classification-decisions.ts`, and `location-decisions.ts`. Identity validation partitions local rows into write candidates, reference reuse, and unresolved evidence without executing a remote mutation. Classification and location validate task-bound decisions, preserve queue grouping and schema/path order, and delegate deterministic apply through the existing CLI argv boundary only after blockers are empty. Their reports and artifacts remain Foundry-local evidence; schema vocabularies, search, mutation, and readback authority remain with their existing owners.
 
 The import-curation entry topology is typed end to end. `profiles.ts` and `trace-summary.ts` are identity-preserving leaf barrels; `import-curation/index.ts` aggregates the eight semantic owner exports; `import-curation.ts` is the public entry consumed by `foundry.mjs`. These modules contain no runtime wrapper or initialization logic. The CLI dispatcher still receives the same injected functions, and command metadata still names the semantic owner modules rather than assigning behavior to a barrel.
+
+The shared fixture topology is typed end to end but remains outside the production build. `foundry-core.ts` provides worktree-local filesystem and command helpers; `row-builders.ts` feeds full-context, identity and mutation evidence fixtures; incremental and topology packages remain separate algorithm fixtures. The fake tidas process is a published-report/exit harness only and is launched through Node executable-plus-argv even without an executable bit. This layer cannot acquire credentials, network access, schema ownership, or mutation authority.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

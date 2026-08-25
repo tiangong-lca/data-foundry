@@ -92,6 +92,14 @@ checkPaths:
   - scripts/lib/bundle-sample-utils.ts
   - test/fixtures/fixture-roots.ts
   - test/fixtures/finalize-fixtures.ts
+  - test/fixtures/fake-tidas.ts
+  - test/fixtures/foundry-core.ts
+  - test/fixtures/full-context-fixtures.ts
+  - test/fixtures/identity-fixtures.ts
+  - test/fixtures/incremental-change-set-fixtures.ts
+  - test/fixtures/mutation-fixtures.ts
+  - test/fixtures/row-builders.ts
+  - test/fixtures/topology-convergence-fixtures.ts
   - test/unit/bafu-family-signatures-contract.test.mts
   - test/unit/import-ledger-contract.test.mts
   - test/unit/wave8-large-leaf-migration.test.mts
@@ -100,6 +108,11 @@ checkPaths:
   - test/unit/wave9-canonical-bundle-migration.test.mts
   - test/unit/import-ledger-type-contract.test.mts
   - test/unit/fixture-helpers-contract.test.mts
+  - test/unit/fixture-executable-core-migration.test.mts
+  - test/unit/row-builders-fixture-migration.test.mts
+  - test/unit/context-identity-mutation-fixture-migration.test.mts
+  - test/unit/incremental-fixture-migration.test.mts
+  - test/unit/topology-fixture-migration.test.mts
   - test/unit/foundry-runtime-utils-contract.test.mts
   - test/unit/wave10-runtime-migration.test.mts
   - test/unit/location-quality-utils-contract.test.mts
@@ -170,8 +183,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: tests cover reference/mutation fail-close, runtime process/capsule/closeout proof, decision help/queues/stages/artifacts, and native-only import-curation leaf/index/public entries with exact namespaces, live owner identity, consumers/metadata, Node 24 source/emitted loading, and native errors."
+lastReviewedCommit: 65b36d340ca7978a4d036ef72fa978fc856d5e6c
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: fixture migration tests pin eight native-only TS7 modules, exact namespaces/live Node references, bytes/hashes/order, isolated temporary roots, native errors and non-executable fake-tidas Node dispatch."
 ---
 
 # Test Layout
@@ -254,6 +267,8 @@ Wave 25 covers three runtime command owners. `unit/cli-wrapper-command-factory.t
 Wave 25 covers the three decision command factories. `unit/wave25-identity-decision-command-migration.test.mts` and `unit/wave25-classification-location-command-migration.test.mts` pin native-only sources, exact export identity, zero explicit type escapes or suppressions, every dispatcher/metadata consumer, and exact serialized help reports. The realistic command/scenario fixtures continue to pin option aliases/defaults, queue and row path order, task-context and unclosed-item blockers, CLI argv/stage short-circuiting, identity output partitioning, report/JSONL writes, and native malformed-artifact failures.
 
 Wave 25 covers two re-export families. `unit/import-curation-leaf-barrels-migration.test.mts` pins the exact profile/trace namespaces and direct owner references. `unit/import-curation-entry-barrels-migration.test.mts` pins the complete eight-export index/public namespace, every owner reference, Foundry CLI injection keys, metadata owner routes, TS-only atomic entry migration, and a clean temporary TypeScript build loaded by Node 24. No fixture reads credentials, `.env`, production state, or ignored Foundry artifacts.
+
+Wave 26 covers the remaining eight shared fixtures as five dependency-ordered RED/GREEN families. `unit/fixture-executable-core-migration.test.mts` pins the core namespace/live Node references, exact writer bytes, native errors and a non-executable `fake-tidas.ts` launched only through `process.execPath`. `unit/row-builders-fixture-migration.test.mts` pins every payload family and one combined byte/hash contract. `unit/context-identity-mutation-fixture-migration.test.mts` pins workflow namespaces, receipt and row bytes, context/dependency order and isolated roots. `unit/incremental-fixture-migration.test.mts` and `unit/topology-fixture-migration.test.mts` pin their policy/graph constants, artifact order, stable JSONL/package bytes and native failures. All consumers use `.ts`; no fixture reads credentials, `.env`, production state or historical `.foundry` data.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 
