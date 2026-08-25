@@ -278,17 +278,14 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
   });
   const rowsFile = path.join(root, "rows", "processes.jsonl");
   const originalRowsText = writeJsonLines(rowsFile, [valid, invalid]);
-  const staleCleanedRows = path.join(root, "cleanup", "processes.cleaned.jsonl");
-  writeJsonLines(staleCleanedRows, [{ stale: "must-not-survive-a-blocked-rerun" }]);
-  fs.writeFileSync(
-    `${staleCleanedRows}.tiangong-foundry-output.json`,
-    `${JSON.stringify({
-      schema_version: 1,
-      command: "dataset-curation-cleanup",
-      output_file: path.resolve(staleCleanedRows),
-      output_realpath: fs.realpathSync(staleCleanedRows),
-    })}\n`,
+  const staleCleanedRows = path.join(
+    root,
+    ".foundry",
+    "workspaces",
+    "cleanup",
+    "processes.cleaned.jsonl",
   );
+  writeJsonLines(staleCleanedRows, [{ stale: "must-not-survive-a-blocked-rerun" }]);
 
   const result = record(
     runDatasetCurationCleanup({
@@ -296,7 +293,7 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
       options: {
         type: "process",
         rowsFile: "rows/processes.jsonl",
-        outDir: "cleanup",
+        outDir: ".foundry/workspaces/cleanup",
       },
     }),
   );
@@ -371,6 +368,62 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
   assert.equal(unownedResult.status, "blocked_invalid_datetime_metadata");
   assert.equal(unownedResult.cleaned_rows_file, null);
   assert.equal(fs.readFileSync(unownedOutput, "utf8"), unownedBytes);
+
+  const forgedOutput = path.join(root, "forged-output", "processes.cleaned.jsonl");
+  const forgedBytes = writeJsonLines(forgedOutput, [
+    { retained: "forged-marker-is-not-authority" },
+  ]);
+  fs.writeFileSync(
+    `${forgedOutput}.tiangong-foundry-output.json`,
+    `${JSON.stringify({
+      schema_version: 1,
+      command: "dataset-curation-cleanup",
+      output_file: path.resolve(forgedOutput),
+      output_realpath: fs.realpathSync(forgedOutput),
+    })}\n`,
+  );
+  const forgedResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: "forged-output",
+      },
+    }),
+  );
+  assert.equal(forgedResult.status, "blocked_invalid_datetime_metadata");
+  assert.equal(fs.readFileSync(forgedOutput, "utf8"), forgedBytes);
+
+  writeJsonLines(rowsFile, [valid]);
+  const replacedOutput = path.join(root, "prior-valid-output", "processes.cleaned.jsonl");
+  const priorValidResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: "prior-valid-output",
+      },
+    }),
+  );
+  assert.equal(priorValidResult.status, "completed");
+  const replacementBytes = writeJsonLines(replacedOutput, [
+    { retained: "same-path-artifact-replaced-after-valid-run" },
+  ]);
+  writeJsonLines(rowsFile, [invalid]);
+  const replacedResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: "prior-valid-output",
+      },
+    }),
+  );
+  assert.equal(replacedResult.status, "blocked_invalid_datetime_metadata");
+  assert.equal(fs.readFileSync(replacedOutput, "utf8"), replacementBytes);
 });
 
 test("lexically managed cleanup path cannot mint ownership or delete through a symlink ancestor", (t) => {
@@ -438,4 +491,58 @@ test("lexically managed cleanup path cannot mint ownership or delete through a s
   assert.equal(blockedResult.cleaned_rows_file, null);
   assert.equal(fs.existsSync(ownershipMarker), false);
   assert.equal(fs.readFileSync(victim, "utf8"), victimBytes);
+});
+
+test("managed workspace root or .foundry symlinks cannot authorize cleanup deletion", (t) => {
+  if (process.platform === "win32") {
+    t.skip("Windows symlink creation requires privileges not guaranteed by the test contract.");
+    return;
+  }
+  for (const symlinkAt of ["workspaces", ".foundry"] as const) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), `foundry-cleanup-${symlinkAt}-root-`));
+    const external = fs.mkdtempSync(path.join(os.tmpdir(), `foundry-cleanup-${symlinkAt}-victim-`));
+    t.after(() => {
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.rmSync(external, { recursive: true, force: true });
+    });
+    const rowsFile = path.join(root, "rows", "processes.jsonl");
+    writeJsonLines(rowsFile, [
+      processRow({
+        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        referenceId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        annualSupply: "Not specified",
+        timestamp: "2025-02-30T00:00:00Z",
+      }),
+    ]);
+    if (symlinkAt === "workspaces") {
+      fs.mkdirSync(path.join(root, ".foundry"), { recursive: true });
+      fs.symlinkSync(external, path.join(root, ".foundry", "workspaces"), "dir");
+    } else {
+      fs.mkdirSync(path.join(external, "workspaces"), { recursive: true });
+      fs.symlinkSync(external, path.join(root, ".foundry"), "dir");
+    }
+    const victim = path.join(
+      external,
+      ...(symlinkAt === "workspaces" ? [] : ["workspaces"]),
+      "task",
+      "processes.cleaned.jsonl",
+    );
+    const victimBytes = writeJsonLines(victim, [
+      { retained: `managed-${symlinkAt}-realpath-is-outside-repository` },
+    ]);
+
+    const result = record(
+      runDatasetCurationCleanup({
+        repoRoot: root,
+        options: {
+          type: "process",
+          rowsFile: "rows/processes.jsonl",
+          outDir: ".foundry/workspaces/task",
+        },
+      }),
+    );
+
+    assert.equal(result.status, "blocked_invalid_datetime_metadata");
+    assert.equal(fs.readFileSync(victim, "utf8"), victimBytes, symlinkAt);
+  }
 });

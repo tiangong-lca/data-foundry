@@ -965,22 +965,22 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
   writeJsonLines(rowsFile, [valid, invalid]);
   const explicitParentBytes = '{"retained":true}\n';
   writeText(explicitParentOutput, explicitParentBytes);
-  const finalizeDir = path.join(root, "finalize");
+  const finalizeDir = path.join(
+    repoRoot,
+    ".foundry",
+    "workspaces",
+    `issue69-owned-finalize-${process.pid}`,
+  );
+  fs.rmSync(finalizeDir, { recursive: true, force: true });
   fs.mkdirSync(finalizeDir, { recursive: true });
-  writeJson(path.join(finalizeDir, ".tiangong-foundry-finalize-output.json"), {
-    schema_version: 1,
-    command: "dataset-post-authoring-finalize",
-    output_directory: path.resolve(finalizeDir),
-    output_directory_realpath: fs.realpathSync(finalizeDir),
-  });
   const supportSource = sourceRow(sourceId) as unknown as FixtureRecord;
   supportSource.sourceDataSet.sourceInformation.dataSetInformation.sourceCitation =
     "Fixture report, 2026";
   writeJsonLines(sourceSupportRowsFile, [supportSource]);
-  writeJson(path.join(root, "finalize", "mutation-manifest", "stale-report.json"), {
+  writeJson(path.join(finalizeDir, "mutation-manifest", "stale-report.json"), {
     status: "ready_for_remote_write",
   });
-  writeJson(path.join(root, "finalize", "commit-handoff", "stale-command-spec.json"), {
+  writeJson(path.join(finalizeDir, "commit-handoff", "stale-command-spec.json"), {
     schema: "tiangong-foundry.command-spec.v1",
     display: "must never survive the blocked rerun",
   });
@@ -991,16 +991,16 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
     "identity-preflight-run-parallel",
     "identity-preflight-current-scope",
   ]) {
-    writeJson(path.join(root, "finalize", staleDirectory, "stale-evidence.json"), {
+    writeJson(path.join(finalizeDir, staleDirectory, "stale-evidence.json"), {
       stale: true,
     });
   }
   writeText(
-    path.join(root, "finalize", "identity-reference-rewrite-external-flow-refs.jsonl"),
+    path.join(finalizeDir, "identity-reference-rewrite-external-flow-refs.jsonl"),
     '{"stale":true}\n',
   );
   writeText(
-    path.join(root, "finalize", "process-reference-external-flow-refs.jsonl"),
+    path.join(finalizeDir, "process-reference-external-flow-refs.jsonl"),
     '{"stale":true}\n',
   );
 
@@ -1019,7 +1019,7 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
       "--cleaned-rows-file",
       rel(explicitParentOutput),
       "--out-dir",
-      rel(path.join(root, "finalize")),
+      rel(finalizeDir),
     ]);
 
     assert.equal(finalize.code, 1, JSON.stringify(finalize.json, null, 2));
@@ -1063,13 +1063,13 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
       "mutation-manifest",
       "commit-handoff",
     ]) {
-      assert.equal(fs.existsSync(path.join(root, "finalize", absent)), false, absent);
+      assert.equal(fs.existsSync(path.join(finalizeDir, absent)), false, absent);
     }
     for (const absentFile of [
       "identity-reference-rewrite-external-flow-refs.jsonl",
       "process-reference-external-flow-refs.jsonl",
     ]) {
-      assert.equal(fs.existsSync(path.join(root, "finalize", absentFile)), false, absentFile);
+      assert.equal(fs.existsSync(path.join(finalizeDir, absentFile)), false, absentFile);
     }
 
     const unownedFinalizeDir = path.join(root, "unowned-finalize");
@@ -1077,6 +1077,12 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
     const unownedCommand = path.join(unownedFinalizeDir, "commit-handoff", "stale-command.json");
     writeJson(unownedSchema, { stale: true });
     writeJson(unownedCommand, { stale: true });
+    writeJson(path.join(unownedFinalizeDir, ".tiangong-foundry-finalize-output.json"), {
+      schema_version: 1,
+      command: "dataset-post-authoring-finalize",
+      output_directory: path.resolve(unownedFinalizeDir),
+      output_directory_realpath: fs.realpathSync(unownedFinalizeDir),
+    });
     const unowned = runFoundry([
       "dataset-post-authoring-finalize",
       "--type",
@@ -1158,6 +1164,7 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
     }
   } finally {
     if (managedSymlinkPath) fs.rmSync(managedSymlinkPath, { force: true });
+    fs.rmSync(finalizeDir, { recursive: true, force: true });
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
