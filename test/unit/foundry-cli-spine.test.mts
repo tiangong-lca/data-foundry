@@ -309,6 +309,10 @@ test("active documentation and source contain no references to removed CLI spine
     "source-semantics.mjs",
     "trace-coverage.mjs",
     "tidas-row-utils.mjs",
+    "decision-task-utils.mjs",
+    "identity-reference-rewrite-utils.mjs",
+    "identity-preflight-artifacts.mjs",
+    "./lib/full-context-proof.mjs",
   ];
   const files = [
     "AGENTS.md",
