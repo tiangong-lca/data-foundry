@@ -186,7 +186,7 @@ test("surface audit exempts declared entrypoints but detects hidden handlers and
   const entrypointReport = auditFixture({
     "scripts/check-tidas-cutover.ts": "export {};\n",
     "scripts/foundry.mjs": "export {};\n",
-    "scripts/foundry-golden-diff.mjs": "export {};\n",
+    "scripts/foundry-golden-diff.ts": "export {};\n",
     "scripts/cases/production-contact-draft.ts": "export {};\n",
     "scripts/with-lca-account.ts": "export {};\n",
   });

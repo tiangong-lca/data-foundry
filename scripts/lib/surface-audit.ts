@@ -55,7 +55,7 @@ const deprecatedNamePattern = /\b(?:legacy|deprecated|compat|compatibility|alias
 const scriptEntrypoints = new Set([
   "scripts/check-tidas-cutover.ts",
   "scripts/foundry.mjs",
-  "scripts/foundry-golden-diff.mjs",
+  "scripts/foundry-golden-diff.ts",
   "scripts/cases/production-contact-draft.ts",
   "scripts/with-lca-account.ts",
 ]);

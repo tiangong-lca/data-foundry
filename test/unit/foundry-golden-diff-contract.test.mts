@@ -9,7 +9,7 @@ const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
 
 function runGolden(base: string): { status: number | null; stdout: string; stderr: string } {
-  const result = spawnSync(process.execPath, ["scripts/foundry-golden-diff.mjs"], {
+  const result = spawnSync(process.execPath, ["scripts/foundry-golden-diff.ts"], {
     cwd: repoRoot,
     encoding: "utf8",
     env: { ...process.env, FOUNDRY_GOLDEN_BASE: base },
@@ -50,7 +50,7 @@ test("Golden harness rejects a HEAD self-comparison before producing artifacts",
 });
 
 test("Golden source preserves Node-native comparison and executable-plus-argv portability", () => {
-  const source = fs.readFileSync(path.join(repoRoot, "scripts/foundry-golden-diff.mjs"), "utf8");
+  const source = fs.readFileSync(path.join(repoRoot, "scripts/foundry-golden-diff.ts"), "utf8");
   assert.match(source, /merge-base/u);
   assert.match(source, /process\.execPath,\s*\["scripts\/foundry\.mjs",\s*\.\.\.args\]/u);
   assert.match(source, /readFileSync\(baselinePath\)\.equals\(readFileSync\(currentPath\)\)/u);
