@@ -120,7 +120,7 @@ test("execution capsule consumers and contract target the typed command owner", 
   for (const consumer of [
     "scripts/foundry.ts",
     "scripts/lib/foundry-command-metadata.ts",
-    "test/commands/execution-capsule.test.mjs",
+    "test/commands/execution-capsule.test.mts",
     "test/unit/execution-capsule-attempt-state.test.mjs",
     "test/unit/execution-capsule-command-factory.test.mts",
     "docs/execution-capsule-contract.md",
@@ -128,7 +128,7 @@ test("execution capsule consumers and contract target the typed command owner", 
     const source = readRepoFile(consumer);
     assert.match(
       source,
-      consumer === "test/commands/execution-capsule.test.mjs"
+      consumer === "test/commands/execution-capsule.test.mts"
         ? /["']execution-capsule\.ts["']/u
         : /(?:commands\/|scripts\/commands\/)execution-capsule\.ts/u,
     );

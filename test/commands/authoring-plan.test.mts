@@ -8,21 +8,21 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const fixtureRoot = path.join(repoRoot, "tmp", "authoring-plan-test");
 
-function rel(filePath) {
+function rel(filePath: string): string {
   return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function writeJsonLines(filePath, rows) {
+function writeJsonLines(filePath: string, rows: unknown[]): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`);
 }
 
-function runFoundry(args, expectedStatus = 0) {
+function runFoundry(args: string[], expectedStatus = 0) {
   const result = spawnSync(process.execPath, ["scripts/foundry.ts", ...args], {
     cwd: repoRoot,
     encoding: "utf8",
@@ -123,46 +123,51 @@ test("dataset-authoring-plan aggregates missing AI task builds from curation gat
   assert.equal(plan.counts.classification_queue_rows, 1);
   assert.equal(plan.counts.field_patch_action_items, 3);
   assert.equal(
-    plan.phases.find((phase) => phase.phase === "location_decisions").status,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "location_decisions").status,
     "not_required",
   );
   assert.equal(
-    plan.phases.find((phase) => phase.phase === "identity_decisions").status,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "identity_decisions").status,
     "needs_task_build",
   );
   assert.equal(
-    plan.phases.find((phase) => phase.phase === "classification_decisions").status,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "classification_decisions")
+      .status,
     "needs_task_build",
   );
   assert.equal(
-    plan.phases.find((phase) => phase.phase === "field_patches").status,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "field_patches").status,
     "needs_task_build",
   );
   assert.match(
-    plan.phases.find((phase) => phase.phase === "classification_decisions").commands.build_task,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "classification_decisions")
+      .commands.build_task,
     /dataset-classification-decision-task-build/u,
   );
   assert.match(
-    plan.phases.find((phase) => phase.phase === "classification_decisions").commands.build_task,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "classification_decisions")
+      .commands.build_task,
     /tidas_locations_category\.json/u,
   );
   assert.match(
-    plan.phases.find((phase) => phase.phase === "classification_decisions").commands.build_task,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "classification_decisions")
+      .commands.build_task,
     /--dataset-type process/u,
   );
   assert.match(
-    plan.phases.find((phase) => phase.phase === "classification_decisions").commands.build_task,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "classification_decisions")
+      .commands.build_task,
     /33333333-3333-5333-8333-333333333333/u,
   );
   assert.match(
     plan.phases
-      .find((phase) => phase.phase === "classification_decisions")
+      .find((phase: { phase: string }) => phase.phase === "classification_decisions")
       .commands.apply_decisions.replaceAll("\\", "/"),
     /classification-authoring-queue\.process\.jsonl/u,
   );
   assert.match(
-    plan.phases.find((phase) => phase.phase === "classification_decisions").commands
-      .apply_decisions,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "classification_decisions")
+      .commands.apply_decisions,
     /--rows-file tmp\/authoring-plan-test\/rows\/processes\.jsonl/u,
   );
 });
@@ -212,52 +217,58 @@ test("dataset-authoring-plan detects ready tasks and waits for AI outputs", () =
 
   assert.equal(plan.status, "ready_for_ai_authoring");
   assert.equal(
-    plan.phases.find((phase) => phase.phase === "identity_decisions").status,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "identity_decisions").status,
     "ready_for_ai_decisions",
   );
   assert.equal(
-    plan.phases.find((phase) => phase.phase === "identity_decisions").commands.apply_decisions,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "identity_decisions").commands
+      .apply_decisions,
     null,
   );
   assert.deepEqual(
     plan.phases
-      .find((phase) => phase.phase === "identity_decisions")
-      .commands.apply_decisions_by_type.map((item) => item.dataset_type),
+      .find((phase: { phase: string }) => phase.phase === "identity_decisions")
+      .commands.apply_decisions_by_type.map((item: Record<string, unknown>) => item.dataset_type),
     ["flow", "process"],
   );
   assert.match(
     plan.phases
-      .find((phase) => phase.phase === "identity_decisions")
+      .find((phase: { phase: string }) => phase.phase === "identity_decisions")
       .commands.apply_decisions_by_type[0].command.replaceAll("\\", "/"),
     /--authoring-package-dir/u,
   );
   assert.match(
-    plan.phases.find((phase) => phase.phase === "identity_decisions").commands
+    plan.phases.find((phase: { phase: string }) => phase.phase === "identity_decisions").commands
       .apply_decisions_by_type[0].command,
     /rows\/flows\.jsonl/u,
   );
   assert.equal(
-    plan.phases.find((phase) => phase.phase === "identity_decisions").chunk_plan.chunks,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "identity_decisions").chunk_plan
+      .chunks,
     2,
   );
   assert.match(
-    plan.phases.find((phase) => phase.phase === "identity_decisions").chunk_plan.commands[0]
-      .command,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "identity_decisions").chunk_plan
+      .commands[0].command,
     /--limit 2/u,
   );
   assert.equal(
-    plan.phases.find((phase) => phase.phase === "classification_decisions").chunk_plan.chunks,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "classification_decisions")
+      .chunk_plan.chunks,
     2,
   );
   assert.equal(
-    plan.phases.find((phase) => phase.phase === "classification_decisions").status,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "classification_decisions")
+      .status,
     "ready_for_ai_decisions",
   );
   assert.equal(
-    plan.phases.find((phase) => phase.phase === "field_patches").status,
+    plan.phases.find((phase: { phase: string }) => phase.phase === "field_patches").status,
     "ready_for_ai_patches",
   );
-  const patchPhase = plan.phases.find((phase) => phase.phase === "field_patches");
+  const patchPhase = plan.phases.find(
+    (phase: { phase: string }) => phase.phase === "field_patches",
+  );
   assert.equal(patchPhase.commands.apply_patches, null);
   assert.equal(
     patchPhase.commands.apply_patches_manifest,
@@ -383,7 +394,9 @@ test("dataset-authoring-plan chains classification output through patch and iden
   const identityOutput = rel(
     path.join(fixtureRoot, "identity-decision-apply", "processes.identity-decisions-applied.jsonl"),
   );
-  const chainedPatchPhase = plan.phases.find((phase) => phase.phase === "field_patches");
+  const chainedPatchPhase = plan.phases.find(
+    (phase: { phase: string }) => phase.phase === "field_patches",
+  );
   assert.match(
     chainedPatchPhase.commands.apply_patches.replaceAll("\\", "/"),
     new RegExp(rel(classifiedRows), "u"),
@@ -394,7 +407,9 @@ test("dataset-authoring-plan chains classification output through patch and iden
   );
   assert.doesNotMatch(chainedPatchPhase.commands.apply_patches, /tmp\/old\/processes\.jsonl/u);
 
-  const identityPhase = plan.phases.find((phase) => phase.phase === "identity_decisions");
+  const identityPhase = plan.phases.find(
+    (phase: { phase: string }) => phase.phase === "identity_decisions",
+  );
   assert.equal(identityPhase.commands.apply_decisions_by_type[0].rows_file, patchOutput);
   assert.match(
     identityPhase.commands.apply_decisions_by_type[0].command.replaceAll("\\", "/"),

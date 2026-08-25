@@ -293,7 +293,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/execution-capsule.test.mjs",
+        "test/commands/execution-capsule.test.mts",
         "execution capsule admission seals exact offline evidence and rejects mutation vectors",
       ),
       nodeTest(
@@ -331,7 +331,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "three-way merge and canonical CLI hashes preserve owner changes only through explicit policy",
       ),
       nodeTest(
-        "test/commands/incremental-change-set.test.mjs",
+        "test/commands/incremental-change-set.test.mts",
         "every conversion receives one terminal event and outputs satisfy action/no-write/hold algebra",
       ),
     ],
@@ -360,7 +360,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "occurrence keys and language overlays prevent global flow-id replacement",
       ),
       nodeTest(
-        "test/commands/topology-convergence.test.mjs",
+        "test/commands/topology-convergence.test.mts",
         "F/P/D artifacts satisfy exact topology algebra and trust boundaries",
       ),
     ],
@@ -412,7 +412,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "complex workflow commands publish AI-readable stage contracts",
       ),
       nodeTest(
-        "test/commands/authoring-plan.test.mjs",
+        "test/commands/authoring-plan.test.mts",
         "dataset-authoring-plan aggregates missing AI task builds from curation gate",
       ),
     ],
@@ -431,7 +431,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     keyTests: [
       goldenDiff,
       nodeTest(
-        "test/commands/authoring-task-context.test.mjs",
+        "test/commands/authoring-task-context.test.mts",
         "authoring task build blocks AI patch authoring when full context is incomplete",
       ),
       importCurationEntryContract,
@@ -445,7 +445,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["authoring-patch-collect-report.json", "ai-patches.batch.json"],
     keyTests: [
       nodeTest(
-        "test/commands/authoring-task-context.test.mjs",
+        "test/commands/authoring-task-context.test.mts",
         "authoring patch collect blocks stale manifests that lack full-context task proof",
       ),
       importCurationEntryContract,
@@ -480,7 +480,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/classification-decisions.test.mjs",
+        "test/commands/classification-decisions.test.mts",
         "classification decision task and apply route AI choices through CLI classification apply",
       ),
     ],
@@ -502,7 +502,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/classification-decisions.test.mjs",
+        "test/commands/classification-decisions.test.mts",
         "library classification decisions project into task-bound apply decisions",
       ),
     ],
@@ -526,7 +526,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-leaf-classification-tasks.test.mjs",
+        "test/commands/bafu-leaf-classification-tasks.test.mts",
         "BAFU leaf classification helper prepares sharded process authoring tasks",
       ),
     ],
@@ -552,7 +552,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-leaf-classification-tasks.test.mjs",
+        "test/commands/bafu-leaf-classification-tasks.test.mts",
         "BAFU leaf category-map projection writes task-bound decisions and non-authoritative candidates separately",
       ),
     ],
@@ -565,7 +565,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["identity-decisions.jsonl", "bafu-identity-decisions-autofill-report.json"],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-auto-authoring.test.mjs",
+        "test/commands/bafu-auto-authoring.test.mts",
         "BAFU identity autofill creates product-flow create_new decisions only when candidates are not identity-equivalent",
       ),
     ],
@@ -578,11 +578,11 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["per-task ai-patches.json", "bafu-authoring-patches-autofill-report.json"],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-auto-authoring.test.mjs",
+        "test/commands/bafu-auto-authoring.test.mts",
         "BAFU patch autofill writes collectable name-plan and flowProperties patches",
       ),
       nodeTest(
-        "test/commands/bafu-auto-authoring.test.mjs",
+        "test/commands/bafu-auto-authoring.test.mts",
         "BAFU patch autofill splits disposal/incineration and transport route names",
       ),
     ],
@@ -595,7 +595,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["classification-decisions-apply-report.json", "classified rows or queue outputs"],
     keyTests: [
       nodeTest(
-        "test/commands/classification-decisions.test.mjs",
+        "test/commands/classification-decisions.test.mts",
         "classification decision task and apply route AI choices through CLI classification apply",
       ),
     ],
@@ -612,7 +612,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/location-decisions.test.mjs",
+        "test/commands/location-decisions.test.mts",
         "location decision task and apply route AI location choices through CLI location apply",
       ),
     ],
@@ -633,7 +633,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/location-decisions.test.mjs",
+        "test/commands/location-decisions.test.mts",
         "location decisions suggest creates task-bound decisions for unique valid candidates",
       ),
     ],
@@ -646,7 +646,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["location-decisions-apply-report.json", "location-coded rows or queue outputs"],
     keyTests: [
       nodeTest(
-        "test/commands/location-decisions.test.mjs",
+        "test/commands/location-decisions.test.mts",
         "location decision task and apply route AI location choices through CLI location apply",
       ),
     ],
@@ -677,7 +677,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "identity decision apply closes flow identity curation and counts as full-context evidence",
       ),
       nodeTest(
-        "test/commands/authoring-task-context.test.mjs",
+        "test/commands/authoring-task-context.test.mts",
         "authoring patch collect blocks AI patches without completed status",
       ),
     ],
@@ -708,7 +708,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/support-cache.test.mjs",
+        "test/commands/support-cache.test.mts",
         "canonical support mapping autofill maps only proven units and reports unresolved units",
       ),
     ],
@@ -734,15 +734,15 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "complex workflow commands publish AI-readable stage contracts",
       ),
       nodeTest(
-        "test/commands/bundle-sample-rows.test.mjs",
+        "test/commands/bundle-sample-rows.test.mts",
         "dataset-bundle-sample-rows writes executable identity preflight requests for process and elementary flow matching",
       ),
       nodeTest(
-        "test/commands/bundle-sample-rows.test.mjs",
+        "test/commands/bundle-sample-rows.test.mts",
         "dataset-bundle-sample-rows projects process geography into referenced flow location evidence",
       ),
       nodeTest(
-        "test/commands/bundle-sample-rows.test.mjs",
+        "test/commands/bundle-sample-rows.test.mts",
         "dataset-bundle-sample-rows retains and blocks canonical amount scaling requirements",
       ),
     ],
@@ -759,7 +759,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     keyTests: [
       identityPreflightRunCommandContract,
       nodeTest(
-        "test/commands/bundle-sample-rows.test.mjs",
+        "test/commands/bundle-sample-rows.test.mts",
         "dataset-identity-preflight-requests-build creates a fresh exact-row request index",
       ),
     ],
@@ -776,7 +776,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     keyTests: [
       identityPreflightRunCommandContract,
       nodeTest(
-        "test/commands/bundle-sample-rows.test.mjs",
+        "test/commands/bundle-sample-rows.test.mts",
         "dataset-identity-preflight-query-audit passes complete fielded edge queries",
       ),
     ],
@@ -794,7 +794,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "complex workflow commands publish AI-readable stage contracts",
       ),
       nodeTest(
-        "test/commands/bundle-sample-rows.test.mjs",
+        "test/commands/bundle-sample-rows.test.mts",
         "dataset-identity-preflight-run executes request indexes and preserves identity blockers as evidence",
       ),
       nodeTest(
@@ -871,7 +871,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "library identity decisions from preflight emits reuse decisions and manual review rows",
       ),
       nodeTest(
-        "test/commands/library-scope-workflow-elementary-identity.test.mjs",
+        "test/commands/library-scope-workflow-elementary-identity.test.mts",
         "elementary identity evaluation preserves source/openLCA compartments and conservative candidate matching",
       ),
     ],
@@ -937,7 +937,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-process-scope-e2e.test.mjs",
+        "test/commands/bafu-process-scope-e2e.test.mts",
         "BAFU process scope helper hard-blocks unresolved AI curation items on resume",
       ),
     ],
@@ -965,19 +965,19 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-batch-import-run.test.mjs",
+        "test/commands/bafu-batch-import-run.test.mts",
         "BAFU batch import runner skips already verified scopes through resumable ledgers",
       ),
       nodeTest(
-        "test/commands/bafu-batch-import-run.test.mjs",
+        "test/commands/bafu-batch-import-run.test.mts",
         "BAFU batch import runner applies pending-only before limit and honors pause file",
       ),
       nodeTest(
-        "test/commands/bafu-batch-import-run.test.mjs",
+        "test/commands/bafu-batch-import-run.test.mts",
         "BAFU batch import runner carries forward prior ledgers into fresh batch selection",
       ),
       nodeTest(
-        "test/commands/bafu-batch-import-run.test.mjs",
+        "test/commands/bafu-batch-import-run.test.mts",
         "BAFU batch import runner writes read-only preflight plan and primes support identity cache",
       ),
     ],
@@ -1006,7 +1006,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-batch-import-run.test.mjs",
+        "test/commands/bafu-batch-import-run.test.mts",
         "BAFU batch import runner skips already verified scopes through resumable ledgers",
       ),
     ],
@@ -1036,7 +1036,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-batch-import-run.test.mjs",
+        "test/commands/bafu-batch-import-run.test.mts",
         "BAFU batch import runner skips already verified scopes through resumable ledgers",
       ),
     ],
@@ -1060,7 +1060,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/bafu-batch-import-run.test.mjs",
+        "test/commands/bafu-batch-import-run.test.mts",
         "BAFU universe coverage report compares full process universe with ready scopes and ledgers",
       ),
     ],
@@ -1096,7 +1096,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/authoring-plan.test.mjs",
+        "test/commands/authoring-plan.test.mts",
         "dataset-identity-decisions-apply filters mixed decisions by requested type",
       ),
       nodeTest(
@@ -1203,7 +1203,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/import-ledger.test.mjs",
+        "test/commands/import-ledger.test.mts",
         "import ledger report separates verified rows from human-review resume scopes",
       ),
     ],

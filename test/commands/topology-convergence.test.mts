@@ -17,7 +17,14 @@ import {
   topologyIds,
 } from "../fixtures/topology-convergence-fixtures.mjs";
 
-function compose(fixture) {
+type ParsedFixture = ReturnType<typeof JSON.parse>;
+type TopologyFixture = ReturnType<typeof createTopologyConvergenceFixture>;
+const makeTopologyFixture = createTopologyConvergenceFixture as unknown as (
+  name: string,
+  mutate?: (state: ParsedFixture) => void,
+) => TopologyFixture;
+
+function compose(fixture: TopologyFixture) {
   return runFoundry([
     "dataset-topology-convergence-compose",
     "--request",
@@ -27,7 +34,7 @@ function compose(fixture) {
   ]);
 }
 
-function composeRaw(fixture) {
+function composeRaw(fixture: TopologyFixture) {
   return spawnSync(
     process.execPath,
     [
@@ -42,12 +49,12 @@ function composeRaw(fixture) {
   );
 }
 
-function fileSha(filePath) {
+function fileSha(filePath: string): string {
   return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
 }
 
 test("topology composer emits exact F/P/D artifacts and preserves owner language by occurrence", () => {
-  const fixture = createTopologyConvergenceFixture("complete");
+  const fixture = makeTopologyFixture("complete");
   const result = compose(fixture);
   assert.equal(result.code, 0);
   assert.equal(result.json.status, "ready_for_admission");
@@ -98,7 +105,7 @@ test("topology composer emits exact F/P/D artifacts and preserves owner language
 
   const processRows = readJsonLines(path.join(fixture.outDir, "process-save-draft-input.jsonl"));
   const updated = processRows.find(
-    (row) =>
+    (row: ParsedFixture) =>
       row.processDataSet.processInformation.dataSetInformation["common:UUID"] ===
       topologyIds.processes[0],
   );
@@ -108,22 +115,25 @@ test("topology composer emits exact F/P/D artifacts and preserves owner language
   );
   const exchanges = updated.processDataSet.exchanges.exchange;
   assert.deepEqual(
-    exchanges.map((entry) => entry.referenceToFlowDataSet["@refObjectId"]),
+    exchanges.map((entry: ParsedFixture) => entry.referenceToFlowDataSet["@refObjectId"]),
     topologyIds.flows,
   );
   const descriptions = exchanges[1].referenceToFlowDataSet["common:shortDescription"];
-  assert.equal(descriptions.find((entry) => entry["@xml:lang"] === "zh")["#text"], "中文流");
+  assert.equal(
+    descriptions.find((entry: ParsedFixture) => entry["@xml:lang"] === "zh")["#text"],
+    "中文流",
+  );
 
   const flowContract = readJson(path.join(fixture.outDir, "flow-create-execution-contract.json"));
   const processContract = readJson(path.join(fixture.outDir, "process-execution-contract.json"));
   assert.deepEqual(
-    flowContract.actions.map((action) => action.expected_operation),
+    flowContract.actions.map((action: ParsedFixture) => action.expected_operation),
     ["insert", "insert"],
   );
-  assert.deepEqual(processContract.actions.map((action) => action.expected_operation).sort(), [
-    "insert",
-    "save_draft",
-  ]);
+  assert.deepEqual(
+    processContract.actions.map((action: ParsedFixture) => action.expected_operation).sort(),
+    ["insert", "save_draft"],
+  );
   assert.equal(readJsonLines(path.join(fixture.outDir, "flow-delete-candidates.jsonl")).length, 5);
 
   const events = readJsonLines(path.join(fixture.outDir, "topology-conversion-events.jsonl"));
@@ -154,7 +164,7 @@ test("topology composer emits exact F/P/D artifacts and preserves owner language
 });
 
 test("foreign target is isolated and no executable contracts are emitted", () => {
-  const fixture = createTopologyConvergenceFixture("foreign", (state) => {
+  const fixture = makeTopologyFixture("foreign", (state) => {
     const id = topologyIds.flows[0];
     const payload = state.flowPayloads.get(id);
     state.foreignFlowRows.push({
@@ -179,13 +189,13 @@ test("foreign target is isolated and no executable contracts are emitted", () =>
   assert.equal(fs.existsSync(path.join(fixture.outDir, "process-execution-contract.json")), false);
   assert.ok(
     readJsonLines(path.join(fixture.outDir, "topology-holds.jsonl")).some(
-      (row) => row.reason === "FOREIGN_ONLY_TARGET",
+      (row: ParsedFixture) => row.reason === "FOREIGN_ONLY_TARGET",
     ),
   );
 });
 
 test("an exact owner target remains no-write when an unrelated foreign copy exists", () => {
-  const fixture = createTopologyConvergenceFixture("owner-and-foreign", (state) => {
+  const fixture = makeTopologyFixture("owner-and-foreign", (state) => {
     const id = topologyIds.flows[2];
     const payload = state.flowPayloads.get(id);
     state.foreignFlowRows.push({
@@ -205,9 +215,9 @@ test("an exact owner target remains no-write when an unrelated foreign copy exis
 });
 
 test("every changed occurrence requires an audited old-to-new flow mapping", () => {
-  const fixture = createTopologyConvergenceFixture("missing-mapping", (state) => {
+  const fixture = makeTopologyFixture("missing-mapping", (state) => {
     state.mappingRows = state.mappingRows.filter(
-      (row) =>
+      (row: ParsedFixture) =>
         !(row.old_flow_id === topologyIds.oldFlows[0] && row.new_flow_id === topologyIds.flows[0]),
     );
   });
@@ -219,7 +229,7 @@ test("every changed occurrence requires an audited old-to-new flow mapping", () 
 });
 
 test("admission binds the full pre-admission request", () => {
-  const fixture = createTopologyConvergenceFixture("request-binding-drift");
+  const fixture = makeTopologyFixture("request-binding-drift");
   fixture.requestValue.expected.amount_changes += 1;
   fs.writeFileSync(fixture.requestPath, `${JSON.stringify(fixture.requestValue, null, 2)}\n`);
   const result = composeRaw(fixture);
@@ -229,7 +239,7 @@ test("admission binds the full pre-admission request", () => {
 });
 
 test("candidate package bytes are verified before derived topology is accepted", () => {
-  const fixture = createTopologyConvergenceFixture("candidate-package-drift");
+  const fixture = makeTopologyFixture("candidate-package-drift");
   fs.appendFileSync(fixture.candidatePackage, "drift\n");
   const result = composeRaw(fixture);
   assert.equal(result.status, 1);
@@ -238,8 +248,10 @@ test("candidate package bytes are verified before derived topology is accepted",
 });
 
 test("fixed classification conflict must resolve to the authorized leaf code", () => {
-  const fixture = createTopologyConvergenceFixture("classification-conflict", (state) => {
-    const target = state.classificationRows.find((row) => row.entity.id === topologyIds.flows[1]);
+  const fixture = makeTopologyFixture("classification-conflict", (state) => {
+    const target = state.classificationRows.find(
+      (row: ParsedFixture) => row.entity.id === topologyIds.flows[1],
+    );
     target.selected_code = "34550";
   });
   const result = compose(fixture);
@@ -249,7 +261,7 @@ test("fixed classification conflict must resolve to the authorized leaf code", (
 });
 
 test("input SHA drift fails before creating any output", () => {
-  const fixture = createTopologyConvergenceFixture("sha-drift");
+  const fixture = makeTopologyFixture("sha-drift");
   fs.appendFileSync(fixture.ownerFlows, "\n");
   const result = composeRaw(fixture);
   assert.equal(result.status, 1);

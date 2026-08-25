@@ -11,25 +11,25 @@ const processId = "33333333-4444-5555-8666-777777777777";
 const locationPath =
   "processDataSet.processInformation.geography.locationOfOperationSupplyOrProduction.@location";
 
-function rel(filePath) {
+function rel(filePath: string): string {
   return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
-function ml(text) {
+function ml(text: string) {
   return { "@xml:lang": "en", "#text": text };
 }
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function writeJsonLines(filePath, rows) {
+function writeJsonLines(filePath: string, rows: unknown[]): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`);
 }
 
-function readJsonLines(filePath) {
+function readJsonLines(filePath: string) {
   return fs
     .readFileSync(filePath, "utf8")
     .trim()
@@ -38,7 +38,7 @@ function readJsonLines(filePath) {
     .map((line) => JSON.parse(line));
 }
 
-function runFoundry(args, expectedStatus = 0) {
+function runFoundry(args: string[], expectedStatus = 0) {
   const result = spawnSync(process.execPath, ["scripts/foundry.ts", ...args], {
     cwd: repoRoot,
     encoding: "utf8",
@@ -170,7 +170,7 @@ test("location decision task and apply route AI location choices through CLI loc
     assert.equal(missingContextTask.status, "blocked_missing_full_context");
     assert.equal(
       missingContextTask.blockers.some(
-        (blocker) =>
+        (blocker: Record<string, unknown>) =>
           blocker.code === "location_decision_task_required_context_missing" &&
           blocker.kind === "classification_schema",
       ),
@@ -309,7 +309,8 @@ test("location decision task and apply route AI location choices through CLI loc
     assert.equal(missingContextBundle.status, "blocked");
     assert.equal(
       missingContextBundle.blockers.some(
-        (blocker) => blocker.code === "location_decision_context_bundle_missing",
+        (blocker: Record<string, unknown>) =>
+          blocker.code === "location_decision_context_bundle_missing",
       ),
       true,
     );
@@ -354,7 +355,8 @@ test("location decision task and apply route AI location choices through CLI loc
     assert.equal(missingDecisionStatus.status, "blocked");
     assert.equal(
       missingDecisionStatus.blockers.some(
-        (blocker) => blocker.code === "location_decision_status_not_completed",
+        (blocker: Record<string, unknown>) =>
+          blocker.code === "location_decision_status_not_completed",
       ),
       true,
     );
@@ -385,7 +387,10 @@ test("location decision task and apply route AI location choices through CLI loc
     );
     assert.equal(blocked.status, "blocked");
     assert.equal(
-      blocked.blockers.some((blocker) => blocker.code === "location_decision_target_path_missing"),
+      blocked.blockers.some(
+        (blocker: Record<string, unknown>) =>
+          blocker.code === "location_decision_target_path_missing",
+      ),
       true,
     );
   } finally {

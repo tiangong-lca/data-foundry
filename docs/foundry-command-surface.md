@@ -80,9 +80,10 @@ checkPaths:
   - test/unit/core-command-factory.test.mts
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
+  - test/commands/*.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: orchestration, adapter/tool, algorithm and final command owners move to TS7 without changing commands/categories/help, exports, receipt/argv/exit artifacts, profiles, Worldsteel/Date.parse or remote-write modes."
+lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
+lastReviewedNote: "Reviewed for Issue #67 Wave 27 integration: native entry/runtime and strict TS7 command contracts preserve commands/categories/help, exports, argv/exit artifacts, profiles, Worldsteel/Date.parse and remote-write modes."
 ---
 
 # Foundry Command Surface
@@ -117,6 +118,8 @@ Wave 26 moves TIDAS/finalize adapters and the cutover/Golden entrypoints to nati
 Wave 26 moves `authoring-plan`, `bundle-sample-rows`, `incremental-change-set`, and `topology-convergence` to native TypeScript. Their registered command names, categories, exports, exact help payloads, artifacts, exit mapping and write modes are unchanged. Realistic fixtures pin deterministic phase/row/sample/F-P-D order, path and hash bytes, scale and graph fail-close, terminal receipt and no-authority handoff semantics, native JSON/filesystem failures, and fresh-output boundaries.
 
 Wave 26 moves `core`, `identity-preflight-run`, and `post-authoring-finalize` to native TypeScript. Core retains all public bootstrap/diagnostic/route commands and exact global help. The identity-preflight family retains its four workflow-internal commands, receipt-bound shell-free argv and fail-closed execution evidence. Finalize retains the existing read-only stage pipeline, report/artifact schema, blocker order and handoff plan. Metadata binds each command to the new focused contract tests without changing registry order or categories.
+
+Wave 27 moves every remaining `test/commands/*.test.mjs` contract to `.test.mts` and makes `pnpm test:commands` a single TypeScript-only glob. Command metadata, retained contracts and file-location references point to the renamed tests; runtime owner modules and the command registry remain unchanged.
 
 ## Categories
 

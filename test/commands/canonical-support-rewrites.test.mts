@@ -4,43 +4,55 @@ import { assert, fs, path, readJson, testTmpRoot, writeJson } from "../fixtures/
 
 const fixtureRoot = testTmpRoot("canonical-support-rewrites-test");
 
+type FlowRow = ReturnType<typeof flowRow>;
+type RunOptions = {
+  pending?: boolean;
+  allowAccountLocalSupportAndElementary?: boolean;
+  blockOnUnscaledCanonicalSupport?: boolean;
+};
+
 // Minimal dependency injection (these are simple utilities the module needs).
 function makeUtils() {
-  const asText = (v) => {
+  const asText = (v: unknown): string => {
     if (v === undefined || v === null) return "";
     if (typeof v === "string" || typeof v === "number") return String(v).trim();
-    if (typeof v === "object") return asText(v["#text"] ?? v.value ?? "");
+    if (typeof v === "object") {
+      const record = v as Record<string, unknown>;
+      return asText(record["#text"] ?? record.value ?? "");
+    }
     return "";
   };
   return createCanonicalSupportRewriteUtils({
     asText,
-    booleanOption: (v) => v === true || v === "true" || v === 1 || v === "1",
-    cloneJson: (v) => JSON.parse(JSON.stringify(v)),
-    datasetIdentity: (row) => {
-      const ds = row?.flowDataSet?.flowInformation?.dataSetInformation ?? {};
+    booleanOption: (v: unknown) => v === true || v === "true" || v === 1 || v === "1",
+    cloneJson: <T,>(v: T): T => JSON.parse(JSON.stringify(v)),
+    datasetIdentity: (row: Record<string, unknown>) => {
+      const flow = row as Partial<FlowRow>;
+      const ds: { "common:UUID"?: string } =
+        flow.flowDataSet?.flowInformation?.dataSetInformation ?? {};
       return { id: ds["common:UUID"] ?? null, version: "00.00.001" };
     },
-    datasetRowsFileStem: (type) => `${type}s`,
-    ensureArray: (v) => (Array.isArray(v) ? v : v == null ? [] : [v]),
-    fileExists: (p) => Boolean(p) && fs.existsSync(p),
-    multiLang: (text, lang = "en") => ({ "@xml:lang": lang, "#text": text }),
+    datasetRowsFileStem: (type: string) => `${type}s`,
+    ensureArray: (v: unknown) => (Array.isArray(v) ? v : v == null ? [] : [v]),
+    fileExists: (p: string | null) => Boolean(p) && fs.existsSync(p!),
+    multiLang: (text: string, lang = "en") => ({ "@xml:lang": lang, "#text": text }),
     nowIso: () => "2026-06-13T00:00:00.000Z",
-    pathExpression: (parts) => parts.join("."),
-    readJson: (p) => JSON.parse(fs.readFileSync(p, "utf8")),
-    readRowsFile: (p) =>
+    pathExpression: (parts: Array<string | number>) => parts.join("."),
+    readJson: (p: string) => JSON.parse(fs.readFileSync(p, "utf8")),
+    readRowsFile: (p: string) =>
       fs
         .readFileSync(p, "utf8")
         .split("\n")
         .filter(Boolean)
-        .map((l) => JSON.parse(l)),
-    repoRelativeMaybe: (p) => p,
-    repoRelativePath: (p) => p,
-    resolveRepoPath: (p) => p,
-    writeJson: (p, v) => {
+        .map((l: string) => JSON.parse(l)),
+    repoRelativeMaybe: (p: string | null) => p,
+    repoRelativePath: (p: string) => p,
+    resolveRepoPath: (p: unknown) => (typeof p === "string" ? p : null),
+    writeJson: (p: string, v: unknown) => {
       fs.mkdirSync(path.dirname(p), { recursive: true });
       fs.writeFileSync(p, JSON.stringify(v, null, 2));
     },
-    writeJsonLines: (p, rows) => {
+    writeJsonLines: (p: string, rows: unknown[]) => {
       fs.mkdirSync(path.dirname(p), { recursive: true });
       fs.writeFileSync(
         p,
@@ -53,7 +65,7 @@ function makeUtils() {
 const MASS_DISTANCE_FP = "118f2a40-50ec-457c-aa60-9bc6b6af9931";
 const MASS_DISTANCE_UG = "3620148f-c5db-48ce-9065-a10092089aca";
 
-function writeCache(dir, { pending = false } = {}) {
+function writeCache(dir: string, { pending = false }: RunOptions = {}): string {
   const cache = {
     schema_version: 1,
     flow_properties: [
@@ -104,7 +116,7 @@ function writeCache(dir, { pending = false } = {}) {
   return cachePath;
 }
 
-function flowRow(uuid, unit) {
+function flowRow(uuid: string, unit: string) {
   return {
     flowDataSet: {
       flowInformation: { dataSetInformation: { "common:UUID": uuid } },
@@ -124,7 +136,7 @@ function flowRow(uuid, unit) {
   };
 }
 
-function run(dir, rows, options = {}) {
+function run(dir: string, rows: FlowRow[], options: RunOptions = {}) {
   const utils = makeUtils();
   const rowsFile = path.join(dir, "flows.jsonl");
   fs.writeFileSync(rowsFile, rows.map((r) => JSON.stringify(r)).join("\n") + "\n");
@@ -202,7 +214,7 @@ test("canonical support rewrite emits a pending-upstream blocker for not-yet-cre
   assert.ok(blocker, "must emit canonical_support_pending_upstream for pending mapping");
   assert.equal(blocker.source_unit, "personkm");
   assert.equal(blocker.canonical_reference_unit, "personkm");
-  assert.match(blocker.pending_upstream_note, /PENDING UPSTREAM/);
+  assert.match(String(blocker.pending_upstream_note), /PENDING UPSTREAM/);
 });
 
 test("override suppresses the pending-upstream blocker (mint account-local My Data FP/UG)", () => {
@@ -231,7 +243,7 @@ test("override suppresses the pending-upstream blocker (mint account-local My Da
 // (source @00.00.001 while the cache/written canonical is @01.00.000) must be bumped
 // to the canonical version under the override, so downstream remote-verify does not
 // report the reference as version_outdated.
-function flowRowCanonicalStaleVersion(uuid) {
+function flowRowCanonicalStaleVersion(uuid: string) {
   return {
     flowDataSet: {
       flowInformation: { dataSetInformation: { "common:UUID": uuid } },

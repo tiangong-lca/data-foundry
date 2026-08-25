@@ -246,7 +246,7 @@
       "referenced_by": [
         "docs/execution-capsule-contract.md",
         "scripts/commands/execution-capsule.ts",
-        "test/commands/execution-capsule.test.mjs"
+        "test/commands/execution-capsule.test.mts"
       ],
       "sensitivity": "non-sensitive schema; no credentials or private payloads",
       "tracked": true,
@@ -280,7 +280,7 @@
       "referenced_by": [
         "docs/incremental-change-set-contract.md",
         "scripts/commands/incremental-change-set.ts",
-        "test/commands/incremental-change-set.test.mjs"
+        "test/commands/incremental-change-set.test.mts"
       ],
       "sensitivity": "non-sensitive schema; no credentials or private payloads",
       "tracked": true,
@@ -314,7 +314,7 @@
       "referenced_by": [
         "docs/topology-convergence-contract.md",
         "scripts/commands/topology-convergence.ts",
-        "test/commands/topology-convergence.test.mjs"
+        "test/commands/topology-convergence.test.mts"
       ],
       "sensitivity": "non-sensitive schema; no credentials or private payloads",
       "tracked": true,

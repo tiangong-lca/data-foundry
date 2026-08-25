@@ -111,6 +111,7 @@ checkPaths:
   - scripts/lib/bundle-sample-utils.ts
   - test/fixtures/fixture-roots.ts
   - test/fixtures/finalize-fixtures.ts
+  - test/commands/*.test.mts
   - .prettierignore
   - package.json
   - pnpm-lock.yaml
@@ -120,8 +121,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed orchestration, adapters/tooling, algorithms and final commands preserve profile/dependency boundaries, deterministic artifacts, diagnostics, reports/hashes and ordered read-only gates without moving CLI, schema, search or database authority."
+lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
+lastReviewedNote: "Reviewed for Issue #67 Wave 27 integration: typed entry/runtime and command contracts preserve profile/dependency boundaries, deterministic artifacts, local fixtures and offline fail-close without moving CLI/schema/search/database authority."
 ---
 
 # Architecture

@@ -19,12 +19,12 @@ checkPaths:
   - test/unit/topology-command-migration.test.mts
   - test/fixtures/topology-convergence-fixtures.mjs
   - test/unit/topology-convergence.test.mjs
-  - test/commands/topology-convergence.test.mjs
+  - test/commands/topology-convergence.test.mts
   - test/scenarios/topology-convergence-handoff.test.mjs
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 5af446bb230dd1f37e26d979352eda8c5ab51550
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: the native zero-escape TS7 composer preserves occurrence-aware graph/cycle/retry semantics, deterministic F/P/D artifacts, handoff blockers, native failures and no-write authority."
+lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
+lastReviewedNote: "Reviewed for Issue #67 Wave 27 command tests: the command contract moves to strict TS7 without changing occurrence identity, F/P/D artifacts, language preservation, delete barriers, audit algebra, or zero-dispatch semantics."
 ---
 
 # Topology Convergence Contract

@@ -194,6 +194,7 @@ checkPaths:
   - test/unit/core-command-factory.test.mts
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
+  - test/commands/*.test.mts
   - test/unit/wave25-identity-decision-command-migration.test.mts
   - test/unit/wave25-classification-location-command-migration.test.mts
   - test/unit/import-curation-leaf-barrels-migration.test.mts
@@ -209,8 +210,8 @@ checkPaths:
   - test/unit/foundry-golden-diff-contract.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed orchestration, adapters/tools, algorithms and final core/preflight/finalize owners preserve dependency order, diagnostics, exact help, hashes/receipts, ordered rewrite/gate/handoff proof and fail-closed authority."
+lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
+lastReviewedNote: "Reviewed for Issue #67 Wave 27 integration: typed entry/runtime owners and command contracts preserve dependency order, fixtures, exact artifacts/order/errors, planner algebra, receipts and fail-closed authority."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

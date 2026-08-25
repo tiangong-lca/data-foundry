@@ -23,7 +23,14 @@ import {
   fixtureUpdatePointer,
 } from "../fixtures/incremental-change-set-fixtures.mjs";
 
-function compose(fixture) {
+type ParsedFixture = ReturnType<typeof JSON.parse>;
+type IncrementalFixture = ReturnType<typeof createIncrementalChangeSetFixture>;
+const makeIncrementalFixture = createIncrementalChangeSetFixture as unknown as (
+  name: string,
+  mutate?: (state: ParsedFixture) => void,
+) => IncrementalFixture;
+
+function compose(fixture: IncrementalFixture) {
   return runFoundry([
     "dataset-incremental-change-set-compose",
     "--request",
@@ -33,7 +40,7 @@ function compose(fixture) {
   ]);
 }
 
-function composeRaw(fixture) {
+function composeRaw(fixture: IncrementalFixture) {
   return spawnSync(
     process.execPath,
     [
@@ -48,11 +55,11 @@ function composeRaw(fixture) {
   );
 }
 
-function bytesSha256(filePath) {
+function bytesSha256(filePath: string): string {
   return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
 }
 
-function decisionFromEvent(event) {
+function decisionFromEvent(event: ParsedFixture) {
   return {
     conversion_id: event.conversion_id,
     entity: event.entity,
@@ -76,7 +83,7 @@ function decisionFromEvent(event) {
   };
 }
 
-function assertCompositionHashes(fixture, result) {
+function assertCompositionHashes(fixture: IncrementalFixture, result: ParsedFixture): void {
   const eventsPath = path.join(fixture.outDir, "incremental-change-set-conversion-events.jsonl");
   const events = readJsonLines(eventsPath);
   for (const event of events) {
@@ -115,7 +122,7 @@ function assertCompositionHashes(fixture, result) {
 }
 
 test("incremental composer emits one terminal log per conversion and exact CLI artifacts", () => {
-  const fixture = createIncrementalChangeSetFixture("complete");
+  const fixture = makeIncrementalFixture("complete");
   const result = compose(fixture);
   assert.equal(result.code, 0);
   assert.equal(result.json.status, "completed_with_holds");
@@ -163,13 +170,13 @@ test("incremental composer emits one terminal log per conversion and exact CLI a
     path.join(fixture.outDir, "dataset-save-draft-execution-contract.json"),
   );
   assert.equal(events.length, 8);
-  assert.equal(new Set(events.map((event) => event.conversion_id)).size, 8);
-  assert.ok(events.every((event) => event.terminal && event.output.row_sha256));
+  assert.equal(new Set(events.map((event: ParsedFixture) => event.conversion_id)).size, 8);
+  assert.ok(events.every((event: ParsedFixture) => event.terminal && event.output.row_sha256));
   assert.equal(events[0].previous_event_sha256, null);
   for (let index = 1; index < events.length; index += 1) {
     assert.equal(events[index].previous_event_sha256, events[index - 1].event_sha256);
   }
-  const noiseEvent = events.find((event) => event.conversion_id === "source-noise");
+  const noiseEvent = events.find((event: ParsedFixture) => event.conversion_id === "source-noise");
   assert.equal(
     noiseEvent.input_refs.old.semantic_sha256,
     noiseEvent.input_refs.candidate.semantic_sha256,
@@ -184,7 +191,9 @@ test("incremental composer emits one terminal log per conversion and exact CLI a
   );
   assert.equal(noiseEvent.evidence.policy_sha256, bytesSha256(fixture.policyPath));
   assert.equal(noiseEvent.evidence.noise_evidence_sha256.length, 1);
-  const curatedEvent = events.find((event) => event.conversion_id === "source-curated");
+  const curatedEvent = events.find(
+    (event: ParsedFixture) => event.conversion_id === "source-curated",
+  );
   assert.equal(curatedEvent.evidence.preserve_owner_evidence_sha256.length, 1);
   assert.deepEqual(curatedEvent.evidence.take_candidate_evidence_sha256, []);
   assert.deepEqual(curatedEvent.evidence.stable_array_evidence_sha256, []);
@@ -194,14 +203,18 @@ test("incremental composer emits one terminal log per conversion and exact CLI a
   assert.deepEqual(holds[0].reason_codes, ["HOLD_DELETE_FORBIDDEN"]);
   assert.equal(contract.actions.length, 4);
   assert.deepEqual(
-    contract.actions.map((action) => action.expected_operation),
+    contract.actions.map((action: ParsedFixture) => action.expected_operation),
     ["insert", "insert", "save_draft", "save_draft"],
   );
-  contract.actions.forEach((action, index) => {
+  contract.actions.forEach((action: ParsedFixture, index: number) => {
     assert.equal(action.desired_sha256, fixtureSha256Json(delta[index]));
     assert.equal(action.before_sha256 === null, action.expected_operation === "insert");
-    const earlier = new Set(contract.actions.slice(0, index).map((entry) => entry.action_id));
-    assert.ok(action.dependency_action_ids.every((dependency) => earlier.has(dependency)));
+    const earlier = new Set(
+      contract.actions.slice(0, index).map((entry: ParsedFixture) => entry.action_id),
+    );
+    assert.ok(
+      action.dependency_action_ids.every((dependency: ParsedFixture) => earlier.has(dependency)),
+    );
   });
   assert.deepEqual(contract.actions[1].dependency_action_ids, [contract.actions[0].action_id]);
 
@@ -221,7 +234,7 @@ test("incremental composer emits one terminal log per conversion and exact CLI a
 });
 
 test("all six CLI table identities accept their exact TIDAS roots, including flowPropertiesInformation", () => {
-  const fixture = createIncrementalChangeSetFixture(
+  const fixture = makeIncrementalFixture(
     "six-table-identities",
     ({ comparisons, owner, ownerRows, projectRef, settings }) => {
       comparisons.splice(0);
@@ -236,8 +249,8 @@ test("all six CLI table identities accept their exact TIDAS roots, including flo
     },
   );
   const flowProperty = fixture.comparisons.find(
-    (row) => row.entity.table === "flowproperties",
-  ).old_payload;
+    (row: ParsedFixture) => row.entity.table === "flowproperties",
+  )!.old_payload;
   assert.ok(flowProperty.flowPropertyDataSet.flowPropertiesInformation);
   const result = compose(fixture);
   assert.equal(result.code, 0);
@@ -247,7 +260,7 @@ test("all six CLI table identities accept their exact TIDAS roots, including flo
 });
 
 test("missing dataset version is rejected before any output is admitted", () => {
-  const fixture = createIncrementalChangeSetFixture("missing-version", ({ comparisons }) => {
+  const fixture = makeIncrementalFixture("missing-version", ({ comparisons }) => {
     comparisons[0].entity.version = "";
   });
   const result = composeRaw(fixture);
@@ -257,7 +270,7 @@ test("missing dataset version is rejected before any output is admitted", () => 
 });
 
 test("incremental composer globally rejects a foreign owner while logging every conversion", () => {
-  const fixture = createIncrementalChangeSetFixture("foreign-owner", ({ ownerRows }) => {
+  const fixture = makeIncrementalFixture("foreign-owner", ({ ownerRows }) => {
     ownerRows[0].owner.user_id = "20000000-0000-4000-8000-000000000002";
   });
   const result = compose(fixture);
@@ -273,7 +286,7 @@ test("incremental composer globally rejects a foreign owner while logging every 
 });
 
 test("owner snapshot project mismatch is rejected before any output is admitted", () => {
-  const fixture = createIncrementalChangeSetFixture("foreign-project", ({ ownerRows }) => {
+  const fixture = makeIncrementalFixture("foreign-project", ({ ownerRows }) => {
     ownerRows[0].project_ref = "different-project-ref";
   });
   const result = composeRaw(fixture);
@@ -284,7 +297,7 @@ test("owner snapshot project mismatch is rejected before any output is admitted"
 
 test("incremental composer rejects input hash drift, receipt drift, and immutable output reuse", async (t) => {
   await t.test("comparison hash drift", () => {
-    const fixture = createIncrementalChangeSetFixture("hash-drift");
+    const fixture = makeIncrementalFixture("hash-drift");
     fs.appendFileSync(fixture.comparisonsPath, "\n");
     const result = composeRaw(fixture);
     assert.equal(result.status, 1);
@@ -293,7 +306,7 @@ test("incremental composer rejects input hash drift, receipt drift, and immutabl
   });
 
   await t.test("owner receipt hash drift", () => {
-    const fixture = createIncrementalChangeSetFixture("receipt-hash-drift");
+    const fixture = makeIncrementalFixture("receipt-hash-drift");
     fs.appendFileSync(fixture.receiptPath, "\n");
     const result = composeRaw(fixture);
     assert.equal(result.status, 1);
@@ -302,7 +315,7 @@ test("incremental composer rejects input hash drift, receipt drift, and immutabl
   });
 
   await t.test("owner receipt snapshot binding drift", () => {
-    const fixture = createIncrementalChangeSetFixture("receipt-content-drift", ({ settings }) => {
+    const fixture = makeIncrementalFixture("receipt-content-drift", ({ settings }) => {
       settings.receiptOverrides.snapshot = {
         sha256: "0".repeat(64),
         bytes: 0,
@@ -316,7 +329,7 @@ test("incremental composer rejects input hash drift, receipt drift, and immutabl
   });
 
   await t.test("owner receipt canonical scope binding drift", () => {
-    const fixture = createIncrementalChangeSetFixture("receipt-scope-drift", ({ settings }) => {
+    const fixture = makeIncrementalFixture("receipt-scope-drift", ({ settings }) => {
       settings.receiptOverrides.scope_binding = {
         allowed_target_keys: ["sources/random@01.00.000"],
         allowed_target_keys_sha256: "0".repeat(64),
@@ -330,7 +343,7 @@ test("incremental composer rejects input hash drift, receipt drift, and immutabl
   });
 
   await t.test("owner receipt cannot omit a present target row", () => {
-    const fixture = createIncrementalChangeSetFixture("receipt-target-gap", ({ settings }) => {
+    const fixture = makeIncrementalFixture("receipt-target-gap", ({ settings }) => {
       settings.receiptOverrides.target_ledger = [];
     });
     const result = composeRaw(fixture);
@@ -340,7 +353,7 @@ test("incremental composer rejects input hash drift, receipt drift, and immutabl
   });
 
   await t.test("immutable output", () => {
-    const fixture = createIncrementalChangeSetFixture("immutable-output");
+    const fixture = makeIncrementalFixture("immutable-output");
     assert.equal(compose(fixture).code, 0);
     const second = composeRaw(fixture);
     assert.equal(second.status, 1);
@@ -349,22 +362,20 @@ test("incremental composer rejects input hash drift, receipt drift, and immutabl
 });
 
 test("request update allowlists accept zero update authority but reject root wildcard prefixes", async (t) => {
-  const insertOnly = createIncrementalChangeSetFixture("zero-update-authority", ({ settings }) => {
+  const insertOnly = makeIncrementalFixture("zero-update-authority", ({ settings }) => {
     settings.allowedUpdatePointerPrefixes.flows = [];
   });
   assert.equal(compose(insertOnly).code, 0);
 
-  for (const [name, prefixes] of [
+  const prefixCases: Array<[string, string[]]> = [
     ["root-empty-token", [""]],
     ["root-slash", ["/"]],
-  ]) {
+  ];
+  for (const [name, prefixes] of prefixCases) {
     await t.test(name, () => {
-      const fixture = createIncrementalChangeSetFixture(
-        `bad-update-scope-${name}`,
-        ({ settings }) => {
-          settings.allowedUpdatePointerPrefixes.processes = prefixes;
-        },
-      );
+      const fixture = makeIncrementalFixture(`bad-update-scope-${name}`, ({ settings }) => {
+        settings.allowedUpdatePointerPrefixes.processes = prefixes;
+      });
       const result = composeRaw(fixture);
       assert.equal(result.status, 1);
       assert.match(result.stderr, /allowed_update_pointer_prefixes|scope/u);
@@ -374,10 +385,10 @@ test("request update allowlists accept zero update authority but reject root wil
 });
 
 test("terminal exclusions bind a readable success receipt and consume one exact candidate action", () => {
-  const fixture = createIncrementalChangeSetFixture(
+  const fixture = makeIncrementalFixture(
     "terminal-exclusion",
     ({ comparisons, terminalExclusions }) => {
-      const flow = comparisons.find((row) => row.conversion_id === "flow-create");
+      const flow = comparisons.find((row: ParsedFixture) => row.conversion_id === "flow-create");
       terminalExclusions.push({
         schema_version: "foundry-incremental-change-set-terminal-exclusion.v1",
         action_id: `flow-create@${flow.candidate_payload_sha256}`,
@@ -390,28 +401,35 @@ test("terminal exclusions bind a readable success receipt and consume one exact 
   assert.equal(result.json.status, "completed_with_holds");
   assert.equal(result.json.counts.actions, 3);
   const noWrites = new Map(
-    readJsonLines(path.join(fixture.outDir, "incremental-change-set-no-write.jsonl")).map((row) => [
-      row.conversion_id,
-      row,
-    ]),
+    readJsonLines(path.join(fixture.outDir, "incremental-change-set-no-write.jsonl")).map(
+      (row: ParsedFixture) => [row.conversion_id, row],
+    ),
   );
   assert.deepEqual(noWrites.get("flow-create").reason_codes, ["NOOP_TERMINAL_SUCCESS"]);
   const contract = readJson(
     path.join(fixture.outDir, "dataset-save-draft-execution-contract.json"),
   );
-  assert.ok(contract.actions.every((action) => !action.action_id.startsWith("flow-create@")));
-  assert.ok(contract.actions.some((action) => action.action_id.startsWith("process-create@")));
   assert.ok(
-    contract.actions.some((action) => action.action_id.startsWith("process-independent-update@")),
+    contract.actions.every((action: ParsedFixture) => !action.action_id.startsWith("flow-create@")),
+  );
+  assert.ok(
+    contract.actions.some((action: ParsedFixture) =>
+      action.action_id.startsWith("process-create@"),
+    ),
+  );
+  assert.ok(
+    contract.actions.some((action: ParsedFixture) =>
+      action.action_id.startsWith("process-independent-update@"),
+    ),
   );
   const events = readJsonLines(
     path.join(fixture.outDir, "incremental-change-set-conversion-events.jsonl"),
   );
-  const event = events.find((row) => row.conversion_id === "flow-create");
+  const event = events.find((row: ParsedFixture) => row.conversion_id === "flow-create");
   assert.equal(event.outcome.terminal_success.receipt_status, "success");
   assert.equal(event.outcome.terminal_success.receipt_bytes > 0, true);
   assert.equal(event.dependencies.dispositions.length, 1);
-  const process = events.find((row) => row.conversion_id === "process-create");
+  const process = events.find((row: ParsedFixture) => row.conversion_id === "process-create");
   assert.deepEqual(process.dependencies.dispositions, [
     { dependency_conversion_id: "flow-create", disposition: "satisfied_terminal_success" },
   ]);
@@ -420,33 +438,44 @@ test("terminal exclusions bind a readable success receipt and consume one exact 
 });
 
 test("malformed, drifted, or duplicate terminal success receipts are rejected", async (t) => {
-  const cases = [
+  const cases: Array<
+    [
+      string,
+      (row: ParsedFixture, terminalExclusions: ParsedFixture[], settings: ParsedFixture) => void,
+    ]
+  > = [
     [
       "bad-schema",
-      (row) => {
+      (row: ParsedFixture) => {
         row.schema_version = "wrong-terminal-schema";
       },
     ],
     [
       "desired-mismatch",
-      (row) => {
+      (row: ParsedFixture) => {
         row.desired_sha256 = "0".repeat(64);
       },
     ],
     [
       "bad-receipt-sha",
-      (_row, _terminalExclusions, settings) => {
+      (_row: ParsedFixture, _terminalExclusions: ParsedFixture[], settings: ParsedFixture) => {
         settings.terminalReceiptReferenceOverrides.sha256 = "0".repeat(64);
       },
     ],
-    ["duplicate", (_row, terminalExclusions) => terminalExclusions.push({ ..._row })],
+    [
+      "duplicate",
+      (_row: ParsedFixture, terminalExclusions: ParsedFixture[]) =>
+        terminalExclusions.push({ ..._row }),
+    ],
   ];
   for (const [name, corrupt] of cases) {
     await t.test(name, () => {
-      const fixture = createIncrementalChangeSetFixture(
+      const fixture = makeIncrementalFixture(
         `terminal-${name}`,
         ({ comparisons, settings, terminalExclusions }) => {
-          const flow = comparisons.find((row) => row.conversion_id === "flow-create");
+          const flow = comparisons.find(
+            (row: ParsedFixture) => row.conversion_id === "flow-create",
+          );
           const row = {
             schema_version: "foundry-incremental-change-set-terminal-exclusion.v1",
             action_id: `flow-create@${flow.candidate_payload_sha256}`,
@@ -465,13 +494,15 @@ test("malformed, drifted, or duplicate terminal success receipts are rejected", 
 });
 
 test("terminal exclusion consumes an exact-current recovery NOOP", () => {
-  const fixture = createIncrementalChangeSetFixture(
+  const fixture = makeIncrementalFixture(
     "terminal-exact-current-recovery",
     ({ comparisons, ownerRows, terminalExclusions }) => {
       const comparison = comparisons.find(
-        (row) => row.conversion_id === "process-independent-update",
+        (row: ParsedFixture) => row.conversion_id === "process-independent-update",
       );
-      const ownerRow = ownerRows.find((row) => row.entity.id === comparison.entity.id);
+      const ownerRow = ownerRows.find(
+        (row: ParsedFixture) => row.entity.id === comparison.entity.id,
+      );
       ownerRow.json_ordered = comparison.new_payload;
       ownerRow.payload_sha256 = comparison.candidate_payload_sha256;
       terminalExclusions.push({
@@ -487,29 +518,29 @@ test("terminal exclusion consumes an exact-current recovery NOOP", () => {
     path.join(fixture.outDir, "incremental-change-set-no-write.jsonl"),
   );
   assert.deepEqual(
-    noWrites.find((row) => row.conversion_id === "process-independent-update").reason_codes,
+    noWrites.find((row: ParsedFixture) => row.conversion_id === "process-independent-update")
+      .reason_codes,
     ["NOOP_TERMINAL_SUCCESS_RECOVERED"],
   );
   const contract = readJson(
     path.join(fixture.outDir, "dataset-save-draft-execution-contract.json"),
   );
   assert.ok(
-    contract.actions.every((action) => !action.action_id.startsWith("process-independent-update@")),
+    contract.actions.every(
+      (action: ParsedFixture) => !action.action_id.startsWith("process-independent-update@"),
+    ),
   );
 });
 
 test("unmatched random terminal success receipt is rejected before output", () => {
-  const fixture = createIncrementalChangeSetFixture(
-    "terminal-unmatched",
-    ({ terminalExclusions }) => {
-      const desired = "a".repeat(64);
-      terminalExclusions.push({
-        schema_version: "foundry-incremental-change-set-terminal-exclusion.v1",
-        action_id: `random-action@${desired}`,
-        desired_sha256: desired,
-      });
-    },
-  );
+  const fixture = makeIncrementalFixture("terminal-unmatched", ({ terminalExclusions }) => {
+    const desired = "a".repeat(64);
+    terminalExclusions.push({
+      schema_version: "foundry-incremental-change-set-terminal-exclusion.v1",
+      action_id: `random-action@${desired}`,
+      desired_sha256: desired,
+    });
+  });
   const result = composeRaw(fixture);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /must consume exactly one/iu);
@@ -517,25 +548,21 @@ test("unmatched random terminal success receipt is rejected before output", () =
 });
 
 test("an absent NOOP cannot satisfy a dependency and holds only its descendant closure", () => {
-  const fixture = createIncrementalChangeSetFixture(
-    "absent-dependency",
-    ({ comparisons, ownerRows }) => {
-      const absent = comparisons.find((row) => row.conversion_id === "ug-exact");
-      absent.old_payload = null;
-      absent.new_payload = null;
-      absent.old_payload_sha256 = null;
-      absent.candidate_payload_sha256 = null;
-      const index = ownerRows.findIndex((row) => row.entity.id === absent.entity.id);
-      ownerRows.splice(index, 1);
-    },
-  );
+  const fixture = makeIncrementalFixture("absent-dependency", ({ comparisons, ownerRows }) => {
+    const absent = comparisons.find((row: ParsedFixture) => row.conversion_id === "ug-exact");
+    absent.old_payload = null;
+    absent.new_payload = null;
+    absent.old_payload_sha256 = null;
+    absent.candidate_payload_sha256 = null;
+    const index = ownerRows.findIndex((row: ParsedFixture) => row.entity.id === absent.entity.id);
+    ownerRows.splice(index, 1);
+  });
   const result = compose(fixture);
   assert.equal(result.code, 0);
   const holds = new Map(
-    readJsonLines(path.join(fixture.outDir, "incremental-change-set-holds.jsonl")).map((row) => [
-      row.conversion_id,
-      row,
-    ]),
+    readJsonLines(path.join(fixture.outDir, "incremental-change-set-holds.jsonl")).map(
+      (row: ParsedFixture) => [row.conversion_id, row],
+    ),
   );
   assert.deepEqual(holds.get("flow-create").reason_codes, ["HOLD_DEPENDENCY_ABSENT"]);
   assert.ok(holds.get("process-create").reason_codes.includes("HOLD_DEPENDENCY"));
@@ -543,26 +570,24 @@ test("an absent NOOP cannot satisfy a dependency and holds only its descendant c
     path.join(fixture.outDir, "dataset-save-draft-execution-contract.json"),
   );
   assert.deepEqual(
-    contract.actions.map((action) => action.action_id.split("@")[0]),
+    contract.actions.map((action: ParsedFixture) => action.action_id.split("@")[0]),
     ["process-numeric-update", "process-independent-update"],
   );
 });
 
 test("blank, object, and duplicate dependency declarations are schema failures", async (t) => {
-  const cases = [
+  const cases: Array<[string, unknown[]]> = [
     ["blank", [" "]],
     ["object", [{ conversion_id: "ug-exact" }]],
     ["duplicate", ["ug-exact", "ug-exact"]],
   ];
   for (const [name, dependencies] of cases) {
     await t.test(name, () => {
-      const fixture = createIncrementalChangeSetFixture(
-        `dependency-schema-${name}`,
-        ({ comparisons }) => {
-          comparisons.find((row) => row.conversion_id === "flow-create").dependency_conversion_ids =
-            dependencies;
-        },
-      );
+      const fixture = makeIncrementalFixture(`dependency-schema-${name}`, ({ comparisons }) => {
+        comparisons.find(
+          (row: ParsedFixture) => row.conversion_id === "flow-create",
+        ).dependency_conversion_ids = dependencies;
+      });
       const result = composeRaw(fixture);
       assert.equal(result.status, 1);
       assert.match(result.stderr, /dependency/i);
@@ -572,25 +597,27 @@ test("blank, object, and duplicate dependency declarations are schema failures",
 });
 
 test("dependency cycles hold only the affected action closure", () => {
-  const fixture = createIncrementalChangeSetFixture("dependency-cycle", ({ comparisons }) => {
+  const fixture = makeIncrementalFixture("dependency-cycle", ({ comparisons }) => {
     comparisons.find(
-      (row) => row.conversion_id === "process-numeric-update",
+      (row: ParsedFixture) => row.conversion_id === "process-numeric-update",
     ).dependency_conversion_ids = ["process-independent-update"];
     comparisons.find(
-      (row) => row.conversion_id === "process-independent-update",
+      (row: ParsedFixture) => row.conversion_id === "process-independent-update",
     ).dependency_conversion_ids = ["process-numeric-update"];
   });
   const result = compose(fixture);
   assert.equal(result.code, 0);
   assert.equal(result.json.counts.actions, 2);
   const holds = readJsonLines(path.join(fixture.outDir, "incremental-change-set-holds.jsonl"));
-  const cycleRows = holds.filter((row) => row.reason_codes.includes("HOLD_DEPENDENCY_CYCLE"));
+  const cycleRows = holds.filter((row: ParsedFixture) =>
+    row.reason_codes.includes("HOLD_DEPENDENCY_CYCLE"),
+  );
   assert.equal(cycleRows.length, 2);
   const contract = readJson(
     path.join(fixture.outDir, "dataset-save-draft-execution-contract.json"),
   );
   assert.deepEqual(
-    contract.actions.map((action) => action.action_id.split("@")[0]),
+    contract.actions.map((action: ParsedFixture) => action.action_id.split("@")[0]),
     ["flow-create", "process-create"],
   );
 });
@@ -630,7 +657,7 @@ test("reordered or duplicate array identities become HOLD dispositions", async (
   ];
   for (const { name, oldItems, candidateItems, currentItems } of cases) {
     await t.test(name, () => {
-      const fixture = createIncrementalChangeSetFixture(
+      const fixture = makeIncrementalFixture(
         `array-${name}`,
         ({ comparisons, owner, ownerRows, policy, projectRef }) => {
           comparisons.splice(0);
@@ -682,7 +709,7 @@ test("reordered or duplicate array identities become HOLD dispositions", async (
 });
 
 test("zero-action composition emits logs and reports but no consumable empty CLI contract", () => {
-  const fixture = createIncrementalChangeSetFixture(
+  const fixture = makeIncrementalFixture(
     "zero-actions",
     ({ comparisons, owner, ownerRows, projectRef }) => {
       comparisons.splice(0);
@@ -705,15 +732,15 @@ test("zero-action composition emits logs and reports but no consumable empty CLI
   const manifest = readJson(path.join(fixture.outDir, "incremental-change-set-manifest.json"));
   assert.equal(
     manifest.output_artifacts.some(
-      (artifact) => artifact.path === "dataset-save-draft-execution-contract.json",
+      (artifact: ParsedFixture) => artifact.path === "dataset-save-draft-execution-contract.json",
     ),
     false,
   );
 });
 
 test("account-local unitgroup/flowproperty actions require the explicit request flag and are reported", async (t) => {
-  function supportFixture(name, allowAccountLocalSupport) {
-    return createIncrementalChangeSetFixture(name, ({ comparisons, ids, ownerRows, settings }) => {
+  function supportFixture(name: string, allowAccountLocalSupport: boolean) {
+    return makeIncrementalFixture(name, ({ comparisons, ids, ownerRows, settings }) => {
       comparisons.splice(0);
       ownerRows.splice(0);
       const payload = fixturePayload("unitgroups", ids.unitgroup, { name: "New support" });

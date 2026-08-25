@@ -169,6 +169,10 @@ checkPaths:
   - test/unit/core-command-factory.test.mts
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
+  - test/unit/command-tests-core-support-migration.test.mts
+  - test/unit/command-tests-authoring-decisions-migration.test.mts
+  - test/unit/command-tests-bafu-library-migration.test.mts
+  - test/unit/command-tests-offline-planners-migration.test.mts
   - test/unit/task-completion-command-factories.test.mts
   - test/unit/handoff-identity-task-command-factories.test.mts
   - test/unit/support-cache-command-factory.test.mts
@@ -186,8 +190,8 @@ checkPaths:
   - test/unit/wave26-bafu-auto-authoring-command-migration.test.mts
   - test/unit/wave26-bafu-process-scope-command-migration.test.mts
   - test/unit/wave26-bafu-batch-command-migration.test.mts
-  - test/commands/classification-decisions.test.mjs
-  - test/commands/location-decisions.test.mjs
+  - test/commands/classification-decisions.test.mts
+  - test/commands/location-decisions.test.mts
   - test/scenarios/flow-identity-decisions.test.mjs
   - test/unit/tidas-adapter-migration-contract.test.mts
   - test/unit/post-authoring-finalize-utils-contract.test.mts
@@ -202,8 +206,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: tests cover typed orchestration, adapters/tools, algorithms and final commands; exact help, deterministic artifacts, diagnostics, receipt/argv/cache/hash fail-close, ordered rewrite/gate/handoff behavior and native errors."
+lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
+lastReviewedNote: "Reviewed for Issue #67 Wave 27 integration: native entry/runtime plus all sixteen command contracts are strict TS7; one .mts command glob preserves fixtures, exact bytes/order/errors and zero type escapes."
 ---
 
 # Test Layout
@@ -294,6 +298,8 @@ Wave 26 covers adapters and repository tooling in four RED/GREEN families. `unit
 Wave 26 covers four algorithmic command owners as independent RED/GREEN families. `unit/authoring-plan-command-migration.test.mts` pins the native owner/export, all consumers and exact help while existing authoring command cases preserve phase/row order, lineage, artifacts and hashes. `unit/bundle-sample-command-migration.test.mts` combines that migration contract with realistic selection cases for seed, row type, location and scale fail-close. `unit/incremental-command-migration.test.mts` covers native ownership/help while the existing unit, command and scenario fixtures preserve three-way activation, dependency holds, terminal receipts and no-authority CLI handoff. `unit/topology-command-migration.test.mts` does the same for occurrence-aware graph convergence, cycles, retry/hold behavior and ordered F/P/D handoffs. All four reject explicit type escapes and suppression directives.
 
 Wave 26 covers three final command families. `unit/core-command-factory.test.mts` uses an isolated repository fixture to pin runtime directory order, workflow/storage/environment reports, route artifact bytes, surface/doctor envelopes, native errors and exact global help. `unit/identity-preflight-run-command-factory.test.mts` plus the existing real local CLI scenarios pin all four help reports, receipt-bound argv, request/target/binding hashes, positive-only cache, stale or mismatched disk/stdout, nonzero/timeout failures and only-pending reuse without shell strings. `unit/post-authoring-finalize-command-factory.test.mts` plus finalize scenarios pin rewrite, cleanup, preflight, queue, schema, QA, location, curation, dry-run, mutation and handoff order; source/support/reuse artifacts, hashes and blockers remain fail-closed. No fixture reads credentials, `.env`, production data, or ignored Foundry state.
+
+Wave 27 migrates all sixteen remaining command tests in four coherent families. The original `.mjs` suite passes 173 cases before migration. The typed files preserve the same fixture imports and behavior bodies while adding strict parameter/narrowing contracts; `unit/command-tests-*-migration.test.mts` rejects legacy paths, explicit `any`, TypeScript suppressions and stale metadata/docs. `pnpm test:commands` now runs one `.mts` glob, including the existing typed account-wrapper contract.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

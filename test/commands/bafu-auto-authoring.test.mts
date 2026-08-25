@@ -1,7 +1,7 @@
+import assert from "node:assert/strict";
 import test from "node:test";
 import { bafuAutoAuthoringTestHooks } from "../../scripts/commands/bafu-auto-authoring.ts";
 import {
-  assert,
   fs,
   path,
   readJson,
@@ -21,7 +21,37 @@ const processId = "22222222-3333-4444-8555-666666666666";
 const electricityFlowId = "33333333-4444-4555-8666-777777777777";
 const electricityProcessId = "44444444-5555-4666-8777-888888888888";
 
-function flowRow(id = flowId) {
+type PatchOperation = {
+  path: string;
+  value?: unknown;
+  closes_action_items: Array<{ code: string }>;
+  resolution: { mode?: string; used_context_kinds: string[]; [key: string]: unknown };
+  [key: string]: unknown;
+};
+
+type NamePlan = {
+  base_name: string;
+  treatment: string;
+  mix_location?: string;
+  flow_property?: string | null;
+};
+
+const splitBafuNamePlan = bafuAutoAuthoringTestHooks.splitBafuNamePlan as unknown as (
+  name: string,
+  locationCode?: string | null,
+) => NamePlan;
+const splitBafuNamePlanFromNameParts =
+  bafuAutoAuthoringTestHooks.splitBafuNamePlanFromNameParts as unknown as (
+    parts: Record<string, unknown>,
+    locationCode?: string | null,
+  ) => NamePlan;
+const cleanProcessFunctionalUnitText =
+  bafuAutoAuthoringTestHooks.cleanProcessFunctionalUnitText as unknown as (
+    value: Record<string, unknown>,
+    locationCode?: string | null,
+  ) => Record<string, unknown> | null;
+
+function flowRow(id: string = flowId) {
   return {
     flowDataSet: {
       flowInformation: {
@@ -65,7 +95,7 @@ function flowRow(id = flowId) {
   };
 }
 
-function processRow(id = processId) {
+function processRow(id: string = processId) {
   return {
     processDataSet: {
       processInformation: {
@@ -126,7 +156,7 @@ function processRow(id = processId) {
   };
 }
 
-function identityActionItem(authoringPackage, authoringPackageSha256) {
+function identityActionItem(authoringPackage: string, authoringPackageSha256: string) {
   return {
     dataset_type: "flow",
     dataset_id: flowId,
@@ -163,7 +193,7 @@ function identityActionItem(authoringPackage, authoringPackageSha256) {
   };
 }
 
-function processIdentityActionItem(authoringPackage, authoringPackageSha256) {
+function processIdentityActionItem(authoringPackage: string, authoringPackageSha256: string) {
   return {
     dataset_type: "process",
     dataset_id: processId,
@@ -202,7 +232,7 @@ function processIdentityActionItem(authoringPackage, authoringPackageSha256) {
   };
 }
 
-function electricityFlowRow(id = electricityFlowId) {
+function electricityFlowRow(id: string = electricityFlowId) {
   return {
     flowDataSet: {
       flowInformation: {
@@ -249,7 +279,7 @@ function electricityFlowRow(id = electricityFlowId) {
   };
 }
 
-function namedFlowRow(id, baseName, locationCode = "CH") {
+function namedFlowRow(id: string, baseName: string, locationCode = "CH") {
   return {
     flowDataSet: {
       flowInformation: {
@@ -293,7 +323,7 @@ function namedFlowRow(id, baseName, locationCode = "CH") {
   };
 }
 
-function electricityProcessRow(id = electricityProcessId) {
+function electricityProcessRow(id: string = electricityProcessId) {
   return {
     processDataSet: {
       processInformation: {
@@ -343,7 +373,10 @@ function electricityProcessRow(id = electricityProcessId) {
   };
 }
 
-function electricityFlowIdentityActionItem(authoringPackage, authoringPackageSha256) {
+function electricityFlowIdentityActionItem(
+  authoringPackage: string,
+  authoringPackageSha256: string,
+) {
   return {
     dataset_type: "flow",
     dataset_id: electricityFlowId,
@@ -396,7 +429,10 @@ function electricityFlowIdentityActionItem(authoringPackage, authoringPackageSha
   };
 }
 
-function electricityProcessIdentityActionItem(authoringPackage, authoringPackageSha256) {
+function electricityProcessIdentityActionItem(
+  authoringPackage: string,
+  authoringPackageSha256: string,
+) {
   return {
     dataset_type: "process",
     dataset_id: electricityProcessId,
@@ -581,7 +617,7 @@ function electricitySemanticActionItems() {
   ];
 }
 
-function routeSplitSemanticActionItems(baseName, locationCode = "CH") {
+function routeSplitSemanticActionItems(baseName: string, locationCode = "CH") {
   return [
     {
       code: "semantic_name_treatment_placeholder",
@@ -1111,7 +1147,9 @@ test("BAFU patch autofill writes collectable name-plan and flowProperties patche
     assert.equal(operations.length, 4);
     assert.deepEqual(
       new Set(
-        operations.flatMap((operation) => operation.closes_action_items.map((item) => item.code)),
+        operations.flatMap((operation: PatchOperation) =>
+          operation.closes_action_items.map((item: { code: string }) => item.code),
+        ),
       ),
       new Set([
         "semantic_name_treatment_placeholder",
@@ -1120,7 +1158,7 @@ test("BAFU patch autofill writes collectable name-plan and flowProperties patche
       ]),
     );
     assert.equal(
-      operations.every((operation) =>
+      operations.every((operation: PatchOperation) =>
         ["schema", "methodology_yaml", "ruleset", "classification_schema", "location_schema"].every(
           (kind) => operation.resolution.used_context_kinds.includes(kind),
         ),
@@ -1198,21 +1236,30 @@ test("BAFU patch autofill splits electricity route names and closes all name-pla
     const patch = readJson(patchPath);
     const operations = patch.patch_sets[0].operations;
     assert.equal(operations.length, 4);
-    assert.deepEqual(operations.find((operation) => operation.path.endsWith("/baseName")).value, {
-      "@xml:lang": "en",
-      "#text": "Electricity",
-    });
     assert.deepEqual(
-      operations.find((operation) => operation.path.endsWith("/treatmentStandardsRoutes")).value,
+      operations.find((operation: PatchOperation) => operation.path.endsWith("/baseName")).value,
+      {
+        "@xml:lang": "en",
+        "#text": "Electricity",
+      },
+    );
+    assert.deepEqual(
+      operations.find((operation: PatchOperation) =>
+        operation.path.endsWith("/treatmentStandardsRoutes"),
+      ).value,
       { "@xml:lang": "en", "#text": "at cogen 1MWth, wood chips, allocation exergy" },
     );
     assert.deepEqual(
-      operations.find((operation) => operation.path.endsWith("/mixAndLocationTypes")).value,
+      operations.find((operation: PatchOperation) =>
+        operation.path.endsWith("/mixAndLocationTypes"),
+      ).value,
       { "@xml:lang": "en", "#text": "production mix, Switzerland" },
     );
     assert.deepEqual(
       new Set(
-        operations.flatMap((operation) => operation.closes_action_items.map((item) => item.code)),
+        operations.flatMap((operation: PatchOperation) =>
+          operation.closes_action_items.map((item: { code: string }) => item.code),
+        ),
       ),
       new Set([
         "semantic_name_base_contains_unsplit_segments",
@@ -1250,7 +1297,7 @@ test("BAFU patch autofill removes source locators from recycled metal profile na
     treatmentStandardsRoutes: { "@xml:lang": "en", "#text": "at plant" },
     mixAndLocationTypes: { "@xml:lang": "en", "#text": "recovered material, Switzerland" },
     flowProperties: { "@xml:lang": "en", "#text": "Mass" },
-  };
+  } as unknown as typeof row.flowDataSet.flowInformation.dataSetInformation.name;
   writeJson(packagePath, {
     dataset_type: "flow",
     entity_id: id,
@@ -1306,21 +1353,29 @@ test("BAFU patch autofill removes source locators from recycled metal profile na
     assert.equal(autofill.code, 0);
     assert.equal(autofill.json.status, "completed");
     const operations = readJson(patchPath).patch_sets[0].operations;
-    assert.deepEqual(operations.find((operation) => operation.path.endsWith("/baseName")).value, {
-      "@xml:lang": "en",
-      "#text": "Aluminium profile",
-    });
     assert.deepEqual(
-      operations.find((operation) => operation.path.endsWith("/treatmentStandardsRoutes")).value,
+      operations.find((operation: PatchOperation) => operation.path.endsWith("/baseName")).value,
+      {
+        "@xml:lang": "en",
+        "#text": "Aluminium profile",
+      },
+    );
+    assert.deepEqual(
+      operations.find((operation: PatchOperation) =>
+        operation.path.endsWith("/treatmentStandardsRoutes"),
+      ).value,
       { "@xml:lang": "en", "#text": "uncoated" },
     );
     assert.deepEqual(
-      operations.find((operation) => operation.path.endsWith("/mixAndLocationTypes")).value,
+      operations.find((operation: PatchOperation) =>
+        operation.path.endsWith("/mixAndLocationTypes"),
+      ).value,
       { "@xml:lang": "en", "#text": "at plant, Switzerland" },
     );
     assert.deepEqual(
-      operations.find((operation) => operation.path.endsWith("/functionalUnitFlowProperties"))
-        .value,
+      operations.find((operation: PatchOperation) =>
+        operation.path.endsWith("/functionalUnitFlowProperties"),
+      ).value,
       { "@xml:lang": "en", "#text": "recycling share 52%" },
     );
   } finally {
@@ -2130,16 +2185,23 @@ test("BAFU patch autofill splits disposal/incineration and transport route names
     for (const item of cases) {
       const patch = readJson(path.join(root, `flow-${item.id}`, "ai-patches.json"));
       const operations = patch.patch_sets[0].operations;
-      assert.deepEqual(operations.find((operation) => operation.path.endsWith("/baseName")).value, {
-        "@xml:lang": "en",
-        "#text": item.expectedBase,
-      });
       assert.deepEqual(
-        operations.find((operation) => operation.path.endsWith("/treatmentStandardsRoutes")).value,
+        operations.find((operation: PatchOperation) => operation.path.endsWith("/baseName")).value,
+        {
+          "@xml:lang": "en",
+          "#text": item.expectedBase,
+        },
+      );
+      assert.deepEqual(
+        operations.find((operation: PatchOperation) =>
+          operation.path.endsWith("/treatmentStandardsRoutes"),
+        ).value,
         { "@xml:lang": "en", "#text": item.expectedTreatment },
       );
       assert.deepEqual(
-        operations.find((operation) => operation.path.endsWith("/mixAndLocationTypes")).value,
+        operations.find((operation: PatchOperation) =>
+          operation.path.endsWith("/mixAndLocationTypes"),
+        ).value,
         { "@xml:lang": "en", "#text": item.expectedMix },
       );
     }
@@ -2222,16 +2284,23 @@ test("BAFU patch autofill splits elementary qualifier without inventing mix loca
     assert.equal(autofill.json.status, "completed");
     const operations = readJson(patchPath).patch_sets[0].operations;
     assert.equal(operations.length, 2);
-    assert.deepEqual(operations.find((operation) => operation.path.endsWith("/baseName")).value, {
-      "@xml:lang": "en",
-      "#text": "Carbon dioxide",
-    });
     assert.deepEqual(
-      operations.find((operation) => operation.path.endsWith("/treatmentStandardsRoutes")).value,
+      operations.find((operation: PatchOperation) => operation.path.endsWith("/baseName")).value,
+      {
+        "@xml:lang": "en",
+        "#text": "Carbon dioxide",
+      },
+    );
+    assert.deepEqual(
+      operations.find((operation: PatchOperation) =>
+        operation.path.endsWith("/treatmentStandardsRoutes"),
+      ).value,
       { "@xml:lang": "en", "#text": "fossil" },
     );
     assert.equal(
-      operations.some((operation) => operation.path.endsWith("/mixAndLocationTypes")),
+      operations.some((operation: PatchOperation) =>
+        operation.path.endsWith("/mixAndLocationTypes"),
+      ),
       false,
     );
   } finally {
@@ -2307,12 +2376,17 @@ test("BAFU patch autofill cleans post-finalize disposal market-mix residue", () 
     assert.equal(autofill.code, 0);
     assert.equal(autofill.json.status, "completed");
     const operations = readJson(patchPath).patch_sets[0].operations;
-    assert.deepEqual(operations.find((operation) => operation.path.endsWith("/baseName")).value, {
-      "@xml:lang": "en",
-      "#text": "Disposal, building, window frame, wood",
-    });
     assert.deepEqual(
-      operations.find((operation) => operation.path.endsWith("/treatmentStandardsRoutes")).value,
+      operations.find((operation: PatchOperation) => operation.path.endsWith("/baseName")).value,
+      {
+        "@xml:lang": "en",
+        "#text": "Disposal, building, window frame, wood",
+      },
+    );
+    assert.deepEqual(
+      operations.find((operation: PatchOperation) =>
+        operation.path.endsWith("/treatmentStandardsRoutes"),
+      ).value,
       { "@xml:lang": "en", "#text": "to final disposal, m2 visible" },
     );
   } finally {
@@ -2388,16 +2462,23 @@ test("BAFU patch autofill moves disposal market mix out of flow baseName", () =>
     assert.equal(autofill.code, 0);
     assert.equal(autofill.json.status, "completed");
     const operations = readJson(patchPath).patch_sets[0].operations;
-    assert.deepEqual(operations.find((operation) => operation.path.endsWith("/baseName")).value, {
-      "@xml:lang": "en",
-      "#text": "Disposal, building, window frame, wood, wall opening",
-    });
     assert.deepEqual(
-      operations.find((operation) => operation.path.endsWith("/treatmentStandardsRoutes")).value,
+      operations.find((operation: PatchOperation) => operation.path.endsWith("/baseName")).value,
+      {
+        "@xml:lang": "en",
+        "#text": "Disposal, building, window frame, wood, wall opening",
+      },
+    );
+    assert.deepEqual(
+      operations.find((operation: PatchOperation) =>
+        operation.path.endsWith("/treatmentStandardsRoutes"),
+      ).value,
       { "@xml:lang": "en", "#text": "to final disposal" },
     );
     assert.deepEqual(
-      operations.find((operation) => operation.path.endsWith("/mixAndLocationTypes")).value,
+      operations.find((operation: PatchOperation) =>
+        operation.path.endsWith("/mixAndLocationTypes"),
+      ).value,
       { "@xml:lang": "en", "#text": "market mix, Switzerland" },
     );
   } finally {
@@ -2460,13 +2541,13 @@ test("BAFU patch autofill writes collectable process name-plan patches", () => {
     assert.equal(operations.length, 5);
     assert.equal(
       operations.some(
-        (operation) =>
+        (operation: PatchOperation) =>
           operation.path ===
           "/processDataSet/processInformation/quantitativeReference/functionalUnitOrOther",
       ),
       true,
     );
-    const exchangeTraceOperation = operations.find((operation) =>
+    const exchangeTraceOperation = operations.find((operation: PatchOperation) =>
       operation.path.endsWith("/common:other"),
     );
     assert.equal(exchangeTraceOperation.resolution.mode, "source_trace_verified");
@@ -2566,7 +2647,7 @@ test("BAFU patch autofill strips functional unit name-location tokens that diffe
     const patch = readJson(patchPath);
     const operations = patch.patch_sets[0].operations;
     assert.deepEqual(
-      operations.find((operation) =>
+      operations.find((operation: PatchOperation) =>
         operation.path.endsWith("/quantitativeReference/functionalUnitOrOther"),
       )?.value,
       {
@@ -2687,21 +2768,28 @@ test("BAFU patch autofill removes process functional unit SE suffixes", () => {
     const operations = patch.patch_sets[0].operations;
     assert.equal(operations.length, 4);
     assert.deepEqual(
-      operations.find((operation) =>
+      operations.find((operation: PatchOperation) =>
         operation.path.endsWith("/quantitativeReference/functionalUnitOrOther"),
       )?.value,
       { "@xml:lang": "en", "#text": "1.0 kWh Electricity, natural gas, at CHP power plant" },
     );
-    assert.deepEqual(operations.find((operation) => operation.path.endsWith("/baseName"))?.value, {
-      "@xml:lang": "en",
-      "#text": "Electricity, natural gas",
-    });
     assert.deepEqual(
-      operations.find((operation) => operation.path.endsWith("/treatmentStandardsRoutes"))?.value,
+      operations.find((operation: PatchOperation) => operation.path.endsWith("/baseName"))?.value,
+      {
+        "@xml:lang": "en",
+        "#text": "Electricity, natural gas",
+      },
+    );
+    assert.deepEqual(
+      operations.find((operation: PatchOperation) =>
+        operation.path.endsWith("/treatmentStandardsRoutes"),
+      )?.value,
       { "@xml:lang": "en", "#text": "at CHP power plant" },
     );
     assert.deepEqual(
-      operations.find((operation) => operation.path.endsWith("/mixAndLocationTypes"))?.value,
+      operations.find((operation: PatchOperation) =>
+        operation.path.endsWith("/mixAndLocationTypes"),
+      )?.value,
       { "@xml:lang": "en", "#text": "production process, Sweden" },
     );
   } finally {
@@ -2859,16 +2947,23 @@ test("BAFU patch autofill moves process market mix from baseName into mix locati
     assert.equal(autofill.code, 0);
     assert.equal(autofill.json.status, "completed");
     const operations = readJson(patchPath).patch_sets[0].operations;
-    assert.deepEqual(operations.find((operation) => operation.path.endsWith("/baseName")).value, {
-      "@xml:lang": "en",
-      "#text": "Window frame",
-    });
     assert.deepEqual(
-      operations.find((operation) => operation.path.endsWith("/treatmentStandardsRoutes")).value,
+      operations.find((operation: PatchOperation) => operation.path.endsWith("/baseName")).value,
+      {
+        "@xml:lang": "en",
+        "#text": "Window frame",
+      },
+    );
+    assert.deepEqual(
+      operations.find((operation: PatchOperation) =>
+        operation.path.endsWith("/treatmentStandardsRoutes"),
+      ).value,
       { "@xml:lang": "en", "#text": "wood, U=1.2 W/m2K, wall opening, at plant" },
     );
     assert.deepEqual(
-      operations.find((operation) => operation.path.endsWith("/mixAndLocationTypes")).value,
+      operations.find((operation: PatchOperation) =>
+        operation.path.endsWith("/mixAndLocationTypes"),
+      ).value,
       { "@xml:lang": "en", "#text": "market mix, Switzerland" },
     );
   } finally {
@@ -2891,7 +2986,11 @@ test("BAFU patch autofill completes bare production process names from output co
     treatmentStandardsRoutes: { "@xml:lang": "en", "#text": "source-described route" },
     mixAndLocationTypes: { "@xml:lang": "en", "#text": "RER" },
   };
-  row.processDataSet.processInformation.dataSetInformation.classificationInformation = {
+  const processInformation = row.processDataSet.processInformation.dataSetInformation as Record<
+    string,
+    unknown
+  >;
+  processInformation.classificationInformation = {
     "common:classification": {
       "common:class": [
         { "@level": "0", "@classId": "C", "#text": "Manufacturing" },
@@ -2906,7 +3005,9 @@ test("BAFU patch autofill completes bare production process names from output co
   row.processDataSet.processInformation.geography = {
     locationOfOperationSupplyOrProduction: { "@location": "RER" },
   };
-  row.processDataSet.exchanges.exchange[0].referenceToFlowDataSet["common:shortDescription"] = {
+  const outputFlowReference = row.processDataSet.exchanges.exchange[0]
+    .referenceToFlowDataSet as Record<string, unknown>;
+  outputFlowReference["common:shortDescription"] = {
     "@xml:lang": "en",
     "#text": "Tetraethylorthosilicat",
   };
@@ -2977,16 +3078,23 @@ test("BAFU patch autofill completes bare production process names from output co
     assert.equal(autofill.code, 0);
     assert.equal(autofill.json.status, "completed");
     const operations = readJson(patchPath).patch_sets[0].operations;
-    assert.deepEqual(operations.find((operation) => operation.path.endsWith("/baseName")).value, {
-      "@xml:lang": "en",
-      "#text": "Tetraethylorthosilicat",
-    });
     assert.deepEqual(
-      operations.find((operation) => operation.path.endsWith("/treatmentStandardsRoutes")).value,
+      operations.find((operation: PatchOperation) => operation.path.endsWith("/baseName")).value,
+      {
+        "@xml:lang": "en",
+        "#text": "Tetraethylorthosilicat",
+      },
+    );
+    assert.deepEqual(
+      operations.find((operation: PatchOperation) =>
+        operation.path.endsWith("/treatmentStandardsRoutes"),
+      ).value,
       { "@xml:lang": "en", "#text": "production" },
     );
     assert.deepEqual(
-      operations.find((operation) => operation.path.endsWith("/mixAndLocationTypes")).value,
+      operations.find((operation: PatchOperation) =>
+        operation.path.endsWith("/mixAndLocationTypes"),
+      ).value,
       { "@xml:lang": "en", "#text": "production process, Europe" },
     );
   } finally {
@@ -3296,7 +3404,7 @@ test("BAFU splitBafuNamePlan covers session rule families", () => {
     },
   ];
   for (const item of cases) {
-    const plan = bafuAutoAuthoringTestHooks.splitBafuNamePlan(item.input, null);
+    const plan = splitBafuNamePlan(item.input, null);
     assert.equal(plan.base_name, item.base, `base_name for ${item.input}`);
     assert.equal(plan.treatment, item.treatment, `treatment for ${item.input}`);
     assert.equal(
@@ -3308,7 +3416,7 @@ test("BAFU splitBafuNamePlan covers session rule families", () => {
 });
 
 test("BAFU process functional unit cleaning strips inline geography tokens matching the dataset location", () => {
-  const cleaned = bafuAutoAuthoringTestHooks.cleanProcessFunctionalUnitText(
+  const cleaned = cleanProcessFunctionalUnitText(
     {
       "@xml:lang": "en",
       "#text":
@@ -3321,7 +3429,7 @@ test("BAFU process functional unit cleaning strips inline geography tokens match
     cleaned["#text"],
     "1.0 MJ Refined Waste Cooking Oil | Refining of waste cooking oil Europe | Alloc Rec, U",
   );
-  const mismatched = bafuAutoAuthoringTestHooks.cleanProcessFunctionalUnitText(
+  const mismatched = cleanProcessFunctionalUnitText(
     { "@xml:lang": "en", "#text": "1.0 MJ Product {CH} mix" },
     "RER",
   );
@@ -3329,7 +3437,7 @@ test("BAFU process functional unit cleaning strips inline geography tokens match
 });
 
 test("BAFU splitBafuNamePlanFromNameParts does not duplicate treatment segments already in baseName", () => {
-  const plan = bafuAutoAuthoringTestHooks.splitBafuNamePlanFromNameParts(
+  const plan = splitBafuNamePlanFromNameParts(
     {
       baseName: {
         "@xml:lang": "en",
@@ -3344,7 +3452,7 @@ test("BAFU splitBafuNamePlanFromNameParts does not duplicate treatment segments 
   assert.equal(plan.treatment, "production mix for aluminium profiles");
   assert.equal(plan.mix_location, "at plant");
 
-  const novelTreatment = bafuAutoAuthoringTestHooks.splitBafuNamePlanFromNameParts(
+  const novelTreatment = splitBafuNamePlanFromNameParts(
     {
       baseName: { "@xml:lang": "en", "#text": "Sawn timber, hardwood, SZH 2010" },
       treatmentStandardsRoutes: { "@xml:lang": "en", "#text": "kiln dried" },
@@ -3356,53 +3464,44 @@ test("BAFU splitBafuNamePlanFromNameParts does not duplicate treatment segments 
 });
 
 test("BAFU splitBafuNamePlan reconstructs ENTSO storage pump names idempotently", () => {
-  const mixPlan = bafuAutoAuthoringTestHooks.splitBafuNamePlan(
+  const mixPlan = splitBafuNamePlan(
     "Electricity mix, operation storage pumps, ENTSO, winter 2018, at plant",
     null,
   );
   assert.equal(mixPlan.base_name, "Electricity");
   assert.equal(mixPlan.treatment, "mix, operation storage pumps, ENTSO, winter 2018, at plant");
 
-  const voltagePlan = bafuAutoAuthoringTestHooks.splitBafuNamePlan(
+  const voltagePlan = splitBafuNamePlan(
     "Electricity, high voltage, operation storage pumps, ENTSO, 2020, at grid",
     null,
   );
   assert.equal(voltagePlan.base_name, "Electricity, high voltage");
   assert.equal(voltagePlan.treatment, "operation storage pumps, ENTSO, 2020, at grid");
 
-  const mangledPlan = bafuAutoAuthoringTestHooks.splitBafuNamePlan(
+  const mangledPlan = splitBafuNamePlan(
     "Electricity, mix, operation storage pumps, ENTSO, summer 2018, at plant, at plant, mix, operation storage pumps, ENTSO, summer 2018, at plant",
     null,
   );
   assert.equal(mangledPlan.base_name, "Electricity");
   assert.equal(mangledPlan.treatment, "mix, operation storage pumps, ENTSO, summer 2018, at plant");
 
-  const replayPlan = bafuAutoAuthoringTestHooks.splitBafuNamePlan(
-    `${mangledPlan.base_name}, ${mangledPlan.treatment}`,
-    null,
-  );
+  const replayPlan = splitBafuNamePlan(`${mangledPlan.base_name}, ${mangledPlan.treatment}`, null);
   assert.equal(replayPlan.base_name, mangledPlan.base_name);
   assert.equal(replayPlan.treatment, mangledPlan.treatment);
 });
 
 test("BAFU splitBafuNamePlan extracts measured-as property ahead of generic at-plant", () => {
-  const measuredPlan = bafuAutoAuthoringTestHooks.splitBafuNamePlan(
-    "X, measured as dry mass, at plant",
-    null,
-  );
+  const measuredPlan = splitBafuNamePlan("X, measured as dry mass, at plant", null);
   assert.equal(measuredPlan.base_name, "X");
   assert.equal(measuredPlan.treatment, "at plant");
   assert.equal(measuredPlan.flow_property, "measured as dry mass");
 
-  const alloyPlan = bafuAutoAuthoringTestHooks.splitBafuNamePlan(
-    "Aluminium alloy, AlMg3, at plant",
-    null,
-  );
+  const alloyPlan = splitBafuNamePlan("Aluminium alloy, AlMg3, at plant", null);
   assert.equal(alloyPlan.base_name, "Aluminium alloy, AlMg3");
   assert.equal(alloyPlan.treatment, "at plant");
   assert.equal(alloyPlan.flow_property ?? null, null);
 
-  const cellulosePlan = bafuAutoAuthoringTestHooks.splitBafuNamePlan(
+  const cellulosePlan = splitBafuNamePlan(
     "Cellulose fibres (injected) (isofloc 2012), import, at plant",
     null,
   );
@@ -3444,11 +3543,15 @@ test("BAFU flow identity non-equivalence ignores route and geography tokens", ()
   assert.equal(reviewed.length, 2);
 
   const nylonReview = reviewed.find((candidate) => candidate.id === nylonCandidate.id);
+  assert.ok(nylonReview);
+  assert.ok(Array.isArray(nylonReview.non_equivalence_reasons));
   assert.ok(nylonReview.non_equivalence_reasons.length > 0);
 
   const sameSubstanceReview = reviewed.find(
     (candidate) => candidate.id === sameSubstanceCandidate.id,
   );
+  assert.ok(sameSubstanceReview);
+  assert.ok(Array.isArray(sameSubstanceReview.non_equivalence_reasons));
   assert.equal(
     sameSubstanceReview.non_equivalence_reasons.includes(
       "flow name/physical service meaning differs",

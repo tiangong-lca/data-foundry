@@ -9,16 +9,16 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const fixtureRoot = path.join(repoRoot, "tmp", "authoring-task-context-test");
 const processId = "aaaaaaaa-bbbb-5ccc-8ddd-eeeeeeeeeeee";
 
-function rel(filePath) {
+function rel(filePath: string): string {
   return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function runFoundry(args, expectedStatus = 0) {
+function runFoundry(args: string[], expectedStatus = 0) {
   const result = spawnSync(process.execPath, ["scripts/foundry.ts", ...args], {
     cwd: repoRoot,
     encoding: "utf8",
@@ -36,7 +36,10 @@ function actionItem() {
   };
 }
 
-function authoringPackage(contractContextFiles, actionItems = [actionItem()]) {
+function authoringPackage(
+  contractContextFiles: Array<Record<string, unknown>>,
+  actionItems: Array<Record<string, unknown>> = [actionItem()],
+) {
   return {
     schema_version: 2,
     profile: "bafu",
@@ -148,7 +151,7 @@ test("authoring task build blocks AI patch authoring when full context is incomp
     assert.equal(task.counts.action_items, 1);
     assert.equal(
       task.blockers.some(
-        (blocker) =>
+        (blocker: Record<string, unknown>) =>
           blocker.code === "authoring_task_required_context_missing" &&
           blocker.required_kind === "ruleset",
       ),
@@ -156,7 +159,7 @@ test("authoring task build blocks AI patch authoring when full context is incomp
     );
     assert.equal(
       task.blockers.some(
-        (blocker) =>
+        (blocker: Record<string, unknown>) =>
           blocker.code === "authoring_task_required_context_file_missing" &&
           blocker.required_file_pattern === "tidas_locations_category.json",
       ),
@@ -213,11 +216,11 @@ test("authoring patch task excludes decision-only identity classification and lo
     assert.equal(task.counts.action_items, 1);
     assert.equal(task.counts.decision_only_action_items, 3);
     assert.deepEqual(
-      task.action_items.map((item) => item.code),
+      task.action_items.map((item: Record<string, unknown>) => item.code),
       ["process_placeholder_content"],
     );
     assert.deepEqual(
-      task.decision_only_action_items.map((item) => item.code),
+      task.decision_only_action_items.map((item: Record<string, unknown>) => item.code),
       [
         "identity_preflight_manual_review",
         "process_classification_requires_authoring",
@@ -334,7 +337,7 @@ test("authoring patch collect blocks stale manifests that lack full-context task
     assert.equal(report.status, "blocked");
     assert.equal(
       report.blockers.some(
-        (blocker) =>
+        (blocker: Record<string, unknown>) =>
           blocker.code === "authoring_task_required_context_missing" &&
           blocker.required_kind === "methodology_yaml",
       ),
@@ -421,7 +424,9 @@ test("authoring patch collect blocks AI patches without completed status", () =>
 
     assert.equal(report.status, "blocked");
     assert.equal(
-      report.blockers.some((blocker) => blocker.code === "ai_patch_status_not_completed"),
+      report.blockers.some(
+        (blocker: Record<string, unknown>) => blocker.code === "ai_patch_status_not_completed",
+      ),
       true,
     );
     assert.equal(report.counts.patch_sets, 0);

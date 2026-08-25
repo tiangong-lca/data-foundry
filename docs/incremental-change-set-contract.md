@@ -17,12 +17,12 @@ checkPaths:
   - scripts/commands/incremental-change-set.ts
   - test/unit/incremental-command-migration.test.mts
   - test/unit/incremental-change-set.test.mjs
-  - test/commands/incremental-change-set.test.mjs
+  - test/commands/incremental-change-set.test.mts
   - test/scenarios/incremental-change-set-handoff.test.mjs
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 5af446bb230dd1f37e26d979352eda8c5ab51550
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: the native zero-escape TS7 composer preserves exact three-way activation, dependency holds, terminal hash-chained receipts, CLI handoff artifacts, native failures and no-write authority."
+lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
+lastReviewedNote: "Reviewed for Issue #67 Wave 27 command tests: the command contract moves to strict TS7 without changing three-way merge, terminal disposition, dependency, event-chain, artifact algebra, activation, or zero-dispatch semantics."
 ---
 
 # Incremental Change-Set Contract

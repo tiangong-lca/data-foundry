@@ -39,7 +39,7 @@
     "skills:use": "pnpm dlx skills@latest use",
     "test": "node --test \"test/**/*.test.mjs\" \"test/**/*.test.mts\"",
     "test:unit": "node --test \"test/unit/*.test.mjs\" \"test/unit/*.test.mts\"",
-    "test:commands": "node --test \"test/commands/*.test.mjs\" \"test/commands/*.test.mts\"",
+    "test:commands": "node --test \"test/commands/*.test.mts\"",
     "test:scenarios": "node --test \"test/scenarios/*.test.mjs\" \"test/scenarios/*.test.mts\"",
     "test:toolchain": "node --test test/unit/toolchain-contract.test.mts",
     "golden:diff": "node scripts/foundry-golden-diff.ts",

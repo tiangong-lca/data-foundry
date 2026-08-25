@@ -10,29 +10,29 @@ const fixtureRoot = path.join(repoRoot, "tmp", "classification-decisions-test");
 const processId = "11111111-2222-5333-8444-555555555555";
 const flowId = "22222222-3333-5444-8555-666666666666";
 
-function rel(filePath) {
+function rel(filePath: string): string {
   return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
-function ml(text) {
+function ml(text: string) {
   return { "@xml:lang": "en", "#text": text };
 }
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function writeJsonLines(filePath, rows) {
+function writeJsonLines(filePath: string, rows: unknown[]): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`);
 }
 
-function readJson(filePath) {
+function readJson(filePath: string) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
-function readJsonLines(filePath) {
+function readJsonLines(filePath: string) {
   return fs
     .readFileSync(filePath, "utf8")
     .trim()
@@ -41,7 +41,7 @@ function readJsonLines(filePath) {
     .map((line) => JSON.parse(line));
 }
 
-function runFoundry(args, expectedStatus = 0) {
+function runFoundry(args: string[], expectedStatus = 0) {
   const result = spawnSync(process.execPath, ["scripts/foundry.ts", ...args], {
     cwd: repoRoot,
     encoding: "utf8",
@@ -233,7 +233,7 @@ test("classification decision task and apply route AI choices through CLI classi
     assert.equal(missingContextTask.status, "blocked_missing_full_context");
     assert.equal(
       missingContextTask.blockers.some(
-        (blocker) =>
+        (blocker: Record<string, unknown>) =>
           blocker.code === "classification_decision_task_required_context_missing" &&
           blocker.kind === "location_schema",
       ),
@@ -494,7 +494,9 @@ test("classification decision task and apply route AI choices through CLI classi
     assert.equal(multiTaskApply.decision_task, null);
     assert.equal(multiTaskApply.decision_tasks.length, 2);
     assert.deepEqual(
-      multiTaskApply.decision_tasks.map((decisionTask) => decisionTask.source_queue).sort(),
+      multiTaskApply.decision_tasks
+        .map((decisionTask: Record<string, unknown>) => decisionTask.source_queue)
+        .sort(),
       [rel(queue), rel(queue)].sort(),
     );
     assert.deepEqual(
@@ -558,7 +560,8 @@ test("classification decision task and apply route AI choices through CLI classi
     assert.equal(missingContextBundle.status, "blocked");
     assert.equal(
       missingContextBundle.blockers.some(
-        (blocker) => blocker.code === "classification_decision_context_bundle_missing",
+        (blocker: Record<string, unknown>) =>
+          blocker.code === "classification_decision_context_bundle_missing",
       ),
       true,
     );
@@ -621,7 +624,8 @@ test("classification decision task and apply route AI choices through CLI classi
     assert.equal(missingDecisionStatus.status, "blocked");
     assert.equal(
       missingDecisionStatus.blockers.some(
-        (blocker) => blocker.code === "classification_decision_status_not_completed",
+        (blocker: Record<string, unknown>) =>
+          blocker.code === "classification_decision_status_not_completed",
       ),
       true,
     );
@@ -652,7 +656,9 @@ test("classification decision task and apply route AI choices through CLI classi
     );
     assert.equal(blocked.status, "blocked");
     assert.equal(
-      blocked.blockers.some((blocker) => blocker.code === "classification_queue_item_unclosed"),
+      blocked.blockers.some(
+        (blocker: Record<string, unknown>) => blocker.code === "classification_queue_item_unclosed",
+      ),
       true,
     );
   } finally {

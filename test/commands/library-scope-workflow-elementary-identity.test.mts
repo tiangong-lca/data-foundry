@@ -1,33 +1,73 @@
+import assert from "node:assert/strict";
 import test from "node:test";
 import { createLibraryScopeWorkflowCommands } from "../../scripts/commands/library-scope-workflow.ts";
-import { assert, fs, path, testTmpRoot } from "../fixtures/foundry-core.mjs";
+import { fs, path, testTmpRoot } from "../fixtures/foundry-core.mjs";
 
 const fixtureRoot = testTmpRoot("library-scope-workflow-elementary-identity-test");
+type DependencyFactory = (dependencies: never) => unknown;
+type TestHook = (...args: never[]) => unknown;
 
-const ensureArray = (value) => (Array.isArray(value) ? value : value == null ? [] : [value]);
-const asText = (value) => (value == null ? "" : String(value).trim());
+function bindFactory<Factory extends DependencyFactory>(
+  factory: Factory,
+  dependencies: unknown,
+): ReturnType<Factory> {
+  return factory(dependencies as never) as ReturnType<Factory>;
+}
 
-const { libraryScopeWorkflowTestHooks } = createLibraryScopeWorkflowCommands({
+function invokeHook<Hook extends TestHook>(hook: Hook, input: unknown): ReturnType<Hook> {
+  return hook(input as never) as ReturnType<Hook>;
+}
+
+interface CandidateView {
+  names: string[];
+  fields: { categories: string[] };
+}
+
+interface SelectedCandidateView {
+  categories: string[];
+  flow_property_label_overridden?: boolean;
+}
+
+function candidateView(value: unknown): CandidateView {
+  const evaluation = value as { candidate?: unknown };
+  assert.ok(evaluation.candidate);
+  return evaluation.candidate as CandidateView;
+}
+
+function selectedCandidateView(value: unknown): SelectedCandidateView {
+  const evaluation = value as { evidence?: { selected_candidate?: unknown } };
+  assert.ok(evaluation.evidence?.selected_candidate);
+  return evaluation.evidence.selected_candidate as SelectedCandidateView;
+}
+
+const ensureArray = (value: unknown) =>
+  Array.isArray(value) ? value : value == null ? [] : [value];
+const asText = (value: unknown) => (value == null ? "" : String(value).trim());
+
+const { libraryScopeWorkflowTestHooks } = bindFactory(createLibraryScopeWorkflowCommands, {
   asText,
-  booleanOption: (value) => Boolean(value),
+  booleanOption: (value: unknown) => Boolean(value),
   bundleClassificationPath: () => null,
-  cloneJson: (value) => JSON.parse(JSON.stringify(value)),
+  cloneJson: <T,>(value: T): T => JSON.parse(JSON.stringify(value)),
   datasetIdentity: () => ({}),
-  directoryExists: (p) => Boolean(p) && fs.existsSync(p) && fs.statSync(p).isDirectory(),
+  directoryExists: (p: string | null) =>
+    Boolean(p) && fs.existsSync(p!) && fs.statSync(p!).isDirectory(),
   ensureArray,
-  fileExists: (p) => Boolean(p) && fs.existsSync(p),
+  fileExists: (p: string | null) => Boolean(p) && fs.existsSync(p!),
   flowTypeOfDataSet: () => "",
   jsonSha256: () => "",
   nowIso: () => "2026-01-01T00:00:00Z",
-  positiveIntegerOption: (value, fallback) => {
-    const parsed = Number.parseInt(value, 10);
+  positiveIntegerOption: (value: unknown, fallback: number | null) => {
+    const parsed = Number.parseInt(String(value), 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
   },
-  readJson: (p) => JSON.parse(fs.readFileSync(p, "utf8")),
+  readJson: (p: string) => JSON.parse(fs.readFileSync(p, "utf8")),
   readJsonLines: () => [],
-  repoRelativeMaybe: (p) => p ?? null,
-  repoRelativePath: (p) => p,
-  resolveRepoPath: (p) => (p ? p : null),
+  repoRelativeMaybe: (p: string | null) => p ?? null,
+  repoRelativePath: (p: string) => p,
+  resolveRepoPath: (p: string | null) => (p ? p : null),
+  profileFor: () => ({}),
+  repoRoot: fixtureRoot,
   sha256Text: () => "",
   textValue: asText,
   writeJson: () => {},
@@ -37,7 +77,7 @@ const { libraryScopeWorkflowTestHooks } = createLibraryScopeWorkflowCommands({
 const { evaluateElementaryIdentityDecision, openLcaCompartmentClassification } =
   libraryScopeWorkflowTestHooks;
 
-function sourceFileWithOpenLcaTrace(categoryPath) {
+function sourceFileWithOpenLcaTrace(categoryPath: string) {
   fs.mkdirSync(fixtureRoot, { recursive: true });
   const file = path.join(
     fixtureRoot,
@@ -67,7 +107,7 @@ function sourceFileWithOpenLcaTrace(categoryPath) {
   return file;
 }
 
-function sourceFileWithTrace({ category, subCategory }) {
+function sourceFileWithTrace({ category, subCategory }: { category: string; subCategory: string }) {
   fs.mkdirSync(fixtureRoot, { recursive: true });
   const file = path.join(
     fixtureRoot,
@@ -94,7 +134,17 @@ function sourceFileWithTrace({ category, subCategory }) {
   return file;
 }
 
-function candidate({ names, cas = null, flowProperty = "Mass", categories }) {
+function candidate({
+  names,
+  cas = null,
+  flowProperty = "Mass",
+  categories,
+}: {
+  names: string[];
+  cas?: string | null;
+  flowProperty?: string;
+  categories: string[];
+}) {
   return {
     id: `cand-${names[0].replace(/[^a-z0-9]/giu, "")}-${categories.join("").length}`,
     version: "03.00.004",
@@ -111,7 +161,7 @@ function candidate({ names, cas = null, flowProperty = "Mass", categories }) {
 
 test("elementary identity evaluator recovers compartment from the source trace", () => {
   const sourceFile = sourceFileWithTrace({ category: "emissions to water", subCategory: "river" });
-  const evaluation = evaluateElementaryIdentityDecision({
+  const evaluation = invokeHook(evaluateElementaryIdentityDecision, {
     entity: {
       dataset_id: "t1",
       name: "Beryllium; source-described route; source-described geography",
@@ -145,7 +195,7 @@ test("elementary identity evaluator recovers compartment from the source trace",
     usage: null,
   });
   assert.equal(evaluation.decision, "reuse_existing_reference");
-  assert.deepEqual(evaluation.candidate.fields.categories, [
+  assert.deepEqual(candidateView(evaluation).fields.categories, [
     "Emissions",
     "Emissions to water",
     "Emissions to fresh water",
@@ -157,7 +207,7 @@ test("elementary identity evaluator refuses a candidate that extends the target 
     category: "emissions to air",
     subCategory: "unspecified",
   });
-  const evaluation = evaluateElementaryIdentityDecision({
+  const evaluation = invokeHook(evaluateElementaryIdentityDecision, {
     entity: {
       dataset_id: "t2",
       name: "Ethane; source-described route; source-described geography",
@@ -189,7 +239,7 @@ test("elementary identity evaluator refuses a candidate that extends the target 
     usage: null,
   });
   assert.equal(evaluation.decision, "reuse_existing_reference");
-  assert.deepEqual(evaluation.candidate.names, ["ethane"]);
+  assert.deepEqual(candidateView(evaluation).names, ["ethane"]);
 });
 
 test("elementary identity evaluator matches inverted chemical names via token permutation", () => {
@@ -197,7 +247,7 @@ test("elementary identity evaluator matches inverted chemical names via token pe
     category: "emissions to air",
     subCategory: "unspecified",
   });
-  const evaluation = evaluateElementaryIdentityDecision({
+  const evaluation = invokeHook(evaluateElementaryIdentityDecision, {
     entity: {
       dataset_id: "t3",
       name: "Ethane, 1,1,2,2-tetrachloro-; source-described route; source-described geography",
@@ -225,12 +275,12 @@ test("elementary identity evaluator matches inverted chemical names via token pe
     usage: null,
   });
   assert.equal(evaluation.decision, "reuse_existing_reference");
-  assert.deepEqual(evaluation.candidate.names, ["1,1,2,2-tetrachloroethane"]);
+  assert.deepEqual(candidateView(evaluation).names, ["1,1,2,2-tetrachloroethane"]);
 });
 
 test("elementary identity evaluator keeps mid-name token runs on manual review", () => {
   const sourceFile = sourceFileWithTrace({ category: "resource, land", subCategory: "" });
-  const evaluation = evaluateElementaryIdentityDecision({
+  const evaluation = invokeHook(evaluateElementaryIdentityDecision, {
     entity: {
       dataset_id: "t4",
       name: "Occupation, dump site, benthos; source-described route; source-described geography",
@@ -266,7 +316,7 @@ test("elementary identity evaluator overrides a mislabeled flow-property text on
     category: "emissions to air",
     subCategory: "low. pop.",
   });
-  const evaluation = evaluateElementaryIdentityDecision({
+  const evaluation = invokeHook(evaluateElementaryIdentityDecision, {
     entity: {
       dataset_id: "t5",
       name: "Heat, waste; source-described route; source-described geography",
@@ -300,8 +350,8 @@ test("elementary identity evaluator overrides a mislabeled flow-property text on
     usage: null,
   });
   assert.equal(evaluation.decision, "reuse_existing_reference");
-  assert.match(evaluation.candidate.fields.categories.join(" "), /non-urban air/u);
-  assert.equal(evaluation.evidence.selected_candidate.flow_property_label_overridden, true);
+  assert.match(candidateView(evaluation).fields.categories.join(" "), /non-urban air/u);
+  assert.equal(selectedCandidateView(evaluation).flow_property_label_overridden, true);
 });
 
 test("openLcaCompartmentClassification maps FEDEFL paths to ecoinvent-style tokens", () => {
@@ -340,7 +390,7 @@ test("elementary identity evaluator recovers the openLCA compartment and picks t
   // the trace. With CAS-equal candidates spread across air/soil compartments, the soil
   // source path must steer the match to the soil candidate, not the air default.
   const sourceFile = sourceFileWithOpenLcaTrace("Elementary flows/emission/ground");
-  const evaluation = evaluateElementaryIdentityDecision({
+  const evaluation = invokeHook(evaluateElementaryIdentityDecision, {
     entity: {
       dataset_id: "olca1",
       name: "Propanoic acid, ...; source-described route; source-described geography",
@@ -374,14 +424,14 @@ test("elementary identity evaluator recovers the openLCA compartment and picks t
     usage: null,
   });
   assert.equal(evaluation.decision, "reuse_existing_reference");
-  assert.match(evaluation.evidence.selected_candidate.categories.join(" "), /to soil/u);
+  assert.match(selectedCandidateView(evaluation).categories.join(" "), /to soil/u);
 });
 
 test("elementary identity evaluator rejects the long-term variant via the openLCA compartment", () => {
   // A non-long-term openLCA air flow must not be deferred just because the remote also
   // has a "(long-term)" sibling: the recovered compartment excludes it from competing.
   const sourceFile = sourceFileWithOpenLcaTrace("Elementary flows/emission/air");
-  const evaluation = evaluateElementaryIdentityDecision({
+  const evaluation = invokeHook(evaluateElementaryIdentityDecision, {
     entity: {
       dataset_id: "olca2",
       name: "Propaquizafop; source-described route; source-described geography",
@@ -419,5 +469,5 @@ test("elementary identity evaluator rejects the long-term variant via the openLC
     usage: null,
   });
   assert.equal(evaluation.decision, "reuse_existing_reference");
-  assert.doesNotMatch(evaluation.evidence.selected_candidate.categories.join(" "), /long-term/u);
+  assert.doesNotMatch(selectedCandidateView(evaluation).categories.join(" "), /long-term/u);
 });

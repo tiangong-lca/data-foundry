@@ -111,6 +111,7 @@ checkPaths:
   - test/fixtures/finalize-fixtures.ts
   - test/unit/import-ledger-type-contract.test.mts
   - test/unit/fixture-helpers-contract.test.mts
+  - test/commands/*.test.mts
   - test/unit/core-command-factory.test.mts
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
@@ -122,8 +123,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: native TS7 orchestration, adapters/tooling, algorithms and final core/preflight/finalize owners preserve profiles, exact help/diagnostics/artifacts, lineage, receipts/hashes, ordered gates and authority."
+lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
+lastReviewedNote: "Reviewed for Issue #67 Wave 27 integration: native TS7 entry/runtime plus the complete command-test surface preserve profiles, exact help/diagnostics/artifacts, fixtures, bytes/order/errors and authority boundaries."
 ---
 
 # TianGong LCA Data Foundry
@@ -211,6 +212,8 @@ Wave 26 migrates four adapter/tool boundaries. `tidas-adapter.ts` retains execut
 Wave 26 migrates four algorithmic command owners as four RED/GREEN families. `authoring-plan.ts` preserves phase and row ordering, source/task lineage, content hashes, exact plan artifacts and native input failures. `bundle-sample-rows.ts` preserves seeded selection, row-type/location order and canonical scale fail-close. `incremental-change-set.ts` preserves three-way merge, dependency activation/hold isolation, terminal hash-chained receipts and CLI handoff candidates. `topology-convergence.ts` preserves occurrence-aware graph composition, F/P/D ordering, cycle-safe retry/hold behavior and separate no-authority handoffs. Exact command help remains unchanged, and inventory moves 89→85 without changing profiles, Worldsteel semantics, Date.parse behavior or remote-write authority.
 
 Wave 26 migrates the three remaining non-entry command owners. `core.ts` preserves runtime-directory order, workflow/storage/environment diagnostics, surface aggregation, route artifacts and exact help. `identity-preflight-run.ts` preserves receipt-bound CLI argv, request/target/binding hashes, positive-only cache reuse, stale or mismatched disk/stdout failure, nonzero exits and only-pending semantics without shell authority. `post-authoring-finalize.ts` preserves identity, unresolved-exchange, source/contact and canonical-support rewrite order; cleanup, preflight, queue, schema, QA, location, curation and dry-run gates; mutation evidence and read-only handoff planning. Inventory moves 79→76 without changing profiles, Worldsteel or Date.parse behavior, or remote-write authority.
+
+Wave 27 migrates all sixteen remaining `test/commands` JavaScript contracts in four RED/GREEN families: core/ledger/support, authoring/decisions, BAFU/library, and offline incremental/topology/capsule planners. The original suite passed 173/173 before renames; `pnpm test:commands` now exposes one `.mts` glob and includes the existing typed account-wrapper cases. Inventory moves 76→60 with no runtime owner, fixture, profile, Worldsteel, Date.parse, or authority change.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 
