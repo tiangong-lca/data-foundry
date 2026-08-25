@@ -38,11 +38,14 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
   - scripts/lib/import-curation/internal/authoring-task-workflow.ts
   - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
+  - scripts/lib/import-curation/internal/curation-gate-workflow.ts
   - scripts/lib/import-curation/authoring-packages.ts
   - scripts/lib/import-curation/patch-collect.ts
+  - scripts/lib/import-curation/curation-gate.ts
+  - scripts/lib/import-curation/curation-cleanup.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 7d8ab3800fba3269830a58036d38a443e13d3d70
-lastReviewedNote: "Reviewed for Issue #67 Wave 23: authoring facades and package/patch artifact runners remain Foundry-local and preserve cross-repository ownership, CLI routing, profile, search, and execution boundaries."
+lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
+lastReviewedNote: "Reviewed for Issue #67 Wave 24 B3: curation aggregate/gate/cleanup remain Foundry-local and preserve cross-repository ownership, CLI routing, profile, search, Worldsteel, and execution boundaries."
 ---
 
 # Workspace Project Map

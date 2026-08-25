@@ -25,13 +25,16 @@ checkPaths:
   - scripts/lib/bundle-sample-utils.ts
   - scripts/lib/import-curation/internal/authoring-task-workflow.ts
   - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
+  - scripts/lib/import-curation/internal/curation-gate-workflow.ts
   - scripts/lib/import-curation/authoring-packages.ts
   - scripts/lib/import-curation/patch-collect.ts
+  - scripts/lib/import-curation/curation-gate.ts
+  - scripts/lib/import-curation/curation-cleanup.ts
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 7d8ab3800fba3269830a58036d38a443e13d3d70
-lastReviewedNote: "Reviewed for Issue #67 Wave 23: typing authoring facades and runners changes no command category, owner/export metadata, help, exit mapping, profile default, artifact contract, or remote-write mode."
+lastReviewedCommit: 1223453460d6a93da725831e56574c5573e58a80
+lastReviewedNote: "Reviewed for Issue #67 Wave 24 B3: typing curation aggregate/gate/cleanup changes no command category, owner/export identity, help, exit mapping, profile default, artifact contract, Worldsteel semantics, or remote-write mode."
 ---
 
 # Foundry Command Surface
