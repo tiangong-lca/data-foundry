@@ -8,24 +8,25 @@ import { createPostAuthoringFinalizeUtils } from "../../scripts/lib/post-authori
 // Minimal dependency stubs: preseedResolutionReuseDecisions only uses
 // asText / resolveRepoPath / fileExists / readRowsFile (plus node fs/path).
 function makeUtils() {
-  return createPostAuthoringFinalizeUtils({
-    asText: (v) => (v == null ? "" : String(v)).trim(),
-    fileExists: (p) => typeof p === "string" && fs.existsSync(p),
-    readRowsFile: (p) =>
+  const dependencies = {
+    asText: (value: unknown) => (value == null ? "" : String(value)).trim(),
+    fileExists: (filePath: unknown) => typeof filePath === "string" && fs.existsSync(filePath),
+    readRowsFile: (filePath: string) =>
       fs
-        .readFileSync(p, "utf8")
+        .readFileSync(filePath, "utf8")
         .split(/\r?\n/u)
         .filter(Boolean)
-        .map((line) => JSON.parse(line)),
-    resolveRepoPath: (p) => (p ? path.resolve(String(p)) : null),
-  });
+        .map((line) => JSON.parse(line) as unknown),
+    resolveRepoPath: (filePath: unknown) => (filePath ? path.resolve(String(filePath)) : null),
+  } as unknown as Parameters<typeof createPostAuthoringFinalizeUtils>[0];
+  return createPostAuthoringFinalizeUtils(dependencies);
 }
 
-function writeJsonl(file, rows) {
+function writeJsonl(file: string, rows: readonly unknown[]): void {
   fs.writeFileSync(file, rows.map((row) => JSON.stringify(row)).join("\n") + "\n");
 }
 
-function withReuseMapEnv(value, fn) {
+function withReuseMapEnv<T>(value: string | null, fn: () => T): T {
   const prior = process.env.IDENTITY_PREFLIGHT_REUSE_MAP;
   if (value === null) {
     delete process.env.IDENTITY_PREFLIGHT_REUSE_MAP;

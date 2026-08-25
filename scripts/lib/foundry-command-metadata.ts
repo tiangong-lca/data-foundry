@@ -284,7 +284,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "execution capsule admission seals exact offline evidence and rejects mutation vectors",
       ),
       nodeTest(
-        "test/unit/execution-capsule-attempt-state.test.mjs",
+        "test/unit/execution-capsule-attempt-state.test.mts",
         "attempt dispositions distinguish unattempted, recovered success, and unknown no-replay states",
       ),
     ],

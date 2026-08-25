@@ -16,7 +16,7 @@ checkPaths:
   - specs/schemas/execution-capsule-stage.schema.json
   - scripts/commands/execution-capsule.ts
   - test/commands/execution-capsule.test.mjs
-  - test/unit/execution-capsule-attempt-state.test.mjs
+  - test/unit/execution-capsule-attempt-state.test.mts
   - test/unit/execution-capsule-command-factory.test.mts
 lastReviewedAt: 2026-08-25
 lastReviewedCommit: a5367648066099c9bd6210cb21f52d13c7317989

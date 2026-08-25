@@ -65,7 +65,7 @@ test("canonical support rewrite consumers target the typed module explicitly", (
 test("bundle sample consumers target the typed module explicitly", () => {
   assertStaticImports([
     ["scripts/foundry.mjs", "./lib/bundle-sample-utils.ts"],
-    ["test/unit/library-contact-reuse.test.mjs", "../../scripts/lib/bundle-sample-utils.ts"],
+    ["test/unit/library-contact-reuse.test.mts", "../../scripts/lib/bundle-sample-utils.ts"],
     ["test/unit/bundle-sample-utils-contract.test.mts", "../../scripts/lib/bundle-sample-utils.ts"],
   ]);
 });
