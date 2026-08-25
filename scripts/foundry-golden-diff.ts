@@ -84,6 +84,22 @@ const worldsteelProfileContractMigrations = new Map<string, string>([
     ]),
   ],
 ]);
+const capabilityContractMigrationHashes = new Map<string, Set<string>>([
+  [
+    "foundry.dataset.curation-cleanup",
+    new Set([
+      "4d041cb2ce4b0f9b9181a94e44a0569b71ce7101097cb56db51f254460feade9",
+      "0c2acbce5acb110348a62dfab4c5d226192567fcae90916b65dc49280e2567cb",
+    ]),
+  ],
+  [
+    "foundry.dataset.post-authoring-finalize",
+    new Set([
+      "27b5aac2d5cee8c0aeb7e7df5e2d361993341a28fce2eecbb796d8a8edcec050",
+      "d18a71a2dfa8933e114ea8b5917a7c54e7bd73813601c76133b9f2914c2be5af",
+    ]),
+  ],
+]);
 
 function resolveGoldenBase(): GoldenBase {
   const explicitBase = String(process.env.FOUNDRY_GOLDEN_BASE ?? "").trim();
@@ -694,6 +710,25 @@ function normalizeWorldsteelProfileContract(value: JsonRecord): JsonRecord | nul
 function normalizeKnownContractMigration(value: JsonRecord): JsonRecord {
   const normalizedWorldsteelProfile = normalizeWorldsteelProfileContract(value);
   if (normalizedWorldsteelProfile) return normalizedWorldsteelProfile;
+  const capabilityHashes = capabilityContractMigrationHashes.get(String(value.id ?? ""));
+  if (capabilityHashes) {
+    const projection = {
+      input_contract: value.input_contract,
+      output_contract: value.output_contract,
+      verification_gate: value.verification_gate,
+      source_manifest_requirements: value.source_manifest_requirements,
+    };
+    const projectionSha256 = createHash("sha256").update(JSON.stringify(projection)).digest("hex");
+    if (capabilityHashes.has(projectionSha256)) {
+      return {
+        ...value,
+        input_contract: "<strict-datetime-capability-contract>",
+        output_contract: "<strict-datetime-capability-contract>",
+        verification_gate: "<strict-datetime-capability-contract>",
+        source_manifest_requirements: ["<strict-datetime-capability-contract>"],
+      };
+    }
+  }
   if (value.id === "foundry.dataset.commit-handoff-plan") {
     return {
       ...value,
