@@ -4,7 +4,39 @@ import fs from "node:fs";
 import path from "node:path";
 import { resolveTiangongLcaCliRuntimeCommand } from "./foundry-runtime-utils.mjs";
 
-const supportedRootTables = new Map([
+type JsonRecord = Record<string, any>;
+
+type CliGetResult = {
+  ok: boolean;
+  payload?: JsonRecord | null;
+  command?: string | null;
+  executable?: string;
+  cli_package?: string | null;
+  exit_code?: number;
+  stdout_log?: string | null;
+  stderr_log?: string | null;
+  parsed?: JsonRecord | null;
+  error?: string | null;
+};
+
+type CliGet = (options: {
+  table: string;
+  id: string;
+  version: string;
+  outDir: string;
+  repoRoot: string;
+}) => CliGetResult;
+
+type AcceptedDiffResult =
+  | { accepted: false; reason: string; [key: string]: unknown }
+  | {
+      accepted: true;
+      verifyReportPath: string;
+      acceptanceReportPath: string;
+      evidence: JsonRecord[];
+    };
+
+const supportedRootTables = new Map<string, { command: string; payloadKeys: string[] }>([
   ["flows", { command: "flow", payloadKeys: ["flow", "payload"] }],
   ["processes", { command: "process", payloadKeys: ["process", "payload"] }],
 ]);
@@ -13,15 +45,15 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function fileExists(filePath) {
-  return Boolean(filePath) && fs.existsSync(filePath) && fs.statSync(filePath).isFile();
+function fileExists(filePath: string | null | undefined): boolean {
+  return Boolean(filePath && fs.existsSync(filePath) && fs.statSync(filePath).isFile());
 }
 
-function readJson(filePath) {
+function readJson(filePath: string): any {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
-function readJsonLines(filePath) {
+function readJsonLines(filePath: string): JsonRecord[] {
   if (!fileExists(filePath)) return [];
   const text = fs.readFileSync(filePath, "utf8").trim();
   return text
@@ -32,7 +64,7 @@ function readJsonLines(filePath) {
     : [];
 }
 
-function readRows(filePath) {
+function readRows(filePath: string): JsonRecord[] {
   if (String(filePath).toLowerCase().endsWith(".jsonl")) return readJsonLines(filePath);
   const value = readJson(filePath);
   if (Array.isArray(value)) return value;
@@ -40,12 +72,12 @@ function readRows(filePath) {
   return [value];
 }
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function writeJsonLines(filePath, rows) {
+function writeJsonLines(filePath: string, rows: unknown[]): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(
     filePath,
@@ -53,20 +85,23 @@ function writeJsonLines(filePath, rows) {
   );
 }
 
-function repoRelative(repoRoot, filePath) {
+function repoRelative(repoRoot: string, filePath: string | null | undefined): string | null {
   if (!filePath) return null;
   return path.relative(repoRoot, filePath).split(path.sep).join(path.posix.sep);
 }
 
-function asText(value) {
+function asText(value: unknown): string {
   if (value == null) return "";
   if (typeof value === "string" || typeof value === "number") return String(value).trim();
   if (Array.isArray(value)) return value.map(asText).filter(Boolean).join("; ");
-  if (typeof value === "object") return asText(value["#text"] ?? value.value ?? value.id);
+  if (typeof value === "object") {
+    const record = value as JsonRecord;
+    return asText(record["#text"] ?? record.value ?? record.id);
+  }
   return "";
 }
 
-function datasetIdentity(row, table) {
+function datasetIdentity(row: JsonRecord, table: string): { id: string; version: string } {
   const type = table === "processes" ? "process" : table === "flows" ? "flow" : null;
   const root = type ? (row?.[`${type}DataSet`] ?? row) : row;
   const information =
@@ -92,7 +127,7 @@ function datasetIdentity(row, table) {
   };
 }
 
-function parseJsonStdout(stdout) {
+function parseJsonStdout(stdout: unknown): JsonRecord | null {
   const text = String(stdout || "").trim();
   if (!text) return null;
   try {
@@ -111,29 +146,33 @@ function parseJsonStdout(stdout) {
   }
 }
 
-function stableJson(value) {
+function stableJson(value: any): string {
   if (value == null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
   const keys = Object.keys(value).sort();
   return `{${keys.map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(",")}}`;
 }
 
-function sha256StableJson(value) {
+function sha256StableJson(value: unknown): string {
   return crypto.createHash("sha256").update(stableJson(value)).digest("hex");
 }
 
-function traceHashPath(pathParts) {
+function traceHashPath(pathParts: string[]): string {
   return `/${pathParts.join("/")}`;
 }
 
-function stripTraceHashFromImportTraceSummary(value, pathParts = [], removed = []) {
+function stripTraceHashFromImportTraceSummary(
+  value: any,
+  pathParts: string[] = [],
+  removed: string[] = [],
+): any {
   if (Array.isArray(value)) {
     return value.map((entry, index) =>
       stripTraceHashFromImportTraceSummary(entry, [...pathParts, String(index)], removed),
     );
   }
   if (!value || typeof value !== "object") return value;
-  const output = {};
+  const output: JsonRecord = {};
   for (const [key, child] of Object.entries(value)) {
     if (key === "tiangongfoundry:importTraceSummary") {
       output[key] = stripTraceHashValue(child, [...pathParts, key], removed);
@@ -144,14 +183,14 @@ function stripTraceHashFromImportTraceSummary(value, pathParts = [], removed = [
   return output;
 }
 
-function stripTraceHashValue(value, pathParts, removed) {
+function stripTraceHashValue(value: any, pathParts: string[], removed: string[]): any {
   if (Array.isArray(value)) {
     return value.map((entry, index) =>
       stripTraceHashValue(entry, [...pathParts, String(index)], removed),
     );
   }
   if (!value || typeof value !== "object") return value;
-  const output = {};
+  const output: JsonRecord = {};
   for (const [key, child] of Object.entries(value)) {
     if (key === "traceHash") {
       removed.push(traceHashPath([...pathParts, key]));
@@ -162,8 +201,12 @@ function stripTraceHashValue(value, pathParts, removed) {
   return output;
 }
 
-function normalizeAllowedTraceHashDifference(payload) {
-  const removed_paths = [];
+function normalizeAllowedTraceHashDifference(payload: unknown): {
+  normalized: any;
+  removed_paths: string[];
+  normalized_sha256: string;
+} {
+  const removed_paths: string[] = [];
   const normalized = stripTraceHashFromImportTraceSummary(payload, [], removed_paths);
   return {
     normalized,
@@ -172,7 +215,7 @@ function normalizeAllowedTraceHashDifference(payload) {
   };
 }
 
-function extractPayloadFromGet(table, json) {
+function extractPayloadFromGet(table: string, json: JsonRecord | null): JsonRecord | null {
   const config = supportedRootTables.get(table);
   if (!config || !json || typeof json !== "object") return null;
   for (const key of config.payloadKeys) {
@@ -183,7 +226,19 @@ function extractPayloadFromGet(table, json) {
   return null;
 }
 
-function defaultCliGet({ table, id, version, outDir, repoRoot }) {
+function defaultCliGet({
+  table,
+  id,
+  version,
+  outDir,
+  repoRoot,
+}: {
+  table: string;
+  id: string;
+  version: string;
+  outDir: string;
+  repoRoot: string;
+}): CliGetResult {
   const config = supportedRootTables.get(table);
   if (!config) {
     return {
@@ -221,7 +276,7 @@ function defaultCliGet({ table, id, version, outDir, repoRoot }) {
   };
 }
 
-function rewriteCounts(counts, acceptedCount) {
+function rewriteCounts(counts: JsonRecord | undefined, acceptedCount: number): JsonRecord {
   const output = { ...(counts ?? {}) };
   output.blockers = Math.max(0, Number(output.blockers ?? 0) - acceptedCount);
   output.root_payload_mismatches = Math.max(
@@ -237,7 +292,19 @@ function rewriteCounts(counts, acceptedCount) {
   return output;
 }
 
-function acceptanceKey({ table, id, version, row_index, path: checkPath }) {
+function acceptanceKey({
+  table,
+  id,
+  version,
+  row_index,
+  path: checkPath,
+}: {
+  table: string;
+  id: string;
+  version: string;
+  row_index: number;
+  path?: string | null;
+}): string {
   return `${table}:${id}@${version}:${row_index}:${checkPath || ""}`;
 }
 
@@ -246,7 +313,12 @@ export function acceptTraceHashOnlyRemoteVerificationMismatch({
   outDir,
   repoRoot,
   runCliGet = defaultCliGet,
-}) {
+}: {
+  verifyReportPath: string;
+  outDir: string;
+  repoRoot: string;
+  runCliGet?: CliGet;
+}): AcceptedDiffResult {
   if (!fileExists(verifyReportPath)) {
     return { accepted: false, reason: "verify_report_missing" };
   }
@@ -257,7 +329,7 @@ export function acceptTraceHashOnlyRemoteVerificationMismatch({
   }
   if (
     blockers.some(
-      (blocker) =>
+      (blocker: JsonRecord) =>
         blocker?.code !== "payload_mismatch" ||
         blocker?.role !== "root" ||
         !supportedRootTables.has(blocker?.table),
@@ -426,132 +498,6 @@ export function acceptTraceHashOnlyRemoteVerificationMismatch({
     accepted_report: repoRelative(repoRoot, acceptedReportPath),
     accepted_checks: repoRelative(repoRoot, acceptedChecksPath),
     accepted_differences: evidence,
-  };
-  writeJsonLines(acceptedChecksPath, acceptedChecks);
-  writeJsonLines(acceptedBlockersPath, []);
-  writeJson(acceptedReportPath, acceptedReport);
-  writeJson(acceptanceReportPath, acceptanceReport);
-  return {
-    accepted: true,
-    verifyReportPath: acceptedReportPath,
-    acceptanceReportPath,
-    evidence,
-  };
-}
-
-function trustedReferenceMatchKey(table, id, version) {
-  return `${table} ${id} ${version || "00.00.001"}`;
-}
-
-// Accept a post-write remote verification whose ONLY blockers are `missing_dataset` on
-// REFERENCE-role rows that point at a pre-verified trusted external dataset — one that
-// genuinely exists remotely but is invisible to the importing account through RLS. This
-// is the worldsteel case where a process references a flow owned by the USLCI account
-// (linanenv@126.com) at state_code=0: the flow was verified to exist via the USLCI token
-// and is reused-by-reference per governance rule instead of being duplicated. The
-// referencing account cannot resolve it (raw PostgREST + CLI both return not-found), so
-// the RLS-scoped post-write verify falsely reports missing_dataset. Every other blocker
-// (version_outdated, non-trusted missing references, any root-role blocker, payload
-// mismatches) rejects acceptance. `trustedReferenceKeys` is a Set of
-// `${table}\0${id}\0${version}` strings the caller independently proved present.
-export function acceptTrustedExternalReferenceMissingDataset({
-  verifyReportPath,
-  outDir,
-  repoRoot,
-  trustedReferenceKeys,
-}) {
-  if (!fileExists(verifyReportPath)) {
-    return { accepted: false, reason: "verify_report_missing" };
-  }
-  const trusted = trustedReferenceKeys instanceof Set ? trustedReferenceKeys : new Set();
-  if (trusted.size === 0) {
-    return { accepted: false, reason: "no_trusted_reference_keys" };
-  }
-  const verifyReport = readJson(verifyReportPath);
-  const blockers = Array.isArray(verifyReport.blockers) ? verifyReport.blockers : [];
-  if (verifyReport.status === "passed_remote_verification" || blockers.length === 0) {
-    return { accepted: false, reason: "verify_report_has_no_blockers" };
-  }
-  const evidence = [];
-  const acceptedRefKeys = new Set();
-  for (const blocker of blockers) {
-    if (blocker?.code !== "missing_dataset" || blocker?.role !== "reference") {
-      return { accepted: false, reason: "verify_report_has_non_trusted_blockers", blocker };
-    }
-    const key = trustedReferenceMatchKey(blocker.table, blocker.id, blocker.version);
-    if (!trusted.has(key)) {
-      return { accepted: false, reason: "reference_not_in_trusted_set", blocker };
-    }
-    acceptedRefKeys.add(key);
-    evidence.push({
-      table: blocker.table,
-      id: blocker.id,
-      version: blocker.version || "00.00.001",
-      path: blocker.path ?? null,
-      accepted_reason: "trusted_external_state0_reference_verified_present",
-    });
-  }
-
-  const acceptedDir = path.join(outDir, "accepted-post-write-verify-trusted-reference");
-  const outputsDir = path.join(acceptedDir, "outputs");
-  const acceptedChecksPath = path.join(outputsDir, "remote-verification.jsonl");
-  const acceptedBlockersPath = path.join(outputsDir, "blockers.jsonl");
-  const acceptedReportPath = path.join(outputsDir, "remote-verification-report.json");
-  const acceptanceReportPath = path.join(acceptedDir, "foundry-accepted-trusted-reference.json");
-
-  const checksPath = path.resolve(String(verifyReport.files?.checks || ""));
-  const checks = fileExists(checksPath) ? readJsonLines(checksPath) : [];
-  const acceptedChecks = checks.map((check) => {
-    if (check?.status !== "missing_dataset") return check;
-    const key = trustedReferenceMatchKey(check.table, check.id, check.version);
-    if (!acceptedRefKeys.has(key)) return check;
-    return {
-      ...check,
-      status: "ok",
-      foundry_verification_mode: "accepted_trusted_external_reference",
-      foundry_original_status: "missing_dataset",
-    };
-  });
-
-  const acceptedCount = evidence.length;
-  const counts = { ...(verifyReport.counts ?? {}) };
-  counts.blockers = Math.max(0, Number(counts.blockers ?? 0) - acceptedCount);
-  counts.by_status = { ...(counts.by_status ?? {}) };
-  counts.by_status.missing_dataset = Math.max(
-    0,
-    Number(counts.by_status.missing_dataset ?? 0) - acceptedCount,
-  );
-  counts.by_status.ok = Number(counts.by_status.ok ?? 0) + acceptedCount;
-
-  const acceptedReport = {
-    ...verifyReport,
-    generated_at_utc: nowIso(),
-    status: "passed_remote_verification",
-    counts,
-    blockers: [],
-    files: {
-      ...(verifyReport.files ?? {}),
-      report: acceptedReportPath,
-      checks: acceptedChecksPath,
-      blockers: acceptedBlockersPath,
-      foundry_original_report: verifyReportPath,
-      foundry_acceptance_report: acceptanceReportPath,
-    },
-    foundry_accepted_trusted_external_references: {
-      status: "accepted_trusted_external_reference",
-      policy:
-        "A missing_dataset blocker on a reference-role row is accepted when the referenced dataset is a pre-verified trusted external dataset (present remotely but hidden from the importing account by RLS). Used for worldsteel references to USLCI-account (linanenv@126.com) state_code=0 flows reused by governance rule. Root readback and every non-trusted reference must still pass exactly.",
-      accepted_at_utc: nowIso(),
-      accepted_references: evidence,
-    },
-  };
-  const acceptanceReport = {
-    schema_version: 1,
-    generated_at_utc: nowIso(),
-    status: "accepted",
-    original_report: repoRelative(repoRoot, verifyReportPath),
-    accepted_report: repoRelative(repoRoot, acceptedReportPath),
-    accepted_references: evidence,
   };
   writeJsonLines(acceptedChecksPath, acceptedChecks);
   writeJsonLines(acceptedBlockersPath, []);

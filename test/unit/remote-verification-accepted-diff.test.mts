@@ -5,22 +5,22 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import * as acceptedDiffModule from "../../scripts/lib/remote-verification-accepted-diff.mjs";
+import * as acceptedDiffModule from "../../scripts/lib/remote-verification-accepted-diff.ts";
 
 const { acceptTraceHashOnlyRemoteVerificationMismatch } = acceptedDiffModule;
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function writeJsonLines(filePath, rows) {
+function writeJsonLines(filePath: string, rows: unknown[]): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, rows.map((row) => JSON.stringify(row)).join("\n") + "\n");
+  fs.writeFileSync(filePath, rows.map((row: unknown) => JSON.stringify(row)).join("\n") + "\n");
 }
 
-function flowPayload(traceHash) {
+function flowPayload(traceHash: string) {
   return {
     flowDataSet: {
       flowInformation: {
@@ -192,7 +192,7 @@ test("rejects payload mismatches that still differ after traceHash normalization
 });
 
 test("foreign or RLS-hidden state-0 missing_dataset cannot be accepted by any caller", () => {
-  assert.equal(acceptedDiffModule.acceptTrustedExternalReferenceMissingDataset, undefined);
+  assert.equal("acceptTrustedExternalReferenceMissingDataset" in acceptedDiffModule, false);
 
   const batchSource = fs.readFileSync(
     path.join(repoRoot, "scripts/commands/bafu-batch-import-run.mjs"),

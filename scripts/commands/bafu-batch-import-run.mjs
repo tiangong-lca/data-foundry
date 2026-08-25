@@ -12,10 +12,7 @@ import {
   compactBafuFamilySignature,
   summarizeBafuFamilyScopes,
 } from "../lib/bafu-family-signatures.mjs";
-import {
-  acceptTraceHashOnlyRemoteVerificationMismatch,
-  acceptTrustedExternalReferenceMissingDataset,
-} from "../lib/remote-verification-accepted-diff.mjs";
+import { acceptTraceHashOnlyRemoteVerificationMismatch } from "../lib/remote-verification-accepted-diff.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.mjs";
 import { stageContract } from "../lib/stage-contract.ts";
 
@@ -24,13 +21,6 @@ const commandName = "dataset-bafu-batch-import-run";
 const coverageCommandName = "dataset-bafu-universe-coverage-report";
 let supportCommitQueue = Promise.resolve();
 const verifiedSupportIdentities = new Set();
-// Trusted external reference flows: `${table}\0${id}\0${version}` keys for datasets that
-// exist remotely but are invisible to the importing account through RLS (worldsteel
-// references to USLCI-account state_code=0 flows, verified present via the USLCI token and
-// reused by governance rule). The post-write verify's RLS-scoped readback falsely reports
-// these as missing_dataset; executeHandoff accepts that single blocker class for these
-// keys only. Empty for BAFU/USLCI, so their runs are unchanged.
-const trustedExternalReferenceFlows = new Set();
 const bafuBatchStageContract = {
   remote_write_mode: "explicit-commit-only",
   stage_pipeline: stageContract([
@@ -125,15 +115,6 @@ function installBafuBatchRuntime(deps, config = {}) {
   }
   bafuBatchRuntime = deps;
   bafuBatchConfig = config || {};
-  trustedExternalReferenceFlows.clear();
-  for (const ref of Array.isArray(bafuBatchConfig.trustedExternalReferenceFlows)
-    ? bafuBatchConfig.trustedExternalReferenceFlows
-    : []) {
-    const table = String(ref?.table || "flows");
-    const id = String(ref?.id || "");
-    const version = String(ref?.version || "00.00.001");
-    if (id) trustedExternalReferenceFlows.add(`${table} ${id} ${version}`);
-  }
 }
 
 function runtime() {
@@ -1187,27 +1168,6 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
           status: "accepted",
           report: repoRelative(acceptedVerify.acceptanceReportPath),
           accepted_differences: acceptedVerify.evidence.length,
-        });
-      }
-    }
-    if (!verifyAccepted && verifyReportPath && trustedExternalReferenceFlows.size > 0) {
-      // Accept a readback whose ONLY blockers are missing_dataset on reference-role rows
-      // that point at pre-verified trusted external datasets (worldsteel -> USLCI
-      // state_code=0 flows, reused by reference and invisible to worldsteel via RLS).
-      const acceptedTrusted = acceptTrustedExternalReferenceMissingDataset({
-        verifyReportPath,
-        outDir,
-        repoRoot,
-        trustedReferenceKeys: trustedExternalReferenceFlows,
-      });
-      if (acceptedTrusted.accepted) {
-        verifyReportPath = acceptedTrusted.verifyReportPath;
-        verifyAccepted = true;
-        stages.push({
-          stage: `${label}.post_write_verify.accepted_trusted_reference`,
-          status: "accepted",
-          report: repoRelative(acceptedTrusted.acceptanceReportPath),
-          accepted_trusted_references: acceptedTrusted.evidence.length,
         });
       }
     }

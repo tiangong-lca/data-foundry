@@ -48,31 +48,9 @@ export function createWorldsteelBatchImportRunCommands(deps) {
     // GaBi/Sphera pseudo-elementary flows with no rewrite reach the (capped) mint path.
     // Requires --library-resolution <dir> at runtime holding exchange-reference-rewrites.jsonl.
     applyResolutionRewrites: true,
-    // Trusted external reference: the worldsteel process exchanges reference one flow —
-    // 3c4b0e5d "Slag (deposited)" @00.00.001 — owned by the USLCI import account
-    // linanenv@126.com (uid 5c784552) at state_code=0. Per the 2026-07-01 governance rule,
-    // USLCI-account data is reusable by the worldsteel import even at state_code=0, so this
-    // flow is reused-by-reference (a reuse_existing_reference decision) instead of minting a
-    // worldsteel duplicate. The flow was independently verified to exist under USLCI via the
-    // USLCI token, but RLS hides it from data@worldsteel.org (raw PostgREST + CLI both return
-    // not-found), so the RLS-scoped post-write readback falsely reports missing_dataset. The
-    // runner accepts that single reference blocker for THIS key only (executeHandoff ->
-    // acceptTrustedExternalReferenceMissingDataset); every other blocker still fails. This is
-    // the only cross-account state_code=0 reference in the worldsteel new-flow universe (the
-    // ~1,315 EF3.1 reference flows are canonical/state_code=100 and resolve normally). BAFU/
-    // USLCI pass no trusted refs, so their runs are unchanged.
-    trustedExternalReferenceFlows: [
-      {
-        table: "flows",
-        id: "3c4b0e5d-6500-4ada-9a2c-58e43ac96500",
-        version: "00.00.001",
-        name: "Slag (deposited)",
-        owner_account: "linanenv@126.com",
-        owner_user_id: "5c784552-09a5-43dc-b704-b96ed3239ecd",
-        provenance:
-          "USLCI import account state_code=0 flow; verified present via USLCI token 2026-07-01; reused by worldsteel governance rule instead of duplicated.",
-      },
-    ],
+    // Foreign or RLS-hidden state_code=0 rows are never accepted as reusable references.
+    // If the importing account cannot read a dependency, post-write verification keeps its
+    // missing_dataset blocker until a public or same-owner visible reference is selected.
     // Requirement 1 (2026-06-29): use the World Steel Association identity (not a generic
     // synthetic foundry contact) as the single shared library contact. The package's own
     // contact id d5710976@20.20.002 turned out to be occupied by a different account in

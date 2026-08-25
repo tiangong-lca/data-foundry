@@ -11,7 +11,7 @@ export function acceptedRemoteDifferencePolicy(input: { accountMode: string }): 
   const productionTest = input.accountMode === "production-test";
   return {
     traceHashOnly: !productionTest,
-    foreignStateZeroReference: !productionTest,
+    foreignStateZeroReference: false,
   };
 }
 
