@@ -5,7 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createCliWrapperCommands } from "../../scripts/commands/cli-wrappers.mjs";
+import { createCliWrapperCommands } from "../../scripts/commands/cli-wrappers.ts";
 
 type JsonObject = Record<string, unknown>;
 

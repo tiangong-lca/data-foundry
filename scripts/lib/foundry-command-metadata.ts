@@ -350,7 +350,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-curation-queue-build": metadata({
     category: "cli-wrapper",
-    ownerModule: "scripts/commands/cli-wrappers.mjs",
+    ownerModule: "scripts/commands/cli-wrappers.ts",
     ownerExport: "createCliWrapperCommands().runDatasetCurationQueueBuild",
     inputs: ["converted process/flow/support/lifecyclemodel rows"],
     outputs: ["CLI curation queue directory", "Foundry wrapper JSON report"],
@@ -646,7 +646,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-patch-apply": metadata({
     category: "cli-wrapper",
-    ownerModule: "scripts/commands/cli-wrappers.mjs",
+    ownerModule: "scripts/commands/cli-wrappers.ts",
     ownerExport: "createCliWrapperCommands().runDatasetPatchApply",
     inputs: ["rows file", "AI patch file", "authoring package proof"],
     outputs: ["patched rows file", "dataset-patch-apply-report.json", "patch-evidence.jsonl"],

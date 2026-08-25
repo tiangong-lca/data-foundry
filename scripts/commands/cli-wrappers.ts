@@ -2,14 +2,72 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
 
+type JsonRecord = Record<string, unknown>;
+
+type CliResolution = {
+  command: string;
+  args: string[];
+  display: string;
+  package: JsonRecord | null;
+};
+
+type JsonCliResult = {
+  cliBin: string;
+  cli: CliResolution;
+  spawnArgs: string[];
+  exitCode: number;
+  report: JsonRecord;
+  stderr: string;
+};
+
+export type CliWrapperOptions = Record<string, unknown> & {
+  help?: unknown;
+  processes?: unknown;
+  processesFile?: unknown;
+  processRows?: unknown;
+  outDir?: unknown;
+  flows?: unknown;
+  flowsFile?: unknown;
+  flowRows?: unknown;
+  support?: unknown;
+  supportFile?: unknown;
+  supportRows?: unknown;
+  externalFlowRef?: unknown;
+  externalFlowRefs?: unknown;
+  excludeProcessId?: unknown;
+  excludeProcessIds?: unknown;
+  processLimit?: unknown;
+  input?: unknown;
+  rowsFile?: unknown;
+  rows?: unknown;
+  patch?: unknown;
+  patchFile?: unknown;
+  patches?: unknown;
+  suggestions?: unknown;
+  out?: unknown;
+  outFile?: unknown;
+  authoringPackageDir?: unknown;
+  authoringPackagesDir?: unknown;
+  requireAuthoringPackage?: unknown;
+  requireActionItemClosure?: unknown;
+};
+
+export type CliWrapperFactoryDependencies = {
+  appendOption: (args: string[], option: string, value: unknown) => unknown;
+  appendRepeatedOptions: (args: string[], option: string, value: unknown) => unknown;
+  repoRoot: string;
+  resolveTiangongLcaCliCommand?: () => CliResolution;
+  resolveTiangongLcaCliBin: () => string;
+};
+
 export function createCliWrapperCommands({
   appendOption,
   appendRepeatedOptions,
   repoRoot,
   resolveTiangongLcaCliCommand,
   resolveTiangongLcaCliBin,
-}) {
-  function runJsonCli(cliArgs, errorMessage) {
+}: CliWrapperFactoryDependencies) {
+  function runJsonCli(cliArgs: string[], errorMessage: string): JsonCliResult {
     const cli = resolveTiangongLcaCliCommand
       ? resolveTiangongLcaCliCommand()
       : {
@@ -31,9 +89,9 @@ export function createCliWrapperCommands({
     if (result.error) {
       throw result.error;
     }
-    let report;
+    let report: JsonRecord;
     try {
-      report = JSON.parse(result.stdout || "{}");
+      report = JSON.parse(result.stdout || "{}") as JsonRecord;
     } catch {
       throw new Error(
         [
@@ -55,7 +113,7 @@ export function createCliWrapperCommands({
     };
   }
 
-  function runDatasetCurationQueueBuild(options) {
+  function runDatasetCurationQueueBuild(options: CliWrapperOptions): JsonRecord {
     if (options.help) {
       return {
         schema_version: 1,
@@ -114,7 +172,7 @@ export function createCliWrapperCommands({
     };
   }
 
-  function runDatasetPatchApply(options) {
+  function runDatasetPatchApply(options: CliWrapperOptions): JsonRecord {
     if (options.help) {
       return {
         schema_version: 1,
@@ -135,7 +193,7 @@ export function createCliWrapperCommands({
 
     const input = options.input || options.rowsFile || options.rows;
     const patch = options.patch || options.patchFile || options.patches || options.suggestions;
-    const outDir = options.outDir || ".foundry/workspaces/dataset-patch-apply";
+    const outDir = (options.outDir || ".foundry/workspaces/dataset-patch-apply") as string;
     const out = options.out || options.outFile || path.join(outDir, "patched-rows.jsonl");
     const cliArgs = ["dataset", "patch", "apply", "--json"];
     appendOption(cliArgs, "--input", input);
