@@ -1,4 +1,5 @@
 import path from "node:path";
+import { createFileArtifactFact } from "../lib/foundry-command-spec.ts";
 import { validateUniqueRootReadbacks } from "../lib/post-write-root-proof.ts";
 
 export function createPostWriteCloseoutCommands({
@@ -367,6 +368,58 @@ export function createPostWriteCloseoutCommands({
     return { type: fallbackType, table };
   }
 
+  function validateHandoffFinalRowsArtifact({ handoffPlan, finalRowsFile, blockers }) {
+    const artifact = handoffPlan.final_rows_artifact;
+    if (
+      !artifact ||
+      typeof artifact !== "object" ||
+      Array.isArray(artifact) ||
+      typeof artifact.path !== "string" ||
+      !Number.isSafeInteger(artifact.bytes) ||
+      artifact.bytes < 0 ||
+      typeof artifact.sha256 !== "string" ||
+      !/^[a-f0-9]{64}$/u.test(artifact.sha256)
+    ) {
+      blockers.push({
+        code: "handoff_final_rows_artifact_missing_or_invalid",
+        message: "Post-write closeout requires handoff final_rows_artifact path/bytes/SHA-256.",
+      });
+      return null;
+    }
+    const artifactPath = resolveRepoPath(artifact.path);
+    if (!artifactPath || !sameResolvedPath(artifactPath, finalRowsFile)) {
+      blockers.push({
+        code: "handoff_final_rows_artifact_path_mismatch",
+        message: "Handoff final_rows_artifact path must resolve to the exact final rows file.",
+        expected_rows: repoRelativeMaybe(finalRowsFile),
+        artifact_path: artifact.path,
+      });
+      return null;
+    }
+    const current = createFileArtifactFact({
+      role: "final_rows",
+      path: artifact.path,
+      filePath: finalRowsFile,
+    });
+    if (current.bytes !== artifact.bytes) {
+      blockers.push({
+        code: "handoff_final_rows_artifact_bytes_drift",
+        message: "Final rows byte length changed after commit handoff.",
+        expected_bytes: artifact.bytes,
+        actual_bytes: current.bytes,
+      });
+    }
+    if (current.sha256 !== artifact.sha256) {
+      blockers.push({
+        code: "handoff_final_rows_artifact_sha256_drift",
+        message: "Final rows bytes changed after commit handoff.",
+        expected_sha256: artifact.sha256,
+        actual_sha256: current.sha256,
+      });
+    }
+    return current;
+  }
+
   function runDatasetPostWriteCloseout(options) {
     if (options.help) {
       return {
@@ -450,6 +503,10 @@ export function createPostWriteCloseoutCommands({
         final_rows_file: handoffPlan.final_rows_file ?? null,
       });
     }
+    const finalRowsArtifact =
+      finalRowsFile && fileExists(finalRowsFile)
+        ? validateHandoffFinalRowsArtifact({ handoffPlan, finalRowsFile, blockers })
+        : null;
     if (!targetUserId) {
       blockers.push({
         code: "target_user_id_missing",
@@ -612,6 +669,13 @@ export function createPostWriteCloseoutCommands({
       commit_report: repoRelativePath(commitArtifact.path),
       post_write_verify_report: repoRelativePath(verifyArtifact.path),
       final_rows_file: repoRelativeMaybe(finalRowsFile),
+      final_rows_artifact: finalRowsArtifact
+        ? {
+            path: finalRowsArtifact.path,
+            bytes: finalRowsArtifact.bytes,
+            sha256: finalRowsArtifact.sha256,
+          }
+        : null,
       target_user_id: targetUserId || null,
       expected_state_code: expectedStateCode,
       policy: {

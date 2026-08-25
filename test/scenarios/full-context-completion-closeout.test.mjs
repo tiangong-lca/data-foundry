@@ -521,6 +521,11 @@ test("post-write closeout requires common:other trace queues to match final rows
     finalize_report: rel(finalizeReport),
     mutation_manifest: rel(mutationReport),
     final_rows_file: rel(rowsFile),
+    final_rows_artifact: {
+      path: rel(rowsFile),
+      bytes: fs.readFileSync(rowsFile).byteLength,
+      sha256: sha256Text(fs.readFileSync(rowsFile)),
+    },
     target_user_id: targetUserId,
     expected_state_code: "0",
     counts: {
