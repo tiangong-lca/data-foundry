@@ -1,14 +1,38 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { createDecisionTaskUtils } from "../../scripts/lib/decision-task-utils.ts";
 import { createFullContextProofUtils } from "../../scripts/lib/full-context-proof.ts";
 import { createIdentityPreflightArtifactUtils } from "../../scripts/lib/identity-preflight-artifacts.ts";
 import { createIdentityReferenceRewriteUtils } from "../../scripts/lib/identity-reference-rewrite-utils.ts";
+
+const testDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(testDir, "..", "..");
+const zeroAnyPaths = [
+  "scripts/lib/decision-task-utils.ts",
+  "scripts/lib/identity-preflight-artifacts.ts",
+  "test/unit/evidence-decision-leaves.test.mts",
+] as const;
+
+test("evidence-decision family contains no explicit any or TypeScript suppression", () => {
+  const oxlint = path.join(repoRoot, "node_modules", "oxlint", "bin", "oxlint");
+  const result = spawnSync(
+    process.execPath,
+    [oxlint, "--format", "stylish", "-D", "typescript/no-explicit-any", ...zeroAnyPaths],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  for (const relativePath of zeroAnyPaths) {
+    const source = fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
+    assert.doesNotMatch(source, /@ts-(?:ignore|nocheck|expect-error)/u, relativePath);
+  }
+});
 
 function withFixture<T>(callback: (root: string) => T): T {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-evidence-leaves-"));
