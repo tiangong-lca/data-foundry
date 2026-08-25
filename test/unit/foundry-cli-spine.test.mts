@@ -315,6 +315,8 @@ test("active documentation and source contain no references to removed CLI spine
     "./lib/full-context-proof.mjs",
     "bafu-family-signatures.mjs",
     "lib/import-ledger.mjs",
+    "canonical-support-rewrites.mjs",
+    "bundle-sample-utils.mjs",
   ];
   const files = [
     "AGENTS.md",
