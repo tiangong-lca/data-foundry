@@ -84,7 +84,7 @@ test("package, surface audit, and tests target the typed cutover entrypoint", ()
   assert.equal(packageJson.scripts["tidas:cutover:audit"], "node scripts/check-tidas-cutover.ts");
   for (const consumer of [
     "scripts/lib/surface-audit.ts",
-    "test/unit/tidas-cutover-audit.test.mjs",
+    "test/unit/tidas-cutover-audit.test.mts",
     "test/unit/tidas-cutover-script-contract.test.mts",
   ]) {
     const source = fs.readFileSync(path.join(repoRoot, consumer), "utf8");

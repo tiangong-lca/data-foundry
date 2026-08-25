@@ -13,7 +13,8 @@ import {
   testTmpRoot,
   writeJson,
   writeJsonLines,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
+import type { FixtureRecord } from "../fixtures/foundry-core.ts";
 
 const fixtureRoot = testTmpRoot("bafu-auto-authoring-test");
 const flowId = "11111111-2222-4333-8444-555555555555";
@@ -21,13 +22,7 @@ const processId = "22222222-3333-4444-8555-666666666666";
 const electricityFlowId = "33333333-4444-4555-8666-777777777777";
 const electricityProcessId = "44444444-5555-4666-8777-888888888888";
 
-type PatchOperation = {
-  path: string;
-  value?: unknown;
-  closes_action_items: Array<{ code: string }>;
-  resolution: { mode?: string; used_context_kinds: string[]; [key: string]: unknown };
-  [key: string]: unknown;
-};
+type PatchOperation = FixtureRecord;
 
 type NamePlan = {
   base_name: string;

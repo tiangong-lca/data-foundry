@@ -40,7 +40,7 @@ test("topology consumers and metadata target the typed module", () => {
     assert.match(source, /topology-convergence\.ts/u, consumer);
     assert.doesNotMatch(source, /topology-convergence\.mjs/u, consumer);
   }
-  const unitSource = readRepoFile("test/unit/topology-convergence.test.mjs");
+  const unitSource = readRepoFile("test/unit/topology-convergence.test.mts");
   assert.match(unitSource, /topology-convergence\.ts/u);
 });
 

@@ -30,7 +30,7 @@ function withEnv<T>(values: Record<string, string | undefined>, run: () => T): T
 }
 
 test("TIDAS adapter preserves script executable plus argv dispatch without shell authority", () => {
-  const script = path.join(repoRoot, "test/fixtures/fake-tidas.mjs");
+  const script = path.join(repoRoot, "test/fixtures/fake-tidas.ts");
   assert.deepEqual(resolveTidasProcessCommand(script), {
     command: process.execPath,
     prefixArgs: [script],
@@ -102,7 +102,7 @@ test("TIDAS adapter exists only as zero-escape native TypeScript", () => {
 test("TIDAS adapter consumers target the typed owner", () => {
   for (const consumer of [
     "scripts/foundry.ts",
-    "test/unit/tidas-adapter.test.mjs",
+    "test/unit/tidas-adapter.test.mts",
     "test/unit/tidas-adapter-migration-contract.test.mts",
   ]) {
     const source = readRepoFile(consumer);

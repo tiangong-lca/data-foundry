@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { runDatasetMutationManifest } from "../../scripts/lib/import-curation/mutation-manifest.ts";
-import { processRowWithFlowRef } from "../fixtures/row-builders.mjs";
+import { processRowWithFlowRef } from "../fixtures/row-builders.ts";
 
 type JsonRecord = Record<string, unknown>;
 

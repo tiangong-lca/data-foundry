@@ -216,7 +216,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     inputs: ["Rust tidas executable", "optional TIDAS_CONFIG"],
     outputs: ["compatible 0.2.x binary and tidas.operation-report.v1 handshake"],
     keyTests: [
-      nodeTest("test/unit/tidas-adapter.test.mjs", "0.2.x version and operation-report handshake"),
+      nodeTest("test/unit/tidas-adapter.test.mts", "0.2.x version and operation-report handshake"),
     ],
   }),
   "dataset-tidas-import": metadata({
@@ -231,7 +231,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/unit/tidas-adapter.test.mjs",
+        "test/unit/tidas-adapter.test.mts",
         "native import, stable exit mapping, cancellation, and cleanup",
       ),
     ],
@@ -247,7 +247,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/unit/tidas-adapter.test.mjs",
+        "test/unit/tidas-adapter.test.mts",
         "official batch validation report mapping and rollback cleanup",
       ),
     ],
@@ -297,7 +297,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "execution capsule admission seals exact offline evidence and rejects mutation vectors",
       ),
       nodeTest(
-        "test/unit/execution-capsule-attempt-state.test.mjs",
+        "test/unit/execution-capsule-attempt-state.test.mts",
         "attempt dispositions distinguish unattempted, recovered success, and unknown no-replay states",
       ),
     ],
@@ -327,7 +327,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/unit/incremental-change-set.test.mjs",
+        "test/unit/incremental-change-set.test.mts",
         "three-way merge and canonical CLI hashes preserve owner changes only through explicit policy",
       ),
       nodeTest(
@@ -356,7 +356,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/unit/topology-convergence.test.mjs",
+        "test/unit/topology-convergence.test.mts",
         "occurrence keys and language overlays prevent global flow-id replacement",
       ),
       nodeTest(
@@ -373,7 +373,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["CLI curation queue directory", "Foundry wrapper JSON report"],
     keyTests: [
       nodeTest(
-        "test/scenarios/identity-curation-context.test.mjs",
+        "test/scenarios/identity-curation-context.test.mts",
         "curation queue build is used before full-context authoring",
       ),
     ],
@@ -394,7 +394,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     keyTests: [
       goldenDiff,
       nodeTest(
-        "test/scenarios/identity-curation-context.test.mjs",
+        "test/scenarios/identity-curation-context.test.mts",
         "curation gate authoring package carries full contract text and queue dependency rows",
       ),
       importCurationEntryContract,
@@ -408,7 +408,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["dataset-authoring-plan JSON report"],
     keyTests: [
       nodeTest(
-        "test/unit/foundry-stage-contract.test.mjs",
+        "test/unit/foundry-stage-contract.test.mts",
         "complex workflow commands publish AI-readable stage contracts",
       ),
       nodeTest(
@@ -463,7 +463,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/scenarios/identity-curation-context.test.mjs",
+        "test/scenarios/identity-curation-context.test.mts",
         "identity decision task deduplicates repeated targets and keeps source evidence",
       ),
     ],
@@ -659,7 +659,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["dataset-curation-cleanup-report.json", "cleaned rows file"],
     keyTests: [
       nodeTest(
-        "test/scenarios/curation-cleanup-quality-gates.test.mjs",
+        "test/scenarios/curation-cleanup-quality-gates.test.mts",
         "curation cleanup fills placeholder annual supply with searchable sentinel",
       ),
       importCurationEntryContract,
@@ -673,7 +673,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["patched rows file", "dataset-patch-apply-report.json", "patch-evidence.jsonl"],
     keyTests: [
       nodeTest(
-        "test/scenarios/flow-reference-reuse-and-traces.test.mjs",
+        "test/scenarios/flow-reference-reuse-and-traces.test.mts",
         "identity decision apply closes flow identity curation and counts as full-context evidence",
       ),
       nodeTest(
@@ -730,7 +730,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     keyTests: [
       goldenDiff,
       nodeTest(
-        "test/unit/foundry-stage-contract.test.mjs",
+        "test/unit/foundry-stage-contract.test.mts",
         "complex workflow commands publish AI-readable stage contracts",
       ),
       nodeTest(
@@ -790,7 +790,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     keyTests: [
       identityPreflightRunCommandContract,
       nodeTest(
-        "test/unit/foundry-stage-contract.test.mjs",
+        "test/unit/foundry-stage-contract.test.mts",
         "complex workflow commands publish AI-readable stage contracts",
       ),
       nodeTest(
@@ -798,7 +798,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "dataset-identity-preflight-run executes request indexes and preserves identity blockers as evidence",
       ),
       nodeTest(
-        "test/scenarios/identity-preflight-run-and-merge.test.mjs",
+        "test/scenarios/identity-preflight-run-and-merge.test.mts",
         "identity preflight batch runner records timed-out CLI rows without hanging",
       ),
     ],
@@ -815,7 +815,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     keyTests: [
       identityPreflightRunCommandContract,
       nodeTest(
-        "test/scenarios/identity-preflight-run-and-merge.test.mjs",
+        "test/scenarios/identity-preflight-run-and-merge.test.mts",
         "identity preflight index merge preserves dependency rows while refreshing current scope",
       ),
     ],
@@ -832,7 +832,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/scenarios/library-scope-workflow.test.mjs",
+        "test/scenarios/library-scope-workflow.test.mts",
         "library index deduplicates root TIDAS entities and projects shared dependencies to process scopes",
       ),
     ],
@@ -849,7 +849,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/scenarios/library-scope-workflow.test.mjs",
+        "test/scenarios/library-scope-workflow.test.mts",
         "library authoring plan emits deduplicated semantic decision templates",
       ),
     ],
@@ -867,7 +867,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/scenarios/library-scope-workflow.test.mjs",
+        "test/scenarios/library-scope-workflow.test.mts",
         "library identity decisions from preflight emits reuse decisions and manual review rows",
       ),
       nodeTest(
@@ -895,7 +895,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/scenarios/library-scope-workflow.test.mjs",
+        "test/scenarios/library-scope-workflow.test.mts",
         "library decisions apply rewrites only elementary flow references and defers unresolved scopes",
       ),
     ],
@@ -913,7 +913,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/scenarios/library-scope-workflow.test.mjs",
+        "test/scenarios/library-scope-workflow.test.mts",
         "process scope runner plans only ready scopes and keeps blocked scopes out of the queue",
       ),
     ],
@@ -1078,7 +1078,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/scenarios/flow-identity-decisions.test.mjs",
+        "test/scenarios/flow-identity-decisions.test.mts",
         "identity duplicate flow rewrites require high-confidence preflight evidence",
       ),
     ],
@@ -1100,7 +1100,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "dataset-identity-decisions-apply filters mixed decisions by requested type",
       ),
       nodeTest(
-        "test/scenarios/flow-identity-decisions.test.mjs",
+        "test/scenarios/flow-identity-decisions.test.mts",
         "AI identity decisions apply split flow rows into writes and reference reuse",
       ),
     ],
@@ -1127,15 +1127,15 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       goldenDiff,
       postAuthoringFinalizeCommandContract,
       nodeTest(
-        "test/unit/foundry-stage-contract.test.mjs",
+        "test/unit/foundry-stage-contract.test.mts",
         "complex workflow commands publish AI-readable stage contracts",
       ),
       nodeTest(
-        "test/scenarios/post-authoring-finalize-gates.test.mjs",
+        "test/scenarios/post-authoring-finalize-gates.test.mts",
         "post-authoring finalize declares external process flow refs for remote proof",
       ),
       nodeTest(
-        "test/scenarios/post-authoring-finalize-gates.test.mjs",
+        "test/scenarios/post-authoring-finalize-gates.test.mts",
         "post-authoring finalize auto-builds curation queue context from sibling process bundle rows",
       ),
     ],
@@ -1156,11 +1156,11 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "CommandSpec blocks artifact byte drift before spawn and never executes display",
       ),
       nodeTest(
-        "test/scenarios/full-context-completion-closeout.test.mjs",
+        "test/scenarios/full-context-completion-closeout.test.mts",
         "commit handoff blocks nonzero location audit blockers",
       ),
       nodeTest(
-        "test/scenarios/full-context-completion-closeout.test.mjs",
+        "test/scenarios/full-context-completion-closeout.test.mts",
         "process commit handoff defaults draft state code and records account guard",
       ),
     ],
@@ -1173,7 +1173,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["post-write-closeout-report.json"],
     keyTests: [
       nodeTest(
-        "test/scenarios/full-context-completion-closeout.test.mjs",
+        "test/scenarios/full-context-completion-closeout.test.mts",
         "post-write closeout requires common:other trace queues to match final rows",
       ),
     ],
@@ -1186,7 +1186,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["dataset-import-completion-report.json"],
     keyTests: [
       nodeTest(
-        "test/scenarios/full-context-completion-closeout.test.mjs",
+        "test/scenarios/full-context-completion-closeout.test.mts",
         "full-context import completion gates block missing proof and pass evidenced BAFU scopes",
       ),
     ],
@@ -1229,11 +1229,11 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     keyTests: [
       goldenDiff,
       nodeTest(
-        "test/scenarios/mutation-full-context-evidence.test.mjs",
+        "test/scenarios/mutation-full-context-evidence.test.mts",
         "mutation manifest requires full-context AI evidence and preserves deferred trace queues",
       ),
       nodeTest(
-        "test/scenarios/mutation-manifest-reference-closure.test.mjs",
+        "test/scenarios/mutation-manifest-reference-closure.test.mts",
         "mutation manifest blocks process writes when referenced datasets are not proven",
       ),
       importCurationEntryContract,

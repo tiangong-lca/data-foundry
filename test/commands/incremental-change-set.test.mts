@@ -10,7 +10,7 @@ import {
   repoRoot,
   runFoundry,
   spawnSync,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 import {
   createIncrementalChangeSetFixture,
   fixtureBoundRule,
@@ -21,7 +21,7 @@ import {
   fixtureSha256Json,
   fixtureTables,
   fixtureUpdatePointer,
-} from "../fixtures/incremental-change-set-fixtures.mjs";
+} from "../fixtures/incremental-change-set-fixtures.ts";
 
 type ParsedFixture = ReturnType<typeof JSON.parse>;
 type IncrementalFixture = ReturnType<typeof createIncrementalChangeSetFixture>;
@@ -250,7 +250,7 @@ test("all six CLI table identities accept their exact TIDAS roots, including flo
   );
   const flowProperty = fixture.comparisons.find(
     (row: ParsedFixture) => row.entity.table === "flowproperties",
-  )!.old_payload;
+  )!.old_payload as { flowPropertyDataSet: { flowPropertiesInformation: unknown } };
   assert.ok(flowProperty.flowPropertyDataSet.flowPropertiesInformation);
   const result = compose(fixture);
   assert.equal(result.code, 0);

@@ -12,7 +12,7 @@ import {
   spawnSync,
   testTmpRoot,
   writeJson,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 
 const scopeBinding = crypto.createHash("sha256").update("generic-fixture-scope").digest("hex");
 const toolchainFingerprint = crypto

@@ -1,7 +1,7 @@
 import test from "node:test";
 import { canonicalPayloadSha256 } from "../../scripts/lib/post-write-root-proof.ts";
 
-import { createFixture } from "../fixtures/full-context-fixtures.mjs";
+import { createFixture } from "../fixtures/full-context-fixtures.ts";
 import {
   assert,
   blockerCodes,
@@ -15,7 +15,7 @@ import {
   targetUserId,
   writeJson,
   writeJsonLines,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;

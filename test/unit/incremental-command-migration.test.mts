@@ -42,7 +42,7 @@ test("incremental consumers and metadata target the typed module", () => {
     assert.match(source, /incremental-change-set\.ts/u, consumer);
     assert.doesNotMatch(source, /incremental-change-set\.mjs/u, consumer);
   }
-  const unitSource = readRepoFile("test/unit/incremental-change-set.test.mjs");
+  const unitSource = readRepoFile("test/unit/incremental-change-set.test.mts");
   assert.match(unitSource, /incremental-change-set\.ts/u);
 });
 

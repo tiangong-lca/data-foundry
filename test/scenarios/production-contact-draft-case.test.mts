@@ -21,7 +21,7 @@ import {
   writeJson,
   writeJsonLines,
   writeText,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 
 const require = createRequire(import.meta.url);
 const cliAuth = require("@tiangong-lca/cli/dist/src/lib/auth-identity-receipt.js") as {

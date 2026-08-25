@@ -10,7 +10,7 @@ import {
   writeReadyFinalizeFixture,
 } from "../fixtures/finalize-fixtures.ts";
 import * as fixtureRoots from "../fixtures/fixture-roots.ts";
-import { repoRoot, testRunId } from "../fixtures/foundry-core.mjs";
+import { repoRoot, testRunId } from "../fixtures/foundry-core.ts";
 
 const fixtureRootBasenames = {
   annualSupplyFixtureRoot: "annual-supply-deferral-test",
@@ -34,21 +34,22 @@ const fixtureRootBasenames = {
 } as const;
 
 const expectedFixtureRootConsumers = [
-  "test/fixtures/full-context-fixtures.mjs",
-  "test/fixtures/mutation-fixtures.mjs",
-  "test/scenarios/authoring-shared-context.test.mjs",
-  "test/scenarios/curation-cleanup-quality-gates.test.mjs",
-  "test/scenarios/decision-task-context-and-classification.test.mjs",
-  "test/scenarios/flow-classification-authoring.test.mjs",
-  "test/scenarios/flow-identity-decisions.test.mjs",
-  "test/scenarios/full-context-completion-closeout.test.mjs",
-  "test/scenarios/identity-curation-context.test.mjs",
-  "test/scenarios/identity-preflight-run-and-merge.test.mjs",
-  "test/scenarios/location-and-finalize-gates.test.mjs",
-  "test/scenarios/mutation-full-context-evidence.test.mjs",
-  "test/scenarios/mutation-lineage-helpers.test.mjs",
-  "test/scenarios/mutation-manifest-reference-closure.test.mjs",
-  "test/scenarios/post-authoring-finalize-gates.test.mjs",
+  "test/fixtures/full-context-fixtures.ts",
+  "test/fixtures/mutation-fixtures.ts",
+  "test/scenarios/authoring-shared-context.test.mts",
+  "test/scenarios/curation-cleanup-quality-gates.test.mts",
+  "test/scenarios/decision-task-context-and-classification.test.mts",
+  "test/scenarios/flow-classification-authoring.test.mts",
+  "test/scenarios/flow-identity-decisions.test.mts",
+  "test/scenarios/full-context-completion-closeout.test.mts",
+  "test/scenarios/identity-curation-context.test.mts",
+  "test/scenarios/identity-preflight-run-and-merge.test.mts",
+  "test/scenarios/location-and-finalize-gates.test.mts",
+  "test/scenarios/mutation-full-context-evidence.test.mts",
+  "test/scenarios/mutation-lineage-helpers.test.mts",
+  "test/scenarios/mutation-manifest-reference-closure.test.mts",
+  "test/scenarios/post-authoring-finalize-gates.test.mts",
+  "test/unit/context-identity-mutation-fixture-migration.test.mts",
   "test/unit/fixture-helpers-contract.test.mts",
 ] as const;
 
@@ -300,8 +301,8 @@ test("fixture migration ledger retains the two-file reduction as later waves con
   assert.ok(inventory.remaining_count <= 128);
   assert.match(inventory.canonical_path_list_sha256, /^[a-f0-9]{64}$/u);
   for (const legacyPath of [
-    "test/fixtures/fixture-roots.mjs",
-    "test/fixtures/finalize-fixtures.mjs",
+    "test/fixtures/fixture-roots.ts",
+    "test/fixtures/finalize-fixtures.ts",
   ]) {
     assert.equal(inventory.baseline_paths.includes(legacyPath), true);
     assert.equal(fs.existsSync(path.join(repoRoot, legacyPath)), false);

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createLibraryScopeWorkflowCommands } from "../../scripts/commands/library-scope-workflow.ts";
-import { fs, path, testTmpRoot } from "../fixtures/foundry-core.mjs";
+import { fs, path, testTmpRoot } from "../fixtures/foundry-core.ts";
 
 const fixtureRoot = testTmpRoot("library-scope-workflow-elementary-identity-test");
 type DependencyFactory = (dependencies: never) => unknown;

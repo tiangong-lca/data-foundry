@@ -14,8 +14,8 @@ import {
   writeJson,
   writeJsonLines,
   writeText,
-} from "../fixtures/foundry-core.mjs";
-import { testAuthIdentityReceipt } from "../fixtures/identity-fixtures.mjs";
+} from "../fixtures/foundry-core.ts";
+import { testAuthIdentityReceipt } from "../fixtures/identity-fixtures.ts";
 
 const root = path.join(repoRoot, "tmp", "identity-preflight-fail-closed");
 const FLOW_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";

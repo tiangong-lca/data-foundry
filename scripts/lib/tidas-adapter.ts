@@ -204,7 +204,7 @@ export function resolveTidasInvocation(
 }
 
 export function resolveTidasProcessCommand(executable: string): TidasProcessCommand {
-  if (/\.(?:cjs|js|mjs)$/iu.test(executable)) {
+  if (/\.(?:[cm]?[jt]s)$/iu.test(executable)) {
     return {
       command: process.execPath,
       prefixArgs: [executable],

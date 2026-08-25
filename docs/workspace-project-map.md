@@ -80,8 +80,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
-lastReviewedNote: "Reviewed for Issue #67 Wave 27 integration: native entry/runtime and TS7-only command evidence remain Foundry-local; Rust tidas, published CLI/database/search/readback, profiles, Worldsteel/Date.parse and cross-repository boundaries are unchanged."
+lastReviewedCommit: 2173145388df1daab563cf501a1cd44658e4bc3e
+lastReviewedNote: "Reviewed for Issue #67 test integration: native entry/runtime and TypeScript-only test evidence remain Foundry-local; Rust tidas, published CLI/database/search/readback, profiles, Worldsteel/Date.parse and cross-repository boundaries are unchanged."
 ---
 
 # Workspace Project Map

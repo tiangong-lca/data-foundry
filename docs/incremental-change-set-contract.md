@@ -16,13 +16,15 @@ checkPaths:
   - specs/schemas/incremental-change-set.schema.json
   - scripts/commands/incremental-change-set.ts
   - test/unit/incremental-command-migration.test.mts
-  - test/unit/incremental-change-set.test.mjs
+  - test/fixtures/incremental-change-set-fixtures.ts
+  - test/unit/incremental-fixture-migration.test.mts
+  - test/unit/incremental-change-set.test.mts
   - test/commands/incremental-change-set.test.mts
-  - test/scenarios/incremental-change-set-handoff.test.mjs
+  - test/scenarios/incremental-change-set-handoff.test.mts
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
-lastReviewedNote: "Reviewed for Issue #67 Wave 27 command tests: the command contract moves to strict TS7 without changing three-way merge, terminal disposition, dependency, event-chain, artifact algebra, activation, or zero-dispatch semantics."
+lastReviewedCommit: 3a5bd04827ebdcd028f9c08b86641e7a7d3a94e9
+lastReviewedNote: "Reviewed for Issue #67 test integration: native TS7 command, fixture, unit and handoff suites preserve canonical hashes, merge/noise/array rules, dependency activation, artifacts, native errors and zero dispatch."
 ---
 
 # Incremental Change-Set Contract

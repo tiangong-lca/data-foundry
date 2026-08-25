@@ -16,11 +16,11 @@ checkPaths:
   - specs/schemas/execution-capsule-stage.schema.json
   - scripts/commands/execution-capsule.ts
   - test/commands/execution-capsule.test.mts
-  - test/unit/execution-capsule-attempt-state.test.mjs
+  - test/unit/execution-capsule-attempt-state.test.mts
   - test/unit/execution-capsule-command-factory.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
-lastReviewedNote: "Reviewed for Issue #67 Wave 27 command tests: the command contract moves to strict TS7 without changing exclusive immutable outputs, predecessor receipt/hash lineage, CAS/reviewer/boundary checks, seal hashes, zero dispatch, or the no-replay attempt model."
+lastReviewedCommit: f168873fb41cb6064f08b1a901a3439eb0b054e4
+lastReviewedNote: "Reviewed for Issue #67 test integration: native TS7 command and attempt-state suites preserve immutable outputs, receipt/hash lineage, CAS/reviewer/boundary checks, seals, zero dispatch and no replay."
 ---
 
 # Execution Capsule Admission Contract

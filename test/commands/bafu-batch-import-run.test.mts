@@ -20,7 +20,7 @@ import {
   testTmpRoot,
   writeJson,
   writeJsonLines,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 
 const fixtureRoot = testTmpRoot("bafu-batch-import-run-test");
 const processId = "11111111-2222-4333-8444-555555555555";
@@ -1660,7 +1660,7 @@ test("BAFU authoring task filter removes rows already rewritten by identity appl
     });
     assert.equal(result.status, "ready_for_ai_authoring_batch");
     assert.notEqual(result.taskManifest, taskManifest);
-    const filtered = readJson(result.taskManifest);
+    const filtered = readJson(String(result.taskManifest));
     assert.equal(filtered.tasks.length, 1);
     assert.equal(filtered.tasks[0].entity.entity_id, keepId);
     const report = readJson(reportPath);

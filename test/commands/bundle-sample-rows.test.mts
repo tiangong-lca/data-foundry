@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { testAuthIdentityReceipt } from "../fixtures/identity-fixtures.mjs";
+import { testAuthIdentityReceipt } from "../fixtures/identity-fixtures.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const fixtureRoot = path.join(repoRoot, "tmp", "bundle-sample-rows-test");

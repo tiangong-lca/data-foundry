@@ -82,8 +82,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
-lastReviewedNote: "Reviewed for Issue #67 Wave 27 integration: typing entry/runtime owners and local command contracts changes no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse or sibling boundary."
+lastReviewedCommit: 2173145388df1daab563cf501a1cd44658e4bc3e
+lastReviewedNote: "Reviewed for Issue #67 test integration: typing entry/runtime and all local test boundaries changes no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse or sibling boundary."
 ---
 
 # Capability Ownership Policy

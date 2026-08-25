@@ -9,7 +9,7 @@ import {
   runFoundry,
   testTmpRoot,
   writeJsonLines,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 
 test("import ledger report separates verified rows from human-review resume scopes", () => {
   const root = testTmpRoot("import-ledger-report");

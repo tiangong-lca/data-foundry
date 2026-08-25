@@ -699,7 +699,7 @@ export function createIdentityDecisionTaskCommands({
       commands: {
         apply_decisions: [
           process.execPath,
-          path.join(repoRoot, "scripts", "foundry.mjs"),
+          path.join(repoRoot, "scripts", "foundry.ts"),
           "dataset-identity-decisions-apply",
           "--type",
           datasetTypes.length === 1 ? datasetTypes[0] : "<flow-or-process>",

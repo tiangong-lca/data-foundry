@@ -112,6 +112,22 @@ checkPaths:
   - test/fixtures/fixture-roots.ts
   - test/fixtures/finalize-fixtures.ts
   - test/commands/*.test.mts
+  - test/fixtures/fake-tidas.ts
+  - test/fixtures/foundry-core.ts
+  - test/fixtures/full-context-fixtures.ts
+  - test/fixtures/identity-fixtures.ts
+  - test/fixtures/incremental-change-set-fixtures.ts
+  - test/fixtures/mutation-fixtures.ts
+  - test/fixtures/row-builders.ts
+  - test/fixtures/topology-convergence-fixtures.ts
+  - test/unit/unit-source-ledger-test-migration.test.mts
+  - test/unit/unit-execution-library-test-migration.test.mts
+  - test/unit/unit-algorithm-adapter-test-migration.test.mts
+  - test/unit/unit-runtime-policy-test-migration.test.mts
+  - test/scenarios/scenario-authoring-curation-test-migration.test.mts
+  - test/scenarios/scenario-identity-reference-test-migration.test.mts
+  - test/scenarios/scenario-mutation-finalize-test-migration.test.mts
+  - test/scenarios/scenario-library-algorithm-test-migration.test.mts
   - .prettierignore
   - package.json
   - pnpm-lock.yaml
@@ -121,8 +137,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
-lastReviewedNote: "Reviewed for Issue #67 Wave 27 integration: typed entry/runtime and command contracts preserve profile/dependency boundaries, deterministic artifacts, local fixtures and offline fail-close without moving CLI/schema/search/database authority."
+lastReviewedCommit: 3a5bd04827ebdcd028f9c08b86641e7a7d3a94e9
+lastReviewedNote: "Reviewed for Issue #67 test integration: native entry/runtime, command, fixture, unit and scenario boundaries remain local evidence; deterministic artifacts and fail-close move no CLI/schema/search/database authority."
 ---
 
 # Architecture
@@ -221,6 +237,12 @@ The typed decision command boundary now includes `identity-decisions.ts`, `class
 The import-curation entry topology is typed end to end. `profiles.ts` and `trace-summary.ts` are identity-preserving leaf barrels; `import-curation/index.ts` aggregates the eight semantic owner exports; `import-curation.ts` is the public entry consumed by `foundry.mjs`. These modules contain no runtime wrapper or initialization logic. The CLI dispatcher still receives the same injected functions, and command metadata still names the semantic owner modules rather than assigning behavior to a barrel.
 
 The typed adapter/tooling layer keeps external ownership explicit. `tidas-adapter.ts` only selects and validates the Rust machine contract; finalize utilities coordinate existing CLI/identity stages; cutover audit reads Git inventory; Golden comparison creates isolated worktrees and compares normalized local outputs. None owns converter rules, database behavior or production mutation.
+
+The shared fixture topology is typed end to end but remains outside the production build. `foundry-core.ts` provides worktree-local filesystem and command helpers; `row-builders.ts` feeds full-context, identity and mutation evidence fixtures; incremental and topology packages remain separate algorithm fixtures. The fake tidas process is a published-report/exit harness only and is launched through Node executable-plus-argv even without an executable bit. This layer cannot acquire credentials, network access, schema ownership, or mutation authority.
+
+The unit-test topology is now TypeScript-only. Four migration contracts retain the established behavior families and verify that governed paths no longer name `.test.mjs`; test-local types narrow fixture/report values while the production runtime dependency graph and owner module specifiers remain unchanged.
+
+The scenario topology is also TypeScript-only. Four migration contracts retain authoring/curation, identity/reference, mutation/finalize and library/algorithm workflow evidence; the broad fixture-report vocabulary exists only to type already-produced test JSON and grants no runtime or remote authority.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

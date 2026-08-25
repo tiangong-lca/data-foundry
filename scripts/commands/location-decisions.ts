@@ -471,7 +471,7 @@ export function createLocationDecisionCommands({
       commands: {
         apply_decisions: [
           process.execPath,
-          path.join(repoRoot, "scripts", "foundry.mjs"),
+          path.join(repoRoot, "scripts", "foundry.ts"),
           "dataset-location-decisions-apply",
           "--location-queue",
           taskQueuePath,

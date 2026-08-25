@@ -9,7 +9,7 @@ import {
   runFoundry,
   testTmpRoot,
   writeJsonLines,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 
 const fixtureRoot = testTmpRoot("support-cache-test");
 

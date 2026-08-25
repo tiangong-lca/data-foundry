@@ -24,7 +24,7 @@ test("every static decision full-context consumer targets the typed module", () 
   const consumers = [
     "scripts/lib/import-curation/internal/mutation-manifest-workflow.ts",
     "scripts/lib/import-curation/internal/workflow-reference-closure.ts",
-    "test/scenarios/mutation-lineage-helpers.test.mjs",
+    "test/scenarios/mutation-lineage-helpers.test.mts",
     "test/unit/workflow-decision-full-context-contract.test.mts",
   ];
   for (const consumer of consumers) {

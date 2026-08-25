@@ -17,14 +17,14 @@ checkPaths:
   - specs/schemas/topology-convergence.schema.json
   - scripts/commands/topology-convergence.ts
   - test/unit/topology-command-migration.test.mts
-  - test/fixtures/topology-convergence-fixtures.mjs
-  - test/unit/topology-convergence.test.mjs
+  - test/fixtures/topology-convergence-fixtures.ts
+  - test/unit/topology-convergence.test.mts
   - test/commands/topology-convergence.test.mts
-  - test/scenarios/topology-convergence-handoff.test.mjs
+  - test/scenarios/topology-convergence-handoff.test.mts
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
-lastReviewedNote: "Reviewed for Issue #67 Wave 27 command tests: the command contract moves to strict TS7 without changing occurrence identity, F/P/D artifacts, language preservation, delete barriers, audit algebra, or zero-dispatch semantics."
+lastReviewedCommit: 3a5bd04827ebdcd028f9c08b86641e7a7d3a94e9
+lastReviewedNote: "Reviewed for Issue #67 test integration: native TS7 command, fixture, unit and handoff suites preserve occurrence identity, graph/F-P-D order, admission/activation, artifacts, native errors and zero dispatch."
 ---
 
 # Topology Convergence Contract

@@ -1,4 +1,4 @@
-import { path, rel, targetUserId, writeJson } from "./foundry-core.mjs";
+import { path, rel, targetUserId, writeJson } from "./foundry-core.ts";
 
 export type ReadyFinalizeFixtureOptions = {
   root: string;

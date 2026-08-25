@@ -489,7 +489,7 @@ export function createClassificationDecisionCommands({
       commands: {
         apply_decisions: [
           process.execPath,
-          path.join(repoRoot, "scripts", "foundry.mjs"),
+          path.join(repoRoot, "scripts", "foundry.ts"),
           "dataset-classification-decisions-apply",
           "--classification-queue",
           taskQueuePath,

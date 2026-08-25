@@ -121,7 +121,7 @@ test("execution capsule consumers and contract target the typed command owner", 
     "scripts/foundry.ts",
     "scripts/lib/foundry-command-metadata.ts",
     "test/commands/execution-capsule.test.mts",
-    "test/unit/execution-capsule-attempt-state.test.mjs",
+    "test/unit/execution-capsule-attempt-state.test.mts",
     "test/unit/execution-capsule-command-factory.test.mts",
     "docs/execution-capsule-contract.md",
   ]) {

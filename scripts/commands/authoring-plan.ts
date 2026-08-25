@@ -154,7 +154,7 @@ export function createAuthoringPlanCommands({
   writeJson,
 }: AuthoringPlanDependencies) {
   function foundryCommand(args: readonly unknown[]): string {
-    return [process.execPath, path.join(repoRoot, "scripts", "foundry.mjs"), ...args]
+    return [process.execPath, path.join(repoRoot, "scripts", "foundry.ts"), ...args]
       .map(shellQuote)
       .join(" ");
   }

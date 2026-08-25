@@ -57,7 +57,7 @@ test("Golden source preserves Node-native comparison and executable-plus-argv po
   assert.match(source, /scripts\\\/foundry\\\.\(\?:mjs\|ts\)/u);
   assert.match(source, /process\.execPath,\s*\[entry,\s*\.\.\.args\]/u);
   assert.match(source, /readFileSync\(baselinePath\)\.equals\(readFileSync\(currentPath\)\)/u);
-  assert.match(source, /resolveTidasProcessCommand|fake-tidas\.mjs/u);
+  assert.match(source, /resolveTidasProcessCommand|fake-tidas\.(?:mjs|ts)/u);
   assert.doesNotMatch(source, /spawnSync\(\s*["']diff["']/u);
   assert.doesNotMatch(source, /worktree["'],\s*["']add["'].*["']HEAD["']/su);
 });

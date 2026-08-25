@@ -28,7 +28,7 @@ test("every static row transform context consumer targets the typed module", () 
     "scripts/lib/import-curation/internal/workflow-evidence-scope.ts",
     "scripts/lib/import-curation/internal/workflow-identity-preflight.ts",
     "scripts/lib/import-curation/internal/workflow-reference-closure.ts",
-    "test/scenarios/mutation-lineage-helpers.test.mjs",
+    "test/scenarios/mutation-lineage-helpers.test.mts",
     "test/unit/workflow-row-transform-context-contract.test.mts",
   ];
   for (const consumer of consumers) {

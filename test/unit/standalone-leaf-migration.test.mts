@@ -33,7 +33,7 @@ test("four standalone leaves are native TypeScript with updated consumers", () =
     ["scripts/foundry.ts", "./lib/source-semantics.ts"],
     ["scripts/foundry.ts", "./lib/trace-coverage.ts"],
     ["scripts/foundry.ts", "./lib/tidas-row-utils.ts"],
-    ["test/unit/source-semantics.test.mjs", "../../scripts/lib/source-semantics.ts"],
+    ["test/unit/source-semantics.test.mts", "../../scripts/lib/source-semantics.ts"],
   ] as const;
   for (const [consumer, specifier] of expectedConsumers) {
     assert.match(

@@ -10,12 +10,12 @@ import {
   repoRoot,
   runFoundry,
   spawnSync,
-} from "../fixtures/foundry-core.mjs";
+} from "../fixtures/foundry-core.ts";
 import {
   createTopologyConvergenceFixture,
   fixtureSha,
   topologyIds,
-} from "../fixtures/topology-convergence-fixtures.mjs";
+} from "../fixtures/topology-convergence-fixtures.ts";
 
 type ParsedFixture = ReturnType<typeof JSON.parse>;
 type TopologyFixture = ReturnType<typeof createTopologyConvergenceFixture>;
