@@ -1,8 +1,8 @@
 import path from "node:path";
-import { normalizeTidasLanguageCode } from "../../tidas-language-utils.mjs";
+import { normalizeTidasLanguageCode } from "../../tidas-language-utils.ts";
 import { fullContextAiCompletionRequirement } from "./context-inputs.mjs";
 import { dataSetInformation, datasetRoot } from "./dataset-payload.mjs";
-import { sha256Text } from "./hash-utils.mjs";
+import { sha256Text } from "./hash-utils.ts";
 import { annualSupplyMissingDataSentinelText } from "./prewrite-cleanup.mjs";
 import {
   asText,

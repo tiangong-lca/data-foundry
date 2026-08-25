@@ -1,4 +1,4 @@
-import { normalizeTidasLanguageCode, tidasLanguageForText } from "./tidas-language-utils.mjs";
+import { normalizeTidasLanguageCode, tidasLanguageForText } from "./tidas-language-utils.ts";
 
 export function createTidasRowUtils({ asText, bundleRowTypes, cloneJson, ensureArray, writeText }) {
   function datasetRowsFileStem(datasetType) {

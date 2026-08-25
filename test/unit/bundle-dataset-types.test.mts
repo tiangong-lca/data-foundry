@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-import { bundleRowTypeOrder, bundleRowTypes } from "../../scripts/lib/bundle-row-types.mjs";
+import { bundleRowTypeOrder, bundleRowTypes } from "../../scripts/lib/bundle-row-types.ts";
 import {
   datasetRoot,
   detectDatasetType,
@@ -16,7 +16,7 @@ import {
   referenceOnlySupportDatasetTypes,
   supportedDatasetTypes,
   supportDatasetTypes,
-} from "../../scripts/lib/import-curation/internal/dataset-types.mjs";
+} from "../../scripts/lib/import-curation/internal/dataset-types.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 const datasetTypeFromAliases = datasetTypeFromOptions as unknown as (

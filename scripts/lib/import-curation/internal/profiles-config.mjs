@@ -1,5 +1,5 @@
 import { normalizeFullContextAiCompletion } from "./context-inputs.mjs";
-import { datasetTypeFromOptions, defaultProfilesFile, fallbackProfiles } from "./dataset-types.mjs";
+import { datasetTypeFromOptions, defaultProfilesFile, fallbackProfiles } from "./dataset-types.ts";
 import { ensureArray, optionList, readJsonIfExists, resolveRepoPath } from "./runtime-io.mjs";
 
 export function normalizeProfile(rawProfile, profileId) {

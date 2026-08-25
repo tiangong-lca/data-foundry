@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { bundleRowTypeOrder, bundleRowTypes } from "../lib/bundle-row-types.mjs";
+import { bundleRowTypeOrder, bundleRowTypes } from "../lib/bundle-row-types.ts";
 import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
 const bundleSampleStageContract = readOnlyStageContract([

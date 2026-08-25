@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import test from "node:test";
 
-import { sha256Json, sha256Text } from "../../scripts/lib/import-curation/internal/hash-utils.mjs";
+import { sha256Json, sha256Text } from "../../scripts/lib/import-curation/internal/hash-utils.ts";
 
 test("text hashing preserves exact String coercion and SHA-256 bytes", () => {
   assert.equal(sha256Text(""), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");

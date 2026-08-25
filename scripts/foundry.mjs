@@ -27,7 +27,7 @@ import { createTidasWorkflowCommands } from "./commands/tidas-workflow.mjs";
 import { createTopologyConvergenceCommands } from "./commands/topology-convergence.mjs";
 import { createUslciBatchImportRunCommands } from "./commands/uslci-batch-import-run.mjs";
 import { createWorldsteelBatchImportRunCommands } from "./commands/worldsteel-batch-import-run.mjs";
-import { bundleRowTypes } from "./lib/bundle-row-types.mjs";
+import { bundleRowTypes } from "./lib/bundle-row-types.ts";
 import { createBundleSampleUtils } from "./lib/bundle-sample-utils.mjs";
 import { createCanonicalSupportRewriteUtils } from "./lib/canonical-support-rewrites.mjs";
 import { createDecisionTaskUtils } from "./lib/decision-task-utils.mjs";

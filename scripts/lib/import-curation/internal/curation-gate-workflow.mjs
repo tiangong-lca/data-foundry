@@ -14,8 +14,8 @@ export {
   readContextFiles,
 } from "./context-inputs.mjs";
 export { datasetIdentity, identityKey, mapRowsByIdentity } from "./dataset-payload.mjs";
-export { datasetTypeFromOptions, datasetTypePlural } from "./dataset-types.mjs";
-export { sha256Text } from "./hash-utils.mjs";
+export { datasetTypeFromOptions, datasetTypePlural } from "./dataset-types.ts";
+export { sha256Text } from "./hash-utils.ts";
 export { profileFor } from "./profiles-config.mjs";
 export {
   ensureArray,

@@ -6,7 +6,7 @@ import {
   TIDAS_LANGUAGE_CODE_SET,
   normalizeTidasLanguageCode,
   tidasLanguageForText,
-} from "../../scripts/lib/tidas-language-utils.mjs";
+} from "../../scripts/lib/tidas-language-utils.ts";
 
 test("TIDAS language enumeration remains complete, unique, sorted, and stable", () => {
   assert.equal(TIDAS_LANGUAGE_CODES.length, 185);

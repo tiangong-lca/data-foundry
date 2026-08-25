@@ -6,7 +6,7 @@ import {
   datasetRoot,
   identityFreshnessIdentityKey,
 } from "./dataset-payload.mjs";
-import { sha256Json } from "./hash-utils.mjs";
+import { sha256Json } from "./hash-utils.ts";
 import {
   asText,
   ensureArray,

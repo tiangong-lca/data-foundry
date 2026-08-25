@@ -28,6 +28,10 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/bundle-row-types.ts
+  - scripts/lib/tidas-language-utils.ts
+  - scripts/lib/import-curation/internal/hash-utils.ts
+  - scripts/lib/import-curation/internal/dataset-types.ts
   - .prettierignore
   - package.json
   - pnpm-lock.yaml
@@ -84,7 +88,7 @@ entrypoint + args
 
 This boundary avoids a misleading bulk rename. Each module remains in the inventory until a TypeScript replacement preserves its command, artifact, stdout, exit, and safety behavior under focused tests. Completion means no untyped business-runtime modules remain and the full case-driven suite is green.
 
-The argument parser, command registry, command metadata, and surface audit are the first native TypeScript leaves on this path. Their focused characterization preserves scalar/argv parsing, exact help JSON and command order, exit-code families, 63-command metadata schemas, portable source/import auditing, orphan/entrypoint policy, and every static consumer before later entrypoint and dispatcher slices move across the boundary.
+The native TypeScript leaf set now covers argument parsing, command registry/metadata, surface audit, bundle row/root mappings, TIDAS language normalization, exact JSON/text hashing, and dataset-type constants. Focused characterization preserves help/exit/report JSON, portable source auditing, root/table/type aliases, enumeration and language detection, JSON insertion/array order, invalid-input failures, and every static consumer before later entrypoint and dispatcher slices move across the boundary.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

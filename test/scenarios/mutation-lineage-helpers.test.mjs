@@ -1,5 +1,5 @@
 import test from "node:test";
-import { sha256Json } from "../../scripts/lib/import-curation/internal/hash-utils.mjs";
+import { sha256Json } from "../../scripts/lib/import-curation/internal/hash-utils.ts";
 import {
   decisionApplyContextCoversExpectedRowsIdentity,
   decisionApplyContextRelevantToRowsFile,

@@ -1,4 +1,4 @@
-export const TIDAS_LANGUAGE_CODES = [
+export const TIDAS_LANGUAGE_CODES: string[] = [
   "aa",
   "ab",
   "ae",
@@ -186,9 +186,17 @@ export const TIDAS_LANGUAGE_CODES = [
   "zu",
 ];
 
-export const TIDAS_LANGUAGE_CODE_SET = new Set(TIDAS_LANGUAGE_CODES);
+export const TIDAS_LANGUAGE_CODE_SET = new Set<string>(TIDAS_LANGUAGE_CODES);
 
-export function normalizeTidasLanguageCode(language, options = {}) {
+export type TidasLanguageOptions = {
+  fallback?: unknown;
+  field?: unknown;
+};
+
+export function normalizeTidasLanguageCode(
+  language: unknown,
+  options: TidasLanguageOptions = {},
+): string {
   const fallback = options.fallback ?? "en";
   const field = options.field ?? "language";
   const raw = String(language ?? "")
@@ -201,7 +209,7 @@ export function normalizeTidasLanguageCode(language, options = {}) {
   return code;
 }
 
-export function tidasLanguageForText(text, fallback = "en") {
+export function tidasLanguageForText(text: unknown, fallback: unknown = "en"): string {
   const value = String(text ?? "").trim();
   if (!value) return normalizeTidasLanguageCode(fallback);
   return /[\u3400-\u9fff\uf900-\ufaff]/u.test(value) ? "zh" : normalizeTidasLanguageCode(fallback);

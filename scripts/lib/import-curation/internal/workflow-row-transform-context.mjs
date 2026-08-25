@@ -1,7 +1,7 @@
 import { readJsonLinesIfExists } from "./artifact-inputs.mjs";
 import { datasetIdentity, identityFreshnessIdentityKey } from "./dataset-payload.mjs";
 import { payloadSha256ByIdentityForRows } from "./full-context-proof.mjs";
-import { sha256Json, sha256Text } from "./hash-utils.mjs";
+import { sha256Json, sha256Text } from "./hash-utils.ts";
 import {
   asText,
   ensureArray,

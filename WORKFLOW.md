@@ -28,9 +28,16 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/lib/bundle-row-types.ts
+  - scripts/lib/tidas-language-utils.ts
+  - scripts/lib/import-curation/internal/hash-utils.ts
+  - scripts/lib/import-curation/internal/dataset-types.ts
   - test/unit/foundry-cli-spine.test.mts
   - test/unit/foundry-command-metadata.test.mts
   - test/unit/surface-audit-typescript.test.mts
+  - test/unit/bundle-dataset-types.test.mts
+  - test/unit/hash-utils.test.mts
+  - test/unit/tidas-language-utils.test.mjs
   - test/README.md
 lastReviewedAt: 2026-08-25
 lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f

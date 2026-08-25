@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { sha256Json } from "./import-curation/internal/hash-utils.mjs";
+import { sha256Json } from "./import-curation/internal/hash-utils.ts";
 
 export function createPostAuthoringFinalizeUtils({
   asText,

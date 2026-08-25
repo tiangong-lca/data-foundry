@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { bundleRowTypes } from "./bundle-row-types.mjs";
+import { bundleRowTypes } from "./bundle-row-types.ts";
 
 const LEDGER_FILES = {
   manifest: "run-manifest.json",

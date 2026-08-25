@@ -5,7 +5,7 @@ import {
   buildDatasetAuthoringTaskFromPackage,
   writeAuthoringTaskBatchManifest,
 } from "./internal/authoring-task-workflow.mjs";
-import { sha256Text } from "./internal/hash-utils.mjs";
+import { sha256Text } from "./internal/hash-utils.ts";
 import {
   asText,
   fileExists,

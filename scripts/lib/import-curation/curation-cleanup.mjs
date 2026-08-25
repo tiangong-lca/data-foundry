@@ -1,5 +1,5 @@
 import path from "node:path";
-import { datasetTypeFromOptions, datasetTypePlural } from "./internal/dataset-types.mjs";
+import { datasetTypeFromOptions, datasetTypePlural } from "./internal/dataset-types.ts";
 import {
   annualSupplyMissingDataSentinelText,
   applyAnnualSupplyMissingDataSentinel,

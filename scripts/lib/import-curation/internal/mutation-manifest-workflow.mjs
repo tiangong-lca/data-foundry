@@ -1,10 +1,6 @@
 export { fullContextAiCompletionRequirement } from "./context-inputs.mjs";
 export { identityKey, mapRowsByIdentity } from "./dataset-payload.mjs";
-export {
-  datasetTypeFromOptions,
-  datasetTypePlural,
-  supportDatasetTypes,
-} from "./dataset-types.mjs";
+export { datasetTypeFromOptions, datasetTypePlural, supportDatasetTypes } from "./dataset-types.ts";
 export { profileFor } from "./profiles-config.mjs";
 export {
   asText,

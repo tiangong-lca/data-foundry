@@ -1,4 +1,20 @@
-export const supportedDatasetTypes = new Set([
+export type DatasetType =
+  | "contact"
+  | "flow"
+  | "flowproperty"
+  | "lifecyclemodel"
+  | "process"
+  | "source"
+  | "support"
+  | "unitgroup";
+
+export type DatasetTypeOptions = {
+  type?: unknown;
+  datasetType?: unknown;
+  kind?: unknown;
+};
+
+export const supportedDatasetTypes = new Set<string>([
   "contact",
   "flow",
   "flowproperty",
@@ -9,11 +25,11 @@ export const supportedDatasetTypes = new Set([
   "unitgroup",
 ]);
 
-export const supportDatasetTypes = new Set(["contact", "source"]);
+export const supportDatasetTypes = new Set<string>(["contact", "source"]);
 
-export const referenceOnlySupportDatasetTypes = new Set(["unitgroup", "flowproperty"]);
+export const referenceOnlySupportDatasetTypes = new Set<string>(["unitgroup", "flowproperty"]);
 
-export const datasetTypePlural = {
+export const datasetTypePlural: Record<DatasetType, string> = {
   contact: "contacts",
   process: "processes",
   flow: "flows",
@@ -40,7 +56,10 @@ export const fallbackProfiles = {
   },
 };
 
-export function datasetTypeFromOptions(options, forcedType = null) {
+export function datasetTypeFromOptions(
+  options: DatasetTypeOptions,
+  forcedType: unknown = null,
+): DatasetType {
   const datasetType = String(
     forcedType ?? options.type ?? options.datasetType ?? options.kind ?? "process",
   )
@@ -51,5 +70,5 @@ export function datasetTypeFromOptions(options, forcedType = null) {
       `Unsupported dataset type: ${datasetType}. Expected contact, source, unitgroup, flowproperty, support, flow, process, or lifecyclemodel.`,
     );
   }
-  return datasetType;
+  return datasetType as DatasetType;
 }

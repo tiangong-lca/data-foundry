@@ -4,7 +4,7 @@ import {
   datasetTypePlural,
   referenceOnlySupportDatasetTypes,
   supportDatasetTypes,
-} from "./dataset-types.mjs";
+} from "./dataset-types.ts";
 import {
   authoringPackageProofsFromCurationGate,
   authoringPackageProofsFromPatchCollect,

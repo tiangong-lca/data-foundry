@@ -4,7 +4,7 @@ import {
   detectDatasetType,
   identityFreshnessIdentityKey,
 } from "./dataset-payload.mjs";
-import { sha256Json, sha256Text } from "./hash-utils.mjs";
+import { sha256Json, sha256Text } from "./hash-utils.ts";
 import {
   asText,
   ensureArray,

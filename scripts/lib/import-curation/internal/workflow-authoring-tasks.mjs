@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { datasetTypePlural, supportedDatasetTypes } from "./dataset-types.mjs";
-import { sha256Text } from "./hash-utils.mjs";
+import { datasetTypePlural, supportedDatasetTypes } from "./dataset-types.ts";
+import { sha256Text } from "./hash-utils.ts";
 import { annualSupplyMissingDataSentinelText } from "./prewrite-cleanup.mjs";
 import {
   asText,

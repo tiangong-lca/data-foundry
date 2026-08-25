@@ -1,3 +1,9 @@
+export type BundleRowTypeConfig = {
+  plural: string;
+  rootKey: string;
+  informationKey: string;
+};
+
 export const bundleRowTypes = {
   contact: {
     plural: "contacts",
@@ -34,9 +40,11 @@ export const bundleRowTypes = {
     rootKey: "lifeCycleModelDataSet",
     informationKey: "lifeCycleModelInformation",
   },
-};
+} satisfies Record<string, BundleRowTypeConfig>;
 
-export const bundleRowTypeOrder = [
+export type BundleRowType = keyof typeof bundleRowTypes;
+
+export const bundleRowTypeOrder: BundleRowType[] = [
   "contact",
   "source",
   "unitgroup",

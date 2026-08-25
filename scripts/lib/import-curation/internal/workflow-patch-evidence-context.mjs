@@ -1,7 +1,7 @@
 import path from "node:path";
 import { identityKey } from "./dataset-payload.mjs";
 import { evidenceResolutionMode, payloadSha256ByIdentityForRows } from "./full-context-proof.mjs";
-import { sha256Json, sha256Text } from "./hash-utils.mjs";
+import { sha256Json, sha256Text } from "./hash-utils.ts";
 import {
   asText,
   ensureArray,
