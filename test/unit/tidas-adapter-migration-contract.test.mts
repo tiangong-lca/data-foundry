@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { resolveTidasProcessCommand, runTidasHandshake } from "../../scripts/lib/tidas-adapter.mjs";
+import { resolveTidasProcessCommand, runTidasHandshake } from "../../scripts/lib/tidas-adapter.ts";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
@@ -35,7 +35,7 @@ test("TIDAS adapter preserves script executable plus argv dispatch without shell
     command: process.execPath,
     prefixArgs: [script],
   });
-  const source = readRepoFile("scripts/lib/tidas-adapter.mjs");
+  const source = readRepoFile("scripts/lib/tidas-adapter.ts");
   assert.match(
     source,
     /spawnSync\(processCommand\.command,\s*\[\.\.\.processCommand\.prefixArgs,\s*\.\.\.args\]/u,

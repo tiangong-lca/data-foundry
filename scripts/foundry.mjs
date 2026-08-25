@@ -57,7 +57,7 @@ import {
   runTidasImport,
   runTidasPackageValidation,
   runTidasRowsValidation,
-} from "./lib/tidas-adapter.mjs";
+} from "./lib/tidas-adapter.ts";
 import { createTidasRowUtils } from "./lib/tidas-row-utils.ts";
 import { createTraceCoverageUtils } from "./lib/trace-coverage.ts";
 
