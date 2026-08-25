@@ -459,9 +459,16 @@ function runSide(label, root, fixture, cliPath) {
   const commandOut = path.join(sideOut, "commands");
   mkdirSync(commandOut, { recursive: true });
   foundryCommand(root, ["init"], path.join(commandOut, "setup-init.json"));
+  const typedFakeTidas = path.join(root, "test", "fixtures", "fake-tidas.ts");
+  const baselineFakeTidas = path.join(
+    root,
+    "test",
+    "fixtures",
+    `fake-tidas.${["m", "js"].join("")}`,
+  );
   const commonEnv = {
     TIANGONG_LCA_CLI_BIN: cliPath,
-    TIDAS_BIN: path.join(root, "test", "fixtures", "fake-tidas.ts"),
+    TIDAS_BIN: existsSync(typedFakeTidas) ? typedFakeTidas : baselineFakeTidas,
   };
   foundryCommand(root, ["help"], path.join(commandOut, "help.json"), commonEnv);
   foundryCommand(root, ["doctor"], path.join(commandOut, "doctor.json"), commonEnv, 1);
@@ -637,6 +644,10 @@ function normalize(value) {
   output = replacePathVariants(output, pathVariants(repoRoot), "<repo-root>");
   output = replacePathVariants(output, pathVariants(tempRoot), "<temp-root>");
   return output
+    .replace(
+      /<repo-root>[\\/]test[\\/]fixtures[\\/]fake-tidas\.(?:mjs|ts)/gu,
+      "<fake-tidas-script>",
+    )
     .replace(/(?:\.\.[\\/])+before-output/gu, "<side-output>")
     .replace(/(?:\.\.[\\/])+after-output/gu, "<side-output>")
     .replace(/(?:\.\.[\\/])+fixtures/gu, "<temp-root>/fixtures")
