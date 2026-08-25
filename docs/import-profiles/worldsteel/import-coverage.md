@@ -2,7 +2,9 @@
 
 Imported under account **data@worldsteel.org** (uid 7d6d550a). Generated 2026-07-01.
 
-## Result: 33 / 33 processes committed & readback-verified
+> Historical pre-hardening report. It records the 2026-07-01 run, but its accepted foreign `state_code=0` reference is no longer valid verification evidence. Current runs must remain blocked until that dependency resolves to an allowed public or same-owner visible row.
+
+## Historical result: 33 / 33 processes committed; 1 reference no longer qualifies as verified
 
 | Entity (owned by data@worldsteel.org, state_code=0 My Data)                  | Count |
 | ---------------------------------------------------------------------------- | ----- |
@@ -13,7 +15,7 @@ Imported under account **data@worldsteel.org** (uid 7d6d550a). Generated 2026-07
 | Library contact (World Steel Association)                                    | 1     |
 | Database fallback source (worldsteel LCI database)                           | 1     |
 
-Plus **~1,315 EF3.1 reference elementary flows + canonical flow properties / unit groups reused by their original canonical UUID** (never minted), and **1 USLCI trusted reference** (3c4b0e5d "Slag (deposited)", reused from linanenv@126.com by governance rule).
+Plus **~1,315 EF3.1 reference elementary flows + canonical flow properties / unit groups reused by their original canonical UUID** (never minted). The historical USLCI-owned `3c4b0e5d "Slag (deposited)"` reference is foreign/RLS-hidden `state_code=0`; it is now a hard `missing_dataset` blocker and must be replaced before a current run can pass.
 
 ## Processes (33)
 
@@ -54,7 +56,7 @@ Plus **~1,315 EF3.1 reference elementary flows + canonical flow properties / uni
 ## Governance decisions applied
 
 - **Reference-only EF3.1 layer** reused by canonical UUID (deterministic exchange-reference-rewrites); canonical reuse pinned to the latest published version.
-- **USLCI trusted reference** — the one flow owned by the USLCI import account (linanenv@126.com) at state_code=0 is reused by reference, not duplicated (accepted via a pre-verified trusted-reference allowlist).
+- **Foreign reference correction** — the prior USLCI-owned state-0 reuse is retired. A current worldsteel run cannot accept that hidden row and must select an allowed public or same-owner visible dependency.
 - **Account-local mint** for the residual with no canonical match: worldsteel-specific product/waste/pseudo-elementary flows, and the 10+10 EF3.1 LANCA land-use LCIA indicator flow-properties/unit-groups (Erosion Resistance, Mechanical/Physicochemical Filtration, Biotic Production, Groundwater Replenishment — Occupation & Transformation), all written as My Data at 00.00.001 (their native EF3.1 versions were occupied by other accounts).
 - **Content-policy waiver** (process names only): source_locator_in_dataset_name is waived because worldsteel names are "<product> <route> <geography> <data-year>" — reference metadata, not a citation.
 - **Contact** minted under a fresh foundry-owned UUID carrying the real World Steel Association identity (steel@worldsteel.org, Avenue de Tervueren 270; classification Organisations > Other organisations) — never BAFU/FOEN defaults.

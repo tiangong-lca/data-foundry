@@ -37,8 +37,8 @@ checkPaths:
   - specs/typescript-migration-inventory.json
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 604b931b27e79861cdc4b68fc58e4bf95454d23b
-lastReviewedNote: "Reviewed for Issue #63: pnpm 11.23, Node 24, the TypeScript 7 typed-spine boundary, and the published CLI 0.1.0 invocation contract."
+lastReviewedCommit: 4df281285d3653e5d7aa8257303ad0ad15db19fd
+lastReviewedNote: "Reviewed for Issue #65: foreign or RLS-hidden state-0 references remain blocking, while the narrow traceHash-only normalization stays available outside production-test cases."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -60,6 +60,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - External source-evidence and document-extraction skills, including `tiangong-kb-sci-search` and `document-granular-decompose`, are installed or read from the `skills` registry package through `pnpm dlx skills@latest ...` at runtime before use. Do not copy their retrieval or extraction logic into Foundry.
 - Raw converted rows may preserve source-language text only, but final import/write-ready rows must include `en` for TIDAS-required multilingual fields. When source data is not English, preserve the original language variant and add an evidence-backed English translation from full task context before write planning.
 - Do not implement direct database writes in Foundry.
+- Never rewrite `missing_dataset` for a foreign or RLS-hidden `state_code=0` reference to passed, even when another account previously observed that row. Production-test account cases reject every accepted remote difference; ordinary runs may retain only the separately proven root-payload `importTraceSummary.traceHash` normalization.
 - Runtime `.env` files may provide account credentials and command defaults, but they do not replace the task-local `source-manifest.json`, `profile-lock.json`, account/write guard evidence, checkpoints, or artifact ledger. Durable import facts must live in the task workspace.
 
 ## Toolchain And TypeScript Migration Contract

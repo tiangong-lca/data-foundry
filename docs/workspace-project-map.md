@@ -22,8 +22,8 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 604b931b27e79861cdc4b68fc58e4bf95454d23b
-lastReviewedNote: "Reviewed for Issue #63: pnpm/TS7 Foundry ownership and published CLI 0.1.0 routing."
+lastReviewedCommit: 4df281285d3653e5d7aa8257303ad0ad15db19fd
+lastReviewedNote: "Reviewed for Issue #65: CLI/RLS owns visible readback truth; Foundry cannot accept a hidden foreign draft as verified."
 ---
 
 # Workspace Project Map
@@ -41,7 +41,7 @@ Foundry should route reusable work to the owning repository instead of copying i
 | Schema validation | Rust `tidas` (`tidas-tools`) | `node scripts/foundry.mjs dataset-tidas-validate` → `tidas validate` |
 | Deterministic QA and curation gates | `tiangong-lca-cli` | `pnpm exec tiangong-lca qa`, `dataset curation-queue build/next/verify` |
 | Identity-preflight candidate search | Edge Functions for request orchestration; `database-engine` for `extracted_md` lexical and `embedding_ft` semantic execution | Foundry forwards one `lexical_weight` and one `semantic_weight` through `dataset-identity-preflight-run` |
-| Remote commit, readback, and publish prep | `tiangong-lca-cli`, Edge Functions, database | `dataset-post-authoring-finalize` and source/contact support handoff artifacts, installed CLI commit commands, `pnpm exec tiangong-lca dataset verify-remote`, `publish run`, Edge verification |
+| Remote commit, readback, and publish prep | `tiangong-lca-cli`, Edge Functions, database | `dataset-post-authoring-finalize` and source/contact support handoff artifacts, installed CLI commit commands, `pnpm exec tiangong-lca dataset verify-remote`, `publish run`, Edge verification; Foundry does not override foreign/RLS-hidden `missing_dataset` readback |
 | Foundry task routing and manifests | `tiangong-lca-data-foundry` | `scripts/foundry.mjs route-task` |
 | Write/execution policy and blocked-scope ledgers/reports | `tiangong-lca-data-foundry` | `foundry-job.json`, library entity indexes, index-relative process-scope projections, deterministic transform evidence reconciliation, source-only-output exchange proof reconciliation, checkpoints, `blocked-scope-ledger.jsonl`, `blocked-scope-report.json`, mutation manifest aggregation, closeout reports |
 | Incremental release planning and conversion logs | `tiangong-lca-data-foundry` for offline composition; `tiangong-lca-cli` for execution/readback | `dataset-incremental-change-set-compose`, per-conversion JSONL, dependency closure, CLI candidate contract, then fresh reconciliation/capsule admission and published CLI execution |

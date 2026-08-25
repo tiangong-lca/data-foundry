@@ -30,8 +30,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 604b931b27e79861cdc4b68fc58e4bf95454d23b
-lastReviewedNote: "Reviewed for Issue #63: pnpm-only TS7 foundation, staged JavaScript migration inventory, clean-worktree gates, and CLI 0.1.0 examples."
+lastReviewedCommit: 4df281285d3653e5d7aa8257303ad0ad15db19fd
+lastReviewedNote: "Reviewed for Issue #65: remote verification cannot accept foreign/RLS-hidden state-0 missing datasets, and the accepted-diff helper/test advance onto the TS7 spine."
 ---
 
 # TianGong LCA Data Foundry
@@ -41,6 +41,8 @@ Control plane for turning external source material into validated, import-ready 
 Foundry is intentionally thin. It owns task routing, local workspaces, import profiles, curation packages, cleanup reports, stable owner-command adapters, and policy checks. Deterministic package import/conversion/schema validation belongs to unified Rust `tidas`; contract context, QA, curation, skills, and database behavior belongs in `tiangong-lca-cli`, `tidas-sdk`, `tiangong-lca-skills`, Edge Functions, or database projects.
 
 Identity-preflight candidate requests use the current Hybrid Search contract: one `lexical_weight` for the database `extracted_md` branch and one `semantic_weight` for `embedding_ft`.
+
+Remote verification is visibility-bound. A `missing_dataset` reference that is foreign or hidden by RLS remains a blocker and cannot be converted to passed from a trusted-key list or another account's observation. The only retained accepted-difference mechanism is exact root readback whose sole normalized difference is `tiangongfoundry:importTraceSummary.traceHash`; production-test account cases accept no difference at all.
 
 ## Toolchain And Typed Spine
 

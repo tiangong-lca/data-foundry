@@ -24,8 +24,8 @@ checkPaths:
   - docs/safety-policy.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 604b931b27e79861cdc4b68fc58e4bf95454d23b
-lastReviewedNote: "Reviewed for Issue #63: pnpm/TS7 changes remain Foundry-local tooling, while CLI 0.1.0 and runtime skills retain sibling ownership."
+lastReviewedCommit: 4df281285d3653e5d7aa8257303ad0ad15db19fd
+lastReviewedNote: "Reviewed for Issue #65: Foundry may aggregate readback but cannot waive CLI/RLS visibility for foreign state-0 references."
 ---
 
 # Capability Ownership Policy
@@ -44,6 +44,7 @@ Foundry owns:
 - deterministic row-transform evidence reconciliation across source/contact rewrites, canonical support rewrites, identity reference rewrites, unresolved-exchange externalization, and cleanup;
 - deterministic source-only-output exchange proof from explicit source rows when the final process row preserves the non-flow-reference exchange signature;
 - remote-write policy checks, execution policy records, blocked-scope ledgers and reports, and commit/readback handoff aggregation;
+- fail-closed aggregation of CLI readback: foreign or RLS-hidden `state_code=0` `missing_dataset` remains blocking and is not a Foundry-owned acceptance policy;
 - projection of the current identity-preflight request contract, including one lexical and one semantic weight, without owning database search semantics;
 - support dependency finalize/handoff aggregation for profile-generated writable contact/source rows, without directly mutating the database;
 - offline old/candidate/current change-set composition, strict machine validation, entity/path/value/evidence-bound preservation, stable-identity array handling, absent-dependency isolation, immutable artifact manifests, and per-conversion terminal logs, without remote dispatch;

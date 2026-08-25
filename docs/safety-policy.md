@@ -21,8 +21,9 @@ checkPaths:
   - docs/import-profiles/bafu/constraints.md
   - specs/automated-lca-capability-registry.json
   - specs/workspace-capability-adapters.md
-lastReviewedAt: 2026-06-05
-lastReviewedCommit: 18b9caed641add8f7c82f4d7abc5c9e34e50c29d
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: 4df281285d3653e5d7aa8257303ad0ad15db19fd
+lastReviewedNote: "Reviewed for Issue #65: foreign/RLS-hidden state-0 missing datasets are never accepted as successful readback."
 ---
 
 # Safety Policy
@@ -72,6 +73,7 @@ Remote database writes are blocked unless:
 - a dry-run artifact exists
 - the configured remote/readback verification gate passes
 - after commit, `tiangong-lca dataset verify-remote --compare-root-payload --target-user-id <id> --state-code <code>` passes for the exact committed rows
+- `missing_dataset` for a foreign or RLS-hidden `state_code=0` reference is always a hard blocker; another account's observation, a static trusted key, or a profile exception cannot rewrite the check/report to passed. Production-test accounts accept no post-write difference. Ordinary runs may normalize only an exact root payload mismatch proven to differ solely at `tiangongfoundry:importTraceSummary.traceHash` after a fresh CLI readback.
 - after commit and readback, Foundry `dataset-post-write-closeout` reports `completed`; it must prove the handoff was ready, the CLI commit report was a real commit with no row failures, post-write verification used the same final rows, root readback checks have equal local/remote payload hashes, owner/state_code match the handoff, profile-required full schema/YAML/context AI proof and evidence counts remain attached, and any `common:other` trace queues remain attached
 - for a task with one or more committed scopes, Foundry `dataset-import-completion-report` reports `completed` after aggregating every closeout report required by the task; missing closeouts, duplicate closeouts for the same dataset type/final rows, non-completed closeouts, mismatched finalize/mutation scopes, missing profile-required full-context proof or evidence counts, unreadable trace queues, or missing required dataset types keep the task blocked
 - for resumable batch imports, Foundry `dataset-import-ledger-report` must be able to summarize the append-only import ledger into `resume.skipped-verified.jsonl` and `resume.plan.jsonl`, preserving ready-only execution across reruns

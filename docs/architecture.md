@@ -32,8 +32,8 @@ checkPaths:
   - tsconfig*.json
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 604b931b27e79861cdc4b68fc58e4bf95454d23b
-lastReviewedNote: "Reviewed for Issue #63: pnpm/TS7 typed-spine architecture, migration inventory, clean-worktree isolation, and CLI 0.1.0 ownership routing."
+lastReviewedCommit: 4df281285d3653e5d7aa8257303ad0ad15db19fd
+lastReviewedNote: "Reviewed for Issue #65: accepted remote differences exclude every foreign/RLS-hidden state-0 reference, and the helper/test are now typed."
 ---
 
 # Architecture
@@ -149,6 +149,7 @@ The v0 runtime is intentionally small:
 - no persistent database
 - no direct database commit from Foundry code; remote commit is allowed only through official CLI/platform commands when profile gates, write policy, commit handoff, and post-write verification are satisfied
 - profile-authorized owner-draft support maintenance remains a CLI/database responsibility: Foundry freezes the candidate registry and complete-plan evidence, while the CLI submits one database-atomic plan and records its audit/readback proof; Foundry must not split that plan into independently committed dimension batches
+- remote verification never treats a foreign or RLS-hidden `state_code=0` row as reusable evidence: `missing_dataset` remains blocking until the importing account can read an allowed public or same-owner reference. The retained normalization is limited to exact root payloads differing only in import-trace `traceHash`, and production-test accounts disable even that acceptance.
 - generated source/contact support rows may get Foundry-prepared finalize and commit-handoff artifacts, but dependent process/flow/lifecyclemodel scopes must wait for the CLI commit and readback verification of those support rows
 - the exact installed CLI dependency is the default command path: `pnpm exec tiangong-lca ...`
 - test execution is local and layered: `pnpm test` runs all behavior layers, while `pnpm test:unit`, `pnpm test:commands`, and `pnpm test:scenarios` target specific Foundry-owned surfaces; `pnpm test:toolchain` protects the pnpm/TS7 graph and migration inventory
