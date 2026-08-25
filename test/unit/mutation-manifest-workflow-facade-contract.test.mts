@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import * as facadeModule from "../../scripts/lib/import-curation/internal/mutation-manifest-workflow.mjs";
+import * as facadeModule from "../../scripts/lib/import-curation/internal/mutation-manifest-workflow.ts";
 import * as contextInputs from "../../scripts/lib/import-curation/internal/context-inputs.ts";
 import * as datasetPayload from "../../scripts/lib/import-curation/internal/dataset-payload.ts";
 import * as datasetTypes from "../../scripts/lib/import-curation/internal/dataset-types.ts";

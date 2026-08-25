@@ -22,7 +22,7 @@ test("evidence scope exists only as native TypeScript", () => {
 
 test("every static evidence scope consumer targets the typed module", () => {
   const consumers = [
-    "scripts/lib/import-curation/internal/mutation-manifest-workflow.mjs",
+    "scripts/lib/import-curation/internal/mutation-manifest-workflow.ts",
     "test/unit/workflow-evidence-scope-contract.test.mts",
   ];
   for (const consumer of consumers) {

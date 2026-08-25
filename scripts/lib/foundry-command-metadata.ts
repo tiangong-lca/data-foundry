@@ -1180,7 +1180,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-mutation-manifest": metadata({
     category: "workflow-internal",
-    ownerModule: importOwner("mutation-manifest"),
+    ownerModule: typedImportOwner("mutation-manifest"),
     ownerExport: "runDatasetMutationManifest",
     inputs: [
       "final rows",

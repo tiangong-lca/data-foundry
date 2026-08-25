@@ -94,7 +94,7 @@ interface PatchApplyContext extends JsonRecord {
 interface SourceContactSemanticEvidenceOptions {
   repoRoot: string;
   datasetType: unknown;
-  rowsFile: string;
+  rowsFile: string | null;
   sourceContactRewriteContext?: RowsTransformContext | null;
   canonicalSupportRewriteContext?: RowsTransformContext | null;
   cleanupContext?: RowsTransformContext | null;
@@ -192,6 +192,23 @@ interface ReferenceReuseOptions {
 interface PartitionItem {
   decision: string;
   operation?: string | null;
+}
+
+export interface MutationManifestItem extends JsonRecord {
+  dataset_type: string;
+  entity_id: string;
+  version: string;
+  role: string;
+  decision: string;
+  operation: string | null;
+  blockers: JsonRecord[];
+  foundry_traces: {
+    unresolved_traces: unknown[];
+    unresolved_exchange_traces: unknown[];
+    source_exchange_completeness: unknown[];
+  };
+  ai_patch_evidence_count?: number;
+  identity_reference_rewrite_count: number;
 }
 
 type DecisionRelevanceOptions = Parameters<typeof decisionApplyContextRelevantToRowsFile>[0];
@@ -870,7 +887,7 @@ export function buildWriteCandidateItem({
   evidenceScopeBlockers = [],
   allowAccountLocalSupportAndElementary = false,
   profile = null,
-}: WriteCandidateOptions): JsonRecord {
+}: WriteCandidateOptions): MutationManifestItem {
   const key = identityKey(identity);
   const blockers: JsonRecord[] = [];
   blockers.push(...evidenceScopeBlockers);
@@ -1073,7 +1090,7 @@ export function buildWriteCandidateItem({
     version: identity.version,
     role: "write_candidate",
     decision,
-    operation,
+    operation: operation as string | null,
     target_user_id: targetUserId,
     schema_status: schemaStatus,
     curation_status: curationStatus,
@@ -1109,7 +1126,7 @@ export function buildReferenceReuseItems({
   rows,
   writeCandidateKeys,
   identityReferenceRewritesByKey,
-}: ReferenceReuseOptions): JsonRecord[] {
+}: ReferenceReuseOptions): MutationManifestItem[] {
   return rows.map((row, index) => {
     const identity = datasetIdentity(row, index, datasetType);
     const key = identityKey(identity);

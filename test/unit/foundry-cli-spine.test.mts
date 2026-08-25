@@ -345,6 +345,8 @@ test("active documentation and source contain no references to removed CLI spine
     "curation-cleanup.mjs",
     "workflow-reference-closure.mjs",
     "workflow-source-reference-context.mjs",
+    "mutation-manifest-workflow.mjs",
+    "mutation-manifest.mjs",
     "commands/tasks.mjs",
     "commands/import-completion.mjs",
     "commands/commit-handoff.mjs",

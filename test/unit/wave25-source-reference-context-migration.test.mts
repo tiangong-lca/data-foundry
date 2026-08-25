@@ -34,9 +34,7 @@ test("typed source context binds typed closure without explicit escape or suppre
 });
 
 test("mutation workflow facade targets the typed source context", () => {
-  const source = readRepoFile(
-    "scripts/lib/import-curation/internal/mutation-manifest-workflow.mjs",
-  );
+  const source = readRepoFile("scripts/lib/import-curation/internal/mutation-manifest-workflow.ts");
   assert.match(source, /\.\/workflow-source-reference-context\.ts/u);
   assert.doesNotMatch(source, /workflow-source-reference-context\.mjs/u);
 });

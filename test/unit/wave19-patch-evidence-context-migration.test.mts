@@ -22,7 +22,7 @@ test("patch evidence context exists only as native TypeScript", () => {
 
 test("every static patch evidence context consumer targets the typed module", () => {
   const consumers = [
-    "scripts/lib/import-curation/internal/mutation-manifest-workflow.mjs",
+    "scripts/lib/import-curation/internal/mutation-manifest-workflow.ts",
     "scripts/lib/import-curation/internal/workflow-reference-closure.ts",
     "test/unit/workflow-patch-evidence-context-contract.test.mts",
   ];

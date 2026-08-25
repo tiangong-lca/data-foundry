@@ -21,7 +21,7 @@ test("every static profiles config consumer targets the typed module", () => {
   const consumers = [
     "scripts/lib/import-curation/profiles.mjs",
     "scripts/lib/import-curation/internal/curation-gate-workflow.ts",
-    "scripts/lib/import-curation/internal/mutation-manifest-workflow.mjs",
+    "scripts/lib/import-curation/internal/mutation-manifest-workflow.ts",
     "test/scenarios/bafu-mydata-override.test.mjs",
     "test/unit/content-policy-profile-waiver.test.mjs",
     "test/unit/profiles-config-contract.test.mts",

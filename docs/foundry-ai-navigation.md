@@ -192,9 +192,9 @@ Use these semantic modules as the import-curation navigation surface:
 | `scripts/lib/import-curation/patch-collect.ts` | AI patch collection and patch evidence readiness |
 | `scripts/lib/import-curation/curation-cleanup.ts` | deterministic prewrite row cleanup |
 | `scripts/lib/import-curation/trace-summary.mjs` | Foundry trace summarization |
-| `scripts/lib/import-curation/mutation-manifest.mjs` | prewrite mutation manifest and blocker aggregation |
+| `scripts/lib/import-curation/mutation-manifest.ts` | prewrite mutation manifest and blocker aggregation |
 
-Command runners live in the semantic modules above. The remaining reusable workflow logic is exposed through focused internal workflow facets such as `authoring-task-workflow.ts`, `authoring-patch-workflow.ts`, `curation-gate-workflow.ts`, and `mutation-manifest-workflow.mjs`. New command behavior should start in the semantic owner module, with reusable helpers placed in focused internal modules.
+Command runners live in the semantic modules above. The remaining reusable workflow logic is exposed through focused internal workflow facets such as `authoring-task-workflow.ts`, `authoring-patch-workflow.ts`, `curation-gate-workflow.ts`, and `mutation-manifest-workflow.ts`. New command behavior should start in the semantic owner module, with reusable helpers placed in focused internal modules.
 
 Complex workflow commands should also publish an AI-readable `stage_pipeline` contract in their help/report payload. The shared helper is `scripts/lib/stage-contract.mjs`; it standardizes `remote_write_mode`, `stage_pipeline[].stage`, canonical `phase`, `purpose`, `inputs`, `outputs`, `blockers`, `artifacts`, `side_effects`, and a stable `report_contract` requiring `status`, `counts`, `files`, `blockers`, and read-only `remote_write_mode`. Complex commands should expose the canonical phases `prepare`, `rewrite_cleanup`, `gate_validate`, and `report`. `test/unit/foundry-stage-contract.test.mjs` currently enforces this contract for:
 
@@ -233,7 +233,7 @@ Layer rules:
 - `authoring-task-workflow.ts`: typed facade for AI authoring package to task manifest/template preparation helpers.
 - `authoring-patch-workflow.ts`: typed facade for AI patch collection, patch-set validation, and full-context readiness helpers.
 - `curation-gate-workflow.ts`: typed aggregate for curation gate queue, identity-preflight, QA/schema action, and authoring context helpers.
-- `mutation-manifest-workflow.mjs`: prewrite evidence, reference closure, dry-run proof, and write-candidate planning helpers.
+- `mutation-manifest-workflow.ts`: typed aggregate for prewrite evidence, reference closure, dry-run proof, and write-candidate planning helpers.
 - `workflow-queue-context.ts`, `workflow-identity-preflight.ts`, `workflow-identity-decision-context.ts`, `workflow-semantic-actions.ts`, `workflow-authoring-tasks.ts`, `workflow-patch-evidence.ts`, `workflow-patch-evidence-context.ts`, `workflow-patch-collect.ts`, `workflow-row-transform-context.ts`, `workflow-evidence-scope.ts`, `workflow-decision-apply-context.ts`, `workflow-decision-full-context.ts`, `workflow-dry-run-context.ts`, `workflow-source-reference-context.ts`, and `workflow-reference-closure.ts`: focused domain helpers used by the workflow facets above.
 
 Dependencies should point downward only outside the explicitly characterized authoring SCC above. Do not add another cycle edge or split that SCC across JavaScript and TypeScript. Internal low-level modules must not import semantic command modules.

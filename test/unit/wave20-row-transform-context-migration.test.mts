@@ -23,7 +23,7 @@ test("row transform context exists only as native TypeScript", () => {
 test("every static row transform context consumer targets the typed module", () => {
   const consumers = [
     "scripts/lib/import-curation/internal/curation-gate-workflow.ts",
-    "scripts/lib/import-curation/internal/mutation-manifest-workflow.mjs",
+    "scripts/lib/import-curation/internal/mutation-manifest-workflow.ts",
     "scripts/lib/import-curation/internal/workflow-decision-full-context.ts",
     "scripts/lib/import-curation/internal/workflow-evidence-scope.ts",
     "scripts/lib/import-curation/internal/workflow-identity-preflight.ts",

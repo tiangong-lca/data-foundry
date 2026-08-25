@@ -25,7 +25,7 @@ test("typed reference closure has no explicit type escape or suppression", () =>
 
 test("reference closure consumers target the typed module", () => {
   for (const consumer of [
-    "scripts/lib/import-curation/internal/mutation-manifest-workflow.mjs",
+    "scripts/lib/import-curation/internal/mutation-manifest-workflow.ts",
     "scripts/lib/import-curation/internal/workflow-source-reference-context.ts",
   ]) {
     const source = readRepoFile(consumer);
