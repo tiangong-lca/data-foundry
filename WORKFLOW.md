@@ -25,7 +25,7 @@ checkPaths:
   - specs/capability-ownership-rules.json
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 4df281285d3653e5d7aa8257303ad0ad15db19fd
+lastReviewedCommit: 4df2812efef776dc5f687d358ba19509ba192aa1
 lastReviewedNote: "Reviewed for Issue #65: foreign/RLS-hidden state-0 missing references remain blocked through readback, with no production-test accepted-diff escape hatch."
 tracker:
   kind: filesystem

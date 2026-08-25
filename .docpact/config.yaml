@@ -8,7 +8,7 @@ layout: repo
 # Review note, 2026-08-25: Issue #63 establishes the pnpm 11.23 / Node 24 / TypeScript 7.0.2 typed spine, explicit JavaScript migration inventory, Oxlint boundary, CLI 0.1.0 command pin, and clean arbitrary-worktree validation. Existing ownership and routing semantics are unchanged.
 # Review note, 2026-08-25: Issue #65 removes the foreign/RLS-hidden state-0 missing-dataset accepted-diff path from the helper, shared batch runner, and worldsteel config; legitimate root traceHash-only normalization remains, and the touched helper/test migrate to TypeScript.
 lastReviewedAt: "2026-08-25"
-lastReviewedCommit: "4df281285d3653e5d7aa8257303ad0ad15db19fd"
+lastReviewedCommit: "4df2812efef776dc5f687d358ba19509ba192aa1"
 
 catalog:
   repos:

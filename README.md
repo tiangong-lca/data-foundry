@@ -30,7 +30,7 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 4df281285d3653e5d7aa8257303ad0ad15db19fd
+lastReviewedCommit: 4df2812efef776dc5f687d358ba19509ba192aa1
 lastReviewedNote: "Reviewed for Issue #65: remote verification cannot accept foreign/RLS-hidden state-0 missing datasets, and the accepted-diff helper/test advance onto the TS7 spine."
 ---
 
