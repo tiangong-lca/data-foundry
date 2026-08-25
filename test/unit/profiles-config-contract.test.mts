@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import * as profilesConfig from "../../scripts/lib/import-curation/internal/profiles-config.mjs";
+import * as profilesConfig from "../../scripts/lib/import-curation/internal/profiles-config.ts";
 import { fallbackProfiles } from "../../scripts/lib/import-curation/internal/dataset-types.ts";
 
 function writeText(filePath: string, text: string): void {
@@ -250,7 +250,7 @@ test("profile listing preserves config key order, normalized public fields, defa
     assert.deepEqual(Object.keys(fallback.profiles), ["generic"]);
     assert.equal(fallback.schema_version, 1);
     assert.throws(
-      () => profilesConfig.listImportProfiles(null),
+      () => profilesConfig.listImportProfiles(null as never),
       (error: unknown) => error instanceof TypeError,
     );
   });

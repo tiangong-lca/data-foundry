@@ -169,7 +169,7 @@ semantic import-curation modules
   -> internal/*-workflow.mjs
   -> internal/workflow-*.mjs
   -> internal/full-context-proof.ts
-  -> internal/profiles-config.mjs
+  -> internal/profiles-config.ts
   -> internal/trace-summary.ts
   -> internal/dataset-payload.ts
   -> internal/dataset-types.ts
@@ -181,7 +181,7 @@ Layer rules:
 - `runtime-io.ts`: generic time, array, text, JSON/JSONL, filesystem, and path helpers.
 - `dataset-types.ts`: supported dataset type sets, plural names, and fallback profile constants.
 - `dataset-payload.ts`: TIDAS row payload unwrap, dataset root/type detection, dataset identity, and identity map keys.
-- `profiles-config.mjs`: import profile loading, normalization, listing, and lookup.
+- `profiles-config.ts`: import profile loading, normalization, listing, and lookup.
 - `trace-summary.ts`: Foundry trace entry collection and compact trace summaries.
 - `prewrite-cleanup.ts`: deterministic write-preparation transforms such as annual-supply sentinel completion, import trace externalization, Foundry trace namespace repair, local locator redaction, and timestamp normalization.
 - `full-context-proof.ts`: full-context package/task proof loading and blocker construction.

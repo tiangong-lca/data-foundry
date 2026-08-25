@@ -16,7 +16,7 @@ export {
 export { datasetIdentity, identityKey, mapRowsByIdentity } from "./dataset-payload.ts";
 export { datasetTypeFromOptions, datasetTypePlural } from "./dataset-types.ts";
 export { sha256Text } from "./hash-utils.ts";
-export { profileFor } from "./profiles-config.mjs";
+export { profileFor } from "./profiles-config.ts";
 export {
   ensureArray,
   fileExists,

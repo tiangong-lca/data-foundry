@@ -3,7 +3,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { profileFor } from "../../scripts/lib/import-curation/internal/profiles-config.mjs";
+import { profileFor } from "../../scripts/lib/import-curation/internal/profiles-config.ts";
 import { prewriteContentQualityBlockers } from "../../scripts/lib/import-curation/internal/workflow-identity-preflight.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");

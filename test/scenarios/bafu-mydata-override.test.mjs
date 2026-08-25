@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { normalizeProfile } from "../../scripts/lib/import-curation/internal/profiles-config.mjs";
+import { normalizeProfile } from "../../scripts/lib/import-curation/internal/profiles-config.ts";
 import {
   flowPrewriteIdentityBlockers,
   prewriteIdentityBlockers,
