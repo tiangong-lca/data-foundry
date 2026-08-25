@@ -21,7 +21,7 @@ import {
   fixtureSha256Json,
   fixtureTables,
   fixtureUpdatePointer,
-} from "../fixtures/incremental-change-set-fixtures.mjs";
+} from "../fixtures/incremental-change-set-fixtures.ts";
 
 function compose(fixture) {
   return runFoundry([

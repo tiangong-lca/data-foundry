@@ -16,7 +16,7 @@ import {
   fixtureBoundRule,
   fixtureSha256Json,
   fixtureValueSha256,
-} from "../fixtures/incremental-change-set-fixtures.mjs";
+} from "../fixtures/incremental-change-set-fixtures.ts";
 
 test("incremental JSONL reader preserves line numbers and hashes without whole-file strings", (t) => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-incremental-jsonl-"));

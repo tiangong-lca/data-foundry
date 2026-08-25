@@ -4,11 +4,135 @@ import path from "node:path";
 import { repoRoot, testTmpRoot, writeJson, writeJsonLines } from "./foundry-core.ts";
 
 const version = "01.00.000";
-const allTables = ["contacts", "unitgroups", "flowproperties", "sources", "flows", "processes"];
+const allTables = [
+  "contacts",
+  "unitgroups",
+  "flowproperties",
+  "sources",
+  "flows",
+  "processes",
+] as const;
 
-function stableValue(value) {
+type FixtureTable = keyof typeof tableShape;
+type JsonRecord = Record<string, unknown>;
+
+interface FixtureScope {
+  allowed_tables: string[];
+  allowed_target_keys: string[];
+  allowed_update_pointer_prefixes: Record<string, string[]>;
+  allow_account_local_support: boolean;
+}
+
+interface FileFacts {
+  path: string;
+  sha256: string;
+  bytes: number;
+  rows?: number;
+}
+
+interface FixtureComparisonRow extends JsonRecord {
+  schema_version: string;
+  conversion_id: string;
+  entity: { table: FixtureTable; id: string; version: string };
+  old_payload: unknown;
+  new_payload: unknown;
+  old_payload_sha256: string | null;
+  candidate_payload_sha256: string | null;
+  dependency_conversion_ids: string[];
+}
+
+interface FixtureOwner {
+  user_id: string;
+  email: string;
+  [key: string]: unknown;
+}
+
+interface FixtureOwnerRow extends JsonRecord {
+  schema_version: string;
+  project_ref: string;
+  entity: { table: FixtureTable; id: string; version: string };
+  json_ordered: unknown;
+  payload_sha256: string;
+  role: string;
+  owner: FixtureOwner;
+  state_code: number;
+}
+
+interface FixtureBoundRule extends JsonRecord {
+  entity_key: string;
+  pointer: string;
+  old_value_sha256: string;
+  candidate_value_sha256: string;
+  current_value_sha256: string;
+  evidence_sha256: string;
+}
+
+interface FixtureBoundRuleInput extends JsonRecord {
+  entityKey: string;
+  pointer: string;
+  oldValue: unknown;
+  candidateValue: unknown;
+  currentValue: unknown;
+  evidence?: unknown;
+}
+
+interface FixtureTablePolicy {
+  allow_insert: boolean;
+  allow_update: boolean;
+  semantic_noise_rules: FixtureBoundRule[];
+  conflict_rules: FixtureBoundRule[];
+  array_merge_rules: FixtureBoundRule[];
+}
+
+interface FixturePolicy extends JsonRecord {
+  schema_version: string;
+  semantic_domain: string;
+  type_rank: string[];
+  table_policies: Record<string, FixtureTablePolicy>;
+}
+
+interface TerminalSuccessReceiptReference extends JsonRecord {
+  path: string;
+  schema_version: string;
+  status: string;
+  bytes: number;
+  sha256: string;
+}
+
+interface TerminalExclusion extends JsonRecord {
+  action_id?: unknown;
+  desired_sha256?: unknown;
+  evidence_sha256?: unknown;
+  success_receipt?: TerminalSuccessReceiptReference | null;
+}
+
+interface FixtureSettings {
+  allowAccountLocalSupport: boolean;
+  allowedTables: FixtureTable[] | null;
+  allowedUpdatePointerPrefixes: Record<string, string[]>;
+  receiptOverrides: JsonRecord;
+  terminalReceiptReferenceOverrides: JsonRecord;
+  requestOverrides: JsonRecord;
+}
+
+interface FixtureMutationContext {
+  comparisons: FixtureComparisonRow[];
+  ids: Record<string, string>;
+  owner: FixtureOwner;
+  ownerRows: FixtureOwnerRow[];
+  policy: FixturePolicy;
+  projectRef: string;
+  settings: FixtureSettings;
+  terminalExclusions: TerminalExclusion[];
+}
+
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stableValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stableValue);
-  if (value && typeof value === "object") {
+  if (isRecord(value)) {
     return Object.fromEntries(
       Object.entries(value)
         .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
@@ -18,18 +142,18 @@ function stableValue(value) {
   return value;
 }
 
-export function fixtureSha256Json(value) {
+export function fixtureSha256Json(value: unknown): string {
   return crypto
     .createHash("sha256")
     .update(JSON.stringify(stableValue(value)))
     .digest("hex");
 }
 
-function rawJsonLineSha256(value) {
+function rawJsonLineSha256(value: unknown): string {
   return crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
-function canonicalScope(scope) {
+function canonicalScope(scope: FixtureScope): FixtureScope {
   return {
     allowed_tables: [...scope.allowed_tables].sort(),
     allowed_target_keys: [...scope.allowed_target_keys].sort(),
@@ -42,7 +166,7 @@ function canonicalScope(scope) {
   };
 }
 
-export function fixtureValueSha256(value) {
+export function fixtureValueSha256(value: unknown): string {
   return fixtureSha256Json(
     value === undefined
       ? { schema_version: "foundry-bound-value.v1", presence: "missing" }
@@ -50,7 +174,7 @@ export function fixtureValueSha256(value) {
   );
 }
 
-function fileFacts(filePath, jsonLines) {
+function fileFacts(filePath: string, jsonLines: boolean): FileFacts {
   const bytes = fs.readFileSync(filePath);
   const rows = jsonLines
     ? fs
@@ -73,18 +197,23 @@ const tableShape = {
   sources: ["sourceDataSet", "sourceInformation"],
   flows: ["flowDataSet", "flowInformation"],
   processes: ["processDataSet", "processInformation"],
-};
+} as const;
 
-function dataSetInformationPointer(table) {
+function dataSetInformationPointer(table: FixtureTable): string {
   const [rootKey, informationKey] = tableShape[table];
   return `/${rootKey}/${informationKey}/dataSetInformation`;
 }
 
-export function fixtureEntityKey(table, id, entityVersion = version) {
+export function fixtureEntityKey(table: FixtureTable, id: string, entityVersion = version): string {
   return `${table}/${id}@${entityVersion}`;
 }
 
-export function fixturePayload(table, id, fields = {}, entityVersion = version) {
+export function fixturePayload(
+  table: FixtureTable,
+  id: string,
+  fields: JsonRecord = {},
+  entityVersion = version,
+) {
   const [rootKey, informationKey] = tableShape[table];
   return {
     [rootKey]: {
@@ -102,14 +231,14 @@ export function fixturePayload(table, id, fields = {}, entityVersion = version) 
 }
 
 export function fixtureComparison(
-  conversionId,
-  table,
-  id,
-  oldPayload,
-  newPayload,
-  dependencies = [],
+  conversionId: string,
+  table: FixtureTable,
+  id: string,
+  oldPayload: unknown,
+  newPayload: unknown,
+  dependencies: string[] = [],
   entityVersion = version,
-) {
+): FixtureComparisonRow {
   return {
     schema_version: "foundry-incremental-change-set-comparison-row.v1",
     conversion_id: conversionId,
@@ -123,14 +252,14 @@ export function fixtureComparison(
 }
 
 export function fixtureOwnerRow(
-  table,
-  id,
-  payload,
-  owner,
+  table: FixtureTable,
+  id: string,
+  payload: unknown,
+  owner: FixtureOwner,
   projectRef = "fixture-project-ref",
   stateCode = 0,
   entityVersion = version,
-) {
+): FixtureOwnerRow {
   return {
     schema_version: "foundry-incremental-change-set-owner-row.v1",
     project_ref: projectRef,
@@ -151,7 +280,7 @@ export function fixtureBoundRule({
   currentValue,
   evidence = { source: "fixture-policy-evidence" },
   ...rest
-}) {
+}: FixtureBoundRuleInput): FixtureBoundRule {
   return {
     entity_key: entityKey,
     pointer,
@@ -163,7 +292,7 @@ export function fixtureBoundRule({
   };
 }
 
-function emptyTablePolicy() {
+function emptyTablePolicy(): FixtureTablePolicy {
   return {
     allow_insert: true,
     allow_update: true,
@@ -173,7 +302,10 @@ function emptyTablePolicy() {
   };
 }
 
-export function createIncrementalChangeSetFixture(name, mutate = () => {}) {
+export function createIncrementalChangeSetFixture(
+  name: string,
+  mutate: (context: FixtureMutationContext) => void = () => {},
+) {
   const root = testTmpRoot(`incremental-change-set-${name}`);
   fs.rmSync(root, { recursive: true, force: true });
   fs.mkdirSync(root, { recursive: true });
@@ -265,7 +397,7 @@ export function createIncrementalChangeSetFixture(name, mutate = () => {}) {
   ];
   const noisePointer = `${dataSetInformationPointer("sources")}/amount`;
   const curatedPointer = `${dataSetInformationPointer("sources")}/curatedName`;
-  const policy = {
+  const policy: FixturePolicy = {
     schema_version: "foundry-incremental-change-set-preservation-policy.v1",
     semantic_domain: "fixture-incremental-semantic.v1",
     type_rank: [...allTables],
@@ -293,8 +425,8 @@ export function createIncrementalChangeSetFixture(name, mutate = () => {}) {
       evidence: { reason: "reviewed owner curation" },
     }),
   );
-  const terminalExclusions = [];
-  const settings = {
+  const terminalExclusions: TerminalExclusion[] = [];
+  const settings: FixtureSettings = {
     allowAccountLocalSupport: false,
     allowedTables: null,
     allowedUpdatePointerPrefixes: Object.fromEntries(
@@ -320,14 +452,16 @@ export function createIncrementalChangeSetFixture(name, mutate = () => {}) {
     ...new Set(comparisons.map((row) => row.entity.table)),
   ];
   for (const table of Object.keys(policy.table_policies)) {
-    if (!allowedTables.includes(table)) delete policy.table_policies[table];
+    if (!allowedTables.includes(table as FixtureTable)) delete policy.table_policies[table];
   }
-  policy.type_rank = policy.type_rank.filter((table) => allowedTables.includes(table));
+  policy.type_rank = policy.type_rank.filter((table) =>
+    allowedTables.includes(table as FixtureTable),
+  );
   const allowedTargetKeys = new Set(
     comparisons.map((row) => fixtureEntityKey(row.entity.table, row.entity.id, row.entity.version)),
   );
   for (const tablePolicy of Object.values(policy.table_policies)) {
-    for (const field of ["semantic_noise_rules", "conflict_rules", "array_merge_rules"]) {
+    for (const field of ["semantic_noise_rules", "conflict_rules", "array_merge_rules"] as const) {
       tablePolicy[field] = tablePolicy[field].filter((rule) =>
         allowedTargetKeys.has(rule.entity_key),
       );
@@ -354,7 +488,7 @@ export function createIncrementalChangeSetFixture(name, mutate = () => {}) {
   writeJson(policyPath, policy);
   const ownerFacts = fileFacts(ownerPath, true);
   const canonicalTargetKeys = [...allowedTargetKeys].sort();
-  const ownerRowsByKey = new Map();
+  const ownerRowsByKey = new Map<string, FixtureOwnerRow[]>();
   for (const row of ownerRows) {
     const key = fixtureEntityKey(row.entity.table, row.entity.id, row.entity.version);
     const rows = ownerRowsByKey.get(key) ?? [];
@@ -389,7 +523,13 @@ export function createIncrementalChangeSetFixture(name, mutate = () => {}) {
     ...settings.receiptOverrides,
   };
   writeJson(receiptPath, receipt);
-  const request = {
+  const inputArtifacts: Record<string, FileFacts> = {
+    comparisons: fileFacts(comparisonsPath, true),
+    owner_snapshot: ownerFacts,
+    owner_snapshot_receipt: fileFacts(receiptPath, false),
+    preservation_policy: fileFacts(policyPath, false),
+  };
+  const request: JsonRecord & { input_artifacts: Record<string, FileFacts> } = {
     schema_version: "foundry-incremental-change-set-request.v1",
     change_set_id: `fixture-${name}`,
     producer_id: "fixture-projector",
@@ -398,12 +538,7 @@ export function createIncrementalChangeSetFixture(name, mutate = () => {}) {
     production_authority: false,
     owner: { ...owner, state_code: 0 },
     scope,
-    input_artifacts: {
-      comparisons: fileFacts(comparisonsPath, true),
-      owner_snapshot: ownerFacts,
-      owner_snapshot_receipt: fileFacts(receiptPath, false),
-      preservation_policy: fileFacts(policyPath, false),
-    },
+    input_artifacts: inputArtifacts,
     consumer: {
       schema_version: "dataset-save-draft-execution-contract.v1",
       cli_version: "0.0.31",
