@@ -471,6 +471,37 @@ test("unproven canonical Unit Group remains fail-closed unless the account-local
   });
 });
 
+test("account-local override leaves an already-canonical stale version unchanged when Unit Group proof is missing", () => {
+  withTempRoot("canonical-stale-unproven-override", (root) => {
+    const rowsFile = path.join(root, "flows.jsonl");
+    const cacheFile = path.join(root, "cache.json");
+    writeJson(cacheFile, canonicalCache({ includeUnitGroup: false }));
+    writeJsonLines(rowsFile, [staleCanonicalFlowRow("flow-stale-unproven")]);
+
+    const report = makeUtils(root).applyCanonicalSupportRewrites({
+      datasetType: "flow",
+      rowsFile,
+      outDir: path.join(root, "out"),
+      options: {
+        canonicalSupportCache: cacheFile,
+        allowAccountLocalSupportAndElementary: true,
+      },
+    });
+
+    assert.equal(report.status, "completed_no_rewrites");
+    assert.deepEqual(report.blockers, []);
+    assert.equal(report.counts.canonical_flow_property_reference_rewrites, 0);
+    assert.equal(report.counts.canonical_unit_group_reference_proofs, 0);
+    const output = readJsonLines(path.join(root, "out", "flows.canonical-support-rewritten.jsonl"));
+    assert.equal(
+      output[0].flowDataSet.flowProperties.flowProperty[0].referenceToFlowPropertyDataSet[
+        "@version"
+      ],
+      "00.00.001",
+    );
+  });
+});
+
 test("canonical rewrite retains empty-run artifacts and native JSON/filesystem errors", () => {
   withTempRoot("canonical-support-errors", (root) => {
     const rowsFile = path.join(root, "empty.jsonl");
