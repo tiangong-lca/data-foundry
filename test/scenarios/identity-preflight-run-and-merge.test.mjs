@@ -90,6 +90,8 @@ test("identity preflight batch runner records timed-out CLI rows without hanging
       {
         env: {
           TIANGONG_LCA_CLI_BIN: fakeCli,
+          FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
+          FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
         },
         timeout: 5_000,
       },

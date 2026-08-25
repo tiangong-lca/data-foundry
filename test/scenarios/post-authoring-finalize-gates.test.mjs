@@ -207,6 +207,8 @@ process.exit(2);
       {
         env: {
           TIANGONG_LCA_CLI_BIN: fakeCli,
+          FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
+          FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
           FOUNDRY_FAKE_CLI_CALLS: callsFile,
         },
       },
@@ -473,7 +475,13 @@ process.stdout.write(JSON.stringify(report));
         "--out-dir",
         rel(path.join(root, "finalize")),
       ],
-      { env: { TIANGONG_LCA_CLI_BIN: fakeCli } },
+      {
+        env: {
+          TIANGONG_LCA_CLI_BIN: fakeCli,
+          FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
+          FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+        },
+      },
     );
 
     assert.equal(finalize.code, 1);
@@ -571,35 +579,43 @@ test("post-authoring finalize skips forced identity preflight refresh when curre
   writeJson(authReceiptFile, testAuthIdentityReceipt());
 
   try {
-    const finalize = runFoundry([
-      "dataset-post-authoring-finalize",
-      "--type",
-      "process",
-      "--profile",
-      "bafu",
-      "--rows-file",
-      rel(rowsFile),
-      "--identity-preflight-index",
-      rel(identityPreflightIndex),
-      "--run-identity-preflight",
-      "--refresh-identity-preflight",
-      "--schema-file",
-      rel(context.schemaFile),
-      "--yaml-file",
-      rel(context.yamlFile),
-      "--ruleset-file",
-      rel(context.rulesetFile),
-      "--target-user-id",
-      targetUserId,
-      "--auth-receipt",
-      rel(authReceiptFile),
-      "--expected-project-ref",
-      "qgzvkongdjqiiamzbbts",
-      "--expected-user-id",
-      "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
-      "--out-dir",
-      rel(path.join(root, "finalize")),
-    ]);
+    const finalize = runFoundry(
+      [
+        "dataset-post-authoring-finalize",
+        "--type",
+        "process",
+        "--profile",
+        "bafu",
+        "--rows-file",
+        rel(rowsFile),
+        "--identity-preflight-index",
+        rel(identityPreflightIndex),
+        "--run-identity-preflight",
+        "--refresh-identity-preflight",
+        "--schema-file",
+        rel(context.schemaFile),
+        "--yaml-file",
+        rel(context.yamlFile),
+        "--ruleset-file",
+        rel(context.rulesetFile),
+        "--target-user-id",
+        targetUserId,
+        "--auth-receipt",
+        rel(authReceiptFile),
+        "--expected-project-ref",
+        "qgzvkongdjqiiamzbbts",
+        "--expected-user-id",
+        "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+        "--out-dir",
+        rel(path.join(root, "finalize")),
+      ],
+      {
+        env: {
+          FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
+          FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+        },
+      },
+    );
 
     assert.equal(finalize.json.counts.identity_preflight_refresh_required, false);
     assert.equal(finalize.json.counts.identity_preflight_refresh_forced, false);

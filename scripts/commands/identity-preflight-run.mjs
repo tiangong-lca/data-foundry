@@ -272,19 +272,26 @@ export function createIdentityPreflightRunCommands({
     const authReceiptPath = resolveRepoPath(
       options.authReceipt || options.authIdentityReceipt || options.accountReceipt,
     );
-    const expectedProjectRef = asText(
-      options.expectedProjectRef ||
-        options.expectedProject ||
-        options.projectRef ||
-        process.env.FOUNDRY_VERIFIED_PROJECT_REF ||
-        process.env.FOUNDRY_EXPECTED_PROJECT_REF,
+    const verifiedProjectRef = asText(process.env.FOUNDRY_VERIFIED_PROJECT_REF);
+    const verifiedUserId = asText(process.env.FOUNDRY_VERIFIED_USER_ID);
+    const optionExpectedProjectRef = asText(
+      options.expectedProjectRef || options.expectedProject || options.projectRef,
     );
-    const expectedUserId = asText(
-      options.expectedUserId ||
-        options.targetUserId ||
-        process.env.FOUNDRY_VERIFIED_USER_ID ||
-        process.env.FOUNDRY_EXPECTED_USER_ID,
-    );
+    const optionExpectedUserId = asText(options.expectedUserId || options.targetUserId);
+    if (
+      (verifiedProjectRef &&
+        optionExpectedProjectRef &&
+        verifiedProjectRef !== optionExpectedProjectRef) ||
+      (verifiedUserId && optionExpectedUserId && verifiedUserId !== optionExpectedUserId)
+    ) {
+      throw new Error("Identity-preflight expected account does not match the receipt-bound env.");
+    }
+    const expectedProjectRef =
+      verifiedProjectRef ||
+      optionExpectedProjectRef ||
+      asText(process.env.FOUNDRY_EXPECTED_PROJECT_REF);
+    const expectedUserId =
+      verifiedUserId || optionExpectedUserId || asText(process.env.FOUNDRY_EXPECTED_USER_ID);
     let authReceipt = null;
     if (!dryRun && selectedRows.length > 0) {
       if (!expectedProjectRef || !expectedUserId) {
@@ -294,6 +301,11 @@ export function createIdentityPreflightRunCommands({
       }
       let receiptValue;
       if (authReceiptPath) {
+        if (!verifiedProjectRef || !verifiedUserId) {
+          throw new Error(
+            "Explicit --auth-receipt requires a receipt-bound Foundry account environment.",
+          );
+        }
         if (!fileExists(authReceiptPath)) {
           throw new Error("--auth-receipt must point to a readable CLI AuthIdentityReceipt.");
         }

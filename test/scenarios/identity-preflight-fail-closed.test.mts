@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 import {
@@ -123,7 +124,13 @@ function runCase(mode: string, extraArgs: string[] = []) {
       ...extraArgs,
     ],
     {
-      env: { TIANGONG_LCA_CLI_BIN: fixture.fakeCli, FAKE_MODE: mode, FAKE_MARKER: fixture.marker },
+      env: {
+        TIANGONG_LCA_CLI_BIN: fixture.fakeCli,
+        FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
+        FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+        FAKE_MODE: mode,
+        FAKE_MARKER: fixture.marker,
+      },
     },
   );
   return { fixture, result };
@@ -172,6 +179,8 @@ test("only-pending skips only an exact bound execution manifest", () => {
     {
       env: {
         TIANGONG_LCA_CLI_BIN: fixture.fakeCli,
+        FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
+        FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
         FAKE_MODE: "valid",
         FAKE_MARKER: fixture.marker,
       },
@@ -204,6 +213,8 @@ test("only-pending skips only an exact bound execution manifest", () => {
     {
       env: {
         TIANGONG_LCA_CLI_BIN: fixture.fakeCli,
+        FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
+        FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
         FAKE_MODE: "valid",
         FAKE_MARKER: fixture.marker,
       },
@@ -234,6 +245,8 @@ test("fresh receipt rotation preserves account-bound only-pending reuse", () => 
   ];
   const env = {
     TIANGONG_LCA_CLI_BIN: fixture.fakeCli,
+    FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
+    FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
     FAKE_MODE: "valid",
     FAKE_MARKER: fixture.marker,
     FAKE_AUTH_RECEIPTS: receiptsFile,
@@ -252,4 +265,36 @@ test("fresh receipt rotation preserves account-bound only-pending reuse", () => 
   assert.equal(second.json.counts.skipped_bound_execution, 1);
   assert.equal(fs.readFileSync(fixture.marker, "utf8").trim().split(/\r?\n/u).length, 1);
   assert.equal(fs.readFileSync(authMarker, "utf8"), "2");
+});
+
+test("explicit receipt cannot substitute another receipt-bound account", () => {
+  const fixture = prepare("cross-account-substitution");
+  const result = spawnSync(
+    process.execPath,
+    [
+      "scripts/foundry.mjs",
+      "dataset-identity-preflight-run",
+      "--index",
+      rel(fixture.indexFile),
+      "--auth-receipt",
+      rel(fixture.authReceiptFile),
+      "--expected-project-ref",
+      "qgzvkongdjqiiamzbbts",
+      "--expected-user-id",
+      "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+    ],
+    {
+      cwd: repoRoot,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        TIANGONG_LCA_CLI_BIN: fixture.fakeCli,
+        FOUNDRY_VERIFIED_PROJECT_REF: "anotherprojectref",
+        FOUNDRY_VERIFIED_USER_ID: "11111111-1111-4111-8111-111111111111",
+      },
+    },
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /does not match the receipt-bound env/u);
+  assert.equal(fs.existsSync(fixture.marker), false);
 });

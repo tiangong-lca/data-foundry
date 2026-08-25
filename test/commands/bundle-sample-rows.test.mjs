@@ -1160,7 +1160,11 @@ process.exit(blocked ? 1 : 0);
       "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
     ],
     1,
-    { TIANGONG_LCA_CLI_BIN: fakeCli },
+    {
+      TIANGONG_LCA_CLI_BIN: fakeCli,
+      FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
+      FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+    },
   );
 
   assert.equal(report.status, "failed");
