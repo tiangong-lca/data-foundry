@@ -16,7 +16,7 @@ checkPaths:
   - docs/topology-convergence-contract.md
   - specs/schemas/topology-convergence.schema.json
   - scripts/commands/topology-convergence.mjs
-  - test/fixtures/topology-convergence-fixtures.mjs
+  - test/fixtures/topology-convergence-fixtures.ts
   - test/unit/topology-convergence.test.mjs
   - test/commands/topology-convergence.test.mjs
   - test/scenarios/topology-convergence-handoff.test.mjs

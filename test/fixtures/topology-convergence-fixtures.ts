@@ -7,6 +7,95 @@ import { repoRoot, testTmpRoot, writeJson, writeJsonLines } from "./foundry-core
 const version = "00.00.001";
 const evidence = "e".repeat(64);
 
+type JsonRecord = Record<string, unknown>;
+
+interface LanguageNode {
+  "@xml:lang": string;
+  "#text": string;
+}
+
+interface FlowPayload extends JsonRecord {
+  flowDataSet: {
+    flowInformation: {
+      dataSetInformation: {
+        "common:UUID": string;
+        name: { baseName: LanguageNode };
+        classificationInformation: JsonRecord;
+      };
+      flowProperties: JsonRecord;
+    };
+    administrativeInformation: JsonRecord;
+  };
+}
+
+interface FixtureExchange extends JsonRecord {
+  "@dataSetInternalID": string;
+  referenceToFlowDataSet: JsonRecord;
+  exchangeDirection: string;
+  meanAmount: string;
+  resultingAmount: string;
+  generalComment: LanguageNode;
+  "common:other"?: unknown;
+}
+
+interface ProcessPayload extends JsonRecord {
+  processDataSet: {
+    processInformation: {
+      dataSetInformation: {
+        "common:UUID": string;
+        name: { baseName: LanguageNode };
+        "common:synonyms"?: LanguageNode;
+      };
+    };
+    exchanges: { exchange: FixtureExchange[] };
+    administrativeInformation: JsonRecord;
+  };
+}
+
+interface SnapshotRow extends JsonRecord {
+  table: string;
+  id: string;
+  version: string;
+  user_id: string | null;
+  state_code: number;
+  json_ordered: unknown;
+  payload_sha256: string;
+}
+
+interface ArtifactRef extends JsonRecord {
+  path: string;
+  sha256: string;
+  bytes: number;
+  rows: number;
+}
+
+interface MappingRow extends JsonRecord {
+  old_flow_id: string;
+  new_flow_id: string;
+  mapping_kind: string;
+  evidence_sha256: string;
+}
+
+interface TopologyFixtureState {
+  root: string;
+  flowPayloads: Map<string, FlowPayload>;
+  candidateProcessPayloads: Map<string, ProcessPayload>;
+  currentProcessA: ProcessPayload;
+  germanRows: JsonRecord[];
+  ownerFlowRows: SnapshotRow[];
+  publicFlowRows: SnapshotRow[];
+  foreignFlowRows: SnapshotRow[];
+  ownerProcessRows: SnapshotRow[];
+  classificationRows: JsonRecord[];
+  mappingRows: MappingRow[];
+  protectedRows: JsonRecord[];
+  requestMutator?: (request: unknown, admission: unknown) => void;
+}
+
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export const topologyIds = {
   flows: [
     "10000000-0000-4000-8000-000000000001",
@@ -29,11 +118,11 @@ export const topologyIds = {
   source: "30000000-0000-4000-8000-000000000001",
   flowproperty: "40000000-0000-4000-8000-000000000001",
   owner: "00000000-0000-4000-8000-000000000001",
-};
+} as const;
 
-function stableValue(value) {
+function stableValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stableValue);
-  if (value && typeof value === "object") {
+  if (isRecord(value)) {
     return Object.fromEntries(
       Object.entries(value)
         .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
@@ -43,18 +132,18 @@ function stableValue(value) {
   return value;
 }
 
-export function fixtureSha(value) {
+export function fixtureSha(value: unknown): string {
   return crypto
     .createHash("sha256")
     .update(JSON.stringify(stableValue(value)))
     .digest("hex");
 }
 
-function fileSha(filePath) {
+function fileSha(filePath: string): string {
   return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
 }
 
-function artifactRef(filePath, rows) {
+function artifactRef(filePath: string, rows: number): ArtifactRef {
   return {
     path: path.relative(repoRoot, filePath),
     sha256: fileSha(filePath),
@@ -63,7 +152,7 @@ function artifactRef(filePath, rows) {
   };
 }
 
-function classification(code) {
+function classification(code: string): JsonRecord {
   return {
     "common:classification": {
       "common:class": [
@@ -74,7 +163,7 @@ function classification(code) {
   };
 }
 
-function flowPayload(id, code) {
+function flowPayload(id: string, code: string): FlowPayload {
   return {
     flowDataSet: {
       flowInformation: {
@@ -101,7 +190,7 @@ function flowPayload(id, code) {
   };
 }
 
-function sourceTrace(number) {
+function sourceTrace(number: string | number): JsonRecord {
   return {
     "common:other": {
       "tidasimport:sourceTrace": {
@@ -115,7 +204,7 @@ function sourceTrace(number) {
   };
 }
 
-function flowReference(id, text, chinese = null) {
+function flowReference(id: string, text: string, chinese: string | null = null): JsonRecord {
   const descriptions = [{ "@xml:lang": "en", "#text": text }];
   if (chinese) descriptions.push({ "@xml:lang": "zh", "#text": chinese });
   return {
@@ -125,7 +214,19 @@ function flowReference(id, text, chinese = null) {
   };
 }
 
-function exchange({ number, flow, amount = "1", direction = "Input", chinese = null }) {
+function exchange({
+  number,
+  flow,
+  amount = "1",
+  direction = "Input",
+  chinese = null,
+}: {
+  number: string | number;
+  flow: string;
+  amount?: string;
+  direction?: string;
+  chinese?: string | null;
+}): FixtureExchange {
   return {
     "@dataSetInternalID": String(number),
     referenceToFlowDataSet: flowReference(flow, `Flow ${flow.slice(-1)}`, chinese),
@@ -137,11 +238,16 @@ function exchange({ number, flow, amount = "1", direction = "Input", chinese = n
   };
 }
 
-function processPayload(id, exchanges, { name = "Candidate name", german = null } = {}) {
-  const dataSetInformation = {
-    "common:UUID": id,
-    name: { baseName: { "@xml:lang": "en", "#text": name } },
-  };
+function processPayload(
+  id: string,
+  exchanges: FixtureExchange[],
+  { name = "Candidate name", german = null }: { name?: string; german?: LanguageNode | null } = {},
+): ProcessPayload {
+  const dataSetInformation: ProcessPayload["processDataSet"]["processInformation"]["dataSetInformation"] =
+    {
+      "common:UUID": id,
+      name: { baseName: { "@xml:lang": "en", "#text": name } },
+    };
   if (german) dataSetInformation["common:synonyms"] = german;
   return {
     processDataSet: {
@@ -154,7 +260,12 @@ function processPayload(id, exchanges, { name = "Candidate name", german = null 
   };
 }
 
-function snapshotRow(table, id, payload, { user = topologyIds.owner, state = 0 } = {}) {
+function snapshotRow(
+  table: string,
+  id: string,
+  payload: unknown,
+  { user = topologyIds.owner, state = 0 }: { user?: string | null; state?: number } = {},
+): SnapshotRow {
   return {
     table,
     id,
@@ -166,7 +277,7 @@ function snapshotRow(table, id, payload, { user = topologyIds.owner, state = 0 }
   };
 }
 
-function candidateIndexRow(filePath, table, id) {
+function candidateIndexRow(filePath: string, table: string, id: string): JsonRecord {
   return {
     schema_version: "foundry-topology-candidate-index-row.v1",
     entity: { table, id, version },
@@ -176,7 +287,10 @@ function candidateIndexRow(filePath, table, id) {
   };
 }
 
-export function createTopologyConvergenceFixture(name, mutate = () => {}) {
+export function createTopologyConvergenceFixture(
+  name: string,
+  mutate: (state: TopologyFixtureState) => void = () => {},
+) {
   const root = testTmpRoot(`topology-${name}`);
   fs.rmSync(root, { recursive: true, force: true });
   fs.mkdirSync(root, { recursive: true });
@@ -188,13 +302,13 @@ export function createTopologyConvergenceFixture(name, mutate = () => {}) {
   const germanA = { "@xml:lang": "de", "#text": "Deutscher Name A" };
   const germanC = { "@xml:lang": "de", "#text": "Deutscher Name C" };
 
-  const flowPayloads = new Map([
+  const flowPayloads = new Map<string, FlowPayload>([
     [flowA, flowPayload(flowA, "12345")],
     [flowB, flowPayload(flowB, "21691")],
     [flowC, flowPayload(flowC, "12345")],
     [flowD, flowPayload(flowD, "12345")],
   ]);
-  const candidateProcessPayloads = new Map([
+  const candidateProcessPayloads = new Map<string, ProcessPayload>([
     [
       processA,
       processPayload(processA, [
@@ -231,7 +345,14 @@ export function createTopologyConvergenceFixture(name, mutate = () => {}) {
     };
   }
 
-  const state = {
+  const mappingTuples: Array<[string, string, string]> = [
+    [oldA, flowA, "1:1"],
+    [oldB, flowB, "many-to-one"],
+    [oldC, flowB, "many-to-one"],
+    [oldD, flowC, "one-to-many"],
+    [oldD, flowD, "one-to-many"],
+  ];
+  const state: TopologyFixtureState = {
     root,
     flowPayloads,
     candidateProcessPayloads,
@@ -273,13 +394,7 @@ export function createTopologyConvergenceFixture(name, mutate = () => {}) {
       source_kind: id === flowB ? "explicit_conflict_override" : "audited_projection",
       evidence_sha256: evidence,
     })),
-    mappingRows: [
-      [oldA, flowA, "1:1"],
-      [oldB, flowB, "many-to-one"],
-      [oldC, flowB, "many-to-one"],
-      [oldD, flowC, "one-to-many"],
-      [oldD, flowD, "one-to-many"],
-    ].map(([old_flow_id, new_flow_id, mapping_kind]) => ({
+    mappingRows: mappingTuples.map(([old_flow_id, new_flow_id, mapping_kind]) => ({
       old_flow_id,
       new_flow_id,
       mapping_kind,
@@ -335,7 +450,7 @@ export function createTopologyConvergenceFixture(name, mutate = () => {}) {
   writeJsonLines(files.protected, state.protectedRows);
   fs.writeFileSync(files.candidatePackage, "fixture candidate package\n");
 
-  const refs = {
+  const refs: Record<string, ArtifactRef> = {
     candidate_flows: artifactRef(files.candidateFlows, flowIndex.length),
     candidate_processes: artifactRef(files.candidateProcesses, processIndex.length),
     owner_flows: artifactRef(files.ownerFlows, state.ownerFlowRows.length),

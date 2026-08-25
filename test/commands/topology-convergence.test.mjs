@@ -15,7 +15,7 @@ import {
   createTopologyConvergenceFixture,
   fixtureSha,
   topologyIds,
-} from "../fixtures/topology-convergence-fixtures.mjs";
+} from "../fixtures/topology-convergence-fixtures.ts";
 
 function compose(fixture) {
   return runFoundry([

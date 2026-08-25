@@ -1,6 +1,6 @@
 import test from "node:test";
 import { assert, path, readJson, rel, runFoundry } from "../fixtures/foundry-core.ts";
-import { createTopologyConvergenceFixture } from "../fixtures/topology-convergence-fixtures.mjs";
+import { createTopologyConvergenceFixture } from "../fixtures/topology-convergence-fixtures.ts";
 
 test("topology package remains offline and requires capsule admission before F/P/D dispatch", () => {
   const fixture = createTopologyConvergenceFixture("handoff");
