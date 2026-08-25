@@ -34,8 +34,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-dry-run-context.ts
   - scripts/lib/import-curation/internal/workflow-evidence-scope.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 928355cb582ce13499403a553cb7f09e8a8bcdd2
-lastReviewedNote: "Reviewed for Issue #67 Wave 21: typed dry-run/evidence-scope contexts remain Foundry-owned proof projection and add no sibling command, CLI or database behavior."
+lastReviewedCommit: a2b66448599df0106ee8e03da94e6f6eeb5a878e
+lastReviewedNote: "Reviewed for Issue #67 Wave 22b: typing the five existing command factories changes no capability owner, remote operation, profile authority or sibling implementation boundary."
 ---
 
 # Capability Ownership Policy

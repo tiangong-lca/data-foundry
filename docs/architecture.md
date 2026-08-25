@@ -73,8 +73,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 928355cb582ce13499403a553cb7f09e8a8bcdd2
-lastReviewedNote: "Reviewed for Issue #67 Wave 21: typed dry-run/evidence-scope helpers remain Foundry-local proof projection and do not alter CLI operations, profiles or database authority."
+lastReviewedCommit: a2b66448599df0106ee8e03da94e6f6eeb5a878e
+lastReviewedNote: "Reviewed for Issue #67 Wave 22b: five typed command factories remain thin Foundry adapters; dependency-injected tests preserve report/profile semantics without moving tidas, CLI or database authority."
 ---
 
 # Architecture

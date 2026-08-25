@@ -15,8 +15,9 @@ checkPaths:
   - docs/import-profiles/bafu/**
   - docs/import-profiles/uslci/**
   - scripts/lib/import-curation/**
-lastReviewedAt: 2026-07-27
-lastReviewedCommit: d29e522562245956d5a146e582a26ddf2a68613e
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: a2b66448599df0106ee8e03da94e6f6eeb5a878e
+lastReviewedNote: "Reviewed for Issue #67 Wave 22b: the USLCI wrapper's TypeScript path and frozen injected profile do not change this historical cleanup evidence or its current-owner interpretation."
 related:
   - docs/import-profiles/bafu/profile.md
   - docs/import-profiles/uslci/profile.md

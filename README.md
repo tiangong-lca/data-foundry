@@ -72,8 +72,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 928355cb582ce13499403a553cb7f09e8a8bcdd2
-lastReviewedNote: "Reviewed for Issue #67 Wave 21: dry-run readers and evidence-scope blockers are native zero-any TS7 with maps, aliases, ordering, deterministic exceptions and errors unchanged."
+lastReviewedCommit: a2b66448599df0106ee8e03da94e6f6eeb5a878e
+lastReviewedNote: "Reviewed for Issue #67 Wave 22b: five low-fan-in command factories are native zero-any TS7 with help, dependency forwarding, report projection and USLCI/worldsteel profile constants unchanged; inventory moves 115 to 110 without executing owner runtimes."
 ---
 
 # TianGong LCA Data Foundry

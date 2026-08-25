@@ -118,8 +118,8 @@ checkPaths:
   - test/unit/wave21-evidence-scope-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 928355cb582ce13499403a553cb7f09e8a8bcdd2
-lastReviewedNote: "Reviewed for Issue #67 Wave 21: typed dry-run and evidence-scope helpers preserve map precedence, artifact aliases, blocker stage order, deterministic lineage exceptions and native failures."
+lastReviewedCommit: a2b66448599df0106ee8e03da94e6f6eeb5a878e
+lastReviewedNote: "Reviewed for Issue #67 Wave 22b: typed import-ledger, tidas, identity-rewrite and profile command factories preserve the existing command order, gates and owner boundaries; characterization invokes only injected local stubs."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
