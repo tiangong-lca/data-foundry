@@ -17,11 +17,12 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - docs/env-surface-policy.md
   - scripts/foundry.mjs
+  - scripts/commands/core.ts
   - scripts/with-lca-account.ts
   - scripts/lib/foundry-runtime-utils.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: typing five orchestration owners adds, removes, or broadens no environment variable; characterization uses local fixtures and reads neither repository `.env` nor production credentials."
+lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typing orchestration plus core env/doctor/workspace, identity-preflight and finalize owners adds, removes or broadens no environment variable; tests use explicit local values and no repository credentials."
 ---
 
 # Environment Surface Policy

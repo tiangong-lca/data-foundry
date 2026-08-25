@@ -42,6 +42,9 @@ checkPaths:
   - scripts/commands/bundle-sample-rows.ts
   - scripts/commands/incremental-change-set.ts
   - scripts/commands/topology-convergence.ts
+  - scripts/commands/core.ts
+  - scripts/commands/identity-preflight-run.ts
+  - scripts/commands/post-authoring-finalize.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-cli.mjs
   - scripts/lib/foundry-command-registry.ts
@@ -101,9 +104,12 @@ checkPaths:
   - test/fixtures/finalize-fixtures.ts
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
+  - test/unit/core-command-factory.test.mts
+  - test/unit/identity-preflight-run-command-factory.test.mts
+  - test/unit/post-authoring-finalize-command-factory.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 5af446bb230dd1f37e26d979352eda8c5ab51550
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: navigation records typed orchestration, adapters/tools and authoring/bundle/incremental/topology owners, their topology, deterministic artifacts, process/hash/audit and receipt/handoff boundaries."
+lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: navigation records typed orchestration, adapters/tools, algorithms and final core/preflight/finalize owners with exact help, deterministic artifacts, diagnostics, receipt/hash and rewrite/gate/handoff boundaries."
 ---
 
 # Foundry AI Navigation
@@ -204,6 +210,8 @@ The typed mutation reference stack starts at `workflow-reference-closure.ts` for
 The typed high-level orchestration path is `library-scope-workflow.ts` for profile-agnostic library/scope preparation, then `bafu-leaf-classification-tasks.ts` and `bafu-auto-authoring.ts`, then `bafu-process-scope-e2e.ts`, with `bafu-batch-import-run.ts` owning resume, selection, interruption, bounded parallelism and explicit handoff delegation. USLCI and Worldsteel adapters import that same batch owner with frozen profile configuration. Start at command metadata and the Wave 26 migration tests, then navigate to the narrower command owner for blocker and artifact semantics.
 
 The typed runtime command owners are `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts`. Navigate to the wrapper for direct executable/argv delegation and process diagnostics, to the capsule for offline immutable admission and attempt-state evidence, and to closeout for already-produced commit/readback aggregation. Root uniqueness and accepted-difference decisions remain in `post-write-root-proof.ts` and `remote-verification-accepted-diff.ts`.
+
+The typed final command owners are `scripts/commands/core.ts`, `identity-preflight-run.ts`, and `post-authoring-finalize.ts`. Navigate to core for local bootstrap, environment/workflow/storage/surface diagnostics and route artifacts; to identity preflight for receipt-bound CLI argv, request/target/binding hashes, positive-only cache and stdout/disk execution evidence; and to finalize for ordered rewrite, cleanup, validation, curation, dry-run, mutation-manifest and handoff aggregation. The current finalize utility import is the base checkpoint's `.mjs` owner and must resolve to `post-authoring-finalize-utils.ts` when this lane is integrated after the adapter lane.
 
 The typed import-curation entry chain is `scripts/lib/import-curation.ts` → `import-curation/index.ts` → semantic owners. `profiles.ts` and `trace-summary.ts` are pure typed leaf barrels. Navigate through the public/index barrels to discover the complete namespace, but edit behavior only in the semantic owner named by command metadata.
 

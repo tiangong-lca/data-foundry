@@ -48,7 +48,20 @@ const importCurationEntryContract = nodeTest(
   "import-curation entry preserves the complete owner namespace and live references",
 );
 
-const coreOwner = "scripts/commands/core.mjs";
+const coreCommandContract = nodeTest(
+  "test/unit/core-command-factory.test.mts",
+  "core runtime, diagnostics, route artifacts, native errors, and exact help remain stable",
+);
+const identityPreflightRunCommandContract = nodeTest(
+  "test/unit/identity-preflight-run-command-factory.test.mts",
+  "identity-preflight receipt, binding, cache, disk, failure, argv, and help contracts remain stable",
+);
+const postAuthoringFinalizeCommandContract = nodeTest(
+  "test/unit/post-authoring-finalize-command-factory.test.mts",
+  "post-authoring rewrite, evidence, gate, manifest, handoff order, and help remain stable",
+);
+
+const coreOwner = "scripts/commands/core.ts";
 const taskOwner = "scripts/commands/tasks.ts";
 const tidasOwner = "scripts/commands/tidas-workflow.ts";
 const typedImportOwner = (moduleName: string): string =>
@@ -107,7 +120,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ownerExport: "createCoreCommands().initRuntime",
     inputs: ["repo root runtime directory policy"],
     outputs: [".foundry/logs", ".foundry/state", ".foundry/workspaces", "tasks/*"],
-    keyTests: [commandSmoke("init"), commandSmoke("doctor")],
+    keyTests: [coreCommandContract, commandSmoke("init"), commandSmoke("doctor")],
   }),
   doctor: metadata({
     category: "public",
@@ -122,7 +135,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       "script import graph",
     ],
     outputs: ["doctor JSON status report"],
-    keyTests: [goldenDiff, commandSmoke("doctor")],
+    keyTests: [coreCommandContract, goldenDiff, commandSmoke("doctor")],
   }),
   "env-check": metadata({
     category: "public",
@@ -130,7 +143,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ownerExport: "createCoreCommands().envCheck",
     inputs: [".env.example"],
     outputs: ["env_example_surface JSON status report"],
-    keyTests: [commandSmoke("env-check"), commandSmoke("doctor")],
+    keyTests: [coreCommandContract, commandSmoke("env-check"), commandSmoke("doctor")],
   }),
   "workflow-check": metadata({
     category: "public",
@@ -138,7 +151,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ownerExport: "createCoreCommands().workflowCheck",
     inputs: ["WORKFLOW.md"],
     outputs: ["workflow_check JSON status report"],
-    keyTests: [commandSmoke("workflow-check"), commandSmoke("doctor")],
+    keyTests: [coreCommandContract, commandSmoke("workflow-check"), commandSmoke("doctor")],
   }),
   "storage-check": metadata({
     category: "public",
@@ -146,7 +159,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ownerExport: "createCoreCommands().storageCheck",
     inputs: ["docs/file-location-registry.json"],
     outputs: ["storage_check JSON status report"],
-    keyTests: [commandSmoke("storage-check"), commandSmoke("doctor")],
+    keyTests: [coreCommandContract, commandSmoke("storage-check"), commandSmoke("doctor")],
   }),
   "surface-audit": metadata({
     category: "public",
@@ -154,7 +167,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ownerExport: "createCoreCommands().surfaceAuditCheck",
     inputs: ["command registry", "command metadata", "docs/**/*.md", "scripts/**/*.{mjs,ts}"],
     outputs: ["surface audit JSON status report"],
-    keyTests: [commandSmoke("surface-audit"), commandSmoke("doctor")],
+    keyTests: [coreCommandContract, commandSmoke("surface-audit"), commandSmoke("doctor")],
   }),
   "acceptance-check": metadata({
     category: "public",
@@ -162,7 +175,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ownerExport: "createCoreCommands().acceptanceCheck",
     inputs: ["task workspace checkpoints"],
     outputs: ["acceptance JSON status report"],
-    keyTests: [commandSmoke("acceptance-check")],
+    keyTests: [coreCommandContract, commandSmoke("acceptance-check")],
   }),
   "workspace-map": metadata({
     category: "public",
@@ -170,7 +183,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ownerExport: "createCoreCommands().workspaceMap",
     inputs: ["docs/workspace-project-map.md", "specs/workspace-capability-adapters.md"],
     outputs: ["workspace map JSON report"],
-    keyTests: [commandSmoke("workspace-map")],
+    keyTests: [coreCommandContract, commandSmoke("workspace-map")],
   }),
   "capabilities-list": metadata({
     category: "public",
@@ -178,7 +191,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ownerExport: "createCoreCommands().capabilitiesList",
     inputs: ["specs/automated-lca-capability-registry.json"],
     outputs: ["capability registry JSON report"],
-    keyTests: [goldenDiff, commandSmoke("capabilities-list")],
+    keyTests: [coreCommandContract, goldenDiff, commandSmoke("capabilities-list")],
   }),
   "profiles-list": metadata({
     category: "public",
@@ -194,7 +207,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ownerExport: "createCoreCommands().buildRoutePlan",
     inputs: ["task metadata options", "capability registry"],
     outputs: ["route plan JSON artifact"],
-    keyTests: [goldenDiff, commandSmoke("route-task")],
+    keyTests: [coreCommandContract, goldenDiff, commandSmoke("route-task")],
   }),
   "tidas-handshake": metadata({
     category: "public",
@@ -736,7 +749,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-identity-preflight-requests-build": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/identity-preflight-run.mjs",
+    ownerModule: "scripts/commands/identity-preflight-run.ts",
     ownerExport: "createIdentityPreflightRunCommands().runDatasetIdentityPreflightRequestsBuild",
     inputs: ["current process or flow rows file", "optional source identity-preflight index"],
     outputs: [
@@ -744,6 +757,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       "dataset-identity-preflight-requests-build-report.json",
     ],
     keyTests: [
+      identityPreflightRunCommandContract,
       nodeTest(
         "test/commands/bundle-sample-rows.test.mjs",
         "dataset-identity-preflight-requests-build creates a fresh exact-row request index",
@@ -752,7 +766,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-identity-preflight-query-audit": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/identity-preflight-run.mjs",
+    ownerModule: "scripts/commands/identity-preflight-run.ts",
     ownerExport: "createIdentityPreflightRunCommands().runDatasetIdentityPreflightQueryAudit",
     inputs: ["identity-preflight-requests.jsonl"],
     outputs: [
@@ -760,6 +774,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       "dataset-identity-preflight-query-audit-report.json",
     ],
     keyTests: [
+      identityPreflightRunCommandContract,
       nodeTest(
         "test/commands/bundle-sample-rows.test.mjs",
         "dataset-identity-preflight-query-audit passes complete fielded edge queries",
@@ -768,11 +783,12 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-identity-preflight-run": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/identity-preflight-run.mjs",
+    ownerModule: "scripts/commands/identity-preflight-run.ts",
     ownerExport: "createIdentityPreflightRunCommands().runDatasetIdentityPreflightRun",
     inputs: ["identity-preflight-requests.jsonl", "published tiangong-lca CLI"],
     outputs: ["identity-preflight-run-results.jsonl", "dataset-identity-preflight-run-report.json"],
     keyTests: [
+      identityPreflightRunCommandContract,
       nodeTest(
         "test/unit/foundry-stage-contract.test.mjs",
         "complex workflow commands publish AI-readable stage contracts",
@@ -789,7 +805,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-identity-preflight-index-merge": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/identity-preflight-run.mjs",
+    ownerModule: "scripts/commands/identity-preflight-run.ts",
     ownerExport: "createIdentityPreflightRunCommands().runDatasetIdentityPreflightIndexMerge",
     inputs: ["base identity-preflight index", "refreshed current-scope identity-preflight index"],
     outputs: [
@@ -797,6 +813,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       "dataset-identity-preflight-index-merge-report.json",
     ],
     keyTests: [
+      identityPreflightRunCommandContract,
       nodeTest(
         "test/scenarios/identity-preflight-run-and-merge.test.mjs",
         "identity preflight index merge preserves dependency rows while refreshing current scope",
@@ -1090,7 +1107,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-post-authoring-finalize": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/post-authoring-finalize.mjs",
+    ownerModule: "scripts/commands/post-authoring-finalize.ts",
     ownerExport: "createPostAuthoringFinalizeCommands().runDatasetPostAuthoringFinalize",
     inputs: [
       "patched or decision-applied rows",
@@ -1108,6 +1125,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       goldenDiff,
+      postAuthoringFinalizeCommandContract,
       nodeTest(
         "test/unit/foundry-stage-contract.test.mjs",
         "complex workflow commands publish AI-readable stage contracts",

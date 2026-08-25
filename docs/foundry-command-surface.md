@@ -51,6 +51,9 @@ checkPaths:
   - scripts/commands/bundle-sample-rows.ts
   - scripts/commands/incremental-change-set.ts
   - scripts/commands/topology-convergence.ts
+  - scripts/commands/core.ts
+  - scripts/commands/identity-preflight-run.ts
+  - scripts/commands/post-authoring-finalize.ts
   - scripts/lib/import-curation/internal/authoring-task-workflow.ts
   - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
   - scripts/lib/import-curation/internal/curation-gate-workflow.ts
@@ -74,9 +77,12 @@ checkPaths:
   - test/unit/wave26-bafu-auto-authoring-command-migration.test.mts
   - test/unit/wave26-bafu-process-scope-command-migration.test.mts
   - test/unit/wave26-bafu-batch-command-migration.test.mts
+  - test/unit/core-command-factory.test.mts
+  - test/unit/identity-preflight-run-command-factory.test.mts
+  - test/unit/post-authoring-finalize-command-factory.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 5af446bb230dd1f37e26d979352eda8c5ab51550
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: orchestration, adapter/tool and algorithm owners move to TS7 without changing commands/help, exports, process/report/exit artifacts, profiles, Worldsteel/Date.parse or remote-write modes."
+lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: orchestration, adapter/tool, algorithm and final command owners move to TS7 without changing commands/categories/help, exports, receipt/argv/exit artifacts, profiles, Worldsteel/Date.parse or remote-write modes."
 ---
 
 # Foundry Command Surface
@@ -109,6 +115,8 @@ Wave 26 moves the generic library-scope owner and four BAFU orchestration owners
 Wave 26 moves TIDAS/finalize adapters and the cutover/Golden entrypoints to native TypeScript. Public Foundry command names and help remain unchanged; package scripts now call the typed audit and Golden entrypoints while retaining the same JSON, exit, merge-base and normalized-diff contracts.
 
 Wave 26 moves `authoring-plan`, `bundle-sample-rows`, `incremental-change-set`, and `topology-convergence` to native TypeScript. Their registered command names, categories, exports, exact help payloads, artifacts, exit mapping and write modes are unchanged. Realistic fixtures pin deterministic phase/row/sample/F-P-D order, path and hash bytes, scale and graph fail-close, terminal receipt and no-authority handoff semantics, native JSON/filesystem failures, and fresh-output boundaries.
+
+Wave 26 moves `core`, `identity-preflight-run`, and `post-authoring-finalize` to native TypeScript. Core retains all public bootstrap/diagnostic/route commands and exact global help. The identity-preflight family retains its four workflow-internal commands, receipt-bound shell-free argv and fail-closed execution evidence. Finalize retains the existing read-only stage pipeline, report/artifact schema, blocker order and handoff plan. Metadata binds each command to the new focused contract tests without changing registry order or categories.
 
 ## Categories
 

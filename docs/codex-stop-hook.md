@@ -17,9 +17,10 @@ checkPaths:
   - .codex/hooks.json
   - .codex/hooks/run-foundry-acceptance-check.sh
   - package.json
+  - scripts/commands/core.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 freshness: five orchestration owners move to TS7 without changing Stop-hook registration, pnpm acceptance invocation, output, artifacts, or recursion guard."
+lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: orchestration and core acceptance owners move to TS7 without changing Stop-hook registration, pnpm invocation, output, artifacts, recursion guard or authoritative local inputs."
 ---
 
 # Codex Stop Hook
