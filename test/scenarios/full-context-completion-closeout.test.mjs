@@ -344,13 +344,17 @@ test("post-write closeout requires common:other trace queues to match final rows
     },
   ]);
   const checksFile = path.join(root, "remote-verification.jsonl");
+  const rowPayloadSha256 = sha256Text(JSON.stringify(readJsonLines(rowsFile)[0]));
   writeJsonLines(checksFile, [
     {
       role: "root",
+      table: "processes",
+      id: processId,
+      version: "00.00.001",
       path: "processes/0#readback",
       status: "ok",
-      local_payload_sha256: "hash-0",
-      remote_payload_sha256: "hash-0",
+      local_payload_sha256: rowPayloadSha256,
+      remote_payload_sha256: rowPayloadSha256,
       remote_user_id: targetUserId,
       remote_state_code: 0,
       row_index: 0,

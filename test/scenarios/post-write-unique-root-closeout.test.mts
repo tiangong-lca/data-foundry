@@ -6,6 +6,7 @@ import {
   blockerCodes,
   path,
   readJson,
+  readJsonLines,
   rel,
   repoRoot,
   runFoundry,
@@ -18,7 +19,8 @@ test("post-write closeout rejects duplicate root checks that hide an intended ro
   const fixture = createFixture();
   const verify = readJson(fixture.verifyReport);
   const checksFile = path.join(repoRoot, verify.files.checks);
-  const payloadSha = sha256Text(JSON.stringify({ id: "p1" }));
+  const firstRow = readJsonLines(fixture.rowsFile)[0];
+  const payloadSha = sha256Text(JSON.stringify(firstRow));
   const duplicate = {
     role: "root",
     table: "processes",

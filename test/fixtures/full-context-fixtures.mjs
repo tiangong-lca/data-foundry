@@ -15,8 +15,22 @@ export function createFixture() {
   fs.rmSync(fixtureRoot, { recursive: true, force: true });
   fs.mkdirSync(fixtureRoot, { recursive: true });
 
+  const rows = ["p1", "p2"].map((id) => ({
+    processDataSet: {
+      processInformation: {
+        dataSetInformation: {
+          "common:UUID": id,
+        },
+      },
+      administrativeInformation: {
+        publicationAndOwnership: {
+          "common:dataSetVersion": "00.00.001",
+        },
+      },
+    },
+  }));
   const rowsFile = path.join(fixtureRoot, "processes.jsonl");
-  writeText(rowsFile, '{"id":"p1"}\n{"id":"p2"}\n');
+  writeJsonLines(rowsFile, rows);
 
   const checksFile = path.join(fixtureRoot, "remote-verification.jsonl");
   writeText(
@@ -25,10 +39,13 @@ export function createFixture() {
       .map((rowIndex) =>
         JSON.stringify({
           role: "root",
+          table: "processes",
+          id: `p${rowIndex + 1}`,
+          version: "00.00.001",
           path: `processes/${rowIndex}#readback`,
           status: "ok",
-          local_payload_sha256: `hash-${rowIndex}`,
-          remote_payload_sha256: `hash-${rowIndex}`,
+          local_payload_sha256: sha256Text(JSON.stringify(rows[rowIndex])),
+          remote_payload_sha256: sha256Text(JSON.stringify(rows[rowIndex])),
           remote_user_id: targetUserId,
           remote_state_code: 0,
           row_index: rowIndex,

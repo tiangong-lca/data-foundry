@@ -1,15 +1,19 @@
 import path from "node:path";
+import { validateUniqueRootReadbacks } from "../lib/post-write-root-proof.ts";
 
 export function createPostWriteCloseoutCommands({
   asText,
   countJsonLinesFile,
   countRowsFile,
+  datasetIdentity,
   ensureArray,
   fileExists,
   fullContextProofCheck,
+  jsonSha256,
   nowIso,
   readJsonArtifactOption,
   readJsonLines,
+  readRowsFile,
   repoRelativeMaybe,
   repoRelativePath,
   reportInputPath,
@@ -98,6 +102,7 @@ export function createPostWriteCloseoutCommands({
     expectedRows,
     targetUserId,
     expectedStateCode,
+    intendedRoots,
     blockers,
   }) {
     const inputPath = resolveRepoPath(reportInputPath(verifyReport));
@@ -135,12 +140,12 @@ export function createPostWriteCloseoutCommands({
     }
     if (
       !Number.isFinite(rootReadbackCount) ||
-      rootReadbackCount < expectedRows ||
+      rootReadbackCount !== expectedRows ||
       expectedRows <= 0
     ) {
       blockers.push({
         code: "post_write_verify_root_readback_incomplete",
-        message: `Post-write verification has ${Number.isFinite(rootReadbackCount) ? rootReadbackCount : "unknown"} root readback checks; expected ${expectedRows}.`,
+        message: `Post-write verification has ${Number.isFinite(rootReadbackCount) ? rootReadbackCount : "unknown"} root readback checks; expected exactly ${expectedRows}.`,
         post_write_verify_report: repoRelativePath(verifyReportPath),
       });
     }
@@ -161,17 +166,17 @@ export function createPostWriteCloseoutCommands({
         post_write_verify_report: repoRelativePath(verifyReportPath),
         checks_file: verifyReport.files?.checks ?? null,
       });
-      return { checksFile: null, readbackChecks: [] };
+      return { checksFile: null, readbackChecks: [], uniqueReadbackCount: 0 };
     }
 
     const checks = readJsonLines(checksFile);
     const readbackChecks = checks.filter(
       (check) => check?.role === "root" && String(check?.path ?? "").endsWith("#readback"),
     );
-    if (readbackChecks.length < expectedRows) {
+    if (readbackChecks.length !== expectedRows) {
       blockers.push({
         code: "post_write_verify_readback_check_rows_missing",
-        message: `Post-write check file contains ${readbackChecks.length} root readback checks; expected ${expectedRows}.`,
+        message: `Post-write check file contains ${readbackChecks.length} root readback checks; expected exactly ${expectedRows}.`,
         checks_file: repoRelativePath(checksFile),
       });
     }
@@ -215,8 +220,19 @@ export function createPostWriteCloseoutCommands({
         });
       }
     }
+    const uniqueProof = validateUniqueRootReadbacks({
+      intended: intendedRoots,
+      checks: readbackChecks,
+      targetUserId,
+      expectedStateCode,
+    });
+    blockers.push(...uniqueProof.blockers);
 
-    return { checksFile, readbackChecks };
+    return {
+      checksFile,
+      readbackChecks,
+      uniqueReadbackCount: uniqueProof.uniqueReadbackCount,
+    };
   }
 
   function validateTraceQueuesForCloseout({
@@ -324,6 +340,31 @@ export function createPostWriteCloseoutCommands({
         source_reference_rewrites: traceQueues.source_reference_rewrites,
       },
     };
+  }
+
+  function rootTypeAndTable(row, fallbackType) {
+    if (row?.contactDataSet) return { type: "contact", table: "contacts" };
+    if (row?.sourceDataSet) return { type: "source", table: "sources" };
+    if (row?.flowPropertyDataSet) return { type: "flowproperty", table: "flowproperties" };
+    if (row?.unitGroupDataSet) return { type: "unitgroup", table: "unitgroups" };
+    if (row?.flowDataSet) return { type: "flow", table: "flows" };
+    if (row?.processDataSet) return { type: "process", table: "processes" };
+    if (row?.lifeCycleModelDataSet || row?.lifecycleModelDataSet) {
+      return { type: "lifecyclemodel", table: "lifecyclemodels" };
+    }
+    const table =
+      fallbackType === "process"
+        ? "processes"
+        : fallbackType === "flow"
+          ? "flows"
+          : fallbackType === "contact"
+            ? "contacts"
+            : fallbackType === "source"
+              ? "sources"
+              : fallbackType === "lifecyclemodel"
+                ? "lifecyclemodels"
+                : "";
+    return { type: fallbackType, table };
   }
 
   function runDatasetPostWriteCloseout(options) {
@@ -496,6 +537,28 @@ export function createPostWriteCloseoutCommands({
 
     const expectedRows =
       finalRowsFile && fileExists(finalRowsFile) ? countRowsFile(finalRowsFile) : 0;
+    const intendedRoots = [];
+    if (finalRowsFile && fileExists(finalRowsFile)) {
+      readRowsFile(finalRowsFile).forEach((row, rowIndex) => {
+        const rootType = rootTypeAndTable(row, datasetType);
+        const identity = datasetIdentity(row, rootType.type);
+        if (!rootType.table || !identity.id || !identity.version) {
+          blockers.push({
+            code: "intended_root_identity_missing",
+            message: `Final row ${rowIndex} does not expose one supported root identity.`,
+            row_index: rowIndex,
+          });
+          return;
+        }
+        intendedRoots.push({
+          rowIndex,
+          table: rootType.table,
+          id: identity.id,
+          version: identity.version,
+          payloadSha256: jsonSha256(row),
+        });
+      });
+    }
     if (expectedRows <= 0) {
       blockers.push({
         code: "final_rows_empty",
@@ -504,6 +567,7 @@ export function createPostWriteCloseoutCommands({
       });
     }
 
+    let rootProof = { checksFile: null, readbackChecks: [], uniqueReadbackCount: 0 };
     if (finalRowsFile && fileExists(finalRowsFile)) {
       validateCommitReportForCloseout({
         commitReport: commitArtifact.value,
@@ -513,13 +577,14 @@ export function createPostWriteCloseoutCommands({
         expectedRows,
         blockers,
       });
-      validatePostWriteVerifyForCloseout({
+      rootProof = validatePostWriteVerifyForCloseout({
         verifyReport: verifyArtifact.value,
         verifyReportPath: verifyArtifact.path,
         finalRowsFile,
         expectedRows,
         targetUserId,
         expectedStateCode,
+        intendedRoots,
         blockers,
       });
     }
@@ -571,6 +636,7 @@ export function createPostWriteCloseoutCommands({
             verifyArtifact.value.counts?.blockers ?? verifyArtifact.value.blockers?.length ?? 0,
           ) || 0,
         root_readback_checks: Number(verifyArtifact.value.counts?.root_readback_checks ?? 0) || 0,
+        unique_root_readback_checks: rootProof.uniqueReadbackCount,
         root_payload_mismatches: Number(verifyArtifact.value.counts?.root_payload_mismatches ?? -1),
         unresolved_trace_entries: traceQueues.counts.unresolved_trace_entries,
         source_exchange_completeness_entries:
