@@ -24,7 +24,7 @@ test("every static decision apply context consumer targets the typed module", ()
   const consumers = [
     "scripts/lib/import-curation/internal/curation-gate-workflow.mjs",
     "scripts/lib/import-curation/internal/mutation-manifest-workflow.mjs",
-    "scripts/lib/import-curation/internal/workflow-decision-full-context.mjs",
+    "scripts/lib/import-curation/internal/workflow-decision-full-context.ts",
     "test/unit/workflow-decision-apply-context-contract.test.mts",
   ];
   for (const consumer of consumers) {
