@@ -1,6 +1,9 @@
 import path from "node:path";
 import { createFileArtifactFact } from "../lib/foundry-command-spec.ts";
-import { validateUniqueRootReadbacks } from "../lib/post-write-root-proof.ts";
+import {
+  canonicalPayloadSha256,
+  validateUniqueRootReadbacks,
+} from "../lib/post-write-root-proof.ts";
 
 export function createPostWriteCloseoutCommands({
   asText,
@@ -10,7 +13,6 @@ export function createPostWriteCloseoutCommands({
   ensureArray,
   fileExists,
   fullContextProofCheck,
-  jsonSha256,
   nowIso,
   readJsonArtifactOption,
   readJsonLines,
@@ -612,7 +614,7 @@ export function createPostWriteCloseoutCommands({
           table: rootType.table,
           id: identity.id,
           version: identity.version,
-          payloadSha256: jsonSha256(row),
+          payloadSha256: canonicalPayloadSha256(row),
         });
       });
     }

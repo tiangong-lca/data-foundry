@@ -1,4 +1,5 @@
 import { fixtureRoot, mutationFixtureRoot } from "./fixture-roots.mjs";
+import { canonicalPayloadSha256 } from "../../scripts/lib/post-write-root-proof.ts";
 import {
   fs,
   fullContextKinds,
@@ -49,8 +50,8 @@ export function createFixture() {
           version: "00.00.001",
           path: `processes/${rowIndex}#readback`,
           status: "ok",
-          local_payload_sha256: sha256Text(JSON.stringify(rows[rowIndex])),
-          remote_payload_sha256: sha256Text(JSON.stringify(rows[rowIndex])),
+          local_payload_sha256: canonicalPayloadSha256(rows[rowIndex]),
+          remote_payload_sha256: canonicalPayloadSha256(rows[rowIndex]),
           remote_user_id: targetUserId,
           remote_state_code: 0,
           row_index: rowIndex,

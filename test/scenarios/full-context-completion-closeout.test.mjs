@@ -1,4 +1,5 @@
 import test from "node:test";
+import { canonicalPayloadSha256 } from "../../scripts/lib/post-write-root-proof.ts";
 import { fixtureRoot } from "../fixtures/fixture-roots.mjs";
 import {
   assert,
@@ -345,7 +346,7 @@ test("post-write closeout requires common:other trace queues to match final rows
     },
   ]);
   const checksFile = path.join(root, "remote-verification.jsonl");
-  const rowPayloadSha256 = sha256Text(JSON.stringify(readJsonLines(rowsFile)[0]));
+  const rowPayloadSha256 = canonicalPayloadSha256(readJsonLines(rowsFile)[0]);
   writeJsonLines(checksFile, [
     {
       role: "root",

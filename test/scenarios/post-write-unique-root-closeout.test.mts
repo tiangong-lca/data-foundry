@@ -1,4 +1,5 @@
 import test from "node:test";
+import { canonicalPayloadSha256 } from "../../scripts/lib/post-write-root-proof.ts";
 
 import { createFixture } from "../fixtures/full-context-fixtures.mjs";
 import {
@@ -31,7 +32,7 @@ test("post-write closeout rejects duplicate root checks that hide an intended ro
   const verify = readJson(fixture.verifyReport);
   const checksFile = path.join(repoRoot, verify.files.checks);
   const firstRow = readJsonLines(fixture.rowsFile)[0];
-  const payloadSha = sha256Text(JSON.stringify(firstRow));
+  const payloadSha = canonicalPayloadSha256(firstRow);
   const duplicate = {
     role: "root",
     table: "processes",

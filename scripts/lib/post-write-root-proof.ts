@@ -31,6 +31,22 @@ function rootKey(table: unknown, id: unknown, version: unknown): string {
   return `${String(table ?? "")}:${String(id ?? "")}@${String(version ?? "00.00.001")}`;
 }
 
+function canonicalJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalJsonValue);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, canonicalJsonValue((value as Record<string, unknown>)[key])]),
+  );
+}
+
+export function canonicalPayloadSha256(value: unknown): string {
+  return createHash("sha256")
+    .update(JSON.stringify(canonicalJsonValue(value)))
+    .digest("hex");
+}
+
 export function validateUniqueRootReadbacks(input: {
   intended: IntendedRoot[];
   checks: RootReadbackCheck[];
@@ -143,3 +159,4 @@ export function validateUniqueRootReadbacks(input: {
 
   return { blockers, uniqueReadbackCount };
 }
+import { createHash } from "node:crypto";

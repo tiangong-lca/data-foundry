@@ -366,7 +366,6 @@ const postWriteCloseoutCommands = createPostWriteCloseoutCommands({
   ensureArray,
   fileExists,
   fullContextProofCheck,
-  jsonSha256,
   nowIso,
   readJsonArtifactOption,
   readJsonLines,
