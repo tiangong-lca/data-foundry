@@ -10,6 +10,23 @@ const nativeDisableToken = "oxlint-disable";
 const forbiddenCommentMarker = "foundry-forbidden-oxlint-disable";
 const typeScriptPathPattern = /\.(?:cts|mts|ts|tsx)$/u;
 const unixDiagnosticPattern = /^(.*):(\d+):(\d+): .*\[Error\/eslint\(no-warning-comments\)\]$/u;
+const gitRepositoryEnvironmentKeys = [
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_COMMON_DIR",
+  "GIT_CONFIG",
+  "GIT_CONFIG_COUNT",
+  "GIT_CONFIG_PARAMETERS",
+  "GIT_DIR",
+  "GIT_GRAFT_FILE",
+  "GIT_IMPLICIT_WORK_TREE",
+  "GIT_INDEX_FILE",
+  "GIT_NO_REPLACE_OBJECTS",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_PREFIX",
+  "GIT_REPLACE_REF_BASE",
+  "GIT_SHALLOW_FILE",
+  "GIT_WORK_TREE",
+] as const;
 
 export type LintSuppressionFinding = {
   path: string;
@@ -31,10 +48,17 @@ function portablePath(filePath: string): string {
   return filePath.split(path.sep).join(path.posix.sep);
 }
 
+function repositoryScopedGitEnvironment(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  for (const key of gitRepositoryEnvironmentKeys) delete env[key];
+  return env;
+}
+
 function gitVisibleTypeScriptFiles(repoRoot: string): string[] {
   return execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], {
     cwd: repoRoot,
     encoding: "utf8",
+    env: repositoryScopedGitEnvironment(),
   })
     .split("\0")
     .filter((file) => Boolean(file) && typeScriptPathPattern.test(file))

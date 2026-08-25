@@ -10,6 +10,22 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const oxlintPath = path.join(repoRoot, "node_modules", "oxlint", "bin", "oxlint");
+const parentGitDirectory = execFileSync("git", ["rev-parse", "--absolute-git-dir"], {
+  cwd: repoRoot,
+  encoding: "utf8",
+}).trim();
+const gitLocalEnvironmentVariables = execFileSync("git", ["rev-parse", "--local-env-vars"], {
+  cwd: repoRoot,
+  encoding: "utf8",
+})
+  .split(/\r?\n/u)
+  .filter(Boolean);
+
+function isolatedGitOptions(cwd: string): { cwd: string; env: NodeJS.ProcessEnv } {
+  const env = { ...process.env };
+  for (const key of gitLocalEnvironmentVariables) delete env[key];
+  return { cwd, env };
+}
 
 function writeFixtureFile(root: string, relativePath: string, contents: string): void {
   const absolutePath = path.join(root, ...relativePath.split("/"));
@@ -20,7 +36,7 @@ function writeFixtureFile(root: string, relativePath: string, contents: string):
 test("tracked TypeScript suppression audit catches native directives without raw-token false positives", () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-lint-suppression-audit-"));
   try {
-    execFileSync("git", ["init", "--quiet"], { cwd: fixtureRoot });
+    execFileSync("git", ["init", "--quiet"], isolatedGitOptions(fixtureRoot));
     writeFixtureFile(
       fixtureRoot,
       "src/directives.ts",
@@ -63,20 +79,29 @@ test("tracked TypeScript suppression audit catches native directives without raw
     execFileSync(
       "git",
       ["add", "src/directives.ts", "src/directive.tsx", "src/raw-tokens.ts", "notes.md"],
-      {
-        cwd: fixtureRoot,
-      },
+      isolatedGitOptions(fixtureRoot),
     );
 
-    assert.deepEqual(auditTrackedTypeScriptSuppressions({ repoRoot: fixtureRoot, oxlintPath }), {
-      scanned: 3,
-      findings: [
-        { path: "src/directive.tsx", line: 1, column: 1 },
-        { path: "src/directives.ts", line: 1, column: 1 },
-        { path: "src/directives.ts", line: 3, column: 1 },
-        { path: "src/directives.ts", line: 5, column: 34 },
-      ],
-    });
+    const previousGitDirectory = process.env.GIT_DIR;
+    const previousGitWorkTree = process.env.GIT_WORK_TREE;
+    try {
+      process.env.GIT_DIR = parentGitDirectory;
+      process.env.GIT_WORK_TREE = repoRoot;
+      assert.deepEqual(auditTrackedTypeScriptSuppressions({ repoRoot: fixtureRoot, oxlintPath }), {
+        scanned: 3,
+        findings: [
+          { path: "src/directive.tsx", line: 1, column: 1 },
+          { path: "src/directives.ts", line: 1, column: 1 },
+          { path: "src/directives.ts", line: 3, column: 1 },
+          { path: "src/directives.ts", line: 5, column: 34 },
+        ],
+      });
+    } finally {
+      if (previousGitDirectory === undefined) delete process.env.GIT_DIR;
+      else process.env.GIT_DIR = previousGitDirectory;
+      if (previousGitWorkTree === undefined) delete process.env.GIT_WORK_TREE;
+      else process.env.GIT_WORK_TREE = previousGitWorkTree;
+    }
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
