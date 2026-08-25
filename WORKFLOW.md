@@ -46,6 +46,11 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-row-transform-context.ts
   - scripts/lib/import-curation/internal/workflow-dry-run-context.ts
   - scripts/lib/import-curation/internal/workflow-evidence-scope.ts
+  - scripts/lib/import-curation/internal/workflow-decision-full-context.ts
+  - scripts/lib/import-curation/internal/workflow-authoring-tasks.ts
+  - scripts/lib/import-curation/internal/workflow-semantic-actions.ts
+  - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
+  - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -116,10 +121,16 @@ checkPaths:
   - test/unit/wave21-dry-run-context-migration.test.mts
   - test/unit/workflow-evidence-scope-contract.test.mts
   - test/unit/wave21-evidence-scope-migration.test.mts
+  - test/unit/workflow-decision-full-context-contract.test.mts
+  - test/unit/wave22-decision-full-context-migration.test.mts
+  - test/unit/workflow-authoring-scc-contract.test.mts
+  - test/unit/wave22-authoring-scc-migration.test.mts
+  - test/unit/workflow-identity-preflight-contract.test.mts
+  - test/unit/wave22-identity-preflight-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 928355cb582ce13499403a553cb7f09e8a8bcdd2
-lastReviewedNote: "Reviewed for Issue #67 Wave 21: typed dry-run and evidence-scope helpers preserve map precedence, artifact aliases, blocker stage order, deterministic lineage exceptions and native failures."
+lastReviewedCommit: 2b2d7e6f9890fbfc9de583a1f27ad20842657716
+lastReviewedNote: "Reviewed for Issue #67 Wave 22: typed decision proof, atomic authoring SCC, and identity preflight preserve proof/hash/receipt binding, order, aliases, blockers, and native failures."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -179,6 +190,8 @@ Patch apply and trace evidence must remain bound to the exact row identity/index
 Deterministic row-lineage acceptance requires an exact or content-equivalent starting artifact followed by an explicit transform chain to the expected rows. First-seen transform order, status gates and payload hashes remain evidence; unreachable or malformed chains do not become freshness or write proof.
 
 Dry-run artifacts and exact-scope evidence remain separate checks: dry-run readers preserve per-command success/failure facts, while evidence-scope rejects missing or mismatched schema, curation, cleanup, patch, dry-run and remote reports unless an explicit deterministic transform chain proves the same final rows.
+
+Decision full-context, patch authoring, semantic actions, patch evidence, and identity-preflight now execute from native TypeScript. The three authoring modules form one characterized SCC and must cross migration/build boundaries atomically. Preserve action/trace/blocker encounter order, shared-context and authoring-package hashes, exact-version identity lookup before id-only fallback, execution-receipt and target-payload freshness checks, source-context requirements, and native parse/filesystem failures; missing or stale evidence never becomes AI completion or write authority.
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 

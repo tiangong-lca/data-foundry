@@ -43,6 +43,11 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-row-transform-context.ts
   - scripts/lib/import-curation/internal/workflow-dry-run-context.ts
   - scripts/lib/import-curation/internal/workflow-evidence-scope.ts
+  - scripts/lib/import-curation/internal/workflow-decision-full-context.ts
+  - scripts/lib/import-curation/internal/workflow-authoring-tasks.ts
+  - scripts/lib/import-curation/internal/workflow-semantic-actions.ts
+  - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
+  - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -96,13 +101,19 @@ checkPaths:
   - test/unit/wave21-dry-run-context-migration.test.mts
   - test/unit/workflow-evidence-scope-contract.test.mts
   - test/unit/wave21-evidence-scope-migration.test.mts
+  - test/unit/workflow-decision-full-context-contract.test.mts
+  - test/unit/wave22-decision-full-context-migration.test.mts
+  - test/unit/workflow-authoring-scc-contract.test.mts
+  - test/unit/wave22-authoring-scc-migration.test.mts
+  - test/unit/workflow-identity-preflight-contract.test.mts
+  - test/unit/wave22-identity-preflight-migration.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 928355cb582ce13499403a553cb7f09e8a8bcdd2
-lastReviewedNote: "Reviewed for Issue #67 Wave 21: tests cover dry-run maps/readers/remote suppression plus exact-scope aliases, blocker order, deterministic chains, QA envelopes and native errors."
+lastReviewedCommit: 2b2d7e6f9890fbfc9de583a1f27ad20842657716
+lastReviewedNote: "Reviewed for Issue #67 Wave 22: tests cover decision proof, atomic authoring SCC behavior/imports, and preflight aliases, receipt/hash freshness, source context, blocker order, and native errors."
 ---
 
 # Test Layout
@@ -169,6 +180,8 @@ Every behavior or migration slice starts with a failing focused test or a realis
 `unit/workflow-row-transform-context-contract.test.mts` characterizes unresolved/canonical/generic report aliases, trace/count/blocker/proof order, payload hashes, transform cross-products and fixed aggregation order, status gates, exact/content-equivalent rows, unordered/cyclic graph reachability, cleanup/decision aliases and every direct patch/identity/classification/externalization chain helper. `unit/wave20-row-transform-context-migration.test.mts` pins the zero-any native module, thirty-one runtime exports and all seven workflow plus scenario consumers.
 
 `unit/workflow-dry-run-context-contract.test.mts` pins exact-last/bare-first maps, operation normalization, flow aliases, three progress/failure readers, overwrite order and planned-root blocker suppression. `unit/workflow-evidence-scope-contract.test.mts` pins portable blocker envelopes, row aliases, all-missing/valid/mismatch stage order, deterministic rewrite-chain acceptance, QA parse envelopes and native path errors. Their Wave 21 migration tests pin native zero-any sources and every consumer.
+
+Wave 22 uses three RED/GREEN families that match the runtime topology. `unit/workflow-decision-full-context-contract.test.mts` pins proof relevance, hash/lineage requirements and blocker order. `unit/workflow-authoring-scc-contract.test.mts` pins patch/action/trace aliases, recursive order, shared-context behavior and the exact three-module export surface; its migration test requires every cycle edge to close over `.ts`. `unit/workflow-identity-preflight-contract.test.mts` pins result paths, missing-receipt fail-close, target hash freshness, exact-version lookup, source context, candidate order, queue aliases, blocker order and native JSON errors. Their Wave 22 migration tests reject old-path consumers and type escapes.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

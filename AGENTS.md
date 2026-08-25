@@ -56,6 +56,11 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-row-transform-context.ts
   - scripts/lib/import-curation/internal/workflow-dry-run-context.ts
   - scripts/lib/import-curation/internal/workflow-evidence-scope.ts
+  - scripts/lib/import-curation/internal/workflow-decision-full-context.ts
+  - scripts/lib/import-curation/internal/workflow-authoring-tasks.ts
+  - scripts/lib/import-curation/internal/workflow-semantic-actions.ts
+  - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
+  - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -80,8 +85,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 928355cb582ce13499403a553cb7f09e8a8bcdd2
-lastReviewedNote: "Reviewed for Issue #67 Wave 21: dry-run artifact and evidence-scope families are native zero-any TS7 with map/blocker/order/fallback and native-error contracts preserved."
+lastReviewedCommit: 2b2d7e6f9890fbfc9de583a1f27ad20842657716
+lastReviewedNote: "Reviewed for Issue #67 Wave 22: decision full-context, the closed authoring SCC, and identity preflight are native zero-escape TS7 with receipt, hash, order, blocker, alias, and native-error contracts preserved."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -131,6 +136,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - `import-curation/internal/workflow-row-transform-context.ts` is the typed deterministic row-lineage boundary. It preserves unresolved/canonical/source-contact/cleanup report aliases, trace and blocker order, payload hashes, transform-entry status matrices and fixed aggregation order, exact/content-equivalent artifact matching, multi-pass graph reachability and every patch/identity/classification/externalization chain combination. It proves lineage only and never performs a transform.
 - `import-curation/internal/workflow-dry-run-context.ts` is the typed dry-run artifact reader. It preserves schema/curation exact-last and bare-first maps, operation normalization, flow/process/lifecycle/save-draft progress/failure overwrite order, payload aliases and planned-root remote blocker suppression.
 - `import-curation/internal/workflow-evidence-scope.ts` is the typed exact-scope admission boundary. It preserves schema, curation, QA, cleanup, patch, collect, dry-run and remote blocker order; deterministic rewrite-chain exceptions require explicit content-bound lineage and never bypass missing evidence.
+- `import-curation/internal/workflow-decision-full-context.ts` preserves exact classification/location/identity proof relevance and deterministic row-chain blockers. The characterized `workflow-authoring-tasks.ts` / `workflow-semantic-actions.ts` / `workflow-patch-evidence.ts` SCC must migrate and compile atomically; do not split it back into `.mjs`/`.ts` dual tracks or add an uncharacterized cycle edge. `workflow-identity-preflight.ts` remains fail-closed on missing execution receipts, stale payload hashes, missing source context, invalid policy evidence, and native parse/filesystem errors.
 - Toolchain and migration tests must pass from a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. They must not depend on the superproject checkout, another worktree's `node_modules`, absolute developer paths, ignored `.foundry` state, or credentials.
 - The Golden gate must compare against a non-`HEAD` merge-base with full Git history and a Node-native comparator. Cross-platform fixtures use executable-plus-argv dispatch; a `.js`/`.mjs`/`.cjs` test script must run through `process.execPath`, not OS executable-bit behavior. `.gitattributes` keeps repository text at LF on every runner; only Windows launcher files may opt into CRLF.
 - Foundry artifact-to-scope matching and transitional command parsers must accept both path separators. Durable JSON/JSONL writers flush the writable descriptor they opened; POSIX permission-bit assertions are not imposed on Windows filesystems.

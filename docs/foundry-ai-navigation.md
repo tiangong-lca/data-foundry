@@ -40,6 +40,11 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-row-transform-context.ts
   - scripts/lib/import-curation/internal/workflow-dry-run-context.ts
   - scripts/lib/import-curation/internal/workflow-evidence-scope.ts
+  - scripts/lib/import-curation/internal/workflow-decision-full-context.ts
+  - scripts/lib/import-curation/internal/workflow-authoring-tasks.ts
+  - scripts/lib/import-curation/internal/workflow-semantic-actions.ts
+  - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
+  - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -62,8 +67,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 928355cb582ce13499403a553cb7f09e8a8bcdd2
-lastReviewedNote: "Reviewed for Issue #67 Wave 21: navigation records typed dry-run maps/remote blockers and evidence-scope report binding/blocker order plus consumers."
+lastReviewedCommit: 2b2d7e6f9890fbfc9de583a1f27ad20842657716
+lastReviewedNote: "Reviewed for Issue #67 Wave 22: navigation records typed decision proof, the closed authoring SCC, and identity-preflight receipt/hash/source-context gates plus consumers."
 ---
 
 # Foundry AI Navigation
@@ -151,6 +156,8 @@ The typed row lineage leaf is `import-curation/internal/workflow-row-transform-c
 
 The typed dry-run leaf is `import-curation/internal/workflow-dry-run-context.ts`; navigate there for schema/curation identity maps, dry-run operation names, flow/process/lifecycle/save-draft artifacts and remote blocker keys. The typed exact-scope leaf is `import-curation/internal/workflow-evidence-scope.ts`; navigate there for report-row aliases and ordered schema/curation/QA/cleanup/patch/collect/dry-run/remote scope blockers.
 
+The typed decision proof leaf is `import-curation/internal/workflow-decision-full-context.ts`; navigate there for classification/location/identity requirement relevance, package/task proof, deterministic row-chain acceptance and ordered blockers. Patch authoring is one characterized SCC: `workflow-authoring-tasks.ts` owns task/package/shared-context construction and patch evidence helpers, `workflow-semantic-actions.ts` owns semantic/content actions and patch templates, and `workflow-patch-evidence.ts` owns trace/classification/location validation. Migrate or reshape those three only as a closed cycle and keep every edge typed. `workflow-identity-preflight.ts` sits above that SCC; navigate there for result path aliases, execution-receipt validation, exact-version lookup, payload freshness and deterministic allowances, source-context requirements, AI identity actions, prewrite policy blockers, and classification/location queue decisions.
+
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 
 The typed handoff primitive is `scripts/lib/foundry-command-spec.ts`. Navigate there for exact-key parsing, canonical command hashing, critical-flag uniqueness, final-row artifact facts, or pre-spawn drift checks. Callers must never reconstruct argv from `display`.
@@ -186,7 +193,8 @@ The current internal dependency direction is:
 ```text
 semantic import-curation modules
   -> internal/*-workflow.mjs
-  -> internal/workflow-*.mjs
+  -> internal/workflow-*.{ts,mjs}
+     -> characterized authoring SCC: authoring-tasks.ts <-> semantic-actions.ts <-> patch-evidence.ts
   -> internal/full-context-proof.ts
   -> internal/profiles-config.ts
   -> internal/trace-summary.ts
@@ -210,7 +218,7 @@ Layer rules:
 - `mutation-manifest-workflow.mjs`: prewrite evidence, reference closure, dry-run proof, and write-candidate planning helpers.
 - `workflow-queue-context.ts`, `workflow-identity-preflight.ts`, `workflow-identity-decision-context.ts`, `workflow-semantic-actions.ts`, `workflow-authoring-tasks.ts`, `workflow-patch-evidence.ts`, `workflow-patch-evidence-context.ts`, `workflow-patch-collect.ts`, `workflow-row-transform-context.ts`, `workflow-evidence-scope.ts`, `workflow-decision-apply-context.ts`, `workflow-decision-full-context.ts`, `workflow-dry-run-context.ts`, `workflow-source-reference-context.mjs`, and `workflow-reference-closure.mjs`: focused domain helpers used by the workflow facets above.
 
-Dependencies should point downward only. Internal low-level modules must not import semantic command modules.
+Dependencies should point downward only outside the explicitly characterized authoring SCC above. Do not add another cycle edge or split that SCC across JavaScript and TypeScript. Internal low-level modules must not import semantic command modules.
 
 ## Cleanup Checks
 
