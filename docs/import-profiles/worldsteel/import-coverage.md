@@ -1,3 +1,9 @@
+---
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: cc3505e7d8c7fe531dc3f8c0f2787b5b3a7398e8
+lastReviewedNote: "Reviewed for Issue #68 as retained delivery evidence; 10+10 LANCA and 11+11 owner rows are historical observations, not runtime caps."
+---
+
 # worldsteel EF3.1 import — coverage report
 
 Imported under account **data@worldsteel.org** (uid 7d6d550a). Generated 2026-07-01.

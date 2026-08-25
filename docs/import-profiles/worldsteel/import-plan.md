@@ -1,9 +1,12 @@
 ---
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: cc3505e7d8c7fe531dc3f8c0f2787b5b3a7398e8
+lastReviewedNote: "Reviewed for Issue #68: R5 records the 2026-07-01 support-mint decision that superseded the earlier FP/UG reference-only plan."
 title: worldsteel EF3.1 ILCD Import Plan
 docType: plan
 scope: import-profile/worldsteel
 status: draft
-revision: 3 (decisions D1–D4 + refinements R1–R4 answered 2026-06-29; prerequisites implemented)
+revision: 4 (decisions D1–D4 + refinements R1–R5; R5 superseded FP/UG reference-only on 2026-07-01)
 owner: tiangong-lca-data-foundry
 created_utc: 2026-06-29
 related:

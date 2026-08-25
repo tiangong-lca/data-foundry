@@ -10,6 +10,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 
 // Explicit TypeScript AnyKeyword closures are enforced by Oxlint; this suite remains the
 // permanent boundary against reintroducing first-party JavaScript compatibility paths.
+// Issue #68's Worldsteel profile-truth contract is native .mts and adds no compatibility path.
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
