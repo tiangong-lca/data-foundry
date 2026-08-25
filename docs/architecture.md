@@ -46,8 +46,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 73fd7d051e7a4ee3695252d155f908e9dee6d5db
-lastReviewedNote: "Reviewed for Issue #67 Wave 4: typed runtime I/O remains a Foundry-local synchronous helper boundary and does not alter durable artifact policy or sibling ownership."
+lastReviewedCommit: cafacf6683810777a91bc1b03e014d708e817b1e
+lastReviewedNote: "Reviewed for Issue #67 Wave 5: typed artifact/context/dataset/trace boundaries remain Foundry-local evidence contracts and do not alter CLI schema assets or sibling ownership."
 ---
 
 # Architecture

@@ -35,8 +35,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 73fd7d051e7a4ee3695252d155f908e9dee6d5db
-lastReviewedNote: "Reviewed for Issue #67 Wave 4: typed runtime I/O navigation records all helper responsibilities and explicitly preserves direct overwrite, partial-prefix, close, native error, and portable path semantics."
+lastReviewedCommit: cafacf6683810777a91bc1b03e014d708e817b1e
+lastReviewedNote: "Reviewed for Issue #67 Wave 5: typed internal navigation records artifact/QA, payload identity, ordered trace, and installed-schema context contracts plus missing/duplicate/drift/error boundaries."
 ---
 
 # Foundry AI Navigation

@@ -50,8 +50,8 @@ checkPaths:
   - test/unit/trace-summary.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 73fd7d051e7a4ee3695252d155f908e9dee6d5db
-lastReviewedNote: "Reviewed for Issue #67 Wave 4: shared runtime I/O migration preserves workflow artifacts, visible filesystem semantics, static consumers, and characterization-first gates."
+lastReviewedCommit: cafacf6683810777a91bc1b03e014d708e817b1e
+lastReviewedNote: "Reviewed for Issue #67 Wave 5: typed internal data contracts preserve workflow artifact facts, identity and trace lineage, context gates, error propagation, and characterization-first order."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

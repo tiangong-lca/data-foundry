@@ -43,8 +43,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 73fd7d051e7a4ee3695252d155f908e9dee6d5db
-lastReviewedNote: "Reviewed for Issue #67 Wave 4: shared runtime I/O is native TS7 under complete export characterization without implicit atomicity or error-semantic changes."
+lastReviewedCommit: cafacf6683810777a91bc1b03e014d708e817b1e
+lastReviewedNote: "Reviewed for Issue #67 Wave 5: artifact, dataset payload, trace summary, and context contracts are native TS7 under complete behavior characterization."
 ---
 
 # TianGong LCA Data Foundry

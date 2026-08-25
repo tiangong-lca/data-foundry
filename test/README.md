@@ -39,8 +39,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 73fd7d051e7a4ee3695252d155f908e9dee6d5db
-lastReviewedNote: "Reviewed for Issue #67 Wave 4: runtime I/O characterization covers all exports, exact bytes, mkdir/overwrite, partial-prefix and close-on-error, JSON envelopes, native errors, missing inputs, separators, and consumers."
+lastReviewedCommit: cafacf6683810777a91bc1b03e014d708e817b1e
+lastReviewedNote: "Reviewed for Issue #67 Wave 5: focused tests cover all artifact/context/dataset/trace exports, priorities, paths, hashes, ordering, dedupe, schemas, missing/duplicate/drift/error envelopes, and consumers."
 ---
 
 # Test Layout

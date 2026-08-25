@@ -51,8 +51,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 73fd7d051e7a4ee3695252d155f908e9dee6d5db
-lastReviewedNote: "Reviewed for Issue #67 Wave 4: high-fan-in runtime I/O is native TS7 with exact synchronous bytes, path normalization, row envelopes, native errors, partial-write, close, and consumer behavior preserved."
+lastReviewedCommit: cafacf6683810777a91bc1b03e014d708e817b1e
+lastReviewedNote: "Reviewed for Issue #67 Wave 5: typed artifact/context/dataset/trace contracts preserve path and identity precedence, QA dedupe, trace order/hashes, installed schemas, and missing/duplicate/drift/error evidence."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
