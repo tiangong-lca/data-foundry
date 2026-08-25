@@ -134,6 +134,29 @@ checkPaths:
   - test/unit/unit-execution-library-test-migration.test.mts
   - test/unit/unit-algorithm-adapter-test-migration.test.mts
   - test/unit/unit-runtime-policy-test-migration.test.mts
+  - test/scenarios/authoring-shared-context.test.mts
+  - test/scenarios/bafu-mydata-override.test.mts
+  - test/scenarios/content-saturation-gates.test.mts
+  - test/scenarios/curation-cleanup-quality-gates.test.mts
+  - test/scenarios/decision-task-context-and-classification.test.mts
+  - test/scenarios/flow-classification-authoring.test.mts
+  - test/scenarios/flow-identity-decisions.test.mts
+  - test/scenarios/flow-reference-reuse-and-traces.test.mts
+  - test/scenarios/full-context-completion-closeout.test.mts
+  - test/scenarios/identity-curation-context.test.mts
+  - test/scenarios/identity-preflight-run-and-merge.test.mts
+  - test/scenarios/incremental-change-set-handoff.test.mts
+  - test/scenarios/library-scope-workflow.test.mts
+  - test/scenarios/location-and-finalize-gates.test.mts
+  - test/scenarios/mutation-full-context-evidence.test.mts
+  - test/scenarios/mutation-lineage-helpers.test.mts
+  - test/scenarios/mutation-manifest-reference-closure.test.mts
+  - test/scenarios/post-authoring-finalize-gates.test.mts
+  - test/scenarios/topology-convergence-handoff.test.mts
+  - test/scenarios/scenario-authoring-curation-test-migration.test.mts
+  - test/scenarios/scenario-identity-reference-test-migration.test.mts
+  - test/scenarios/scenario-mutation-finalize-test-migration.test.mts
+  - test/scenarios/scenario-library-algorithm-test-migration.test.mts
   - test/unit/foundry-runtime-utils-contract.test.mts
   - test/unit/wave10-runtime-migration.test.mts
   - test/unit/location-quality-utils-contract.test.mts
@@ -204,8 +227,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: f168873fb41cb6064f08b1a901a3439eb0b054e4
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 unit-test completion: four migration families pin all 17 remaining suites as native zero-escape TS7 while their 65 behavior cases, fixture imports, bytes/order/policies and native failures remain unchanged."
+lastReviewedCommit: 3a5bd04827ebdcd028f9c08b86641e7a7d3a94e9
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 scenario completion: four migration families pin all 19 remaining suites as native zero-escape TS7 while 86 multi-command cases, artifacts/order/hashes, fixture imports, failures and authority boundaries remain unchanged."
 ---
 
 # Test Layout
@@ -292,6 +315,8 @@ Wave 25 covers two re-export families. `unit/import-curation-leaf-barrels-migrat
 Wave 26 covers the remaining eight shared fixtures as five dependency-ordered RED/GREEN families. `unit/fixture-executable-core-migration.test.mts` pins the core namespace/live Node references, exact writer bytes, native errors and a non-executable `fake-tidas.ts` launched only through `process.execPath`. `unit/row-builders-fixture-migration.test.mts` pins every payload family and one combined byte/hash contract. `unit/context-identity-mutation-fixture-migration.test.mts` pins workflow namespaces, receipt and row bytes, context/dependency order and isolated roots. `unit/incremental-fixture-migration.test.mts` and `unit/topology-fixture-migration.test.mts` pin their policy/graph constants, artifact order, stable JSONL/package bytes and native failures. All consumers use `.ts`; no fixture reads credentials, `.env`, production state or historical `.foundry` data.
 
 Wave 26 completes the unit-test boundary in four more RED/GREEN families. `unit/unit-source-ledger-test-migration.test.mts` covers six source/language/ledger/support suites; `unit/unit-execution-library-test-migration.test.mts` covers capsule attempt, finalize reuse and library contact suites; `unit/unit-algorithm-adapter-test-migration.test.mts` covers tidas adapter/cutover plus incremental/topology suites and typed fixture imports; `unit/unit-runtime-policy-test-migration.test.mts` covers runtime skill, stage and content/semantic policy suites. All 17 legacy `.test.mjs` files are gone, all 65 original cases stay green, and explicit test-side narrowing adds no production behavior or authority.
+
+Wave 26 completes the scenario boundary in four RED/GREEN families. `scenarios/scenario-authoring-curation-test-migration.test.mts`, `scenario-identity-reference-test-migration.test.mts`, `scenario-mutation-finalize-test-migration.test.mts`, and `scenario-library-algorithm-test-migration.test.mts` require all 19 suites to be native `.mts` with typed fixture imports and no explicit type escape. All 86 original multi-command cases preserve artifact bytes/order/hashes, blockers, native errors, fail-close and remote-write boundaries; no `.test.mjs` remains under `test/scenarios`.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

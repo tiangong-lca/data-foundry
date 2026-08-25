@@ -22,8 +22,8 @@ checkPaths:
   - test/scenarios/topology-convergence-handoff.test.mts
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: f168873fb41cb6064f08b1a901a3439eb0b054e4
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 unit-test completion: the native TS7 topology suite and fixture preserve occurrence identity, canonical hashes, graph/mapping order, admission binding, stable artifacts and native errors without changing convergence semantics or authority."
+lastReviewedCommit: 3a5bd04827ebdcd028f9c08b86641e7a7d3a94e9
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 scenario completion: native TS7 topology unit, fixture and handoff suites preserve occurrence identity, graph/mapping order, admission/activation boundaries, artifacts and native errors without changing convergence semantics or authority."
 ---
 
 # Topology Convergence Contract

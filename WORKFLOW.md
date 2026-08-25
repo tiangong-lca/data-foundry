@@ -153,6 +153,29 @@ checkPaths:
   - test/unit/unit-execution-library-test-migration.test.mts
   - test/unit/unit-algorithm-adapter-test-migration.test.mts
   - test/unit/unit-runtime-policy-test-migration.test.mts
+  - test/scenarios/authoring-shared-context.test.mts
+  - test/scenarios/bafu-mydata-override.test.mts
+  - test/scenarios/content-saturation-gates.test.mts
+  - test/scenarios/curation-cleanup-quality-gates.test.mts
+  - test/scenarios/decision-task-context-and-classification.test.mts
+  - test/scenarios/flow-classification-authoring.test.mts
+  - test/scenarios/flow-identity-decisions.test.mts
+  - test/scenarios/flow-reference-reuse-and-traces.test.mts
+  - test/scenarios/full-context-completion-closeout.test.mts
+  - test/scenarios/identity-curation-context.test.mts
+  - test/scenarios/identity-preflight-run-and-merge.test.mts
+  - test/scenarios/incremental-change-set-handoff.test.mts
+  - test/scenarios/library-scope-workflow.test.mts
+  - test/scenarios/location-and-finalize-gates.test.mts
+  - test/scenarios/mutation-full-context-evidence.test.mts
+  - test/scenarios/mutation-lineage-helpers.test.mts
+  - test/scenarios/mutation-manifest-reference-closure.test.mts
+  - test/scenarios/post-authoring-finalize-gates.test.mts
+  - test/scenarios/topology-convergence-handoff.test.mts
+  - test/scenarios/scenario-authoring-curation-test-migration.test.mts
+  - test/scenarios/scenario-identity-reference-test-migration.test.mts
+  - test/scenarios/scenario-mutation-finalize-test-migration.test.mts
+  - test/scenarios/scenario-library-algorithm-test-migration.test.mts
   - test/unit/foundry-runtime-utils-contract.test.mts
   - test/unit/wave10-runtime-migration.test.mts
   - test/unit/location-quality-utils-contract.test.mts
@@ -214,8 +237,8 @@ checkPaths:
   - test/unit/import-curation-entry-barrels-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: f168873fb41cb6064f08b1a901a3439eb0b054e4
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 unit-test completion: native TS7 unit suites preserve source/ledger/support, execution/finalize/library, adapter/algorithm and runtime/content-policy behavior without changing workflow or production authority."
+lastReviewedCommit: 3a5bd04827ebdcd028f9c08b86641e7a7d3a94e9
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 scenario completion: native TS7 multi-command suites preserve authoring/curation, identity/reference, mutation/finalize and library/algorithm evidence without changing workflow or production authority."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -295,6 +318,8 @@ The import-curation leaf, index, and public entry barrels are native TypeScript 
 All shared fixtures are native TypeScript. Keep `foundry-core.ts`, `row-builders.ts`, full-context/identity/mutation fixtures and incremental/topology packages deterministic and worktree-local. `fake-tidas.ts` must be invoked through `process.execPath` plus its script argv, never through an executable bit, shell, or platform-specific launcher; fixtures must not read credentials, `.env`, production state, or ignored historical artifacts.
 
 All unit suites are native `.test.mts`. Preserve the exact existing cases before and after each rename, keep shared fixture imports on `.ts`, and use explicit narrowing or test-local dependency casts only where the runtime owner still exposes a JavaScript-shaped boundary. Unit-test typing must not modify owner behavior, profile defaults, Worldsteel/Date.parse semantics, or remote authority.
+
+All scenario suites are native `.test.mts`. Preserve every multi-command artifact, row and blocker order, content hash, native error, fail-closed stage and remote-write boundary before and after rename. Shared recursive report typing is test-only; runtime owners and production validation remain authoritative.
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 

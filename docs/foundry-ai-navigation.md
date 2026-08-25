@@ -98,12 +98,16 @@ checkPaths:
   - test/unit/unit-execution-library-test-migration.test.mts
   - test/unit/unit-algorithm-adapter-test-migration.test.mts
   - test/unit/unit-runtime-policy-test-migration.test.mts
+  - test/scenarios/scenario-authoring-curation-test-migration.test.mts
+  - test/scenarios/scenario-identity-reference-test-migration.test.mts
+  - test/scenarios/scenario-mutation-finalize-test-migration.test.mts
+  - test/scenarios/scenario-library-algorithm-test-migration.test.mts
   - scripts/commands/incremental-change-set.mjs
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: f168873fb41cb6064f08b1a901a3439eb0b054e4
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 unit-test completion: navigation records four native TS7 unit behavior families, typed fixture edges, governed test paths and unchanged runtime owner boundaries."
+lastReviewedCommit: 3a5bd04827ebdcd028f9c08b86641e7a7d3a94e9
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 scenario completion: navigation records four native TS7 multi-command behavior families, typed fixture/report edges, governed paths and unchanged runtime owner boundaries."
 ---
 
 # Foundry AI Navigation
@@ -208,6 +212,8 @@ The typed import-curation entry chain is `scripts/lib/import-curation.ts` → `i
 The typed fixture chain starts at `test/fixtures/foundry-core.ts` and `row-builders.ts`, then branches into full-context/identity/mutation evidence and independent incremental/topology packages. Navigate to `fake-tidas.ts` only for the stable Rust operation-report/exit harness; dispatch it as `process.execPath` plus script argv. Fixture modules preserve runtime export namespaces and artifact bytes but are never semantic command owners.
 
 All unit suites use `.test.mts`. Navigate through the four `unit-*-test-migration.test.mts` contracts for the source/ledger/support, execution/finalize/library, adapter/algorithm, and runtime/content-policy partitions; navigate from each behavior test to its existing semantic owner without treating test-side type narrowing as a new runtime abstraction.
+
+All scenario suites use `.test.mts`. Navigate through the four `scenario-*-test-migration.test.mts` contracts for authoring/curation, identity/reference, mutation/finalize and library/algorithm partitions. Their shared report types describe captured test artifacts only; semantic ownership stays in command metadata and runtime owners.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 

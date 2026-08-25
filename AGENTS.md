@@ -141,6 +141,29 @@ checkPaths:
   - test/unit/unit-execution-library-test-migration.test.mts
   - test/unit/unit-algorithm-adapter-test-migration.test.mts
   - test/unit/unit-runtime-policy-test-migration.test.mts
+  - test/scenarios/authoring-shared-context.test.mts
+  - test/scenarios/bafu-mydata-override.test.mts
+  - test/scenarios/content-saturation-gates.test.mts
+  - test/scenarios/curation-cleanup-quality-gates.test.mts
+  - test/scenarios/decision-task-context-and-classification.test.mts
+  - test/scenarios/flow-classification-authoring.test.mts
+  - test/scenarios/flow-identity-decisions.test.mts
+  - test/scenarios/flow-reference-reuse-and-traces.test.mts
+  - test/scenarios/full-context-completion-closeout.test.mts
+  - test/scenarios/identity-curation-context.test.mts
+  - test/scenarios/identity-preflight-run-and-merge.test.mts
+  - test/scenarios/incremental-change-set-handoff.test.mts
+  - test/scenarios/library-scope-workflow.test.mts
+  - test/scenarios/location-and-finalize-gates.test.mts
+  - test/scenarios/mutation-full-context-evidence.test.mts
+  - test/scenarios/mutation-lineage-helpers.test.mts
+  - test/scenarios/mutation-manifest-reference-closure.test.mts
+  - test/scenarios/post-authoring-finalize-gates.test.mts
+  - test/scenarios/topology-convergence-handoff.test.mts
+  - test/scenarios/scenario-authoring-curation-test-migration.test.mts
+  - test/scenarios/scenario-identity-reference-test-migration.test.mts
+  - test/scenarios/scenario-mutation-finalize-test-migration.test.mts
+  - test/scenarios/scenario-library-algorithm-test-migration.test.mts
   - test/unit/curation-gate-workflow-facade-contract.test.mts
   - test/unit/wave24-curation-gate-workflow-migration.test.mts
   - test/unit/curation-gate-runner-contract.test.mts
@@ -165,8 +188,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: f168873fb41cb6064f08b1a901a3439eb0b054e4
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 unit-test completion: all 17 remaining unit suites are native zero-escape TS7 while preserving 65 established cases, exact artifacts/stages/policies, fixture imports and native errors without credential or production access."
+lastReviewedCommit: 3a5bd04827ebdcd028f9c08b86641e7a7d3a94e9
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 scenario completion: all 19 remaining multi-command suites are native zero-escape TS7 while preserving 86 established artifact/order/hash/fail-close and no-remote-authority cases without credentials or production access."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -224,6 +247,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts` are typed runtime command boundaries. CLI wrappers preserve executable-prefix/argv arrays, inherited environment, stdout/stderr, exit mapping and native spawn errors without shell strings. Capsule admission remains offline, exclusive-write, receipt/hash/seal and no-replay evidence only. Closeout remains read-only and fail-closed on artifact drift, non-unique roots, owner/state/payload mismatch, foreign or hidden missing data, and production-test accepted-diff restrictions.
 - The shared fixture layer is native TypeScript: `foundry-core.ts` owns worktree-local file/process helpers, `row-builders.ts` owns deterministic payloads, workflow and algorithm fixtures own realistic evidence packages, and `fake-tidas.ts` is always dispatched as `process.execPath` plus argv. Fixtures remain test-only, zero-credential local evidence and never emulate sibling schema or database authority.
 - Every `test/unit/*.test.*` suite is native TypeScript. Four migration contracts group source/ledger/support, execution/finalize/library, adapter/algorithm, and runtime/content-policy behavior; their typing narrows only test harness values and retains existing runtime owner specifiers until those owners migrate.
+- Every `test/scenarios/*.test.*` suite is native TypeScript. Four migration contracts group authoring/curation, identity/reference, mutation/finalize, and library/incremental/topology workflows; the shared recursive fixture evidence type is test-only and does not weaken runtime validation or remote-write boundaries.
 - Toolchain and migration tests must pass from a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. They must not depend on the superproject checkout, another worktree's `node_modules`, absolute developer paths, ignored `.foundry` state, or credentials.
 - The Golden gate must compare against a non-`HEAD` merge-base with full Git history and a Node-native comparator. Cross-platform fixtures use executable-plus-argv dispatch; a `.js`/`.mjs`/`.cjs` test script must run through `process.execPath`, not OS executable-bit behavior. `.gitattributes` keeps repository text at LF on every runner; only Windows launcher files may opt into CRLF.
 - Foundry artifact-to-scope matching and transitional command parsers must accept both path separators. Durable JSON/JSONL writers flush the writable descriptor they opened; POSIX permission-bit assertions are not imposed on Windows filesystems.
