@@ -1,11 +1,31 @@
 import { normalizeTidasLanguageCode, tidasLanguageForText } from "./tidas-language-utils.ts";
 
 export type TidasRowUtilsDependencies = {
-  asText: (value: any) => string;
+  asText: (value: unknown) => string;
   bundleRowTypes: Record<string, { plural: string; rootKey: string; informationKey: string }>;
   cloneJson: <T>(value: T) => T;
-  ensureArray: (value: any) => any[];
-  writeText: (filePath: string, text: string) => any;
+  ensureArray: (value: unknown) => unknown[];
+  writeText: (filePath: string, text: string) => unknown;
+};
+
+type UnknownRecord = Record<string, unknown>;
+
+type ContactReference = UnknownRecord & {
+  "@type"?: unknown;
+  "@refObjectId"?: unknown;
+  "@version"?: unknown;
+  "@uri"?: unknown;
+  "common:shortDescription"?: unknown;
+};
+
+type ContactRewriteStats = {
+  rewritten: number;
+  previous_ids: Set<string>;
+  previous_descriptions: Set<string>;
+};
+
+type PlaceholderTextStats = {
+  placeholder_text_replacements: number;
 };
 
 export function createTidasRowUtils({
@@ -15,7 +35,7 @@ export function createTidasRowUtils({
   ensureArray,
   writeText,
 }: TidasRowUtilsDependencies) {
-  function datasetRowsFileStem(datasetType: any) {
+  function datasetRowsFileStem(datasetType: unknown) {
     return (
       {
         contact: "contacts",
@@ -30,29 +50,39 @@ export function createTidasRowUtils({
     );
   }
 
-  function multiLang(text: any, language: any = "en") {
+  function multiLang(text: unknown, language: unknown = "en") {
     return {
       "@xml:lang": normalizeTidasLanguageCode(language),
       "#text": String(text ?? "").trim(),
     };
   }
 
-  function containsCjk(text: any) {
+  function containsCjk(text: unknown) {
     return /[\u3400-\u9fff\uf900-\ufaff]/u.test(String(text ?? ""));
   }
 
-  function languageForText(text: any, fallback: any = "en") {
+  function languageForText(text: unknown, fallback: unknown = "en") {
     const value = String(text ?? "").trim();
     if (!value) return normalizeTidasLanguageCode(fallback);
     return containsCjk(value) ? "zh" : tidasLanguageForText(value, fallback);
   }
 
-  function preferredSourceLanguageText(values: any) {
+  function preferredSourceLanguageText(values: unknown) {
     const texts = ensureArray(values).map(asText).filter(Boolean);
     return texts.find((text) => !containsCjk(text)) || texts[0] || "";
   }
 
-  function contactGlobalReference({ id, version, shortDescription, language = "en" }: any) {
+  function contactGlobalReference({
+    id,
+    version,
+    shortDescription,
+    language = "en",
+  }: {
+    id: unknown;
+    version: unknown;
+    shortDescription: unknown;
+    language?: unknown;
+  }) {
     return {
       "@type": "contact data set",
       "@refObjectId": id,
@@ -62,31 +92,33 @@ export function createTidasRowUtils({
     };
   }
 
-  function datasetIdentity(payload: any, type: string) {
+  function datasetIdentity(payload: unknown, type: string) {
     const config = bundleRowTypes[type];
     if (!config || !payload || typeof payload !== "object" || Array.isArray(payload)) {
       return { id: null, version: null };
     }
-    const root =
-      payload[config.rootKey] && typeof payload[config.rootKey] === "object"
-        ? payload[config.rootKey]
-        : {};
+    const payloadRecord = payload as UnknownRecord;
+    const rootValue = payloadRecord[config.rootKey];
+    const root = rootValue && typeof rootValue === "object" ? (rootValue as UnknownRecord) : {};
+    const informationValue = root[config.informationKey];
     const information =
-      root[config.informationKey] && typeof root[config.informationKey] === "object"
-        ? root[config.informationKey]
+      informationValue && typeof informationValue === "object"
+        ? (informationValue as UnknownRecord)
         : {};
+    const dataSetInformationValue = information.dataSetInformation;
     const dataSetInformation =
-      information.dataSetInformation && typeof information.dataSetInformation === "object"
-        ? information.dataSetInformation
+      dataSetInformationValue && typeof dataSetInformationValue === "object"
+        ? (dataSetInformationValue as UnknownRecord)
         : {};
+    const administrativeInformationValue = root.administrativeInformation;
     const administrativeInformation =
-      root.administrativeInformation && typeof root.administrativeInformation === "object"
-        ? root.administrativeInformation
+      administrativeInformationValue && typeof administrativeInformationValue === "object"
+        ? (administrativeInformationValue as UnknownRecord)
         : {};
+    const publicationAndOwnershipValue = administrativeInformation.publicationAndOwnership;
     const publicationAndOwnership =
-      administrativeInformation.publicationAndOwnership &&
-      typeof administrativeInformation.publicationAndOwnership === "object"
-        ? administrativeInformation.publicationAndOwnership
+      publicationAndOwnershipValue && typeof publicationAndOwnershipValue === "object"
+        ? (publicationAndOwnershipValue as UnknownRecord)
         : {};
     return {
       id: asText(dataSetInformation["common:UUID"]) || null,
@@ -94,52 +126,60 @@ export function createTidasRowUtils({
     };
   }
 
-  function contactDescriptionText(reference: any) {
-    const description = reference?.["common:shortDescription"];
+  function contactDescriptionText(reference: unknown) {
+    const description = (reference as ContactReference | null | undefined)?.[
+      "common:shortDescription"
+    ];
     if (typeof description === "string") return description;
     if (description && typeof description === "object" && !Array.isArray(description)) {
-      return asText(description["#text"]) || asText(description.value);
+      const descriptionRecord = description as UnknownRecord;
+      return asText(descriptionRecord["#text"]) || asText(descriptionRecord.value);
     }
     return "";
   }
 
-  function rewriteContactReferences(value: any, contactRef: any, stats: any): void {
+  function rewriteContactReferences(
+    value: unknown,
+    contactRef: ContactReference,
+    stats: ContactRewriteStats,
+  ): void {
     if (!value || typeof value !== "object") return;
     if (Array.isArray(value)) {
       for (const item of value) rewriteContactReferences(item, contactRef, stats);
       return;
     }
 
-    const refType = asText(value["@type"]).toLowerCase();
-    const refObjectId = asText(value["@refObjectId"]);
+    const valueRecord = value as UnknownRecord;
+    const refType = asText(valueRecord["@type"]).toLowerCase();
+    const refObjectId = asText(valueRecord["@refObjectId"]);
     if (refObjectId && refType.includes("contact")) {
       stats.rewritten += 1;
       stats.previous_ids.add(refObjectId);
       const previousDescription = contactDescriptionText(value);
       if (previousDescription) stats.previous_descriptions.add(previousDescription);
-      value["@type"] = contactRef["@type"];
-      value["@refObjectId"] = contactRef["@refObjectId"];
-      value["@version"] = contactRef["@version"];
-      value["@uri"] = contactRef["@uri"];
-      value["common:shortDescription"] = cloneJson(contactRef["common:shortDescription"]);
+      valueRecord["@type"] = contactRef["@type"];
+      valueRecord["@refObjectId"] = contactRef["@refObjectId"];
+      valueRecord["@version"] = contactRef["@version"];
+      valueRecord["@uri"] = contactRef["@uri"];
+      valueRecord["common:shortDescription"] = cloneJson(contactRef["common:shortDescription"]);
     }
 
-    for (const child of Object.values(value)) {
+    for (const child of Object.values(valueRecord)) {
       rewriteContactReferences(child, contactRef, stats);
     }
   }
 
-  function isObjectEmpty(value: any) {
+  function isObjectEmpty(value: unknown) {
     return (
       value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0
     );
   }
 
-  function pathExpression(pathSegments: any[]) {
+  function pathExpression(pathSegments: unknown[]) {
     return pathSegments.map(String).join(".");
   }
 
-  function cleanEcoSpoldNameText(text: any) {
+  function cleanEcoSpoldNameText(text: unknown) {
     return String(text ?? "")
       .replace(/^\s*x+\s+/iu, "")
       .replace(/\s*\{[A-Za-z][A-Za-z0-9_-]*\}/gu, "")
@@ -147,7 +187,11 @@ export function createTidasRowUtils({
       .trim();
   }
 
-  function sanitizePlaceholderText(text: any, pathSegments: any[], stats: any) {
+  function sanitizePlaceholderText(
+    text: unknown,
+    pathSegments: unknown[],
+    stats: PlaceholderTextStats,
+  ) {
     const original = String(text ?? "");
     let next = original;
     if (/^\s*0\s+Not declared in source package\s*$/iu.test(next)) {
@@ -170,15 +214,21 @@ export function createTidasRowUtils({
     return next;
   }
 
-  function bundleClassificationEntries(payload: any, type: string) {
+  function bundleClassificationEntries(payload: unknown, type: string) {
     const config = bundleRowTypes[type];
-    const root = payload?.[config?.rootKey];
-    const information = root?.[config?.informationKey];
-    const dataSetInformation = information?.dataSetInformation;
-    const classes =
-      dataSetInformation?.classificationInformation?.["common:classification"]?.["common:class"];
+    const payloadRecord = payload as UnknownRecord | null | undefined;
+    const root = payloadRecord?.[config?.rootKey] as UnknownRecord | undefined;
+    const information = root?.[config?.informationKey] as UnknownRecord | undefined;
+    const dataSetInformation = information?.dataSetInformation as UnknownRecord | undefined;
+    const classificationInformation = dataSetInformation?.classificationInformation as
+      UnknownRecord | undefined;
+    const classification = classificationInformation?.["common:classification"] as
+      UnknownRecord | undefined;
+    const classes = classification?.["common:class"];
     return ensureArray(classes)
-      .filter((item) => item && typeof item === "object")
+      .filter((item): item is UnknownRecord =>
+        Boolean(item && typeof item === "object" && !Array.isArray(item)),
+      )
       .map((item) => ({
         level: asText(item["@level"]),
         class_id: asText(item["@classId"]),
@@ -187,35 +237,39 @@ export function createTidasRowUtils({
       .filter((item) => item.text);
   }
 
-  function bundleClassificationPath(payload: any, type: string) {
+  function bundleClassificationPath(payload: unknown, type: string) {
     return bundleClassificationEntries(payload, type)
       .map((entry) => entry.text)
       .join(" > ");
   }
 
-  function isConvertedDefaultClassification(classificationPath: any) {
+  function isConvertedDefaultClassification(classificationPath: string) {
     return /Other service activities\s*>\s*Activities of membership organizations\s*>\s*Activities of other membership organizations\s*>\s*Activities of other membership organizations n\.e\.c\.|Community,\s*social and personal services\s*>\s*Sewage and waste collection,\s*treatment and disposal and other environmental protection services\s*>\s*Other environmental protection services n\.e\.c\./iu.test(
       classificationPath,
     );
   }
 
-  function flowTypeOfDataSet(payload: any) {
-    return asText(
-      payload?.flowDataSet?.modellingAndValidation?.LCIMethod?.typeOfDataSet ??
-        payload?.flowDataSet?.flowInformation?.dataSetInformation?.typeOfDataSet,
-    );
+  function flowTypeOfDataSet(payload: unknown) {
+    const payloadRecord = payload as UnknownRecord | null | undefined;
+    const flowDataSet = payloadRecord?.flowDataSet as UnknownRecord | undefined;
+    const modellingAndValidation = flowDataSet?.modellingAndValidation as UnknownRecord | undefined;
+    const lciMethod = modellingAndValidation?.LCIMethod as UnknownRecord | undefined;
+    const flowInformation = flowDataSet?.flowInformation as UnknownRecord | undefined;
+    const dataSetInformation = flowInformation?.dataSetInformation as UnknownRecord | undefined;
+    return asText(lciMethod?.typeOfDataSet ?? dataSetInformation?.typeOfDataSet);
   }
 
-  function flowClassificationSchemaType(payload: any) {
+  function flowClassificationSchemaType(payload: unknown) {
     return /^elementary flow$/iu.test(flowTypeOfDataSet(payload))
       ? "flow-elementary"
       : "flow-product";
   }
 
-  function textValue(value: any): string {
+  function textValue(value: unknown): string {
     if (typeof value === "string") return value.trim();
     if (value && typeof value === "object" && !Array.isArray(value)) {
-      return asText(value["#text"]) || asText(value.value);
+      const valueRecord = value as UnknownRecord;
+      return asText(valueRecord["#text"]) || asText(valueRecord.value);
     }
     if (Array.isArray(value)) {
       for (const item of value) {
@@ -226,14 +280,14 @@ export function createTidasRowUtils({
     return "";
   }
 
-  function writeJsonLines(filePath: string, rows: any[]) {
+  function writeJsonLines(filePath: string, rows: unknown[]) {
     writeText(
       filePath,
       rows.map((row) => JSON.stringify(row)).join("\n") + (rows.length ? "\n" : ""),
     );
   }
 
-  function printJson(value: any) {
+  function printJson(value: unknown) {
     console.log(JSON.stringify(value, null, 2));
   }
 
