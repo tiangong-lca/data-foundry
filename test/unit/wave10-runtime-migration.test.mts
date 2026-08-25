@@ -28,7 +28,7 @@ test("every static Foundry runtime consumer targets the typed module explicitly"
     ["scripts/lib/import-curation/internal/context-inputs.ts", "../../foundry-runtime-utils.ts"],
     ["test/fixtures/foundry-core.ts", "../../scripts/lib/foundry-runtime-utils.ts"],
     [
-      "test/scenarios/library-scope-workflow.test.mjs",
+      "test/scenarios/library-scope-workflow.test.mts",
       "../../scripts/lib/foundry-runtime-utils.ts",
     ],
     [

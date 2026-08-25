@@ -12,6 +12,7 @@ import {
   firstTidasSchemaDir,
   tidasSchemaPath,
 } from "../../scripts/lib/import-curation/internal/context-inputs.ts";
+import type { FixtureRecord } from "../fixtures/foundry-core.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const fixtureRoot = path.join(repoRoot, "tmp", "library-scope-workflow-test");
@@ -28,20 +29,20 @@ const ids = {
   ug2: "99999999-9999-5999-8999-999999999999",
 };
 
-function rel(filePath) {
+function rel(filePath: string): string {
   return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
-function ml(text) {
+function ml(text: string) {
   return { "@xml:lang": "en", "#text": text };
 }
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function writeJsonLines(filePath, rows) {
+function writeJsonLines(filePath: string, rows: readonly unknown[]): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(
     filePath,
@@ -49,27 +50,31 @@ function writeJsonLines(filePath, rows) {
   );
 }
 
-function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+function readJson(filePath: string): FixtureRecord {
+  return JSON.parse(fs.readFileSync(filePath, "utf8")) as FixtureRecord;
 }
 
-function readJsonLines(filePath) {
+function readJsonLines(filePath: string): FixtureRecord[] {
   const text = fs.readFileSync(filePath, "utf8").trim();
   if (!text) return [];
-  return text.split(/\r?\n/u).map((line) => JSON.parse(line));
+  return text.split(/\r?\n/u).map((line) => JSON.parse(line) as FixtureRecord);
 }
 
-function runFoundry(args, expectedStatus = 0, env = {}) {
+function runFoundry(
+  args: string[],
+  expectedStatus = 0,
+  env: NodeJS.ProcessEnv = {},
+): FixtureRecord {
   const result = spawnSync(process.execPath, ["scripts/foundry.mjs", ...args], {
     cwd: repoRoot,
     env: { ...process.env, ...env },
     encoding: "utf8",
   });
   assert.equal(result.status, expectedStatus, result.stderr || result.stdout);
-  return JSON.parse(result.stdout);
+  return JSON.parse(result.stdout) as FixtureRecord;
 }
 
-function unitGroupPayload(id, name, unitName) {
+function unitGroupPayload(id: string, name: string, unitName: string) {
   return {
     unitGroupDataSet: {
       unitGroupInformation: {
@@ -92,7 +97,7 @@ function unitGroupPayload(id, name, unitName) {
   };
 }
 
-function flowPropertyPayload(id, unitGroupId, name) {
+function flowPropertyPayload(id: string, unitGroupId: string, name: string) {
   return {
     flowPropertyDataSet: {
       flowPropertiesInformation: {
@@ -117,7 +122,19 @@ function flowPropertyPayload(id, unitGroupId, name) {
   };
 }
 
-function flowPayload({ id, name, flowPropertyId, flowType, category }) {
+function flowPayload({
+  id,
+  name,
+  flowPropertyId,
+  flowType,
+  category,
+}: {
+  id: string;
+  name: string;
+  flowPropertyId: string;
+  flowType: string;
+  category?: string[];
+}) {
   return {
     flowDataSet: {
       flowInformation: {
@@ -161,7 +178,20 @@ function flowPayload({ id, name, flowPropertyId, flowType, category }) {
   };
 }
 
-function processPayload({ id, name, exchanges }) {
+function processPayload({
+  id,
+  name,
+  exchanges,
+}: {
+  id: string;
+  name: string;
+  exchanges: Array<{
+    direction: string;
+    amount: string;
+    flowId: string;
+    shortDescription: string;
+  }>;
+}) {
   return {
     processDataSet: {
       processInformation: {
@@ -191,11 +221,15 @@ function processPayload({ id, name, exchanges }) {
   };
 }
 
-function writeTidasPayload(root, typePlural, id, payload) {
+function writeTidasPayload(root: string, typePlural: string, id: string, payload: unknown): void {
   writeJson(path.join(root, "tidas", typePlural, `${id}.json`), payload);
 }
 
-function writeBundle(root, processId, payloads) {
+function writeBundle(
+  root: string,
+  processId: string,
+  payloads: Record<string, Record<string, unknown>>,
+) {
   const bundleDir = path.join(root, "process-bundles", processId);
   for (const [plural, rows] of Object.entries(payloads)) {
     for (const [id, payload] of Object.entries(rows)) {
@@ -287,13 +321,13 @@ function createLibraryFixture() {
       writeTidasPayload(fixtureRoot, plural, id, payload);
     }
   }
-  const p1Bundle = writeBundle(fixtureRoot, ids.p1, {
+  writeBundle(fixtureRoot, ids.p1, {
     unitgroups: { [ids.ug1]: ug1 },
     flowproperties: { [ids.fp1]: fp1 },
     flows: { [ids.ef1]: ef1, [ids.pf1]: pf1 },
     processes: { [ids.p1]: p1 },
   });
-  const p2Bundle = writeBundle(fixtureRoot, ids.p2, {
+  writeBundle(fixtureRoot, ids.p2, {
     unitgroups: { [ids.ug2]: ug2 },
     flowproperties: { [ids.fp2]: fp2 },
     flows: { [ids.ef2]: ef2 },
@@ -350,7 +384,7 @@ test("library index deduplicates root TIDAS entities and projects shared depende
   assert.equal(scopeProjection.length, 2);
   assert.equal(
     scopeProjection
-      .find((row) => row.process_id === ids.p1)
+      .find((row) => row.process_id === ids.p1)!
       .dependency_ids.flows.some((dep) => dep.id === ids.ef1),
     true,
   );

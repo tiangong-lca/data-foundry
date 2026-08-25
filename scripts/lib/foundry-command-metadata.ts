@@ -815,7 +815,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/scenarios/library-scope-workflow.test.mjs",
+        "test/scenarios/library-scope-workflow.test.mts",
         "library index deduplicates root TIDAS entities and projects shared dependencies to process scopes",
       ),
     ],
@@ -832,7 +832,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/scenarios/library-scope-workflow.test.mjs",
+        "test/scenarios/library-scope-workflow.test.mts",
         "library authoring plan emits deduplicated semantic decision templates",
       ),
     ],
@@ -850,7 +850,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/scenarios/library-scope-workflow.test.mjs",
+        "test/scenarios/library-scope-workflow.test.mts",
         "library identity decisions from preflight emits reuse decisions and manual review rows",
       ),
     ],
@@ -874,7 +874,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/scenarios/library-scope-workflow.test.mjs",
+        "test/scenarios/library-scope-workflow.test.mts",
         "library decisions apply rewrites only elementary flow references and defers unresolved scopes",
       ),
     ],
@@ -892,7 +892,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/scenarios/library-scope-workflow.test.mjs",
+        "test/scenarios/library-scope-workflow.test.mts",
         "process scope runner plans only ready scopes and keeps blocked scopes out of the queue",
       ),
     ],

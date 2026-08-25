@@ -19,7 +19,7 @@ checkPaths:
   - test/fixtures/topology-convergence-fixtures.ts
   - test/unit/topology-convergence.test.mts
   - test/commands/topology-convergence.test.mjs
-  - test/scenarios/topology-convergence-handoff.test.mjs
+  - test/scenarios/topology-convergence-handoff.test.mts
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
 lastReviewedCommit: f168873fb41cb6064f08b1a901a3439eb0b054e4

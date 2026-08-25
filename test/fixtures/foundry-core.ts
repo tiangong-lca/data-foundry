@@ -23,6 +23,7 @@ export interface FixtureRecord {
   schema: string;
   schema_version: string | number;
   status: string;
+  state: string;
   code: string;
   field: string;
   kind: string;
@@ -62,6 +63,11 @@ export interface FixtureRecord {
   expected_state_code_source: string;
   commit_account_binding: string;
   sourceCitation: string;
+  next_gate: string;
+  delete_gate: string;
+  process_id: string;
+  exchangeDirection: string;
+  meanAmount: string;
   authoring_package: string;
   json_pointer: string;
   action_kind: string;
@@ -80,6 +86,8 @@ export interface FixtureRecord {
   exit_code: number;
   duration_ms: number;
   commit_command_supports_target_user_id: boolean;
+  production_authority: boolean;
+  preserved_exchange_fields: boolean;
   files: FixtureFiles;
   counts: Record<string, number>;
   policy: Record<string, boolean>;
@@ -97,6 +105,8 @@ export interface FixtureRecord {
   phases: FixtureRecord[];
   stages: FixtureRecord[];
   timings: FixtureRecord[];
+  command_stages: FixtureRecord[];
+  results: FixtureRecord[];
   findings: FixtureRecord[];
   candidate_sources: FixtureRecord[];
   canonical_references: FixtureRecord[];
@@ -108,6 +118,7 @@ export interface FixtureRecord {
   support_rows: FixtureRecord[];
   candidates: FixtureRecord[];
   names: string[];
+  messages: string[];
   dataset_types: string[];
   argv: string[];
   args: string[];
@@ -151,6 +162,12 @@ export interface FixtureRecord {
   closure: FixtureRecord;
   external_refs: FixtureRecord[];
   canonical_unit_group_reference_keys: FixtureRecord[];
+  dispatch_counts: FixtureRecord;
+  dependency_ids: FixtureRecord;
+  flows: FixtureRecord[];
+  reason_summary: FixtureRecord[];
+  scope_summary: FixtureRecord[];
+  sample_blocking_dependencies: FixtureRecord[];
   processDataSet: FixtureRecord;
   flowDataSet: FixtureRecord;
   sourceDataSet: FixtureRecord;

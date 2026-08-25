@@ -19,7 +19,7 @@ checkPaths:
   - test/unit/incremental-fixture-migration.test.mts
   - test/unit/incremental-change-set.test.mts
   - test/commands/incremental-change-set.test.mjs
-  - test/scenarios/incremental-change-set-handoff.test.mjs
+  - test/scenarios/incremental-change-set-handoff.test.mts
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
 lastReviewedCommit: f168873fb41cb6064f08b1a901a3439eb0b054e4

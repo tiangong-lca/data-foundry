@@ -71,7 +71,7 @@ test("four internal contracts are native TypeScript with updated static consumer
     ["scripts/lib/import-curation/internal/workflow-reference-closure.ts", "./trace-summary.ts"],
     ["scripts/lib/import-curation/internal/full-context-proof.ts", "./context-inputs.ts"],
     [
-      "test/scenarios/library-scope-workflow.test.mjs",
+      "test/scenarios/library-scope-workflow.test.mts",
       "../../scripts/lib/import-curation/internal/context-inputs.ts",
     ],
   ] as const;
