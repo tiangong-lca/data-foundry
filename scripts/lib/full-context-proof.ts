@@ -16,8 +16,8 @@ export function createFullContextProofUtils({
   repoRoot,
   sha256Text,
   unique,
-}) {
-  function profileFullContextRequirement(profileId, datasetType) {
+}: any) {
+  function profileFullContextRequirement(profileId: any, datasetType: any) {
     const listing = listImportProfiles({ repoRoot });
     const requestedProfileId = asText(
       profileId || listing.default_profile || "generic",
@@ -32,7 +32,7 @@ export function createFullContextProofUtils({
 
     const requiredDatasetTypes = normalizedList(
       requirement.dataset_types ?? requirement.datasetTypes,
-    ).map((value) => value.toLowerCase());
+    ).map((value: any) => value.toLowerCase());
     const normalizedDatasetType = asText(datasetType).toLowerCase();
     if (requiredDatasetTypes.length > 0 && !requiredDatasetTypes.includes(normalizedDatasetType)) {
       return null;
@@ -50,7 +50,7 @@ export function createFullContextProofUtils({
     };
   }
 
-  function taskProfileId(task) {
+  function taskProfileId(task: any) {
     return asText(
       task?.meta?.profile ??
         task?.meta?.import_profile ??
@@ -60,23 +60,23 @@ export function createFullContextProofUtils({
     );
   }
 
-  function taskDatasetType(task) {
+  function taskDatasetType(task: any) {
     return asText(task?.meta?.dataset_type ?? task?.meta?.datasetType);
   }
 
-  function fullContextCount(counts, key) {
+  function fullContextCount(counts: any, key: any) {
     const value = Number(counts?.[key] ?? 0);
     return Number.isFinite(value) && value > 0 ? value : 0;
   }
 
-  function normalizeProofRows(value) {
+  function normalizeProofRows(value: any) {
     if (Array.isArray(value)) return value.filter(Boolean);
     if (Array.isArray(value?.decisions)) return value.decisions.filter(Boolean);
     if (Array.isArray(value?.rows)) return value.rows.filter(Boolean);
     return value && typeof value === "object" ? [value] : [];
   }
 
-  function readJsonOrJsonlRowsArtifact(value) {
+  function readJsonOrJsonlRowsArtifact(value: any) {
     const resolved = resolveRepoPath(value);
     if (!resolved || !fileExists(resolved)) {
       return { path: resolved, rows: [], error: "missing" };
@@ -108,15 +108,15 @@ export function createFullContextProofUtils({
     "deferred_to_common_other",
   ]);
 
-  function patchEvidenceResolution(entry) {
+  function patchEvidenceResolution(entry: any) {
     return entry?.resolution && typeof entry.resolution === "object" ? entry.resolution : {};
   }
 
-  function patchEvidenceResolutionMode(entry) {
+  function patchEvidenceResolutionMode(entry: any) {
     return asText(patchEvidenceResolution(entry).mode);
   }
 
-  function patchEvidenceResolutionContextKinds(entry) {
+  function patchEvidenceResolutionContextKinds(entry: any) {
     return unique(
       normalizedList(
         patchEvidenceResolution(entry).used_context_kinds ??
@@ -129,9 +129,9 @@ export function createFullContextProofUtils({
     packageRef,
     expectedSha256 = null,
     source = null,
-  }) {
+  }: any) {
     const packagePath = resolveRepoPath(packageRef);
-    const proof = {
+    const proof: any = {
       source,
       path: packageRef || null,
       sha256: null,
@@ -180,12 +180,12 @@ export function createFullContextProofUtils({
     return proof;
   }
 
-  function authoringPackageProofsFromPatchCollect(patchCollectArtifact) {
+  function authoringPackageProofsFromPatchCollect(patchCollectArtifact: any) {
     const manifestRef = patchCollectArtifact?.value?.task_manifest;
     const manifestArtifact = readJsonArtifactOption(manifestRef);
     if (!manifestArtifact) return [];
     return ensureArray(manifestArtifact.value?.tasks)
-      .map((task) => {
+      .map((task: any) => {
         const packageRef = asText(task?.files?.authoring_package ?? task?.files?.authoringPackage);
         if (!packageRef) return null;
         return readAuthoringPackageProofForFullContext({
@@ -197,7 +197,7 @@ export function createFullContextProofUtils({
       .filter(Boolean);
   }
 
-  function authoringPackageProofsFromCurationGate(mutationManifest) {
+  function authoringPackageProofsFromCurationGate(mutationManifest: any) {
     const curationGateArtifact = readJsonArtifactOption(
       mutationManifest?.evidence?.curation_gate_report,
     );
@@ -209,7 +209,7 @@ export function createFullContextProofUtils({
         curationGateArtifact.value?.items,
     );
     return entities
-      .map((entity) => {
+      .map((entity: any) => {
         const packageRef = asText(entity?.authoring_package ?? entity?.authoringPackage);
         if (!packageRef) return null;
         return readAuthoringPackageProofForFullContext({
@@ -227,7 +227,7 @@ export function createFullContextProofUtils({
     suffix,
     message,
     details = {},
-  }) {
+  }: any) {
     return {
       ...prefix,
       code: `${codePrefix}_full_context_${suffix}`,
@@ -236,7 +236,7 @@ export function createFullContextProofUtils({
     };
   }
 
-  function decisionApplyTasksFromReport(report) {
+  function decisionApplyTasksFromReport(report: any) {
     const tasks = ensureArray(report?.decision_tasks ?? report?.decisionTasks);
     if (tasks.length > 0) return tasks;
     return report?.decision_task || report?.decisionTask
@@ -244,11 +244,11 @@ export function createFullContextProofUtils({
       : [];
   }
 
-  function decisionTaskReferencePath(task) {
+  function decisionTaskReferencePath(task: any) {
     return asText(task?.path ?? task?.task ?? task?.decision_task ?? task?.decisionTask);
   }
 
-  function readDecisionTaskArtifactForProof(task) {
+  function readDecisionTaskArtifactForProof(task: any) {
     const taskRef = decisionTaskReferencePath(task);
     const artifact = readJsonArtifactOption(taskRef);
     if (!artifact) {
@@ -314,7 +314,7 @@ export function createFullContextProofUtils({
     };
   }
 
-  function decisionApplyReportRefs(evidence, reportKey, kind) {
+  function decisionApplyReportRefs(evidence: any, reportKey: any, kind: any) {
     const values =
       kind === "identity"
         ? [
@@ -322,7 +322,7 @@ export function createFullContextProofUtils({
             ...ensureArray(evidence[reportKey]),
           ]
         : ensureArray(evidence[reportKey]);
-    return unique(values.map((value) => asText(value)));
+    return unique(values.map((value: any) => asText(value)));
   }
 
   function buildDecisionApplyProofBlockers({
@@ -332,9 +332,9 @@ export function createFullContextProofUtils({
     codePrefix,
     kind,
     expectedCount,
-  }) {
+  }: any) {
     if (expectedCount <= 0) return [];
-    const blockers = [];
+    const blockers: any[] = [];
     const mutationManifest = mutationArtifact?.value ?? {};
     const evidence = mutationManifest.evidence ?? {};
     const reportKey =
@@ -357,7 +357,7 @@ export function createFullContextProofUtils({
         : "ready_for_ai_classification_decisions";
     const reportRefs = decisionApplyReportRefs(evidence, reportKey, kind);
     const reportArtifacts = reportRefs
-      .map((reportRef) => readJsonArtifactOption(reportRef))
+      .map((reportRef: any) => readJsonArtifactOption(reportRef))
       .filter(Boolean);
     const reportArtifact = reportArtifacts[0] ?? null;
     if (!reportArtifact) {
@@ -450,7 +450,7 @@ export function createFullContextProofUtils({
             "Decision rows referenced by the apply report are fewer than the mutation manifest semantic evidence count.",
           details: {
             report: repoRelativePath(reportArtifact.path),
-            reports: reportArtifacts.map((artifact) => repoRelativePath(artifact.path)),
+            reports: reportArtifacts.map((artifact: any) => repoRelativePath(artifact.path)),
             decisions_files: decisionFiles,
             expected_decision_entries: expectedCount,
             actual_decision_entries: decisionsArtifact.rows.length,
@@ -462,7 +462,7 @@ export function createFullContextProofUtils({
     const taskProofs =
       kind === "identity"
         ? []
-        : decisionApplyTasksFromReport(report).map((task) =>
+        : decisionApplyTasksFromReport(report).map((task: any) =>
             readDecisionTaskArtifactForProof(task),
           );
     if (kind !== "identity" && taskProofs.length === 0) {
@@ -541,7 +541,7 @@ export function createFullContextProofUtils({
       }
     }
 
-    const contextBundleHashes = unique(taskProofs.map((proof) => proof.context_bundle_sha256));
+    const contextBundleHashes = unique(taskProofs.map((proof: any) => proof.context_bundle_sha256));
     const missingCompletedStatus = decisionsArtifact.rows.filter(
       (decision) => decisionCompletionStatus(decision) !== "completed",
     );
@@ -634,9 +634,9 @@ export function createFullContextProofUtils({
     prefix,
     codePrefix,
     expectedCount,
-  }) {
+  }: any) {
     if (expectedCount <= 0) return [];
-    const blockers = [];
+    const blockers: any[] = [];
     const mutationManifest = mutationArtifact?.value ?? {};
     const evidence = mutationManifest.evidence ?? {};
     const patchCollectArtifact = readJsonArtifactOption(evidence.patch_collect_report);
@@ -749,7 +749,7 @@ export function createFullContextProofUtils({
     if (!patchEvidenceArtifact.error) {
       const patchEvidenceRows = patchEvidenceArtifact.rows;
       const missingPackageHash = patchEvidenceRows.filter(
-        (entry) => !asText(entry?.authoring_package_sha256),
+        (entry: any) => !asText(entry?.authoring_package_sha256),
       );
       if (missingPackageHash.length > 0) {
         blockers.push(
@@ -770,7 +770,7 @@ export function createFullContextProofUtils({
       const knownPackageHashes = new Set(
         authoringPackageProofs.map((proof) => asText(proof.sha256)).filter(Boolean),
       );
-      const unknownPackageHash = patchEvidenceRows.filter((entry) => {
+      const unknownPackageHash = patchEvidenceRows.filter((entry: any) => {
         const hash = asText(entry?.authoring_package_sha256);
         return hash && !knownPackageHashes.has(hash);
       });
@@ -791,7 +791,7 @@ export function createFullContextProofUtils({
         );
       }
       const missingClosures = patchEvidenceRows.filter(
-        (entry) => ensureArray(entry?.closes_action_items).length === 0,
+        (entry: any) => ensureArray(entry?.closes_action_items).length === 0,
       );
       if (missingClosures.length > 0) {
         blockers.push(
@@ -810,7 +810,7 @@ export function createFullContextProofUtils({
         );
       }
       const missingEvidence = patchEvidenceRows.filter(
-        (entry) => !entry?.evidence || typeof entry.evidence !== "object",
+        (entry: any) => !entry?.evidence || typeof entry.evidence !== "object",
       );
       if (missingEvidence.length > 0) {
         blockers.push(
@@ -828,7 +828,7 @@ export function createFullContextProofUtils({
         );
       }
       const missingResolution = patchEvidenceRows.filter(
-        (entry) => !patchEvidenceResolutionMode(entry),
+        (entry: any) => !patchEvidenceResolutionMode(entry),
       );
       if (missingResolution.length > 0) {
         blockers.push(
@@ -845,7 +845,7 @@ export function createFullContextProofUtils({
           }),
         );
       }
-      const invalidResolutionMode = patchEvidenceRows.filter((entry) => {
+      const invalidResolutionMode = patchEvidenceRows.filter((entry: any) => {
         const mode = patchEvidenceResolutionMode(entry);
         return mode && !fullContextPatchResolutionModes.has(mode);
       });
@@ -899,7 +899,7 @@ export function createFullContextProofUtils({
     requirement,
     prefix,
     codePrefix,
-  }) {
+  }: any) {
     const mutationManifest = mutationArtifact?.value ?? null;
     if (!mutationManifest?.evidence?.full_context_ai_completion_required) {
       return [];
@@ -947,7 +947,7 @@ export function createFullContextProofUtils({
     closeoutCounts = null,
     mutationArtifact = null,
     codePrefix = "completion",
-  }) {
+  }: any) {
     const mutationManifest = mutationArtifact?.value ?? null;
     const profileRequirement = profileId
       ? profileFullContextRequirement(profileId, datasetType)
@@ -963,13 +963,13 @@ export function createFullContextProofUtils({
       profile: profileRequirement?.profile_id ?? (asText(profileId) || null),
       dataset_type: profileRequirement?.dataset_type ?? (asText(datasetType).toLowerCase() || null),
     };
-    const semanticEvidenceCount = (counts) =>
+    const semanticEvidenceCount = (counts: any) =>
       (Number(counts?.ai_patch_evidence_entries ?? 0) || 0) +
       (Number(counts?.ai_classification_decision_entries ?? 0) || 0) +
       (Number(counts?.ai_location_decision_entries ?? 0) || 0) +
       (Number(counts?.ai_identity_decision_entries ?? 0) || 0) +
       (Number(counts?.source_contact_rewrite_semantic_evidence_entries ?? 0) || 0);
-    const blockers = [];
+    const blockers: any[] = [];
     if (closeoutCounts) {
       if (closeoutCounts.full_context_ai_completion_required !== true) {
         blockers.push({
@@ -1034,10 +1034,10 @@ export function createFullContextProofUtils({
     return { required: true, blockers };
   }
 
-  function completionFullContextBlockers({ task, completionReport }) {
-    const blockers = [];
+  function completionFullContextBlockers({ task, completionReport }: any) {
+    const blockers: any[] = [];
     const closeouts = ensureArray(completionReport?.closeouts).filter(
-      (closeout) => closeout && typeof closeout === "object" && !Array.isArray(closeout),
+      (closeout: any) => closeout && typeof closeout === "object" && !Array.isArray(closeout),
     );
     const taskProfile = taskProfileId(task);
     const taskType = taskDatasetType(task);
@@ -1056,7 +1056,7 @@ export function createFullContextProofUtils({
       });
     }
 
-    closeouts.forEach((closeout, index) => {
+    closeouts.forEach((closeout: any, index: number) => {
       const profileId = asText(closeout.profile) || taskProfile;
       const datasetType = asText(closeout.dataset_type) || taskType;
       const mutationArtifact = readJsonArtifactOption(closeout.mutation_manifest);
@@ -1074,7 +1074,7 @@ export function createFullContextProofUtils({
       if (!fullContextCheck.required) return;
       requiredCloseoutCount += 1;
       blockers.push(
-        ...fullContextCheck.blockers.map((blocker) => ({
+        ...fullContextCheck.blockers.map((blocker: any) => ({
           ...blocker,
           closeout_index: index,
           closeout_report: closeout.closeout_report ?? null,

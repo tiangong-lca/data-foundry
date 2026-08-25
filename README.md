@@ -39,6 +39,10 @@ checkPaths:
   - scripts/lib/source-semantics.ts
   - scripts/lib/trace-coverage.ts
   - scripts/lib/tidas-row-utils.ts
+  - scripts/lib/decision-task-utils.ts
+  - scripts/lib/identity-reference-rewrite-utils.ts
+  - scripts/lib/full-context-proof.ts
+  - scripts/lib/identity-preflight-artifacts.ts
   - docs/architecture.md
   - docs/runtime-skill-management.md
   - docs/foundry-task-contracts.md
@@ -78,6 +82,8 @@ The runtime I/O slice migrates the shared `runtime-io.ts` leaf without changing 
 The next internal-contract slice migrates artifact/QA inputs, dataset payload identity, compact trace summaries, and full-context inputs. Characterization preserves path fallback, file/hash facts, dedupe and traversal order, installed CLI schema resolution, missing/duplicate/drift findings, exact trace hashes, and native JSON/filesystem errors.
 
 The standalone-leaf slice migrates canonical FlowProperty mappings, profile-aware source semantics, trace queue coverage, and reusable TIDAS row helpers. Characterization preserves all scale factors and pending defaults, BAFU/USLCI/worldsteel source identities, canonical reference rewrites, trace evidence keys/blockers, multilingual/root/id/version helpers, and invalid-input behavior.
+
+The evidence/decision slice migrates decision-task context and stable hashes, identity reference rewrites, full-context completion proof, and identity-preflight request artifacts. Characterization preserves exact paths/bytes/SHA/ordering, missing or ambiguous evidence blockers, artifact-bound CommandSpecs, source-index first binding, and positive-only cache/execution reuse boundaries.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

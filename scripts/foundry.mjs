@@ -30,14 +30,14 @@ import { createWorldsteelBatchImportRunCommands } from "./commands/worldsteel-ba
 import { bundleRowTypes } from "./lib/bundle-row-types.ts";
 import { createBundleSampleUtils } from "./lib/bundle-sample-utils.mjs";
 import { createCanonicalSupportRewriteUtils } from "./lib/canonical-support-rewrites.mjs";
-import { createDecisionTaskUtils } from "./lib/decision-task-utils.mjs";
+import { createDecisionTaskUtils } from "./lib/decision-task-utils.ts";
 import { parseArgs, parseScalar } from "./lib/foundry-args.ts";
 import { runFoundryCli } from "./lib/foundry-cli.mjs";
 import { exitCodeForCommand, usage } from "./lib/foundry-command-registry.ts";
 import { createFoundryRuntimeUtils } from "./lib/foundry-runtime-utils.mjs";
-import { createFullContextProofUtils } from "./lib/full-context-proof.mjs";
-import { createIdentityPreflightArtifactUtils } from "./lib/identity-preflight-artifacts.mjs";
-import { createIdentityReferenceRewriteUtils } from "./lib/identity-reference-rewrite-utils.mjs";
+import { createFullContextProofUtils } from "./lib/full-context-proof.ts";
+import { createIdentityPreflightArtifactUtils } from "./lib/identity-preflight-artifacts.ts";
+import { createIdentityReferenceRewriteUtils } from "./lib/identity-reference-rewrite-utils.ts";
 import {
   foundryTraceSummary,
   listImportProfiles,

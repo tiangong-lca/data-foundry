@@ -5,10 +5,10 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { createDecisionTaskUtils } from "../../scripts/lib/decision-task-utils.mjs";
-import { createFullContextProofUtils } from "../../scripts/lib/full-context-proof.mjs";
-import { createIdentityPreflightArtifactUtils } from "../../scripts/lib/identity-preflight-artifacts.mjs";
-import { createIdentityReferenceRewriteUtils } from "../../scripts/lib/identity-reference-rewrite-utils.mjs";
+import { createDecisionTaskUtils } from "../../scripts/lib/decision-task-utils.ts";
+import { createFullContextProofUtils } from "../../scripts/lib/full-context-proof.ts";
+import { createIdentityPreflightArtifactUtils } from "../../scripts/lib/identity-preflight-artifacts.ts";
+import { createIdentityReferenceRewriteUtils } from "../../scripts/lib/identity-reference-rewrite-utils.ts";
 
 function withFixture<T>(callback: (root: string) => T): T {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-evidence-leaves-"));

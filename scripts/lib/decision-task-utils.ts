@@ -18,8 +18,8 @@ export function createDecisionTaskUtils({
   sha256Text,
   unique,
   writeJson,
-}) {
-  function classificationQueueSchemaType(row) {
+}: any) {
+  function classificationQueueSchemaType(row: any) {
     return asText(
       row?.classification_workflow?.schema_type ??
         row?.schema_type ??
@@ -28,28 +28,28 @@ export function createDecisionTaskUtils({
     );
   }
 
-  function classificationQueueRowType(row) {
+  function classificationQueueRowType(row: any) {
     return asText(row?.classification_workflow?.row_type ?? row?.dataset_type);
   }
 
-  function classificationQueueInputRows(row) {
+  function classificationQueueInputRows(row: any) {
     return asText(row?.classification_workflow?.commands?.input_rows);
   }
 
-  function classificationQueueOutputRows(row) {
+  function classificationQueueOutputRows(row: any) {
     return asText(row?.classification_workflow?.commands?.output_rows);
   }
 
-  function queueRowSourceFile(row) {
+  function queueRowSourceFile(row: any) {
     return asText(row?.source_file ?? row?.sourceFile);
   }
 
-  function queueRowBundleId(row) {
+  function queueRowBundleId(row: any) {
     const match = queueRowSourceFile(row).match(/(?:^|\/)process-bundles\/([^/]+)\//u);
     return match?.[1] ?? "";
   }
 
-  function hasQueueSelectionOptions(options) {
+  function hasQueueSelectionOptions(options: any) {
     return Boolean(
       normalizedList(options.datasetId || options.datasetIds || options.id).length ||
       normalizedList(options.datasetType || options.datasetTypes).length ||
@@ -62,7 +62,7 @@ export function createDecisionTaskUtils({
     );
   }
 
-  function queueSelectionSummary(options) {
+  function queueSelectionSummary(options: any) {
     return {
       dataset_ids: normalizedList(options.datasetId || options.datasetIds || options.id),
       dataset_types: normalizedList(options.datasetType || options.datasetTypes),
@@ -75,7 +75,7 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function queueRowMatchesSelection(row, selection, schemaTypeForRow) {
+  function queueRowMatchesSelection(row: any, selection: any, schemaTypeForRow: any) {
     const datasetId = asText(row?.dataset_id);
     const datasetType = asText(row?.dataset_type);
     const categoryType = schemaTypeForRow(row);
@@ -95,7 +95,7 @@ export function createDecisionTaskUtils({
     return true;
   }
 
-  function selectDecisionTaskQueueRows(queueRows, options, schemaTypeForRow) {
+  function selectDecisionTaskQueueRows(queueRows: any[], options: any, schemaTypeForRow: any) {
     const selection = queueSelectionSummary(options);
     const filtered = queueRows
       .map((row, sourceIndex) => ({ row, sourceIndex }))
@@ -115,14 +115,14 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function safeFileToken(value, fallback) {
+  function safeFileToken(value: any, fallback: any) {
     const token = asText(value)
       .replace(/[^A-Za-z0-9_.-]+/gu, "-")
       .replace(/^-+|-+$/gu, "");
     return token || fallback;
   }
 
-  function decisionTaskChunkLabel(options, selection, fallback) {
+  function decisionTaskChunkLabel(options: any, selection: any, fallback: any) {
     if (options.chunkLabel || options.chunk || options.label) {
       return safeFileToken(options.chunkLabel || options.chunk || options.label, fallback);
     }
@@ -150,9 +150,9 @@ export function createDecisionTaskUtils({
     outputSuffix,
     inputRowsForRow,
     inputRowsOverride = null,
-  }) {
-    const outputByInput = new Map();
-    return selected.map(({ row, sourceIndex }) => {
+  }: any) {
+    const outputByInput = new Map<string, string>();
+    return selected.map(({ row, sourceIndex }: any) => {
       const next = cloneJson(row);
       const inputRows = inputRowsOverride || resolveRepoPath(inputRowsForRow(next));
       const inputBase = inputRows
@@ -179,7 +179,7 @@ export function createDecisionTaskUtils({
     });
   }
 
-  function decisionTaskInputRowsOverride(options) {
+  function decisionTaskInputRowsOverride(options: any) {
     const optionValue =
       options.rowsFile ||
       options.inputRows ||
@@ -196,7 +196,7 @@ export function createDecisionTaskUtils({
     return resolved;
   }
 
-  function classificationDecisionSchemaType(decision) {
+  function classificationDecisionSchemaType(decision: any) {
     return asText(
       decision?.category_type ??
         decision?.categoryType ??
@@ -206,7 +206,7 @@ export function createDecisionTaskUtils({
     );
   }
 
-  function classificationDecisionTargetKey(decision, schemaType = "") {
+  function classificationDecisionTargetKey(decision: any, schemaType = "") {
     const datasetId = asText(
       decision?.dataset_id ?? decision?.datasetId ?? decision?.id ?? decision?.uuid,
     );
@@ -217,13 +217,13 @@ export function createDecisionTaskUtils({
     return `${type}::${datasetId}::${version}`;
   }
 
-  function classificationQueueTargetKey(row) {
+  function classificationQueueTargetKey(row: any) {
     return `${classificationQueueSchemaType(row)}::${asText(
       row?.dataset_id,
     )}::${asText(row?.dataset_version)}`;
   }
 
-  function classificationDecisionCode(decision) {
+  function classificationDecisionCode(decision: any) {
     return asText(
       decision?.code ??
         decision?.class_id ??
@@ -235,7 +235,7 @@ export function createDecisionTaskUtils({
     );
   }
 
-  function classificationDecisionUsedContextKinds(decision) {
+  function classificationDecisionUsedContextKinds(decision: any) {
     return unique([
       ...normalizedList(decision?.used_context_kinds ?? decision?.usedContextKinds),
       ...normalizedList(
@@ -247,7 +247,7 @@ export function createDecisionTaskUtils({
     ]);
   }
 
-  function readClassificationTaskJsonlContextRows(baseDir, fileName, maxRows = 2000) {
+  function readClassificationTaskJsonlContextRows(baseDir: any, fileName: any, maxRows = 2000) {
     const filePath = path.join(baseDir, fileName);
     if (!fileExists(filePath)) return { file: null, rows: [] };
     const rows = readJsonLines(filePath);
@@ -259,7 +259,7 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function buildClassificationTaskProvenanceContext(queuePath) {
+  function buildClassificationTaskProvenanceContext(queuePath: any) {
     const baseDir = path.dirname(queuePath);
     const sourceSemantics = readClassificationTaskJsonlContextRows(
       baseDir,
@@ -280,8 +280,8 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function decisionTaskContextFileDetails(contractContext) {
-    return contractContext.files.map((file) => ({
+  function decisionTaskContextFileDetails(contractContext: any) {
+    return contractContext.files.map((file: any) => ({
       kind: file.kind,
       path: file.path,
       sha256: file.sha256,
@@ -289,7 +289,7 @@ export function createDecisionTaskUtils({
     }));
   }
 
-  function decisionTaskContextFileWithText(file) {
+  function decisionTaskContextFileWithText(file: any) {
     const text = String(file?.text ?? "");
     return {
       kind: asText(file?.kind) || "context",
@@ -300,7 +300,7 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function decisionTaskContextFileSummary(file) {
+  function decisionTaskContextFileSummary(file: any) {
     const withText = decisionTaskContextFileWithText(file);
     return {
       kind: withText.kind,
@@ -310,8 +310,8 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function dedupeDecisionTaskContextFiles(files) {
-    const byKey = new Map();
+  function dedupeDecisionTaskContextFiles(files: any) {
+    const byKey = new Map<string, any>();
     for (const file of ensureArray(files).map(decisionTaskContextFileWithText)) {
       const key = JSON.stringify([file.kind, file.path, file.sha256]);
       if (!byKey.has(key)) byKey.set(key, file);
@@ -325,13 +325,13 @@ export function createDecisionTaskUtils({
     files,
     references = [],
     cacheDir = null,
-  }) {
+  }: any) {
     const uniqueFiles = dedupeDecisionTaskContextFiles(files);
     const uniqueBytes = uniqueFiles.reduce((total, file) => total + (Number(file.bytes) || 0), 0);
     const referenceRows = ensureArray(references);
     const referencedBytes =
       referenceRows.length > 0
-        ? referenceRows.reduce((total, ref) => total + (Number(ref.bytes) || 0), 0)
+        ? referenceRows.reduce((total: number, ref: any) => total + (Number(ref.bytes) || 0), 0)
         : uniqueBytes;
     const stablePayload = {
       schema_version: 1,
@@ -390,8 +390,8 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function stableDecisionTaskQueueRows(queueRows) {
-    return ensureArray(queueRows).map((row) => {
+  function stableDecisionTaskQueueRows(queueRows: any) {
+    return ensureArray(queueRows).map((row: any) => {
       const next = cloneJson(row);
       if (next?.classification_workflow?.commands) {
         delete next.classification_workflow.commands.output_rows;
@@ -403,13 +403,13 @@ export function createDecisionTaskUtils({
     });
   }
 
-  function decisionTaskQueueSha256(queueRows) {
+  function decisionTaskQueueSha256(queueRows: any) {
     return sha256Text(JSON.stringify(stableDecisionTaskQueueRows(queueRows)));
   }
 
-  function decisionTaskProvenanceFileDetails(provenanceContext) {
+  function decisionTaskProvenanceFileDetails(provenanceContext: any) {
     return Object.fromEntries(
-      Object.entries(provenanceContext).map(([key, value]) => [
+      Object.entries(provenanceContext as Record<string, any>).map(([key, value]) => [
         key,
         {
           file: value?.file ?? null,
@@ -430,14 +430,14 @@ export function createDecisionTaskUtils({
     contractContext,
     provenanceContext,
     attachedInputRows,
-  }) {
+  }: any) {
     const contextFiles = dedupeDecisionTaskContextFiles(contractContext.files);
     const contractFiles = contextFiles.map(decisionTaskContextFileSummary);
     const sharedContextBundle = writeDecisionTaskSharedContextBundle({
       outDir: outDir ?? path.dirname(taskPath),
       taskKind,
       files: contextFiles,
-      references: contextFiles.map((file) => ({
+      references: contextFiles.map((file: any) => ({
         kind: file.kind,
         path: file.path,
         sha256: file.sha256,
@@ -452,7 +452,7 @@ export function createDecisionTaskUtils({
       contract_context_files: contractFiles,
       missing_context_files: contractContext.missing,
       provenance_context: decisionTaskProvenanceFileDetails(provenanceContext),
-      attached_input_rows: attachedInputRows.map((row) => ({
+      attached_input_rows: attachedInputRows.map((row: any) => ({
         input_rows: row.input_rows,
         input_row_index: row.index,
         row_type: row.row_type,
@@ -472,12 +472,14 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function decisionAuthoringContext(contextBundle) {
+  function decisionAuthoringContext(contextBundle: any) {
     return {
       task: contextBundle.task,
       context_bundle_sha256: contextBundle.sha256,
-      required_context_kinds: unique(contextBundle.contract_context_files.map((file) => file.kind)),
-      context_files: contextBundle.contract_context_files.map((file) => ({
+      required_context_kinds: unique(
+        contextBundle.contract_context_files.map((file: any) => file.kind),
+      ),
+      context_files: contextBundle.contract_context_files.map((file: any) => ({
         kind: file.kind,
         path: file.path,
         sha256: file.sha256,
@@ -485,7 +487,7 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function classificationDecisionTaskContextKind(kind, filePath) {
+  function classificationDecisionTaskContextKind(kind: any, filePath: any) {
     const baseName = path.basename(String(filePath || "")).toLowerCase();
     if (baseName === "schema.json") return "schema";
     if (baseName === "methodology.yaml" || baseName === "methodology.yml") {
@@ -499,7 +501,7 @@ export function createDecisionTaskUtils({
     return kind;
   }
 
-  function buildClassificationDecisionTaskContextFiles(options) {
+  function buildClassificationDecisionTaskContextFiles(options: any) {
     const inputs = [
       ["schema", options.schemaFile],
       ["methodology_yaml", options.yamlFile],
@@ -537,11 +539,13 @@ export function createDecisionTaskUtils({
     contractContext,
     requiredContextKinds,
     attachedInputRowCount,
-  }) {
+  }: any) {
     if (queueRows.length === 0) return [];
     const blockers = [];
     const availableKinds = new Set(
-      contractContext.files.filter((file) => Number(file.bytes) > 0).map((file) => file.kind),
+      contractContext.files
+        .filter((file: any) => Number(file.bytes) > 0)
+        .map((file: any) => file.kind),
     );
     for (const missingFile of contractContext.missing) {
       blockers.push({
@@ -584,13 +588,13 @@ export function createDecisionTaskUtils({
     return blockers;
   }
 
-  function decisionTaskBuildStatus({ queueRows, blockers, readyStatus, emptyStatus }) {
+  function decisionTaskBuildStatus({ queueRows, blockers, readyStatus, emptyStatus }: any) {
     if (queueRows.length === 0) return emptyStatus;
     if (blockers.length > 0) return "blocked_missing_full_context";
     return readyStatus;
   }
 
-  function decisionTaskOptionPath(options, kind) {
+  function decisionTaskOptionPath(options: any, kind: any) {
     if (kind === "classification") {
       return (
         options.decisionTask ||
@@ -609,18 +613,18 @@ export function createDecisionTaskUtils({
     );
   }
 
-  function decisionTaskOptionPaths(options, kind) {
+  function decisionTaskOptionPaths(options: any, kind: any) {
     return normalizedList(decisionTaskOptionPath(options, kind));
   }
 
-  function readDecisionTaskSharedContextBundleProof(task, proofPath) {
+  function readDecisionTaskSharedContextBundleProof(task: any, proofPath: any) {
     const contextBundle = task?.context_bundle ?? task?.authoring_context ?? {};
     const sharedContext = task?.shared_context_bundle ?? contextBundle?.shared_context_bundle ?? {};
     const sharedPath = asText(sharedContext?.path ?? task?.files?.shared_context_bundle);
     const expectedSha256 = asText(
       sharedContext?.sha256 ?? contextBundle?.shared_context_bundle_sha256,
     );
-    const proof = {
+    const proof: any = {
       path: sharedPath || null,
       sha256: null,
       expected_sha256: expectedSha256 || null,
@@ -666,10 +670,10 @@ export function createDecisionTaskUtils({
     return proof;
   }
 
-  function readDecisionTaskProofFromPath(taskPathInput, kind, queuePath) {
+  function readDecisionTaskProofFromPath(taskPathInput: any, kind: any, queuePath: any) {
     const taskPath = resolveRepoPath(taskPathInput);
     if (!taskPath) return null;
-    const proof = {
+    const proof: any = {
       path: repoRelativePath(taskPath),
       sha256: null,
       status: null,
@@ -769,18 +773,18 @@ export function createDecisionTaskUtils({
     return proof;
   }
 
-  function readDecisionTaskProof(options, kind, queuePath) {
+  function readDecisionTaskProof(options: any, kind: any, queuePath: any) {
     const [taskPath] = decisionTaskOptionPaths(options, kind);
     return taskPath ? readDecisionTaskProofFromPath(taskPath, kind, queuePath) : null;
   }
 
-  function readDecisionTaskProofs(options, kind, queuePath) {
+  function readDecisionTaskProofs(options: any, kind: any, queuePath: any) {
     return decisionTaskOptionPaths(options, kind)
-      .map((taskPath) => readDecisionTaskProofFromPath(taskPath, kind, queuePath))
+      .map((taskPath: any) => readDecisionTaskProofFromPath(taskPath, kind, queuePath))
       .filter(Boolean);
   }
 
-  function decisionContextBundleSha256(decision) {
+  function decisionContextBundleSha256(decision: any) {
     return asText(
       decision?.authoring_context?.context_bundle_sha256 ??
         decision?.authoringContext?.contextBundleSha256 ??
@@ -790,11 +794,11 @@ export function createDecisionTaskUtils({
     );
   }
 
-  function decisionCompletionStatus(decision) {
+  function decisionCompletionStatus(decision: any) {
     return asText(decision?.decision_status ?? decision?.decisionStatus ?? decision?.status);
   }
 
-  function decisionTaskReportPayload(proof) {
+  function decisionTaskReportPayload(proof: any) {
     if (!proof) return null;
     return {
       path: proof.path,
@@ -804,7 +808,7 @@ export function createDecisionTaskUtils({
       queue: proof.queue,
       source_queue: proof.source_queue,
       context_bundle_sha256: proof.context_bundle_sha256,
-      contract_context_files: proof.contract_context_files.map((file) => ({
+      contract_context_files: proof.contract_context_files.map((file: any) => ({
         kind: file.kind,
         path: file.path,
         sha256: file.sha256,
@@ -822,12 +826,12 @@ export function createDecisionTaskUtils({
     };
   }
 
-  function decisionTaskProofList(proofOrProofs) {
+  function decisionTaskProofList(proofOrProofs: any) {
     return ensureArray(proofOrProofs).filter(Boolean);
   }
 
-  function decisionTaskContextBundleHashes(proofs) {
-    return unique(decisionTaskProofList(proofs).map((proof) => proof.context_bundle_sha256));
+  function decisionTaskContextBundleHashes(proofs: any) {
+    return unique(decisionTaskProofList(proofs).map((proof: any) => proof.context_bundle_sha256));
   }
 
   return {

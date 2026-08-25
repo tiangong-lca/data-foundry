@@ -41,6 +41,10 @@ checkPaths:
   - scripts/lib/source-semantics.ts
   - scripts/lib/trace-coverage.ts
   - scripts/lib/tidas-row-utils.ts
+  - scripts/lib/decision-task-utils.ts
+  - scripts/lib/identity-reference-rewrite-utils.ts
+  - scripts/lib/full-context-proof.ts
+  - scripts/lib/identity-preflight-artifacts.ts
   - .prettierignore
   - package.json
   - pnpm-lock.yaml
@@ -97,7 +101,7 @@ entrypoint + args
 
 This boundary avoids a misleading bulk rename. Each module remains in the inventory until a TypeScript replacement preserves its command, artifact, stdout, exit, and safety behavior under focused tests. Completion means no untyped business-runtime modules remain and the full case-driven suite is green.
 
-The native TypeScript leaf set now covers the CLI and internal contracts plus standalone canonical-support, source-semantics, trace-coverage, and TIDAS-row factories. Focused characterization preserves exact mapping bytes/scales, profile defaults and source rewrites, trace queue blocker algebra, root/id/version/multilingual transforms, path/hash/order/error behavior, and every static consumer before higher workflow facets move across the boundary.
+The native TypeScript leaf set now also covers decision context, identity reference rewrite, full-context proof, and preflight artifact factories. Focused characterization preserves queue/context SHA scopes, exact reference rows/reports, fail-closed missing evidence, transform relevance, request/report artifact facts, CommandSpec argv, first-bound source indexes, positive-only execution reuse, and every static consumer.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

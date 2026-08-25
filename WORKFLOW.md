@@ -41,6 +41,10 @@ checkPaths:
   - scripts/lib/source-semantics.ts
   - scripts/lib/trace-coverage.ts
   - scripts/lib/tidas-row-utils.ts
+  - scripts/lib/decision-task-utils.ts
+  - scripts/lib/identity-reference-rewrite-utils.ts
+  - scripts/lib/full-context-proof.ts
+  - scripts/lib/identity-preflight-artifacts.ts
   - test/unit/foundry-cli-spine.test.mts
   - test/unit/foundry-command-metadata.test.mts
   - test/unit/surface-audit-typescript.test.mts
@@ -56,6 +60,8 @@ checkPaths:
   - test/unit/source-semantics-contract.test.mts
   - test/unit/trace-coverage.test.mts
   - test/unit/tidas-row-utils.test.mts
+  - test/unit/evidence-decision-leaves.test.mts
+  - test/unit/evidence-leaf-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
 lastReviewedCommit: 45b0848ab233c274f436c69a0b70ea28df30d922

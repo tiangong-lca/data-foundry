@@ -3,10 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-import * as decisionTask from "../../scripts/lib/decision-task-utils.mjs";
-import * as fullContext from "../../scripts/lib/full-context-proof.mjs";
-import * as preflightArtifacts from "../../scripts/lib/identity-preflight-artifacts.mjs";
-import * as identityRewrite from "../../scripts/lib/identity-reference-rewrite-utils.mjs";
+import * as decisionTask from "../../scripts/lib/decision-task-utils.ts";
+import * as fullContext from "../../scripts/lib/full-context-proof.ts";
+import * as preflightArtifacts from "../../scripts/lib/identity-preflight-artifacts.ts";
+import * as identityRewrite from "../../scripts/lib/identity-reference-rewrite-utils.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 

@@ -35,6 +35,10 @@ checkPaths:
   - scripts/lib/source-semantics.ts
   - scripts/lib/trace-coverage.ts
   - scripts/lib/tidas-row-utils.ts
+  - scripts/lib/decision-task-utils.ts
+  - scripts/lib/identity-reference-rewrite-utils.ts
+  - scripts/lib/full-context-proof.ts
+  - scripts/lib/identity-preflight-artifacts.ts
   - scripts/commands/incremental-change-set.mjs
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
@@ -95,6 +99,8 @@ The high-fan-in typed I/O leaf is `scripts/lib/import-curation/internal/runtime-
 The typed contracts immediately above runtime I/O are `artifact-inputs.ts`, `dataset-payload.ts`, `trace-summary.ts`, and `context-inputs.ts`. They own QA/artifact file fallback and dedupe, TIDAS payload/root/type/id/version extraction, ordered `common:other` trace aggregation and compact hashing, and exact installed-CLI schema/methodology/classification/location context resolution. Missing files, duplicate resolved paths, context-byte drift, invalid JSON, trace serialization errors, and fallback identities remain explicit evidence rather than silently repaired input.
 
 The typed standalone policy/row leaves are `canonical-support-mappings.ts`, `source-semantics.ts`, `trace-coverage.ts`, and `tidas-row-utils.ts`. Navigate there for exact canonical FP/UG scales and pending support, profile-aware source kind/fallback/reference decisions, final-row-to-trace-queue coverage keys and blocker envelopes, or reusable root/id/version/multilingual row transforms. These factories retain existing BAFU/USLCI/worldsteel defaults and must not silently normalize units, sources, trace evidence, or row payloads during migration.
+
+The typed evidence/decision leaves are `decision-task-utils.ts`, `identity-reference-rewrite-utils.ts`, `full-context-proof.ts`, and `identity-preflight-artifacts.ts`. They own stable decision selection/context bundles, exact identity reference reuse or unresolved traces, profile-required completion lineage, and content-bound preflight requests/CommandSpecs/source-index attachments. Missing, stale, ambiguous, cross-context, or non-positive evidence remains blocking; display strings and unbound cache candidates never become execution authority.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 
