@@ -25,15 +25,31 @@ const canonicalComplianceSourceId = "d92a1a12-2545-49e2-a585-55c259997756";
 const canonicalMassFlowPropertyId = "93a60a56-a3c8-11da-a746-0800200b9a66";
 const canonicalMassUnitGroupId = "93a60a57-a4c8-11da-a746-0800200c9a66";
 
-function rel(filePath) {
+type BlockerRow = {
+  code?: string;
+  label?: string;
+  noise_code?: string;
+  canonical_flow_property_id?: string;
+  canonical_reference_unit_group_id?: string;
+  suggested_location_code?: string;
+};
+
+type PreflightResultRow = {
+  command: string;
+  dataset_type: string;
+  decision?: string;
+  failure_code?: string;
+};
+
+function rel(filePath: string): string {
   return path.relative(repoRoot, filePath).replaceAll("\\", "/");
 }
 
-function ml(text) {
+function ml(text: string) {
   return { "@xml:lang": "en", "#text": text };
 }
 
-function contactRef(id, text) {
+function contactRef(id: string, text: string) {
   return {
     "@type": "contact data set",
     "@refObjectId": id,
@@ -43,7 +59,7 @@ function contactRef(id, text) {
   };
 }
 
-function sourceRef(id, text) {
+function sourceRef(id: string, text: string) {
   return {
     "@type": "source data set",
     "@refObjectId": id,
@@ -53,12 +69,12 @@ function sourceRef(id, text) {
   };
 }
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function writeJsonLines(filePath, rows) {
+function writeJsonLines(filePath: string, rows: unknown[]): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(
     filePath,
@@ -66,7 +82,7 @@ function writeJsonLines(filePath, rows) {
   );
 }
 
-function readJsonLines(filePath) {
+function readJsonLines(filePath: string) {
   return fs
     .readFileSync(filePath, "utf8")
     .trim()
@@ -75,7 +91,7 @@ function readJsonLines(filePath) {
     .map((line) => JSON.parse(line));
 }
 
-function runFoundry(args, expectedStatus = 0, env = {}) {
+function runFoundry(args: string[], expectedStatus = 0, env: NodeJS.ProcessEnv = {}) {
   const result = spawnSync(process.execPath, ["scripts/foundry.mjs", ...args], {
     cwd: repoRoot,
     env: { ...process.env, ...env },
@@ -246,7 +262,7 @@ test("dataset-bundle-sample-rows creates one shared library contact and rewrites
   assert.deepEqual(
     contacts[0].contactDataSet.contactInformation.dataSetInformation.classificationInformation[
       "common:classification"
-    ]["common:class"].map((item) => item["#text"]),
+    ]["common:class"].map((item: { "#text": string }) => item["#text"]),
     ["Organisations", "Governmental organisations"],
   );
   assert.equal(JSON.stringify(processes).includes(newContactId), true);
@@ -601,7 +617,7 @@ test("dataset-bundle-sample-rows retains and blocks canonical amount scaling req
   assert.equal(report.amount_scaling_requirements.length, 1);
   assert.match(report.policy.canonical_support_amount_scaling, /never convert amounts/u);
   assert.deepEqual(
-    report.blockers.map((blocker) => blocker.code),
+    report.blockers.map((blocker: BlockerRow) => blocker.code),
     ["canonical_support_amount_scaling_required"],
   );
   assert.equal(report.blockers[0].amount_scale_to_canonical_reference, 1000);
@@ -658,7 +674,7 @@ test("dataset-bundle-sample-rows retains and blocks canonical amount scaling req
   assert.equal(unresolvedReport.status, "blocked");
   assert.equal(unresolvedReport.counts.amount_scaling_unresolved, 1);
   assert.deepEqual(
-    unresolvedReport.blockers.map((blocker) => blocker.code),
+    unresolvedReport.blockers.map((blocker: BlockerRow) => blocker.code),
     ["canonical_support_amount_scale_unresolved"],
   );
   const unresolvedLedger = readJsonLines(
@@ -754,7 +770,7 @@ test("dataset-bundle-sample-rows blocks canonical flow property mappings when th
   assert.equal(result.counts.canonical_unit_group_reference_proofs, 0);
   assert.equal(
     result.blockers.some(
-      (blocker) =>
+      (blocker: BlockerRow) =>
         blocker.code === "canonical_flow_property_unit_group_unproven" &&
         blocker.canonical_flow_property_id === canonicalMassFlowPropertyId &&
         blocker.canonical_reference_unit_group_id === canonicalMassUnitGroupId,
@@ -873,7 +889,7 @@ test("dataset-bundle-sample-rows writes executable identity preflight requests f
   );
   assert.equal(
     elementaryQueue[0].identity_preflight_request_file,
-    indexRows.find((row) => row.dataset_type === "flow").request_file,
+    indexRows.find((row: PreflightResultRow) => row.dataset_type === "flow").request_file,
   );
   assert.match(elementaryQueue[0].identity_preflight_command, /flow identity-preflight/u);
   assert.equal(elementaryQueue[0].remote_search.edge_request.endpoint, "flow_hybrid_search");
@@ -1219,21 +1235,21 @@ test("dataset-identity-preflight-query-audit blocks incomplete or noisy search b
   assert.equal(audit.counts.blocked_rows, 1);
   assert.ok(
     audit.blockers.some(
-      (blocker) =>
+      (blocker: BlockerRow) =>
         blocker.code === "identity_preflight_query_required_label_missing" &&
         blocker.label === "reference flow",
     ),
   );
   assert.ok(
     audit.blockers.some(
-      (blocker) =>
+      (blocker: BlockerRow) =>
         blocker.code === "identity_preflight_query_noise" &&
         blocker.noise_code === "ecospold_location_in_name",
     ),
   );
   assert.ok(
     audit.blockers.some(
-      (blocker) =>
+      (blocker: BlockerRow) =>
         blocker.code === "identity_preflight_query_noise" &&
         blocker.noise_code === "not_specified_source_phrase",
     ),
@@ -1386,15 +1402,15 @@ process.exit(blocked ? 1 : 0);
   assert.equal(report.counts.cli_exit_nonzero, 1);
   assert.equal(report.runtime_options.timeout_ms, 45000);
   assert.equal(
-    report.results.every((row) => row.command.includes("--timeout-ms 45000")),
+    report.results.every((row: PreflightResultRow) => row.command.includes("--timeout-ms 45000")),
     true,
   );
   assert.equal(
-    report.results.find((row) => row.dataset_type === "flow").decision,
+    report.results.find((row: PreflightResultRow) => row.dataset_type === "flow").decision,
     "block_duplicate",
   );
   assert.equal(
-    report.results.find((row) => row.dataset_type === "flow").failure_code,
+    report.results.find((row: PreflightResultRow) => row.dataset_type === "flow").failure_code,
     "identity_preflight_cli_exit_nonzero",
   );
   assert.equal(
@@ -2221,12 +2237,20 @@ test("dataset-bundle-sample-rows blocks converted default process classification
   assert.equal(report.counts.process_scopes_needs_ai_authoring, 1);
   assert.equal(report.counts.process_scopes_blocked_deferred, 0);
   assert.ok(
-    report.blockers.some((blocker) => blocker.code === "process_classification_requires_authoring"),
+    report.blockers.some(
+      (blocker: BlockerRow) => blocker.code === "process_classification_requires_authoring",
+    ),
   );
   assert.ok(
-    report.blockers.some((blocker) => blocker.code === "flow_classification_requires_authoring"),
+    report.blockers.some(
+      (blocker: BlockerRow) => blocker.code === "flow_classification_requires_authoring",
+    ),
   );
-  assert.ok(report.blockers.some((blocker) => blocker.code === "location_code_requires_authoring"));
+  assert.ok(
+    report.blockers.some(
+      (blocker: BlockerRow) => blocker.code === "location_code_requires_authoring",
+    ),
+  );
 
   const queue = readJsonLines(path.join(repoRoot, report.files.classification_authoring_queue));
   const processScopeLedger = readJsonLines(path.join(repoRoot, report.files.process_scope_ledger));
@@ -2236,7 +2260,7 @@ test("dataset-bundle-sample-rows blocks converted default process classification
     1,
   );
   const processQueueRow = queue.find((row) => row.dataset_type === "process");
-  const flowQueueRow = queue.find((row) => row.dataset_type === "flow");
+  const flowQueueRow = queue.find((row: PreflightResultRow) => row.dataset_type === "flow");
   assert.equal(processQueueRow.source_classification.category, "material, obsolete");
   assert.match(
     processQueueRow.classification_workflow.commands.children_root,
@@ -2440,7 +2464,7 @@ test("dataset-bundle-sample-rows queues missing flow locationOfSupply from name 
   assert.equal(report.counts.location_authoring_queue_rows, 1);
   assert.ok(
     report.blockers.some(
-      (blocker) =>
+      (blocker: BlockerRow) =>
         blocker.code === "flow_location_of_supply_requires_authoring" &&
         blocker.suggested_location_code === "CH",
     ),

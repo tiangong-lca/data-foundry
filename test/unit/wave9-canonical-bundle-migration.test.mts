@@ -52,7 +52,7 @@ test("canonical support rewrite consumers target the typed module explicitly", (
   assertStaticImports([
     ["scripts/foundry.mjs", "./lib/canonical-support-rewrites.ts"],
     [
-      "test/commands/canonical-support-rewrites.test.mjs",
+      "test/commands/canonical-support-rewrites.test.mts",
       "../../scripts/lib/canonical-support-rewrites.ts",
     ],
     [

@@ -708,7 +708,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/support-cache.test.mjs",
+        "test/commands/support-cache.test.mts",
         "canonical support mapping autofill maps only proven units and reports unresolved units",
       ),
     ],
@@ -734,15 +734,15 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "complex workflow commands publish AI-readable stage contracts",
       ),
       nodeTest(
-        "test/commands/bundle-sample-rows.test.mjs",
+        "test/commands/bundle-sample-rows.test.mts",
         "dataset-bundle-sample-rows writes executable identity preflight requests for process and elementary flow matching",
       ),
       nodeTest(
-        "test/commands/bundle-sample-rows.test.mjs",
+        "test/commands/bundle-sample-rows.test.mts",
         "dataset-bundle-sample-rows projects process geography into referenced flow location evidence",
       ),
       nodeTest(
-        "test/commands/bundle-sample-rows.test.mjs",
+        "test/commands/bundle-sample-rows.test.mts",
         "dataset-bundle-sample-rows retains and blocks canonical amount scaling requirements",
       ),
     ],
@@ -759,7 +759,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     keyTests: [
       identityPreflightRunCommandContract,
       nodeTest(
-        "test/commands/bundle-sample-rows.test.mjs",
+        "test/commands/bundle-sample-rows.test.mts",
         "dataset-identity-preflight-requests-build creates a fresh exact-row request index",
       ),
     ],
@@ -776,7 +776,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     keyTests: [
       identityPreflightRunCommandContract,
       nodeTest(
-        "test/commands/bundle-sample-rows.test.mjs",
+        "test/commands/bundle-sample-rows.test.mts",
         "dataset-identity-preflight-query-audit passes complete fielded edge queries",
       ),
     ],
@@ -794,7 +794,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "complex workflow commands publish AI-readable stage contracts",
       ),
       nodeTest(
-        "test/commands/bundle-sample-rows.test.mjs",
+        "test/commands/bundle-sample-rows.test.mts",
         "dataset-identity-preflight-run executes request indexes and preserves identity blockers as evidence",
       ),
       nodeTest(
@@ -1199,7 +1199,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/import-ledger.test.mjs",
+        "test/commands/import-ledger.test.mts",
         "import ledger report separates verified rows from human-review resume scopes",
       ),
     ],

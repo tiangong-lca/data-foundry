@@ -26,13 +26,20 @@ test("core ledger and support command tests exist only as native TypeScript", ()
 });
 
 test("metadata and migration consumers target the typed command tests", () => {
-  for (const consumer of [
-    "scripts/lib/foundry-command-metadata.ts",
-    "test/unit/wave9-canonical-bundle-migration.test.mts",
-    "docs/import-profiles/bafu/fp-ug-canonical-support-governance.md",
-  ]) {
+  const consumers: Array<[string, string[]]> = [
+    [
+      "scripts/lib/foundry-command-metadata.ts",
+      ["bundle-sample-rows", "import-ledger", "support-cache"],
+    ],
+    ["test/unit/wave9-canonical-bundle-migration.test.mts", ["canonical-support-rewrites"]],
+    [
+      "docs/import-profiles/bafu/fp-ug-canonical-support-governance.md",
+      ["canonical-support-rewrites"],
+    ],
+  ];
+  for (const [consumer, names] of consumers) {
     const source = fs.readFileSync(path.join(repoRoot, consumer), "utf8");
-    for (const name of commandTests.filter((candidate) => source.includes(candidate))) {
+    for (const name of names) {
       assert.match(source, new RegExp(`test/commands/${name}\\.test\\.mts`, "u"), consumer);
       assert.doesNotMatch(source, new RegExp(`test/commands/${name}\\.test\\.mjs`, "u"), consumer);
     }
