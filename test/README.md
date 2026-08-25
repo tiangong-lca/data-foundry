@@ -30,6 +30,9 @@ checkPaths:
   - scripts/commands/execution-capsule.ts
   - scripts/commands/post-write-closeout.ts
   - scripts/lib/foundry-args.ts
+  - scripts/commands/identity-decisions.ts
+  - scripts/commands/classification-decisions.ts
+  - scripts/commands/location-decisions.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
@@ -151,13 +154,18 @@ checkPaths:
   - test/unit/mutation-manifest-workflow-facade-contract.test.mts
   - test/unit/mutation-manifest-runner-contract.test.mts
   - test/unit/wave25-mutation-manifest-migration.test.mts
+  - test/unit/wave25-identity-decision-command-migration.test.mts
+  - test/unit/wave25-classification-location-command-migration.test.mts
+  - test/commands/classification-decisions.test.mjs
+  - test/commands/location-decisions.test.mjs
+  - test/scenarios/flow-identity-decisions.test.mjs
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: febf43c6bf901e1a63aed975a2d8b15bd7889818
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: tests cover reference partitions/source proofs/mutation bytes and fail-closed writes plus real CLI argv/process errors, capsule receipt/hash/seal states, closeout unique-root/accepted-diff behavior, typed ownership, and native errors."
+lastReviewedCommit: 7d1d552a47f0cbf34d2d9597c9978d1d16169b94
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: tests cover reference partitions/source proofs/mutation bytes and fail-closed writes, runtime argv/process and capsule/closeout proof, plus three zero-escape decision factories with exact help, aliases, paths/order, queue/blockers, CLI stages, artifact boundaries, and native errors."
 ---
 
 # Test Layout
@@ -236,6 +244,8 @@ Wave 24 covers five command factories in three RED/GREEN families. `unit/task-co
 Wave 25 covers the reference stack in three dependency-ordered RED/GREEN families. `unit/workflow-reference-closure-contract.test.mts` pins exact exports, DFS/table mapping, Foundry-trace exclusion, planned-self/public-remote/proven/unresolved/foreign closure partitions, write/reuse candidates and decision/operation order. `unit/workflow-source-reference-context-contract.test.mts` pins explicit/default source file precedence, scope/index order, public-canonical filtering and support proof order. `unit/mutation-manifest-workflow-facade-contract.test.mts` pins every live owner reference; `unit/mutation-manifest-runner-contract.test.mts` pins realistic write/reference/blocked partitions, remote proof, report/items and partition JSONL bytes/hashes, native JSON failure, and empty write output whenever the manifest is blocked. Migration tests require atomic native zero-escape TypeScript and every consumer update.
 
 Wave 25 covers three runtime command owners. `unit/cli-wrapper-command-factory.test.mts` executes a real local Node child to pin executable prefixes, argv, CWD/environment, stdout/stderr, nonzero exits and native spawn errors without shell strings. `unit/execution-capsule-command-factory.test.mts` and the existing command fixture pin offline help, attempt/no-replay states, immutable snapshots, predecessor receipts, semantic/raw hashes, reviewer/boundary checks and seals. `unit/post-write-closeout-command-factory.test.mts` routes to realistic unique-root, byte-drift, canonical-hash, accepted-diff and production-mode fixtures.
+
+Wave 25 covers the three decision command factories. `unit/wave25-identity-decision-command-migration.test.mts` and `unit/wave25-classification-location-command-migration.test.mts` pin native-only sources, exact export identity, zero explicit type escapes or suppressions, every dispatcher/metadata consumer, and exact serialized help reports. The realistic command/scenario fixtures continue to pin option aliases/defaults, queue and row path order, task-context and unclosed-item blockers, CLI argv/stage short-circuiting, identity output partitioning, report/JSONL writes, and native malformed-artifact failures.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

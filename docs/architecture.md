@@ -33,6 +33,9 @@ checkPaths:
   - scripts/commands/execution-capsule.ts
   - scripts/commands/post-write-closeout.ts
   - scripts/lib/foundry-args.ts
+  - scripts/commands/identity-decisions.ts
+  - scripts/commands/classification-decisions.ts
+  - scripts/commands/location-decisions.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
@@ -97,8 +100,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: febf43c6bf901e1a63aed975a2d8b15bd7889818
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation and runtime-command adapters preserve exact evidence, partition, argv/process, seal, unique-root/accepted-diff, byte/order/hash and blocker semantics without moving CLI, schema, search, database, or production authority."
+lastReviewedCommit: 7d1d552a47f0cbf34d2d9597c9978d1d16169b94
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation, runtime-command, and decision adapters preserve exact evidence/partition/order/bytes/hashes, argv/process and seals, unique-root/accepted-diff, queues/blockers and deterministic CLI delegation without moving schema, search, database, or production authority."
 ---
 
 # Architecture
@@ -187,6 +190,8 @@ The typed command-owner layer now includes filesystem task/completion aggregatio
 The typed mutation reference stack remains an offline planning boundary. Reference closure classifies local roots and externally proven dependencies without querying or mutating the database; source context admits only ordered, in-scope public-canonical proofs; mutation manifest aggregates exact evidence and writes JSON/JSONL partitions. If any item is blocked, no write-candidate payload is emitted for execution.
 
 The typed runtime-command layer also includes CLI wrappers, offline capsule admission and post-write closeout. Wrappers delegate to the installed CLI with an executable and argv array; capsule admission writes immutable local evidence with zero dispatch; closeout aggregates already-produced commit/readback proof without issuing a remote operation. Unique-root, owner/state/payload, accepted-diff and production-test rules remain in their typed proof owners rather than moving into transport code.
+
+The typed decision command boundary now includes `identity-decisions.ts`, `classification-decisions.ts`, and `location-decisions.ts`. Identity validation partitions local rows into write candidates, reference reuse, and unresolved evidence without executing a remote mutation. Classification and location validate task-bound decisions, preserve queue grouping and schema/path order, and delegate deterministic apply through the existing CLI argv boundary only after blockers are empty. Their reports and artifacts remain Foundry-local evidence; schema vocabularies, search, mutation, and readback authority remain with their existing owners.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

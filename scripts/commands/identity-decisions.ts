@@ -1,5 +1,57 @@
 import path from "node:path";
 
+interface LooseRecord {
+  [key: string]: LooseRecord | undefined;
+}
+
+interface IdentityCanonical {
+  table: string;
+  ref_object_id: string;
+  version: string;
+  short_description: string;
+}
+
+interface IdentityProfile {
+  allowAccountLocalSupportAndElementary?: boolean;
+}
+
+interface IdentityDecisionDependencies {
+  asText: (value: unknown) => string;
+  datasetIdentity: (row: LooseRecord, datasetType: string) => { id: string; version: string };
+  datasetRowsFileStem: (datasetType: string) => string;
+  fileExists: (filePath: string | null | undefined) => boolean;
+  flowTypeOfDataSet: (row: LooseRecord) => string;
+  hasUnresolvedAiPlaceholder: (value: unknown) => boolean;
+  normalizedList: (value: unknown) => string[];
+  nowIso: () => string;
+  profileFor: (repoRoot: string, profile: string, options: LooseRecord) => IdentityProfile;
+  readJson: (filePath: string) => LooseRecord | LooseRecord[];
+  readJsonLines: (filePath: string) => LooseRecord[];
+  readRowsFile: (filePath: string) => LooseRecord[];
+  readText: (filePath: string) => string;
+  referenceShortDescription: (value: unknown) => string;
+  repoRelativePath: (filePath: string) => string;
+  repoRoot: string;
+  resolveRepoPath: (filePath: unknown) => string | null;
+  sha256Text: (text: string) => string;
+  unique: <T>(values: T[]) => T[];
+  writeJson: (filePath: string, value: unknown) => void;
+  writeJsonLines: (filePath: string, rows: readonly unknown[]) => void;
+}
+
+interface IdentityDecisionValidation {
+  dataset_id: string;
+  dataset_version: string;
+  decision: string;
+  canonical: IdentityCanonical | null;
+  package_path: string | null;
+  blockers: Array<Record<string, unknown>>;
+}
+
+interface AppliedIdentityDecision extends IdentityDecisionValidation {
+  raw: LooseRecord;
+}
+
 export function createIdentityDecisionCommands({
   asText,
   datasetIdentity,
@@ -22,8 +74,8 @@ export function createIdentityDecisionCommands({
   unique,
   writeJson,
   writeJsonLines,
-}) {
-  function readDecisionRowsFile(filePath) {
+}: IdentityDecisionDependencies) {
+  function readDecisionRowsFile(filePath: string | null): LooseRecord[] {
     if (!filePath || !fileExists(filePath)) return [];
     if (filePath.toLowerCase().endsWith(".jsonl")) {
       return readJsonLines(filePath);
@@ -35,7 +87,7 @@ export function createIdentityDecisionCommands({
     return [value];
   }
 
-  function identityDecisionDatasetId(decision) {
+  function identityDecisionDatasetId(decision: LooseRecord): string {
     return asText(
       decision?.dataset_id ??
         decision?.datasetId ??
@@ -46,14 +98,14 @@ export function createIdentityDecisionCommands({
     );
   }
 
-  function identityDecisionDatasetVersion(decision) {
+  function identityDecisionDatasetVersion(decision: LooseRecord): string {
     return (
       asText(decision?.dataset_version ?? decision?.datasetVersion ?? decision?.version) ||
       "00.00.001"
     );
   }
 
-  function normalizeIdentityDecisionValue(decision) {
+  function normalizeIdentityDecisionValue(decision: LooseRecord): string {
     const raw = asText(
       decision?.identity_decision ??
         decision?.identityDecision ??
@@ -69,11 +121,11 @@ export function createIdentityDecisionCommands({
     return raw;
   }
 
-  function identityDecisionCompletionStatus(decision) {
+  function identityDecisionCompletionStatus(decision: LooseRecord): string {
     return asText(decision?.decision_status ?? decision?.decisionStatus ?? decision?.status);
   }
 
-  function identityDecisionUsedContextKinds(decision) {
+  function identityDecisionUsedContextKinds(decision: LooseRecord): string[] {
     return unique([
       ...normalizedList(decision?.used_context_kinds ?? decision?.usedContextKinds),
       ...normalizedList(decision?.resolution?.used_context_kinds),
@@ -81,7 +133,7 @@ export function createIdentityDecisionCommands({
     ]);
   }
 
-  function identityDecisionCanonical(decision) {
+  function identityDecisionCanonical(decision: LooseRecord): IdentityCanonical | null {
     const canonical =
       decision?.canonical ??
       decision?.selected_reference ??
@@ -108,7 +160,7 @@ export function createIdentityDecisionCommands({
     };
   }
 
-  function identityDecisionPackageReference(decision) {
+  function identityDecisionPackageReference(decision: LooseRecord): string {
     return asText(
       decision?.authoring_package ??
         decision?.authoringPackage ??
@@ -117,7 +169,7 @@ export function createIdentityDecisionCommands({
     );
   }
 
-  function identityDecisionPackageSha(decision) {
+  function identityDecisionPackageSha(decision: LooseRecord): string {
     return asText(
       decision?.authoring_package_sha256 ??
         decision?.authoringPackageSha256 ??
@@ -126,7 +178,10 @@ export function createIdentityDecisionCommands({
     );
   }
 
-  function identityDecisionPackagePath(decision, packageDir) {
+  function identityDecisionPackagePath(
+    decision: LooseRecord,
+    packageDir: string | null,
+  ): string | null {
     const explicit = identityDecisionPackageReference(decision);
     if (explicit) {
       const resolved = resolveRepoPath(explicit);
@@ -143,7 +198,7 @@ export function createIdentityDecisionCommands({
     return candidates.find(fileExists) ?? null;
   }
 
-  function identityDecisionClosesAction(decision, code) {
+  function identityDecisionClosesAction(decision: LooseRecord, code: string): boolean {
     return normalizedList(
       decision?.closes_action_items ??
         decision?.closesActionItems ??
@@ -151,16 +206,24 @@ export function createIdentityDecisionCommands({
     ).includes(code);
   }
 
-  function identityDecisionReferenceTable(datasetType) {
+  function identityDecisionReferenceTable(datasetType: string): string {
     return datasetRowsFileStem(datasetType);
   }
 
-  function isElementaryFlowIdentityRow(row) {
+  function isElementaryFlowIdentityRow(row: LooseRecord): boolean {
     return /^elementary flow$/iu.test(flowTypeOfDataSet(row));
   }
 
-  function validateIdentityDecision({ decision, datasetType, packageDir }) {
-    const blockers = [];
+  function validateIdentityDecision({
+    decision,
+    datasetType,
+    packageDir,
+  }: {
+    decision: LooseRecord;
+    datasetType: string;
+    packageDir: string | null;
+  }): IdentityDecisionValidation {
+    const blockers: Array<Record<string, unknown>> = [];
     const id = identityDecisionDatasetId(decision);
     const value = normalizeIdentityDecisionValue(decision);
     if (hasUnresolvedAiPlaceholder(decision)) {
@@ -271,7 +334,7 @@ export function createIdentityDecisionCommands({
     };
   }
 
-  function runDatasetIdentityDecisionsApply(options) {
+  function runDatasetIdentityDecisionsApply(options: LooseRecord) {
     if (options.help) {
       return {
         schema_version: 1,
@@ -307,7 +370,7 @@ export function createIdentityDecisionCommands({
     }
     const outDir = resolveRepoPath(
       options.outDir || path.join(path.dirname(rowsFile), "identity-decisions"),
-    );
+    )!;
     const packageDir = resolveRepoPath(options.authoringPackageDir || options.authoringPackagesDir);
     const rows = readRowsFile(rowsFile);
     const inputDecisions = readDecisionRowsFile(decisionsFile);
@@ -317,9 +380,9 @@ export function createIdentityDecisionCommands({
       ).toLowerCase();
       return !decisionType || decisionType === datasetType;
     });
-    const decisionMap = new Map();
-    const blockers = [];
-    const decisionEvidenceRows = [];
+    const decisionMap = new Map<string, AppliedIdentityDecision>();
+    const blockers: Array<Record<string, unknown>> = [];
+    const decisionEvidenceRows: Array<Record<string, unknown>> = [];
     for (const decision of decisions) {
       const validation = validateIdentityDecision({
         decision,
@@ -341,11 +404,11 @@ export function createIdentityDecisionCommands({
       decisionMap.set(key, { raw: decision, ...validation });
     }
 
-    const outputRows = [];
-    const referenceRows = [];
-    const unresolvedRows = [];
-    const rewriteRows = [];
-    const unresolvedReferenceRows = [];
+    const outputRows: LooseRecord[] = [];
+    const referenceRows: LooseRecord[] = [];
+    const unresolvedRows: LooseRecord[] = [];
+    const rewriteRows: Array<Record<string, unknown>> = [];
+    const unresolvedReferenceRows: Array<Record<string, unknown>> = [];
     rows.forEach((row, rowIndex) => {
       const identity = datasetIdentity(row, datasetType);
       const key = `${identity.id}@@${identity.version || "00.00.001"}`;

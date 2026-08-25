@@ -29,6 +29,9 @@ checkPaths:
   - scripts/commands/cli-wrappers.ts
   - scripts/commands/execution-capsule.ts
   - scripts/commands/post-write-closeout.ts
+  - scripts/commands/identity-decisions.ts
+  - scripts/commands/classification-decisions.ts
+  - scripts/commands/location-decisions.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
@@ -56,8 +59,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: febf43c6bf901e1a63aed975a2d8b15bd7889818
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation and runtime-command owners remain Foundry-local and preserve cross-repository ownership, CLI routing, database/readback, profiles, search, Worldsteel/Date.parse, and execution boundaries."
+lastReviewedCommit: 7d1d552a47f0cbf34d2d9597c9978d1d16169b94
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation, runtime-command, and decision owners remain Foundry-local; deterministic decision apply remains CLI-routed and cross-repository ownership, readback, profiles, search, Worldsteel/Date.parse, and execution boundaries are unchanged."
 ---
 
 # Workspace Project Map

@@ -42,6 +42,9 @@ checkPaths:
   - scripts/commands/cli-wrappers.ts
   - scripts/commands/execution-capsule.ts
   - scripts/commands/post-write-closeout.ts
+  - scripts/commands/identity-decisions.ts
+  - scripts/commands/classification-decisions.ts
+  - scripts/commands/location-decisions.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -116,12 +119,14 @@ checkPaths:
   - test/unit/cli-wrapper-command-factory.test.mts
   - test/unit/execution-capsule-command-factory.test.mts
   - test/unit/post-write-closeout-command-factory.test.mts
+  - test/unit/wave25-identity-decision-command-migration.test.mts
+  - test/unit/wave25-classification-location-command-migration.test.mts
   - specs/typescript-migration-inventory.json
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: febf43c6bf901e1a63aed975a2d8b15bd7889818
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: the typed reference/mutation stack and runtime command owners preserve partitions, source proofs, fail-closed write authority, argv/process behavior, immutable capsule seals, unique-root/accepted-diff gates, exact bytes/order, blockers, and native failures under local fixtures."
+lastReviewedCommit: 7d1d552a47f0cbf34d2d9597c9978d1d16169b94
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation, runtime-command, and decision owners preserve partitions, proofs, fail-closed authority, argv/process and capsule seals, unique-root/accepted-diff gates, queue/blocker order, deterministic CLI delegation, exact artifacts, and native failures under local fixtures."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

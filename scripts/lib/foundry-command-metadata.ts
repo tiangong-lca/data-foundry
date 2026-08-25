@@ -450,7 +450,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-classification-decision-task-build": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/classification-decisions.mjs",
+    ownerModule: "scripts/commands/classification-decisions.ts",
     ownerExport: "createClassificationDecisionCommands().runDatasetClassificationDecisionTaskBuild",
     inputs: ["classification-authoring-queue.jsonl", "classification schemas", "context files"],
     outputs: [
@@ -467,7 +467,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-library-classification-decisions-project": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/classification-decisions.mjs",
+    ownerModule: "scripts/commands/classification-decisions.ts",
     ownerExport:
       "createClassificationDecisionCommands().runDatasetLibraryClassificationDecisionsProject",
     inputs: [
@@ -569,7 +569,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-classification-decisions-apply": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/classification-decisions.mjs",
+    ownerModule: "scripts/commands/classification-decisions.ts",
     ownerExport: "createClassificationDecisionCommands().runDatasetClassificationDecisionsApply",
     inputs: ["classification queue", "AI classification decisions", "decision task proof"],
     outputs: ["classification-decisions-apply-report.json", "classified rows or queue outputs"],
@@ -582,7 +582,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-location-decision-task-build": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/location-decisions.mjs",
+    ownerModule: "scripts/commands/location-decisions.ts",
     ownerExport: "createLocationDecisionCommands().runDatasetLocationDecisionTaskBuild",
     inputs: ["location-authoring-queue.jsonl", "tidas_locations_category.json", "context files"],
     outputs: [
@@ -599,7 +599,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-location-decisions-suggest": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/location-decisions.mjs",
+    ownerModule: "scripts/commands/location-decisions.ts",
     ownerExport: "createLocationDecisionCommands().runDatasetLocationDecisionsSuggest",
     inputs: [
       "location-authoring-queue.jsonl",
@@ -620,7 +620,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-location-decisions-apply": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/location-decisions.mjs",
+    ownerModule: "scripts/commands/location-decisions.ts",
     ownerExport: "createLocationDecisionCommands().runDatasetLocationDecisionsApply",
     inputs: ["location queue", "AI location decisions", "decision task proof"],
     outputs: ["location-decisions-apply-report.json", "location-coded rows or queue outputs"],
@@ -1056,7 +1056,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-identity-decisions-apply": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/identity-decisions.mjs",
+    ownerModule: "scripts/commands/identity-decisions.ts",
     ownerExport: "createIdentityDecisionCommands().runDatasetIdentityDecisionsApply",
     inputs: ["rows file", "AI identity decisions", "identity decision task proof"],
     outputs: [
