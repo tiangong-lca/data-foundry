@@ -33,6 +33,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/hash-utils.ts
   - scripts/lib/import-curation/internal/dataset-types.ts
   - scripts/lib/import-curation/internal/runtime-io.ts
+  - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -61,8 +62,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1282579aa90016fde378293bfa4b1de11c679b4f
-lastReviewedNote: "Reviewed for Issue #67 Wave 11: location quality utilities are native zero-any TS7 with command strings, schema lookup, target order and queue/blocker contracts unchanged."
+lastReviewedCommit: 8217c918603fad89ec64b92e91d397707f3e0920
+lastReviewedNote: "Reviewed for Issue #67 Wave 12: prewrite cleanup is native zero-any TS7 with datetime/sentinel/proof/trace/namespace/redaction bytes, ordering and errors unchanged."
 ---
 
 # TianGong LCA Data Foundry
@@ -104,6 +105,8 @@ The ledger hardening follow-up removes every explicit `any` from `import-ledger.
 The runtime wave migrates `foundry-runtime-utils.ts`, the high-fan-in helper used by the entrypoint, account wrapper, context discovery, BAFU commands, location/remote verification and shared tests. Characterization pins the installed CLI package contract, override command rendering, all 49 factory helpers, exact file/JSON/JSONL/frontmatter/env-file/stage behavior, portable paths, errors, hashes, UUIDs and local subprocess reports. The runtime source has no explicit `any`; migration inventory moves from 128 to 127 without reading `.env` or accessing production.
 
 The location wave migrates `location-quality-utils.ts`, which feeds bundle sampling and location/finalize authoring through the Foundry entrypoint. Characterization pins classification/location command strings and artifacts, installed schema code loading, fallback and recursive location target discovery, depth-first/array order, valid/blocker counts, queue context, blocker envelopes and invalid-input errors. It remains fail-closed and zero-any; inventory moves from 127 to 126.
+
+The prewrite wave migrates `prewrite-cleanup.ts`, a six-consumer deterministic evidence boundary. Characterization pins UTC normalization, process-only annual sentinel completion, source-row identity precedence, output-only exchange proof hashes and order sensitivity, existing-proof dedupe, trace summary externalization, namespace repair, local path redaction hashes and serialization errors. It remains zero-any and byte/fail-closed compatible; inventory moves from 126 to 125.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

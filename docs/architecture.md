@@ -35,6 +35,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/hash-utils.ts
   - scripts/lib/import-curation/internal/dataset-types.ts
   - scripts/lib/import-curation/internal/runtime-io.ts
+  - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -62,8 +63,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1282579aa90016fde378293bfa4b1de11c679b4f
-lastReviewedNote: "Reviewed for Issue #67 Wave 11: typed location quality remains a Foundry-local authoring/blocker adapter and does not absorb CLI classification or schema authority."
+lastReviewedCommit: 8217c918603fad89ec64b92e91d397707f3e0920
+lastReviewedNote: "Reviewed for Issue #67 Wave 12: typed prewrite cleanup remains Foundry-local deterministic evidence preparation and does not alter schema, source, CLI or database authority."
 ---
 
 # Architecture
@@ -120,6 +121,8 @@ The typed import-ledger boundary now models its JSON graph, external dependencie
 The high-fan-in runtime utility boundary is native TypeScript and owns only Foundry-local file/path/frontmatter/env-file/stage mechanics plus exact installed-package discovery. It resolves the pinned CLI package bin/schema assets or an explicit operator/test binary override, but the published CLI still owns sessions and remote behavior. Runtime tests execute only a local Node JSON subprocess and explicit temporary env files; production credentials and repository `.env` remain outside the test boundary.
 
 The typed location-quality boundary reads the installed CLI location vocabulary and discovers only schema/fallback-declared location fields. It creates local authoring commands, queue context and blockers; the CLI owns classification lookup/apply and the schema package owns valid codes. Missing schema evidence yields an empty valid-code map rather than approving unknown values, and invalid targets remain blocking before finalize.
+
+The typed prewrite-cleanup boundary performs deterministic transformations only after authoring evidence exists: required-field sentinel completion, metadata normalization, source/final exchange proof, import-only trace externalization, namespace repair and local locator redaction. Source and final exchange signatures exclude only permitted flow-reference rewrites; their array and object order remains content-addressed. It cannot invent source evidence or grant write authority.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

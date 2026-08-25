@@ -35,6 +35,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/hash-utils.ts
   - scripts/lib/import-curation/internal/dataset-types.ts
   - scripts/lib/import-curation/internal/runtime-io.ts
+  - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -82,10 +83,12 @@ checkPaths:
   - test/unit/wave10-runtime-migration.test.mts
   - test/unit/location-quality-utils-contract.test.mts
   - test/unit/wave11-location-migration.test.mts
+  - test/unit/prewrite-cleanup-contract.test.mts
+  - test/unit/wave12-prewrite-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1282579aa90016fde378293bfa4b1de11c679b4f
-lastReviewedNote: "Reviewed for Issue #67 Wave 11: typed location helpers preserve CLI authoring commands, schema/fallback target discovery and fail-closed queue/blocker order."
+lastReviewedCommit: 8217c918603fad89ec64b92e91d397707f3e0920
+lastReviewedNote: "Reviewed for Issue #67 Wave 12: typed prewrite helpers preserve deterministic sentinel/proof/trace/redaction order and fail before partially deleting invalid evidence."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

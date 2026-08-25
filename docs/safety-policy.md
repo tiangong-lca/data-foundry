@@ -21,9 +21,10 @@ checkPaths:
   - docs/import-profiles/bafu/constraints.md
   - specs/automated-lca-capability-registry.json
   - specs/workspace-capability-adapters.md
+  - scripts/lib/import-curation/internal/prewrite-cleanup.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
-lastReviewedNote: "Reviewed for Issue #65: authoritative argv handoffs bind final-row bytes, and foreign/RLS-hidden state-0 missing rows never count as successful readback."
+lastReviewedCommit: 8217c918603fad89ec64b92e91d397707f3e0920
+lastReviewedNote: "Reviewed for Issue #67 Wave 12: typed prewrite cleanup preserves source-exchange proof hashes, trace externalization-before-delete and local locator redaction without broadening write authority."
 ---
 
 # Safety Policy
@@ -61,6 +62,7 @@ Remote database writes are blocked unless:
 - missing canonical unitgroups, flowproperties, elementary flows, compliance sources, data-format sources, contacts, or true sources block only the dependent write scope and are recorded for human/database governance; independent scopes with proven closure may continue
 - blocked write scopes must append machine-readable import-ledger rows under `blocked.scopes.human-review.jsonl` and categorized `blocked.dependencies.*.jsonl` files with concrete blocker reasons, required human action, and the rerun path; successful readback-verified scopes must append `ok.*.verified.jsonl` rows so later batch reruns can skip already imported rows
 - curation cleanup has run and cleaned rows were revalidated
+- deterministic cleanup may externalize import-only source trace only after hashing it into a safe summary; circular/unserializable trace evidence fails before deletion. Retained Foundry trace evidence must carry its namespace, local machine locators must be deleted or SHA-redacted, and source-only-output proof remains bound to exact ordered non-flow-reference exchange signatures.
 - post-authoring Foundry curation gate passes on the exact final rows and references a deterministic QA report for those rows
 - state-code-aware mutation plan exists
 - Foundry `dataset-mutation-manifest` is `ready_for_remote_write` for the exact write scope

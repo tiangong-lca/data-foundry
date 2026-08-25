@@ -24,8 +24,8 @@ checkPaths:
   - docs/safety-policy.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1282579aa90016fde378293bfa4b1de11c679b4f
-lastReviewedNote: "Reviewed for Issue #67 Wave 11: typed location command planning, schema-code lookup, queue and blocker helpers remain Foundry-owned adapters and add no sibling CLI classification or schema behavior."
+lastReviewedCommit: 8217c918603fad89ec64b92e91d397707f3e0920
+lastReviewedNote: "Reviewed for Issue #67 Wave 12: typed deterministic prewrite sentinel/proof/trace/redaction helpers remain Foundry-owned evidence preparation and add no sibling schema, CLI or database behavior."
 ---
 
 # Capability Ownership Policy

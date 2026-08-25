@@ -26,8 +26,8 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1282579aa90016fde378293bfa4b1de11c679b4f
-lastReviewedNote: "Reviewed for Issue #67 Wave 11: typing location command-plan and blocker helpers changes no command category, owner/export metadata, help, artifacts, exit mapping, or remote-write mode."
+lastReviewedCommit: 8217c918603fad89ec64b92e91d397707f3e0920
+lastReviewedNote: "Reviewed for Issue #67 Wave 12: typing deterministic prewrite evidence helpers changes no command category, owner/export metadata, help, artifact schema, exit mapping, or remote-write mode."
 ---
 
 # Foundry Command Surface

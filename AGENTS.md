@@ -45,6 +45,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/hash-utils.ts
   - scripts/lib/import-curation/internal/dataset-types.ts
   - scripts/lib/import-curation/internal/runtime-io.ts
+  - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -69,8 +70,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1282579aa90016fde378293bfa4b1de11c679b4f
-lastReviewedNote: "Reviewed for Issue #67 Wave 11: location command/schema/recursive-target helpers are native zero-any TS7 with exact queue/blocker order, fail-closed codes, paths and consumers preserved."
+lastReviewedCommit: 8217c918603fad89ec64b92e91d397707f3e0920
+lastReviewedNote: "Reviewed for Issue #67 Wave 12: prewrite evidence transforms are native zero-any TS7 with array/object order, hashes, sentinel, trace externalization, namespace and locator-redaction contracts preserved."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -109,6 +110,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - `import-ledger.ts` is a strict compile-time boundary rather than an extension-only migration: it exports recursive JSON types, dependency interfaces, discriminated closeout/finalize reports, verified/blocked/retry/resume row contracts, manifest/write/report results, and uses `unknown` narrowing plus a generic latest-by-key helper with no explicit `any`. The fixture type contract must compile while every JSONL/hash/order/error behavior test stays byte-identical.
 - `foundry-runtime-utils.ts` is the typed shared runtime boundary. It preserves the exact installed `@tiangong-lca/cli@0.1.1` package/bin/schema resolution, environment override command prefix, synchronous text/JSON/JSONL and portable path helpers, task frontmatter/scalar parsing, explicit env-file precedence, stage/blocker envelopes, local CLI subprocess JSON parsing, hashes and deterministic UUIDs. Tests must use an explicit temporary env file and local Node subprocess; they must not call `loadRuntimeEnv()` or read repository credentials.
 - `location-quality-utils.ts` is the typed location authoring boundary. It preserves classification/location CLI command strings, installed location schema codes plus fallback/schema-derived target keys, ascending-array/depth-first target order, `#text` leaf paths, exact valid/blocker counters and `location_code_requires_authoring` queue/blocker envelopes. Invalid locations never become write candidates merely because a schema file or nested value is missing.
+- `prewrite-cleanup.ts` is the typed deterministic evidence-cleanup boundary. It preserves timestamp recursion, annual-supply sentinel policy, output-only source/final exchange signature proof, import-trace hash summaries, Foundry namespaces and local-locator SHA redaction. Exchange arrays and object insertion order remain part of the proof hash; circular/unserializable trace input throws before source evidence is deleted.
 - Toolchain and migration tests must pass from a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. They must not depend on the superproject checkout, another worktree's `node_modules`, absolute developer paths, ignored `.foundry` state, or credentials.
 - The Golden gate must compare against a non-`HEAD` merge-base with full Git history and a Node-native comparator. Cross-platform fixtures use executable-plus-argv dispatch; a `.js`/`.mjs`/`.cjs` test script must run through `process.execPath`, not OS executable-bit behavior. `.gitattributes` keeps repository text at LF on every runner; only Windows launcher files may opt into CRLF.
 - Foundry artifact-to-scope matching and transitional command parsers must accept both path separators. Durable JSON/JSONL writers flush the writable descriptor they opened; POSIX permission-bit assertions are not imposed on Windows filesystems.
