@@ -69,4 +69,4 @@ export {
   sourceContactSupportCanonicalUnitGroupProofKeys,
   sourceContactSupportTrueSourceProofKeys,
   sourceReferenceRewriteProofKeys,
-} from "./workflow-source-reference-context.mjs";
+} from "./workflow-source-reference-context.ts";

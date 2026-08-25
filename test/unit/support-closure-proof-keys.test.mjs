@@ -3,7 +3,7 @@ import { referenceKey } from "../../scripts/lib/import-curation/internal/workflo
 import {
   sourceContactSupportCanonicalUnitGroupProofKeys,
   sourceContactSupportTrueSourceProofKeys,
-} from "../../scripts/lib/import-curation/internal/workflow-source-reference-context.mjs";
+} from "../../scripts/lib/import-curation/internal/workflow-source-reference-context.ts";
 import { assert } from "../fixtures/foundry-core.mjs";
 
 // CLASS 1: a minted (account-local) Flow Property whose reference Unit Group is a public

@@ -1,12 +1,57 @@
 import { asText, fileExists, resolveRepoPath } from "./runtime-io.ts";
 import {
   defaultSourceReferenceRewriteFile,
+  type NormalizedSourceReferenceRewriteRow,
   normalizeSourceReferenceRewriteRow,
   readJsonLines,
 } from "./workflow-patch-collect.ts";
 import { referenceKey } from "./workflow-reference-closure.ts";
 
-export function readSourceReferenceRewriteContext({ repoRoot, rowsFile, options, writeRows }) {
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface SourceReferenceOptions extends JsonRecord {
+  sourceReferenceRewrites?: string | null;
+  sourceReferenceRewritesFile?: string | null;
+  sourceReferenceRewriteFile?: string | null;
+  referenceRewrites?: string | null;
+  referenceRewritesFile?: string | null;
+}
+
+interface WriteRowEntry {
+  identity: { id: string };
+}
+
+interface ReadSourceReferenceOptions {
+  repoRoot: string;
+  rowsFile: string;
+  options: SourceReferenceOptions;
+  writeRows: Map<unknown, WriteRowEntry>;
+}
+
+export interface SourceReferenceRewriteContext {
+  sourceFile: string | null;
+  sourceRows: unknown[];
+  scopedRows: NormalizedSourceReferenceRewriteRow[];
+  byIdentity: Map<string, NormalizedSourceReferenceRewriteRow[]>;
+}
+
+interface ProofContext {
+  artifact?: unknown;
+  scopedRows?: unknown[];
+}
+
+function asRecord(value: unknown): JsonRecord {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
+}
+
+export function readSourceReferenceRewriteContext({
+  repoRoot,
+  rowsFile,
+  options,
+  writeRows,
+}: ReadSourceReferenceOptions): SourceReferenceRewriteContext {
   const configuredFile = resolveRepoPath(
     repoRoot,
     options.sourceReferenceRewrites ??
@@ -29,11 +74,11 @@ export function readSourceReferenceRewriteContext({ repoRoot, rowsFile, options,
     const key = `${row.dataset_id}@@${row.dataset_version || "00.00.001"}`;
     return writeKeys.has(key) || writeIds.has(row.dataset_id);
   });
-  const byIdentity = new Map();
+  const byIdentity = new Map<string, NormalizedSourceReferenceRewriteRow[]>();
   for (const row of scopedRows) {
     const key = `${row.dataset_id}@@${row.dataset_version || "00.00.001"}`;
     if (!byIdentity.has(key)) byIdentity.set(key, []);
-    byIdentity.get(key).push(row);
+    byIdentity.get(key)!.push(row);
   }
   return {
     sourceFile,
@@ -62,9 +107,11 @@ export const publicCanonicalSourceReferenceKeys = new Set([
 // reference keys so the FIRST process.finalize reference-closure proof passes for them
 // once they are in the support commit. This can ONLY prove sources the stage actually
 // committed into the support set, so it cannot loosen closure for any other source.
-export function sourceContactSupportTrueSourceProofKeys(context) {
-  const sourceSupport = context?.artifact?.value?.source_support;
-  const keys = new Set();
+export function sourceContactSupportTrueSourceProofKeys(
+  context?: ProofContext | null,
+): Set<string> {
+  const sourceSupport = asRecord(asRecord(asRecord(context?.artifact).value).source_support);
+  const keys = new Set<string>();
   if (!sourceSupport) return keys;
   const entries = Array.isArray(sourceSupport.referenced_true_source_keys)
     ? sourceSupport.referenced_true_source_keys
@@ -90,9 +137,11 @@ export function sourceContactSupportTrueSourceProofKeys(context) {
 // finalize reference-closure proof passes for the FP->canonical-UG edge without writing
 // the UG. The keys come only from UGs the stage proved against the canonical support
 // cache, so this cannot prove a UG that is not a published canonical dataset.
-export function sourceContactSupportCanonicalUnitGroupProofKeys(context) {
-  const canonicalSupport = context?.artifact?.value?.canonical_support;
-  const keys = new Set();
+export function sourceContactSupportCanonicalUnitGroupProofKeys(
+  context?: ProofContext | null,
+): Set<string> {
+  const canonicalSupport = asRecord(asRecord(asRecord(context?.artifact).value).canonical_support);
+  const keys = new Set<string>();
   if (!canonicalSupport) return keys;
   const entries = Array.isArray(canonicalSupport.canonical_unit_group_reference_keys)
     ? canonicalSupport.canonical_unit_group_reference_keys
@@ -106,18 +155,25 @@ export function sourceContactSupportCanonicalUnitGroupProofKeys(context) {
   return keys;
 }
 
-export function sourceReferenceRewriteProofKeys(context) {
-  const scopedCanonicalKeys = new Set(
+export function sourceReferenceRewriteProofKeys(context?: ProofContext | null): Set<string> {
+  const scopedCanonicalKeys = new Set<string>(
     (context?.scopedRows ?? [])
       .filter((row) =>
-        ["dataset_format_source", "compliance_system_source"].includes(asText(row?.relation)),
+        ["dataset_format_source", "compliance_system_source"].includes(
+          asText(asRecord(row).relation),
+        ),
       )
-      .map((row) => row?.canonical)
+      .map((row) => asRecord(row).canonical)
       .filter(Boolean)
       .map((canonical) => ({
         table: "sources",
-        id: asText(canonical.ref_object_id ?? canonical.refObjectId ?? canonical.id),
-        version: asText(canonical.version ?? canonical["@version"]) || "00.00.001",
+        id: asText(
+          asRecord(canonical).ref_object_id ??
+            asRecord(canonical).refObjectId ??
+            asRecord(canonical).id,
+        ),
+        version:
+          asText(asRecord(canonical).version ?? asRecord(canonical)["@version"]) || "00.00.001",
       }))
       .filter((reference) => reference.id)
       .map(referenceKey),
