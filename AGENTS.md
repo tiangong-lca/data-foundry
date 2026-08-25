@@ -130,6 +130,8 @@ checkPaths:
   - test/fixtures/row-builders.ts
   - test/fixtures/topology-convergence-fixtures.ts
   - test/unit/import-ledger-type-contract.test.mts
+  - test/unit/source-row-explicit-any-contract.test.mts
+  - test/unit/identity-rewrite-explicit-any-contract.test.mts
   - test/unit/fixture-helpers-contract.test.mts
   - test/unit/fixture-executable-core-migration.test.mts
   - test/unit/row-builders-fixture-migration.test.mts
@@ -217,8 +219,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: Foundry is pnpm-only native TS7 with zero tracked first-party JavaScript; exact help, artifacts, ordering, hashes, errors, metadata topology and fail-closed authority remain preserved without credentials."
+lastReviewedCommit: 9e64691a31400c9c4198caa96f3c95891bd55d3a
+lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: source, row and identity-reference boundaries use concrete interfaces or narrowed unknown; exact bytes/order/hashes/errors and fail-closed authority remain unchanged without credentials."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -253,6 +255,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - The historical pre-migration baseline at commit `c996633832ea23bf7883c7b219f524bf28e6ce7e` contained 160 tracked JavaScript artifacts: 95 runtime `.mjs` files, 64 `.mjs` tests, and one Prettier `.cjs` config. Migration is complete; `test/unit/zero-javascript-ratchet.test.mts` permanently requires zero tracked first-party `.js`/`.mjs`/`.cjs` files, TS-only compiler/test globs, and native `prettier.config.ts`.
 - Issue #63 established the pnpm/TS7 toolchain and typed spine in dependency order: entrypoints, registry/metadata, runtime I/O, artifact/receipt primitives, command families, fixtures, and tests. The permanent ratchet is zero tracked first-party JavaScript; future changes must start directly in TypeScript with equivalent characterization and case coverage.
 - The characterized TypeScript leaves include the CLI/data/evidence spine plus canonical-support rewrite and bundle-sampling factories. Focused tests pin mapping lookup and traversal order, scale/pending/Unit Group proof blockers, account-local/stale-version precedence, source-trace cleanup, contact/profile fallbacks, support/reference closure materialization, deterministic sampling/dedupe, invalid inputs, and every static consumer.
+- `source-semantics.ts`, `tidas-row-utils.ts`, `identity-reference-rewrite-utils.ts`, and their directly coupled contract fixtures use concrete dependency, row, reference, mapping, report, and blocker interfaces or `unknown` narrowed at the read boundary. Their focused worktree-local Oxlint contracts reject every explicit TypeScript `any` node without loading the TypeScript compiler API; existing source/profile/reference bytes, order, errors, and fail-closed write boundaries remain the behavior authority.
 - Canonical FP rewrites never convert amounts. When bundle sampling uses `--block-on-unscaled-canonical-support`, a known finite positive non-1 factor emits `canonical_support_amount_scaling_required`; a missing, non-finite, zero, or negative factor emits `canonical_support_amount_scale_unresolved`. Both remain in the scaling JSONL, command report, and process-scope ledger before any later stage can lose the source-unit evidence.
 - `import-ledger.ts` is a strict compile-time boundary rather than an extension-only migration: it exports recursive JSON types, dependency interfaces, discriminated closeout/finalize reports, verified/blocked/retry/resume row contracts, manifest/write/report results, and uses `unknown` narrowing plus a generic latest-by-key helper with no explicit `any`. The fixture type contract must compile while every JSONL/hash/order/error behavior test stays byte-identical.
 - `foundry-runtime-utils.ts` is the typed shared runtime boundary. It preserves the exact installed `@tiangong-lca/cli@0.1.1` package/bin/schema resolution, environment override command prefix, synchronous text/JSON/JSONL and portable path helpers, task frontmatter/scalar parsing, explicit env-file precedence, stage/blocker envelopes, local CLI subprocess JSON parsing, hashes and deterministic UUIDs. Tests must use an explicit temporary env file and local Node subprocess; they must not call `loadRuntimeEnv()` or read repository credentials.

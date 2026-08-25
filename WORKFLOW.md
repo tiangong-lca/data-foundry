@@ -136,6 +136,8 @@ checkPaths:
   - test/unit/tidas-row-utils.test.mts
   - test/unit/evidence-decision-leaves.test.mts
   - test/unit/evidence-leaf-migration.test.mts
+  - test/unit/source-row-explicit-any-contract.test.mts
+  - test/unit/identity-rewrite-explicit-any-contract.test.mts
   - test/unit/bafu-family-signatures-contract.test.mts
   - test/unit/import-ledger-contract.test.mts
   - test/unit/wave8-large-leaf-migration.test.mts
@@ -266,8 +268,8 @@ checkPaths:
   - test/unit/foundry-golden-diff-contract.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: pnpm-only native TS7 entry/runtime/tests/config preserve dependency order, exact artifacts/order/hashes/errors, planner algebra, receipts and fail-closed authority."
+lastReviewedCommit: 9e64691a31400c9c4198caa96f3c95891bd55d3a
+lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: worktree-local Oxlint AST contracts guard the source/row/reference family while established cases preserve exact artifacts/order/hashes/errors and fail-closed authority."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -309,6 +311,8 @@ Choose one lane:
 Use Node.js 24 and the repository-pinned `pnpm@11.23.0`. TypeScript `7.0.2` is the sole compiler, Oxlint is the linter, and Prettier is the formatter. Do not create npm/Yarn lockfiles, TypeScript 5/6 aliases, or compiler-API lint/format bridges.
 
 Issue #63 established the typed spine and its migration is complete. Keep the permanent `test/unit/zero-javascript-ratchet.test.mts` green: tracked first-party JavaScript, compatibility compiler includes, and mixed JS test/lint globs must remain at zero. Drive every later slice with focused characterization plus a realistic case, and verify toolchain changes from a clean arbitrary worktree after `pnpm install --frozen-lockfile`, without credentials, ignored `.foundry` artifacts, a sibling checkout, or another worktree's dependencies.
+
+For explicit-any cleanup, pair the existing behavior cases with a focused contract that runs the installed Oxlint `typescript/no-explicit-any` AST rule through `process.execPath`; do not depend on a TypeScript compiler API that the pinned TypeScript 7 package does not expose. The source-semantics, TIDAS-row, and identity-reference-rewrite boundaries plus their directly coupled fixtures must remain at zero explicit `any`, while other debt families stay independently scoped until the integrated repository-wide lint ratchet is enabled.
 
 Queue authoring context must preserve manifest and JSONL encounter order, exact-version selection before id-only fallback, closure dependency/support order and native parse/filesystem/invalid-dependency failures. Missing or malformed queue evidence must not be converted into an executable or remote-write allowance.
 

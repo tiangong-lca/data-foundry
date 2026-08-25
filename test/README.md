@@ -123,6 +123,8 @@ checkPaths:
   - test/unit/bundle-sample-utils-contract.test.mts
   - test/unit/wave9-canonical-bundle-migration.test.mts
   - test/unit/import-ledger-type-contract.test.mts
+  - test/unit/source-row-explicit-any-contract.test.mts
+  - test/unit/identity-rewrite-explicit-any-contract.test.mts
   - test/unit/fixture-helpers-contract.test.mts
   - test/unit/fixture-executable-core-migration.test.mts
   - test/unit/row-builders-fixture-migration.test.mts
@@ -263,8 +265,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: entry/runtime plus command, fixture, unit and scenario surfaces are native TS7 with a permanent zero-JavaScript ratchet; exact cases, bytes/order/hashes/errors and authority boundaries remain unchanged."
+lastReviewedCommit: 9e64691a31400c9c4198caa96f3c95891bd55d3a
+lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: focused source/row/reference AST contracts pair with established unit/command/scenario cases; exact bytes/order/hashes/errors and authority boundaries remain unchanged."
 ---
 
 # Test Layout
@@ -301,6 +303,8 @@ The Issue #63 migration is complete. `unit/zero-javascript-ratchet.test.mts` per
 `unit/canonical-support-mappings.test.mts`, `unit/source-semantics-contract.test.mts`, `unit/trace-coverage.test.mts`, and `unit/tidas-row-utils.test.mts` characterize standalone leaves: mapping completeness/scales/pending support, source kinds/profile fallbacks/canonical rewrites, trace count/missing/stale/duplicate/evidence blockers, and TIDAS root/id/version/multilingual/cleanup/JSONL helpers with invalid inputs.
 
 `unit/evidence-decision-leaves.test.mts` characterizes decision selection/context SHA/dedupe, missing-index fail-close and exact identity reuse rows, required full-context missing-manifest blockers, preflight request bytes/CommandSpec artifact facts, queue attachment, and source-index first binding/missing context. Existing identity scenarios retain positive-only cache and end-to-end lineage coverage.
+
+`unit/source-row-explicit-any-contract.test.mts` and `unit/identity-rewrite-explicit-any-contract.test.mts` invoke the installed Oxlint TypeScript AST rule through Node over the exact source/direct-fixture targets. They reject explicit `any` without a compiler-API dependency; the existing standalone/evidence unit tests and realistic command/scenario cases continue to pin exact source/profile/reference rows, bytes, order, hashes, native errors, and remote-write fail-close behavior.
 
 `unit/bafu-family-signatures-contract.test.mts` and `unit/import-ledger-contract.test.mts` characterize the Wave 8 leaves independently: exact normalized family and ordered exchange hashes, scope-order grouping/rank/summary/missing envelopes, then append-only verified/blocked/dependency/retry bytes, root-based row identity, payload hashes, human actions, duplicate suppression, latest-row resume ordering, artifact paths, and native errors. `unit/wave8-large-leaf-migration.test.mts` pins both native `.ts` files, their consumers, and named exports.
 

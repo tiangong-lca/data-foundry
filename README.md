@@ -118,6 +118,8 @@ checkPaths:
   - test/fixtures/row-builders.ts
   - test/fixtures/topology-convergence-fixtures.ts
   - test/unit/import-ledger-type-contract.test.mts
+  - test/unit/source-row-explicit-any-contract.test.mts
+  - test/unit/identity-rewrite-explicit-any-contract.test.mts
   - test/unit/fixture-helpers-contract.test.mts
   - test/commands/*.test.mts
   - test/unit/core-command-factory.test.mts
@@ -139,8 +141,8 @@ checkPaths:
   - specs/import-profiles.json
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 entry, runtime, tests and config plus the permanent zero-JavaScript ratchet preserve profiles, exact help/artifacts, bytes/order/hashes/errors and authority boundaries."
+lastReviewedCommit: 9e64691a31400c9c4198caa96f3c95891bd55d3a
+lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: the three local source/row/reference leaves and directly coupled tests reject explicit any while preserving profiles, exact artifacts, bytes/order/hashes/errors and authority boundaries."
 ---
 
 # TianGong LCA Data Foundry
@@ -172,6 +174,8 @@ The next internal-contract slice migrates artifact/QA inputs, dataset payload id
 The standalone-leaf slice migrates canonical FlowProperty mappings, profile-aware source semantics, trace queue coverage, and reusable TIDAS row helpers. Characterization preserves all scale factors and pending defaults, BAFU/USLCI/worldsteel source identities, canonical reference rewrites, trace evidence keys/blockers, multilingual/root/id/version helpers, and invalid-input behavior.
 
 The evidence/decision slice migrates decision-task context and stable hashes, identity reference rewrites, full-context completion proof, and identity-preflight request artifacts. Characterization preserves exact paths/bytes/SHA/ordering, missing or ambiguous evidence blockers, artifact-bound CommandSpecs, source-index first binding, and positive-only cache/execution reuse boundaries.
+
+The explicit-any hardening slice removes all 197 explicit TypeScript `any` nodes from `source-semantics.ts`, `tidas-row-utils.ts`, `identity-reference-rewrite-utils.ts`, and their directly coupled contract tests. Two focused contracts run the installed Oxlint TypeScript AST rule through `process.execPath`, while the established source/profile/reference cases preserve exact rows, report bytes, order, hashes, native errors, and remote-write fail-close behavior. Other explicit-any families remain separately owned debt until the repository-wide lint ratchet is enabled from an integrated head.
 
 The family/ledger slice migrates BAFU family signatures and the append-only import ledger. Characterization preserves normalized family names, ordered exchange skeleton/template/amount hashes, scope-order master selection and summaries, verified/blocked/retry row schemas, payload identity hashes, duplicate suppression, human-review ordering, resume/skipped artifacts, relative paths, and native parse/filesystem errors.
 
