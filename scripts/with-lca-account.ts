@@ -453,7 +453,20 @@ export function main(argv: string[] = process.argv.slice(2)): number {
 }
 
 export function isDirectEntry(importMetaUrl: string, argv1: string | undefined): boolean {
-  return argv1 ? importMetaUrl === pathToFileURL(path.resolve(argv1)).href : false;
+  if (!argv1) return false;
+  const canonicalFileUrl = (filePath: string): string => {
+    const resolved = path.resolve(filePath);
+    try {
+      return pathToFileURL(fs.realpathSync(resolved)).href;
+    } catch {
+      return pathToFileURL(resolved).href;
+    }
+  };
+  try {
+    return canonicalFileUrl(fileURLToPath(importMetaUrl)) === canonicalFileUrl(argv1);
+  } catch {
+    return importMetaUrl === pathToFileURL(path.resolve(argv1)).href;
+  }
 }
 
 if (isDirectEntry(import.meta.url, process.argv[1])) {
