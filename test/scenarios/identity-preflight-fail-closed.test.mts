@@ -38,7 +38,7 @@ function prepare(mode: string) {
       dataset_type: "flow",
       dataset_id: FLOW_ID,
       dataset_version: "00.00.001",
-      target_sha256: "1".repeat(64),
+      target_sha256: sha256(JSON.stringify({ id: FLOW_ID })),
       request_bytes_sha256: sha256(requestText),
       request_file: rel(requestFile),
       output_dir: rel(outputDir),
@@ -156,6 +156,7 @@ test("only-pending skips only an exact bound execution manifest", () => {
   writeText(fixture.requestFile, changedRequest);
   const changedIndex = readJsonLines(fixture.indexFile);
   changedIndex[0].request_bytes_sha256 = sha256(changedRequest);
+  changedIndex[0].target_sha256 = sha256(JSON.stringify({ id: FLOW_ID, changed: true }));
   writeJsonLines(fixture.indexFile, changedIndex);
   const rerun = runFoundry(
     [
