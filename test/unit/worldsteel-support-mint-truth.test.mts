@@ -1,0 +1,94 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+import { createWorldsteelBatchImportRunCommands } from "../../scripts/commands/worldsteel-batch-import-run.ts";
+
+const testDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(testDir, "..", "..");
+const worldsteelDocsDir = path.join(repoRoot, "docs", "import-profiles", "worldsteel");
+
+type WorldsteelProfileFile = {
+  profiles: {
+    worldsteel: {
+      docs: string[];
+      allow_account_local_support_and_elementary: {
+        enabled: boolean;
+        scope: string[];
+        authorized_by: string;
+        note: string;
+      };
+    };
+  };
+};
+
+function activeWorldsteelDocs(): string[] {
+  return fs
+    .readdirSync(worldsteelDocsDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+    .map((entry) => path.posix.join("docs/import-profiles/worldsteel", entry.name))
+    .sort();
+}
+
+function documentedRuntimeValues(source: string): boolean[] {
+  return [...source.matchAll(/mintUnmatchedFpUgSupport=(true|false)/gu)].map(
+    (match) => match[1] === "true",
+  );
+}
+
+test("Worldsteel runtime, profile authorization, and every active document expose one support-mint truth", () => {
+  let runtimeConfig: Record<string, unknown> | undefined;
+  const runner = () => undefined;
+  createWorldsteelBatchImportRunCommands({}, {
+    createBafuBatchImportRunCommands(_deps, config) {
+      runtimeConfig = config;
+      return { runDatasetBafuBatchImportRun: runner };
+    },
+  });
+
+  assert.ok(runtimeConfig, "Worldsteel factory must pass a profile config to the batch engine");
+  const runtimeValue = runtimeConfig.mintUnmatchedFpUgSupport;
+  assert.equal(typeof runtimeValue, "boolean");
+
+  const profile = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, "specs", "import-profiles.json"), "utf8"),
+  ) as WorldsteelProfileFile;
+  const worldsteel = profile.profiles.worldsteel;
+  assert.equal(worldsteel.allow_account_local_support_and_elementary.enabled, true);
+  assert.deepEqual(
+    new Set(worldsteel.allow_account_local_support_and_elementary.scope),
+    new Set([
+      "elementary_flow_write",
+      "elementary_flow_create_new",
+      "flowproperty_write",
+      "unitgroup_write",
+      "canonical_support_local_mint",
+    ]),
+  );
+
+  const activeDocs = activeWorldsteelDocs();
+  assert.deepEqual(
+    [...worldsteel.docs].sort(),
+    activeDocs,
+    "The profile must navigate AI developers to every active Worldsteel document",
+  );
+  for (const relativePath of activeDocs) {
+    const source = fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
+    assert.deepEqual(
+      [...new Set(documentedRuntimeValues(source))],
+      [runtimeValue],
+      `${relativePath} must declare the executable mintUnmatchedFpUgSupport value exactly once in meaning`,
+    );
+  }
+
+  const retainedEvidence = fs.readFileSync(
+    path.join(worldsteelDocsDir, "import-coverage.md"),
+    "utf8",
+  );
+  assert.match(retainedEvidence, /10\+10 EF3\.1 LANCA/iu);
+  assert.match(retainedEvidence, /Flow properties[^\n]*\|\s*11\s*\|/iu);
+  assert.match(retainedEvidence, /Unit groups[^\n]*\|\s*11\s*\|/iu);
+  assert.match(worldsteel.allow_account_local_support_and_elementary.authorized_by, /2026-07-01/u);
+  assert.match(worldsteel.allow_account_local_support_and_elementary.note, /LANCA/u);
+});
