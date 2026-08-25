@@ -247,6 +247,11 @@ test("golden comparison is portable and cannot collapse into HEAD self-compariso
   assert.match(source, /FOUNDRY_GOLDEN_BASE/u);
   assert.match(source, /pnpm["'],\s*\["install",\s*"--frozen-lockfile"/u);
   assert.doesNotMatch(source, /function linkInstalledDependencies/u);
+  assert.doesNotMatch(
+    source,
+    /installPortableBaselineProcessAdapters/u,
+    "Golden must execute dependency-bound adapters from the baseline commit, not copy them from HEAD",
+  );
   assert.doesNotMatch(source, /spawnSync\(\s*["']diff["']/u);
   assert.doesNotMatch(source, /worktree["'],\s*["']add["'].*["']HEAD["']/su);
 });

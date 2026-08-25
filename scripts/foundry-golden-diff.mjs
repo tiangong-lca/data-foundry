@@ -2,7 +2,6 @@
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
-  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -430,19 +429,6 @@ function linkLegacyInstalledCliAssets() {
   symlinkSync(installedCliRoot, legacyCliRoot, process.platform === "win32" ? "junction" : "dir");
 }
 
-function installPortableBaselineProcessAdapters() {
-  if (process.platform !== "win32") return;
-  // The historical baseline predates script-backed executable dispatch. Reuse
-  // only the two current process adapters on Windows so its behavior surface
-  // can execute; focused adapter tests retain responsibility for these shims.
-  for (const fileName of ["foundry-runtime-utils.mjs", "surface-audit.mjs", "tidas-adapter.mjs"]) {
-    copyFileSync(
-      path.join(repoRoot, "scripts", "lib", fileName),
-      path.join(beforeRoot, "scripts", "lib", fileName),
-    );
-  }
-}
-
 function normalizeBaselineLineEndings() {
   if (process.platform !== "win32") return;
   const tracked = run("git", ["ls-files", "-z"], { cwd: beforeRoot })
@@ -806,7 +792,6 @@ try {
   });
   normalizeBaselineLineEndings();
   installBaselineDependencies(beforeRoot);
-  installPortableBaselineProcessAdapters();
   linkLegacyInstalledCliAssets();
   runSide("before", beforeRoot, fixture, cliPath);
   runSide("after", repoRoot, fixture, cliPath);
