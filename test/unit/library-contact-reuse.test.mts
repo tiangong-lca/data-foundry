@@ -31,21 +31,21 @@ function utils() {
   return createBundleSampleUtils(dependencies);
 }
 
-// Requirement 1 (2026-06-29): the worldsteel runner reuses the packaged worldsteel
-// contact (d5710976) as the shared library contact instead of minting a synthetic
-// foundry contact. The library-prefixed contact id/version must win.
+// A profile with an explicitly verified visible contact may reuse that identity. The
+// library-prefixed contact id/version must win; Worldsteel intentionally exercises the
+// no-id deterministic branch below because its packaged id is foreign/private.
 test("buildLibraryContactPayload reuses an explicit library contact id/version", () => {
   const payload = utils().buildLibraryContactPayload({
-    profile: "worldsteel",
-    libraryContactId: "d5710976-d600-11da-a94d-0800200c9a66",
+    profile: "example-library",
+    libraryContactId: "44444444-5555-4666-8777-888888888888",
     libraryContactVersion: "20.20.002",
-    libraryName: "World Steel Association",
-    libraryShortName: "worldsteel",
-    libraryWebsite: "https://www.worldsteel.org",
+    libraryName: "Example Library",
+    libraryShortName: "example",
+    libraryWebsite: "https://example.invalid",
   });
   const di = payload.contactDataSet.contactInformation.dataSetInformation;
-  assert.equal(di["common:UUID"], "d5710976-d600-11da-a94d-0800200c9a66");
-  assert.equal(di["common:name"]["#text"], "World Steel Association");
+  assert.equal(di["common:UUID"], "44444444-5555-4666-8777-888888888888");
+  assert.equal(di["common:name"]["#text"], "Example Library");
   assert.equal(
     payload.contactDataSet.administrativeInformation.publicationAndOwnership[
       "common:dataSetVersion"
@@ -57,7 +57,7 @@ test("buildLibraryContactPayload reuses an explicit library contact id/version",
     payload.contactDataSet.administrativeInformation.publicationAndOwnership[
       "common:referenceToOwnershipOfDataSet"
     ]["@refObjectId"],
-    "d5710976-d600-11da-a94d-0800200c9a66",
+    "44444444-5555-4666-8777-888888888888",
   );
 });
 
@@ -70,6 +70,12 @@ test("buildLibraryContactPayload mints a deterministic id when none is supplied"
   assert.equal(
     payload.contactDataSet.contactInformation.dataSetInformation["common:UUID"],
     "deterministic-minted-id",
+  );
+  assert.equal(
+    payload.contactDataSet.administrativeInformation.publicationAndOwnership[
+      "common:dataSetVersion"
+    ],
+    "00.00.001",
   );
 });
 

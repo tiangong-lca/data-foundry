@@ -3875,9 +3875,9 @@ function buildFinalizeArgs({
     appendOption(args, "--library-contact-address", libraryContact.contactAddress);
     appendOption(args, "--library-central-contact-point", libraryContact.centralContactPoint);
     appendOption(args, "--library-description", libraryContact.description);
-    // Optional explicit identity to REUSE an existing packaged contact as the
-    // shared library contact (worldsteel reuses its packaged contact d5710976)
-    // instead of minting a synthetic deterministic foundry contact.
+    // Optional explicit identity to reuse an existing visible packaged contact as the
+    // shared library contact instead of deriving a deterministic owner-draft identity.
+    // Worldsteel intentionally omits these options because its packaged id is foreign/private.
     appendOption(args, "--library-contact-id", libraryContact.contactId);
     appendOption(args, "--library-contact-version", libraryContact.contactVersion);
   }

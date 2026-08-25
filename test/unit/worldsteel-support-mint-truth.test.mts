@@ -53,6 +53,9 @@ test("Worldsteel runtime, profile authorization, and every active document expos
   assert.ok(runtimeConfig, "Worldsteel factory must pass a profile config to the batch engine");
   const runtimeValue = runtimeConfig.mintUnmatchedFpUgSupport;
   assert.equal(runtimeValue, true, "retained PR #20 delivery evidence freezes the runtime on");
+  const libraryContact = runtimeConfig.libraryContact as Record<string, unknown>;
+  assert.equal(libraryContact.contactId, undefined);
+  assert.equal(libraryContact.contactVersion, undefined);
 
   const profile = JSON.parse(
     fs.readFileSync(path.join(repoRoot, "specs", "import-profiles.json"), "utf8"),
@@ -82,6 +85,7 @@ test("Worldsteel runtime, profile authorization, and every active document expos
     worldsteel.allow_account_local_support_and_elementary.note,
     /enabled=false only when both the R3 elementary residual and R5 FP\/UG support/iu,
   );
+  assert.doesNotMatch(JSON.stringify(worldsteel), /(?:reuse[^.]*d5710976|d5710976[^.]*reus)/iu);
 
   const activeDocs = activeWorldsteelDocs();
   assert.deepEqual(
@@ -111,6 +115,7 @@ test("Worldsteel runtime, profile authorization, and every active document expos
       relativePath,
     );
     assert.match(source, /00\.00\.001/u, relativePath);
+    assert.doesNotMatch(source, /(?:reuse[^.\n]*d5710976|d5710976[^.\n]*reus)/iu, relativePath);
     for (const line of source.split("\n").filter((value) => value.includes("enabled=false"))) {
       assert.match(line, /both .*R3.*R5 .*FP\/UG/iu, relativePath);
     }

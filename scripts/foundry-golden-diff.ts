@@ -75,15 +75,6 @@ const worldsteelProfileContractMigrations = new Map<string, string>([
     ]),
   ],
   [
-    "d8943c24ab3f7518451ac9db103e0faf7dd5f760872411910cc977c047049ab5",
-    JSON.stringify([
-      "docs/import-profiles/worldsteel/profile.md",
-      "docs/import-profiles/worldsteel/constraints.md",
-      "docs/import-profiles/worldsteel/import-plan.md",
-      "docs/import-profiles/worldsteel/import-coverage.md",
-    ]),
-  ],
-  [
     "4d33ab773546d7055db900899e33f4f3179f41b815009fdedf232bfcdf0cd297",
     JSON.stringify([
       "docs/import-profiles/worldsteel/profile.md",

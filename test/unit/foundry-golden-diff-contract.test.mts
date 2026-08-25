@@ -82,13 +82,13 @@ test("Golden admits only exact reviewed Worldsteel profile-truth contracts", () 
   assert.match(source, /worldsteelProfileContractMigrations/u);
   for (const sha256 of [
     "3ea8f90134ab5cc6f19ea6825556d1ef21136011b7c35ecd3d949a266de023c7",
-    "d8943c24ab3f7518451ac9db103e0faf7dd5f760872411910cc977c047049ab5",
     "4d33ab773546d7055db900899e33f4f3179f41b815009fdedf232bfcdf0cd297",
   ]) {
     assert.match(source, new RegExp(sha256, "u"));
   }
   assert.match(source, /expectedDocs !== JSON\.stringify\(value\.docs\)/u);
   assert.match(source, /<worldsteel-profile-truth-contract>/u);
+  assert.doesNotMatch(source, /d8943c24ab3f7518451ac9db103e0faf7dd5f760872411910cc977c047049ab5/u);
 });
 
 test("Golden harness exists only as zero-escape native TypeScript", () => {
