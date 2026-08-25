@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { admissionRequestBinding } from "../../scripts/commands/topology-convergence.mjs";
+import { admissionRequestBinding } from "../../scripts/commands/topology-convergence.ts";
 import { repoRoot, testTmpRoot, writeJson, writeJsonLines } from "./foundry-core.mjs";
 
 const version = "00.00.001";

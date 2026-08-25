@@ -321,7 +321,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-topology-convergence-compose": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/topology-convergence.mjs",
+    ownerModule: "scripts/commands/topology-convergence.ts",
     ownerExport: "createTopologyConvergenceCommands().runDatasetTopologyConvergenceCompose",
     inputs: [
       "SHA-bound topology convergence request",

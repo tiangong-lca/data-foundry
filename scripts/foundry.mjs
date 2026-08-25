@@ -24,7 +24,7 @@ import { createPostWriteCloseoutCommands } from "./commands/post-write-closeout.
 import { createSupportCacheCommands } from "./commands/support-cache.ts";
 import { createTaskCommands } from "./commands/tasks.ts";
 import { createTidasWorkflowCommands } from "./commands/tidas-workflow.ts";
-import { createTopologyConvergenceCommands } from "./commands/topology-convergence.mjs";
+import { createTopologyConvergenceCommands } from "./commands/topology-convergence.ts";
 import { createUslciBatchImportRunCommands } from "./commands/uslci-batch-import-run.ts";
 import { createWorldsteelBatchImportRunCommands } from "./commands/worldsteel-batch-import-run.ts";
 import { bundleRowTypes } from "./lib/bundle-row-types.ts";
