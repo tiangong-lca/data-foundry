@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createPostAuthoringFinalizeUtils } from "../../scripts/lib/post-authoring-finalize-utils.mjs";
+import { createPostAuthoringFinalizeUtils } from "../../scripts/lib/post-authoring-finalize-utils.ts";
 
 type JsonObject = Record<string, unknown>;
 
@@ -28,7 +28,7 @@ function writeJsonLines(filePath: string, rows: unknown[]): void {
   );
 }
 
-function readJsonLines(filePath: string): JsonObject[] {
+function readJsonLines(filePath: string | null): JsonObject[] {
   if (!filePath || !fs.existsSync(filePath)) return [];
   const text = fs.readFileSync(filePath, "utf8").trim();
   return text ? text.split(/\r?\n/u).map((line) => JSON.parse(line) as JsonObject) : [];
