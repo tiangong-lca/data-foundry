@@ -7,6 +7,7 @@ import { createIdentityReferenceRewriteCommands } from "../../scripts/commands/i
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
+const harnessRepoRoot = path.join(path.parse(repoRoot).root, "repo");
 
 function readRepoFile(relativePath: string): string {
   return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
@@ -35,18 +36,18 @@ function createHarness() {
       return `${datasetType}s`;
     },
     fileExists(filePath) {
-      return filePath === "/repo/input.jsonl";
+      return filePath === path.join(harnessRepoRoot, "input.jsonl");
     },
     nowIso() {
       return "2026-08-25T00:00:00.000Z";
     },
     repoRelativePath(filePath) {
-      return path.relative("/repo", filePath).replaceAll("\\", "/");
+      return path.relative(harnessRepoRoot, filePath).replaceAll("\\", "/");
     },
     resolveRepoPath(value) {
       resolvedInputs.push(value);
       if (typeof value !== "string" || value.length === 0) return null;
-      return path.resolve("/repo", value);
+      return path.resolve(harnessRepoRoot, value);
     },
     writeJson(filePath, value) {
       writes.push({ filePath, value });
@@ -86,14 +87,14 @@ test("identity rewrite preserves option precedence, apply input, report aliases,
   assert.deepEqual(resolvedInputs, [
     "input.jsonl",
     "artifacts",
-    "/repo/artifacts/flows.identity-rewritten.jsonl",
+    path.join(harnessRepoRoot, "artifacts", "flows.identity-rewritten.jsonl"),
   ]);
   assert.deepEqual(applyCalls, [
     {
       datasetType: "flow",
-      rowsFile: "/repo/input.jsonl",
-      outFile: "/repo/artifacts/flows.identity-rewritten.jsonl",
-      outDir: "/repo/artifacts",
+      rowsFile: path.join(harnessRepoRoot, "input.jsonl"),
+      outFile: path.join(harnessRepoRoot, "artifacts", "flows.identity-rewritten.jsonl"),
+      outDir: path.join(harnessRepoRoot, "artifacts"),
       options,
       allowMissingIndex: false,
     },
@@ -120,7 +121,11 @@ test("identity rewrite preserves option precedence, apply input, report aliases,
   });
   assert.deepEqual(writes, [
     {
-      filePath: "/repo/artifacts/identity-reference-rewrites-apply-report.json",
+      filePath: path.join(
+        harnessRepoRoot,
+        "artifacts",
+        "identity-reference-rewrites-apply-report.json",
+      ),
       value: report,
     },
   ]);

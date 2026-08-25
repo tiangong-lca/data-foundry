@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import path from "node:path";
 import test from "node:test";
 import { createLocationQualityUtils } from "../../scripts/lib/location-quality-utils.ts";
 
@@ -19,10 +20,16 @@ const bundleRowTypes = {
   lifecyclemodel: { plural: "lifecyclemodels" },
 };
 
+const syntheticRepoRoot = path.join(path.parse(process.cwd()).root, "repo");
+
 function shellQuote(value: unknown): string {
   const text = String(value ?? "");
   if (/^[A-Za-z0-9_./:@%+=,-]+$/u.test(text)) return text;
   return `'${text.replace(/'/gu, `'\\''`)}'`;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 }
 
 function makeUtils({
@@ -57,30 +64,33 @@ function makeUtils({
     pathExpression: (parts: Array<string | number>) => parts.join("."),
     readJson,
     repoRelativeMaybe: (filePath: string | null) => filePath,
-    repoRelativePath: (filePath: string) => filePath.replace(/^\/repo\//u, ""),
+    repoRelativePath: (filePath: string) =>
+      path.relative(syntheticRepoRoot, filePath).split(path.sep).join(path.posix.sep),
     shellQuote,
   });
 }
 
 test("classification authoring commands preserve CLI prefix, row-type override, paths, and exact argv rendering", () => {
   const utils = makeUtils();
+  const outDir = path.join(syntheticRepoRoot, "out");
+  const rowsDir = path.join(syntheticRepoRoot, "rows");
+  const classificationDir = path.join(outDir, "classification", "flow-product");
+  const inputFile = path.join(rowsDir, "flows.jsonl");
+  const decisionsFile = path.join(outDir, "flow-product-classification-decisions.jsonl");
+  const outputFile = path.join(rowsDir, "flows.classified.jsonl");
   assert.deepEqual(
     utils.classificationAuthoringCommands({
       cliBin: ["node", "/cli/tiangong-lca.js"],
-      outDir: "/repo/out",
-      rowsDir: "/repo/rows",
+      outDir,
+      rowsDir,
       type: "flow-product",
       rowType: "flow",
     }),
     {
-      children_root:
-        "node /cli/tiangong-lca.js dataset classification children --type flow-product --out-dir /repo/out/classification/flow-product --json",
-      children_next_template:
-        "node /cli/tiangong-lca.js dataset classification children --type flow-product --parent <parent-code> --out-dir /repo/out/classification/flow-product --json",
-      path_template:
-        "node /cli/tiangong-lca.js dataset classification path --type flow-product --code <selected-code> --out-dir /repo/out/classification/flow-product --json",
-      apply:
-        "node /cli/tiangong-lca.js dataset classification apply --input /repo/rows/flows.jsonl --decisions /repo/out/flow-product-classification-decisions.jsonl --out /repo/rows/flows.classified.jsonl --type flow-product --out-dir /repo/out/classification/flow-product --json",
+      children_root: `node /cli/tiangong-lca.js dataset classification children --type flow-product --out-dir ${shellQuote(classificationDir)} --json`,
+      children_next_template: `node /cli/tiangong-lca.js dataset classification children --type flow-product --parent <parent-code> --out-dir ${shellQuote(classificationDir)} --json`,
+      path_template: `node /cli/tiangong-lca.js dataset classification path --type flow-product --code <selected-code> --out-dir ${shellQuote(classificationDir)} --json`,
+      apply: `node /cli/tiangong-lca.js dataset classification apply --input ${shellQuote(inputFile)} --decisions ${shellQuote(decisionsFile)} --out ${shellQuote(outputFile)} --type flow-product --out-dir ${shellQuote(classificationDir)} --json`,
       decision_file: "out/flow-product-classification-decisions.jsonl",
       input_rows: "rows/flows.jsonl",
       output_rows: "rows/flows.classified.jsonl",
@@ -89,19 +99,30 @@ test("classification authoring commands preserve CLI prefix, row-type override, 
 
   const processCommands = utils.classificationAuthoringCommands({
     cliBin: "tiangong-lca",
-    outDir: "/repo/out folder",
-    rowsDir: "/repo/rows",
+    outDir: path.join(syntheticRepoRoot, "out folder"),
+    rowsDir,
     type: "process",
   });
   assert.match(processCommands.children_root, /^tiangong-lca dataset classification children/u);
-  assert.match(processCommands.children_root, /'\/repo\/out folder\/classification\/process'/u);
-  assert.match(processCommands.apply, /--input \/repo\/rows\/processes\.jsonl/u);
+  assert.match(
+    processCommands.children_root,
+    new RegExp(
+      escapeRegExp(
+        shellQuote(path.join(syntheticRepoRoot, "out folder", "classification", "process")),
+      ),
+      "u",
+    ),
+  );
+  assert.match(
+    processCommands.apply,
+    new RegExp(`--input ${escapeRegExp(shellQuote(path.join(rowsDir, "processes.jsonl")))}`, "u"),
+  );
   assert.throws(
     () =>
       utils.classificationAuthoringCommands({
         cliBin: "tiangong-lca",
-        outDir: "/repo/out",
-        rowsDir: "/repo/rows",
+        outDir,
+        rowsDir,
         type: "unknown",
       }),
     (error: unknown) => error instanceof TypeError,
@@ -109,21 +130,23 @@ test("classification authoring commands preserve CLI prefix, row-type override, 
 });
 
 test("location authoring commands preserve audit, lookup, apply, and artifact contracts", () => {
+  const outDir = path.join(syntheticRepoRoot, "out");
+  const rowsDir = path.join(syntheticRepoRoot, "rows");
+  const locationDir = path.join(outDir, "classification", "location", "process");
+  const inputFile = path.join(rowsDir, "processes.jsonl");
+  const decisionsFile = path.join(outDir, "process-location-decisions.jsonl");
+  const outputFile = path.join(rowsDir, "processes.located.jsonl");
   const commands = makeUtils().locationAuthoringCommands({
     cliBin: ["node", "/cli/tiangong-lca.js"],
-    outDir: "/repo/out",
-    rowsDir: "/repo/rows",
+    outDir,
+    rowsDir,
     type: "process",
   });
   assert.deepEqual(commands, {
-    audit:
-      "node /cli/tiangong-lca.js dataset classification audit --type location --input /repo/rows/processes.jsonl --out-dir /repo/out/classification/location/process --json",
-    children_root:
-      "node /cli/tiangong-lca.js dataset classification children --type location --out-dir /repo/out/classification/location/process --json",
-    path_template:
-      "node /cli/tiangong-lca.js dataset classification path --type location --code <selected-location-code> --out-dir /repo/out/classification/location/process --json",
-    apply:
-      "node /cli/tiangong-lca.js dataset classification apply --input /repo/rows/processes.jsonl --decisions /repo/out/process-location-decisions.jsonl --out /repo/rows/processes.located.jsonl --type location --out-dir /repo/out/classification/location/process --json",
+    audit: `node /cli/tiangong-lca.js dataset classification audit --type location --input ${shellQuote(inputFile)} --out-dir ${shellQuote(locationDir)} --json`,
+    children_root: `node /cli/tiangong-lca.js dataset classification children --type location --out-dir ${shellQuote(locationDir)} --json`,
+    path_template: `node /cli/tiangong-lca.js dataset classification path --type location --code <selected-location-code> --out-dir ${shellQuote(locationDir)} --json`,
+    apply: `node /cli/tiangong-lca.js dataset classification apply --input ${shellQuote(inputFile)} --decisions ${shellQuote(decisionsFile)} --out ${shellQuote(outputFile)} --type location --out-dir ${shellQuote(locationDir)} --json`,
     decision_file: "out/process-location-decisions.jsonl",
     input_rows: "rows/processes.jsonl",
     output_rows: "rows/processes.located.jsonl",

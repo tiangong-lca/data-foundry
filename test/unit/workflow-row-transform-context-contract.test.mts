@@ -424,16 +424,19 @@ test("artifact equality and transform graph preserve exact/content identity, uno
 });
 
 test("cleanup/decision path helpers and every direct chain combination preserve aliases and exact topology", () => {
-  const root = "/repo";
+  const root = path.join(path.parse(process.cwd()).root, "repo");
   const cleanupArtifact = { value: { rowsFile: "cleanup-input" } };
-  assert.equal(transforms.cleanupInputRowsFile(root, cleanupArtifact), "/repo/cleanup-input");
+  assert.equal(
+    transforms.cleanupInputRowsFile(root, cleanupArtifact),
+    path.join(root, "cleanup-input"),
+  );
   assert.equal(
     transforms.decisionApplyExpectedRowsFile({
       repoRoot: root,
       rowsFile: "final",
       cleanupArtifact,
     }),
-    "/repo/cleanup-input",
+    path.join(root, "cleanup-input"),
   );
   assert.equal(
     transforms.decisionApplyExpectedRowsFile({

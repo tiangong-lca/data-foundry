@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -15,7 +14,9 @@ test("import-ledger contains no explicit any escape hatch", () => {
 });
 
 test("import-ledger publishes a strict compile-time dependency, report, row, and result contract", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "import-ledger-types-"));
+  const tempParent = path.join(repoRoot, "tmp");
+  fs.mkdirSync(tempParent, { recursive: true });
+  const tempRoot = fs.mkdtempSync(path.join(tempParent, "import-ledger-types-"));
   try {
     const sourceModule = path.join(repoRoot, "scripts", "lib", "import-ledger.ts");
     let moduleSpecifier = path.relative(tempRoot, sourceModule).replaceAll("\\", "/");
