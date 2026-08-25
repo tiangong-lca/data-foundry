@@ -735,7 +735,7 @@ test("flow commit handoff includes target user id on publish-version command", (
       sha256: sha256Text(fs.readFileSync(rowsFile)),
     });
     assert.deepEqual(handoff.json.commands.commit.binding.artifacts, [
-      { role: "final_rows", ...handoff.json.final_rows_artifact },
+      { ...handoff.json.final_rows_artifact, role: "final_rows" },
     ]);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

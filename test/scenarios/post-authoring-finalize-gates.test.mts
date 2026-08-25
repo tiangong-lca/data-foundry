@@ -19,6 +19,7 @@ import {
   writeJsonLines,
   writeText,
 } from "../fixtures/foundry-core.ts";
+import type { FixtureRecord } from "../fixtures/foundry-core.ts";
 import { writeContextPackFiles } from "../fixtures/full-context-fixtures.ts";
 import {
   testAuthIdentityReceipt,
@@ -218,7 +219,7 @@ process.exit(2);
     assert.ok(finalize.json.files.dry_run_report);
     const dryRunStage = finalize.json.stages.find(
       (stage) => stage.stage === "flow_publish_version_dry_run",
-    );
+    )!;
     assert.equal(dryRunStage.exit_code, 0);
     assert.equal(dryRunStage.args.includes("--target-user-id"), true);
     assert.equal(dryRunStage.args.includes("--state-code"), false);
@@ -635,7 +636,7 @@ test("post-authoring finalize includes referenced true sources in source/contact
   const sourceId = "b1111111-2222-4333-8444-555555555555";
   const rowsFile = path.join(root, "rows", "processes.jsonl");
   const sourceSupportRowsFile = path.join(root, "rows", "sources.jsonl");
-  const processRow = processRowWithDefaultClassification(processId);
+  const processRow = processRowWithDefaultClassification(processId) as unknown as FixtureRecord;
   processRow.processDataSet.modellingAndValidation = {
     dataSourcesTreatmentAndRepresentativeness: {
       referenceToDataSource: {
@@ -648,9 +649,9 @@ test("post-authoring finalize includes referenced true sources in source/contact
         },
       },
     },
-  };
+  } as unknown as FixtureRecord;
   writeJsonLines(rowsFile, [processRow]);
-  const trueSourceRow = sourceRow(sourceId);
+  const trueSourceRow = sourceRow(sourceId) as unknown as FixtureRecord;
   trueSourceRow.sourceDataSet.sourceInformation.dataSetInformation.sourceCitation =
     "Fixture report, 2026";
   writeJsonLines(sourceSupportRowsFile, [trueSourceRow]);
@@ -727,7 +728,7 @@ test("post-authoring finalize proves canonical UG for minted FP and excludes for
   const ugRowsFile = path.join(root, "rows", "unitgroups.jsonl");
   const cacheFile = path.join(root, "cache", "flow-properties-unit-groups.json");
 
-  const processRow = processRowWithDefaultClassification(processId);
+  const processRow = processRowWithDefaultClassification(processId) as unknown as FixtureRecord;
   processRow.processDataSet.modellingAndValidation = {
     dataSourcesTreatmentAndRepresentativeness: {
       referenceToDataSource: {
@@ -747,23 +748,24 @@ test("post-authoring finalize proves canonical UG for minted FP and excludes for
         },
       },
     },
-  };
+  } as unknown as FixtureRecord;
   writeJsonLines(rowsFile, [processRow]);
 
-  const trueSource = sourceRow(trueSourceId);
+  const trueSource = sourceRow(trueSourceId) as unknown as FixtureRecord;
   trueSource.sourceDataSet.sourceInformation.dataSetInformation.sourceCitation =
     "Fixture report, 2026";
-  const formatSource = sourceRow(formatSourceId);
+  const formatSource = sourceRow(formatSourceId) as unknown as FixtureRecord;
   formatSource.sourceDataSet.sourceInformation.dataSetInformation["common:shortName"] = {
     "@xml:lang": "en",
     "#text": "ILCD format",
   };
-  delete formatSource.sourceDataSet.sourceInformation.sourceCitation;
+  delete (formatSource.sourceDataSet.sourceInformation as unknown as Record<string, unknown>)
+    .sourceCitation;
   formatSource.sourceDataSet.sourceInformation.dataSetInformation.classificationInformation = {
     "common:classification": {
       "common:class": { "@level": "0", "@classId": "1", "#text": "Data set formats" },
     },
-  };
+  } as unknown as FixtureRecord;
   writeJsonLines(sourceSupportRowsFile, [trueSource, formatSource]);
 
   // Minted FP referencing a PUBLIC CANONICAL UG at the converter's @00.00.001.
@@ -1109,7 +1111,7 @@ test("post-authoring finalize externalizes unresolved elementary flow exchanges"
   const processId = "e1e1e1e1-4444-4555-8666-777777777777";
   const missingFlowId = "f1f1f1f1-5555-4666-8777-888888888888";
   const rowsFile = path.join(root, "rows", "processes.jsonl");
-  const row = processRowWithFlowRef(processId, missingFlowId);
+  const row = processRowWithFlowRef(processId, missingFlowId) as unknown as FixtureRecord;
   row.processDataSet.processInformation.dataSetInformation["common:other"] = {
     "tiangongfoundry:unresolvedTrace": [
       {
@@ -1121,7 +1123,7 @@ test("post-authoring finalize externalizes unresolved elementary flow exchanges"
         reason: "Fixture unresolved elementary flow cannot be safely mapped to a public flow.",
       },
     ],
-  };
+  } as unknown as FixtureRecord;
   writeJsonLines(rowsFile, [row]);
   const context = writeContextPackFiles(root);
   const identityPreflightIndex = writeCompletedIdentityPreflightIndex(root, [

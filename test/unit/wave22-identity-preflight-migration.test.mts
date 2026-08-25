@@ -24,7 +24,7 @@ test("every static identity-preflight consumer targets the typed module", () => 
     "scripts/lib/import-curation/internal/workflow-reference-closure.ts",
     "test/scenarios/bafu-mydata-override.test.mts",
     "test/scenarios/identity-curation-context.test.mts",
-    "test/scenarios/mutation-lineage-helpers.test.mjs",
+    "test/scenarios/mutation-lineage-helpers.test.mts",
     "test/unit/content-policy-profile-waiver.test.mts",
     "test/unit/wave13-queue-context-migration.test.mts",
     "test/unit/wave18-identity-decision-context-migration.test.mts",

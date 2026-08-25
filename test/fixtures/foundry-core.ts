@@ -11,7 +11,12 @@ export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 export const testRunId = process.env.FOUNDRY_FULL_CONTEXT_TEST_RUN_ID || process.pid;
 
 export type FixtureFiles = Record<string, string> & FixtureRecord[];
-export type FixtureCommands = Record<string, string | null> & FixtureRecord[];
+export interface FixtureCommands extends Array<FixtureRecord> {
+  commit: FixtureRecord;
+  post_write_verify: FixtureRecord;
+  apply_all_patches: string | null;
+  build_task: string;
+}
 
 export interface FixtureRecord {
   [key: string]: unknown;
@@ -51,6 +56,12 @@ export interface FixtureRecord {
   rewrite_file: string;
   report_policy: string;
   query: string;
+  display: string;
+  out_path: string;
+  expected_state_code: string;
+  expected_state_code_source: string;
+  commit_account_binding: string;
+  sourceCitation: string;
   authoring_package: string;
   json_pointer: string;
   action_kind: string;
@@ -66,6 +77,9 @@ export interface FixtureRecord {
   deterministic_cleanup_count: number;
   timeout_ms: number;
   spawn_timeout_ms: number;
+  exit_code: number;
+  duration_ms: number;
+  commit_command_supports_target_user_id: boolean;
   files: FixtureFiles;
   counts: Record<string, number>;
   policy: Record<string, boolean>;
@@ -82,17 +96,21 @@ export interface FixtureRecord {
   patch_sets: FixtureRecord[];
   phases: FixtureRecord[];
   stages: FixtureRecord[];
+  timings: FixtureRecord[];
   findings: FixtureRecord[];
   candidate_sources: FixtureRecord[];
   canonical_references: FixtureRecord[];
   identity_action_items: FixtureRecord[];
   related_authoring_packages: FixtureRecord[];
   source_action_items: FixtureRecord[];
-  dependencies: FixtureRecord[];
+  dependencies: FixtureRecord[] & FixtureRecord;
   dependency_rows: FixtureRecord[];
   support_rows: FixtureRecord[];
   candidates: FixtureRecord[];
   names: string[];
+  dataset_types: string[];
+  argv: string[];
+  args: string[];
   decision_only_action_items: FixtureRecord[];
   operations: FixtureRecord[];
   rows: FixtureRecord[];
@@ -107,6 +125,10 @@ export interface FixtureRecord {
   report_contract: FixtureRecord;
   evidence: FixtureRecord;
   result: FixtureRecord;
+  final_rows_artifact: FixtureRecord;
+  binding: FixtureRecord;
+  account_write_guard: FixtureRecord;
+  artifacts: FixtureRecord[];
   cache: FixtureRecord;
   chunk_plan: FixtureRecord;
   classification_authoring_context: FixtureRecord;
@@ -117,6 +139,7 @@ export interface FixtureRecord {
   identity_preflight_context: FixtureRecord;
   identity_reference_rewrite_context: FixtureRecord;
   curation_queue_context: FixtureRecord;
+  curation_queue: FixtureRecord;
   authoring_context: FixtureRecord;
   current: FixtureRecord;
   remote_search: FixtureRecord;
@@ -124,12 +147,21 @@ export interface FixtureRecord {
   runtime_options: FixtureRecord;
   remote_candidate_search: FixtureRecord;
   canonical: FixtureRecord;
+  canonical_support: FixtureRecord;
+  closure: FixtureRecord;
+  external_refs: FixtureRecord[];
+  canonical_unit_group_reference_keys: FixtureRecord[];
   processDataSet: FixtureRecord;
   flowDataSet: FixtureRecord;
+  sourceDataSet: FixtureRecord;
+  unitGroupDataSet: FixtureRecord;
+  flowPropertyDataSet: FixtureRecord;
   processInformation: FixtureRecord;
   flowInformation: FixtureRecord;
   sourceInformation: FixtureRecord;
   contactInformation: FixtureRecord;
+  unitGroupInformation: FixtureRecord;
+  flowPropertiesInformation: FixtureRecord;
   dataSetInformation: FixtureRecord;
   modellingAndValidation: FixtureRecord;
   exchanges: FixtureRecord;
@@ -139,12 +171,21 @@ export interface FixtureRecord {
   dataSourcesTreatmentAndRepresentativeness: FixtureRecord;
   classificationInformation: FixtureRecord;
   annualSupplyOrProductionVolume: FixtureRecord;
+  quantitativeReference: FixtureRecord;
+  referenceToReferenceUnitGroup: FixtureRecord;
+  referenceToDataSource: FixtureRecord;
+  validation: FixtureRecord;
+  review: FixtureRecord;
+  "common:referenceToCompleteReviewReport": FixtureRecord;
+  original_exchange: FixtureRecord;
+  upstream_flow_blockers: FixtureRecord[];
   publicationAndOwnership: FixtureRecord;
   "common:other": FixtureRecord;
   "common:classification": FixtureRecord;
   "common:class": FixtureRecord[];
   "tiangongfoundry:sourceExchangeCompleteness": FixtureRecord[];
   "tiangongfoundry:unresolvedTrace": FixtureRecord[];
+  "tiangongfoundry:unresolvedExchangeTrace": FixtureRecord[];
 }
 
 export interface FixtureBlocker extends FixtureRecord {

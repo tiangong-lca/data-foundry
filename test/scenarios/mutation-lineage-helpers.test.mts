@@ -281,11 +281,11 @@ test("full-context lineage accepts deterministic location patch source contact s
     true,
   );
 
-  const freshness = attachIdentityPreflightFreshness(
+  const attachedFreshness = attachIdentityPreflightFreshness(
     {
       status: "completed",
       request: { target_sha256: sha256Json(classified) },
-    },
+    } as unknown as NonNullable<Parameters<typeof attachIdentityPreflightFreshness>[0]>,
     cleaned,
     {
       repoRoot,
@@ -297,8 +297,14 @@ test("full-context lineage accepts deterministic location patch source contact s
       sourceContactRewriteContext,
       canonicalSupportRewriteContext,
       cleanupContext,
-    },
-  ).freshness;
+    } as unknown as NonNullable<Parameters<typeof attachIdentityPreflightFreshness>[2]>,
+  );
+  assert.ok(attachedFreshness?.freshness);
+  const freshness = attachedFreshness.freshness as unknown as {
+    current_payload_matches_request: boolean;
+    current_payload_scope_accepted: boolean;
+    deterministic_transform_allowance: { reason: string };
+  };
   assert.equal(freshness.current_payload_matches_request, false);
   assert.equal(freshness.current_payload_scope_accepted, true);
   assert.equal(

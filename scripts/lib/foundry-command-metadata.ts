@@ -1109,11 +1109,11 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "complex workflow commands publish AI-readable stage contracts",
       ),
       nodeTest(
-        "test/scenarios/post-authoring-finalize-gates.test.mjs",
+        "test/scenarios/post-authoring-finalize-gates.test.mts",
         "post-authoring finalize declares external process flow refs for remote proof",
       ),
       nodeTest(
-        "test/scenarios/post-authoring-finalize-gates.test.mjs",
+        "test/scenarios/post-authoring-finalize-gates.test.mts",
         "post-authoring finalize auto-builds curation queue context from sibling process bundle rows",
       ),
     ],
@@ -1134,11 +1134,11 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "CommandSpec blocks artifact byte drift before spawn and never executes display",
       ),
       nodeTest(
-        "test/scenarios/full-context-completion-closeout.test.mjs",
+        "test/scenarios/full-context-completion-closeout.test.mts",
         "commit handoff blocks nonzero location audit blockers",
       ),
       nodeTest(
-        "test/scenarios/full-context-completion-closeout.test.mjs",
+        "test/scenarios/full-context-completion-closeout.test.mts",
         "process commit handoff defaults draft state code and records account guard",
       ),
     ],
@@ -1151,7 +1151,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["post-write-closeout-report.json"],
     keyTests: [
       nodeTest(
-        "test/scenarios/full-context-completion-closeout.test.mjs",
+        "test/scenarios/full-context-completion-closeout.test.mts",
         "post-write closeout requires common:other trace queues to match final rows",
       ),
     ],
@@ -1164,7 +1164,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["dataset-import-completion-report.json"],
     keyTests: [
       nodeTest(
-        "test/scenarios/full-context-completion-closeout.test.mjs",
+        "test/scenarios/full-context-completion-closeout.test.mts",
         "full-context import completion gates block missing proof and pass evidenced BAFU scopes",
       ),
     ],
@@ -1207,11 +1207,11 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     keyTests: [
       goldenDiff,
       nodeTest(
-        "test/scenarios/mutation-full-context-evidence.test.mjs",
+        "test/scenarios/mutation-full-context-evidence.test.mts",
         "mutation manifest requires full-context AI evidence and preserves deferred trace queues",
       ),
       nodeTest(
-        "test/scenarios/mutation-manifest-reference-closure.test.mjs",
+        "test/scenarios/mutation-manifest-reference-closure.test.mts",
         "mutation manifest blocks process writes when referenced datasets are not proven",
       ),
       importCurationEntryContract,
