@@ -217,8 +217,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: Foundry is pnpm-only native TS7 with zero tracked first-party JavaScript; exact help, artifacts, ordering, hashes, errors, metadata topology and fail-closed authority remain preserved without credentials."
+lastReviewedCommit: fd28af2e841e69d4368fbd22093f6d4733c58d3f
+lastReviewedNote: "Reviewed for Issue #67 explicit-any proof hardening: target Oxlint ratchets plus semantic interfaces and unknown narrowing preserve exact artifacts, ordering, hashes, native errors and fail-closed authority without credentials."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
