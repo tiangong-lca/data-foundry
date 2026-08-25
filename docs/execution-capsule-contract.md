@@ -19,8 +19,8 @@ checkPaths:
   - test/unit/execution-capsule-attempt-state.test.mjs
   - test/unit/execution-capsule-command-factory.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: the native TS7 owner preserves exclusive immutable outputs, predecessor receipt/hash lineage, CAS/reviewer/boundary checks, seal hashes, zero dispatch, and the exact no-replay attempt model."
+lastReviewedCommit: a5367648066099c9bd6210cb21f52d13c7317989
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: typed shared test helpers change no capsule schema or behavior; exclusive immutable outputs, predecessor lineage, reviewer/boundary checks, seal hashes, zero dispatch, and the no-replay attempt model remain exact."
 ---
 
 # Execution Capsule Admission Contract

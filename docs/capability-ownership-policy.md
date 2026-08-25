@@ -65,8 +65,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typing reference/mutation planning, runtime commands, decision factories, and identity-preserving import-curation re-exports changes no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse semantics, or sibling boundary."
+lastReviewedCommit: a5367648066099c9bd6210cb21f52d13c7317989
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: typing the shared local fixture layer changes no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse semantics, or sibling boundary; fake tidas remains a report/exit harness only."
 ---
 
 # Capability Ownership Policy

@@ -63,8 +63,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation, runtime-command, decision, and import-curation entry owners remain Foundry-local navigation; deterministic decision apply remains CLI-routed and cross-repository ownership, readback, profiles, search, Worldsteel/Date.parse, and execution boundaries are unchanged."
+lastReviewedCommit: a5367648066099c9bd6210cb21f52d13c7317989
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: typed test fixtures remain Foundry-local harness infrastructure; cross-repository ownership, CLI routing, readback, profiles, search, Worldsteel/Date.parse behavior, and execution boundaries are unchanged."
 ---
 
 # Workspace Project Map

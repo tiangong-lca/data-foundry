@@ -15,13 +15,15 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - specs/schemas/incremental-change-set.schema.json
   - scripts/commands/incremental-change-set.mjs
+  - test/fixtures/incremental-change-set-fixtures.ts
+  - test/unit/incremental-fixture-migration.test.mts
   - test/unit/incremental-change-set.test.mjs
   - test/commands/incremental-change-set.test.mjs
   - test/scenarios/incremental-change-set-handoff.test.mjs
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 4d415fac33799011d37094ac79122c1eef3a7855
-lastReviewedNote: "Reviewed for Issue #63: the stage-contract module moved to TypeScript without changing incremental composition semantics or artifacts."
+lastReviewedCommit: a5367648066099c9bd6210cb21f52d13c7317989
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: the native TS7 incremental fixture preserves policy constants, comparison/owner/policy JSONL bytes and hashes, dependency order, isolated roots and native errors without changing composition semantics or authority."
 ---
 
 # Incremental Change-Set Contract
