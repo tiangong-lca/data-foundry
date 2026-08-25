@@ -19,8 +19,8 @@ checkPaths:
   - scripts/foundry.mjs
   - scripts/with-lca-account.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 2a3ec74528d9377bd37ab7cc0808ce286a3d6d09
-lastReviewedNote: "Reviewed for Issue #65: account profiles, receipt bindings, and the restricted TS7 child environment."
+lastReviewedCommit: 097eeb85d08167c87aef8b0efb8270311fc6baa8
+lastReviewedNote: "Reviewed for Issue #65 after final four-platform validation: account profiles, receipt bindings, the restricted TS7 child environment, and credential-free Golden baseline isolation remain aligned."
 ---
 
 # Environment Surface Policy
