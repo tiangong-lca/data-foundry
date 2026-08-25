@@ -1129,12 +1129,10 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       "decision/patch evidence",
     ],
     outputs: [
+      "post-authoring-finalize report (always)",
       "cleanup-complete: final rows file",
+      "cleanup-complete: schema, cleanup, and dry-run reports",
       "cleanup-blocked: ordered blockers, blocked import ledger, null final rows, no CommandSpec",
-      "schema report",
-      "cleanup report",
-      "dry-run report",
-      "post-authoring-finalize report",
     ],
     keyTests: [
       goldenDiff,

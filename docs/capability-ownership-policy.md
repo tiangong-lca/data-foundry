@@ -86,7 +86,7 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 3eeb2c876d1c9823264e804267bac624144d4096
+lastReviewedCommit: f8a64b9902788cde805ab7b4eb48d53ae0668793
 lastReviewedNote: "Reviewed for Issue #69: strict prewrite datetime classification and local blocker orchestration stay in Data Foundry; Rust tidas schema ownership and CLI/database mutation authority do not move."
 ---
 
