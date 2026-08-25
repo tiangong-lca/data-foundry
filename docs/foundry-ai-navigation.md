@@ -171,7 +171,7 @@ Use these semantic modules as the import-curation navigation surface:
 | `scripts/lib/import-curation/profiles.mjs` | import profile listing and profile lookup |
 | `scripts/lib/import-curation/curation-gate.mjs` | curation gate report and AI authoring package creation |
 | `scripts/lib/import-curation/authoring-packages.ts` | AI authoring task manifest/package preparation |
-| `scripts/lib/import-curation/patch-collect.mjs` | AI patch collection and patch evidence readiness |
+| `scripts/lib/import-curation/patch-collect.ts` | AI patch collection and patch evidence readiness |
 | `scripts/lib/import-curation/curation-cleanup.mjs` | deterministic prewrite row cleanup |
 | `scripts/lib/import-curation/trace-summary.mjs` | Foundry trace summarization |
 | `scripts/lib/import-curation/mutation-manifest.mjs` | prewrite mutation manifest and blocker aggregation |

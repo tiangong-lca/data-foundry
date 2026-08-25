@@ -18,7 +18,42 @@ import {
   writeJson,
 } from "./internal/runtime-io.ts";
 
-export function runDatasetAuthoringPatchCollect({ repoRoot, options = {} } = {}) {
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface PatchCollectOptions extends JsonRecord {
+  help?: unknown;
+  taskManifest?: string | null;
+  manifest?: string | null;
+  input?: string | null;
+  outDir?: string | null;
+  out?: string | null;
+  patchOut?: string | null;
+}
+
+interface PatchCollectArgs {
+  repoRoot?: string;
+  options?: PatchCollectOptions;
+}
+
+interface AuthoringTask extends JsonRecord {
+  status?: unknown;
+  action_item_count?: unknown;
+  entity?: unknown;
+  context?: unknown;
+  action_items?: unknown;
+  files?: unknown;
+}
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+export function runDatasetAuthoringPatchCollect({
+  repoRoot,
+  options = {},
+}: PatchCollectArgs = {}): JsonRecord {
   if (options.help) {
     return {
       schema_version: 1,
@@ -34,35 +69,41 @@ export function runDatasetAuthoringPatchCollect({ repoRoot, options = {} } = {})
   }
 
   const manifestPath = resolveRepoPath(
-    repoRoot,
+    repoRoot!,
     options.taskManifest ?? options.manifest ?? options.input,
   );
   if (!manifestPath || !fileExists(manifestPath)) {
     throw new Error("--task-manifest is required and must point to authoring-task-manifest.json.");
   }
-  const manifest = readJson(manifestPath);
+  const manifest = readJson<JsonRecord>(manifestPath);
+  const batchPatchContract = isRecord(manifest.batch_patch_contract)
+    ? manifest.batch_patch_contract
+    : {};
+  const manifestCommands = isRecord(manifest.commands) ? manifest.commands : {};
   const manifestDir = path.dirname(manifestPath);
-  const outDir = resolveRepoPath(repoRoot, options.outDir || manifestDir);
+  const outDir = resolveRepoPath(repoRoot!, options.outDir || manifestDir)!;
   const batchPatchPath = resolveRepoPath(
-    repoRoot,
+    repoRoot!,
     options.out ||
       options.patchOut ||
-      manifest.batch_patch_contract?.output_patch_file ||
+      (batchPatchContract.output_patch_file as string | null | undefined) ||
       path.join(outDir, "ai-patches.batch.json"),
-  );
+  )!;
   const reportPath = path.join(outDir, "authoring-patch-collect-report.json");
   const requiredTasks = ensureArray(manifest.tasks).filter(
-    (task) => task?.status === "ready_for_ai_authoring" || Number(task?.action_item_count ?? 0) > 0,
+    (task): task is AuthoringTask =>
+      isRecord(task) &&
+      (task.status === "ready_for_ai_authoring" || Number(task.action_item_count ?? 0) > 0),
   );
-  const patchSets = [];
-  const patchFiles = [];
-  const blockers = [];
+  const patchSets: JsonRecord[] = [];
+  const patchFiles: string[] = [];
+  const blockers: JsonRecord[] = [];
 
   if (requiredTasks.length > 0) {
     blockers.push(
       ...sharedContextBundleReadinessBlockers({
-        repoRoot,
-        sharedContextBundle: manifest?.shared_context_bundle,
+        repoRoot: repoRoot!,
+        sharedContextBundle: manifest.shared_context_bundle,
         sourceKind: "manifest",
         sourcePath: manifestPath,
       }),
@@ -71,7 +112,7 @@ export function runDatasetAuthoringPatchCollect({ repoRoot, options = {} } = {})
 
   for (const [taskIndex, task] of requiredTasks.entries()) {
     const taskContextBlockers = authoringTaskFullContextReadinessBlockers({
-      repoRoot,
+      repoRoot: repoRoot!,
       task,
     });
     if (taskContextBlockers.length > 0) {
@@ -84,27 +125,31 @@ export function runDatasetAuthoringPatchCollect({ repoRoot, options = {} } = {})
       );
       continue;
     }
-    const patchPath = resolveRepoPath(repoRoot, task?.files?.output_patch_file);
+    const taskFiles = isRecord(task.files) ? task.files : {};
+    const patchPath = resolveRepoPath(
+      repoRoot!,
+      taskFiles.output_patch_file as string | null | undefined,
+    );
     if (!patchPath || !fileExists(patchPath)) {
       blockers.push({
         code: "ai_patch_missing",
         message: "Expected AI patch file is missing for authoring task.",
         task_index: taskIndex,
         entity: task.entity ?? null,
-        expected_patch_file: task?.files?.output_patch_file ?? null,
+        expected_patch_file: taskFiles.output_patch_file ?? null,
       });
       continue;
     }
-    let rawPatch;
+    let rawPatch: JsonRecord;
     try {
-      rawPatch = readJson(patchPath);
+      rawPatch = readJson<JsonRecord>(patchPath);
     } catch (error) {
       blockers.push({
         code: "ai_patch_invalid_json",
         message: error instanceof Error ? error.message : String(error),
         task_index: taskIndex,
         entity: task.entity ?? null,
-        patch_file: repoRelativePath(repoRoot, patchPath),
+        patch_file: repoRelativePath(repoRoot!, patchPath),
       });
       continue;
     }
@@ -114,7 +159,7 @@ export function runDatasetAuthoringPatchCollect({ repoRoot, options = {} } = {})
         message: "AI patch file still has template_status=requires_ai_completion.",
         task_index: taskIndex,
         entity: task.entity ?? null,
-        patch_file: repoRelativePath(repoRoot, patchPath),
+        patch_file: repoRelativePath(repoRoot!, patchPath),
       });
       continue;
     }
@@ -125,7 +170,7 @@ export function runDatasetAuthoringPatchCollect({ repoRoot, options = {} } = {})
         message: "AI patch file must declare patch_status=completed before collect.",
         task_index: taskIndex,
         entity: task.entity ?? null,
-        patch_file: repoRelativePath(repoRoot, patchPath),
+        patch_file: repoRelativePath(repoRoot!, patchPath),
         patch_status: patchStatus || null,
       });
       continue;
@@ -137,23 +182,24 @@ export function runDatasetAuthoringPatchCollect({ repoRoot, options = {} } = {})
         message: "AI patch file must contain a patch set or patch_sets[].",
         task_index: taskIndex,
         entity: task.entity ?? null,
-        patch_file: repoRelativePath(repoRoot, patchPath),
+        patch_file: repoRelativePath(repoRoot!, patchPath),
       });
       continue;
     }
     for (const [patchSetIndex, patchSet] of taskPatchSets.entries()) {
+      const typedPatchSet = isRecord(patchSet) ? patchSet : {};
       blockers.push(
         ...validateCollectedPatchSet({
-          repoRoot,
+          repoRoot: repoRoot!,
           task,
-          patchSet,
+          patchSet: typedPatchSet,
           patchSetIndex,
           patchPath,
         }),
       );
     }
-    patchSets.push(...taskPatchSets);
-    patchFiles.push(repoRelativePath(repoRoot, patchPath));
+    patchSets.push(...taskPatchSets.map((patchSet) => (isRecord(patchSet) ? patchSet : {})));
+    patchFiles.push(repoRelativePath(repoRoot!, patchPath));
   }
 
   const operationCount = patchSets.reduce(
@@ -164,7 +210,7 @@ export function runDatasetAuthoringPatchCollect({ repoRoot, options = {} } = {})
     schema_version: 1,
     generated_at_utc: nowIso(),
     status: blockers.length > 0 ? "blocked" : "ready_for_patch_apply",
-    task_manifest: repoRelativePath(repoRoot, manifestPath),
+    task_manifest: repoRelativePath(repoRoot!, manifestPath),
     counts: {
       tasks: ensureArray(manifest.tasks).length,
       required_tasks: requiredTasks.length,
@@ -176,11 +222,11 @@ export function runDatasetAuthoringPatchCollect({ repoRoot, options = {} } = {})
     patch_files: patchFiles,
     blockers,
     commands: {
-      apply_all_patches: manifest.commands?.apply_all_patches ?? null,
+      apply_all_patches: manifestCommands.apply_all_patches ?? null,
     },
     files: {
-      batch_patch: repoRelativePath(repoRoot, batchPatchPath),
-      report: repoRelativePath(repoRoot, reportPath),
+      batch_patch: repoRelativePath(repoRoot!, batchPatchPath),
+      report: repoRelativePath(repoRoot!, reportPath),
     },
   };
   fs.mkdirSync(outDir, { recursive: true });
@@ -190,7 +236,7 @@ export function runDatasetAuthoringPatchCollect({ repoRoot, options = {} } = {})
       kind: "tiangong_foundry_dataset_patch_batch",
       patch_status: "completed",
       generated_at_utc: report.generated_at_utc,
-      task_manifest: repoRelativePath(repoRoot, manifestPath),
+      task_manifest: repoRelativePath(repoRoot!, manifestPath),
       patch_sets: patchSets,
     });
   }

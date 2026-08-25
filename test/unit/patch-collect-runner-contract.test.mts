@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { runDatasetAuthoringPatchCollect } from "../../scripts/lib/import-curation/patch-collect.mjs";
+import { runDatasetAuthoringPatchCollect } from "../../scripts/lib/import-curation/patch-collect.ts";
 
 type PatchCollectRunner = (args?: {
   repoRoot?: string;

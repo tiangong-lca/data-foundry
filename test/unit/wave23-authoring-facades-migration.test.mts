@@ -39,7 +39,7 @@ test("typed facade exports remain direct references to typed workflow owners", (
 test("authoring facade consumers target the typed modules", () => {
   const consumers = [
     ["scripts/lib/import-curation/authoring-packages.ts", "./internal/authoring-task-workflow.ts"],
-    ["scripts/lib/import-curation/patch-collect.mjs", "./internal/authoring-patch-workflow.ts"],
+    ["scripts/lib/import-curation/patch-collect.ts", "./internal/authoring-patch-workflow.ts"],
   ] as const;
   for (const [consumer, specifier] of consumers) {
     const source = readRepoFile(consumer);
