@@ -12,14 +12,12 @@ import { createFileArtifactFact, createFoundryCommandSpec } from "../lib/foundry
 import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
 // Run-level identity-preflight RESULT cache (env-gated; off unless
-// BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE points at a directory). The remote
-// candidate search is a pure function of the flow's IDENTITY, so the same flow
-// referenced by many scopes need only be searched once. The cache is keyed by
-// dataset identity (type:id@version) — NOT by full content hash: the same flow id
-// carries identical identity fields across scopes (only provenance/sourceTrace
-// metadata varies), so content hashing would miss every cross-scope hit. The batch
-// runner invalidates a flow's entry the moment that flow is minted/committed, so a
-// later scope re-searches and reuses the freshly minted flow instead of duplicating it.
+// BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE points at a directory). Entries are keyed by
+// the complete execution binding hash, including target, request, CLI, account, and
+// input evidence. Only positive canonical-reuse results may be published or restored;
+// negative/create-new searches must be repeated. After an identity is minted or
+// committed, the batch runner scans the bound manifests and removes every positive
+// cache entry for that dataset identity before another scope can reuse stale evidence.
 function identityPreflightResultCacheDir(resolveRepoPath) {
   const raw = process.env.BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE;
   return raw ? resolveRepoPath(raw) : null;
