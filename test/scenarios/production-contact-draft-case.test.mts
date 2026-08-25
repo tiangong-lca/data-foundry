@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import test from "node:test";
 
@@ -12,6 +13,7 @@ import {
   fs,
   path,
   readJson,
+  repoRoot,
   sha256Text,
   testTmpRoot,
   writeJson,
@@ -37,14 +39,14 @@ const USER_ID = "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7";
 const CONTACT_ID = "11111111-2222-4333-8444-555555555555";
 const TEST_KEY = "fixture-production-test-key-never-persist";
 
-function receipt(capturedAtUtc: string) {
+function receipt(capturedAtUtc: string, packageVersion = "0.1.1") {
   const scope = {
     schema: "tiangong-lca.auth-identity-receipt.v1",
     status: "passed",
     operation: "current-user-read",
     remote_write_mode: "read-only",
     captured_at_utc: capturedAtUtc,
-    cli: { package_name: "@tiangong-lca/cli", package_version: "0.1.1" },
+    cli: { package_name: "@tiangong-lca/cli", package_version: packageVersion },
     project: {
       project_ref: PROJECT_REF,
       project_base_url: `https://${PROJECT_REF}.supabase.co`,
@@ -141,6 +143,88 @@ test("production contact case parser accepts only one exact intent tuple", () =>
   }
 });
 
+test("production contact case direct entry is symlink-safe", () => {
+  const root = testTmpRoot("production-contact-symlink-entry");
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.mkdirSync(root, { recursive: true });
+  const link = path.join(root, "production-contact-draft.ts");
+  fs.symlinkSync(path.join(repoRoot, "scripts", "cases", "production-contact-draft.ts"), link);
+  try {
+    const child = spawnSync(process.execPath, [link, "--help"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    });
+    assert.equal(child.status, 0, child.stderr);
+    assert.match(child.stdout, /case:production:contact-draft/u);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("production contact case requires POSIX-private ignored output before runtime", async () => {
+  const root = testTmpRoot("production-contact-boundary");
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.mkdirSync(root, { recursive: true });
+  let prepared = 0;
+  const runtime = () => {
+    prepared += 1;
+    return {
+      entrypoint: "/never/started.js",
+      cliPackageName: "@tiangong-lca/cli",
+      cliPackageVersion: "0.1.1",
+      cliEntrypointSha256: "a".repeat(64),
+      cliRuntimeSha256: "b".repeat(64),
+      runnerSha256: "c".repeat(64),
+      pnpmLockSha256: "d".repeat(64),
+      cleanup: () => {},
+    };
+  };
+  await assert.rejects(
+    runProductionContactDraftCase(
+      {
+        envFile: path.join(root, "missing.env"),
+        expectedProjectRef: PROJECT_REF,
+        expectedUserId: USER_ID,
+        outDir: path.join(root, "windows-case"),
+      },
+      { platform: "win32", prepareRuntimeSnapshot: runtime } as never,
+    ),
+    /private case storage is unsupported on Windows/u,
+  );
+  assert.equal(prepared, 0);
+
+  const nonIgnored = path.join(repoRoot, "test", `production-case-unignored-${process.pid}`);
+  try {
+    await assert.rejects(
+      runProductionContactDraftCase(
+        {
+          envFile: path.join(root, "missing.env"),
+          expectedProjectRef: PROJECT_REF,
+          expectedUserId: USER_ID,
+          outDir: nonIgnored,
+        },
+        { prepareRuntimeSnapshot: runtime },
+      ),
+      /git-ignored per-run directory/u,
+    );
+    assert.equal(prepared, 0);
+  } finally {
+    fs.rmSync(nonIgnored, { recursive: true, force: true });
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("production case source contracts bind dependency bytes and durable private evidence", () => {
+  const source = fs.readFileSync(
+    path.join(repoRoot, "scripts", "cases", "production-contact-draft.ts"),
+    "utf8",
+  );
+  assert.match(source, /pnpmInstallationSha256/u);
+  assert.match(source, /verifyCurrent/u);
+  assert.match(source, /fsyncSync/u);
+  assert.match(source, /Buffer\.compare/u);
+});
+
 test("production contact case default pinned runtime completes offline gates before env access", async () => {
   const root = testTmpRoot("production-contact-offline-runtime");
   fs.rmSync(root, { recursive: true, force: true });
@@ -206,6 +290,26 @@ test("production contact case executes one bounded owner-draft mutation and uniq
   let commitDispatches = 0;
   let runtimeCleanups = 0;
   let successfulSpawn: RunProductionContactDraftCaseDeps["spawnImpl"];
+  let receiptPackageVersion = "0.1.1";
+  let authCallsThisRun = 0;
+  let mutateAfterWriteReceipt = false;
+  let extraPostwriteCheckStatus: string | null = null;
+  let failIdentityReceipt = false;
+  let injectSecretInPostwrite = false;
+  const fakeRuntime = (
+    cleanup = () => {
+      runtimeCleanups += 1;
+    },
+  ) => ({
+    entrypoint: "/trusted/private/cli.js",
+    cliPackageName: "@tiangong-lca/cli",
+    cliPackageVersion: "0.1.1",
+    cliEntrypointSha256: "a".repeat(64),
+    cliRuntimeSha256: "b".repeat(64),
+    runnerSha256: "c".repeat(64),
+    pnpmLockSha256: "d".repeat(64),
+    cleanup,
+  });
 
   try {
     const manifest = await runProductionContactDraftCase(
@@ -214,18 +318,7 @@ test("production contact case executes one bounded owner-draft mutation and uniq
         processEnv: { PATH: "/safe/bin", UNRELATED_AMBIENT_SECRET: "forbidden" },
         now: () => new Date("2026-08-25T12:36:00.000Z"),
         randomUUID: () => CONTACT_ID,
-        prepareRuntimeSnapshot: () => ({
-          entrypoint: "/trusted/private/cli.js",
-          cliPackageName: "@tiangong-lca/cli",
-          cliPackageVersion: "0.1.1",
-          cliEntrypointSha256: "a".repeat(64),
-          cliRuntimeSha256: "b".repeat(64),
-          runnerSha256: "c".repeat(64),
-          pnpmLockSha256: "d".repeat(64),
-          cleanup: () => {
-            runtimeCleanups += 1;
-          },
-        }),
+        prepareRuntimeSnapshot: fakeRuntime,
         spawnImpl: (successfulSpawn = (command, args, options) => {
           spawns.push({ command, args, options });
           const cliArgs = args.slice(1);
@@ -292,9 +385,28 @@ test("production contact case executes one bounded owner-draft mutation and uniq
           }
           if (cliArgs[0] === "auth") {
             receiptCount += 1;
-            return jsonResult(
-              receipt(receiptCount === 1 ? "2026-08-25T12:35:50.000Z" : "2026-08-25T12:35:55.000Z"),
+            authCallsThisRun += 1;
+            if (failIdentityReceipt) {
+              return {
+                status: 1,
+                signal: null,
+                stdout: "",
+                stderr: `${JSON.stringify({ error: { code: "AUTH_FIXTURE_FAILED" } })}\n`,
+              };
+            }
+            const value = receipt(
+              authCallsThisRun === 1 ? "2026-08-25T12:35:50.000Z" : "2026-08-25T12:35:55.000Z",
+              receiptPackageVersion,
             );
+            if (mutateAfterWriteReceipt && authCallsThisRun === 2) {
+              const candidatePath = path.join(path.dirname(options.cwd), "contact.jsonl");
+              if (process.platform !== "win32") fs.chmodSync(candidatePath, 0o600);
+              writeText(
+                candidatePath,
+                `${JSON.stringify({ contactDataSet: { drifted: true } })}\n`,
+              );
+            }
+            return jsonResult(value);
           }
           if (cliArgs[0] === "flow" && cliArgs[1] === "list") {
             return jsonResult({
@@ -360,6 +472,19 @@ test("production contact case executes one bounded owner-draft mutation and uniq
                     },
                   ]
                 : []),
+              ...(postWrite && extraPostwriteCheckStatus
+                ? [
+                    {
+                      row_index: 0,
+                      role: "reference",
+                      table: "sources",
+                      id: "unexpected-reference",
+                      version: "00.00.001",
+                      path: "/contactDataSet/reference",
+                      status: extraPostwriteCheckStatus,
+                    },
+                  ]
+                : []),
             ]);
             const reportPath = path.join(
               stageOut as string,
@@ -379,6 +504,7 @@ test("production contact case executes one bounded owner-draft mutation and uniq
                     root_payload_mismatches: 0,
                   },
                   blockers: [],
+                  ...(postWrite && injectSecretInPostwrite ? { debug_value: TEST_KEY } : {}),
                   files: { checks: checksPath },
                 },
                 reportPath,
@@ -462,6 +588,7 @@ test("production contact case executes one bounded owner-draft mutation and uniq
 
     const ambiguousOutDir = path.join(root, "ambiguous-case-output");
     let ambiguousCommitCalls = 0;
+    authCallsThisRun = 0;
     await assert.rejects(
       runProductionContactDraftCase(
         {
@@ -474,18 +601,7 @@ test("production contact case executes one bounded owner-draft mutation and uniq
           processEnv: { PATH: "/safe/bin", UNRELATED_AMBIENT_SECRET: "forbidden" },
           now: () => new Date("2026-08-25T12:36:00.000Z"),
           randomUUID: () => CONTACT_ID,
-          prepareRuntimeSnapshot: () => ({
-            entrypoint: "/trusted/private/cli.js",
-            cliPackageName: "@tiangong-lca/cli",
-            cliPackageVersion: "0.1.1",
-            cliEntrypointSha256: "a".repeat(64),
-            cliRuntimeSha256: "b".repeat(64),
-            runnerSha256: "c".repeat(64),
-            pnpmLockSha256: "d".repeat(64),
-            cleanup: () => {
-              runtimeCleanups += 1;
-            },
-          }),
+          prepareRuntimeSnapshot: fakeRuntime,
           spawnImpl: (command, args, options) => {
             const cliArgs = args.slice(1);
             if (
@@ -506,9 +622,146 @@ test("production contact case executes one bounded owner-draft mutation and uniq
     assert.equal(runtimeCleanups, 2);
     const failure = readJson(path.join(ambiguousOutDir, "case-failure.json"));
     assert.equal(failure.stage, "commit-contact-draft");
+    assert.equal(failure.error_code, "CASE_MUTATION_OUTCOME_AMBIGUOUS");
     assert.equal(failure.mutation_dispatch_count, 1);
     assert.equal(failure.automatic_retry_performed, false);
     assert.equal(fs.existsSync(path.join(ambiguousOutDir, "case-manifest.json")), false);
+
+    const driftOutDir = path.join(root, "drifted-candidate-output");
+    authCallsThisRun = 0;
+    mutateAfterWriteReceipt = true;
+    const commitsBeforeDrift = commitDispatches;
+    await assert.rejects(
+      runProductionContactDraftCase(
+        {
+          envFile,
+          expectedProjectRef: PROJECT_REF,
+          expectedUserId: USER_ID,
+          outDir: driftOutDir,
+        },
+        {
+          processEnv: { PATH: "/safe/bin" },
+          now: () => new Date("2026-08-25T12:36:00.000Z"),
+          randomUUID: () => CONTACT_ID,
+          prepareRuntimeSnapshot: fakeRuntime,
+          spawnImpl: successfulSpawn,
+        },
+      ),
+      /candidate bytes changed before mutation/u,
+    );
+    mutateAfterWriteReceipt = false;
+    assert.equal(commitDispatches, commitsBeforeDrift);
+    assert.equal(readJson(path.join(driftOutDir, "case-failure.json")).mutation_dispatch_count, 0);
+
+    const wrongReceiptOutDir = path.join(root, "wrong-receipt-runtime-output");
+    authCallsThisRun = 0;
+    receiptPackageVersion = "0.1.2";
+    await assert.rejects(
+      runProductionContactDraftCase(
+        {
+          envFile,
+          expectedProjectRef: PROJECT_REF,
+          expectedUserId: USER_ID,
+          outDir: wrongReceiptOutDir,
+        },
+        {
+          processEnv: { PATH: "/safe/bin" },
+          now: () => new Date("2026-08-25T12:36:00.000Z"),
+          randomUUID: () => CONTACT_ID,
+          prepareRuntimeSnapshot: fakeRuntime,
+          spawnImpl: successfulSpawn,
+        },
+      ),
+      /receipt CLI does not match the pinned runtime/u,
+    );
+    receiptPackageVersion = "0.1.1";
+    assert.equal(
+      readJson(path.join(wrongReceiptOutDir, "case-failure.json")).mutation_dispatch_count,
+      0,
+    );
+
+    const extraCheckOutDir = path.join(root, "extra-non-ok-check-output");
+    authCallsThisRun = 0;
+    extraPostwriteCheckStatus = "missing_dataset";
+    await assert.rejects(
+      runProductionContactDraftCase(
+        {
+          envFile,
+          expectedProjectRef: PROJECT_REF,
+          expectedUserId: USER_ID,
+          outDir: extraCheckOutDir,
+        },
+        {
+          processEnv: { PATH: "/safe/bin" },
+          now: () => new Date("2026-08-25T12:36:00.000Z"),
+          randomUUID: () => CONTACT_ID,
+          prepareRuntimeSnapshot: fakeRuntime,
+          spawnImpl: successfulSpawn,
+        },
+      ),
+      /non-ok verification check/u,
+    );
+    extraPostwriteCheckStatus = null;
+
+    const secretArtifactOutDir = path.join(root, "secret-artifact-output");
+    authCallsThisRun = 0;
+    injectSecretInPostwrite = true;
+    await assert.rejects(
+      runProductionContactDraftCase(
+        {
+          envFile,
+          expectedProjectRef: PROJECT_REF,
+          expectedUserId: USER_ID,
+          outDir: secretArtifactOutDir,
+        },
+        {
+          processEnv: { PATH: "/safe/bin" },
+          now: () => new Date("2026-08-25T12:36:00.000Z"),
+          randomUUID: () => CONTACT_ID,
+          prepareRuntimeSnapshot: fakeRuntime,
+          spawnImpl: successfulSpawn,
+        },
+      ),
+      /secret material was detected/u,
+    );
+    injectSecretInPostwrite = false;
+    const secretArtifactText = fs
+      .readdirSync(secretArtifactOutDir, { recursive: true, encoding: "utf8" })
+      .map((entry) => path.join(secretArtifactOutDir, entry))
+      .filter((entry) => fs.existsSync(entry) && fs.statSync(entry).isFile())
+      .map((entry) => fs.readFileSync(entry, "utf8"))
+      .join("\n");
+    assert.doesNotMatch(secretArtifactText, new RegExp(TEST_KEY, "u"));
+    assert.equal(fs.existsSync(path.join(secretArtifactOutDir, "case-manifest.json")), false);
+
+    const cleanupFailureOutDir = path.join(root, "cleanup-failure-output");
+    authCallsThisRun = 0;
+    failIdentityReceipt = true;
+    await assert.rejects(
+      runProductionContactDraftCase(
+        {
+          envFile,
+          expectedProjectRef: PROJECT_REF,
+          expectedUserId: USER_ID,
+          outDir: cleanupFailureOutDir,
+        },
+        {
+          processEnv: { PATH: "/safe/bin" },
+          now: () => new Date("2026-08-25T12:36:00.000Z"),
+          randomUUID: () => CONTACT_ID,
+          prepareRuntimeSnapshot: () =>
+            fakeRuntime(() => {
+              throw new Error("fixture cleanup failure");
+            }),
+          spawnImpl: successfulSpawn,
+        },
+      ),
+      /CLI failed at identity-before-reads/u,
+    );
+    failIdentityReceipt = false;
+    const cleanupFailure = readJson(path.join(cleanupFailureOutDir, "case-failure.json"));
+    assert.equal(cleanupFailure.error_code, "AUTH_FIXTURE_FAILED");
+    assert.equal(cleanupFailure.runtime_cleanup_error_code, "CASE_RUNTIME_CLEANUP_FAILED");
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
