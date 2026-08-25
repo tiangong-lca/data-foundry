@@ -166,8 +166,8 @@
     "test/unit/topology-convergence.test.mjs",
     "test/unit/workflow-semantic-actions.test.mjs"
   ],
-  "remaining_count": 132,
-  "canonical_path_list_sha256": "a520cf91d475c8784fd4e1bdcfe84c0f790c35a5b746594808e164de117cff85",
+  "remaining_count": 131,
+  "canonical_path_list_sha256": "f73776b36e7a5bdf358500205eee58572e594afcb48446e3379bc5efda068bd8",
   "path_contract": "git ls-files --cached --others --exclude-standard, existing '*.mjs'/'*.cjs' files only, LC_ALL=C sorted and joined with one LF per path",
   "allowed_final_javascript": [],
   "policy": "Every later TypeScript slice must monotonically reduce remaining_count. Current JavaScript must remain a subset of baseline_paths; new tracked JavaScript is forbidden."

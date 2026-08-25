@@ -29,7 +29,7 @@ import { createUslciBatchImportRunCommands } from "./commands/uslci-batch-import
 import { createWorldsteelBatchImportRunCommands } from "./commands/worldsteel-batch-import-run.mjs";
 import { bundleRowTypes } from "./lib/bundle-row-types.ts";
 import { createBundleSampleUtils } from "./lib/bundle-sample-utils.mjs";
-import { createCanonicalSupportRewriteUtils } from "./lib/canonical-support-rewrites.mjs";
+import { createCanonicalSupportRewriteUtils } from "./lib/canonical-support-rewrites.ts";
 import { createDecisionTaskUtils } from "./lib/decision-task-utils.ts";
 import { parseArgs, parseScalar } from "./lib/foundry-args.ts";
 import { runFoundryCli } from "./lib/foundry-cli.mjs";

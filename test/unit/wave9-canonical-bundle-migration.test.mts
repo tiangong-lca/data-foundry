@@ -70,10 +70,13 @@ test("bundle sample consumers target the typed module explicitly", () => {
   ]);
 });
 
-test("typed canonical and bundle factories retain their exact named export surfaces", () => {
+test("typed canonical rewrite factory retains its exact named export surface", () => {
   assert.deepEqual(exportedFunctions("scripts/lib/canonical-support-rewrites.ts"), [
     "createCanonicalSupportRewriteUtils",
   ]);
+});
+
+test("typed bundle sample factory retains its exact named export surface", () => {
   assert.deepEqual(exportedFunctions("scripts/lib/bundle-sample-utils.ts"), [
     "createBundleSampleUtils",
   ]);

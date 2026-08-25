@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import * as canonicalSupportRewrites from "../../scripts/lib/canonical-support-rewrites.mjs";
+import * as canonicalSupportRewrites from "../../scripts/lib/canonical-support-rewrites.ts";
 
 type JsonObject = Record<string, any>;
 

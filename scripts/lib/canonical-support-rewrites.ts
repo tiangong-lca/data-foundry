@@ -1,6 +1,74 @@
 import fs from "node:fs";
 import path from "node:path";
 
+type JsonRecord = Record<string, unknown>;
+
+type DatasetIdentity = {
+  id: string | null;
+  version: string | null;
+};
+
+type CanonicalSupportRewriteDependencies = {
+  asText: (value: unknown) => string;
+  booleanOption: (value: unknown) => boolean;
+  cloneJson: <T>(value: T) => T;
+  datasetIdentity: (row: JsonRecord, datasetType: string) => DatasetIdentity;
+  datasetRowsFileStem: (datasetType: string) => string;
+  ensureArray: (value: unknown) => unknown[];
+  fileExists: (filePath: string) => boolean;
+  multiLang: (text: string, language?: string) => JsonRecord;
+  nowIso: () => string;
+  pathExpression: (parts: Array<string | number>) => string;
+  readJson: (filePath: string) => JsonRecord;
+  readRowsFile: (filePath: string) => JsonRecord[];
+  repoRelativeMaybe: (filePath: string | null) => string | null;
+  repoRelativePath: (filePath: string) => string;
+  resolveRepoPath: (filePath: unknown) => string | null;
+  writeJson: (filePath: string, value: unknown) => void;
+  writeJsonLines: (filePath: string, rows: unknown[]) => void;
+};
+
+type CanonicalSupportOptions = JsonRecord & {
+  canonicalSupportCache?: unknown;
+  supportCache?: unknown;
+  cacheFile?: unknown;
+};
+
+type CanonicalSupportIndex = {
+  flowPropertyById: Map<string, JsonRecord>;
+  flowPropertyMappingByUnit: Map<string, JsonRecord & { canonicalId: string }>;
+  unitGroupById: Map<string, JsonRecord>;
+};
+
+type CanonicalSupportCacheContext = {
+  cache: JsonRecord | null;
+  cachePath: string | null;
+  index: CanonicalSupportIndex;
+};
+
+type RewriteStats = {
+  canonical_flow_property_reference_rewrites: number;
+  canonical_unit_group_reference_proofs: number;
+  amount_scaling_required_rewrites: number;
+  amount_scaling_blocked: number;
+};
+
+type RewriteContext = {
+  cacheContext: CanonicalSupportCacheContext;
+  datasetType: string;
+  sourceFile: string;
+  stats: RewriteStats;
+  rewriteRows: JsonRecord[];
+  blockers: JsonRecord[];
+  scalingRequirements?: JsonRecord[];
+  blockOnUnscaled?: boolean;
+  datasetIdentityCache: DatasetIdentity;
+  rowIndex?: number | null;
+  language?: string;
+  pathSegments?: Array<string | number>;
+  allowAccountLocalSupportAndElementary?: boolean;
+};
+
 export function createCanonicalSupportRewriteUtils({
   asText,
   booleanOption,
@@ -19,24 +87,25 @@ export function createCanonicalSupportRewriteUtils({
   resolveRepoPath,
   writeJson,
   writeJsonLines,
-}) {
+}: CanonicalSupportRewriteDependencies) {
   const defaultCanonicalSupportCacheFile =
     "specs/canonical-support/flow-properties-unit-groups.json";
 
-  function supportText(value) {
+  function supportText(value: unknown): string {
     if (value === undefined || value === null) return "";
     if (typeof value === "string" || typeof value === "number") return String(value).trim();
     if (Array.isArray(value)) {
       return value.map(supportText).filter(Boolean).join(" | ");
     }
     if (typeof value === "object") {
-      if (typeof value["#text"] === "string") return value["#text"].trim();
-      return Object.values(value).map(supportText).filter(Boolean).join(" | ");
+      const record = value as JsonRecord;
+      if (typeof record["#text"] === "string") return record["#text"].trim();
+      return Object.values(record).map(supportText).filter(Boolean).join(" | ");
     }
     return "";
   }
 
-  function normalizeSupportKey(value) {
+  function normalizeSupportKey(value: unknown): string {
     return String(value ?? "")
       .trim()
       .toLowerCase()
@@ -52,18 +121,23 @@ export function createCanonicalSupportRewriteUtils({
   // Flow Property's reference unit (e.g. kWh -> MJ = 3.6, t*km -> kg*km = 1000).
   // The factor lives in the mapping's source_unit_scales (authoritative, sourced
   // from the canonical UnitGroup mean values); 1 means no conversion is needed.
-  function resolveAmountScale(mapping, unit, normalizedUnit) {
+  function resolveAmountScale(
+    mapping: JsonRecord | undefined,
+    unit: string,
+    normalizedUnit: string,
+  ): number | null {
     const scales = mapping?.source_unit_scales;
     if (!scales || typeof scales !== "object") return null;
-    if (Object.hasOwn(scales, unit)) return Number(scales[unit]);
-    if (Object.hasOwn(scales, normalizedUnit)) return Number(scales[normalizedUnit]);
-    for (const [key, value] of Object.entries(scales)) {
+    const scaleRecord = scales as JsonRecord;
+    if (Object.hasOwn(scaleRecord, unit)) return Number(scaleRecord[unit]);
+    if (Object.hasOwn(scaleRecord, normalizedUnit)) return Number(scaleRecord[normalizedUnit]);
+    for (const [key, value] of Object.entries(scaleRecord)) {
       if (normalizeSupportKey(key) === normalizedUnit) return Number(value);
     }
     return null;
   }
 
-  function canonicalSupportCachePath(options = {}) {
+  function canonicalSupportCachePath(options: CanonicalSupportOptions = {}): string | null {
     return resolveRepoPath(
       options.canonicalSupportCache ||
         options.supportCache ||
@@ -72,31 +146,34 @@ export function createCanonicalSupportRewriteUtils({
     );
   }
 
-  function flowPropertyReferenceText(reference) {
+  function flowPropertyReferenceText(reference: JsonRecord | null | undefined): string {
     return supportText(
       reference?.["common:shortDescription"] ?? reference?.shortDescription ?? reference?.name,
     );
   }
 
-  function unitFromFlowPropertyReference(reference) {
+  function unitFromFlowPropertyReference(reference: JsonRecord): string {
     const text = flowPropertyReferenceText(reference);
     const match = text.match(/^amount\s+in\s+(.+)$/iu);
     return match ? match[1].trim() : text;
   }
 
-  function buildCanonicalSupportIndex(cache) {
-    const flowPropertyById = new Map();
-    for (const row of ensureArray(cache?.flow_properties)) {
+  function buildCanonicalSupportIndex(cache: JsonRecord | null): CanonicalSupportIndex {
+    const flowPropertyById = new Map<string, JsonRecord>();
+    for (const value of ensureArray(cache?.flow_properties)) {
+      const row = value as JsonRecord;
       const id = asText(row?.id);
       if (id) flowPropertyById.set(id, row);
     }
-    const unitGroupById = new Map();
-    for (const row of ensureArray(cache?.unit_groups)) {
+    const unitGroupById = new Map<string, JsonRecord>();
+    for (const value of ensureArray(cache?.unit_groups)) {
+      const row = value as JsonRecord;
       const id = asText(row?.id);
       if (id) unitGroupById.set(id, row);
     }
-    const flowPropertyMappingByUnit = new Map();
-    for (const mapping of ensureArray(cache?.flow_property_mappings)) {
+    const flowPropertyMappingByUnit = new Map<string, JsonRecord & { canonicalId: string }>();
+    for (const value of ensureArray(cache?.flow_property_mappings)) {
+      const mapping = value as JsonRecord;
       const canonicalId = asText(mapping?.canonical_flow_property_id);
       for (const unit of ensureArray(mapping?.source_units)) {
         const key = normalizeSupportKey(unit);
@@ -106,7 +183,9 @@ export function createCanonicalSupportRewriteUtils({
     return { flowPropertyById, flowPropertyMappingByUnit, unitGroupById };
   }
 
-  function loadCanonicalSupportCache(options = {}) {
+  function loadCanonicalSupportCache(
+    options: CanonicalSupportOptions = {},
+  ): CanonicalSupportCacheContext {
     const cachePath = canonicalSupportCachePath(options);
     if (!cachePath || !fileExists(cachePath)) {
       return { cache: null, cachePath, index: buildCanonicalSupportIndex(null) };
@@ -115,7 +194,7 @@ export function createCanonicalSupportRewriteUtils({
     return { cache, cachePath, index: buildCanonicalSupportIndex(cache) };
   }
 
-  function canonicalFlowPropertyReference(entry, language = "en") {
+  function canonicalFlowPropertyReference(entry: JsonRecord, language = "en") {
     const id = asText(entry?.id);
     const version = asText(entry?.version);
     const rawShortDescription =
@@ -133,8 +212,11 @@ export function createCanonicalSupportRewriteUtils({
     };
   }
 
-  function canonicalFlowPropertyUnitGroupProof(entry, cacheContext) {
-    const referenceUnitGroup = entry?.reference_unit_group ?? {};
+  function canonicalFlowPropertyUnitGroupProof(
+    entry: JsonRecord,
+    cacheContext: CanonicalSupportCacheContext,
+  ) {
+    const referenceUnitGroup = (entry?.reference_unit_group ?? {}) as JsonRecord;
     const unitGroupId = asText(
       referenceUnitGroup.id ??
         referenceUnitGroup.ref_object_id ??
@@ -160,7 +242,7 @@ export function createCanonicalSupportRewriteUtils({
   }
 
   function rewriteCanonicalFlowPropertyReferences(
-    value,
+    value: unknown,
     {
       cacheContext,
       datasetType,
@@ -175,8 +257,8 @@ export function createCanonicalSupportRewriteUtils({
       language = "en",
       pathSegments = [],
       allowAccountLocalSupportAndElementary = false,
-    },
-  ) {
+    }: RewriteContext,
+  ): void {
     if (!value || typeof value !== "object") return;
     if (Array.isArray(value)) {
       value.forEach((item, index) =>
@@ -198,7 +280,8 @@ export function createCanonicalSupportRewriteUtils({
       );
       return;
     }
-    for (const [key, child] of Object.entries(value)) {
+    const record = value as JsonRecord;
+    for (const [key, child] of Object.entries(record)) {
       const childPath = [...pathSegments, key];
       if (
         key === "referenceToFlowPropertyDataSet" &&
@@ -206,9 +289,10 @@ export function createCanonicalSupportRewriteUtils({
         typeof child === "object" &&
         !Array.isArray(child)
       ) {
-        const originalId = asText(child["@refObjectId"]);
-        const originalVersion = asText(child["@version"]);
-        const unit = unitFromFlowPropertyReference(child);
+        const reference = child as JsonRecord;
+        const originalId = asText(reference["@refObjectId"]);
+        const originalVersion = asText(reference["@version"]);
+        const unit = unitFromFlowPropertyReference(reference);
         const normalizedUnit = normalizeSupportKey(unit);
         const alreadyCanonical = originalId && cacheContext.index.flowPropertyById.has(originalId);
         const mapping = cacheContext.index.flowPropertyMappingByUnit.get(normalizedUnit);
@@ -260,7 +344,7 @@ export function createCanonicalSupportRewriteUtils({
           const cachedVersion = asText(provenCanonical.version);
           if (cachedVersion && cachedVersion !== originalVersion) {
             const next = canonicalFlowPropertyReference(provenCanonical, language);
-            value[key] = next;
+            record[key] = next;
             stats.canonical_flow_property_reference_rewrites += 1;
             stats.canonical_unit_group_reference_proofs += 1;
             rewriteRows.push({
@@ -278,7 +362,7 @@ export function createCanonicalSupportRewriteUtils({
               original: {
                 ref_object_id: originalId || null,
                 version: originalVersion || null,
-                short_description: flowPropertyReferenceText(child) || null,
+                short_description: flowPropertyReferenceText(reference) || null,
               },
               canonical: {
                 ref_object_id: next["@refObjectId"],
@@ -292,9 +376,9 @@ export function createCanonicalSupportRewriteUtils({
           }
           continue;
         }
-        if (!alreadyCanonical && canonical) {
+        if (!alreadyCanonical && mapping && canonical) {
           const next = canonicalFlowPropertyReference(canonical, language);
-          value[key] = next;
+          record[key] = next;
           stats.canonical_flow_property_reference_rewrites += 1;
           stats.canonical_unit_group_reference_proofs += 1;
           // The source unit may differ in scale from the canonical reference unit
@@ -320,7 +404,7 @@ export function createCanonicalSupportRewriteUtils({
             original: {
               ref_object_id: originalId || null,
               version: originalVersion || null,
-              short_description: flowPropertyReferenceText(child) || null,
+              short_description: flowPropertyReferenceText(reference) || null,
             },
             canonical: {
               ref_object_id: next["@refObjectId"],
@@ -419,7 +503,19 @@ export function createCanonicalSupportRewriteUtils({
     }
   }
 
-  function applyCanonicalSupportRewrites({ datasetType, rowsFile, outFile, outDir, options = {} }) {
+  function applyCanonicalSupportRewrites({
+    datasetType,
+    rowsFile,
+    outFile = null,
+    outDir = null,
+    options = {},
+  }: {
+    datasetType: string;
+    rowsFile: string;
+    outFile?: string | null;
+    outDir?: string | null;
+    options?: CanonicalSupportOptions;
+  }) {
     const resolvedOutDir =
       outDir || path.join(path.dirname(rowsFile), "canonical-support-rewrites");
     const resolvedOutFile =
@@ -437,9 +533,9 @@ export function createCanonicalSupportRewriteUtils({
       amount_scaling_required_rewrites: 0,
       amount_scaling_blocked: 0,
     };
-    const rewriteRows = [];
-    const blockers = [];
-    const scalingRequirements = [];
+    const rewriteRows: JsonRecord[] = [];
+    const blockers: JsonRecord[] = [];
+    const scalingRequirements: JsonRecord[] = [];
     const blockOnUnscaled = booleanOption(
       options.blockOnUnscaledCanonicalSupport || options.blockUnscaledCanonicalSupport,
     );
@@ -472,7 +568,7 @@ export function createCanonicalSupportRewriteUtils({
           options.deferCanonicalSupportBlockedRows ||
           options.deferBlockedSupportRows,
       );
-    const blockedRowIndexes = new Set(
+    const blockedRowIndexes = new Set<number>(
       blockers
         .map((blocker) => Number(blocker.row_index))
         .filter((rowIndex) => Number.isInteger(rowIndex) && rowIndex >= 0),
