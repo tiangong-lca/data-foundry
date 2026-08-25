@@ -35,6 +35,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/runtime-io.ts
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
+  - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -63,8 +64,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 910fdbdc5e575a19fc05ae26984e65b44a6eaa44
-lastReviewedNote: "Reviewed for Issue #67 Wave 13: queue context loading and authoring attachment are native zero-any TS7 with paths, ordering, bytes and errors unchanged."
+lastReviewedCommit: 3d27dc05c4a27acb6ff5dee305cb671e1b6b6cf8
+lastReviewedNote: "Reviewed for Issue #67 Wave 14: internal full-context proof loading is native zero-any TS7 with package/task bytes, hashes, order, fallbacks and errors unchanged."
 ---
 
 # TianGong LCA Data Foundry
@@ -110,6 +111,8 @@ The location wave migrates `location-quality-utils.ts`, which feeds bundle sampl
 The prewrite wave migrates `prewrite-cleanup.ts`, a six-consumer deterministic evidence boundary. Characterization pins UTC normalization, process-only annual sentinel completion, source-row identity precedence, output-only exchange proof hashes and order sensitivity, existing-proof dedupe, trace summary externalization, namespace repair, local path redaction hashes and serialization errors. It remains zero-any and byte/fail-closed compatible; inventory moves from 126 to 125.
 
 The queue-context wave migrates `import-curation/internal/workflow-queue-context.ts`, a five-consumer authoring-evidence boundary. Characterization pins annual-supply action envelopes, manifest task order and duplicate-map behavior, exact-identity then id-only selection, queue-relative paths, closure dependency/support order, JSONL filtering and last-row binding, identity-preflight path precedence, and native filesystem/parse/invalid-dependency errors. It remains zero-any and fail-closed; inventory moves from 125 to 124.
+
+The internal full-context wave migrates `import-curation/internal/full-context-proof.ts`, a six-consumer evidence boundary. Characterization pins context aliases and UTF-8 presence, exact authoring-package/decision-task bytes and hashes, embedded-before-shared file order, manifest/task alias fallbacks, required-kind/file blocker order, classification schema-pattern selection, payload identity encounter order and last-write hashes, caught proof parse envelopes, and native row JSON errors. It remains zero-any and fail-closed; inventory moves from 124 to 123.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

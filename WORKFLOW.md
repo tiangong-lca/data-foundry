@@ -37,6 +37,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/runtime-io.ts
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
+  - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -89,10 +90,12 @@ checkPaths:
   - test/unit/workflow-queue-context-contract.test.mts
   - test/unit/workflow-queue-context-native-errors.test.mts
   - test/unit/wave13-queue-context-migration.test.mts
+  - test/unit/full-context-proof-contract.test.mts
+  - test/unit/wave14-full-context-proof-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 910fdbdc5e575a19fc05ae26984e65b44a6eaa44
-lastReviewedNote: "Reviewed for Issue #67 Wave 13: typed queue context helpers preserve manifest, JSONL, dependency and support order and retain native fail-closed input errors."
+lastReviewedCommit: 3d27dc05c4a27acb6ff5dee305cb671e1b6b6cf8
+lastReviewedNote: "Reviewed for Issue #67 Wave 14: typed full-context proof helpers preserve package/task bytes, shared-file order, required evidence and fail-closed hash/parse blockers."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -136,6 +139,8 @@ Use Node.js 24 and the repository-pinned `pnpm@11.23.0`. TypeScript `7.0.2` is t
 Issue #63 is the typed-spine foundation, not a declaration that the 160 tracked JavaScript artifacts are already TypeScript. Keep `specs/typescript-migration-inventory.json` synchronized, migrate one characterized boundary or command family at a time, and drive each slice with focused tests plus a realistic case. Toolchain changes must also pass from a clean arbitrary worktree after `pnpm install --frozen-lockfile`, without credentials, ignored `.foundry` artifacts, a sibling checkout, or another worktree's dependencies.
 
 Queue authoring context must preserve manifest and JSONL encounter order, exact-version selection before id-only fallback, closure dependency/support order and native parse/filesystem/invalid-dependency failures. Missing or malformed queue evidence must not be converted into an executable or remote-write allowance.
+
+Full-context package and decision-task proof must remain bound to exact file bytes, recorded hashes and non-empty required context. Shared context follows embedded task context in the existing order; missing, malformed, hash-drifted or incomplete proof remains blocking and cannot be converted into remote-write authority.
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 

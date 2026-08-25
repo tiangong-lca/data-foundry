@@ -22,9 +22,10 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - docs/incremental-change-set-contract.md
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
+  - scripts/lib/import-curation/internal/full-context-proof.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 910fdbdc5e575a19fc05ae26984e65b44a6eaa44
-lastReviewedNote: "Reviewed for Issue #67 Wave 13: zero-any queue context assembly remains Foundry-local orchestration; no cross-repository owner or normal execution surface changes."
+lastReviewedCommit: 3d27dc05c4a27acb6ff5dee305cb671e1b6b6cf8
+lastReviewedNote: "Reviewed for Issue #67 Wave 14: zero-any full-context proof remains Foundry-local verification; no cross-repository owner or normal execution surface changes."
 ---
 
 # Workspace Project Map

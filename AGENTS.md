@@ -47,6 +47,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/runtime-io.ts
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
+  - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -71,8 +72,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 910fdbdc5e575a19fc05ae26984e65b44a6eaa44
-lastReviewedNote: "Reviewed for Issue #67 Wave 13: the queue authoring context is native zero-any TS7 with manifest/JSONL/dependency/support order, path fallback and fail-closed native errors preserved."
+lastReviewedCommit: 3d27dc05c4a27acb6ff5dee305cb671e1b6b6cf8
+lastReviewedNote: "Reviewed for Issue #67 Wave 14: internal full-context package/task proof is native zero-any TS7 with exact bytes, hashes, traversal, aliases and fail-closed blocker order preserved."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -113,6 +114,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - `location-quality-utils.ts` is the typed location authoring boundary. It preserves classification/location CLI command strings, installed location schema codes plus fallback/schema-derived target keys, ascending-array/depth-first target order, `#text` leaf paths, exact valid/blocker counters and `location_code_requires_authoring` queue/blocker envelopes. Invalid locations never become write candidates merely because a schema file or nested value is missing.
 - `prewrite-cleanup.ts` is the typed deterministic evidence-cleanup boundary. It preserves timestamp recursion, annual-supply sentinel policy, output-only source/final exchange signature proof, import-trace hash summaries, Foundry namespaces and local-locator SHA redaction. Exchange arrays and object insertion order remain part of the proof hash; circular/unserializable trace input throws before source evidence is deleted.
 - `workflow-queue-context.ts` is the typed queue-attachment boundary. It preserves manifest task order, exact-identity then id-only fallback, last-row JSONL identity binding, dependency/support traversal order, portable artifact paths and native filesystem/parse/invalid-dependency failures. It only assembles local authoring evidence and cannot grant remote-write authority.
+- `import-curation/internal/full-context-proof.ts` is the typed proof-reading boundary used by decision, patch, row-transform and reference-closure contexts. It preserves raw-file SHA binding, embedded-then-shared context order, required-kind/file blocker order, classification schema selection, payload identity last-write behavior, caught proof parse envelopes and native row parse failures. Missing, invalid or hash-drifted proof remains blocking.
 - Toolchain and migration tests must pass from a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. They must not depend on the superproject checkout, another worktree's `node_modules`, absolute developer paths, ignored `.foundry` state, or credentials.
 - The Golden gate must compare against a non-`HEAD` merge-base with full Git history and a Node-native comparator. Cross-platform fixtures use executable-plus-argv dispatch; a `.js`/`.mjs`/`.cjs` test script must run through `process.execPath`, not OS executable-bit behavior. `.gitattributes` keeps repository text at LF on every runner; only Windows launcher files may opt into CRLF.
 - Foundry artifact-to-scope matching and transitional command parsers must accept both path separators. Durable JSON/JSONL writers flush the writable descriptor they opened; POSIX permission-bit assertions are not imposed on Windows filesystems.

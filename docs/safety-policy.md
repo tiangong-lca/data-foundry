@@ -23,9 +23,10 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
+  - scripts/lib/import-curation/internal/full-context-proof.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 910fdbdc5e575a19fc05ae26984e65b44a6eaa44
-lastReviewedNote: "Reviewed for Issue #67 Wave 13: typed queue context preserves missing/malformed evidence failures and does not turn local queue attachment into remote-write authority."
+lastReviewedCommit: 3d27dc05c4a27acb6ff5dee305cb671e1b6b6cf8
+lastReviewedNote: "Reviewed for Issue #67 Wave 14: typed full-context proof preserves missing, malformed, hash-drift and incomplete-context blockers without broadening write authority."
 ---
 
 # Safety Policy
