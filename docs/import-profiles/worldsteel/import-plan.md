@@ -1,7 +1,7 @@
 ---
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 38f1291d99571c7af377b8dca89d39fd690eb8d0
-lastReviewedNote: "Reviewed for Issue #68: R5 records the 2026-07-01 support-mint decision that superseded the earlier FP/UG reference-only plan."
+lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
+lastReviewedNote: "Reviewed for Issue #68: R1/R4 corrections and R5 supersede the unavailable-contact, native-row-version, and FP/UG reference-only assumptions."
 title: worldsteel EF3.1 ILCD Import Plan
 docType: plan
 scope: import-profile/worldsteel

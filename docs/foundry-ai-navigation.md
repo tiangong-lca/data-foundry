@@ -136,8 +136,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
-lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: navigation exposes trusted source/emitted entry resolution, isolated Golden environments and suppression-resistant complete TS coverage without moving semantic ownership."
+lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
+lastReviewedNote: "Reviewed for Issue #68: navigation binds the Worldsteel factory, profile authorization, four active documents, retained evidence, and exact Golden migration while documenting the deliberate one-way Docpact route from dataset-specific paths."
 ---
 
 # Foundry AI Navigation
@@ -221,7 +221,7 @@ The typed decision apply leaf is `import-curation/internal/workflow-decision-app
 
 The typed profile leaf is `import-curation/internal/profiles-config.ts`. Navigate there for profile field alias precedence, full-context policy normalization, account-local override projection, config-file fallback, requested/default/generic lookup, operator-added docs/QA waivers and ordered profile listing. The public profiles facade plus curation and mutation facets consume it; profile defaults remain declarative in `specs/import-profiles.json`.
 
-Worldsteel's frozen adapter/profile policy is a governed cross-file contract. Start with `scripts/commands/worldsteel-batch-import-run.ts` for the executable batch-engine flags, then follow the `worldsteel.docs` list in `specs/import-profiles.json` for current policy, constraints, plan, and retained delivery evidence. `test/unit/worldsteel-support-mint-truth.test.mts` executes the factory, compares its unmatched FP/UG support value with the structured profile value, and requires every declared Worldsteel document to state the same truth. The hard candidate boundary is a materialized canonical-cache miss behind the profile and finalize gates; LANCA names and historical counts are evidence, not a runtime allowlist.
+Worldsteel's frozen adapter/profile policy is a governed cross-file contract. Start with `scripts/commands/worldsteel-batch-import-run.ts` for the executable batch-engine flags, then follow the `worldsteel.docs` list in `specs/import-profiles.json` for current policy, constraints, plan, and retained delivery evidence. `test/unit/worldsteel-support-mint-truth.test.mts` freezes runtime `true`, verifies the existing profile `enabled`/scope authorization and profile prose, and requires every declared Worldsteel document to state the same truth. The hard candidate boundary is a materialized canonical-cache miss behind the profile and finalize gates; LANCA names and historical counts are evidence, not a runtime allowlist. Docpact intentionally routes wrapper/test/Worldsteel-doc changes into that evidence set but leaves the monolithic profile index under its generic trigger so a BAFU/USLCI edit does not create Worldsteel noise; the truth test supplies the reverse cross-file check.
 
 The typed patch collect leaf is `import-curation/internal/workflow-patch-collect.ts`. Navigate there for patch-set admission blockers, action-item closure, resolution/context/evidence validation, JSON/JSONL and optional artifact readers, identity-apply report option aliases, default source-rewrite discovery and normalized source-rewrite evidence. Its nine workflow consumers span authoring, curation, mutation, dry-run, identity, evidence, reference closure and row transforms.
 

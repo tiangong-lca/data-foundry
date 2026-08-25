@@ -10,9 +10,9 @@ layout: repo
 # Review note, 2026-08-25: Issue #65 adds the typed CommandSpec envelope, authoritative executable/argv handoffs, final-row byte/SHA binding, and shell-free BAFU execution. Ownership and routing semantics are unchanged.
 # Review note, 2026-08-25: Issue #67 Wave 24 B3 migrates the curation aggregate, gate runner, and cleanup runner under the existing scripts/** and test/** ownership/rule coverage. No catalog, routing, rule, profile, environment, or remote-authority semantics change.
 # Review note, 2026-08-25: Issue #67 Wave 24 migrates five existing command-owner paths to TypeScript with local characterization. Existing control-plane, test-layout, ownership, and documentation routes already cover the moved paths; no rule or authority boundary changes.
-# Review note, 2026-08-26: Issue #68 adds a narrow Worldsteel runtime/profile/document truth route. The executable unmatched-FP/UG flag, structured profile authorization, current profile docs, and retained coverage evidence now review together without making shared batch-engine edits trigger dataset-specific documentation noise.
+# Review note, 2026-08-26: Issue #68 adds a narrow Worldsteel wrapper/test/document route to the profile index, current docs, and retained evidence. The monolithic specs/import-profiles.json stays under the generic import-profile trigger so unrelated profile edits do not fan out to Worldsteel; the executable truth test is the cross-file backstop for its Worldsteel subtree.
 lastReviewedAt: "2026-08-26"
-lastReviewedCommit: "0fa3657c4c42eb733c133ec95b69cf8a0b44ecd1"
+lastReviewedCommit: "da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6"
 
 catalog:
   repos:
@@ -362,7 +362,7 @@ rules:
         mode: review_or_update
       - path: docs/import-profiles/worldsteel/import-coverage.md
         mode: review_or_update
-    reason: Worldsteel's frozen adapter flag, structured profile authorization, current constraints and plan, and retained coverage evidence must expose one canonical-vs-unmatched FP/UG mint policy.
+    reason: Changes from the Worldsteel wrapper, truth test, or profile-doc subtree must review the frozen adapter policy, profile authorization, current constraints and plan, and retained coverage evidence together; the monolithic profile index keeps its generic trigger to avoid unrelated fan-out.
   - id: foundry-execution-capsule-contract
     scope: repo
     repo: data-foundry

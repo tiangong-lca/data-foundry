@@ -1,7 +1,7 @@
 ---
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 38f1291d99571c7af377b8dca89d39fd690eb8d0
-lastReviewedNote: "Reviewed for Issue #68: canonical-cache misses are gated owner-draft candidates; LANCA names and historical counts are evidence, not a runtime allowlist."
+lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
+lastReviewedNote: "Reviewed for Issue #68: canonical-cache misses are gated owner-draft candidates; the shared override, deterministic contact, row version, and non-allowlist semantics match runtime."
 title: worldsteel Import Constraints
 docType: constraints
 scope: import-profile

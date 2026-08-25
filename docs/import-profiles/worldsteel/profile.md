@@ -1,7 +1,7 @@
 ---
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 38f1291d99571c7af377b8dca89d39fd690eb8d0
-lastReviewedNote: "Reviewed for Issue #68 against the frozen executable factory, PR #20 delivery rationale, retained coverage, and current shared support/finalize behavior."
+lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
+lastReviewedNote: "Reviewed for Issue #68 against the frozen factory, PR #20 rationale, retained coverage, shared override coupling, deterministic contact, and owner-draft row-version behavior."
 title: worldsteel Import Profile
 docType: profile
 scope: import-profile

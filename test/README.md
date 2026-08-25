@@ -273,8 +273,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 0fa3657c4c42eb733c133ec95b69cf8a0b44ecd1
-lastReviewedNote: "Reviewed for Issue #68: the Worldsteel truth contract belongs in unit because it executes the frozen adapter factory and compares declarative profile/document semantics without invoking a command or production case."
+lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
+lastReviewedNote: "Reviewed for Issue #68: the Worldsteel truth contract belongs in unit because it executes and freezes the adapter factory, verifies profile authorization, and rejects contradictory document semantics without invoking a command or production case."
 ---
 
 # Test Layout

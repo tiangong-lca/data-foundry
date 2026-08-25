@@ -86,7 +86,7 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: cc3505e7d8c7fe531dc3f8c0f2787b5b3a7398e8
+lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
 lastReviewedNote: "Reviewed for Issue #68: Worldsteel's frozen adapter/profile support-mint truth remains Foundry-owned profile governance and moves no CLI, database, SDK, skill, or sibling-repository capability."
 ---
 
