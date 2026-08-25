@@ -300,6 +300,7 @@ test("active documentation and source contain no references to removed CLI spine
     "tidas-language-utils.mjs",
     "hash-utils.mjs",
     "dataset-types.mjs",
+    "runtime-io.mjs",
   ];
   const files = [
     "AGENTS.md",
