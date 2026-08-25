@@ -13,7 +13,7 @@ import { createCoreCommands } from "./commands/core.ts";
 import { createExecutionCapsuleCommands } from "./commands/execution-capsule.ts";
 import { createIdentityDecisionTaskCommands } from "./commands/identity-decision-task.ts";
 import { createIdentityDecisionCommands } from "./commands/identity-decisions.ts";
-import { createIdentityPreflightRunCommands } from "./commands/identity-preflight-run.mjs";
+import { createIdentityPreflightRunCommands } from "./commands/identity-preflight-run.ts";
 import { createIdentityReferenceRewriteCommands } from "./commands/identity-reference-rewrites.ts";
 import { createImportCompletionCommands } from "./commands/import-completion.ts";
 import { createImportLedgerCommands } from "./commands/import-ledger.ts";

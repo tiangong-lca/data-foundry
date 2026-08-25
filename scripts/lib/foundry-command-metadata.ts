@@ -736,7 +736,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-identity-preflight-requests-build": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/identity-preflight-run.mjs",
+    ownerModule: "scripts/commands/identity-preflight-run.ts",
     ownerExport: "createIdentityPreflightRunCommands().runDatasetIdentityPreflightRequestsBuild",
     inputs: ["current process or flow rows file", "optional source identity-preflight index"],
     outputs: [
@@ -752,7 +752,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-identity-preflight-query-audit": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/identity-preflight-run.mjs",
+    ownerModule: "scripts/commands/identity-preflight-run.ts",
     ownerExport: "createIdentityPreflightRunCommands().runDatasetIdentityPreflightQueryAudit",
     inputs: ["identity-preflight-requests.jsonl"],
     outputs: [
@@ -768,7 +768,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-identity-preflight-run": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/identity-preflight-run.mjs",
+    ownerModule: "scripts/commands/identity-preflight-run.ts",
     ownerExport: "createIdentityPreflightRunCommands().runDatasetIdentityPreflightRun",
     inputs: ["identity-preflight-requests.jsonl", "published tiangong-lca CLI"],
     outputs: ["identity-preflight-run-results.jsonl", "dataset-identity-preflight-run-report.json"],
@@ -789,7 +789,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-identity-preflight-index-merge": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/identity-preflight-run.mjs",
+    ownerModule: "scripts/commands/identity-preflight-run.ts",
     ownerExport: "createIdentityPreflightRunCommands().runDatasetIdentityPreflightIndexMerge",
     inputs: ["base identity-preflight index", "refreshed current-scope identity-preflight index"],
     outputs: [

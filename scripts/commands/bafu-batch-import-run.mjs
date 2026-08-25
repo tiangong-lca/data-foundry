@@ -1368,7 +1368,7 @@ function completedReusableIdentityDecision(row) {
 // the flow is minted/committed. A later scope referencing the same source flow then
 // re-runs the (now cheap, post-mint) search and reuses the freshly created flow
 // instead of restoring the stale pre-mint result and minting a duplicate.
-// Paired with the cache in scripts/commands/identity-preflight-run.mjs. No-op unless
+// Paired with the cache in scripts/commands/identity-preflight-run.ts. No-op unless
 // BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE is set.
 function invalidateIdentityPreflightResultCacheEntry(identityKey) {
   const raw = process.env.BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE;
