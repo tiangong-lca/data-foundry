@@ -6,15 +6,13 @@ import path from "node:path";
 import process from "node:process";
 import test from "node:test";
 import { parseScalar } from "../../scripts/lib/foundry-args.ts";
-import * as runtimeModule from "../../scripts/lib/foundry-runtime-utils.mjs";
-
-type JsonObject = Record<string, any>;
-
-const {
+import {
   createFoundryRuntimeUtils,
   resolveInstalledTiangongLcaCliPackage,
   resolveTiangongLcaCliRuntimeCommand,
-} = runtimeModule as Record<string, (...args: any[]) => any>;
+} from "../../scripts/lib/foundry-runtime-utils.ts";
+
+type JsonObject = Record<string, any>;
 
 function withTempRoot(name: string, body: (root: string) => void): void {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), `${name}-`));
@@ -181,6 +179,10 @@ test("runtime file, JSON, JSONL, row, count, search, and portable path helpers p
     assert.equal(runtime.resolveRepoPath("data/value.json"), jsonPath);
     assert.equal(runtime.resolveRepoPath(jsonPath), jsonPath);
     assert.equal(runtime.resolveRepoPath(null), null);
+    assert.throws(
+      () => runtime.resolveRepoPath(7),
+      (error: unknown) => error instanceof TypeError,
+    );
     assert.equal(runtime.repoRelativePath(jsonPath), "data/value.json");
     assert.equal(runtime.repoRelativeMaybe(null), null);
     assert.equal(

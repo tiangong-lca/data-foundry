@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.mjs";
+import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.ts";
 
 const fullContextKinds = [
   "schema",

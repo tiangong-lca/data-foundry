@@ -12,7 +12,72 @@ const tiangongLcaCliPackageVersion = "0.1.1";
 const tiangongLcaCliBinName = "tiangong-lca";
 const foundryRepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-export function resolveInstalledTiangongLcaCliPackage() {
+export interface InstalledTiangongLcaCliPackage {
+  packageName: string;
+  packageVersion: string;
+  packageSpec: string;
+  packageJsonPath: string;
+  packageRoot: string;
+  binName: string;
+  binPath: string;
+  schemaDir: string;
+}
+
+export interface TiangongLcaCliRuntimeCommand {
+  command: string;
+  args: string[];
+  display: string;
+  source: "TIANGONG_LCA_CLI_BIN" | "installed_package";
+  package: string | null;
+  package_version: string | null;
+  package_root?: string;
+  bin_path: string;
+}
+
+export interface FoundryRuntimeDependencies {
+  parseScalar: (value: unknown) => unknown;
+  repoRoot: string;
+}
+
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface RuntimeStage extends JsonRecord {
+  stage?: string;
+  status?: string;
+  exit_code?: number;
+  command?: string;
+  args?: string[];
+  stderr?: string;
+  report?: JsonRecord | null;
+  report_file?: string | null;
+}
+
+interface LoadEnvOptions {
+  override?: boolean;
+}
+
+interface GateBlockerOptions {
+  code: string;
+  message: string;
+}
+
+interface PostAuthoringGateOptions {
+  schemaStage: RuntimeStage;
+  qaStage: RuntimeStage;
+  locationAuditBlockers: JsonRecord[];
+  curationGate: JsonRecord | null;
+  curationGateReportFile: string | null;
+  requireDeterministicQa?: boolean;
+  requireCurationGate?: boolean;
+}
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+export function resolveInstalledTiangongLcaCliPackage(): InstalledTiangongLcaCliPackage {
   const logicalPackageJsonPath = path.join(
     foundryRepoRoot,
     "node_modules",
@@ -32,7 +97,7 @@ export function resolveInstalledTiangongLcaCliPackage() {
     }
   }
 
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as JsonRecord;
   if (
     packageJson.name !== tiangongLcaCliPackageName ||
     packageJson.version !== tiangongLcaCliPackageVersion
@@ -45,7 +110,9 @@ export function resolveInstalledTiangongLcaCliPackage() {
   const binEntry =
     typeof packageJson.bin === "string"
       ? packageJson.bin
-      : packageJson.bin?.[tiangongLcaCliBinName];
+      : isRecord(packageJson.bin)
+        ? packageJson.bin[tiangongLcaCliBinName]
+        : undefined;
   if (typeof binEntry !== "string" || binEntry.trim() === "") {
     throw new Error(
       `Installed ${tiangongLcaCliPackageName}@${tiangongLcaCliPackageVersion} does not expose the '${tiangongLcaCliBinName}' package bin.`,
@@ -76,13 +143,15 @@ export function resolveInstalledTiangongLcaCliPackage() {
   };
 }
 
-function shellQuoteCommandToken(value) {
+function shellQuoteCommandToken(value: unknown): string {
   const text = String(value ?? "");
   if (/^[A-Za-z0-9_./:@%+=,-]+$/u.test(text)) return text;
   return `'${text.replace(/'/gu, `'\\''`)}'`;
 }
 
-export function resolveTiangongLcaCliRuntimeCommand(env = process.env) {
+export function resolveTiangongLcaCliRuntimeCommand(
+  env: NodeJS.ProcessEnv = process.env,
+): TiangongLcaCliRuntimeCommand {
   if (env.TIANGONG_LCA_CLI_BIN) {
     const binPath = env.TIANGONG_LCA_CLI_BIN;
     const isNodeScript = process.platform === "win32" && /\.(?:cjs|mjs|js)$/iu.test(binPath);
@@ -112,34 +181,34 @@ export function resolveTiangongLcaCliRuntimeCommand(env = process.env) {
   };
 }
 
-export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
-  function nowIso() {
+export function createFoundryRuntimeUtils({ parseScalar, repoRoot }: FoundryRuntimeDependencies) {
+  function nowIso(): string {
     return new Date().toISOString();
   }
 
-  function readText(filePath) {
+  function readText(filePath: string): string {
     return fs.readFileSync(filePath, "utf8");
   }
 
-  function writeText(filePath, text) {
+  function writeText(filePath: string, text: string): void {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, text);
   }
 
-  function resolveTiangongLcaCliCommand() {
+  function resolveTiangongLcaCliCommand(): TiangongLcaCliRuntimeCommand {
     return resolveTiangongLcaCliRuntimeCommand(process.env);
   }
 
-  function resolveTiangongLcaCliBin() {
+  function resolveTiangongLcaCliBin(): string {
     return resolveTiangongLcaCliCommand().display;
   }
 
-  function resolveTiangongLcaCliCommandPrefix() {
+  function resolveTiangongLcaCliCommandPrefix(): string[] {
     const cli = resolveTiangongLcaCliCommand();
     return [cli.command, ...cli.args];
   }
 
-  function tiangongLcaCliInvocation(args = []) {
+  function tiangongLcaCliInvocation(args: string[] = []) {
     const cli = resolveTiangongLcaCliCommand();
     const spawnArgs = [...cli.args, ...args];
     return {
@@ -149,11 +218,11 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
     };
   }
 
-  function readJson(filePath) {
+  function readJson(filePath: string): unknown {
     return JSON.parse(readText(filePath));
   }
 
-  function readJsonLines(filePath) {
+  function readJsonLines(filePath: string): unknown[] {
     return readText(filePath)
       .split(/\r?\n/u)
       .map((line) => line.trim())
@@ -167,49 +236,49 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
       });
   }
 
-  function writeJson(filePath, value) {
+  function writeJson(filePath: string, value: unknown): void {
     writeText(filePath, `${JSON.stringify(value, null, 2)}\n`);
   }
 
-  function fileExists(filePath) {
+  function fileExists(filePath: string | null | undefined): boolean {
     return Boolean(filePath && fs.existsSync(filePath) && fs.statSync(filePath).isFile());
   }
 
-  function directoryExists(filePath) {
+  function directoryExists(filePath: string | null | undefined): boolean {
     return Boolean(filePath && fs.existsSync(filePath) && fs.statSync(filePath).isDirectory());
   }
 
-  function resolveRepoPath(filePath) {
+  function resolveRepoPath(filePath: unknown): string | null {
     if (!filePath) return null;
-    return path.isAbsolute(filePath) ? filePath : path.join(repoRoot, filePath);
+    const value = filePath as string;
+    return path.isAbsolute(value) ? value : path.join(repoRoot, value);
   }
 
-  function repoRelativePath(filePath) {
+  function repoRelativePath(filePath: string): string {
     return path.relative(repoRoot, filePath).split(path.sep).join(path.posix.sep);
   }
 
-  function repoRelativeMaybe(filePath) {
+  function repoRelativeMaybe(filePath: string | null | undefined): string | null {
     return filePath ? repoRelativePath(filePath) : null;
   }
 
-  function sha256Text(value) {
+  function sha256Text(value: unknown): string {
     return createHash("sha256")
       .update(String(value ?? ""))
       .digest("hex");
   }
 
-  function sameResolvedPath(left, right) {
+  function sameResolvedPath(left: string | null | undefined, right: string | null | undefined) {
     if (!left || !right) return false;
     return path.resolve(left) === path.resolve(right);
   }
 
-  function reportInputPath(report) {
-    return asText(
-      report?.input_path || report?.input_file || report?.inputPath || report?.inputFile,
-    );
+  function reportInputPath(report: unknown): string {
+    const record = isRecord(report) ? report : {};
+    return asText(record.input_path || record.input_file || record.inputPath || record.inputFile);
   }
 
-  function countRowsFile(filePath) {
+  function countRowsFile(filePath: string | null | undefined): number {
     if (!filePath || !fileExists(filePath)) return 0;
     const text = readText(filePath);
     if (!text.trim()) return 0;
@@ -218,36 +287,36 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
     }
     const value = JSON.parse(text);
     if (Array.isArray(value)) return value.length;
-    if (Array.isArray(value?.rows)) return value.rows.length;
-    if (Array.isArray(value?.items)) return value.items.length;
+    if (isRecord(value) && Array.isArray(value.rows)) return value.rows.length;
+    if (isRecord(value) && Array.isArray(value.items)) return value.items.length;
     return 1;
   }
 
-  function countJsonLinesFile(filePath) {
+  function countJsonLinesFile(filePath: string | null | undefined): number {
     if (!filePath || !fileExists(filePath)) return 0;
     return readText(filePath)
       .split(/\r?\n/u)
       .filter((line) => line.trim()).length;
   }
 
-  function readRowsFile(filePath) {
+  function readRowsFile(filePath: string | null | undefined): unknown[] {
     if (!filePath || !fileExists(filePath)) return [];
     if (filePath.toLowerCase().endsWith(".jsonl")) {
       return readJsonLines(filePath);
     }
     const value = readJson(filePath);
     if (Array.isArray(value)) return value;
-    if (Array.isArray(value?.rows)) return value.rows;
-    if (Array.isArray(value?.items)) return value.items;
+    if (isRecord(value) && Array.isArray(value.rows)) return value.rows;
+    if (isRecord(value) && Array.isArray(value.items)) return value.items;
     return [value];
   }
 
-  function findFilesByName(startDir, fileName, maxDepth = 8) {
+  function findFilesByName(startDir: unknown, fileName: string, maxDepth = 8): string[] {
     const root = resolveRepoPath(startDir);
     if (!root || !directoryExists(root)) return [];
-    const found = [];
+    const found: string[] = [];
     const ignoredDirs = new Set([".git", "node_modules"]);
-    function walk(dir, depth) {
+    function walk(dir: string, depth: number): void {
       if (depth > maxDepth) return;
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const entryPath = path.join(dir, entry.name);
@@ -262,14 +331,14 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
     return found.sort();
   }
 
-  function asText(value) {
+  function asText(value: unknown): string {
     if (value === undefined || value === null) return "";
     if (typeof value === "string") return value.trim();
     if (typeof value === "number" || typeof value === "boolean") return String(value);
     return "";
   }
 
-  function splitFrontmatter(text) {
+  function splitFrontmatter(text: string): { frontmatter: string; body: string } {
     if (!text.startsWith("---\n")) return { frontmatter: "", body: text };
     const end = text.indexOf("\n---\n", 4);
     if (end === -1) throw new Error("Missing closing frontmatter marker.");
@@ -279,7 +348,7 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
     };
   }
 
-  function replaceFrontmatterField(frontmatter, key, value) {
+  function replaceFrontmatterField(frontmatter: string, key: string, value: unknown): string {
     const lines = frontmatter.split(/\r?\n/u);
     let replaced = false;
     const nextLines = lines.map((line) => {
@@ -295,10 +364,10 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
     return nextLines.join("\n").replace(/\n+$/u, "");
   }
 
-  function taskMetaFromFile(filePath) {
+  function taskMetaFromFile(filePath: string) {
     const text = readText(filePath);
     const { frontmatter, body } = splitFrontmatter(text);
-    const meta = {};
+    const meta: Record<string, unknown> = {};
     for (const line of frontmatter.split(/\r?\n/u)) {
       const match = line.match(/^([A-Za-z0-9_.-]+):\s*(.*)$/u);
       if (match) meta[match[1]] = parseScalar(match[2]);
@@ -306,14 +375,14 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
     return { text, frontmatter, body, meta };
   }
 
-  function isPlaceholderEnvValue(value) {
+  function isPlaceholderEnvValue(value: unknown): boolean {
     const normalized = String(value ?? "").trim();
     return normalized === "" || normalized === "REPLACE_ME";
   }
 
-  function loadEnvFile(filePath, { override = false } = {}) {
+  function loadEnvFile(filePath: string | null, { override = false }: LoadEnvOptions = {}) {
     if (!filePath || !fs.existsSync(filePath)) return { file: filePath, loaded: false, keys: [] };
-    const keys = [];
+    const keys: string[] = [];
     for (const rawLine of readText(filePath).split(/\r?\n/u)) {
       const line = rawLine.trim();
       if (!line || line.startsWith("#")) continue;
@@ -336,60 +405,60 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
     return { repoEnv };
   }
 
-  function hasUsableEnvValue(key) {
+  function hasUsableEnvValue(key: string): boolean {
     return process.env[key] !== undefined && !isPlaceholderEnvValue(process.env[key]);
   }
 
-  function ensureArray(value) {
+  function ensureArray(value: unknown): unknown[] {
     if (Array.isArray(value)) return value;
     if (value === undefined || value === null || value === "") return [];
     return [value];
   }
 
-  function normalizedList(value) {
+  function normalizedList(value: unknown): string[] {
     return ensureArray(value)
       .flatMap((item) => String(item).split(","))
       .map((item) => item.trim())
       .filter(Boolean);
   }
 
-  function unique(values) {
+  function unique<T>(values: T[]): T[] {
     return [...new Set(values.filter(Boolean))];
   }
 
-  function appendOption(args, flag, value) {
+  function appendOption(args: string[], flag: string, value: unknown): void {
     if (value === undefined || value === null || value === false || value === "") return;
     args.push(flag, String(value));
   }
 
-  function appendRepeatedOptions(args, flag, values) {
+  function appendRepeatedOptions(args: string[], flag: string, values: unknown): void {
     for (const value of normalizedList(values)) {
       appendOption(args, flag, value);
     }
   }
 
-  function booleanOption(value) {
+  function booleanOption(value: unknown): boolean {
     return value === true || value === "true" || value === "1" || value === "yes";
   }
 
-  function integerOption(value, fallback = null) {
+  function integerOption(value: unknown, fallback: number | null = null): number | null {
     if (value === undefined || value === null || value === "") return fallback;
     const number = Number(value);
     return Number.isInteger(number) ? number : fallback;
   }
 
-  function positiveIntegerOption(value, fallback = null) {
+  function positiveIntegerOption(value: unknown, fallback: number | null = null): number | null {
     const number = integerOption(value, fallback);
-    return Number.isInteger(number) && number > 0 ? number : fallback;
+    return number !== null && Number.isInteger(number) && number > 0 ? number : fallback;
   }
 
-  function shellQuote(value) {
+  function shellQuote(value: unknown): string {
     const text = String(value ?? "");
     if (/^[A-Za-z0-9_./:@%+=,-]+$/u.test(text)) return text;
     return `'${text.replace(/'/gu, `'\\''`)}'`;
   }
 
-  function compactStageReport(stage) {
+  function compactStageReport(stage: RuntimeStage) {
     return {
       stage: stage.stage,
       status: stage.report?.status ?? stage.status ?? null,
@@ -401,12 +470,16 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
     };
   }
 
-  function reportFileFromCliStage(stage, selectors, fallbackPath) {
+  function reportFileFromCliStage(
+    stage: RuntimeStage,
+    selectors: string[],
+    fallbackPath: unknown,
+  ): string | null {
     for (const selector of selectors) {
       const parts = selector.split(".");
-      let value = stage.report;
+      let value: unknown = stage.report;
       for (const part of parts) {
-        value = value?.[part];
+        value = isRecord(value) ? value[part] : undefined;
       }
       const resolved = resolveRepoPath(value);
       if (fileExists(resolved)) {
@@ -417,14 +490,17 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
     return fileExists(fallback) ? fallback : null;
   }
 
-  function blockersFromLocationAuditStage(stage) {
+  function blockersFromLocationAuditStage(stage: RuntimeStage | null | undefined): JsonRecord[] {
     const reportBlockers = ensureArray(stage?.report?.blockers);
-    const blockers = reportBlockers.map((blocker) => ({
-      ...blocker,
-      code: blocker?.code || "location_audit_blocker",
-      stage: "location_audit",
-      message: blocker?.message || "Location audit reported a blocker before remote write.",
-    }));
+    const blockers: JsonRecord[] = reportBlockers.map((value) => {
+      const blocker = value as JsonRecord;
+      return {
+        ...blocker,
+        code: blocker.code || "location_audit_blocker",
+        stage: "location_audit",
+        message: blocker.message || "Location audit reported a blocker before remote write.",
+      };
+    });
     if (stage?.exit_code !== 0 && blockers.length === 0) {
       blockers.push({
         code: "location_audit_failed",
@@ -437,7 +513,10 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
     return blockers;
   }
 
-  function stageExitBlocker(stage, { code, message }) {
+  function stageExitBlocker(
+    stage: RuntimeStage | null | undefined,
+    { code, message }: GateBlockerOptions,
+  ) {
     return stage?.exit_code === 0
       ? null
       : {
@@ -457,8 +536,8 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
     curationGateReportFile,
     requireDeterministicQa = true,
     requireCurationGate = true,
-  }) {
-    return [
+  }: PostAuthoringGateOptions): JsonRecord[] {
+    const blockers: Array<JsonRecord | null> = [
       stageExitBlocker(schemaStage, {
         code: "schema_validate_not_ready",
         message:
@@ -472,7 +551,8 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
           })
         : null,
       ...locationAuditBlockers,
-      !requireCurationGate || ["ready", "ready_with_profile_waivers"].includes(curationGate?.status)
+      !requireCurationGate ||
+      ["ready", "ready_with_profile_waivers"].includes(curationGate?.status as string)
         ? null
         : {
             code: "post_authoring_curation_gate_not_ready",
@@ -482,10 +562,11 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
             status: curationGate?.status ?? null,
             report_file: repoRelativeMaybe(curationGateReportFile),
           },
-    ].filter(Boolean);
+    ];
+    return blockers.filter((blocker): blocker is JsonRecord => Boolean(blocker));
   }
 
-  function skippedPrewriteStage(stage, reason) {
+  function skippedPrewriteStage(stage: string, reason: string) {
     return {
       stage,
       status: "skipped",
@@ -501,12 +582,12 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
     };
   }
 
-  function readJsonArtifactOption(value) {
+  function readJsonArtifactOption(value: unknown): { path: string; value: unknown } | null {
     const resolved = resolveRepoPath(value);
     return resolved && fileExists(resolved) ? { path: resolved, value: readJson(resolved) } : null;
   }
 
-  function runTiangongJsonStage(stage, args) {
+  function runTiangongJsonStage(stage: string, args: string[]) {
     const cli = tiangongLcaCliInvocation(args);
     const result = spawnSync(cli.command, cli.spawn_args, {
       cwd: repoRoot,
@@ -520,7 +601,7 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
     if (result.error) {
       throw result.error;
     }
-    let report = null;
+    let report: unknown = null;
     try {
       report = JSON.parse(result.stdout || "{}");
     } catch {
@@ -548,30 +629,30 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }) {
     };
   }
 
-  function readJsonOrJsonLines(filePath) {
+  function readJsonOrJsonLines(filePath: unknown): unknown[] {
     const resolved = resolveRepoPath(filePath);
     if (!resolved || !fileExists(resolved)) return [];
     if (resolved.toLowerCase().endsWith(".jsonl")) return readJsonLines(resolved);
     const value = readJson(resolved);
     if (Array.isArray(value)) return value;
-    if (Array.isArray(value?.decisions)) return value.decisions;
-    if (Array.isArray(value?.rows)) return value.rows;
+    if (isRecord(value) && Array.isArray(value.decisions)) return value.decisions;
+    if (isRecord(value) && Array.isArray(value.rows)) return value.rows;
     return value && typeof value === "object" ? [value] : [];
   }
 
-  function hasUnresolvedAiPlaceholder(value) {
+  function hasUnresolvedAiPlaceholder(value: unknown): boolean {
     return /__AI_(?:FILL|SELECT)[A-Z0-9_]*__|requires_ai_completion/iu.test(JSON.stringify(value));
   }
 
-  function cloneJson(value) {
-    return JSON.parse(JSON.stringify(value));
+  function cloneJson<T>(value: T): T {
+    return JSON.parse(JSON.stringify(value)) as T;
   }
 
-  function jsonSha256(value) {
+  function jsonSha256(value: unknown): string {
     return createHash("sha256").update(JSON.stringify(value)).digest("hex");
   }
 
-  function deterministicUuid(input) {
+  function deterministicUuid(input: unknown): string {
     const bytes = Buffer.from(
       createHash("sha1").update(String(input)).digest("hex").slice(0, 32),
       "hex",

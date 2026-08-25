@@ -34,7 +34,7 @@ import { createDecisionTaskUtils } from "./lib/decision-task-utils.ts";
 import { parseArgs, parseScalar } from "./lib/foundry-args.ts";
 import { runFoundryCli } from "./lib/foundry-cli.mjs";
 import { exitCodeForCommand, usage } from "./lib/foundry-command-registry.ts";
-import { createFoundryRuntimeUtils } from "./lib/foundry-runtime-utils.mjs";
+import { createFoundryRuntimeUtils } from "./lib/foundry-runtime-utils.ts";
 import { createFullContextProofUtils } from "./lib/full-context-proof.ts";
 import { createIdentityPreflightArtifactUtils } from "./lib/identity-preflight-artifacts.ts";
 import { createIdentityReferenceRewriteUtils } from "./lib/identity-reference-rewrite-utils.ts";

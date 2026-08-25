@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { resolveInstalledTiangongLcaCliPackage } from "./foundry-runtime-utils.mjs";
+import { resolveInstalledTiangongLcaCliPackage } from "./foundry-runtime-utils.ts";
 
 function cliCommandPrefix(cliBin) {
   return Array.isArray(cliBin) ? cliBin : [cliBin];

@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import {
   createFoundryRuntimeUtils,
   resolveInstalledTiangongLcaCliPackage,
-} from "../../scripts/lib/foundry-runtime-utils.mjs";
+} from "../../scripts/lib/foundry-runtime-utils.ts";
 import {
   firstTidasSchemaDir,
   tidasSchemaPath,

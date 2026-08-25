@@ -51,6 +51,7 @@ test("every static Foundry runtime consumer targets the typed module explicitly"
 
 test("typed Foundry runtime retains its exact named export surface", () => {
   const source = readRepoFile("scripts/lib/foundry-runtime-utils.ts");
+  assert.doesNotMatch(source, /\bany\b/u);
   assert.deepEqual(
     [...source.matchAll(/export function\s+([A-Za-z0-9_]+)/gu)].map((match) => match[1]),
     [

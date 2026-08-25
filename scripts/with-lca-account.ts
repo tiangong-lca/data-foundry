@@ -11,7 +11,7 @@ import {
   parseFreshIntentBoundAuthReceipt,
   type AuthIdentityReceipt,
 } from "./lib/identity-preflight-proof.ts";
-import { resolveInstalledTiangongLcaCliPackage } from "./lib/foundry-runtime-utils.mjs";
+import { resolveInstalledTiangongLcaCliPackage } from "./lib/foundry-runtime-utils.ts";
 import { accountModeForVerifiedIdentity } from "./lib/production-case-policy.ts";
 
 const DEFAULT_RECEIPT_TIMEOUT_MS = 10_000;

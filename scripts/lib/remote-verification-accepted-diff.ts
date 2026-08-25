@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { resolveTiangongLcaCliRuntimeCommand } from "./foundry-runtime-utils.mjs";
+import { resolveTiangongLcaCliRuntimeCommand } from "./foundry-runtime-utils.ts";
 
 type JsonRecord = Record<string, any>;
 

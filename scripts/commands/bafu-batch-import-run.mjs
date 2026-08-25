@@ -18,7 +18,7 @@ import {
   assertFoundryCommandSpecBindsArtifact,
   commandSpecOptionValue,
 } from "../lib/foundry-command-spec.ts";
-import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.mjs";
+import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.ts";
 import { stageContract } from "../lib/stage-contract.ts";
 import {
   assertReceiptBoundHandoffAccount,
