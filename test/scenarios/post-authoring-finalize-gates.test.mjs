@@ -459,8 +459,8 @@ process.stdout.write(JSON.stringify(report));
     assert.equal(finalize.code, 1);
     assert.equal(finalize.json.status, "blocked");
     assert.equal(finalize.json.counts.identity_preflight_run_selected, 2);
-    assert.equal(finalize.json.counts.identity_preflight_run_completed, 1);
-    assert.equal(finalize.json.counts.identity_preflight_run_skipped_existing, 1);
+    assert.equal(finalize.json.counts.identity_preflight_run_completed, 2);
+    assert.equal(finalize.json.counts.identity_preflight_run_skipped_existing, 0);
     assert.equal(finalize.json.counts.identity_preflight_refresh_required, true);
     assert.equal(
       finalize.json.counts.identity_preflight_refresh_reason,
