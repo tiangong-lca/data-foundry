@@ -72,6 +72,12 @@
       }
     },
     {
+      "files": ["scripts/lib/full-context-proof.ts", "test/unit/evidence-decision-leaves.test.mts"],
+      "rules": {
+        "typescript/no-explicit-any": "error"
+      }
+    },
+    {
       "files": ["test/**/*.{js,mjs,cjs,ts,mts,cts}"],
       "rules": {
         "typescript/no-floating-promises": "off",
