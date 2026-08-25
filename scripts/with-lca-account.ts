@@ -116,27 +116,31 @@ function isRecord(value: unknown): value is JsonRecord {
 }
 
 function parseArguments(argv: readonly string[]): ParsedArguments {
-  if (argv.length === 0 || (argv.length === 1 && ["-h", "--help"].includes(argv[0] ?? ""))) {
+  const normalizedArgv = argv[0] === "--" ? argv.slice(1) : argv;
+  if (
+    normalizedArgv.length === 0 ||
+    (normalizedArgv.length === 1 && ["-h", "--help"].includes(normalizedArgv[0] ?? ""))
+  ) {
     return { kind: "help" };
   }
-  const separatorIndex = argv.indexOf("--");
+  const separatorIndex = normalizedArgv.indexOf("--");
   if (separatorIndex > 1) {
     throw new AccountWrapperError(
       "The account wrapper does not accept wrapper flags; authentication bypasses were removed.",
       2,
     );
   }
-  if (separatorIndex !== 1 || argv.length <= separatorIndex + 1) {
+  if (separatorIndex !== 1 || normalizedArgv.length <= separatorIndex + 1) {
     throw new AccountWrapperError(
       "Expected <profile> -- <executable> [args...] with no wrapper flags.",
       2,
     );
   }
-  const profile = argv[0] ?? "";
+  const profile = normalizedArgv[0] ?? "";
   if (!SAFE_FILE_STEM_PATTERN.test(profile)) {
     throw new AccountWrapperError("Account profile name is invalid.", 2);
   }
-  const [executable = "", ...commandArgv] = argv.slice(separatorIndex + 1);
+  const [executable = "", ...commandArgv] = normalizedArgv.slice(separatorIndex + 1);
   if (
     !executable ||
     executable.includes("\0") ||
