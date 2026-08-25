@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import * as cleanup from "../../scripts/lib/import-curation/internal/prewrite-cleanup.mjs";
+import * as cleanup from "../../scripts/lib/import-curation/internal/prewrite-cleanup.ts";
 
 type JsonObject = Record<string, any>;
 
@@ -133,11 +133,11 @@ test("source row index preserves exact-version last-write and bare-id first-writ
   const v2 = processRow({ id: "shared", version: "02.00.000" });
   const index = cleanup.buildSourceRowsByIdentity([firstV1, secondV1, v2]);
 
-  assert.equal(index.get("shared@@01.00.000").row, secondV1);
-  assert.equal(index.get("shared@@01.00.000").index, 1);
-  assert.equal(index.get("shared@@02.00.000").row, v2);
-  assert.equal(index.get("shared").row, firstV1);
-  assert.equal(index.get("shared").index, 0);
+  assert.equal(index.get("shared@@01.00.000")!.row, secondV1);
+  assert.equal(index.get("shared@@01.00.000")!.index, 1);
+  assert.equal(index.get("shared@@02.00.000")!.row, v2);
+  assert.equal(index.get("shared")!.row, firstV1);
+  assert.equal(index.get("shared")!.index, 0);
 });
 
 test("deterministic source-exchange proof preserves output-only, array/object order, reference exclusion, hashes, and duplicate guard", () => {

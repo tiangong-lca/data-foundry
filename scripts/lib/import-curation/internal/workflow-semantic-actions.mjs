@@ -3,7 +3,7 @@ import { normalizeTidasLanguageCode } from "../../tidas-language-utils.ts";
 import { fullContextAiCompletionRequirement } from "./context-inputs.ts";
 import { dataSetInformation, datasetRoot } from "./dataset-payload.ts";
 import { sha256Text } from "./hash-utils.ts";
-import { annualSupplyMissingDataSentinelText } from "./prewrite-cleanup.mjs";
+import { annualSupplyMissingDataSentinelText } from "./prewrite-cleanup.ts";
 import {
   asText,
   ensureArray,

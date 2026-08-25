@@ -1,5 +1,5 @@
 import path from "node:path";
-import { annualSupplyMissingDataSentinelText } from "./prewrite-cleanup.mjs";
+import { annualSupplyMissingDataSentinelText } from "./prewrite-cleanup.ts";
 import {
   asText,
   ensureArray,

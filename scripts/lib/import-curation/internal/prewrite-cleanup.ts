@@ -24,7 +24,35 @@ const localSourceLocatorKeys = new Set([
   "sourceObject",
 ]);
 
-export function normalizeUtcDateTimeString(value) {
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface SourceRowEntry {
+  row: unknown;
+  index: number;
+  identity: ReturnType<typeof datasetIdentity>;
+}
+
+export type SourceRowsByIdentity = Map<string, SourceRowEntry>;
+
+interface SourceExchangeProofOptions {
+  rowIndex?: number | null;
+  sourceRowsByKey?: SourceRowsByIdentity | null;
+  sourceRowsFile?: string | null;
+  rowsFile?: string | null;
+  proofRows?: JsonRecord[];
+}
+
+interface LocatorStats {
+  redacted: number;
+}
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+export function normalizeUtcDateTimeString(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.test(trimmed)) {
@@ -36,15 +64,16 @@ export function normalizeUtcDateTimeString(value) {
   return normalized === value ? null : normalized;
 }
 
-export function normalizeDateTimeMetadata(value) {
+export function normalizeDateTimeMetadata(value: unknown): number {
   let normalized = 0;
-  const visit = (node) => {
+  const visit = (node: unknown): void => {
     if (!node || typeof node !== "object") return;
     if (Array.isArray(node)) {
       for (const item of node) visit(item);
       return;
     }
 
+    if (!isRecord(node)) return;
     for (const [key, child] of Object.entries(node)) {
       if (datetimeFieldsToNormalize.has(key)) {
         const nextValue = normalizeUtcDateTimeString(child);
@@ -61,15 +90,15 @@ export function normalizeDateTimeMetadata(value) {
   return normalized;
 }
 
-function annualSupplyTextValue(value) {
+function annualSupplyTextValue(value: unknown): string {
   if (typeof value === "string") return value.trim();
-  if (value && typeof value === "object" && !Array.isArray(value)) {
+  if (isRecord(value)) {
     return asText(value["#text"] ?? value.value);
   }
   return "";
 }
 
-function isPlaceholderAnnualSupplyValue(value) {
+function isPlaceholderAnnualSupplyValue(value: unknown): boolean {
   const text = annualSupplyTextValue(value);
   const normalized = text.toLowerCase();
   return (
@@ -83,19 +112,20 @@ function isPlaceholderAnnualSupplyValue(value) {
   );
 }
 
-function annualSupplySentinelValue() {
+function annualSupplySentinelValue(): JsonRecord {
   return {
     "@xml:lang": "en",
     "#text": annualSupplyMissingDataSentinelText,
   };
 }
 
-export function applyAnnualSupplyMissingDataSentinel(row, datasetType) {
+export function applyAnnualSupplyMissingDataSentinel(row: unknown, datasetType: string): boolean {
   if (datasetType !== "process") return false;
   const payload = unwrapDatasetPayload(row, datasetType);
   const root = datasetRoot(payload, datasetType);
-  const dataSources = root?.modellingAndValidation?.dataSourcesTreatmentAndRepresentativeness;
-  if (!dataSources || typeof dataSources !== "object") return false;
+  const modelling = isRecord(root.modellingAndValidation) ? root.modellingAndValidation : {};
+  const dataSources = modelling.dataSourcesTreatmentAndRepresentativeness;
+  if (!isRecord(dataSources)) return false;
   const current = dataSources.annualSupplyOrProductionVolume;
   if (current !== undefined && !isPlaceholderAnnualSupplyValue(current)) {
     return false;
@@ -104,28 +134,33 @@ export function applyAnnualSupplyMissingDataSentinel(row, datasetType) {
   return true;
 }
 
-function processDataSetInformation(row) {
+function processDataSetInformation(row: unknown): JsonRecord | null {
   const payload = unwrapDatasetPayload(row, "process");
   const root = datasetRoot(payload, "process");
-  return root?.processInformation?.dataSetInformation;
+  const processInformation = isRecord(root.processInformation) ? root.processInformation : {};
+  return isRecord(processInformation.dataSetInformation)
+    ? processInformation.dataSetInformation
+    : null;
 }
 
-function processExchanges(row) {
+function processExchanges(row: unknown): unknown[] {
   const payload = unwrapDatasetPayload(row, "process");
   const root = datasetRoot(payload, "process");
-  return ensureArray(root?.exchanges?.exchange);
+  const exchanges = isRecord(root.exchanges) ? root.exchanges : {};
+  return ensureArray(exchanges.exchange);
 }
 
-function exchangeDirection(exchange) {
-  return asText(exchange?.exchangeDirection).toLowerCase();
+function exchangeDirection(exchange: unknown): string {
+  return asText(isRecord(exchange) ? exchange.exchangeDirection : undefined).toLowerCase();
 }
 
-function stripFlowReferenceFromExchange(value) {
+function stripFlowReferenceFromExchange(value: unknown): unknown {
   if (!value || typeof value !== "object") return value;
   if (Array.isArray(value)) {
     return value.map((item) => stripFlowReferenceFromExchange(item));
   }
-  const next = {};
+  if (!isRecord(value)) return value;
+  const next: JsonRecord = {};
   for (const [key, child] of Object.entries(value)) {
     if (key === "referenceToFlowDataSet") continue;
     next[key] = stripFlowReferenceFromExchange(child);
@@ -133,7 +168,13 @@ function stripFlowReferenceFromExchange(value) {
   return next;
 }
 
-function outputOnlyExchangeProofCandidate({ row, sourceRow }) {
+function outputOnlyExchangeProofCandidate({
+  row,
+  sourceRow,
+}: {
+  row: unknown;
+  sourceRow: unknown;
+}) {
   const finalExchanges = processExchanges(row);
   const sourceExchanges = processExchanges(sourceRow);
   if (finalExchanges.length === 0 || sourceExchanges.length === 0) return null;
@@ -160,20 +201,25 @@ function outputOnlyExchangeProofCandidate({ row, sourceRow }) {
   };
 }
 
-function acceptedSourceExchangeTraceExists(row) {
+function acceptedSourceExchangeTraceExists(row: unknown): boolean {
   const info = processDataSetInformation(row);
   const traces = ensureArray(
-    info?.["common:other"]?.["tiangongfoundry:sourceExchangeCompleteness"],
+    isRecord(info?.["common:other"])
+      ? info["common:other"]["tiangongfoundry:sourceExchangeCompleteness"]
+      : undefined,
   );
-  return traces.some((trace) =>
-    ["source_only_output_exchange_verified", "accepted_source_only_output", "verified"].includes(
-      asText(trace?.status ?? trace?.decision_status ?? trace?.decisionStatus),
-    ),
-  );
+  return traces.some((trace) => {
+    const record = isRecord(trace) ? trace : {};
+    return [
+      "source_only_output_exchange_verified",
+      "accepted_source_only_output",
+      "verified",
+    ].includes(asText(record.status ?? record.decision_status ?? record.decisionStatus));
+  });
 }
 
-function sourceRowsByIdentity(sourceRows) {
-  const byIdentity = new Map();
+function sourceRowsByIdentity(sourceRows: unknown[]): SourceRowsByIdentity {
+  const byIdentity: SourceRowsByIdentity = new Map();
   sourceRows.forEach((row, index) => {
     const identity = datasetIdentity(row, index, "process");
     byIdentity.set(`${identity.id}@@${identity.version}`, {
@@ -189,10 +235,16 @@ function sourceRowsByIdentity(sourceRows) {
 }
 
 export function applyDeterministicSourceExchangeCompletenessProofs(
-  row,
-  datasetType,
-  { rowIndex, sourceRowsByKey, sourceRowsFile, rowsFile, proofRows } = {},
-) {
+  row: unknown,
+  datasetType: string,
+  {
+    rowIndex,
+    sourceRowsByKey,
+    sourceRowsFile,
+    rowsFile,
+    proofRows,
+  }: SourceExchangeProofOptions = {},
+): boolean {
   if (datasetType !== "process" || !sourceRowsByKey) return false;
   if (acceptedSourceExchangeTraceExists(row)) return false;
   const identity = datasetIdentity(row, rowIndex ?? 0, "process");
@@ -205,9 +257,8 @@ export function applyDeterministicSourceExchangeCompletenessProofs(
   });
   if (!proof) return false;
   const info = processDataSetInformation(row);
-  if (!info || typeof info !== "object" || Array.isArray(info)) return false;
-  const commonOther =
-    info["common:other"] && typeof info["common:other"] === "object" ? info["common:other"] : {};
+  if (!info) return false;
+  const commonOther = isRecord(info["common:other"]) ? info["common:other"] : {};
   commonOther["@xmlns:tiangongfoundry"] =
     commonOther["@xmlns:tiangongfoundry"] ?? foundryTraceNamespace;
   const trace = {
@@ -260,11 +311,11 @@ export function applyDeterministicSourceExchangeCompletenessProofs(
   return true;
 }
 
-export function buildSourceRowsByIdentity(sourceRows) {
+export function buildSourceRowsByIdentity(sourceRows: unknown[]): SourceRowsByIdentity {
   return sourceRowsByIdentity(sourceRows);
 }
 
-function appendImportTraceSummary(commonOther, sourceTrace) {
+function appendImportTraceSummary(commonOther: JsonRecord, sourceTrace: unknown): void {
   commonOther["@xmlns:tiangongfoundry"] =
     commonOther["@xmlns:tiangongfoundry"] ?? foundryTraceNamespace;
   const summary = {
@@ -283,18 +334,22 @@ function appendImportTraceSummary(commonOther, sourceTrace) {
   }
 }
 
-export function externalizeImportTraceMetadata(value) {
+export function externalizeImportTraceMetadata(value: unknown): {
+  removed: number;
+  summaries: number;
+} {
   let removed = 0;
   let summaries = 0;
-  const visit = (node) => {
+  const visit = (node: unknown): void => {
     if (!node || typeof node !== "object") return;
     if (Array.isArray(node)) {
       for (const item of node) visit(item);
       return;
     }
 
+    if (!isRecord(node)) return;
     const commonOther = node["common:other"];
-    if (commonOther && typeof commonOther === "object" && !Array.isArray(commonOther)) {
+    if (isRecord(commonOther)) {
       if (Object.hasOwn(commonOther, "tidasimport:sourceTrace")) {
         appendImportTraceSummary(commonOther, commonOther["tidasimport:sourceTrace"]);
         delete commonOther["tidasimport:sourceTrace"];
@@ -315,17 +370,18 @@ export function externalizeImportTraceMetadata(value) {
   return { removed, summaries };
 }
 
-export function ensureFoundryTraceNamespaces(value) {
+export function ensureFoundryTraceNamespaces(value: unknown): number {
   let added = 0;
-  const visit = (node) => {
+  const visit = (node: unknown): void => {
     if (!node || typeof node !== "object") return;
     if (Array.isArray(node)) {
       for (const item of node) visit(item);
       return;
     }
 
+    if (!isRecord(node)) return;
     const commonOther = node["common:other"];
-    if (commonOther && typeof commonOther === "object" && !Array.isArray(commonOther)) {
+    if (isRecord(commonOther)) {
       const hasFoundryExtension = Object.keys(commonOther).some((key) =>
         key.startsWith("tiangongfoundry:"),
       );
@@ -341,7 +397,7 @@ export function ensureFoundryTraceNamespaces(value) {
   return added;
 }
 
-function containsLocalSourceLocator(value) {
+function containsLocalSourceLocator(value: unknown): boolean {
   const text = asText(value);
   return Boolean(
     text &&
@@ -351,13 +407,14 @@ function containsLocalSourceLocator(value) {
   );
 }
 
-function sanitizeTraceEvidenceValue(value, stats) {
+function sanitizeTraceEvidenceValue(value: unknown, stats: LocatorStats): void {
   if (!value || typeof value !== "object") return;
   if (Array.isArray(value)) {
     for (const item of value) sanitizeTraceEvidenceValue(item, stats);
     return;
   }
 
+  if (!isRecord(value)) return;
   for (const [key, child] of Object.entries(value)) {
     if (child && typeof child === "object") {
       sanitizeTraceEvidenceValue(child, stats);
@@ -377,24 +434,25 @@ function sanitizeTraceEvidenceValue(value, stats) {
   }
 }
 
-export function sanitizeFoundryTraceEvidenceLocators(value) {
+export function sanitizeFoundryTraceEvidenceLocators(value: unknown): number {
   const stats = { redacted: 0 };
-  const visit = (node) => {
+  const visit = (node: unknown): void => {
     if (!node || typeof node !== "object") return;
     if (Array.isArray(node)) {
       for (const item of node) visit(item);
       return;
     }
 
+    if (!isRecord(node)) return;
     const commonOther = node["common:other"];
-    if (commonOther && typeof commonOther === "object" && !Array.isArray(commonOther)) {
+    if (isRecord(commonOther)) {
       for (const traceKey of foundryTraceKeys) {
         for (const traceEntry of ensureArray(commonOther[traceKey])) {
           if (!traceEntry || typeof traceEntry !== "object" || Array.isArray(traceEntry)) {
             continue;
           }
-          const evidence =
-            traceEntry.evidence ?? traceEntry.source_evidence ?? traceEntry.sourceEvidence;
+          const record = traceEntry as JsonRecord;
+          const evidence = record.evidence ?? record.source_evidence ?? record.sourceEvidence;
           sanitizeTraceEvidenceValue(evidence, stats);
         }
       }

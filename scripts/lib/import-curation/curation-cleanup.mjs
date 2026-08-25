@@ -9,7 +9,7 @@ import {
   externalizeImportTraceMetadata,
   normalizeDateTimeMetadata,
   sanitizeFoundryTraceEvidenceLocators,
-} from "./internal/prewrite-cleanup.mjs";
+} from "./internal/prewrite-cleanup.ts";
 import {
   fileExists,
   jsonLines,

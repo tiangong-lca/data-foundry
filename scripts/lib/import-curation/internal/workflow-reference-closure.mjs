@@ -14,7 +14,7 @@ import {
   evidenceResolutionMode,
   fullContextPackageProofBlockers,
 } from "./full-context-proof.mjs";
-import { externalizeImportTraceMetadata } from "./prewrite-cleanup.mjs";
+import { externalizeImportTraceMetadata } from "./prewrite-cleanup.ts";
 import {
   asText,
   ensureArray,
