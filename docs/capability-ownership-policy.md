@@ -25,9 +25,10 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
+  - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3d27dc05c4a27acb6ff5dee305cb671e1b6b6cf8
-lastReviewedNote: "Reviewed for Issue #67 Wave 14: typed full-context proof remains Foundry-owned local evidence verification and adds no sibling schema, CLI or database behavior."
+lastReviewedCommit: 23333b0d57b8b2463f7f1542ec4dab464d026b95
+lastReviewedNote: "Reviewed for Issue #67 Wave 15: typed decision apply context remains Foundry-owned local evidence aggregation and adds no sibling decision, CLI or database behavior."
 ---
 
 # Capability Ownership Policy

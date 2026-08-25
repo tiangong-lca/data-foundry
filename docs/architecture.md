@@ -38,6 +38,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
+  - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -65,8 +66,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3d27dc05c4a27acb6ff5dee305cb671e1b6b6cf8
-lastReviewedNote: "Reviewed for Issue #67 Wave 14: typed internal full-context proof remains Foundry-local evidence verification and does not alter schema, CLI, profile or database authority."
+lastReviewedCommit: 23333b0d57b8b2463f7f1542ec4dab464d026b95
+lastReviewedNote: "Reviewed for Issue #67 Wave 15: typed decision apply context remains Foundry-local evidence aggregation and does not alter decision, schema, CLI or database authority."
 ---
 
 # Architecture
@@ -129,6 +130,8 @@ The typed prewrite-cleanup boundary performs deterministic transformations only 
 The typed workflow-queue-context boundary reads local queue manifests, task rows, closure dependencies and optional authoring JSONL indexes without changing their encounter order or evidence bytes. It attaches that evidence to curation packages using exact-version then id-only lookup and retains native missing, malformed and invalid-dependency failures; it does not execute queue work or expand remote-write authority.
 
 The typed internal full-context-proof boundary reads content-addressed authoring packages, decision tasks, shared context bundles and row artifacts. It verifies exact bytes, required non-empty kinds/files, task kind/status and payload identity hashes while preserving evidence encounter order and existing parse envelopes. It constructs blockers only; schema ownership, AI decisions and remote execution remain outside this module.
+
+The typed decision-apply-context boundary projects an existing classification apply report into local evidence: normalized decisions, bound decision-task proof, resolved input/output row paths, content hashes and applied count. It preserves report order and aliases and performs no decision application, schema mutation or remote operation.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

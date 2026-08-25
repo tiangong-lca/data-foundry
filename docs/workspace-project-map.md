@@ -23,9 +23,10 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
+  - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3d27dc05c4a27acb6ff5dee305cb671e1b6b6cf8
-lastReviewedNote: "Reviewed for Issue #67 Wave 14: zero-any full-context proof remains Foundry-local verification; no cross-repository owner or normal execution surface changes."
+lastReviewedCommit: 23333b0d57b8b2463f7f1542ec4dab464d026b95
+lastReviewedNote: "Reviewed for Issue #67 Wave 15: zero-any decision apply context remains Foundry-local evidence projection; no cross-repository owner or execution surface changes."
 ---
 
 # Workspace Project Map

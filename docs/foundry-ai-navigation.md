@@ -32,6 +32,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
+  - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -54,8 +55,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3d27dc05c4a27acb6ff5dee305cb671e1b6b6cf8
-lastReviewedNote: "Reviewed for Issue #67 Wave 14: navigation records typed internal package/task/shared-context proof, blocker construction, payload hashes and six consumers."
+lastReviewedCommit: 23333b0d57b8b2463f7f1542ec4dab464d026b95
+lastReviewedNote: "Reviewed for Issue #67 Wave 15: navigation records typed decision apply report normalization, task proof, path and payload-hash context plus three consumers."
 ---
 
 # Foundry AI Navigation
@@ -128,6 +129,8 @@ The typed deterministic prewrite leaf is `import-curation/internal/prewrite-clea
 The typed queue leaf is `import-curation/internal/workflow-queue-context.ts`. Navigate there for annual-supply schema actions, curation manifest loading, task/artifact path resolution, exact-version and id-only task selection, closure dependency/support attachment, authoring JSONL identity indexes and identity-preflight request paths. Its tests pin encounter order, duplicate-map behavior, portable paths and native fail-closed errors across all static consumers.
 
 The typed internal proof leaf is `import-curation/internal/full-context-proof.ts` (distinct from the reusable `scripts/lib/full-context-proof.ts` factory). Navigate there for curation context aliases, package/task/shared-bundle byte and SHA proof, non-empty required context blockers, classification/location file-pattern selection and per-identity payload hashes. Its consumers are the decision, identity, patch-evidence, reference-closure and row-transform context modules.
+
+The typed decision apply leaf is `import-curation/internal/workflow-decision-apply-context.ts`. Navigate there for classification apply report aliases, normalized decision rows, decision-task proof binding, input/output row path lists, fallback dataset type selection, identity payload hashes and applied counts. Curation and mutation workflow facets re-export it; decision full-context logic consumes it directly.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 

@@ -26,8 +26,8 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3d27dc05c4a27acb6ff5dee305cb671e1b6b6cf8
-lastReviewedNote: "Reviewed for Issue #67 Wave 14: typing internal full-context proof changes no command category, owner/export metadata, help, artifact schema, exit mapping, profile default, or remote-write mode."
+lastReviewedCommit: 23333b0d57b8b2463f7f1542ec4dab464d026b95
+lastReviewedNote: "Reviewed for Issue #67 Wave 15: typing decision apply context changes no command category, owner/export metadata, help, artifact schema, exit mapping, profile default, or remote-write mode."
 ---
 
 # Foundry Command Surface
