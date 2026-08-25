@@ -956,6 +956,10 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
     );
     assert.equal(finalize.json.files.final_rows, null);
     assert.ok(finalize.json.files.cleanup_report);
+    assert.ok(Number(finalize.json.counts.import_ledger_entries) > 0);
+    const importLedger = finalize.json.files.import_ledger as unknown as FixtureRecord;
+    assert.ok(importLedger.blocked_scopes);
+    assert.equal(fs.existsSync(path.join(repoRoot, String(importLedger.blocked_scopes))), true);
     for (const absent of [
       "identity-preflight-run",
       "curation-queue",

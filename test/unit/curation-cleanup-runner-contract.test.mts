@@ -278,6 +278,8 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
   });
   const rowsFile = path.join(root, "rows", "processes.jsonl");
   const originalRowsText = writeJsonLines(rowsFile, [valid, invalid]);
+  const staleCleanedRows = path.join(root, "cleanup", "processes.cleaned.jsonl");
+  writeJsonLines(staleCleanedRows, [{ stale: "must-not-survive-a-blocked-rerun" }]);
 
   const result = record(
     runDatasetCurationCleanup({
@@ -322,7 +324,7 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
   });
   const files = record(result.files);
   assert.equal(files.cleaned_rows, null);
-  assert.equal(fs.existsSync(path.join(root, "cleanup", "processes.cleaned.jsonl")), false);
+  assert.equal(fs.existsSync(staleCleanedRows), false);
   assert.equal(
     fs.readFileSync(path.join(root, String(files.report)), "utf8"),
     `${JSON.stringify(result, null, 2)}\n`,

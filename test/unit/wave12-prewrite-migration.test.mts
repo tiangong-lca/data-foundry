@@ -45,6 +45,7 @@ test("every static prewrite cleanup consumer targets the typed module", () => {
   const bundleSampleSource = readRepoFile("scripts/lib/bundle-sample-utils.ts");
   assert.match(bundleSampleSource, /normalizeUtcDateTimeString\(value\) \?\? value/u);
   assert.doesNotMatch(bundleSampleSource, /new Date\(value\)\.toISOString\(\)/u);
+  assert.doesNotMatch(bundleSampleSource, /normalized = `\$\{value\}Z`/u);
 });
 
 test("typed prewrite cleanup retains its exact zero-any export surface", () => {

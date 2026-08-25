@@ -1319,10 +1319,36 @@ export function createPostAuthoringFinalizeCommands({
         },
       };
       writeJson(reportPath, report);
-      return {
+      const importLedger = writeFinalizeImportLedger
+        ? timeStage("import_ledger", () =>
+            writeFinalizeImportLedger({
+              report,
+              reportPath,
+              ledgerDir: resolveRepoPath(
+                options.ledgerDir || options.importLedgerDir || path.join(outDir, "import-ledger"),
+              ),
+            }),
+          )
+        : { status: "skipped", files: {}, counts: { entries_written: 0 } };
+      const finalReport = {
         ...report,
+        counts: {
+          ...report.counts,
+          finalize_duration_ms: Date.now() - finalizeStartedAtMs,
+          finalize_substage_count: finalizeTimings.length,
+          import_ledger_entries: importLedger.counts?.entries_written ?? 0,
+        },
+        timings: finalizeTimings,
         files: {
           ...report.files,
+          import_ledger: importLedger.files ?? {},
+        },
+      };
+      writeJson(reportPath, finalReport);
+      return {
+        ...finalReport,
+        files: {
+          ...finalReport.files,
           report: repoRelativePath(reportPath),
         },
       };

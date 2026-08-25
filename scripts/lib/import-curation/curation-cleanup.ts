@@ -1,3 +1,4 @@
+import { rmSync } from "node:fs";
 import path from "node:path";
 import { datasetTypeFromOptions, datasetTypePlural } from "./internal/dataset-types.ts";
 import { datasetIdentity } from "./internal/dataset-payload.ts";
@@ -129,6 +130,7 @@ export function runDatasetCurationCleanup({
   });
 
   if (invalidDateTimeBlockers.length > 0) {
+    if (outFile !== rowsFile && fileExists(outFile)) rmSync(outFile);
     const reportFileName = "dataset-curation-cleanup-report.json";
     const reportPath = path.join(outDir, reportFileName);
     const report: JsonRecord = {

@@ -371,35 +371,36 @@ test("bundle sanitization preserves source evidence while repairing process year
   });
 });
 
-test("bundle sanitization preserves an impossible offset datetime for cleanup to block", () => {
+test("bundle sanitization preserves impossible and timezone-less datetimes for cleanup to block", () => {
   withTempRoot("bundle-invalid-datetime-contract", (root) => {
     const utils = makeUtils(root);
-    const payload = processPayload();
-    payload.processDataSet.administrativeInformation.dataEntryBy["common:timeStamp"] =
-      "2025-02-30T03:04:05+02:00";
-    const stats = {
-      timestamp_normalizations: 0,
-      reference_year_repairs: 0,
-      annual_supply_repairs: 0,
-      removed_import_traces: 0,
-      removed_import_trace_namespaces: 0,
-      placeholder_sanitizations: 0,
-    };
+    for (const timestamp of ["2025-02-30T03:04:05+02:00", "2025-01-02T03:04:05"]) {
+      const payload = processPayload();
+      payload.processDataSet.administrativeInformation.dataEntryBy["common:timeStamp"] = timestamp;
+      const stats = {
+        timestamp_normalizations: 0,
+        reference_year_repairs: 0,
+        annual_supply_repairs: 0,
+        removed_import_traces: 0,
+        removed_import_trace_namespaces: 0,
+        placeholder_sanitizations: 0,
+      };
 
-    utils.sanitizeBundlePayload(
-      payload,
-      "process",
-      path.join(root, "bundle", "process.json"),
-      stats,
-      [],
-      utils.collectSourceTracePayloads(payload),
-    );
+      utils.sanitizeBundlePayload(
+        payload,
+        "process",
+        path.join(root, "bundle", "process.json"),
+        stats,
+        [],
+        utils.collectSourceTracePayloads(payload),
+      );
 
-    assert.equal(
-      payload.processDataSet.administrativeInformation.dataEntryBy["common:timeStamp"],
-      "2025-02-30T03:04:05+02:00",
-    );
-    assert.equal(stats.timestamp_normalizations, 0);
+      assert.equal(
+        payload.processDataSet.administrativeInformation.dataEntryBy["common:timeStamp"],
+        timestamp,
+      );
+      assert.equal(stats.timestamp_normalizations, 0);
+    }
   });
 });
 

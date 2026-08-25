@@ -284,8 +284,6 @@ export function createBundleSampleUtils({
     let normalized = value;
     if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?[+-]\d{2}:\d{2}$/u.test(value)) {
       normalized = normalizeUtcDateTimeString(value) ?? value;
-    } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/u.test(value)) {
-      normalized = `${value}Z`;
     }
     if (normalized !== value) {
       stats.timestamp_normalizations += 1;
