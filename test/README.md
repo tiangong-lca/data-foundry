@@ -156,6 +156,10 @@ checkPaths:
   - test/unit/core-command-factory.test.mts
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
+  - test/unit/command-tests-core-support-migration.test.mts
+  - test/unit/command-tests-authoring-decisions-migration.test.mts
+  - test/unit/command-tests-bafu-library-migration.test.mts
+  - test/unit/command-tests-offline-planners-migration.test.mts
   - test/unit/task-completion-command-factories.test.mts
   - test/unit/handoff-identity-task-command-factories.test.mts
   - test/unit/support-cache-command-factory.test.mts
@@ -176,8 +180,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 final commands: tests cover core runtime/diagnostic/route/help bytes, identity-preflight receipt/argv/cache/hash/disk/exit fail-close, finalize rewrite/gate/manifest/handoff order, native-only owners, metadata, and native errors."
+lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
+lastReviewedNote: "Reviewed for Issue #67 Wave 27 command tests: all sixteen remaining command contracts are strict TS7, the command script has one .mts glob, and four migration families pin consumers, fixtures, bytes/order/native errors, and zero type escapes."
 ---
 
 # Test Layout
@@ -262,6 +266,8 @@ Wave 25 covers the three decision command factories. `unit/wave25-identity-decis
 Wave 25 covers two re-export families. `unit/import-curation-leaf-barrels-migration.test.mts` pins the exact profile/trace namespaces and direct owner references. `unit/import-curation-entry-barrels-migration.test.mts` pins the complete eight-export index/public namespace, every owner reference, Foundry CLI injection keys, metadata owner routes, TS-only atomic entry migration, and a clean temporary TypeScript build loaded by Node 24. No fixture reads credentials, `.env`, production state, or ignored Foundry artifacts.
 
 Wave 26 covers three final command families. `unit/core-command-factory.test.mts` uses an isolated repository fixture to pin runtime directory order, workflow/storage/environment reports, route artifact bytes, surface/doctor envelopes, native errors and exact global help. `unit/identity-preflight-run-command-factory.test.mts` plus the existing real local CLI scenarios pin all four help reports, receipt-bound argv, request/target/binding hashes, positive-only cache, stale or mismatched disk/stdout, nonzero/timeout failures and only-pending reuse without shell strings. `unit/post-authoring-finalize-command-factory.test.mts` plus finalize scenarios pin rewrite, cleanup, preflight, queue, schema, QA, location, curation, dry-run, mutation and handoff order; source/support/reuse artifacts, hashes and blockers remain fail-closed. No fixture reads credentials, `.env`, production data, or ignored Foundry state.
+
+Wave 27 migrates all sixteen remaining command tests in four coherent families. The original `.mjs` suite passes 173 cases before migration. The typed files preserve the same fixture imports and behavior bodies while adding strict parameter/narrowing contracts; `unit/command-tests-*-migration.test.mts` rejects legacy paths, explicit `any`, TypeScript suppressions and stale metadata/docs. `pnpm test:commands` now runs one `.mts` glob, including the existing typed account-wrapper contract.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

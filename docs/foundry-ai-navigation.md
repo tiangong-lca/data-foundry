@@ -95,9 +95,10 @@ checkPaths:
   - test/unit/core-command-factory.test.mts
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
+  - test/commands/*.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 final commands: navigation records typed core, identity-preflight runner, and post-authoring finalize owners with exact help, diagnostics, receipt/argv/cache/hash, rewrite/gate/manifest/handoff, consumer metadata, and fail-closed evidence boundaries."
+lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
+lastReviewedNote: "Reviewed for Issue #67 Wave 27 command tests: metadata and navigation now point to sixteen strict TS7 command contracts while preserving semantic owners, fixtures, exact artifacts/order/errors, and fail-closed boundaries."
 ---
 
 # Foundry AI Navigation

@@ -98,6 +98,7 @@ checkPaths:
   - test/fixtures/finalize-fixtures.ts
   - test/unit/import-ledger-type-contract.test.mts
   - test/unit/fixture-helpers-contract.test.mts
+  - test/commands/*.test.mts
   - test/unit/core-command-factory.test.mts
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
@@ -109,8 +110,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 final commands: native TS7 core, identity-preflight runner, and post-authoring finalize preserve exact help, diagnostics, receipt/argv/cache/hash evidence, rewrite/gate/manifest/handoff order, native errors, and read-only authority."
+lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
+lastReviewedNote: "Reviewed for Issue #67 Wave 27 command tests: the complete command-test surface is strict TS7-only, preserves all existing fixture/byte/order/error behavior, and reduces the migration inventory from 76 to 60 without runtime changes."
 ---
 
 # TianGong LCA Data Foundry
@@ -192,6 +193,8 @@ Wave 25 migrates the three decision command factories in dependency order: stand
 Wave 25 migrates the import-curation re-export topology without wrappers. `profiles.ts` and `trace-summary.ts` retain their exact namespaces and owner function identity; `import-curation/index.ts` and the public `import-curation.ts` entry retain the complete eight-export namespace and direct references to the semantic owners. Node 24 loads both source and emitted entry layers, and command metadata continues to route each command to its semantic owner. Inventory moves 93→89 without changing runtime behavior, command help, profiles, Worldsteel semantics, or remote-write authority.
 
 Wave 26 migrates the three remaining non-entry command owners. `core.ts` preserves runtime-directory order, workflow/storage/environment diagnostics, surface aggregation, route artifacts and exact help. `identity-preflight-run.ts` preserves receipt-bound CLI argv, request/target/binding hashes, positive-only cache reuse, stale or mismatched disk/stdout failure, nonzero exits and only-pending semantics without shell authority. `post-authoring-finalize.ts` preserves identity, unresolved-exchange, source/contact and canonical-support rewrite order; cleanup, preflight, queue, schema, QA, location, curation and dry-run gates; mutation evidence and read-only handoff planning. Inventory moves 79→76 without changing profiles, Worldsteel or Date.parse behavior, or remote-write authority.
+
+Wave 27 migrates all sixteen remaining `test/commands` JavaScript contracts in four RED/GREEN families: core/ledger/support, authoring/decisions, BAFU/library, and offline incremental/topology/capsule planners. The original suite passed 173/173 before renames; `pnpm test:commands` now exposes one `.mts` glob and includes the existing typed account-wrapper cases. Inventory moves 76→60 with no runtime owner, fixture, profile, Worldsteel, Date.parse, or authority change.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

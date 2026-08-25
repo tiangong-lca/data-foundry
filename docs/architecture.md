@@ -98,6 +98,7 @@ checkPaths:
   - scripts/lib/bundle-sample-utils.ts
   - test/fixtures/fixture-roots.ts
   - test/fixtures/finalize-fixtures.ts
+  - test/commands/*.test.mts
   - .prettierignore
   - package.json
   - pnpm-lock.yaml
@@ -107,8 +108,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 final commands: typed core, identity-preflight runner, and post-authoring finalize preserve diagnostics, exact help, receipt/argv/cache/hash evidence, ordered rewrites/gates/manifests/handoffs, and fail-closed read-only authority without moving CLI, schema, search, profile, Worldsteel, database, or production ownership."
+lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
+lastReviewedNote: "Reviewed for Issue #67 Wave 27 command tests: strict TS7 command contracts preserve local fixtures, artifact bytes/order/native errors and offline/fail-closed boundaries without changing runtime owners, CLI/schema/search/profile/Worldsteel/database/production authority."
 ---
 
 # Architecture

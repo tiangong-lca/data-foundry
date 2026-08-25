@@ -61,9 +61,10 @@ checkPaths:
   - test/unit/core-command-factory.test.mts
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
+  - test/commands/*.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 final commands: core, identity-preflight runner, and post-authoring finalize move to TS7 without changing command names/categories, exact help, receipt/argv/exit, reports/artifacts, profiles, Worldsteel/Date.parse semantics, or remote-write modes."
+lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
+lastReviewedNote: "Reviewed for Issue #67 Wave 27 command tests: all command metadata test paths target strict TS7 contracts without changing command names/categories, help, argv/exit, reports/artifacts, profiles, Worldsteel/Date.parse semantics, or remote-write modes."
 ---
 
 # Foundry Command Surface
@@ -92,6 +93,8 @@ Wave 25 moves `cli-wrappers`, `execution-capsule`, and `post-write-closeout` to 
 Wave 25 moves the import-curation leaf, index, and public barrels to TypeScript while command metadata continues to identify semantic owner modules. Metadata links the entry namespace contract as navigation evidence for profile listing, authoring, curation, cleanup, and mutation commands; the runtime command surface and handler injection remain unchanged.
 
 Wave 26 moves `core`, `identity-preflight-run`, and `post-authoring-finalize` to native TypeScript. Core retains all public bootstrap/diagnostic/route commands and exact global help. The identity-preflight family retains its four workflow-internal commands, receipt-bound shell-free argv and fail-closed execution evidence. Finalize retains the existing read-only stage pipeline, report/artifact schema, blocker order and handoff plan. Metadata binds each command to the new focused contract tests without changing registry order or categories.
+
+Wave 27 moves every remaining `test/commands/*.test.mjs` contract to `.test.mts` and makes `pnpm test:commands` a single TypeScript-only glob. Command metadata, retained contracts and file-location references point to the renamed tests; runtime owner modules and the command registry remain unchanged.
 
 ## Categories
 

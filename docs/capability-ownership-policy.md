@@ -67,9 +67,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-source-reference-context.ts
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
+  - test/commands/*.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 final commands: typing core diagnostics, identity-preflight execution evidence, and post-authoring finalize orchestration changes no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse semantics, or sibling boundary."
+lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
+lastReviewedNote: "Reviewed for Issue #67 Wave 27 command tests: migrating local command contracts to strict TS7 changes no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse semantics, or sibling boundary."
 ---
 
 # Capability Ownership Policy

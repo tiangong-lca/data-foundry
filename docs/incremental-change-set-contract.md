@@ -20,8 +20,8 @@ checkPaths:
   - test/scenarios/incremental-change-set-handoff.test.mjs
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 4d415fac33799011d37094ac79122c1eef3a7855
-lastReviewedNote: "Reviewed for Issue #63: the stage-contract module moved to TypeScript without changing incremental composition semantics or artifacts."
+lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
+lastReviewedNote: "Reviewed for Issue #67 Wave 27 command tests: the command contract moves to strict TS7 without changing three-way merge, terminal disposition, dependency, event-chain, artifact algebra, activation, or zero-dispatch semantics."
 ---
 
 # Incremental Change-Set Contract

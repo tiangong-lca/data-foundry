@@ -129,6 +129,7 @@ checkPaths:
   - test/unit/core-command-factory.test.mts
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
+  - test/commands/*.test.mts
   - test/unit/wave25-identity-decision-command-migration.test.mts
   - test/unit/wave25-classification-location-command-migration.test.mts
   - test/unit/import-curation-leaf-barrels-migration.test.mts
@@ -137,8 +138,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 final commands: typed core, identity-preflight runner, and post-authoring finalize owners preserve exact help, runtime/storage/env diagnostics, receipt-bound argv and cache evidence, rewrite/gate/manifest/handoff order, native errors, and fail-closed write authority."
+lastReviewedCommit: 898eb5cc5b348095e3ac096804e5271d2203479c
+lastReviewedNote: "Reviewed for Issue #67 Wave 27 command tests: all sixteen remaining command-contract tests execute as strict zero-escape TypeScript while preserving 173 pre-migration cases, exact fixtures/bytes/order/native errors, metadata paths, and runtime authority boundaries."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
