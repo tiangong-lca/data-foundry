@@ -46,10 +46,9 @@ test("active governed docs do not retain the six legacy unit-test paths", () => 
   }
 });
 
-test("the canonical test command executes native mjs and mts tests", () => {
+test("the canonical test command executes native TypeScript tests only", () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8")) as {
     scripts: Record<string, string>;
   };
-  assert.match(packageJson.scripts.test, /test\/\*\*\/\*\.test\.mjs/u);
-  assert.match(packageJson.scripts.test, /test\/\*\*\/\*\.test\.mts/u);
+  assert.equal(packageJson.scripts.test, 'node --test "test/**/*.test.mts"');
 });

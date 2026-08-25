@@ -48,7 +48,7 @@ test("BAFU auto-authoring consumers and metadata target typed local fixtures", (
   assert.doesNotMatch(entrySource, /bafu-auto-authoring\.mjs/u);
   assert.match(metadataSource, /ownerModule: "scripts\/commands\/bafu-auto-authoring\.ts"/u);
   assert.doesNotMatch(metadataSource, /bafu-auto-authoring\.mjs/u);
-  assert.match(metadataSource, /test\/commands\/bafu-auto-authoring\.test\.mjs/u);
+  assert.match(metadataSource, /test\/commands\/bafu-auto-authoring\.test\.mts/u);
 });
 
 test("BAFU auto-authoring help retains exact serialized bytes", () => {

@@ -35,7 +35,7 @@ test("BAFU process-scope entry and metadata target typed realistic fixtures", ()
   assert.doesNotMatch(entrySource, /bafu-process-scope-e2e\.mjs/u);
   assert.match(metadataSource, /ownerModule: "scripts\/commands\/bafu-process-scope-e2e\.ts"/u);
   assert.doesNotMatch(metadataSource, /bafu-process-scope-e2e\.mjs/u);
-  assert.match(metadataSource, /test\/commands\/bafu-process-scope-e2e\.test\.mjs/u);
+  assert.match(metadataSource, /test\/commands\/bafu-process-scope-e2e\.test\.mts/u);
 });
 
 test("BAFU process-scope help retains exact serialized bytes", () => {

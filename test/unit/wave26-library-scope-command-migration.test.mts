@@ -60,10 +60,10 @@ test("library-scope entry and metadata target the typed semantic owner", () => {
   assert.doesNotMatch(entrySource, /library-scope-workflow\.mjs/u);
   assert.match(metadataSource, /ownerModule: "scripts\/commands\/library-scope-workflow\.ts"/u);
   assert.doesNotMatch(metadataSource, /library-scope-workflow\.mjs/u);
-  assert.match(metadataSource, /test\/scenarios\/library-scope-workflow\.test\.mjs/u);
+  assert.match(metadataSource, /test\/scenarios\/library-scope-workflow\.test\.mts/u);
   assert.match(
     metadataSource,
-    /test\/commands\/library-scope-workflow-elementary-identity\.test\.mjs/u,
+    /test\/commands\/library-scope-workflow-elementary-identity\.test\.mts/u,
   );
 });
 

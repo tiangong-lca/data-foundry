@@ -52,7 +52,7 @@ test("BAFU leaf consumers and metadata target the typed owner and real fixture",
     /ownerModule: "scripts\/commands\/bafu-leaf-classification-tasks\.ts"/u,
   );
   assert.doesNotMatch(metadataSource, /bafu-leaf-classification-tasks\.mjs/u);
-  assert.match(metadataSource, /test\/commands\/bafu-leaf-classification-tasks\.test\.mjs/u);
+  assert.match(metadataSource, /test\/commands\/bafu-leaf-classification-tasks\.test\.mts/u);
 });
 
 test("BAFU leaf classification help retains exact serialized bytes", () => {

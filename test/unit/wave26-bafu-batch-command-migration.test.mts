@@ -51,7 +51,7 @@ test("BAFU/USLCI/Worldsteel consumers and metadata target one typed batch owner"
   assert.doesNotMatch(entrySource, /bafu-batch-import-run\.mjs/u);
   assert.match(metadataSource, /ownerModule: "scripts\/commands\/bafu-batch-import-run\.ts"/u);
   assert.doesNotMatch(metadataSource, /bafu-batch-import-run\.mjs/u);
-  assert.match(metadataSource, /test\/commands\/bafu-batch-import-run\.test\.mjs/u);
+  assert.match(metadataSource, /test\/commands\/bafu-batch-import-run\.test\.mts/u);
   for (const source of [uslciSource, worldsteelSource]) {
     assert.match(source, /from "\.\/bafu-batch-import-run\.ts"/u);
     assert.doesNotMatch(source, /bafu-batch-import-run\.mjs/u);
