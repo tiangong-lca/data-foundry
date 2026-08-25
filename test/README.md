@@ -23,7 +23,6 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
   - test/unit/worldsteel-support-mint-truth.test.mts
-  - test/unit/managed-output-safety.test.mts
   - scripts/foundry-golden-diff.ts
   - scripts/check-tidas-cutover.ts
   - scripts/check-lint-suppressions.ts
@@ -93,7 +92,6 @@ checkPaths:
   - scripts/lib/import-curation/patch-collect.ts
   - scripts/lib/import-curation/curation-gate.ts
   - scripts/lib/import-curation/curation-cleanup.ts
-  - scripts/lib/managed-output-safety.ts
   - scripts/lib/import-curation/internal/workflow-reference-closure.ts
   - scripts/lib/import-curation/internal/workflow-source-reference-context.ts
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
@@ -276,8 +274,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 5912c11b4175ae6e847b40206acf67e4edea861b
-lastReviewedNote: "Reviewed for Issue #69: unit/scenario layers cover strict calendar fail-close, repository-root/task symlink and marker escapes, CLI failure and finalize suppression."
+lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
+lastReviewedNote: "Reviewed for Issue #69: unit/scenario layers cover strict calendar fail-close, zero blocked-run deletion, CLI failure and finalize suppression."
 ---
 
 # Test Layout
@@ -331,7 +329,7 @@ The Issue #63 migration is complete. `unit/zero-javascript-ratchet.test.mts` per
 
 `unit/location-quality-utils-contract.test.mts` characterizes classification/location command plans, installed and missing schema maps, fallback/schema location keys, nested `#text` paths, depth-first/ascending-array order, exact counters, queue context, blocker order and invalid row-type errors. `unit/wave11-location-migration.test.mts` pins the zero-any factory, named export and static consumers; bundle/location/finalize command scenarios retain integration coverage.
 
-`unit/prewrite-cleanup-contract.test.mts` characterizes strict Gregorian/leap-century/clock/offset validation, accepted UTC bytes, four-digit year-boundary preservation, recursive blocker order, all-or-nothing mutation, annual sentinel variants, source-row map precedence, output-only exchange proof and order-sensitive hashes, duplicate proof suppression, trace summary/hash/error behavior, namespace repair and exact local-locator SHA redaction. `unit/curation-cleanup-runner-contract.test.mts` adds the multi-row fail-close: one invalid datetime yields zero transforms; stale cleanup requires a repository-anchored physical managed root and strict task descendant, while forged/legacy markers, replaced artifacts, explicit/custom paths, and root/child symlink escapes remain intact and reported. `unit/managed-output-safety.test.mts` directly pins the shared root and both runtime consumers. `unit/wave12-prewrite-migration.test.mts` pins the zero-any native module, ten exports, seven direct consumers and the bundle injection edge (eight runtime consumers total).
+`unit/prewrite-cleanup-contract.test.mts` characterizes strict Gregorian/leap-century/clock/offset validation, accepted UTC bytes, four-digit year-boundary preservation, recursive blocker order, all-or-nothing mutation, annual sentinel variants, source-row map precedence, output-only exchange proof and order-sensitive hashes, duplicate proof suppression, trace summary/hash/error behavior, namespace repair and exact local-locator SHA redaction. `unit/curation-cleanup-runner-contract.test.mts` adds the multi-row fail-close: one invalid datetime yields zero transforms, a null cleaned path, and no automatic deletion; managed/custom/replaced/symlink-root stale defaults remain byte-identical and reported, while explicit outputs stay untouched. `unit/wave12-prewrite-migration.test.mts` pins the zero-any native module, ten exports, seven direct consumers and the bundle injection edge (eight runtime consumers total).
 
 `unit/workflow-queue-context-contract.test.mts` characterizes annual-supply actions, queue manifest filtering/order/map behavior, task paths and summaries, exact-version then id-only selection, closure dependency/support order, authoring JSONL filtering/last-row binding and identity-preflight paths. `unit/workflow-queue-context-native-errors.test.mts` locks the legacy non-null-object task traversal and native `TypeError` for a null dependency; `unit/wave13-queue-context-migration.test.mts` pins the zero-any native module, exact runtime exports and all static consumers.
 
@@ -373,7 +371,7 @@ Wave 26 covers adapters and repository tooling in four RED/GREEN families. `unit
 
 Wave 26 covers four algorithmic command owners as independent RED/GREEN families. `unit/authoring-plan-command-migration.test.mts` pins the native owner/export, all consumers and exact help while existing authoring command cases preserve phase/row order, lineage, artifacts and hashes. `unit/bundle-sample-command-migration.test.mts` combines that migration contract with realistic selection cases for seed, row type, location and scale fail-close. `unit/incremental-command-migration.test.mts` covers native ownership/help while the existing unit, command and scenario fixtures preserve three-way activation, dependency holds, terminal receipts and no-authority CLI handoff. `unit/topology-command-migration.test.mts` does the same for occurrence-aware graph convergence, cycles, retry/hold behavior and ordered F/P/D handoffs. All four reject explicit type escapes and suppression directives.
 
-Wave 26 covers three final command families. `unit/core-command-factory.test.mts` uses an isolated repository fixture to pin runtime directory order, workflow/storage/environment reports, surface/doctor envelopes, native errors and exact global help. `unit/identity-preflight-run-command-factory.test.mts` plus the existing real local CLI scenarios pin all four help reports, receipt-bound argv, request/target/binding hashes, positive-only cache, stale or mismatched disk/stdout, nonzero/timeout failures and only-pending reuse without shell strings. `unit/post-authoring-finalize-command-factory.test.mts` plus finalize scenarios pin rewrite, parent-cleanup-before-nested-support, output-alias isolation, preflight, queue, schema, QA, location, curation, dry-run, mutation and handoff order; a blocked cleanup must terminate that list, purge only repository-anchored managed-task stale evidence, ignore marker claims, reject root/child symlink escapes, preserve/report every other path, append the blocked ledger, and expose no final rows or CommandSpec. Source/support/reuse artifacts, hashes and blockers remain fail-closed. No fixture reads credentials, `.env`, production data, or ignored Foundry state.
+Wave 26 covers three final command families. `unit/core-command-factory.test.mts` uses an isolated repository fixture to pin runtime directory order, workflow/storage/environment reports, surface/doctor envelopes, native errors and exact global help. `unit/identity-preflight-run-command-factory.test.mts` plus the existing real local CLI scenarios pin all four help reports, receipt-bound argv, request/target/binding hashes, positive-only cache, stale or mismatched disk/stdout, nonzero/timeout failures and only-pending reuse without shell strings. `unit/post-authoring-finalize-command-factory.test.mts` plus finalize scenarios pin rewrite, parent-cleanup-before-nested-support, output-alias isolation, preflight, queue, schema, QA, location, curation, dry-run, mutation and handoff order; a blocked cleanup must terminate that list, preserve/report every pre-existing downstream artifact without deletion, append the blocked ledger, and expose no final rows or CommandSpec. Source/support/reuse artifacts, hashes and blockers remain fail-closed. No fixture reads credentials, `.env`, production data, or ignored Foundry state.
 
 Wave 27 migrates all sixteen remaining command tests in four coherent families. The original `.mjs` suite passes 173 cases before migration. The typed files preserve the same fixture imports and behavior bodies while adding strict parameter/narrowing contracts; `unit/command-tests-*-migration.test.mts` rejects legacy paths, explicit `any`, TypeScript suppressions and stale metadata/docs. `pnpm test:commands` now runs one `.mts` glob, including the existing typed account-wrapper contract.
 

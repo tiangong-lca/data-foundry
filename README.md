@@ -91,7 +91,6 @@ checkPaths:
   - scripts/lib/import-curation/patch-collect.ts
   - scripts/lib/import-curation/curation-gate.ts
   - scripts/lib/import-curation/curation-cleanup.ts
-  - scripts/lib/managed-output-safety.ts
   - scripts/lib/import-curation/internal/workflow-reference-closure.ts
   - scripts/lib/import-curation/internal/workflow-source-reference-context.ts
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
@@ -150,8 +149,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 5912c11b4175ae6e847b40206acf67e4edea861b
-lastReviewedNote: "Reviewed for Issue #69: strict datetime plus repository-anchored managed-task ownership replaces rollover behavior without changing package, profile or remote-write authority."
+lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
+lastReviewedNote: "Reviewed for Issue #69: strict datetime plus non-destructive blocked artifact reporting replaces rollover behavior without changing package, profile or remote-write authority."
 ---
 
 # TianGong LCA Data Foundry
@@ -196,7 +195,7 @@ The runtime wave migrates `foundry-runtime-utils.ts`, the high-fan-in helper use
 
 The location wave migrates `location-quality-utils.ts`, which feeds bundle sampling and location/finalize authoring through the Foundry entrypoint. Characterization pins classification/location command strings and artifacts, installed schema code loading, fallback and recursive location target discovery, depth-first/array order, valid/blocker counts, queue context, blocker envelopes and invalid-input errors. It remains fail-closed and zero-any; inventory moves from 127 to 126.
 
-The prewrite wave migrated `prewrite-cleanup.ts` as a deterministic evidence boundary and initially froze the inherited `Date.parse` behavior. Issue #69 supersedes that rollover: eight runtime consumers now share one strict metadata contract. Full timezone-qualified timestamps keep prior UTC bytes for valid inputs; valid offsets that would cross outside the four-digit UTC year grammar keep exact source bytes. Impossible Gregorian dates, invalid clocks, partial/sentinel/non-string values, or invalid offsets block the entire cleanup before any sentinel/proof/trace/redaction transform or cleaned-row output. Bundle materialization preserves invalid and timezone-less values for that gate, the CLI exits nonzero, and post-authoring finalize completes parent cleanup before nested support finalization. On failure, cleanup/finalize purge only strict task descendants of the repository's physical `.foundry/workspaces` root. The shared root, root/child symlink escapes, custom or explicit paths, replaced artifacts, and path-only ownership markers remain intact and become blockers; the blocked ledger is written and no CommandSpec is emitted.
+The prewrite wave migrated `prewrite-cleanup.ts` as a deterministic evidence boundary and initially froze the inherited `Date.parse` behavior. Issue #69 supersedes that rollover: eight runtime consumers now share one strict metadata contract. Full timezone-qualified timestamps keep prior UTC bytes for valid inputs; valid offsets that would cross outside the four-digit UTC year grammar keep exact source bytes. Impossible Gregorian dates, invalid clocks, partial/sentinel/non-string values, or invalid offsets block the entire cleanup before any sentinel/proof/trace/redaction transform or cleaned-row output. Bundle materialization preserves invalid and timezone-less values for that gate, the CLI exits nonzero, and post-authoring finalize completes parent cleanup before nested support finalization. On failure, cleanup/finalize never delete a pre-existing artifact: retained default/downstream paths become blockers, explicit outputs remain untouched and unreferenced, the blocked ledger is written, and no CommandSpec is emitted. A repaired rerun uses a new output path or deliberate operator-managed archival.
 
 The queue-context wave migrates `import-curation/internal/workflow-queue-context.ts`, a five-consumer authoring-evidence boundary. Characterization pins annual-supply action envelopes, manifest task order and duplicate-map behavior, exact-identity then id-only selection, queue-relative paths, closure dependency/support order, JSONL filtering and last-row binding, identity-preflight path precedence, and native filesystem/parse/invalid-dependency errors. It remains zero-any and fail-closed; inventory moves from 125 to 124.
 

@@ -84,7 +84,7 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 5912c11b4175ae6e847b40206acf67e4edea861b
+lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
 lastReviewedNote: "Reviewed for Issue #69: strict datetime cleanup and finalize fail-close are Data Foundry-local; workspace repository ownership and cross-project boundaries are unchanged."
 ---
 

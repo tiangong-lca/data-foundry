@@ -24,7 +24,7 @@ checkPaths:
   - scripts/lib/foundry-runtime-utils.ts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 5912c11b4175ae6e847b40206acf67e4edea861b
+lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
 lastReviewedNote: "Reviewed for Issue #69: strict datetime and local realpath ownership checks add no environment input, credential forwarding or public .env surface."
 ---
 

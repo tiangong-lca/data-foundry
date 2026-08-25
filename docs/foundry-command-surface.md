@@ -84,7 +84,7 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 5912c11b4175ae6e847b40206acf67e4edea861b
+lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
 lastReviewedNote: "Reviewed for Issue #69: strict datetime and local stale-artifact ownership do not change the 63-command surface, categories, profiles or remote-write modes."
 ---
 
