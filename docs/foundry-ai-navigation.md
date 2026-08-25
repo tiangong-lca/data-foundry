@@ -198,7 +198,7 @@ Layer rules:
 - `authoring-patch-workflow.mjs`: AI patch collection, patch-set validation, and full-context readiness helpers.
 - `curation-gate-workflow.mjs`: curation gate queue, identity-preflight, QA/schema action, and authoring context helpers.
 - `mutation-manifest-workflow.mjs`: prewrite evidence, reference closure, dry-run proof, and write-candidate planning helpers.
-- `workflow-queue-context.ts`, `workflow-identity-preflight.mjs`, `workflow-identity-decision-context.ts`, `workflow-semantic-actions.mjs`, `workflow-authoring-tasks.mjs`, `workflow-patch-evidence.mjs`, `workflow-patch-evidence-context.mjs`, `workflow-patch-collect.ts`, `workflow-row-transform-context.mjs`, `workflow-evidence-scope.mjs`, `workflow-decision-apply-context.ts`, `workflow-decision-full-context.mjs`, `workflow-dry-run-context.mjs`, `workflow-source-reference-context.mjs`, and `workflow-reference-closure.mjs`: focused domain helpers used by the workflow facets above.
+- `workflow-queue-context.ts`, `workflow-identity-preflight.mjs`, `workflow-identity-decision-context.ts`, `workflow-semantic-actions.mjs`, `workflow-authoring-tasks.mjs`, `workflow-patch-evidence.mjs`, `workflow-patch-evidence-context.ts`, `workflow-patch-collect.ts`, `workflow-row-transform-context.mjs`, `workflow-evidence-scope.mjs`, `workflow-decision-apply-context.ts`, `workflow-decision-full-context.mjs`, `workflow-dry-run-context.mjs`, `workflow-source-reference-context.mjs`, and `workflow-reference-closure.mjs`: focused domain helpers used by the workflow facets above.
 
 Dependencies should point downward only. Internal low-level modules must not import semantic command modules.
 

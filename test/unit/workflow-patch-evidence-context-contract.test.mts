@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import * as evidenceContext from "../../scripts/lib/import-curation/internal/workflow-patch-evidence-context.mjs";
+import * as evidenceContext from "../../scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts";
 import { sha256Json, sha256Text } from "../../scripts/lib/import-curation/internal/hash-utils.ts";
 
 type JsonRecord = Record<string, unknown>;
@@ -125,19 +125,19 @@ test("patch apply context preserves report/evidence blockers, dual indexes, path
     assert.equal(context.status, "completed");
     assert.equal(context.evidenceFile, evidencePath);
     assert.deepEqual(
-      context.evidenceRows.map((row: JsonRecord) => row.basis),
+      context.evidenceRows.map((row) => (row as JsonRecord).basis),
       ["first", "second", "row-only"],
     );
     assert.deepEqual(
-      context.byIdentity.get("dataset-id@@01.00.000").map((row: JsonRecord) => row.basis),
+      context.byIdentity.get("dataset-id@@01.00.000")!.map((row) => row.basis),
       ["first", "second"],
     );
     assert.deepEqual(
-      context.byIdentity.get("dataset-id").map((row: JsonRecord) => row.basis),
+      context.byIdentity.get("dataset-id")!.map((row) => row.basis),
       ["first", "second"],
     );
     assert.deepEqual(
-      context.byRowIndex.get(0).map((row: JsonRecord) => row.basis),
+      context.byRowIndex.get(0)!.map((row) => row.basis),
       ["first", "second"],
     );
     assert.equal(context.inputRowsFile, inputPath);

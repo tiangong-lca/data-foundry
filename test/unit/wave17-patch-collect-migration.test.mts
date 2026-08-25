@@ -27,7 +27,7 @@ test("every static patch collect helper consumer targets the typed module", () =
     "scripts/lib/import-curation/internal/mutation-manifest-workflow.mjs",
     "scripts/lib/import-curation/internal/workflow-dry-run-context.mjs",
     "scripts/lib/import-curation/internal/workflow-identity-decision-context.ts",
-    "scripts/lib/import-curation/internal/workflow-patch-evidence-context.mjs",
+    "scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts",
     "scripts/lib/import-curation/internal/workflow-reference-closure.mjs",
     "scripts/lib/import-curation/internal/workflow-row-transform-context.mjs",
     "scripts/lib/import-curation/internal/workflow-source-reference-context.mjs",

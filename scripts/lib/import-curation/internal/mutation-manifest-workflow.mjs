@@ -43,7 +43,7 @@ export {
   readJsonIfOption,
   readRowsIfExists,
 } from "./workflow-patch-collect.ts";
-export { readPatchApplyContext, readPolicySnapshots } from "./workflow-patch-evidence-context.mjs";
+export { readPatchApplyContext, readPolicySnapshots } from "./workflow-patch-evidence-context.ts";
 export {
   buildFullContextAiCompletionBlockers,
   buildReferenceClosureBlockers,

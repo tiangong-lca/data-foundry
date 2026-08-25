@@ -25,7 +25,7 @@ test("every static workflow queue consumer targets the typed module", () => {
     "scripts/lib/import-curation/internal/curation-gate-workflow.mjs",
     "scripts/lib/import-curation/internal/workflow-identity-preflight.mjs",
     "scripts/lib/import-curation/internal/workflow-patch-evidence.mjs",
-    "scripts/lib/import-curation/internal/workflow-patch-evidence-context.mjs",
+    "scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts",
     "scripts/lib/import-curation/internal/workflow-semantic-actions.mjs",
     "test/unit/workflow-queue-context-contract.test.mts",
     "test/unit/workflow-queue-context-native-errors.test.mts",

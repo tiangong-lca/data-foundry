@@ -36,7 +36,7 @@ import {
   hasImportOnlyTrace,
   patchEvidenceForRow,
   tracePatchEvidenceBlockers,
-} from "./workflow-patch-evidence-context.mjs";
+} from "./workflow-patch-evidence-context.ts";
 import {
   deterministicRowsFileTransformEntries,
   rowsFileReachableThroughTransformChain,
