@@ -47,8 +47,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 279c7c0be11c1e5503f6af01e8b0a74257538006
-lastReviewedNote: "Reviewed for Issue #67 Wave 3: typed row/type/language/hash leaves preserve exact roots, tables, aliases, enumeration, serialization order, invalid-input behavior, and static consumers."
+lastReviewedCommit: 73fd7d051e7a4ee3695252d155f908e9dee6d5db
+lastReviewedNote: "Reviewed for Issue #67 Wave 4: high-fan-in runtime I/O is native TS7 with exact synchronous bytes, path normalization, row envelopes, native errors, partial-write, close, and consumer behavior preserved."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

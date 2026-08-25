@@ -31,8 +31,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 279c7c0be11c1e5503f6af01e8b0a74257538006
-lastReviewedNote: "Reviewed for Issue #67 Wave 3: low-level TS navigation identifies exact root/table/type, language, and serialization contracts and forbids silent canonicalization drift."
+lastReviewedCommit: 73fd7d051e7a4ee3695252d155f908e9dee6d5db
+lastReviewedNote: "Reviewed for Issue #67 Wave 4: typed runtime I/O navigation records all helper responsibilities and explicitly preserves direct overwrite, partial-prefix, close, native error, and portable path semantics."
 ---
 
 # Foundry AI Navigation

@@ -35,8 +35,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 279c7c0be11c1e5503f6af01e8b0a74257538006
-lastReviewedNote: "Reviewed for Issue #67 Wave 3: focused tests pin bundle roots/tables, dataset aliases/root detection, language enumeration/fallback, JSON/text hashes, ordering, invalid inputs, and stale paths."
+lastReviewedCommit: 73fd7d051e7a4ee3695252d155f908e9dee6d5db
+lastReviewedNote: "Reviewed for Issue #67 Wave 4: runtime I/O characterization covers all exports, exact bytes, mkdir/overwrite, partial-prefix and close-on-error, JSON envelopes, native errors, missing inputs, separators, and consumers."
 ---
 
 # Test Layout

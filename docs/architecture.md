@@ -42,8 +42,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 279c7c0be11c1e5503f6af01e8b0a74257538006
-lastReviewedNote: "Reviewed for Issue #67 Wave 3: typed row/type/language/hash primitives remain Foundry-local contracts and do not alter sibling schema, CLI, database, or converter ownership."
+lastReviewedCommit: 73fd7d051e7a4ee3695252d155f908e9dee6d5db
+lastReviewedNote: "Reviewed for Issue #67 Wave 4: typed runtime I/O remains a Foundry-local synchronous helper boundary and does not alter durable artifact policy or sibling ownership."
 ---
 
 # Architecture
