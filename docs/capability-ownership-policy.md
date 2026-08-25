@@ -28,9 +28,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
   - scripts/lib/import-curation/internal/profiles-config.ts
   - scripts/lib/import-curation/internal/workflow-patch-collect.ts
+  - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 247e1007a38aff7311ded1d9b8a70898c300b4da
-lastReviewedNote: "Reviewed for Issue #67 Wave 17: typed patch collect remains Foundry-owned local admission/evidence handling and adds no sibling patch, CLI or database behavior."
+lastReviewedCommit: 3baba4184e8e18391b055d9a15eae315d643a3cd
+lastReviewedNote: "Reviewed for Issue #67 Wave 18: typed identity decision context remains Foundry-owned evidence projection and adds no sibling search, decision, CLI or database behavior."
 ---
 
 # Capability Ownership Policy

@@ -39,6 +39,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
   - scripts/lib/import-curation/internal/profiles-config.ts
   - scripts/lib/import-curation/internal/workflow-patch-collect.ts
+  - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -67,8 +68,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 247e1007a38aff7311ded1d9b8a70898c300b4da
-lastReviewedNote: "Reviewed for Issue #67 Wave 17: patch validation, artifact readers and source-rewrite normalization are native zero-any TS7 with order, bytes and errors unchanged."
+lastReviewedCommit: 3baba4184e8e18391b055d9a15eae315d643a3cd
+lastReviewedNote: "Reviewed for Issue #67 Wave 18: identity decision/rewrite context is native zero-any TS7 with aliases, dual indexes, proof/hash/merge order and errors unchanged."
 ---
 
 # TianGong LCA Data Foundry
@@ -122,6 +123,8 @@ The decision-apply context wave migrates `import-curation/internal/workflow-deci
 The profile-config wave migrates `import-curation/internal/profiles-config.ts`, the shared profile loading/lookup/listing boundary. Characterization pins camel/snake precedence, normalized full-context fields, raw account-local overrides, configured key order, requested/default/generic fallback, base-before-extra docs and waivers, conditional dataset-type validation, fallback object identity, profile-list output, and native JSON/argument errors. Existing generic/BAFU/USLCI/worldsteel defaults remain unchanged; inventory moves from 122 to 121.
 
 The patch-collect wave migrates `import-curation/internal/workflow-patch-collect.ts`, the admission/helper boundary shared by nine workflow modules. Characterization pins early invalid returns, deterministic blocker and operation order, action closure, annual-supply defer rejection, full-context/trace evidence, circular-input failure, JSON/JSONL delimiters and parse errors, artifact-option alias order and duplicates, source-rewrite discovery priority and normalized evidence envelopes. It remains zero-any and fail-closed; inventory moves from 121 to 120.
+
+The identity-decision context wave migrates `import-curation/internal/workflow-identity-decision-context.ts`, the evidence adapter shared by curation, mutation, preflight, patch evidence and full-context gates. Characterization pins rewrite candidate priority, scoped/dual-index encounter order, decision/canonical/package aliases, normalized reuse/create/block values, file-versus-embedded fallback, authoring-package proof dedupe, payload hash last-write, merge/unique order, completion predicates, unresolved flow reference keys and native JSON/path errors. It remains zero-any and fail-closed; inventory moves from 120 to 119.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

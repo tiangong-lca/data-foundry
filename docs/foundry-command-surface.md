@@ -26,8 +26,8 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 247e1007a38aff7311ded1d9b8a70898c300b4da
-lastReviewedNote: "Reviewed for Issue #67 Wave 17: typing patch collect changes no command category, owner/export metadata, help, artifact schema, exit mapping, profile default, or remote-write mode."
+lastReviewedCommit: 3baba4184e8e18391b055d9a15eae315d643a3cd
+lastReviewedNote: "Reviewed for Issue #67 Wave 18: typing identity decision context changes no command category, owner/export metadata, help, artifact schema, exit mapping, profile default, or remote-write mode."
 ---
 
 # Foundry Command Surface

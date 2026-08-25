@@ -38,6 +38,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
   - scripts/lib/import-curation/internal/profiles-config.ts
   - scripts/lib/import-curation/internal/workflow-patch-collect.ts
+  - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -81,13 +82,15 @@ checkPaths:
   - test/unit/wave16-profiles-config-migration.test.mts
   - test/unit/workflow-patch-collect-contract.test.mts
   - test/unit/wave17-patch-collect-migration.test.mts
+  - test/unit/workflow-identity-decision-context-contract.test.mts
+  - test/unit/wave18-identity-decision-context-migration.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 247e1007a38aff7311ded1d9b8a70898c300b4da
-lastReviewedNote: "Reviewed for Issue #67 Wave 17: tests cover patch blocker order, closures, full-context/trace evidence, JSON/artifact order, source rewrites and native errors."
+lastReviewedCommit: 3baba4184e8e18391b055d9a15eae315d643a3cd
+lastReviewedNote: "Reviewed for Issue #67 Wave 18: tests cover identity rewrite priority/indexes, decision aliases, package/payload proof, merge order, predicates, unresolved keys and errors."
 ---
 
 # Test Layout
@@ -146,6 +149,8 @@ Every behavior or migration slice starts with a failing focused test or a realis
 `unit/profiles-config-contract.test.mts` characterizes camel/snake precedence, scalar profile envelopes, full-context normalization, raw account-local overrides, exact config/fallback identity, requested/default/generic selection, docs and waiver addition order, conditional dataset-type errors, profile key/list order and native JSON/argument failures. `unit/wave16-profiles-config-migration.test.mts` pins the zero-any native module, four runtime exports and all five pre-existing static consumers.
 
 `unit/workflow-patch-collect-contract.test.mts` characterizes early invalid returns, valid action closure, top-level and operation blocker order, annual-supply defer rejection, full-context structured evidence, native circular/path errors, JSONL delimiters and row envelopes, artifact option aliases/order/duplicates, source-rewrite candidate priority and normalized evidence. `unit/wave17-patch-collect-migration.test.mts` pins the zero-any native module, nine runtime exports and all nine pre-existing workflow consumers.
+
+`unit/workflow-identity-decision-context-contract.test.mts` characterizes rewrite-file candidate priority, normalized rewrite evidence, scoped exact/bare indexes, decision/canonical/package aliases and values, file/embedded fallback, package-proof dedupe, payload hash last-write, path encounter order, multi-context merge/dedupe, completed-action predicates, unresolved flow reference keys and native JSON/path failures. `unit/wave18-identity-decision-context-migration.test.mts` pins the zero-any native module, nineteen runtime exports and all five pre-existing workflow consumers.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

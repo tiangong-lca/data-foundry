@@ -27,9 +27,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
   - scripts/lib/import-curation/internal/profiles-config.ts
   - scripts/lib/import-curation/internal/workflow-patch-collect.ts
+  - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 247e1007a38aff7311ded1d9b8a70898c300b4da
-lastReviewedNote: "Reviewed for Issue #67 Wave 17: typed patch collect preserves annual-supply, closure, resolution, trace and full-context blockers without broadening write authority."
+lastReviewedCommit: 3baba4184e8e18391b055d9a15eae315d643a3cd
+lastReviewedNote: "Reviewed for Issue #67 Wave 18: typed identity decision context preserves completed-decision, package/hash, rewrite and unresolved-reference evidence without broadening write authority."
 ---
 
 # Safety Policy
