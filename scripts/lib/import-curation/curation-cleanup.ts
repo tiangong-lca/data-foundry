@@ -1,5 +1,6 @@
-import { lstatSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { rmSync } from "node:fs";
 import path from "node:path";
+import { isTrustedManagedWorkspaceDescendant } from "../managed-output-safety.ts";
 import { datasetTypeFromOptions, datasetTypePlural } from "./internal/dataset-types.ts";
 import { datasetIdentity } from "./internal/dataset-payload.ts";
 import {
@@ -60,35 +61,6 @@ function dateTimeBlockersFromError(error: unknown): JsonRecord[] | null {
   );
 }
 
-function isRegularNonSymlink(filePath: string): boolean {
-  try {
-    const stats = lstatSync(filePath);
-    return stats.isFile() && !stats.isSymbolicLink();
-  } catch {
-    return false;
-  }
-}
-
-function isDirectoryNonSymlink(directory: string): boolean {
-  try {
-    const stats = lstatSync(directory);
-    return stats.isDirectory() && !stats.isSymbolicLink();
-  } catch {
-    return false;
-  }
-}
-
-function realPathIsWithin(rootPath: string, targetPath: string): boolean {
-  try {
-    const rootRealPath = realpathSync(rootPath);
-    const targetRealPath = realpathSync(targetPath);
-    const relative = path.relative(rootRealPath, targetRealPath);
-    return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
-  } catch {
-    return false;
-  }
-}
-
 export function runDatasetCurationCleanup({
   repoRoot,
   options = {},
@@ -115,33 +87,7 @@ export function runDatasetCurationCleanup({
   const defaultOutFile = path.join(outDir, `${datasetTypePlural[datasetType]}.cleaned.jsonl`);
   const explicitOutFile = resolveRepoPath(root, options.out || options.outFile);
   const outFile = explicitOutFile || defaultOutFile;
-  const managedWorkspaceRoot = path.resolve(root, ".foundry", "workspaces");
-  const lexicalManagedRelative = path.relative(managedWorkspaceRoot, path.resolve(outFile));
-  const lexicallyManagedDefaultOutput =
-    lexicalManagedRelative === "" ||
-    (!lexicalManagedRelative.startsWith("..") && !path.isAbsolute(lexicalManagedRelative));
-  const managedDefaultOutput = realPathIsWithin(managedWorkspaceRoot, outFile);
-  const outputParentIsRegular = isDirectoryNonSymlink(path.dirname(outFile));
-  const ownershipPathSafe = !lexicallyManagedDefaultOutput || managedDefaultOutput;
-  const outputOwnershipMarker = `${outFile}.tiangong-foundry-output.json`;
-  let markerOwnsOutput = false;
-  if (
-    isRegularNonSymlink(outputOwnershipMarker) &&
-    isRegularNonSymlink(outFile) &&
-    outputParentIsRegular &&
-    ownershipPathSafe
-  ) {
-    try {
-      const marker = JSON.parse(readFileSync(outputOwnershipMarker, "utf8")) as JsonRecord;
-      markerOwnsOutput =
-        marker.schema_version === 1 &&
-        marker.command === "dataset-curation-cleanup" &&
-        marker.output_file === path.resolve(outFile) &&
-        marker.output_realpath === realpathSync(outFile);
-    } catch {
-      markerOwnsOutput = false;
-    }
-  }
+  const managedDefaultOutput = isTrustedManagedWorkspaceDescendant(root, outFile);
   if (!rowsFile || !fileExists(rowsFile)) {
     throw new Error("--rows-file is required and must point to a JSON/JSONL dataset row file.");
   }
@@ -187,15 +133,21 @@ export function runDatasetCurationCleanup({
   });
 
   if (invalidDateTimeBlockers.length > 0) {
-    if (
-      !explicitOutFile &&
-      outFile !== rowsFile &&
-      fileExists(outFile) &&
-      (managedDefaultOutput || markerOwnsOutput)
-    ) {
+    let staleDefaultOutputBlocker: JsonRecord | null = null;
+    if (!explicitOutFile && outFile !== rowsFile && fileExists(outFile) && managedDefaultOutput) {
       rmSync(outFile);
-      if (fileExists(outputOwnershipMarker)) rmSync(outputOwnershipMarker);
+    } else if (!explicitOutFile && outFile !== rowsFile && fileExists(outFile)) {
+      staleDefaultOutputBlocker = {
+        code: "stale_cleanup_artifact_not_invalidated",
+        path: repoRelativePath(root, outFile),
+        reason: "output_is_outside_trusted_managed_workspace",
+        action:
+          "Preserve and inspect the stale cleaned artifact manually; use a new strict descendant of the repository's physical .foundry/workspaces root for automatic invalidation.",
+      };
     }
+    const blockers = staleDefaultOutputBlocker
+      ? [...invalidDateTimeBlockers, staleDefaultOutputBlocker]
+      : invalidDateTimeBlockers;
     const reportFileName = "dataset-curation-cleanup-report.json";
     const reportPath = path.join(outDir, reportFileName);
     const report: JsonRecord = {
@@ -209,7 +161,7 @@ export function runDatasetCurationCleanup({
       cleaned_rows_file: null,
       counts: {
         rows: rows.length,
-        blockers: invalidDateTimeBlockers.length,
+        blockers: blockers.length,
         removed_source_trace_blocks: 0,
         externalized_source_trace_summaries: 0,
         redacted_foundry_trace_evidence_locators: 0,
@@ -223,7 +175,7 @@ export function runDatasetCurationCleanup({
           ? repoRelativePath(root, sourceRowsFile)
           : null,
       source_exchange_completeness_proofs: [],
-      blockers: invalidDateTimeBlockers,
+      blockers,
       policy: {
         purpose:
           "Reject invalid TIDAS/ILCD datetime metadata before any cleanup transform or cleaned-row output.",
@@ -269,18 +221,6 @@ export function runDatasetCurationCleanup({
     addedFoundryTraceNamespaces += ensureFoundryTraceNamespaces(cleaned);
   });
   writeText(outFile, jsonLines(cleanedRows));
-  const outputParentIsRegularAfterWrite = isDirectoryNonSymlink(path.dirname(outFile));
-  const managedDefaultOutputAfterWrite = realPathIsWithin(managedWorkspaceRoot, outFile);
-  const ownershipPathSafeAfterWrite =
-    !lexicallyManagedDefaultOutput || managedDefaultOutputAfterWrite;
-  if (!explicitOutFile && outputParentIsRegularAfterWrite && ownershipPathSafeAfterWrite) {
-    writeJson(outputOwnershipMarker, {
-      schema_version: 1,
-      command: "dataset-curation-cleanup",
-      output_file: path.resolve(outFile),
-      output_realpath: realpathSync(outFile),
-    });
-  }
 
   const report: JsonRecord = {
     schema_version: 2,

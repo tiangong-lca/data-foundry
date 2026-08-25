@@ -393,6 +393,10 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
     }),
   );
   assert.equal(forgedResult.status, "blocked_invalid_datetime_metadata");
+  assert.deepEqual(
+    records(forgedResult.blockers).map((blocker) => blocker.code),
+    ["invalid_datetime_metadata", "stale_cleanup_artifact_not_invalidated"],
+  );
   assert.equal(fs.readFileSync(forgedOutput, "utf8"), forgedBytes);
 
   writeJsonLines(rowsFile, [valid]);
@@ -423,6 +427,10 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
     }),
   );
   assert.equal(replacedResult.status, "blocked_invalid_datetime_metadata");
+  assert.deepEqual(
+    records(replacedResult.blockers).map((blocker) => blocker.code),
+    ["invalid_datetime_metadata", "stale_cleanup_artifact_not_invalidated"],
+  );
   assert.equal(fs.readFileSync(replacedOutput, "utf8"), replacementBytes);
 });
 

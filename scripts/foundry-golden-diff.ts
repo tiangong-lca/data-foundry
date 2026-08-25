@@ -90,6 +90,7 @@ const capabilityContractMigrationHashes = new Map<string, Set<string>>([
     new Set([
       "4d041cb2ce4b0f9b9181a94e44a0569b71ce7101097cb56db51f254460feade9",
       "0c2acbce5acb110348a62dfab4c5d226192567fcae90916b65dc49280e2567cb",
+      "1bd5ce56f134f22da328281d67a9e5937f8737ebc606479a502d46392025f51e",
     ]),
   ],
   [
@@ -98,6 +99,7 @@ const capabilityContractMigrationHashes = new Map<string, Set<string>>([
       "27b5aac2d5cee8c0aeb7e7df5e2d361993341a28fce2eecbb796d8a8edcec050",
       "d18a71a2dfa8933e114ea8b5917a7c54e7bd73813601c76133b9f2914c2be5af",
       "ebc54fd890ea7732b69472f16239e6d5ae7553efcab4eb02fef1886ac6072050",
+      "7edaa6363ab849eccc0679f228d5be74c9d3b3aa172e82672e9c678970bab264",
     ]),
   ],
 ]);
