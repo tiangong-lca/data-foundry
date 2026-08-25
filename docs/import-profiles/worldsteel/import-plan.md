@@ -41,7 +41,7 @@ Everything downstream is the proven generic chain. Confirmed decisions (D1–D4 
 
 | # | Question | Answer |
 | --- | --- | --- |
-| **D1** | Account | **`data@worldsteel.org`** — API key already written to foundry `.env` (active `WORLDSTEEL ACCOUNT` block; BAFU/USLCI keys commented out). Dedicated account, **not** `linanenv`. |
+| **D1** | Account | **`data@worldsteel.org`** — use its dedicated ignored `.foundry/account-profiles/worldsteel.env` with exact project/user intent and the receipt-gated account wrapper. Do not select it through active/commented repository `.env` blocks. |
 | **D2** | `external_docs` write-auth + owner | Use the **`data@worldsteel.org` account's authenticated session** (same INSERT permission the web app's authenticated users have). Implement attachment upload **in `tiangong-lca-cli`**, **not** tidas-tools. |
 | **D3** | Land prerequisites before the import? | **Yes.** tidas-tools: **ILCD adapter** + **eilcd XSD fix**. tiangong-lca-cli: **external-doc upload** (NOT tidas-tools). foundry: **finalize perf optimization**. |
 | **D4** | Does the canonical DB hold EF3.1 flows under original UUIDs? | **Yes.** → **Reuse by UUID directly** (fastest); semantic matching is reserved only for the 17 GaBi/Sphera pseudo-elementary flows + any residual. |
@@ -166,7 +166,7 @@ Input: `inputs/CUP2025-2_2022b_v10_worldsteel_products_Tiangong_v1 EF3.1 2026_01
 | **Reuse vs mint** | Reference-only for the ~1,315-flow reference layer + all FP/UG (`mintUnmatchedFpUgSupport:false`), reused by UUID. **R3:** a capped allowance to mint **≤17** GaBi/Sphera pseudo-elementary flows. | Worldsteel's FP/UG/reference elementary are EF3.1/ILCD **canonical** (1,061/1,332 use canonical Mass FP; ~95%+ FP edges canonical) — reused, not minted. Only the small Sphera-specific tail needs minting to keep processes whole. **Do not copy the BAFU/USLCI profile wholesale — they mint at scale.** |
 | **17 GaBi pseudo-elementary (R3)** | Reuse-match first **with full AI context** (NOT by UUID); mint the residual as account-local My Data (state_code=0), capped at ≤17. **Review the actual residual count after the UUID-reuse pass**, then finalize (set `enabled=false` if zero). | Keeps canonical clean while guaranteeing the 33 steel processes stay complete. |
 | **Profile** | `worldsteel` entry added to `specs/import-profiles.json`: `allow_account_local_support_and_elementary.enabled=true` (documented as the capped ≤17 escape hatch), `mintUnmatchedFpUgSupport=false`, `waived_qa_codes_by_type:{"process":["process_material_balance_deviation"]}`, and **`full_context_ai_completion.required:true`** for `flow`/`process`/`lifecyclemodel` (gives the AI the full context R3 calls for). | Pure data; only `.enabled`, QA waivers, and the full-context gate are read from JSON. |
-| **Account** | **`data@worldsteel.org`** (dedicated). API key already in foundry `.env` (active `WORLDSTEEL ACCOUNT` block; BAFU/USLCI commented out). Create `.foundry/account-profiles/worldsteel.env` (or keep using the active `.env` block) and set `FOUNDRY_EXPECTED_USER_ID` = the account's `user_id`, resolved from the session at first auth and captured once. | Account identity is **not** in profile JSON; it lives in the runtime account-profile + write guard. The same account session authenticates the external-doc upload (D2). |
+| **Account** | **`data@worldsteel.org`** (dedicated). Create ignored `.foundry/account-profiles/worldsteel.env` with the three CLI credential values plus `FOUNDRY_EXPECTED_PROJECT_REF` and the canonical `FOUNDRY_EXPECTED_USER_ID`. Do not select accounts by commenting blocks in the repository `.env`. | Account identity is **not** in profile JSON; it lives in the runtime account profile, Codex thread guard when applicable, and the fresh CLI 0.1.1 intent-bound receipt. The same receipt-gated account context authenticates the external-doc upload (D2). |
 | **State / version (R4)** | `state_code=0` (My Data draft) for processes + worldsteel support; reused canonical refs stay `state_code=100`. **Preserve the source `dataSetVersion`** (`20.25.x` products / `03.00.004` reference) — do NOT renumber to `00.00.001`. | The adapter already preserves `dataSetVersion` into `raw["version"]`; downstream stages keep it. |
 | **Library/attribution contact (R1)** | **Reuse the packaged worldsteel contact `d5710976-d600-11da-a94d-0800200c9a66`** (World Steel Association, v20.20.002) as the single shared library contact — threaded via the runner's `libraryContact.contactId`/`contactVersion` (new `--library-contact-id`/`--library-contact-version` finalize flags). **Not** minted, **not** NREL/FOEN/GaBi-software. | The first-import bootstrap (`commitFlowSupportInline:true`) needs this contact pinned; reusing the package's own contact is the most faithful identity. |
 | **DB-fallback source (R2)** | `worldsteel` branch added to `source-semantics.mjs databaseFallbackSourceConfig` (shortName "worldsteel LCI database", worldsteel citation, `worldsteel.org/lci/<id>` URI). | **Without it, worldsteel processes silently inherit the BAFU 2025 default fallback source — a data-integrity corruption, not an error.** |
@@ -195,7 +195,7 @@ Input: `inputs/CUP2025-2_2022b_v10_worldsteel_products_Tiangong_v1 EF3.1 2026_01
 Environment for every step:
 
 ```bash
-pnpm install --frozen-lockfile   # installs the exact @tiangong-lca/cli@0.1.0 project dependency
+pnpm install --frozen-lockfile   # installs the exact @tiangong-lca/cli@0.1.1 project dependency
 RUN=".foundry/workspaces/worldsteel-full-import-$(date -u +%Y%m%dT%H%M%SZ)"   # stamp once; the runtime forbids Date.now in workflows but the shell is fine
 TUID="<worldsteel target user id>"   # in zsh, NOT UID (reserved)
 ```
@@ -220,8 +220,8 @@ Produces `$RUN/conversion-v1/{tidas/, process-bundles/, conversion-report.json}`
 ### Phase 1.5 — external-docs upload + URI rewrite (NEW; D2 — runs in `tiangong-lca-cli`, authenticated as `data@worldsteel.org`)
 
 ```bash
-node scripts/with-lca-account.mjs worldsteel -- \
-  ./node_modules/.bin/tiangong-lca dataset source upload-attachments \
+pnpm account:run -- worldsteel -- \
+  node node_modules/@tiangong-lca/cli/bin/tiangong-lca.js dataset source upload-attachments \
     --tidas-dir "$RUN/conversion-v1/tidas" \
     --external-docs-dir "inputs/CUP2025-2_2022b_v10_worldsteel_products_Tiangong_v1 EF3.1 2026_01_27/ILCD/external_docs" \
     --bucket external_docs --json
@@ -309,7 +309,7 @@ The vast majority of those exchanges, however, point at EF3.1 **reference** flow
 
 ## 9. Risk register (consolidated gotchas)
 
-- **Use the project-installed CLI** — leave `TIANGONG_LCA_CLI_BIN` blank so Foundry resolves exact `@tiangong-lca/cli@0.1.0`; an override is only for an explicit local test binary.
+- **Use the project-installed CLI** — leave `TIANGONG_LCA_CLI_BIN` blank so Foundry resolves exact `@tiangong-lca/cli@0.1.1`; an override is only for an explicit local test binary. Credential-scoped execution still goes through the receipt-gated `pnpm account:run` wrapper.
 - **Don't copy BAFU/USLCI profile wholesale** — they mint reference support at scale; worldsteel reuses by UUID and only mints the capped ≤17 tail (✅ profile authored accordingly).
 - **`databaseFallbackSourceConfig` silently inherits BAFU** for any unknown profile → ✅ worldsteel branch added.
 - **`source_contact_rewrites` gated to bafu/uslci** → ✅ widened to include `worldsteel`.
@@ -343,7 +343,7 @@ The vast majority of those exchanges, however, point at EF3.1 **reference** flow
 3. [x] **tiangong-lca-cli** `dataset source upload-attachments` — authenticated `external_docs` upload + `referenceToDigitalFile` rewrite. 25 tests, 100% coverage.
 4. [x] **foundry** `worldsteel` profile (capped ≤17 mint, full-context on) + docs; `source-semantics.mjs` worldsteel branch; widened `post-authoring-finalize.mjs` gate; `worldsteel-batch-import-run.mjs` wrapper (reuses contact `d5710976`) + registrations. New tests green.
 5. [x] **finalize-trust-resolution-rewrites** speed-up (mega-scope prerequisite, §8): preseed present + **auto-wired** in the runner (`IDENTITY_PREFLIGHT_REUSE_MAP` from `--library-resolution`); unit-tested.
-6. [ ] `.foundry/account-profiles/worldsteel.env` (account `data@worldsteel.org`, capture `FOUNDRY_EXPECTED_USER_ID` from session). Library contact = reuse `d5710976` (no separate creation needed). _(needs a live session)_
+6. [ ] `.foundry/account-profiles/worldsteel.env` with the exact expected project ref and canonical expected user id for `data@worldsteel.org`; obtain a fresh CLI 0.1.1 intent-bound receipt before the run. Library contact = reuse `d5710976` (no separate creation needed). _(needs a live session)_
 7. [ ] Publish tidas-tools (≥ the version the CLI bundles) + the CLI, so the foundry run picks up the adapter + upload command. _(release action)_
 8. [ ] **Phase 1** convert (`--from-format ilcd`) → gates (0 error, LCIA=0 tolerated, extensions OK, Perc/CAS corrected, source versions preserved).
 9. [ ] **Phase 1.5** upload 13 external_docs + rewrite source URIs → signed-URL verify (CLI command, account-wrapped).
