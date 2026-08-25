@@ -72,7 +72,7 @@
       }
     },
     {
-      "files": ["scripts/lib/full-context-proof.ts", "test/unit/evidence-decision-leaves.test.mts"],
+      "files": ["scripts/lib/full-context-proof.ts"],
       "rules": {
         "typescript/no-explicit-any": "error"
       }
