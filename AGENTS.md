@@ -39,6 +39,9 @@ checkPaths:
   - scripts/commands/commit-handoff.ts
   - scripts/commands/identity-decision-task.ts
   - scripts/commands/support-cache.ts
+  - scripts/commands/cli-wrappers.ts
+  - scripts/commands/execution-capsule.ts
+  - scripts/commands/post-write-closeout.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -110,12 +113,15 @@ checkPaths:
   - test/unit/mutation-manifest-workflow-facade-contract.test.mts
   - test/unit/mutation-manifest-runner-contract.test.mts
   - test/unit/wave25-mutation-manifest-migration.test.mts
+  - test/unit/cli-wrapper-command-factory.test.mts
+  - test/unit/execution-capsule-command-factory.test.mts
+  - test/unit/post-write-closeout-command-factory.test.mts
   - specs/typescript-migration-inventory.json
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: typed reference closure/source context and mutation facade/runner preserve self/public/foreign partitions, source fallback/order, remote proofs, candidate/reuse/blocker order, exact manifest/report bytes and hashes, native failures, and fail-closed write authority."
+lastReviewedCommit: febf43c6bf901e1a63aed975a2d8b15bd7889818
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: the typed reference/mutation stack and runtime command owners preserve partitions, source proofs, fail-closed write authority, argv/process behavior, immutable capsule seals, unique-root/accepted-diff gates, exact bytes/order, blockers, and native failures under local fixtures."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -170,6 +176,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - `curation-gate-workflow.ts` is a reference-preserving typed aggregate over the existing evidence helpers. `curation-gate.ts` preserves source-row entity order, schema/QA/queue/context blocker order, authoring-package bytes and report aliases; `curation-cleanup.ts` preserves deep-cloned row order, JSONL bytes, annual sentinel completion, trace externalization, source-exchange proof, locator redaction and native errors. These remain local read/transform/report stages and grant no remote-write authority.
 - `workflow-reference-closure.ts` preserves reference discovery, planned-self, verified-public, proven, unresolved and foreign partition semantics plus write/reuse decision order. `workflow-source-reference-context.ts` preserves explicit/default rewrite-file priority and public-canonical proof filtering. `mutation-manifest-workflow.ts` remains a live-reference aggregate, while `mutation-manifest.ts` preserves ordered write/reference/blocked artifacts and omits executable write authority whenever any blocker remains.
 - `scripts/commands/tasks.ts`, `import-completion.ts`, `commit-handoff.ts`, `identity-decision-task.ts`, and `support-cache.ts` are typed command-owner boundaries. They preserve queue/report ordering, exact report and snapshot bytes, CommandSpec executable/argv plus final-row byte/SHA binding, identity action dedupe, public-support cache ordering, fail-closed blockers, and native errors. Their tests use local filesystem fixtures, injected spies, and stubbed read-only HTTP responses only; migration grants no credential, mutation, review, or publish authority.
+- `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts` are typed runtime command boundaries. CLI wrappers preserve executable-prefix/argv arrays, inherited environment, stdout/stderr, exit mapping and native spawn errors without shell strings. Capsule admission remains offline, exclusive-write, receipt/hash/seal and no-replay evidence only. Closeout remains read-only and fail-closed on artifact drift, non-unique roots, owner/state/payload mismatch, foreign or hidden missing data, and production-test accepted-diff restrictions.
 - Toolchain and migration tests must pass from a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. They must not depend on the superproject checkout, another worktree's `node_modules`, absolute developer paths, ignored `.foundry` state, or credentials.
 - The Golden gate must compare against a non-`HEAD` merge-base with full Git history and a Node-native comparator. Cross-platform fixtures use executable-plus-argv dispatch; a `.js`/`.mjs`/`.cjs` test script must run through `process.execPath`, not OS executable-bit behavior. `.gitattributes` keeps repository text at LF on every runner; only Windows launcher files may opt into CRLF.
 - Foundry artifact-to-scope matching and transitional command parsers must accept both path separators. Durable JSON/JSONL writers flush the writable descriptor they opened; POSIX permission-bit assertions are not imposed on Windows filesystems.

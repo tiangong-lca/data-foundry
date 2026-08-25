@@ -357,6 +357,9 @@ test("active documentation and source contain no references to removed CLI spine
     "commands/identity-reference-rewrites.mjs",
     "commands/uslci-batch-import-run.mjs",
     "commands/worldsteel-batch-import-run.mjs",
+    "commands/cli-wrappers.mjs",
+    "commands/execution-capsule.mjs",
+    "commands/post-write-closeout.mjs",
   ];
   const files = [
     "AGENTS.md",

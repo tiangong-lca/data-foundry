@@ -29,6 +29,9 @@ checkPaths:
   - scripts/commands/commit-handoff.ts
   - scripts/commands/identity-decision-task.ts
   - scripts/commands/support-cache.ts
+  - scripts/commands/cli-wrappers.ts
+  - scripts/commands/execution-capsule.ts
+  - scripts/commands/post-write-closeout.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -162,10 +165,13 @@ checkPaths:
   - test/unit/mutation-manifest-workflow-facade-contract.test.mts
   - test/unit/mutation-manifest-runner-contract.test.mts
   - test/unit/wave25-mutation-manifest-migration.test.mts
+  - test/unit/cli-wrapper-command-factory.test.mts
+  - test/unit/execution-capsule-command-factory.test.mts
+  - test/unit/post-write-closeout-command-factory.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: typed reference closure/source proof and mutation facade/runner preserve partitions, fallback/order, remote proof, blocker/candidate/reuse order, exact bytes/hashes, native failures and fail-closed write authority."
+lastReviewedCommit: febf43c6bf901e1a63aed975a2d8b15bd7889818
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation planning and runtime commands preserve partitions, proof/order/bytes/hashes, fail-closed write authority, argv/process behavior, immutable capsule seals, unique-root/accepted-diff checks, blockers, and native failures."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -235,6 +241,8 @@ The curation planning boundary is native TypeScript as well. Its aggregate facad
 The task/completion, commit-handoff/identity-task, and support-cache command owners are native TypeScript. Preserve queue and closeout order, exact task/report/snapshot bytes, final-row artifact facts, authoritative CommandSpec argv, identity action dedupe, support-cache paging and row order, and every established blocker/native error. Credential-bearing support refresh remains a read-only operator command; ordinary tests must use local HTTP stubs and must not read `.env` or access production.
 
 The mutation reference stack is native TypeScript. Preserve reference DFS and table resolution, planned-self/public-remote/proven/unresolved/foreign closure partitions, explicit-before-default source rewrite selection, public-canonical source proof filtering, write/reference/blocked item order and report/items bytes. A blocked manifest must keep write-candidates empty; rendered plans and evidence never become mutation authority.
+
+CLI wrappers, execution-capsule admission, and post-write closeout are native TypeScript. Wrappers must pass executable plus argv arrays directly, retain the existing environment/CWD/stdout/stderr/exit contract, and surface native spawn errors without executing display text. Capsule admission stays offline and unattempted until exact external dispatch evidence exists. Closeout stays read-only and requires one exact owner/state/payload readback per intended root; production-test mode accepts no traceHash normalization, and foreign or RLS-hidden missing rows never pass.
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 

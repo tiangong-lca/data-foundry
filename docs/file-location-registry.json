@@ -230,7 +230,7 @@
       "referenced_by": [
         "README.md",
         "docs/foundry-command-surface.md",
-        "scripts/commands/execution-capsule.mjs"
+        "scripts/commands/execution-capsule.ts"
       ],
       "sensitivity": "non-sensitive local evidence contract; no credentials or private payloads",
       "tracked": true,
@@ -245,7 +245,7 @@
       "owner": "tiangong-lca-data-foundry",
       "referenced_by": [
         "docs/execution-capsule-contract.md",
-        "scripts/commands/execution-capsule.mjs",
+        "scripts/commands/execution-capsule.ts",
         "test/commands/execution-capsule.test.mjs"
       ],
       "sensitivity": "non-sensitive schema; no credentials or private payloads",

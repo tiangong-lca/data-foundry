@@ -26,6 +26,9 @@ checkPaths:
   - scripts/commands/commit-handoff.ts
   - scripts/commands/identity-decision-task.ts
   - scripts/commands/support-cache.ts
+  - scripts/commands/cli-wrappers.ts
+  - scripts/commands/execution-capsule.ts
+  - scripts/commands/post-write-closeout.ts
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
@@ -54,8 +57,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: typed reference closure/source proof and mutation manifest preserve fail-closed foreign/reference gates, exact partitions/bytes/hashes, empty executable write output on blockers and native errors without broadening write authority."
+lastReviewedCommit: febf43c6bf901e1a63aed975a2d8b15bd7889818
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation and runtime-command owners preserve fail-closed foreign/reference gates, exact partitions/bytes/hashes, empty writes on blockers, shell-free argv, zero-dispatch capsule admission, unique-root readback, production accepted-diff restrictions, and native errors without broadening write authority."
 ---
 
 # Safety Policy

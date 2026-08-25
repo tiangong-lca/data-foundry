@@ -22,6 +22,9 @@ checkPaths:
   - scripts/commands/commit-handoff.ts
   - scripts/commands/identity-decision-task.ts
   - scripts/commands/support-cache.ts
+  - scripts/commands/cli-wrappers.ts
+  - scripts/commands/execution-capsule.ts
+  - scripts/commands/post-write-closeout.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-cli.mjs
   - scripts/lib/foundry-command-registry.ts
@@ -83,8 +86,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: navigation records typed reference closure/source proof and mutation facade/runner boundaries, exact partition/order/byte/hash TDD fixtures, fail-closed authority and every static consumer."
+lastReviewedCommit: febf43c6bf901e1a63aed975a2d8b15bd7889818
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: navigation records typed reference/mutation and runtime-command owners, exact partition/proof/order/byte/hash, executable/argv, attempt/seal and unique-root/accepted-diff fixtures, fail-closed authority, and static consumers."
 ---
 
 # Foundry AI Navigation
@@ -181,6 +184,8 @@ The typed curation planner is split the same way. `internal/curation-gate-workfl
 The typed command factories are `scripts/commands/tasks.ts`, `import-completion.ts`, `commit-handoff.ts`, `identity-decision-task.ts`, and `support-cache.ts`. Navigate to them for filesystem task state, closeout aggregation, artifact-bound commit/verify CommandSpecs, content-addressed identity decision tasks, or canonical public-support read/autofill behavior respectively. They preserve the existing command registry and metadata names and must not absorb remote execution semantics.
 
 The typed mutation reference stack starts at `workflow-reference-closure.ts` for reference/table/partition algebra, then `workflow-source-reference-context.ts` for ordered source proof admission, then the pure `mutation-manifest-workflow.ts` aggregate and `mutation-manifest.ts` artifact runner. Navigate downward for individual proof rules; the runner only partitions and reports exact evidence and never executes a write.
+
+The typed runtime command owners are `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts`. Navigate to the wrapper for direct executable/argv delegation and process diagnostics, to the capsule for offline immutable admission and attempt-state evidence, and to closeout for already-produced commit/readback aggregation. Root uniqueness and accepted-difference decisions remain in `post-write-root-proof.ts` and `remote-verification-accepted-diff.ts`.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 

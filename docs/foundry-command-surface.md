@@ -28,6 +28,9 @@ checkPaths:
   - scripts/commands/commit-handoff.ts
   - scripts/commands/identity-decision-task.ts
   - scripts/commands/support-cache.ts
+  - scripts/commands/cli-wrappers.ts
+  - scripts/commands/execution-capsule.ts
+  - scripts/commands/post-write-closeout.ts
   - scripts/lib/import-curation/internal/authoring-task-workflow.ts
   - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
   - scripts/lib/import-curation/internal/curation-gate-workflow.ts
@@ -42,8 +45,8 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: reference closure/source proof and mutation facade/runner move to TS7 without changing command names/categories, owner exports, help, report/items bytes, artifacts, exit mapping, profiles, Worldsteel/Date.parse, or remote-write modes."
+lastReviewedCommit: febf43c6bf901e1a63aed975a2d8b15bd7889818
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: reference/mutation and runtime-command owners move to TS7 without changing command names/categories, owner exports, help, argv/exit, report/items bytes, artifacts, profiles, Worldsteel/Date.parse semantics, or remote-write modes."
 ---
 
 # Foundry Command Surface
@@ -64,6 +67,8 @@ The Wave 8 BAFU family-signature and import-ledger migrations remain supporting 
 Wave 9 keeps `dataset-bundle-sample-rows` under its existing command owner and read-only mode. Its metadata now advertises the conditional `canonical-support-amount-scaling.jsonl` artifact and its command test: the explicit blocking flag retains known or unresolved scale evidence in the report and process-scope ledger rather than letting an early canonical-reference rewrite erase the source-unit safety decision.
 
 Wave 24 moves `tasks`, `import-completion`, `commit-handoff`, `identity-decision-task`, and `support-cache` to native TypeScript. Their registered command names, help payloads, owner exports, artifact lists, output ordering, fail-closed states, and read-only modes are unchanged. Focused tests pin exact Markdown/JSON/JSONL bytes, CommandSpec final-row binding and argv, identity snapshot/dedupe order, support-cache HTTP read order and native errors.
+
+Wave 25 moves `cli-wrappers`, `execution-capsule`, and `post-write-closeout` to native TypeScript. The wrappers still delegate executable plus argv arrays and surface process output/errors; capsule admission remains offline and zero-authority; closeout remains read-only and accepts only exact, unique, account/state-bound readback proof under the existing ordinary/production accepted-diff policy.
 
 ## Categories
 

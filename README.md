@@ -27,6 +27,9 @@ checkPaths:
   - scripts/commands/commit-handoff.ts
   - scripts/commands/identity-decision-task.ts
   - scripts/commands/support-cache.ts
+  - scripts/commands/cli-wrappers.ts
+  - scripts/commands/execution-capsule.ts
+  - scripts/commands/post-write-closeout.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -93,8 +96,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: reference closure/source proof and mutation facade/runner are native zero-escape TS7 with exact partitions, fallback/proof/order, report/items bytes and hashes, blockers, native errors, and fail-closed authority preserved."
+lastReviewedCommit: febf43c6bf901e1a63aed975a2d8b15bd7889818
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: the native TS7 reference/mutation stack and runtime commands preserve exact partition/proof/order/byte/hash contracts, fail-closed authority, argv/process behavior, capsule seals, unique-root/accepted-diff proof, blockers, and native failures."
 ---
 
 # TianGong LCA Data Foundry
@@ -168,6 +171,8 @@ Wave 24 migrates five command factories in three RED/GREEN families. `tasks.ts` 
 Together the parallel Wave 24 lanes reduce the inventory from 101 to 93 without changing public help, Golden artifacts, profiles, Worldsteel semantics, or remote-write authority.
 
 Wave 25 migrates the mutation reference stack in dependency order. `workflow-reference-closure.ts` preserves DFS reference discovery and self/remote/proven/unresolved/foreign closure algebra; `workflow-source-reference-context.ts` preserves explicit/default source-rewrite precedence and public-canonical filtering; `mutation-manifest-workflow.ts` plus `mutation-manifest.ts` preserve ordered write/reference/blocked partitions, report/items JSON bytes and hashes, native failures and the rule that one blocked item leaves the executable write file empty. Inventory moves 93→89 without changing help, profiles, Worldsteel semantics, Date.parse behavior or remote-write authority.
+
+Wave 25 migrates three runtime command owners. `cli-wrappers.ts` preserves installed-CLI executable prefixes, exact argv order, CWD/environment, JSON stdout, stderr, nonzero exits and native spawn errors without a shell-string path. `execution-capsule.ts` preserves exclusive immutable snapshots, predecessor receipts, raw/semantic hashes, reviewer and boundary checks, seal hashes, zero dispatch and no-replay attempt states. `post-write-closeout.ts` preserves artifact binding, exact unique-root readback, ordinary-only traceHash normalization, production-test fail-close and foreign/RLS-hidden `missing_dataset` rejection. Inventory moves 93→90 with no command-help, profile, Worldsteel or remote-authority change.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

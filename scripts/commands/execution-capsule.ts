@@ -2,6 +2,147 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+type JsonRecord = Record<string, unknown>;
+
+type RawHash = {
+  algorithm?: string;
+  sha256?: string;
+  bytes?: number;
+};
+
+type SemanticHash = {
+  algorithm?: string;
+  domain?: string;
+  canonicalizer_id?: string;
+  sha256?: string;
+};
+
+type Freshness = {
+  toolchain_fingerprint_sha256?: string;
+  activation_epoch_id?: string;
+  captured_at_utc?: string;
+  source_fingerprint_sha256?: string;
+  owner_session_fingerprint_sha256?: string;
+  no_known_mutation_after_capture?: boolean;
+};
+
+type StageLeaf = JsonRecord & {
+  leaf_id?: string;
+  role?: string;
+  path?: string;
+  raw_hash?: RawHash;
+  semantic_hash?: SemanticHash;
+  scope_binding_sha256?: string;
+  dependency_leaf_ids?: string[];
+  freshness_class?: string;
+  freshness?: Freshness;
+  executable_input?: boolean;
+};
+
+type AttemptState = JsonRecord & {
+  status?: string;
+  attempt_count?: number;
+  primary_attempt_count?: number;
+  dispatch_state?: string;
+  mutation_state?: string;
+  readback_state?: string;
+};
+
+type StageManifest = JsonRecord & {
+  schema_version?: string;
+  stage_id?: string;
+  producer_id?: string;
+  revision?: number;
+  predecessor_stage_manifest_sha256?: string | null;
+  stage_root?: string;
+  admission_mode?: string;
+  production_authority?: boolean;
+  scope_binding_sha256?: string;
+  attempt_state?: AttemptState;
+  findings?: { p0?: number; p1?: number };
+  leaves?: StageLeaf[];
+  boundary_contract_leaf_id?: string;
+  reviewer_report_leaf_ids?: string[];
+};
+
+type BoundaryShape = JsonRecord & {
+  cwd?: string;
+  argv?: string[];
+  program_path?: string;
+  declared_fields?: string[];
+  producer_outputs?: Record<string, string>;
+  consumer_inputs?: Record<string, string>;
+  network_mode?: string;
+  network_dispatch_count?: number;
+  database_dispatch_count?: number;
+};
+
+type BoundaryContract = JsonRecord & {
+  schema_version?: string;
+  required?: BoundaryShape;
+  observed?: BoundaryShape;
+};
+
+type ReviewerReport = JsonRecord & {
+  status?: string;
+  reviewer_id?: string;
+  scope_binding_sha256?: string;
+  reviewed_leaf_ids?: string[];
+  findings?: { p0?: number; p1?: number };
+};
+
+type LedgerRow = {
+  schema_version: string;
+  check_id: string;
+  status: "PASS" | "FAIL";
+  severity: "P0" | "P1" | null;
+  detail: string;
+  evidence: unknown;
+};
+
+type MaterializedLeaf = {
+  leaf_id: string | null;
+  path: string | null;
+  role: string | null;
+  executable_input: boolean;
+  raw_sha256: string | null;
+  semantic_sha256: string | null;
+  freshness_class: string | null;
+};
+
+type ValidationResult = {
+  rows: LedgerRow[];
+  materializedLeaves: MaterializedLeaf[];
+  stageRoot: string | null;
+  manifestSha256: string;
+};
+
+type AddCheck = (checkId: string, passed: boolean, detail: string, evidence?: unknown) => boolean;
+
+export type ExecutionAttemptState = {
+  dispatch_state?: string;
+  readback_state?: string;
+};
+
+export type ExecutionAttemptDisposition = {
+  disposition:
+    | "UNATTEMPTED"
+    | "SUCCEEDED_EXACT_READBACK"
+    | "SUCCEEDED_RECOVERED_EXACT_READBACK"
+    | "UNKNOWN_DO_NOT_REPLAY";
+  attempt_consumed: boolean;
+  replay_allowed: boolean;
+  terminal: boolean;
+};
+
+export type ExecutionCapsuleOptions = Record<string, unknown> & {
+  help?: unknown;
+  stageManifest?: unknown;
+  manifest?: unknown;
+  outDir?: unknown;
+  predecessorStageManifest?: unknown;
+};
+
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 const STAGE_SCHEMA = "foundry-execution-capsule-stage.v1";
 const BOUNDARY_SCHEMA = "foundry-execution-capsule-boundary.v1";
@@ -23,17 +164,17 @@ const ATTEMPT_DISPATCH_STATES = new Set([
   "DISPATCH_UNKNOWN",
 ]);
 
-function sha256(value) {
+function sha256(value: crypto.BinaryLike): string {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
-function compareText(left, right) {
+function compareText(left: string, right: string): number {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
 }
 
-function stableValue(value) {
+function stableValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stableValue);
   if (value && typeof value === "object") {
     return Object.fromEntries(
@@ -45,19 +186,19 @@ function stableValue(value) {
   return value;
 }
 
-function stableJson(value) {
+function stableJson(value: unknown): string {
   return JSON.stringify(stableValue(value));
 }
 
-function isPlainObject(value) {
+function isPlainObject(value: unknown): value is JsonRecord {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
-function isSha256(value) {
+function isSha256(value: unknown): value is string {
   return typeof value === "string" && SHA256_PATTERN.test(value);
 }
 
-function isIsoTimestamp(value) {
+function isIsoTimestamp(value: unknown): value is string {
   return (
     typeof value === "string" &&
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/u.test(value) &&
@@ -65,16 +206,16 @@ function isIsoTimestamp(value) {
   );
 }
 
-function exactJson(left, right) {
+function exactJson(left: unknown, right: unknown): boolean {
   return stableJson(left) === stableJson(right);
 }
 
-function pathIsInside(root, candidate) {
+function pathIsInside(root: string, candidate: string): boolean {
   const relative = path.relative(root, candidate);
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
-function canonicalSemanticBytes(buffer, canonicalizerId) {
+function canonicalSemanticBytes(buffer: Buffer, canonicalizerId: string | undefined): Buffer {
   switch (canonicalizerId) {
     case "raw-bytes-v1":
       return buffer;
@@ -87,15 +228,15 @@ function canonicalSemanticBytes(buffer, canonicalizerId) {
   }
 }
 
-function semanticSha256(domain, canonicalBytes) {
+function semanticSha256(domain: string, canonicalBytes: Buffer): string {
   return sha256(Buffer.concat([Buffer.from(`${domain}\0`, "utf8"), canonicalBytes]));
 }
 
-function dependencyIds(leaf) {
+function dependencyIds(leaf: StageLeaf | undefined): string[] {
   return Array.isArray(leaf?.dependency_leaf_ids) ? leaf.dependency_leaf_ids : [];
 }
 
-function severityFor(code) {
+function severityFor(code: string): "P0" | "P1" {
   if (
     code.startsWith("attempt_") ||
     code.startsWith("leaf_raw_") ||
@@ -112,8 +253,8 @@ function severityFor(code) {
 }
 
 function checkCollector() {
-  const rows = [];
-  function add(checkId, passed, detail, evidence = null) {
+  const rows: LedgerRow[] = [];
+  function add(checkId: string, passed: boolean, detail: string, evidence: unknown = null) {
     rows.push({
       schema_version: LEDGER_SCHEMA,
       check_id: checkId,
@@ -127,10 +268,10 @@ function checkCollector() {
   return { add, rows };
 }
 
-function dependencyCycle(leavesById) {
-  const visiting = new Set();
-  const visited = new Set();
-  function visit(leafId, trail) {
+function dependencyCycle(leavesById: Map<string, StageLeaf>): string[] | null {
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  function visit(leafId: string, trail: string[]): string[] | null {
     if (visiting.has(leafId)) return [...trail, leafId];
     if (visited.has(leafId)) return null;
     visiting.add(leafId);
@@ -151,7 +292,11 @@ function dependencyCycle(leavesById) {
   return null;
 }
 
-function boundaryChecks(boundary, materializedLeafPaths, add) {
+function boundaryChecks(
+  boundary: BoundaryContract,
+  materializedLeafPaths: Set<string>,
+  add: AddCheck,
+): void {
   const schemaOk = boundary?.schema_version === BOUNDARY_SCHEMA;
   add(
     "boundary_schema",
@@ -242,7 +387,7 @@ function boundaryChecks(boundary, materializedLeafPaths, add) {
   ];
   add(
     "boundary_paths_content_addressed",
-    boundaryPaths.every((value) => materializedLeafPaths.has(value)),
+    boundaryPaths.every((value) => materializedLeafPaths.has(value as string)),
     "The consumer program and every producer/consumer path must resolve to a content-addressed stage leaf.",
     { boundary_paths: boundaryPaths },
   );
@@ -253,9 +398,9 @@ function boundaryChecks(boundary, materializedLeafPaths, add) {
   );
 }
 
-function freshnessChecks(leaf, add) {
+function freshnessChecks(leaf: StageLeaf, add: AddCheck): void {
   const freshnessClass = leaf?.freshness_class;
-  const known = FRESHNESS_CLASSES.has(freshnessClass);
+  const known = FRESHNESS_CLASSES.has(freshnessClass ?? "");
   add(
     `freshness_class:${leaf?.leaf_id ?? "unknown"}`,
     known,
@@ -303,7 +448,9 @@ function freshnessChecks(leaf, add) {
   }
 }
 
-export function modelExecutionAttemptDisposition(state) {
+export function modelExecutionAttemptDisposition(
+  state: ExecutionAttemptState,
+): ExecutionAttemptDisposition {
   const dispatchState = state?.dispatch_state;
   const desiredExact = state?.readback_state === "EXACT_DESIRED";
   if (dispatchState === "NOT_DISPATCHED") {
@@ -314,7 +461,7 @@ export function modelExecutionAttemptDisposition(state) {
       terminal: false,
     };
   }
-  if (ATTEMPT_DISPATCH_STATES.has(dispatchState) && desiredExact) {
+  if (ATTEMPT_DISPATCH_STATES.has(dispatchState ?? "") && desiredExact) {
     return {
       disposition:
         dispatchState === "DISPATCH_UNKNOWN"
@@ -333,7 +480,19 @@ export function modelExecutionAttemptDisposition(state) {
   };
 }
 
-function validateStage({ manifest, manifestPath, manifestRaw, predecessorOption, repoRoot }) {
+function validateStage({
+  manifest,
+  manifestPath,
+  manifestRaw,
+  predecessorOption,
+  repoRoot,
+}: {
+  manifest: StageManifest;
+  manifestPath: string;
+  manifestRaw: Buffer;
+  predecessorOption: unknown;
+  repoRoot: string;
+}): ValidationResult {
   const { add, rows } = checkCollector();
   add(
     "stage_schema",
@@ -346,7 +505,7 @@ function validateStage({ manifest, manifestPath, manifestRaw, predecessorOption,
   add("stage_producer_id", Boolean(manifest?.producer_id), "A non-empty producer_id is required.");
   add(
     "stage_revision",
-    Number.isInteger(manifest?.revision) && manifest.revision >= 1,
+    Number.isInteger(manifest.revision) && Number(manifest.revision) >= 1,
     "Revision must be a positive integer.",
   );
   const predecessorHash = manifest?.predecessor_stage_manifest_sha256;
@@ -362,10 +521,12 @@ function validateStage({ manifest, manifestPath, manifestRaw, predecessorOption,
       isSha256(predecessorHash),
       "Later revisions require a predecessor SHA-256 descriptor.",
     );
-    const predecessorPath = predecessorOption ? path.resolve(repoRoot, predecessorOption) : null;
+    const predecessorPath = predecessorOption
+      ? path.resolve(repoRoot, predecessorOption as string)
+      : null;
     const repoReal = fs.realpathSync(repoRoot);
     let predecessorSafe = false;
-    let predecessorRaw = null;
+    let predecessorRaw: Buffer | null = null;
     if (
       predecessorPath &&
       pathIsInside(repoRoot, predecessorPath) &&
@@ -389,10 +550,10 @@ function validateStage({ manifest, manifestPath, manifestRaw, predecessorOption,
       Boolean(predecessorRaw && sha256(predecessorRaw) === predecessorHash),
       "The predecessor manifest bytes must match the declared predecessor SHA-256.",
     );
-    let predecessorManifest = null;
+    let predecessorManifest: StageManifest | null = null;
     if (predecessorRaw) {
       try {
-        predecessorManifest = JSON.parse(predecessorRaw.toString("utf8"));
+        predecessorManifest = JSON.parse(predecessorRaw.toString("utf8")) as StageManifest;
       } catch {
         predecessorManifest = null;
       }
@@ -403,7 +564,7 @@ function validateStage({ manifest, manifestPath, manifestRaw, predecessorOption,
         predecessorManifest?.schema_version === STAGE_SCHEMA &&
         predecessorManifest?.stage_id === manifest?.stage_id &&
         predecessorManifest?.producer_id === manifest?.producer_id &&
-        predecessorManifest?.revision === manifest?.revision - 1,
+        predecessorManifest?.revision === Number(manifest.revision) - 1,
       ),
       "The predecessor must be the immediately prior revision for the same stage and producer.",
     );
@@ -452,17 +613,17 @@ function validateStage({ manifest, manifestPath, manifestRaw, predecessorOption,
   });
   const rootReal = rootExists ? fs.realpathSync(stageRoot) : stageRoot;
 
-  const leaves = Array.isArray(manifest?.leaves) ? manifest.leaves : [];
+  const leaves = Array.isArray(manifest.leaves) ? manifest.leaves : [];
   add("stage_leaves", leaves.length > 0, "At least one CAS leaf is required.", {
     leaf_count: leaves.length,
   });
-  const leavesById = new Map();
-  const leafBuffers = new Map();
-  const leafPaths = new Set();
-  const materializedLeaves = [];
+  const leavesById = new Map<string, StageLeaf>();
+  const leafBuffers = new Map<string, Buffer>();
+  const leafPaths = new Set<string>();
+  const materializedLeaves: MaterializedLeaf[] = [];
   for (const leaf of leaves) {
     const leafId = leaf?.leaf_id;
-    const identityOk = Boolean(leafId) && !leavesById.has(leafId);
+    const identityOk = Boolean(leafId) && !leavesById.has(leafId ?? "");
     add(
       `leaf_identity:${leafId ?? "missing"}`,
       identityOk,
@@ -483,13 +644,13 @@ function validateStage({ manifest, manifestPath, manifestRaw, predecessorOption,
     add(`leaf_path_confined:${leafId}`, confined, "Leaf path must stay inside the stage root.", {
       path: relativePath ?? null,
     });
-    const pathUnique = Boolean(relativePath) && !leafPaths.has(relativePath);
+    const pathUnique = Boolean(relativePath) && !leafPaths.has(relativePath ?? "");
     add(`leaf_path_unique:${leafId}`, pathUnique, "Leaf paths must be non-empty and unique.");
     if (relativePath) leafPaths.add(relativePath);
 
-    let buffer = null;
+    let buffer: Buffer | null = null;
     let pathSafe = false;
-    if (confined && fs.existsSync(candidate)) {
+    if (confined && candidate && fs.existsSync(candidate)) {
       const stat = fs.lstatSync(candidate);
       pathSafe = stat.isFile() && !stat.isSymbolicLink();
       if (pathSafe) {
@@ -509,7 +670,7 @@ function validateStage({ manifest, manifestPath, manifestRaw, predecessorOption,
       leaf?.raw_hash?.algorithm === "sha256" &&
       isSha256(leaf?.raw_hash?.sha256) &&
       Number.isInteger(leaf?.raw_hash?.bytes) &&
-      leaf.raw_hash.bytes >= 0,
+      Number(leaf.raw_hash?.bytes) >= 0,
     );
     add(
       `leaf_raw_descriptor:${leafId}`,
@@ -540,16 +701,21 @@ function validateStage({ manifest, manifestPath, manifestRaw, predecessorOption,
       semanticDescriptorOk,
       "Semantic hash descriptor requires domain, canonicalizer, and SHA-256.",
     );
-    if (buffer && semanticDescriptorOk) {
+    const semanticHash = leaf.semantic_hash;
+    if (buffer && semanticDescriptorOk && semanticHash?.canonicalizer_id && semanticHash.domain) {
       try {
-        const canonical = canonicalSemanticBytes(buffer, leaf.semantic_hash.canonicalizer_id);
+        const canonical = canonicalSemanticBytes(buffer, semanticHash.canonicalizer_id);
         add(
           `leaf_semantic_hash:${leafId}`,
-          semanticSha256(leaf.semantic_hash.domain, canonical) === leaf.semantic_hash.sha256,
+          semanticSha256(semanticHash.domain, canonical) === semanticHash.sha256,
           "Leaf semantic SHA-256 must match its declared canonicalizer.",
         );
       } catch (error) {
-        add(`leaf_semantic_hash:${leafId}`, false, error.message);
+        add(
+          `leaf_semantic_hash:${leafId}`,
+          false,
+          error instanceof Error ? error.message : String(error),
+        );
       }
     }
 
@@ -622,7 +788,9 @@ function validateStage({ manifest, manifestPath, manifestRaw, predecessorOption,
       "Reviewer report references must resolve to reviewer_report leaves.",
     );
     try {
-      const reviewerReport = JSON.parse(leafBuffers.get(reviewerId)?.toString("utf8") ?? "");
+      const reviewerReport = JSON.parse(
+        leafBuffers.get(reviewerId)?.toString("utf8") ?? "",
+      ) as ReviewerReport;
       add(
         `reviewer_report_coverage_shape:${reviewerId}`,
         Array.isArray(reviewerReport?.reviewed_leaf_ids) &&
@@ -653,19 +821,21 @@ function validateStage({ manifest, manifestPath, manifestRaw, predecessorOption,
       );
       add(
         `reviewer_report_coverage:${reviewerId}`,
-        executableLeafIds.every((leafId) => reviewerReport?.reviewed_leaf_ids?.includes(leafId)),
+        executableLeafIds.every((leafId) =>
+          reviewerReport?.reviewed_leaf_ids?.includes(leafId as string),
+        ),
         "Reviewer report must cover every executable input leaf.",
       );
     } catch (error) {
       add(
         `reviewer_report_parse:${reviewerId}`,
         false,
-        `Reviewer report is not valid JSON: ${error.message}`,
+        `Reviewer report is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
 
-  const boundaryLeaf = leavesById.get(manifest?.boundary_contract_leaf_id);
+  const boundaryLeaf = leavesById.get(manifest.boundary_contract_leaf_id ?? "");
   add(
     "boundary_leaf_role",
     boundaryLeaf?.role === "consumer_boundary_contract",
@@ -674,12 +844,18 @@ function validateStage({ manifest, manifestPath, manifestRaw, predecessorOption,
   if (boundaryLeaf && rootExists) {
     try {
       boundaryChecks(
-        JSON.parse(leafBuffers.get(boundaryLeaf.leaf_id)?.toString("utf8") ?? ""),
+        JSON.parse(
+          leafBuffers.get(boundaryLeaf.leaf_id ?? "")?.toString("utf8") ?? "",
+        ) as BoundaryContract,
         leafPaths,
         add,
       );
     } catch (error) {
-      add("boundary_parse", false, `Boundary contract is not valid JSON: ${error.message}`);
+      add(
+        "boundary_parse",
+        false,
+        `Boundary contract is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -691,21 +867,21 @@ function validateStage({ manifest, manifestPath, manifestRaw, predecessorOption,
   };
 }
 
-function writeExclusive(filePath, content) {
+function writeExclusive(filePath: string, content: string | Buffer): void {
   fs.writeFileSync(filePath, content, { flag: "wx" });
 }
 
-function writeJsonExclusive(filePath, value) {
+function writeJsonExclusive(filePath: string, value: unknown): void {
   writeExclusive(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function relativeToRepo(repoRoot, filePath) {
+function relativeToRepo(repoRoot: string, filePath: string): string {
   const relative = path.relative(repoRoot, filePath).split(path.sep).join(path.posix.sep);
   return pathIsInside(repoRoot, filePath) ? relative : filePath;
 }
 
-export function createExecutionCapsuleCommands({ repoRoot }) {
-  function runExecutionCapsuleAdmit(options) {
+export function createExecutionCapsuleCommands({ repoRoot }: { repoRoot: string }) {
+  function runExecutionCapsuleAdmit(options: ExecutionCapsuleOptions): JsonRecord {
     if (options.help) {
       return {
         status: "help",
@@ -721,8 +897,8 @@ export function createExecutionCapsuleCommands({ repoRoot }) {
     if (!manifestOption || !outDirOption) {
       throw new Error("--stage-manifest and --out-dir are required.");
     }
-    const manifestPath = path.resolve(repoRoot, manifestOption);
-    const outDir = path.resolve(repoRoot, outDirOption);
+    const manifestPath = path.resolve(repoRoot, manifestOption as string);
+    const outDir = path.resolve(repoRoot, outDirOption as string);
     if (!pathIsInside(repoRoot, outDir)) {
       throw new Error("--out-dir must stay inside the repository root.");
     }
@@ -754,10 +930,10 @@ export function createExecutionCapsuleCommands({ repoRoot }) {
     const snapshotPath = path.join(outDir, "execution-capsule-stage-revision.json");
     writeExclusive(snapshotPath, manifestRaw);
 
-    let manifest;
-    let validation;
+    let manifest: StageManifest | undefined;
+    let validation: ValidationResult | undefined;
     try {
-      manifest = JSON.parse(manifestRaw.toString("utf8"));
+      manifest = JSON.parse(manifestRaw.toString("utf8")) as StageManifest;
     } catch (error) {
       validation = {
         rows: [
@@ -766,7 +942,7 @@ export function createExecutionCapsuleCommands({ repoRoot }) {
             check_id: "stage_parse",
             status: "FAIL",
             severity: "P0",
-            detail: `Stage manifest is not valid JSON: ${error.message}`,
+            detail: `Stage manifest is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
             evidence: null,
           },
         ],
@@ -778,7 +954,7 @@ export function createExecutionCapsuleCommands({ repoRoot }) {
     if (!validation) {
       try {
         validation = validateStage({
-          manifest,
+          manifest: manifest!,
           manifestPath,
           manifestRaw,
           predecessorOption: options.predecessorStageManifest,
@@ -792,7 +968,7 @@ export function createExecutionCapsuleCommands({ repoRoot }) {
               check_id: "admission_validator_error",
               status: "FAIL",
               severity: "P0",
-              detail: `Admission validator failed closed: ${error.message}`,
+              detail: `Admission validator failed closed: ${error instanceof Error ? error.message : String(error)}`,
               evidence: null,
             },
           ],
@@ -847,17 +1023,17 @@ export function createExecutionCapsuleCommands({ repoRoot }) {
     const reportPath = path.join(outDir, "execution-capsule-admission-report.json");
     writeJsonExclusive(reportPath, report);
 
-    let seal = null;
-    let sealPath = null;
+    let seal: JsonRecord | null = null;
+    let sealPath: string | null = null;
     if (failed.length === 0) {
       const reportBytes = fs.readFileSync(reportPath);
       const sealPayload = {
         schema_version: SEAL_SCHEMA,
-        stage_id: manifest.stage_id,
-        revision: manifest.revision,
-        predecessor_stage_manifest_sha256: manifest.predecessor_stage_manifest_sha256,
+        stage_id: manifest!.stage_id,
+        revision: manifest!.revision,
+        predecessor_stage_manifest_sha256: manifest!.predecessor_stage_manifest_sha256,
         stage_manifest_sha256: validation.manifestSha256,
-        scope_binding_sha256: manifest.scope_binding_sha256,
+        scope_binding_sha256: manifest!.scope_binding_sha256,
         leaf_set_sha256: sha256(
           stableJson(
             validation.materializedLeaves
@@ -866,7 +1042,7 @@ export function createExecutionCapsuleCommands({ repoRoot }) {
                 raw_sha256: leaf.raw_sha256,
                 semantic_sha256: leaf.semantic_sha256,
               }))
-              .sort((left, right) => compareText(left.leaf_id, right.leaf_id)),
+              .sort((left, right) => compareText(left.leaf_id ?? "", right.leaf_id ?? "")),
           ),
         ),
         evidence: {
