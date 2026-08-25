@@ -1,12 +1,28 @@
 ---
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: cc3505e7d8c7fe531dc3f8c0f2787b5b3a7398e8
+lastReviewedCommit: 38f1291d99571c7af377b8dca89d39fd690eb8d0
 lastReviewedNote: "Reviewed for Issue #68 against the frozen executable factory, PR #20 delivery rationale, retained coverage, and current shared support/finalize behavior."
 title: worldsteel Import Profile
 docType: profile
 scope: import-profile
 status: draft
+authoritative: true
 owner: tiangong-lca-data-foundry
+language: en
+whenToUse:
+  - when selecting the Worldsteel import profile, runner flags, or account-local support policy
+  - when interpreting which canonical references are reused and which candidates remain gated
+whenToUpdate:
+  - when the frozen Worldsteel adapter/profile value or support candidate boundary changes
+  - when a retained delivery decision changes the Worldsteel import policy
+checkPaths:
+  - specs/import-profiles.json
+  - scripts/commands/worldsteel-batch-import-run.ts
+  - docs/import-profiles/worldsteel/profile.md
+  - docs/import-profiles/worldsteel/constraints.md
+  - docs/import-profiles/worldsteel/import-plan.md
+  - docs/import-profiles/worldsteel/import-coverage.md
+  - test/unit/worldsteel-support-mint-truth.test.mts
 related:
   - specs/import-profiles.json
   - docs/import-profiles/worldsteel/import-plan.md

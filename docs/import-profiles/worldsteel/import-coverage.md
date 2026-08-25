@@ -1,7 +1,28 @@
 ---
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: cc3505e7d8c7fe531dc3f8c0f2787b5b3a7398e8
+lastReviewedCommit: 38f1291d99571c7af377b8dca89d39fd690eb8d0
 lastReviewedNote: "Reviewed for Issue #68 as retained delivery evidence; 10+10 LANCA and 11+11 owner rows are historical observations, not runtime caps."
+title: worldsteel EF3.1 Import Coverage Evidence
+docType: report
+scope: import-profile/worldsteel
+status: retained
+authoritative: true
+owner: tiangong-lca-data-foundry
+language: en
+whenToUse:
+  - when establishing the retained 2026-07-01 reason for enabling unmatched FP/UG support
+  - when distinguishing historical owner inventory from current runtime policy and verification
+whenToUpdate:
+  - when a later durable delivery supersedes these retained counts or their interpretation
+  - when hardening changes whether any historical result still qualifies as current evidence
+checkPaths:
+  - specs/import-profiles.json
+  - scripts/commands/worldsteel-batch-import-run.ts
+  - docs/import-profiles/worldsteel/profile.md
+  - docs/import-profiles/worldsteel/constraints.md
+  - docs/import-profiles/worldsteel/import-plan.md
+  - docs/import-profiles/worldsteel/import-coverage.md
+  - test/unit/worldsteel-support-mint-truth.test.mts
 ---
 
 # worldsteel EF3.1 import — coverage report

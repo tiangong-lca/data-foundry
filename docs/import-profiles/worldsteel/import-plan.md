@@ -1,13 +1,29 @@
 ---
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: cc3505e7d8c7fe531dc3f8c0f2787b5b3a7398e8
+lastReviewedCommit: 38f1291d99571c7af377b8dca89d39fd690eb8d0
 lastReviewedNote: "Reviewed for Issue #68: R5 records the 2026-07-01 support-mint decision that superseded the earlier FP/UG reference-only plan."
 title: worldsteel EF3.1 ILCD Import Plan
 docType: plan
 scope: import-profile/worldsteel
 status: draft
+authoritative: true
 revision: 4 (decisions D1–D4 + refinements R1–R5; R5 superseded FP/UG reference-only on 2026-07-01)
 owner: tiangong-lca-data-foundry
+language: en
+whenToUse:
+  - when executing or revising the sequenced Worldsteel import workflow
+  - when tracing a current decision back to D1-D4 or refinements R1-R5
+whenToUpdate:
+  - when a Worldsteel workflow stage, dependency, resolved decision, or operational blocker changes
+  - when a historical implementation path gains or loses current executable authority
+checkPaths:
+  - specs/import-profiles.json
+  - scripts/commands/worldsteel-batch-import-run.ts
+  - docs/import-profiles/worldsteel/profile.md
+  - docs/import-profiles/worldsteel/constraints.md
+  - docs/import-profiles/worldsteel/import-plan.md
+  - docs/import-profiles/worldsteel/import-coverage.md
+  - test/unit/worldsteel-support-mint-truth.test.mts
 created_utc: 2026-06-29
 related:
   - docs/uslci-import-plan.md

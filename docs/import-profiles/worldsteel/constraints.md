@@ -1,12 +1,30 @@
 ---
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: cc3505e7d8c7fe531dc3f8c0f2787b5b3a7398e8
+lastReviewedCommit: 38f1291d99571c7af377b8dca89d39fd690eb8d0
 lastReviewedNote: "Reviewed for Issue #68: canonical-cache misses are gated owner-draft candidates; LANCA names and historical counts are evidence, not a runtime allowlist."
 title: worldsteel Import Constraints
 docType: constraints
 scope: import-profile
 status: draft
+authoritative: true
 owner: tiangong-lca-data-foundry
+language: en
+whenToUse:
+  - when deciding whether a Worldsteel canonical-cache miss may enter an owner-draft support scope
+  - when evaluating unit-scale, closure, handoff, or readback blockers for Worldsteel
+whenToUpdate:
+  - when Worldsteel support authorization, ordering, or blocking semantics change
+  - when the shared support/finalize engine changes the enforceable candidate boundary
+checkPaths:
+  - specs/import-profiles.json
+  - scripts/commands/worldsteel-batch-import-run.ts
+  - scripts/commands/bafu-batch-import-run.ts
+  - scripts/commands/post-authoring-finalize.ts
+  - docs/import-profiles/worldsteel/profile.md
+  - docs/import-profiles/worldsteel/constraints.md
+  - docs/import-profiles/worldsteel/import-plan.md
+  - docs/import-profiles/worldsteel/import-coverage.md
+  - test/unit/worldsteel-support-mint-truth.test.mts
 related:
   - docs/import-profiles/worldsteel/profile.md
   - docs/import-profiles/worldsteel/import-plan.md
