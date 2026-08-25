@@ -28,6 +28,10 @@ checkPaths:
   - scripts/commands/commit-handoff.ts
   - scripts/commands/identity-decision-task.ts
   - scripts/commands/support-cache.ts
+  - scripts/commands/authoring-plan.ts
+  - scripts/commands/bundle-sample-rows.ts
+  - scripts/commands/incremental-change-set.ts
+  - scripts/commands/topology-convergence.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
@@ -55,8 +59,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: d6bd903c10db864230da6c7fa025cea703d1f69c
-lastReviewedNote: "Reviewed for Issue #67 Wave 25: typing reference closure/source context and mutation manifest changes no capability owner, remote operation, search behavior, profile authority, Worldsteel/Date.parse semantics, or sibling boundary."
+lastReviewedCommit: c874ff1362a5d1248a34dd0d9d25d52937d39b28
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: typing four local algorithm owners changes no capability owner, remote operation, search behavior, profile authority, Worldsteel/Date.parse semantics, or sibling boundary."
 ---
 
 # Capability Ownership Policy
