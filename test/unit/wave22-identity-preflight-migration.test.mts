@@ -25,7 +25,7 @@ test("every static identity-preflight consumer targets the typed module", () => 
     "test/scenarios/bafu-mydata-override.test.mjs",
     "test/scenarios/identity-curation-context.test.mjs",
     "test/scenarios/mutation-lineage-helpers.test.mjs",
-    "test/unit/content-policy-profile-waiver.test.mjs",
+    "test/unit/content-policy-profile-waiver.test.mts",
     "test/unit/wave13-queue-context-migration.test.mts",
     "test/unit/wave18-identity-decision-context-migration.test.mts",
     "test/unit/wave20-row-transform-context-migration.test.mts",

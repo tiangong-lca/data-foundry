@@ -5,17 +5,34 @@ import test from "node:test";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 
-function readJson(relativePath) {
-  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), "utf8"));
+interface SkillEntry {
+  name: string;
+  source: string;
+  source_type: string;
+  install_command: string;
+  use_command: string;
 }
 
-function readText(relativePath) {
+interface SharedSkillsConfig {
+  local_project_skills: SkillEntry[];
+  shared_runtime_skills: SkillEntry[];
+}
+
+interface PackageConfig {
+  scripts: Record<string, string>;
+}
+
+function readJson<T>(relativePath: string): T {
+  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), "utf8")) as T;
+}
+
+function readText(relativePath: string): string {
   return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 }
 
 test("document-granular-decompose is a runtime Tiangong AI skill, not a tracked Foundry skill", () => {
-  const sharedSkills = readJson(".agents/shared-skills.json");
-  const packageJson = readJson("package.json");
+  const sharedSkills = readJson<SharedSkillsConfig>(".agents/shared-skills.json");
+  const packageJson = readJson<PackageConfig>("package.json");
   const gitignore = readText(".gitignore");
 
   const localNames = new Set(sharedSkills.local_project_skills.map((skill) => skill.name));

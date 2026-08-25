@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { namePlanQualityFindings } from "../../scripts/lib/import-curation/internal/workflow-semantic-actions.ts";
 
+interface TestNameFinding {
+  code: string;
+  field?: unknown;
+  detected_segments?: unknown;
+}
+
 test("name-plan QA treats season-year scope as temporal, not a source citation", () => {
   const seasonScopedFindings = namePlanQualityFindings({
     baseName: "Electricity",
@@ -14,13 +20,15 @@ test("name-plan QA treats season-year scope as temporal, not a source citation",
 
   const citationFindings = namePlanQualityFindings({
     baseName: "Steel sheet, Frischknecht 2012, at plant",
-  });
+  }) as unknown as TestNameFinding[];
   const sourceLocatorFindings = citationFindings.filter(
     (finding) => finding.code === "semantic_name_source_locator_in_name",
   );
   assert.equal(sourceLocatorFindings.length, 1);
   assert.equal(sourceLocatorFindings[0].field, "baseName");
-  assert.ok(sourceLocatorFindings[0].detected_segments.includes("latin-author-year"));
+  const detectedSegments = sourceLocatorFindings[0].detected_segments;
+  assert.ok(Array.isArray(detectedSegments));
+  assert.ok(detectedSegments.includes("latin-author-year"));
 });
 
 test("name-plan QA ignores a trailing location brace that restates mixAndLocationTypes", () => {
@@ -42,11 +50,12 @@ test("name-plan QA ignores a trailing location brace that restates mixAndLocatio
   const mismatchedLocationFindings = namePlanQualityFindings({
     baseName: "Tyre wear emissions, passenger car {GLO}",
     mixAndLocationTypes: "RER",
-  });
+  }) as unknown as TestNameFinding[];
   assert.ok(
     mismatchedLocationFindings.some(
       (finding) =>
         finding.code === "semantic_name_base_contains_unsplit_segments" &&
+        Array.isArray(finding.detected_segments) &&
         finding.detected_segments.includes("braced_location_or_qualifier"),
     ),
   );

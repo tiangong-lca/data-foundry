@@ -8,7 +8,7 @@ import { prewriteContentQualityBlockers } from "../../scripts/lib/import-curatio
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
-function processPayload(baseName) {
+function processPayload(baseName: string) {
   return {
     processDataSet: {
       processInformation: {
@@ -20,7 +20,7 @@ function processPayload(baseName) {
   };
 }
 
-function flowPayload(baseName) {
+function flowPayload(baseName: string) {
   return {
     flowDataSet: {
       flowInformation: {
@@ -32,7 +32,8 @@ function flowPayload(baseName) {
   };
 }
 
-const codesFor = (blockers) => blockers.map((b) => b.code);
+const codesFor = (blockers: Array<Record<string, unknown>>): unknown[] =>
+  blockers.map((blocker) => blocker.code);
 
 // The prewrite-content-policy `source_locator_in_dataset_name` rule (latin-author-year marker)
 // flags "<Word> <YYYY>" — a false positive for worldsteel process names like
@@ -44,7 +45,7 @@ test("worldsteel profile waives source_locator_in_dataset_name for process names
     repoRoot,
     payload: processPayload("Steel rebar Global 2022"),
     datasetType: "process",
-    profile: ws,
+    profile: ws as unknown as Record<string, unknown>,
   });
   assert.equal(codesFor(blockers).includes("source_locator_in_dataset_name"), false);
 });
@@ -64,7 +65,7 @@ test("BAFU profile still enforces the source-locator rule (no leak)", () => {
     repoRoot,
     payload: processPayload("Steel rebar Global 2022"),
     datasetType: "process",
-    profile: bafu,
+    profile: bafu as unknown as Record<string, unknown>,
   });
   assert.equal(codesFor(blockers).includes("source_locator_in_dataset_name"), true);
 });
@@ -75,7 +76,7 @@ test("worldsteel waiver is scoped to process type — flows still enforce citati
     repoRoot,
     payload: flowPayload("Emissions per Smith et al. 2019"),
     datasetType: "flow",
-    profile: ws,
+    profile: ws as unknown as Record<string, unknown>,
   });
   assert.equal(codesFor(blockers).includes("source_locator_in_dataset_name"), true);
 });

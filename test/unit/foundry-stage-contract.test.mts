@@ -6,17 +6,40 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-function runFoundryJson(args) {
+interface StageContract {
+  stage: string;
+  phase: string;
+  purpose: string;
+  inputs: unknown[];
+  outputs: unknown[];
+  blockers: unknown[];
+  artifacts: unknown[];
+  side_effects: unknown[];
+  report_contract: {
+    status: string;
+    counts: string;
+    files: string;
+    blockers: string;
+    remote_write_mode: string;
+  };
+}
+
+interface StageHelp {
+  remote_write_mode: string;
+  stage_pipeline: StageContract[];
+}
+
+function runFoundryJson(args: string[]): StageHelp {
   const result = spawnSync(process.execPath, ["scripts/foundry.mjs", ...args], {
     cwd: repoRoot,
     encoding: "utf8",
   });
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  return JSON.parse(result.stdout);
+  return JSON.parse(result.stdout) as StageHelp;
 }
 
 test("complex workflow commands publish AI-readable stage contracts", () => {
-  const commands = [
+  const commands: string[] = [
     "dataset-bundle-sample-rows",
     "dataset-post-authoring-finalize",
     "dataset-authoring-plan",

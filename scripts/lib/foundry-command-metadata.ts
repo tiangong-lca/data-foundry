@@ -395,7 +395,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["dataset-authoring-plan JSON report"],
     keyTests: [
       nodeTest(
-        "test/unit/foundry-stage-contract.test.mjs",
+        "test/unit/foundry-stage-contract.test.mts",
         "complex workflow commands publish AI-readable stage contracts",
       ),
       nodeTest(
@@ -717,7 +717,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     keyTests: [
       goldenDiff,
       nodeTest(
-        "test/unit/foundry-stage-contract.test.mjs",
+        "test/unit/foundry-stage-contract.test.mts",
         "complex workflow commands publish AI-readable stage contracts",
       ),
       nodeTest(
@@ -774,7 +774,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["identity-preflight-run-results.jsonl", "dataset-identity-preflight-run-report.json"],
     keyTests: [
       nodeTest(
-        "test/unit/foundry-stage-contract.test.mjs",
+        "test/unit/foundry-stage-contract.test.mts",
         "complex workflow commands publish AI-readable stage contracts",
       ),
       nodeTest(
@@ -1105,7 +1105,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     keyTests: [
       goldenDiff,
       nodeTest(
-        "test/unit/foundry-stage-contract.test.mjs",
+        "test/unit/foundry-stage-contract.test.mts",
         "complex workflow commands publish AI-readable stage contracts",
       ),
       nodeTest(
