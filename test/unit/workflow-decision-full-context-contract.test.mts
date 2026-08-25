@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import * as fullDecision from "../../scripts/lib/import-curation/internal/workflow-decision-full-context.mjs";
+import * as fullDecision from "../../scripts/lib/import-curation/internal/workflow-decision-full-context.ts";
 
 type JsonRecord = Record<string, unknown>;
 

@@ -1,4 +1,7 @@
 import {
+  type AuthoringPackageProof,
+  type DecisionTaskProof,
+  type FullContextRequirement,
   fullContextDecisionTaskProofBlockers,
   fullContextPackageProofBlockers,
   payloadSha256ByIdentityForRows,
@@ -35,13 +38,114 @@ import {
   sameRowsArtifact,
 } from "./workflow-row-transform-context.ts";
 
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface ArtifactValue extends JsonRecord {
+  rows_file?: unknown;
+  rowsFile?: unknown;
+  input_path?: unknown;
+  inputPath?: unknown;
+}
+
+interface ArtifactEnvelope {
+  path: string;
+  value?: ArtifactValue | null;
+}
+
+interface DecisionRecord extends JsonRecord {
+  dataset_type?: unknown;
+  datasetType?: unknown;
+  category_type?: unknown;
+  categoryType?: unknown;
+  dataset_id?: unknown;
+  datasetId?: unknown;
+  id?: unknown;
+  dataset_version?: unknown;
+  datasetVersion?: unknown;
+  version?: unknown;
+  used_context_kinds?: unknown;
+  usedContextKinds?: unknown;
+  resolution?: unknown;
+  evidence?: unknown;
+  authoring_context?: unknown;
+  authoringContext?: unknown;
+  authoring_context_sha256?: unknown;
+  context_bundle_sha256?: unknown;
+  contextBundleSha256?: unknown;
+  decision_status?: unknown;
+  decisionStatus?: unknown;
+  status?: unknown;
+  basis?: unknown;
+  reason?: unknown;
+}
+
+interface DecisionContext {
+  status?: unknown;
+  decisions?: DecisionRecord[];
+  inputRows?: string[];
+  outputRows?: string[];
+  inputPayloadSha256ByIdentity?: Map<string, string>;
+  outputPayloadSha256ByIdentity?: Map<string, string>;
+  decisionTaskProofs?: unknown;
+  decisionTaskProof?: unknown;
+  authoringPackageProofs?: unknown[];
+  identityReferenceRewritesFiles?: unknown;
+  identityReferenceRewritesFile?: unknown;
+}
+
+interface TransformContext {
+  status?: unknown;
+  inputRowsFile?: string | null;
+  outputRowsFile?: string | null;
+  inputRows?: string[];
+  outputRows?: string[];
+  sourceFile?: string | null;
+  scopedRows?: JsonRecord[];
+  inputPayloadSha256ByIdentity?: Map<string, string>;
+  outputPayloadSha256ByIdentity?: Map<string, string>;
+}
+
+interface DecisionChainOptions {
+  repoRoot: string;
+  context: DecisionContext | null | undefined;
+  expectedRowsFile: unknown;
+}
+
+interface DecisionRowsFileOptions {
+  repoRoot: string;
+  rowsFile: string;
+  cleanupArtifact?: ArtifactEnvelope | null;
+  context: DecisionContext | null | undefined;
+}
+
+interface DecisionBuilderOptions {
+  repoRoot: string;
+  rowsFile: string;
+  cleanupArtifact?: ArtifactEnvelope | null;
+  requirement: FullContextRequirement;
+  classificationDecisionApplyArtifact?: ArtifactEnvelope | null;
+  classificationDecisionApplyContext?: DecisionContext | null;
+  locationDecisionApplyArtifact?: ArtifactEnvelope | null;
+  locationDecisionApplyContext?: DecisionContext | null;
+  identityDecisionApplyArtifact?: ArtifactEnvelope | null;
+  identityDecisionApplyContext?: DecisionContext | null;
+  patchApplyContext?: TransformContext | null;
+  identityReferenceRewriteContext?: TransformContext | null;
+  unresolvedExchangeExternalizationContext?: TransformContext | null;
+  sourceContactRewriteContext?: TransformContext | null;
+  canonicalSupportRewriteContext?: TransformContext | null;
+  cleanupContext?: TransformContext | null;
+}
+
 // part-10.mjs
 export function decisionApplyOutputRowsChainThroughUnresolvedExchangeExternalization(
-  repoRoot,
-  context,
-  unresolvedExchangeExternalizationContext,
-  expectedRowsFile,
-) {
+  repoRoot: string,
+  context: DecisionContext | null | undefined,
+  unresolvedExchangeExternalizationContext: TransformContext | null | undefined,
+  expectedRowsFile: unknown,
+): boolean {
   return Boolean(
     expectedRowsFile &&
     unresolvedExchangeExternalizationContext?.inputRowsFile &&
@@ -60,18 +164,18 @@ export function decisionApplyOutputRowsChainThroughUnresolvedExchangeExternaliza
 }
 
 export function decisionApplyOutputRowsChainThroughPatchAndUnresolvedExchangeExternalization(
-  repoRoot,
-  context,
-  patchApplyContext,
-  unresolvedExchangeExternalizationContext,
-  expectedRowsFile,
-) {
+  repoRoot: string,
+  context: DecisionContext | null | undefined,
+  patchApplyContext: TransformContext | null | undefined,
+  unresolvedExchangeExternalizationContext: TransformContext | null | undefined,
+  expectedRowsFile: unknown,
+): boolean {
   return Boolean(
     expectedRowsFile &&
     patchApplyContext?.inputRowsFile &&
     unresolvedExchangeExternalizationContext?.inputRowsFile &&
     decisionApplyOutputRowsMatch(repoRoot, context, patchApplyContext.inputRowsFile) &&
-    patchApplyContext.outputRows.some((filePath) =>
+    patchApplyContext.outputRows?.some((filePath) =>
       sameArtifactPath(repoRoot, filePath, unresolvedExchangeExternalizationContext.inputRowsFile),
     ) &&
     rowsFileChainsThroughUnresolvedExchangeExternalization({
@@ -83,7 +187,11 @@ export function decisionApplyOutputRowsChainThroughPatchAndUnresolvedExchangeExt
   );
 }
 
-function decisionApplyRowsEquivalentToExpected(repoRoot, context, expectedRowsFile) {
+function decisionApplyRowsEquivalentToExpected(
+  repoRoot: string,
+  context: DecisionContext | null | undefined,
+  expectedRowsFile: unknown,
+): boolean {
   return Boolean(
     expectedRowsFile &&
     context?.inputRows?.some((filePath) =>
@@ -93,10 +201,11 @@ function decisionApplyRowsEquivalentToExpected(repoRoot, context, expectedRowsFi
   );
 }
 
-function decisionDatasetType(decision) {
-  const explicit = asText(decision?.dataset_type ?? decision?.datasetType);
+function decisionDatasetType(decision: unknown): string | null {
+  const record = decision as DecisionRecord | null | undefined;
+  const explicit = asText(record?.dataset_type ?? record?.datasetType);
   if (explicit) return explicit;
-  const categoryType = asText(decision?.category_type ?? decision?.categoryType);
+  const categoryType = asText(record?.category_type ?? record?.categoryType);
   if (categoryType === "process") return "process";
   if (categoryType.startsWith("flow")) return "flow";
   if (["source", "contact", "flowproperty", "unitgroup", "lifecyclemodel"].includes(categoryType)) {
@@ -105,7 +214,7 @@ function decisionDatasetType(decision) {
   return null;
 }
 
-function decisionTargetIdentityKeys(context) {
+function decisionTargetIdentityKeys(context: DecisionContext | null | undefined): string[] {
   return ensureArray(context?.decisions)
     .map((decision) => {
       const datasetType = decisionDatasetType(decision);
@@ -115,14 +224,14 @@ function decisionTargetIdentityKeys(context) {
         "00.00.001";
       return datasetType && id ? `${datasetType}:${id}@@${version}` : null;
     })
-    .filter(Boolean);
+    .filter(Boolean) as string[];
 }
 
 export function decisionApplyContextRelevantToExpectedRowsFile({
   repoRoot,
   context,
   expectedRowsFile,
-}) {
+}: DecisionChainOptions): boolean {
   if (!context || !expectedRowsFile) return true;
   if (
     decisionApplyInputRowsMatch(repoRoot, context, expectedRowsFile) ||
@@ -144,7 +253,7 @@ export function decisionApplyContextCoversExpectedRowsIdentity({
   repoRoot,
   context,
   expectedRowsFile,
-}) {
+}: DecisionChainOptions): boolean {
   if (!context || !expectedRowsFile) return false;
   const expectedKeys = new Set(payloadSha256ByIdentityForRows(repoRoot, [expectedRowsFile]).keys());
   if (expectedKeys.size === 0) return false;
@@ -162,7 +271,7 @@ export function decisionApplyContextRelevantToRowsFile({
   rowsFile,
   cleanupArtifact,
   context,
-}) {
+}: DecisionRowsFileOptions): boolean {
   return decisionApplyContextRelevantToExpectedRowsFile({
     repoRoot,
     context,
@@ -171,13 +280,13 @@ export function decisionApplyContextRelevantToRowsFile({
 }
 
 export function decisionApplyOutputRowsChainThroughPatchIdentityRewriteAndUnresolvedExchangeExternalization(
-  repoRoot,
-  context,
-  patchApplyContext,
-  identityReferenceRewriteContext,
-  unresolvedExchangeExternalizationContext,
-  expectedRowsFile,
-) {
+  repoRoot: string,
+  context: DecisionContext | null | undefined,
+  patchApplyContext: TransformContext | null | undefined,
+  identityReferenceRewriteContext: TransformContext | null | undefined,
+  unresolvedExchangeExternalizationContext: TransformContext | null | undefined,
+  expectedRowsFile: unknown,
+): boolean {
   return Boolean(
     expectedRowsFile &&
     patchApplyContext?.inputRowsFile &&
@@ -185,7 +294,7 @@ export function decisionApplyOutputRowsChainThroughPatchIdentityRewriteAndUnreso
     identityReferenceRewriteContext?.outputRowsFile &&
     unresolvedExchangeExternalizationContext?.inputRowsFile &&
     decisionApplyOutputRowsMatch(repoRoot, context, patchApplyContext.inputRowsFile) &&
-    patchApplyContext.outputRows.some((filePath) =>
+    patchApplyContext.outputRows?.some((filePath) =>
       sameArtifactPath(repoRoot, filePath, identityReferenceRewriteContext.inputRowsFile),
     ) &&
     sameArtifactPath(
@@ -203,10 +312,11 @@ export function decisionApplyOutputRowsChainThroughPatchIdentityRewriteAndUnreso
 }
 
 export function identityDecisionApplyProvesReferenceRewrite(
-  repoRoot,
-  context,
-  identityReferenceRewriteContext,
-) {
+  repoRoot: string,
+  context: DecisionContext | null | undefined,
+  identityReferenceRewriteContext: TransformContext | null | undefined,
+): boolean {
+  const scopedRows = identityReferenceRewriteContext?.scopedRows ?? [];
   const decisionRewriteFiles = unique(
     [
       ...ensureArray(context?.identityReferenceRewritesFiles),
@@ -222,52 +332,61 @@ export function identityDecisionApplyProvesReferenceRewrite(
       decisionRewriteFile,
       identityReferenceRewriteContext.sourceFile,
     );
-    const chainedThroughProcessRewrite = identityReferenceRewriteContext.scopedRows.some(
-      (row) =>
-        sameArtifactPath(repoRoot, row?.rewrite_source?.file, decisionRewriteFile) ||
-        sameArtifactPath(repoRoot, row?.rewriteSource?.file, decisionRewriteFile),
-    );
-    return Boolean(
-      identityReferenceRewriteContext.scopedRows.length > 0 &&
-      (directlyUsed || chainedThroughProcessRewrite),
-    );
+    const chainedThroughProcessRewrite = scopedRows.some((row) => {
+      const rewriteSource = row?.rewrite_source as JsonRecord | null | undefined;
+      const camelRewriteSource = row?.rewriteSource as JsonRecord | null | undefined;
+      return (
+        sameArtifactPath(repoRoot, rewriteSource?.file, decisionRewriteFile) ||
+        sameArtifactPath(repoRoot, camelRewriteSource?.file, decisionRewriteFile)
+      );
+    });
+    return Boolean(scopedRows.length > 0 && (directlyUsed || chainedThroughProcessRewrite));
   });
 }
 
-export function classificationDecisionContextKinds(decision) {
+export function classificationDecisionContextKinds(decision: unknown): string[] {
+  const record = decision as DecisionRecord | null | undefined;
+  const resolution = record?.resolution as JsonRecord | null | undefined;
+  const evidence = record?.evidence as JsonRecord | null | undefined;
   return [
-    ...optionList(decision?.used_context_kinds ?? decision?.usedContextKinds),
-    ...optionList(
-      decision?.resolution?.used_context_kinds ?? decision?.resolution?.usedContextKinds,
-    ),
-    ...optionList(decision?.evidence?.used_context_kinds ?? decision?.evidence?.usedContextKinds),
+    ...optionList(record?.used_context_kinds ?? record?.usedContextKinds),
+    ...optionList(resolution?.used_context_kinds ?? resolution?.usedContextKinds),
+    ...optionList(evidence?.used_context_kinds ?? evidence?.usedContextKinds),
   ];
 }
 
-export function classificationDecisionContextBundleSha256(decision) {
+export function classificationDecisionContextBundleSha256(decision: unknown): string {
+  const record = decision as DecisionRecord | null | undefined;
+  const authoringContext = record?.authoring_context as JsonRecord | null | undefined;
+  const camelContext = record?.authoringContext as JsonRecord | null | undefined;
   return asText(
-    decision?.authoring_context?.context_bundle_sha256 ??
-      decision?.authoringContext?.contextBundleSha256 ??
-      decision?.authoring_context_sha256 ??
-      decision?.context_bundle_sha256 ??
-      decision?.contextBundleSha256,
+    authoringContext?.context_bundle_sha256 ??
+      camelContext?.contextBundleSha256 ??
+      record?.authoring_context_sha256 ??
+      record?.context_bundle_sha256 ??
+      record?.contextBundleSha256,
   );
 }
 
-export function classificationDecisionCompletionStatus(decision) {
-  return asText(decision?.decision_status ?? decision?.decisionStatus ?? decision?.status);
+export function classificationDecisionCompletionStatus(decision: unknown): string {
+  const record = decision as DecisionRecord | null | undefined;
+  return asText(record?.decision_status ?? record?.decisionStatus ?? record?.status);
 }
 
-export function decisionTaskProofListFromContext(context) {
-  const proofs = ensureArray(context?.decisionTaskProofs).filter(Boolean);
+export function decisionTaskProofListFromContext(
+  context: DecisionContext | null | undefined,
+): DecisionTaskProof[] {
+  const proofs = ensureArray(context?.decisionTaskProofs).filter(Boolean) as DecisionTaskProof[];
   if (proofs.length > 0) return proofs;
-  return context?.decisionTaskProof ? [context.decisionTaskProof] : [];
+  return context?.decisionTaskProof ? [context.decisionTaskProof as DecisionTaskProof] : [];
 }
 
-export function decisionTaskContextBundleHashesFromContext(context) {
+export function decisionTaskContextBundleHashesFromContext(
+  context: DecisionContext | null | undefined,
+): string[] {
   return unique(
     decisionTaskProofListFromContext(context).map((proof) => proof.context_bundle_sha256),
-  );
+  ) as string[];
 }
 
 export function buildClassificationDecisionFullContextBlockers({
@@ -285,8 +404,8 @@ export function buildClassificationDecisionFullContextBlockers({
   sourceContactRewriteContext,
   canonicalSupportRewriteContext,
   cleanupContext,
-}) {
-  const blockers = [];
+}: DecisionBuilderOptions): JsonRecord[] {
+  const blockers: JsonRecord[] = [];
   if (!classificationDecisionApplyArtifact) return blockers;
   const context = classificationDecisionApplyContext;
   const expectedRowsFile = decisionApplyExpectedRowsFile({
@@ -409,12 +528,12 @@ export function buildClassificationDecisionFullContextBlockers({
       message:
         "Classification decision apply report files.output_rows must match the cleanup input rows file, the exact mutation rows file, or the input rows of a completed patch apply report whose output rows then match that cleanup/mutation file.",
       rows_file: repoRelativePath(repoRoot, rowsFile),
-      expected_output_rows_file: repoRelativePath(repoRoot, expectedRowsFile),
+      expected_output_rows_file: repoRelativePath(repoRoot, expectedRowsFile as string),
       patch_apply_input_rows_file: patchApplyContext?.inputRowsFile
         ? repoRelativePath(repoRoot, patchApplyContext.inputRowsFile)
         : null,
       patch_apply_output_rows_files:
-        patchApplyContext?.outputRows.map((file) => repoRelativePath(repoRoot, file)) ?? [],
+        patchApplyContext?.outputRows?.map((file) => repoRelativePath(repoRoot, file)) ?? [],
       identity_reference_rewrite_input_rows_file: identityReferenceRewriteContext?.inputRowsFile
         ? repoRelativePath(repoRoot, identityReferenceRewriteContext.inputRowsFile)
         : null,
@@ -450,7 +569,7 @@ export function buildClassificationDecisionFullContextBlockers({
       artifact: repoRelativePath(repoRoot, classificationDecisionApplyArtifact.path),
     });
   }
-  if (!context?.decisions.length) {
+  if (!context?.decisions?.length) {
     blockers.push({
       code: "full_context_ai_classification_decision_evidence_required",
       stage: "full_context_ai_completion",
@@ -495,7 +614,7 @@ export function buildClassificationDecisionFullContextBlockers({
       artifact: repoRelativePath(repoRoot, classificationDecisionApplyArtifact.path),
     });
   }
-  const missingContextKinds = [];
+  const missingContextKinds: Array<{ decision: DecisionRecord; requiredKind: string }> = [];
   for (const decision of context.decisions) {
     const usedKinds = new Set(classificationDecisionContextKinds(decision));
     for (const requiredKind of requirement.requiredContextKinds) {
@@ -542,7 +661,10 @@ export function buildClassificationDecisionFullContextBlockers({
   return blockers;
 }
 
-export function readLocationDecisionApplyContext(repoRoot, locationDecisionApplyArtifact) {
+export function readLocationDecisionApplyContext(
+  repoRoot: string,
+  locationDecisionApplyArtifact: ArtifactEnvelope | null | undefined,
+) {
   return readClassificationDecisionApplyContext(
     repoRoot,
     locationDecisionApplyArtifact,
@@ -564,8 +686,8 @@ export function buildLocationDecisionFullContextBlockers({
   sourceContactRewriteContext,
   canonicalSupportRewriteContext,
   cleanupContext,
-}) {
-  const blockers = [];
+}: DecisionBuilderOptions): JsonRecord[] {
+  const blockers: JsonRecord[] = [];
   if (!locationDecisionApplyArtifact) return blockers;
   const context = locationDecisionApplyContext;
   const expectedRowsFile = decisionApplyExpectedRowsFile({
@@ -687,12 +809,12 @@ export function buildLocationDecisionFullContextBlockers({
       message:
         "Location decision apply report files.output_rows must match the cleanup input rows file, the exact mutation rows file, or the input rows of a completed patch apply report whose output rows then match that cleanup/mutation file.",
       rows_file: repoRelativePath(repoRoot, rowsFile),
-      expected_output_rows_file: repoRelativePath(repoRoot, expectedRowsFile),
+      expected_output_rows_file: repoRelativePath(repoRoot, expectedRowsFile as string),
       patch_apply_input_rows_file: patchApplyContext?.inputRowsFile
         ? repoRelativePath(repoRoot, patchApplyContext.inputRowsFile)
         : null,
       patch_apply_output_rows_files:
-        patchApplyContext?.outputRows.map((file) => repoRelativePath(repoRoot, file)) ?? [],
+        patchApplyContext?.outputRows?.map((file) => repoRelativePath(repoRoot, file)) ?? [],
       identity_reference_rewrite_input_rows_file: identityReferenceRewriteContext?.inputRowsFile
         ? repoRelativePath(repoRoot, identityReferenceRewriteContext.inputRowsFile)
         : null,
@@ -728,7 +850,7 @@ export function buildLocationDecisionFullContextBlockers({
       artifact: repoRelativePath(repoRoot, locationDecisionApplyArtifact.path),
     });
   }
-  if (!context?.decisions.length) {
+  if (!context?.decisions?.length) {
     blockers.push({
       code: "full_context_ai_location_decision_evidence_required",
       stage: "full_context_ai_completion",
@@ -773,7 +895,7 @@ export function buildLocationDecisionFullContextBlockers({
       artifact: repoRelativePath(repoRoot, locationDecisionApplyArtifact.path),
     });
   }
-  const missingContextKinds = [];
+  const missingContextKinds: Array<{ decision: DecisionRecord; requiredKind: string }> = [];
   for (const decision of context.decisions) {
     const usedKinds = new Set(classificationDecisionContextKinds(decision));
     for (const requiredKind of requirement.requiredContextKinds) {
@@ -833,8 +955,8 @@ export function buildIdentityDecisionFullContextBlockers({
   sourceContactRewriteContext,
   canonicalSupportRewriteContext,
   cleanupContext,
-}) {
-  const blockers = [];
+}: DecisionBuilderOptions): JsonRecord[] {
+  const blockers: JsonRecord[] = [];
   if (!identityDecisionApplyArtifact) return blockers;
   const context = identityDecisionApplyContext;
   if (context?.status !== "completed") {
@@ -930,7 +1052,7 @@ export function buildIdentityDecisionFullContextBlockers({
       message:
         "Identity decision apply report files.output_rows must match the cleanup input rows file, the exact mutation rows file, feed a completed identity reference rewrite / unresolved exchange externalization chain, or provide an identity-reference-rewrites file used by this scope.",
       rows_file: repoRelativePath(repoRoot, rowsFile),
-      expected_output_rows_file: repoRelativePath(repoRoot, expectedRowsFile),
+      expected_output_rows_file: repoRelativePath(repoRoot, expectedRowsFile as string),
       identity_reference_rewrite_input_rows_file: identityReferenceRewriteContext?.inputRowsFile
         ? repoRelativePath(repoRoot, identityReferenceRewriteContext.inputRowsFile)
         : null,
@@ -938,11 +1060,11 @@ export function buildIdentityDecisionFullContextBlockers({
         ? repoRelativePath(repoRoot, identityReferenceRewriteContext.outputRowsFile)
         : null,
       classification_decision_apply_input_rows_files:
-        classificationDecisionApplyContext?.inputRows.map((file) =>
+        classificationDecisionApplyContext?.inputRows?.map((file) =>
           repoRelativePath(repoRoot, file),
         ) ?? [],
       classification_decision_apply_output_rows_files:
-        classificationDecisionApplyContext?.outputRows.map((file) =>
+        classificationDecisionApplyContext?.outputRows?.map((file) =>
           repoRelativePath(repoRoot, file),
         ) ?? [],
       unresolved_exchange_externalization_input_rows_file:
@@ -972,16 +1094,16 @@ export function buildIdentityDecisionFullContextBlockers({
         ? repoRelativePath(repoRoot, cleanupContext.outputRowsFile)
         : null,
       identity_decision_reference_rewrites_file: context?.identityReferenceRewritesFile
-        ? repoRelativePath(repoRoot, context.identityReferenceRewritesFile)
+        ? repoRelativePath(repoRoot, context.identityReferenceRewritesFile as string)
         : null,
       identity_reference_rewrites_file: identityReferenceRewriteContext?.sourceFile
         ? repoRelativePath(repoRoot, identityReferenceRewriteContext.sourceFile)
         : null,
-      identity_reference_rewrite_rows: identityReferenceRewriteContext?.scopedRows.length ?? 0,
+      identity_reference_rewrite_rows: identityReferenceRewriteContext?.scopedRows?.length ?? 0,
       artifact: repoRelativePath(repoRoot, identityDecisionApplyArtifact.path),
     });
   }
-  if (!context?.decisions.length) {
+  if (!context?.decisions?.length) {
     blockers.push({
       code: "full_context_ai_identity_decision_evidence_required",
       stage: "full_context_ai_completion",
@@ -1002,7 +1124,12 @@ export function buildIdentityDecisionFullContextBlockers({
     });
   } else {
     for (const proof of packageProofs) {
-      blockers.push(...fullContextPackageProofBlockers({ requirement, proof }));
+      blockers.push(
+        ...fullContextPackageProofBlockers({
+          requirement,
+          proof: proof as AuthoringPackageProof,
+        }),
+      );
     }
   }
   const missingPackageBinding = context.decisions.filter(
@@ -1086,7 +1213,7 @@ export function buildIdentityDecisionFullContextBlockers({
       artifact: repoRelativePath(repoRoot, identityDecisionApplyArtifact.path),
     });
   }
-  const missingContextKinds = [];
+  const missingContextKinds: Array<{ decision: DecisionRecord; requiredKind: string }> = [];
   for (const decision of context.decisions) {
     const usedKinds = new Set(classificationDecisionContextKinds(decision));
     for (const requiredKind of requirement.requiredContextKinds) {

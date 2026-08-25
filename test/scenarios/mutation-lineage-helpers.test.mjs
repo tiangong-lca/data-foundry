@@ -3,7 +3,7 @@ import { sha256Json } from "../../scripts/lib/import-curation/internal/hash-util
 import {
   decisionApplyContextCoversExpectedRowsIdentity,
   decisionApplyContextRelevantToRowsFile,
-} from "../../scripts/lib/import-curation/internal/workflow-decision-full-context.mjs";
+} from "../../scripts/lib/import-curation/internal/workflow-decision-full-context.ts";
 import { attachIdentityPreflightFreshness } from "../../scripts/lib/import-curation/internal/workflow-identity-preflight.mjs";
 import {
   decisionApplyOutputRowsReachableThroughDeterministicTransforms,

@@ -20,7 +20,7 @@ export {
   decisionApplyContextRelevantToRowsFile,
   decisionTaskContextBundleHashesFromContext,
   readLocationDecisionApplyContext,
-} from "./workflow-decision-full-context.mjs";
+} from "./workflow-decision-full-context.ts";
 export {
   mapCurationEntities,
   mapSchemaRows,
