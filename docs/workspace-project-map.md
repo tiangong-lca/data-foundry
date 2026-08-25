@@ -22,8 +22,8 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 6be9e559a1d2ab1fed1aaaa7778095b115b713f6
-lastReviewedNote: "Reviewed for Issue #67 Wave 9: native TS canonical/bundle helpers and scale blocker propagation remain Foundry-local control-plane evidence; no cross-repository owner or normal execution surface changes."
+lastReviewedCommit: dc43513aff4191082c5290d9b8bc726bdce14cb1
+lastReviewedNote: "Reviewed for Issue #67 follow-up: zero-any import-ledger contracts and native TS shared fixtures remain Foundry-local evidence/delivery tooling; no cross-repository owner or normal execution surface changes."
 ---
 
 # Workspace Project Map

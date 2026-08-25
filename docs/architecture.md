@@ -49,6 +49,8 @@ checkPaths:
   - scripts/lib/import-ledger.ts
   - scripts/lib/canonical-support-rewrites.ts
   - scripts/lib/bundle-sample-utils.ts
+  - test/fixtures/fixture-roots.ts
+  - test/fixtures/finalize-fixtures.ts
   - .prettierignore
   - package.json
   - pnpm-lock.yaml
@@ -58,8 +60,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 9af72cd28ee83d4558cf5973cd92a69dfd13c964
-lastReviewedNote: "Reviewed for Issue #67 Wave 9: typed canonical rewrite and bundle sampling remain Foundry-local policy/materialization boundaries; scale blockers stay pre-write evidence and do not alter CLI authority."
+lastReviewedCommit: dc43513aff4191082c5290d9b8bc726bdce14cb1
+lastReviewedNote: "Reviewed for Issue #67 follow-up: strict import-ledger contracts and typed test fixtures remain local evidence/harness boundaries and do not alter command or CLI authority."
 ---
 
 # Architecture
@@ -110,6 +112,8 @@ The native TypeScript leaf set now also covers decision context, identity refere
 The typed BAFU family and import-ledger leaves preserve two local control-plane boundaries: deterministic family grouping/ranking over ordered signature hashes, and append-only resume evidence over verified, blocked, dependency, retry, and skipped JSONL rows. They do not change database writes, command ownership, public help, profile defaults, or the owner CLI boundary.
 
 The typed canonical-support and bundle-sampling leaves own local reference rewriting and source-package materialization, not amount conversion or remote execution. Canonical scale evidence is collected before the package-local FP reference is replaced: the explicit blocking flag distinguishes a known positive non-1 factor from an unresolved missing/non-finite/non-positive factor, and projects either blocker into the report and process-scope ledger. Without that flag, existing profile behavior remains compatible.
+
+The typed import-ledger boundary now models its JSON graph, external dependencies, report state unions, every emitted row family, manifest and write results directly. Unknown external values are narrowed at the boundary and no explicit `any` remains; the emitted append-only schema and byte/order/hash behavior are unchanged. Typed fixture roots/finalize builders remain test-only delivery infrastructure and do not enter the runtime dependency graph.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

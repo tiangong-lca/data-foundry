@@ -24,8 +24,8 @@ checkPaths:
   - docs/safety-policy.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 6be9e559a1d2ab1fed1aaaa7778095b115b713f6
-lastReviewedNote: "Reviewed for Issue #67 Wave 9: typed canonical rewriting, bundle materialization, and fail-closed scale evidence remain Foundry-owned pre-write policy helpers and add no sibling CLI, SDK, converter, database, or Edge behavior."
+lastReviewedCommit: dc43513aff4191082c5290d9b8bc726bdce14cb1
+lastReviewedNote: "Reviewed for Issue #67 follow-up: strict import-ledger types and typed shared test fixtures remain Foundry-owned evidence/harness boundaries and add no sibling CLI, SDK, converter, database, or Edge behavior."
 ---
 
 # Capability Ownership Policy

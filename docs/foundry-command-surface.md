@@ -26,8 +26,8 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 9af72cd28ee83d4558cf5973cd92a69dfd13c964
-lastReviewedNote: "Reviewed for Issue #67 Wave 9: typed canonical/bundle helpers preserve command categories and owners; bundle sampling conditionally declares scaling evidence and distinct known/unresolved blockers under its existing safety flag."
+lastReviewedCommit: dc43513aff4191082c5290d9b8bc726bdce14cb1
+lastReviewedNote: "Reviewed for Issue #67 follow-up: strict ledger type exports and typed test fixtures change no command category, owner, help, artifact schema, exit mapping, or remote-write mode."
 ---
 
 # Foundry Command Surface

@@ -47,6 +47,10 @@ checkPaths:
   - scripts/lib/import-ledger.ts
   - scripts/lib/canonical-support-rewrites.ts
   - scripts/lib/bundle-sample-utils.ts
+  - test/fixtures/fixture-roots.ts
+  - test/fixtures/finalize-fixtures.ts
+  - test/unit/import-ledger-type-contract.test.mts
+  - test/unit/fixture-helpers-contract.test.mts
   - docs/architecture.md
   - docs/runtime-skill-management.md
   - docs/foundry-task-contracts.md
@@ -55,8 +59,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 9af72cd28ee83d4558cf5973cd92a69dfd13c964
-lastReviewedNote: "Reviewed for Issue #67 Wave 9: canonical-support rewrites and bundle-sample utilities are native TS7 with profile, support, trace, contact, sample, scale, blocker, and artifact contracts retained."
+lastReviewedCommit: dc43513aff4191082c5290d9b8bc726bdce14cb1
+lastReviewedNote: "Reviewed for Issue #67 follow-up: import-ledger exposes strict zero-any TS contracts and shared root/finalize fixtures are native TS7 without JSONL, path, default, or consumer drift."
 ---
 
 # TianGong LCA Data Foundry
@@ -92,6 +96,8 @@ The evidence/decision slice migrates decision-task context and stable hashes, id
 The family/ledger slice migrates BAFU family signatures and the append-only import ledger. Characterization preserves normalized family names, ordered exchange skeleton/template/amount hashes, scope-order master selection and summaries, verified/blocked/retry row schemas, payload identity hashes, duplicate suppression, human-review ordering, resume/skipped artifacts, relative paths, and native parse/filesystem errors.
 
 The canonical/bundle slice migrates canonical FlowProperty reference rewrites and bundle sampling utilities. Characterization preserves normalized mapping lookup, scale/pending/proof/stale-version decisions, support/source/contact/profile fallbacks, source-trace field repair, reference-closure materialization, deterministic selection/dedupe, exact report ordering, and native errors. Bundle sampling also carries the existing scale contract end to end: under the explicit blocking flag, known non-1 factors and unresolved invalid factors use distinct blockers and remain visible in scaling/report/scope-ledger artifacts; scale 1 and no-flag defaults do not change.
+
+The ledger hardening follow-up removes every explicit `any` from `import-ledger.ts` and publishes concrete JSON, dependency, blocker, manifest, report, row, write-option/result, and report-result types. A separate TypeScript compile fixture proves valid state unions and rejects invalid discriminators or numeric paths, while behavior tests preserve exact JSONL bytes, hashes, ordering, dedupe, paths, and errors. The first test-fixture slice also migrates shared fixture roots and ready-finalize builders with all direct consumers updated; inventory accounting therefore moves from 130 to 128 without changing production code.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

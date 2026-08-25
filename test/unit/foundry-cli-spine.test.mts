@@ -317,6 +317,8 @@ test("active documentation and source contain no references to removed CLI spine
     "lib/import-ledger.mjs",
     "canonical-support-rewrites.mjs",
     "bundle-sample-utils.mjs",
+    "fixture-roots.mjs",
+    "finalize-fixtures.mjs",
   ];
   const files = [
     "AGENTS.md",

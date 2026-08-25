@@ -49,6 +49,8 @@ checkPaths:
   - scripts/lib/import-ledger.ts
   - scripts/lib/canonical-support-rewrites.ts
   - scripts/lib/bundle-sample-utils.ts
+  - test/fixtures/fixture-roots.ts
+  - test/fixtures/finalize-fixtures.ts
   - test/unit/foundry-cli-spine.test.mts
   - test/unit/foundry-command-metadata.test.mts
   - test/unit/surface-audit-typescript.test.mts
@@ -72,10 +74,12 @@ checkPaths:
   - test/unit/canonical-support-rewrites-contract.test.mts
   - test/unit/bundle-sample-utils-contract.test.mts
   - test/unit/wave9-canonical-bundle-migration.test.mts
+  - test/unit/import-ledger-type-contract.test.mts
+  - test/unit/fixture-helpers-contract.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 9af72cd28ee83d4558cf5973cd92a69dfd13c964
-lastReviewedNote: "Reviewed for Issue #67 Wave 9: typed canonical/bundle helpers preserve profile/materialization order and keep known/unresolved scale evidence blocking under the explicit flag."
+lastReviewedCommit: dc43513aff4191082c5290d9b8bc726bdce14cb1
+lastReviewedNote: "Reviewed for Issue #67 follow-up: strict ledger state types and typed shared fixtures reinforce characterization-first JSONL/report and test-harness contracts without changing workflow order."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
