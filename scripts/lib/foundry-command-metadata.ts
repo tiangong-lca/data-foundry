@@ -496,7 +496,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-bafu-leaf-classification-tasks-prepare": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/bafu-leaf-classification-tasks.mjs",
+    ownerModule: "scripts/commands/bafu-leaf-classification-tasks.ts",
     ownerExport:
       "createBafuLeafClassificationTaskCommands().runDatasetBafuLeafClassificationTasksPrepare",
     inputs: [
@@ -520,7 +520,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-bafu-leaf-classification-category-map-project": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/bafu-leaf-classification-tasks.mjs",
+    ownerModule: "scripts/commands/bafu-leaf-classification-tasks.ts",
     ownerExport:
       "createBafuLeafClassificationTaskCommands().runDatasetBafuLeafClassificationCategoryMapProject",
     inputs: [

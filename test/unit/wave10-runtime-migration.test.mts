@@ -22,7 +22,7 @@ test("every static Foundry runtime consumer targets the typed module explicitly"
     ["scripts/with-lca-account.ts", "./lib/foundry-runtime-utils.ts"],
     ["scripts/commands/bafu-auto-authoring.mjs", "../lib/foundry-runtime-utils.ts"],
     ["scripts/commands/bafu-batch-import-run.mjs", "../lib/foundry-runtime-utils.ts"],
-    ["scripts/commands/bafu-leaf-classification-tasks.mjs", "../lib/foundry-runtime-utils.ts"],
+    ["scripts/commands/bafu-leaf-classification-tasks.ts", "../lib/foundry-runtime-utils.ts"],
     ["scripts/lib/location-quality-utils.ts", "./foundry-runtime-utils.ts"],
     ["scripts/lib/remote-verification-accepted-diff.ts", "./foundry-runtime-utils.ts"],
     ["scripts/lib/import-curation/internal/context-inputs.ts", "../../foundry-runtime-utils.ts"],

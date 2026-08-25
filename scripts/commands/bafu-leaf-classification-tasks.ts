@@ -1,11 +1,106 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.ts";
 
-const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(scriptDir, "..", "..");
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface BafuLeafRuntime {
+  asText: (value: unknown) => string;
+  ensureArray: (value: unknown) => unknown[];
+  integerOption: (value: unknown, fallback?: number | null) => number | null;
+  positiveIntegerOption: (value: unknown, fallback?: number | null) => number | null;
+  resolveRepoPath: (filePath: unknown) => string | null;
+  repoRelativeMaybe: (filePath: string | null | undefined) => string | null;
+  readJson: (filePath: string) => unknown;
+  readJsonLines: (filePath: string) => unknown[];
+  writeJson: (filePath: string, value: unknown) => void;
+  writeJsonLines: (filePath: string, rows: readonly unknown[]) => void;
+  nowIso: () => string;
+}
+
+interface CategoryEntry extends JsonRecord {
+  code: string;
+  level: string | null;
+  label: string | null;
+}
+
+interface CategorySchema {
+  path: string;
+  entries: CategoryEntry[];
+  byCode: Map<string, CategoryEntry>;
+  leafCodes: Set<string>;
+}
+
+interface RepairCandidateOptions {
+  candidateType: string;
+  ruleSource: string;
+}
+
+interface ProjectedDecisionInput {
+  task: JsonRecord;
+  categoryKey: string;
+  decision: ResolvedCategoryDecision;
+}
+
+interface EnrichedCategoryDecision {
+  row: JsonRecord;
+  categoryKey: string;
+  file: string;
+  lineIndex: number;
+}
+
+interface ResolvedCategoryDecision {
+  categoryKey: string;
+  code: string;
+  label: string | null;
+  schemaLevel: string | null;
+  row: JsonRecord;
+  file: string;
+  lineIndex: number;
+}
+
+interface CategoryMapDecisionResult {
+  files: string[];
+  rows: EnrichedCategoryDecision[];
+  resolved: Map<string, ResolvedCategoryDecision>;
+  manualReview: JsonRecord[];
+}
+
+interface ProcessRepairInput {
+  task: JsonRecord;
+  categoryKey: string;
+  existingDecision: JsonRecord | null | undefined;
+  processSchema: CategorySchema;
+}
+
+interface DecisionTemplateInput {
+  processId: string;
+  processVersion: string;
+  key: string;
+  entityRow?: JsonRecord;
+  existingDecision: JsonRecord | null | undefined;
+  taskId: string;
+}
+
+interface TaskRowInput {
+  ledgerRow: JsonRecord;
+  entityRow?: JsonRecord;
+  scopeRow?: JsonRecord;
+  existingDecision: JsonRecord | null | undefined;
+  options: { maxExchangeRefs: number; maxReferences: number };
+}
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function jsonRecord(value: unknown): JsonRecord {
+  return isJsonRecord(value) ? value : {};
+}
+
 const prepareCommandName = "dataset-bafu-leaf-classification-tasks-prepare";
 const projectCommandName = "dataset-bafu-leaf-classification-category-map-project";
 const DEFAULT_SHARD_SIZE = 100;
@@ -13,7 +108,7 @@ const DEFAULT_MAX_EXCHANGE_REFS = 48;
 const DEFAULT_MAX_REFERENCES = 48;
 const DEFAULT_TEXT_LIMIT = 2400;
 
-function installedCliSchemaPath(fileName) {
+function installedCliSchemaPath(fileName: string): string {
   return path.join(resolveInstalledTiangongLcaCliPackage().schemaDir, fileName);
 }
 
@@ -29,11 +124,11 @@ const bafuLeafRuntimeKeys = [
   "writeJson",
   "writeJsonLines",
   "nowIso",
-];
+] as const satisfies readonly (keyof BafuLeafRuntime)[];
 
-let bafuLeafRuntime = null;
+let bafuLeafRuntime: BafuLeafRuntime | null = null;
 
-function installBafuLeafRuntime(deps) {
+function installBafuLeafRuntime(deps: BafuLeafRuntime): void {
   const missing = bafuLeafRuntimeKeys.filter((key) => typeof deps?.[key] !== "function");
   if (missing.length > 0) {
     throw new Error(
@@ -43,76 +138,76 @@ function installBafuLeafRuntime(deps) {
   bafuLeafRuntime = deps;
 }
 
-function runtime() {
+function runtime(): BafuLeafRuntime {
   if (!bafuLeafRuntime) {
     throw new Error("createBafuLeafClassificationTaskCommands must install command dependencies.");
   }
   return bafuLeafRuntime;
 }
 
-function asText(value) {
+function asText(value: unknown): string {
   return runtime().asText(value);
 }
 
-function ensureArray(value) {
+function ensureArray(value: unknown): unknown[] {
   return runtime().ensureArray(value);
 }
 
-function integerOption(value, fallback) {
+function integerOption(value: unknown, fallback: number | null = null): number | null {
   return runtime().integerOption(value, fallback);
 }
 
-function positiveIntegerOption(value, fallback) {
+function positiveIntegerOption(value: unknown, fallback: number | null = null): number | null {
   return runtime().positiveIntegerOption(value, fallback);
 }
 
-function resolveRepoPath(filePath) {
+function resolveRepoPath(filePath: unknown): string | null {
   return runtime().resolveRepoPath(filePath);
 }
 
-function repoRelative(filePath) {
+function repoRelative(filePath: string | null | undefined): string | null {
   return runtime().repoRelativeMaybe(filePath);
 }
 
-function readJson(filePath) {
-  return runtime().readJson(filePath);
+function readJson(filePath: string): JsonRecord {
+  return runtime().readJson(filePath) as JsonRecord;
 }
 
-function readJsonLines(filePath) {
-  return runtime().readJsonLines(filePath);
+function readJsonLines(filePath: string): JsonRecord[] {
+  return runtime().readJsonLines(filePath) as JsonRecord[];
 }
 
-function copyFileIfExists(sourcePath, targetPath) {
+function copyFileIfExists(sourcePath: string | null, targetPath: string): boolean {
   if (!sourcePath || !fs.existsSync(sourcePath)) return false;
   fs.mkdirSync(path.dirname(targetPath), { recursive: true });
   fs.copyFileSync(sourcePath, targetPath);
   return true;
 }
 
-function optionList(value) {
+function optionList(value: unknown): unknown[] {
   if (value === undefined || value === null || value === true || value === "") return [];
   return Array.isArray(value) ? value : [value];
 }
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   runtime().writeJson(filePath, value);
 }
 
-function writeJsonLines(filePath, rows) {
+function writeJsonLines(filePath: string, rows: readonly unknown[]): void {
   runtime().writeJsonLines(filePath, rows);
 }
 
-function sha256File(filePath) {
+function sha256File(filePath: string): string {
   return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
 }
 
-function truncateText(value, maxLength = DEFAULT_TEXT_LIMIT) {
+function truncateText(value: unknown, maxLength = DEFAULT_TEXT_LIMIT): string | null {
   const text = asText(value);
   if (!text || text.length <= maxLength) return text || null;
   return `${text.slice(0, maxLength)}...`;
 }
 
-function trimObjectStrings(value, maxLength = 800) {
+function trimObjectStrings(value: unknown, maxLength = 800): unknown {
   if (Array.isArray(value)) return value.map((item) => trimObjectStrings(item, maxLength));
   if (!value || typeof value !== "object") {
     return typeof value === "string" ? truncateText(value, maxLength) : value;
@@ -122,16 +217,21 @@ function trimObjectStrings(value, maxLength = 800) {
   );
 }
 
-function findNamedNode(node, wantedName, seen = new Set()) {
+function findNamedNode(
+  node: unknown,
+  wantedName: string,
+  seen: Set<object> = new Set(),
+): JsonRecord | null {
   if (!node || typeof node !== "object") return null;
   if (seen.has(node)) return null;
   seen.add(node);
-  if (node.name === wantedName) return node;
-  for (const child of ensureArray(node.children)) {
+  const record = jsonRecord(node);
+  if (record.name === wantedName) return record;
+  for (const child of ensureArray(record.children)) {
     const found = findNamedNode(child, wantedName, seen);
     if (found) return found;
   }
-  for (const [key, value] of Object.entries(node)) {
+  for (const [key, value] of Object.entries(record)) {
     if (key === "attributes" || key === "children") continue;
     if (!value || typeof value !== "object") continue;
     const found = findNamedNode(value, wantedName, seen);
@@ -140,32 +240,39 @@ function findNamedNode(node, wantedName, seen = new Set()) {
   return null;
 }
 
-function attributesObject(node) {
+function attributesObject(node: JsonRecord | null): Record<string, string> {
   if (!node || typeof node !== "object") return {};
   return Object.fromEntries(
     ensureArray(node.attributes)
-      .map((attribute) => [asText(attribute?.name), asText(attribute?.value)])
+      .map(jsonRecord)
+      .map((attribute) => [asText(attribute.name), asText(attribute.value)] as const)
       .filter(([key]) => key),
   );
 }
 
-function classificationRows(row) {
-  const classes =
-    row?.processDataSet?.processInformation?.dataSetInformation?.classificationInformation?.[
-      "common:classification"
-    ]?.["common:class"];
-  return ensureArray(classes).map((item) => ({
-    level: asText(item?.["@level"]) || null,
-    code: asText(item?.["@classId"]) || null,
-    label: asText(item) || null,
-  }));
+function classificationRows(row: JsonRecord): JsonRecord[] {
+  const dataSetInformation = jsonRecord(
+    jsonRecord(jsonRecord(row.processDataSet).processInformation).dataSetInformation,
+  );
+  const classification = jsonRecord(
+    jsonRecord(dataSetInformation.classificationInformation)["common:classification"],
+  );
+  return ensureArray(classification["common:class"])
+    .map(jsonRecord)
+    .map((item) => ({
+      level: asText(item["@level"]) || null,
+      code: asText(item["@classId"]) || null,
+      label: asText(item) || null,
+    }));
 }
 
-function extractProcessPayloadContext(row) {
-  const dataSetInformation = row?.processDataSet?.processInformation?.dataSetInformation ?? {};
-  const name = dataSetInformation.name ?? {};
-  const other = dataSetInformation["common:other"] ?? {};
-  const sourceTracePayload = other?.["tidasimport:sourceTrace"]?.payload ?? null;
+function extractProcessPayloadContext(row: JsonRecord): JsonRecord {
+  const dataSetInformation = jsonRecord(
+    jsonRecord(jsonRecord(row.processDataSet).processInformation).dataSetInformation,
+  );
+  const name = jsonRecord(dataSetInformation.name);
+  const other = jsonRecord(dataSetInformation["common:other"]);
+  const sourceTracePayload = jsonRecord(jsonRecord(other["tidasimport:sourceTrace"]).payload);
   const referenceFunction = findNamedNode(sourceTracePayload, "referenceFunction");
   const sourceGeography = findNamedNode(sourceTracePayload, "geography");
   const sourceTechnology = findNamedNode(sourceTracePayload, "technology");
@@ -185,20 +292,21 @@ function extractProcessPayloadContext(row) {
       .join(" > "),
     converted_classification_classes: classRows,
     general_comment: truncateText(dataSetInformation["common:generalComment"]),
-    source_trace: sourceTracePayload
-      ? {
-          source_object: truncateText(sourceTracePayload.sourceObject),
-          source_classification: trimObjectStrings(sourceTracePayload.sourceClassification),
-          reference_function_attributes: trimObjectStrings(attributesObject(referenceFunction)),
-          geography_attributes: trimObjectStrings(attributesObject(sourceGeography)),
-          technology_attributes: trimObjectStrings(attributesObject(sourceTechnology)),
-          time_period_attributes: trimObjectStrings(attributesObject(sourceTimePeriod)),
-        }
-      : null,
+    source_trace:
+      Object.keys(sourceTracePayload).length > 0
+        ? {
+            source_object: truncateText(sourceTracePayload.sourceObject),
+            source_classification: trimObjectStrings(sourceTracePayload.sourceClassification),
+            reference_function_attributes: trimObjectStrings(attributesObject(referenceFunction)),
+            geography_attributes: trimObjectStrings(attributesObject(sourceGeography)),
+            technology_attributes: trimObjectStrings(attributesObject(sourceTechnology)),
+            time_period_attributes: trimObjectStrings(attributesObject(sourceTimePeriod)),
+          }
+        : null,
   };
 }
 
-function readOptionalProcessContext(filePath) {
+function readOptionalProcessContext(filePath: unknown): JsonRecord | null {
   const resolved = resolveRepoPath(filePath);
   if (!resolved || !fs.existsSync(resolved)) return null;
   try {
@@ -208,7 +316,11 @@ function readOptionalProcessContext(filePath) {
   }
 }
 
-function libraryIndexPaths(inputPath) {
+function libraryIndexPaths(inputPath: unknown): {
+  indexDir: string;
+  entityIndex: string;
+  scopeProjection: string;
+} {
   const resolved = resolveRepoPath(inputPath);
   if (!resolved || !fs.existsSync(resolved)) {
     throw new Error("--library-index must point to a library index directory.");
@@ -222,15 +334,15 @@ function libraryIndexPaths(inputPath) {
   };
 }
 
-function entityKey(type, id, version) {
+function entityKey(type: string, id: string, version: string): string {
   return `${type}:${id}:${version}`;
 }
 
-function decisionKey(type, id, version) {
+function decisionKey(type: string, id: string, version: string): string {
   return `${type}::${id}::${version}`;
 }
 
-function classificationLibraryKey(row) {
+function classificationLibraryKey(row: JsonRecord): string {
   const categoryType = asText(row?.category_type ?? row?.schema_type);
   const datasetType =
     asText(row?.dataset_type ?? row?.type) ||
@@ -246,14 +358,14 @@ function classificationLibraryKey(row) {
   ].join(":");
 }
 
-function dependencyCounts(scopeRow) {
-  const dependencies = scopeRow?.dependency_ids ?? {};
+function dependencyCounts(scopeRow: JsonRecord | undefined): Record<string, number> {
+  const dependencies = jsonRecord(scopeRow?.dependency_ids);
   return Object.fromEntries(
     Object.entries(dependencies).map(([key, value]) => [key, ensureArray(value).length]),
   );
 }
 
-function limitRows(rows, limit) {
+function limitRows(rows: unknown, limit: number): JsonRecord {
   const safeRows = ensureArray(rows);
   return {
     rows: safeRows.slice(0, limit),
@@ -262,11 +374,11 @@ function limitRows(rows, limit) {
   };
 }
 
-function processReferences(entityRow, maxReferences) {
-  const references = ensureArray(entityRow?.references);
-  const sourceReferences = references.filter((item) => asText(item?.type) === "source data set");
-  const contactReferences = references.filter((item) => asText(item?.type) === "contact data set");
-  const flowReferences = references.filter((item) => asText(item?.type) === "flow data set");
+function processReferences(entityRow: JsonRecord | undefined, maxReferences: number): JsonRecord {
+  const references = ensureArray(entityRow?.references).map(jsonRecord);
+  const sourceReferences = references.filter((item) => asText(item.type) === "source data set");
+  const contactReferences = references.filter((item) => asText(item.type) === "contact data set");
+  const flowReferences = references.filter((item) => asText(item.type) === "flow data set");
   return {
     source_references: limitRows(sourceReferences, maxReferences),
     contact_references: limitRows(contactReferences, maxReferences),
@@ -274,7 +386,7 @@ function processReferences(entityRow, maxReferences) {
   };
 }
 
-function compactExistingDecision(decision) {
+function compactExistingDecision(decision: JsonRecord | null | undefined): JsonRecord | null {
   if (!decision) return null;
   return {
     selected_code: asText(decision.selected_code ?? decision.code ?? decision.leaf_code) || null,
@@ -289,17 +401,18 @@ function compactExistingDecision(decision) {
   };
 }
 
-function collectCategorySchemaEntries(schema) {
-  const byCode = new Map();
-  const visit = (value) => {
+function collectCategorySchemaEntries(schema: JsonRecord): CategoryEntry[] {
+  const byCode = new Map<string, CategoryEntry>();
+  const visit = (value: unknown): void => {
     if (!value || typeof value !== "object") return;
-    const properties = value.properties ?? {};
-    const code = asText(properties["@classId"]?.const);
+    const record = jsonRecord(value);
+    const properties = jsonRecord(record.properties);
+    const code = asText(jsonRecord(properties["@classId"]).const);
     if (code && !byCode.has(code)) {
       byCode.set(code, {
         code,
-        level: asText(properties["@level"]?.const) || null,
-        label: asText(properties["#text"]?.const) || null,
+        level: asText(jsonRecord(properties["@level"]).const) || null,
+        label: asText(jsonRecord(properties["#text"]).const) || null,
       });
     }
     for (const child of Object.values(value)) visit(child);
@@ -308,7 +421,7 @@ function collectCategorySchemaEntries(schema) {
   return [...byCode.values()];
 }
 
-function loadProcessCategorySchema(schemaPath) {
+function loadProcessCategorySchema(schemaPath: unknown): CategorySchema {
   const resolved =
     resolveRepoPath(schemaPath) || installedCliSchemaPath("tidas_processes_category.json");
   if (!resolved || !fs.existsSync(resolved)) {
@@ -318,17 +431,18 @@ function loadProcessCategorySchema(schemaPath) {
   }
   const schema = readJson(resolved);
   const entries = ensureArray(schema.oneOf ?? schema.anyOf)
-    .map((entry) => {
-      const properties = entry?.properties ?? {};
-      const code = asText(properties["@classId"]?.const);
+    .map(jsonRecord)
+    .map((entry): CategoryEntry | null => {
+      const properties = jsonRecord(entry.properties);
+      const code = asText(jsonRecord(properties["@classId"]).const);
       if (!code) return null;
       return {
         code,
-        level: asText(properties["@level"]?.const) || null,
-        label: asText(properties["#text"]?.const) || null,
+        level: asText(jsonRecord(properties["@level"]).const) || null,
+        label: asText(jsonRecord(properties["#text"]).const) || null,
       };
     })
-    .filter(Boolean);
+    .filter((entry): entry is CategoryEntry => Boolean(entry));
   const byCode = new Map(entries.map((entry) => [entry.code, entry]));
   const leafCodes = new Set(
     entries
@@ -343,7 +457,7 @@ function loadProcessCategorySchema(schemaPath) {
   };
 }
 
-function loadFlowProductCategorySchema(schemaPath) {
+function loadFlowProductCategorySchema(schemaPath: unknown): CategorySchema {
   const resolved =
     resolveRepoPath(schemaPath) || installedCliSchemaPath("tidas_flows_product_category.json");
   if (!resolved || !fs.existsSync(resolved)) {
@@ -374,7 +488,7 @@ function loadFlowProductCategorySchema(schemaPath) {
   };
 }
 
-function normalizedText(value) {
+function normalizedText(value: unknown): string {
   return asText(value)
     .toLowerCase()
     .normalize("NFKD")
@@ -383,24 +497,24 @@ function normalizedText(value) {
     .trim();
 }
 
-function classificationDecisionIsBroadFlowProduct(row) {
+function classificationDecisionIsBroadFlowProduct(row: JsonRecord): boolean {
   if (asText(row?.category_type ?? row?.categoryType) !== "flow-product") return false;
   const code = asText(row?.selected_code ?? row?.code ?? row?.leaf_code);
   const level = asText(row?.classification_decision_level ?? row?.classificationDecisionLevel);
   return level === "broad_section" || /^\d{1,3}$/u.test(code);
 }
 
-function normalizedSourceName(row) {
+function normalizedSourceName(row: JsonRecord): string {
   return normalizedText(row?.source_name).replace(/^x{1,3}\s+/u, "");
 }
 
-function flowProductLeafRepairRule(row) {
+function flowProductLeafRepairRule(row: JsonRecord): JsonRecord | null {
   const sourceName = normalizedSourceName(row);
   const basis = normalizedText(row?.basis);
   const converted = normalizedText(row?.converted_classification_reference);
   const evidenceText = [sourceName, basis, converted].filter(Boolean).join(" ");
-  const startsWith = (pattern) => pattern.test(sourceName);
-  const contains = (pattern) => pattern.test(evidenceText);
+  const startsWith = (pattern: RegExp): boolean => pattern.test(sourceName);
+  const contains = (pattern: RegExp): boolean => pattern.test(evidenceText);
 
   if (startsWith(/^electricity\b/u)) {
     return {
@@ -938,11 +1052,14 @@ function flowProductLeafRepairRule(row) {
   return null;
 }
 
-function repairBroadFlowProductDecision(row, flowProductSchema) {
+function repairBroadFlowProductDecision(
+  row: JsonRecord,
+  flowProductSchema: CategorySchema,
+): JsonRecord | null {
   if (!classificationDecisionIsBroadFlowProduct(row)) return null;
   const repair = flowProductLeafRepairRule(row);
   if (!repair) return null;
-  const selectedCode = repair.code;
+  const selectedCode = asText(repair.code);
   const schemaEntry = flowProductSchema.byCode.get(selectedCode);
   if (!flowProductSchema.leafCodes.has(selectedCode) || !schemaEntry) return null;
   const mentionsBattery =
@@ -982,7 +1099,10 @@ function repairBroadFlowProductDecision(row, flowProductSchema) {
   };
 }
 
-function classificationRepairCandidate(row, { candidateType, ruleSource }) {
+function classificationRepairCandidate(
+  row: JsonRecord,
+  { candidateType, ruleSource }: RepairCandidateOptions,
+): JsonRecord {
   return {
     ...row,
     decision_status: "candidate_requires_ai_or_human_review",
@@ -1001,16 +1121,20 @@ function classificationRepairCandidate(row, { candidateType, ruleSource }) {
   };
 }
 
-function categoryKeyFromParts(category, subcategory) {
+function categoryKeyFromParts(category: unknown, subcategory: unknown): string {
   return [asText(category), asText(subcategory)].filter(Boolean).join(" > ");
 }
 
-function sourceClassificationFromTask(task) {
-  return task?.process_context?.source_trace?.source_classification ?? {};
+function sourceClassificationFromTask(task: JsonRecord): JsonRecord | null {
+  const processContext = jsonRecord(task.process_context);
+  const sourceTrace = jsonRecord(processContext.source_trace);
+  const sourceClassification = jsonRecord(sourceTrace.source_classification);
+  return Object.keys(sourceClassification).length > 0 ? sourceClassification : null;
 }
 
-function categoryKeyForLeafTask(task) {
+function categoryKeyForLeafTask(task: JsonRecord): string {
   const sourceClassification = sourceClassificationFromTask(task);
+  if (!sourceClassification) return "";
   return categoryKeyFromParts(
     sourceClassification.category ?? sourceClassification.localCategory,
     sourceClassification.subCategory ??
@@ -1019,7 +1143,7 @@ function categoryKeyForLeafTask(task) {
   );
 }
 
-function categoryKeyForMapDecision(row) {
+function categoryKeyForMapDecision(row: JsonRecord): string {
   return (
     asText(row?.category_key) ||
     categoryKeyFromParts(
@@ -1029,12 +1153,12 @@ function categoryKeyForMapDecision(row) {
   );
 }
 
-function categoryMapDecisionFiles(rawOptions) {
+function categoryMapDecisionFiles(rawOptions: JsonRecord): string[] {
   const explicitFiles = optionList(
     rawOptions.categoryMapDecisions || rawOptions.categoryDecisions || rawOptions.decisions,
   )
     .map(resolveRepoPath)
-    .filter(Boolean);
+    .filter((filePath): filePath is string => Boolean(filePath));
   if (explicitFiles.length > 0) return explicitFiles;
   const decisionsDir = resolveRepoPath(
     rawOptions.categoryMapDecisionsDir ||
@@ -1053,18 +1177,21 @@ function categoryMapDecisionFiles(rawOptions) {
     .map((name) => path.join(decisionsDir, name));
 }
 
-function completedCategoryMapDecision(row) {
+function completedCategoryMapDecision(row: JsonRecord): boolean {
   return asText(row?.decision_status ?? row?.decisionStatus ?? row?.status) === "completed";
 }
 
-function categoryMapDecisionCode(row) {
+function categoryMapDecisionCode(row: JsonRecord): string {
   return asText(row?.selected_code ?? row?.selectedCode ?? row?.code);
 }
 
-function readCategoryMapDecisions(rawOptions, processSchema) {
+function readCategoryMapDecisions(
+  rawOptions: JsonRecord,
+  processSchema: CategorySchema,
+): CategoryMapDecisionResult {
   const files = categoryMapDecisionFiles(rawOptions);
-  const byCategory = new Map();
-  const rows = [];
+  const byCategory = new Map<string, EnrichedCategoryDecision[]>();
+  const rows: EnrichedCategoryDecision[] = [];
   for (const filePath of files) {
     for (const [lineIndex, row] of readJsonLines(filePath).entries()) {
       const categoryKey = categoryKeyForMapDecision(row);
@@ -1082,8 +1209,8 @@ function readCategoryMapDecisions(rawOptions, processSchema) {
     }
   }
 
-  const resolved = new Map();
-  const manualReview = [];
+  const resolved = new Map<string, ResolvedCategoryDecision>();
+  const manualReview: JsonRecord[] = [];
   for (const [categoryKey, decisionRows] of byCategory.entries()) {
     const completedRows = decisionRows.filter(({ row }) => completedCategoryMapDecision(row));
     if (completedRows.length === 0) {
@@ -1122,7 +1249,7 @@ function readCategoryMapDecisions(rawOptions, processSchema) {
       });
       continue;
     }
-    const code = uniqueCodes[0];
+    const code = uniqueCodes[0] ?? "";
     const schemaEntry = processSchema.byCode.get(code);
     if (!code || !processSchema.leafCodes.has(code) || !schemaEntry) {
       manualReview.push({
@@ -1141,7 +1268,9 @@ function readCategoryMapDecisions(rawOptions, processSchema) {
       continue;
     }
     const chosen = completedRows[0];
-    const contextBundleSha256 = asText(chosen.row?.authoring_context?.context_bundle_sha256);
+    const contextBundleSha256 = asText(
+      jsonRecord(chosen.row.authoring_context).context_bundle_sha256,
+    );
     if (!contextBundleSha256) {
       manualReview.push({
         schema_version: 1,
@@ -1176,9 +1305,20 @@ function readCategoryMapDecisions(rawOptions, processSchema) {
   };
 }
 
-function projectedClassificationDecision({ task, categoryKey, decision }) {
+function projectedClassificationDecision({
+  task,
+  categoryKey,
+  decision,
+}: ProjectedDecisionInput): JsonRecord {
   const processId = asText(task.dataset_id);
   const processVersion = asText(task.dataset_version) || "00.00.001";
+  const decisionRow = decision.row;
+  const decisionEvidence = jsonRecord(decisionRow.evidence);
+  const processContext = jsonRecord(task.process_context);
+  const libraryIndexContext = jsonRecord(task.library_index_context);
+  const exchangeContext = jsonRecord(task.exchange_context);
+  const decisionTemplate = jsonRecord(task.decision_template);
+  const templateEvidence = jsonRecord(decisionTemplate.evidence);
   return {
     schema_version: 1,
     dataset_type: "process",
@@ -1189,19 +1329,19 @@ function projectedClassificationDecision({ task, categoryKey, decision }) {
     decision_status: "completed",
     selected_code: decision.code,
     code: decision.code,
-    selected_label: decision.label ?? (asText(decision.row?.selected_label) || null),
+    selected_label: decision.label ?? (asText(decisionRow.selected_label) || null),
     basis:
-      asText(decision.row?.basis) ||
+      asText(decisionRow.basis) ||
       `Projected from completed BAFU source category mapping ${categoryKey}.`,
-    confidence: asText(decision.row?.confidence) || null,
-    authoring_context: decision.row?.authoring_context ?? null,
+    confidence: asText(decisionRow.confidence) || null,
+    authoring_context: decisionRow.authoring_context ?? null,
     classification_decision_level: "leaf",
-    source_name: task.process_context?.name ?? null,
-    converted_classification_reference: task.process_context?.converted_classification_path ?? null,
+    source_name: processContext.name ?? null,
+    converted_classification_reference: processContext.converted_classification_path ?? null,
     converted_classification_reference_policy: "weak_hint_only",
     used_context_kinds: [
       ...new Set([
-        ...ensureArray(decision.row?.used_context_kinds),
+        ...ensureArray(decisionRow.used_context_kinds),
         "library_entity_index",
         "scope_projection",
         "blocked_scope_ledger",
@@ -1218,42 +1358,42 @@ function projectedClassificationDecision({ task, categoryKey, decision }) {
         file: repoRelative(decision.file),
         line: decision.lineIndex,
         selected_code: decision.code,
-        selected_label: decision.label ?? (asText(decision.row?.selected_label) || null),
-        basis: truncateText(decision.row?.basis),
-        confidence: asText(decision.row?.confidence) || null,
-        category_semantics: truncateText(decision.row?.evidence?.category_semantics),
-        examples_used: ensureArray(decision.row?.evidence?.examples_used),
+        selected_label: decision.label ?? (asText(decisionRow.selected_label) || null),
+        basis: truncateText(decisionRow.basis),
+        confidence: asText(decisionRow.confidence) || null,
+        category_semantics: truncateText(decisionEvidence.category_semantics),
+        examples_used: ensureArray(decisionEvidence.examples_used),
       },
       task: {
         task_id: task.task_id ?? null,
         process_id: processId,
         process_version: processVersion,
-        source_file: task.library_index_context?.root_process_file ?? null,
-        bundle_process_file: task.library_index_context?.bundle_process_file ?? null,
-        payload_sha256: task.library_index_context?.payload_sha256 ?? null,
-        name_parts: task.process_context?.name_parts ?? null,
+        source_file: libraryIndexContext.root_process_file ?? null,
+        bundle_process_file: libraryIndexContext.bundle_process_file ?? null,
+        payload_sha256: libraryIndexContext.payload_sha256 ?? null,
+        name_parts: processContext.name_parts ?? null,
         source_classification: sourceClassificationFromTask(task),
-        output_flows: task.exchange_context?.output_flows ?? null,
+        output_flows: exchangeContext.output_flows ?? null,
       },
       broad_decision_replaced:
-        task.decision_template?.evidence?.broad_decision_replaced ??
-        task.existing_library_decision ??
-        null,
+        templateEvidence.broad_decision_replaced ?? task.existing_library_decision ?? null,
     },
   };
 }
 
-function normalizedTaskProcessName(task) {
-  return normalizedText(task?.process_context?.name).replace(/^x{1,3}\s+/u, "");
+function normalizedTaskProcessName(task: JsonRecord): string {
+  return normalizedText(jsonRecord(task.process_context).name).replace(/^x{1,3}\s+/u, "");
 }
 
-function taskSourceTraceText(task) {
-  const trace = task?.process_context?.source_trace ?? {};
-  const attrs = trace.reference_function_attributes ?? {};
+function taskSourceTraceText(task: JsonRecord): string {
+  const processContext = jsonRecord(task.process_context);
+  const trace = jsonRecord(processContext.source_trace);
+  const attrs = jsonRecord(trace.reference_function_attributes);
+  const sourceClassification = jsonRecord(trace.source_classification);
   return normalizedText(
     [
-      task?.process_context?.name,
-      task?.process_context?.general_comment,
+      processContext.name,
+      processContext.general_comment,
       attrs.name,
       attrs.localName,
       attrs.unit,
@@ -1262,29 +1402,30 @@ function taskSourceTraceText(task) {
       attrs.localCategory,
       attrs.localSubCategory,
       attrs.includedProcesses,
-      trace.source_classification?.category,
-      trace.source_classification?.subCategory,
-      trace.source_classification?.localCategory,
-      trace.source_classification?.localSubCategory,
+      sourceClassification.category,
+      sourceClassification.subCategory,
+      sourceClassification.localCategory,
+      sourceClassification.localSubCategory,
     ]
       .filter(Boolean)
       .join(" "),
   );
 }
 
-function taskReferenceUnit(task) {
-  return normalizedText(
-    task?.process_context?.source_trace?.reference_function_attributes?.unit ??
-      task?.process_context?.name_parts?.functional_unit_flow_properties,
-  );
+function taskReferenceUnit(task: JsonRecord): string {
+  const processContext = jsonRecord(task.process_context);
+  const sourceTrace = jsonRecord(processContext.source_trace);
+  const referenceAttributes = jsonRecord(sourceTrace.reference_function_attributes);
+  const nameParts = jsonRecord(processContext.name_parts);
+  return normalizedText(referenceAttributes.unit ?? nameParts.functional_unit_flow_properties);
 }
 
-function processLeafRepairRule(task) {
+function processLeafRepairRule(task: JsonRecord): JsonRecord | null {
   const sourceName = normalizedTaskProcessName(task);
   const evidenceText = taskSourceTraceText(task);
   const unit = taskReferenceUnit(task);
-  const startsWith = (pattern) => pattern.test(sourceName);
-  const contains = (pattern) => pattern.test(evidenceText);
+  const startsWith = (pattern: RegExp): boolean => pattern.test(sourceName);
+  const contains = (pattern: RegExp): boolean => pattern.test(evidenceText);
   const excludesActivityAmbiguity = !contains(
     /\b(?:operation|maintenance|use|production plant|chemical plant|system|infrastructure)\b/u,
   );
@@ -1483,13 +1624,22 @@ function processLeafRepairRule(task) {
   return null;
 }
 
-function repairProcessLeafDecision({ task, categoryKey, existingDecision, processSchema }) {
+function repairProcessLeafDecision({
+  task,
+  categoryKey,
+  existingDecision,
+  processSchema,
+}: ProcessRepairInput): JsonRecord | null {
   const repair = processLeafRepairRule(task);
   if (!repair) return null;
-  const schemaEntry = processSchema.byCode.get(repair.code);
-  if (!processSchema.leafCodes.has(repair.code) || !schemaEntry) return null;
+  const repairCode = asText(repair.code);
+  const schemaEntry = processSchema.byCode.get(repairCode);
+  if (!processSchema.leafCodes.has(repairCode) || !schemaEntry) return null;
   const processId = asText(task.dataset_id);
   const processVersion = asText(task.dataset_version) || "00.00.001";
+  const processContext = jsonRecord(task.process_context);
+  const libraryIndexContext = jsonRecord(task.library_index_context);
+  const exchangeContext = jsonRecord(task.exchange_context);
   return {
     schema_version: 1,
     dataset_type: "process",
@@ -1504,8 +1654,8 @@ function repairProcessLeafDecision({ task, categoryKey, existingDecision, proces
     basis: repair.basis,
     confidence: "high",
     classification_decision_level: "leaf",
-    source_name: task.process_context?.name ?? null,
-    converted_classification_reference: task.process_context?.converted_classification_path ?? null,
+    source_name: processContext.name ?? null,
+    converted_classification_reference: processContext.converted_classification_path ?? null,
     converted_classification_reference_policy: "weak_hint_ignored",
     used_context_kinds: [
       "library_entity_index",
@@ -1520,20 +1670,20 @@ function repairProcessLeafDecision({ task, categoryKey, existingDecision, proces
       source: "bafu_process_leaf_repair",
       repair_rule: repair.rule,
       category_key: categoryKey || null,
-      source_name: task.process_context?.name ?? null,
+      source_name: processContext.name ?? null,
       selected_code: repair.code,
       selected_label: schemaEntry.label,
       task: {
         task_id: task.task_id ?? null,
         process_id: processId,
         process_version: processVersion,
-        source_file: task.library_index_context?.root_process_file ?? null,
-        bundle_process_file: task.library_index_context?.bundle_process_file ?? null,
-        payload_sha256: task.library_index_context?.payload_sha256 ?? null,
-        name_parts: task.process_context?.name_parts ?? null,
+        source_file: libraryIndexContext.root_process_file ?? null,
+        bundle_process_file: libraryIndexContext.bundle_process_file ?? null,
+        payload_sha256: libraryIndexContext.payload_sha256 ?? null,
+        name_parts: processContext.name_parts ?? null,
         source_classification: sourceClassificationFromTask(task),
         reference_unit: taskReferenceUnit(task) || null,
-        output_flows: task.exchange_context?.output_flows ?? null,
+        output_flows: exchangeContext.output_flows ?? null,
       },
       broad_decision_replaced: existingDecision ?? null,
       guard_conditions: {
@@ -1551,7 +1701,7 @@ function buildDecisionTemplate({
   entityRow,
   existingDecision,
   taskId,
-}) {
+}: DecisionTemplateInput): JsonRecord {
   return {
     schema_version: 1,
     dataset_type: "process",
@@ -1591,20 +1741,27 @@ function buildDecisionTemplate({
   };
 }
 
-function buildTaskRow({ ledgerRow, entityRow, scopeRow, existingDecision, options }) {
-  const processId = asText(ledgerRow.blocked_process_id ?? ledgerRow.blocking_dependency?.id);
-  const processVersion = asText(
-    ledgerRow.blocked_process_version ?? ledgerRow.blocking_dependency?.version,
-  );
+function buildTaskRow({
+  ledgerRow,
+  entityRow,
+  scopeRow,
+  existingDecision,
+  options,
+}: TaskRowInput): JsonRecord {
+  const blockingDependency = jsonRecord(ledgerRow.blocking_dependency);
+  const processId = asText(ledgerRow.blocked_process_id ?? blockingDependency.id);
+  const processVersion = asText(ledgerRow.blocked_process_version ?? blockingDependency.version);
   const key = entityKey("process", processId, processVersion);
   const processContext =
     readOptionalProcessContext(scopeRow?.process_file) ??
     readOptionalProcessContext(entityRow?.source_file) ??
     {};
-  const exchangeRefs = ensureArray(scopeRow?.usage_refs?.process_exchange_flow_refs);
+  const usageRefs = jsonRecord(scopeRow?.usage_refs);
+  const exchangeRefs = ensureArray(usageRefs.process_exchange_flow_refs).map(jsonRecord);
   const outputRefs = exchangeRefs.filter(
-    (item) => asText(item?.direction).toLowerCase() === "output",
+    (item) => asText(item.direction).toLowerCase() === "output",
   );
+  const nameParts = jsonRecord(processContext.name_parts);
   const taskId = key;
 
   return {
@@ -1639,7 +1796,7 @@ function buildTaskRow({ ledgerRow, entityRow, scopeRow, existingDecision, option
       dependency_counts: dependencyCounts(scopeRow),
     },
     process_context: {
-      name: entityRow?.name ?? processContext.name_parts?.base_name ?? null,
+      name: entityRow?.name ?? nameParts.base_name ?? null,
       name_parts: processContext.name_parts ?? null,
       converted_classification_path:
         entityRow?.classification_path ?? processContext.converted_classification_path ?? null,
@@ -1677,7 +1834,7 @@ function buildTaskRow({ ledgerRow, entityRow, scopeRow, existingDecision, option
   };
 }
 
-export function prepareBafuLeafClassificationTasks(rawOptions) {
+export function prepareBafuLeafClassificationTasks(rawOptions: JsonRecord): JsonRecord {
   if (rawOptions.help) {
     return {
       schema_version: 1,
@@ -1706,13 +1863,18 @@ export function prepareBafuLeafClassificationTasks(rawOptions) {
 
   const outDir = resolveRepoPath(
     rawOptions.outDir || ".foundry/workspaces/bafu-leaf-classification-authoring",
-  );
-  const shardSize = positiveIntegerOption(rawOptions.shardSize, DEFAULT_SHARD_SIZE);
-  const offset = Math.max(0, integerOption(rawOptions.offset, 0));
+  )!;
+  const shardSize =
+    positiveIntegerOption(rawOptions.shardSize, DEFAULT_SHARD_SIZE) ?? DEFAULT_SHARD_SIZE;
+  const offset = Math.max(0, integerOption(rawOptions.offset, 0) ?? 0);
   const limit = integerOption(rawOptions.limit, null);
   const options = {
-    maxExchangeRefs: positiveIntegerOption(rawOptions.maxExchangeRefs, DEFAULT_MAX_EXCHANGE_REFS),
-    maxReferences: positiveIntegerOption(rawOptions.maxReferences, DEFAULT_MAX_REFERENCES),
+    maxExchangeRefs:
+      positiveIntegerOption(rawOptions.maxExchangeRefs, DEFAULT_MAX_EXCHANGE_REFS) ??
+      DEFAULT_MAX_EXCHANGE_REFS,
+    maxReferences:
+      positiveIntegerOption(rawOptions.maxReferences, DEFAULT_MAX_REFERENCES) ??
+      DEFAULT_MAX_REFERENCES,
   };
 
   const entityRows = readJsonLines(entityIndex);
@@ -1722,32 +1884,38 @@ export function prepareBafuLeafClassificationTasks(rawOptions) {
   const decisionRows =
     decisionsPath && fs.existsSync(decisionsPath) ? readJsonLines(decisionsPath) : [];
 
-  const processEntities = new Map(
+  const processEntities = new Map<string, JsonRecord>(
     entityRows
       .filter((row) => row.dataset_type === "process")
-      .map((row) => [entityKey("process", row.dataset_id, row.dataset_version), row]),
-  );
-  const scopes = new Map(
-    scopeRows.map((row) => [
-      entityKey("process", row.process_id, row.process_version ?? "00.00.001"),
-      row,
-    ]),
-  );
-  const decisions = new Map(
-    decisionRows
-      .filter((row) => row.dataset_type === "process" || row.category_type === "process")
       .map((row) => [
-        decisionKey("process", row.dataset_id ?? row.id, row.dataset_version ?? row.version),
+        entityKey("process", asText(row.dataset_id), asText(row.dataset_version)),
         row,
       ]),
   );
-  const blockedByProcess = new Map();
+  const scopes = new Map<string, JsonRecord>(
+    scopeRows.map((row) => [
+      entityKey("process", asText(row.process_id), asText(row.process_version) || "00.00.001"),
+      row,
+    ]),
+  );
+  const decisions = new Map<string, JsonRecord>(
+    decisionRows
+      .filter((row) => row.dataset_type === "process" || row.category_type === "process")
+      .map((row) => [
+        decisionKey(
+          "process",
+          asText(row.dataset_id ?? row.id),
+          asText(row.dataset_version ?? row.version) || "00.00.001",
+        ),
+        row,
+      ]),
+  );
+  const blockedByProcess = new Map<string, JsonRecord>();
   for (const row of blockedRows) {
     if (row.reason !== "process_classification_requires_leaf_authoring") continue;
-    const processId = asText(row.blocked_process_id ?? row.blocking_dependency?.id);
-    const processVersion = asText(
-      row.blocked_process_version ?? row.blocking_dependency?.version ?? "00.00.001",
-    );
+    const dependency = jsonRecord(row.blocking_dependency);
+    const processId = asText(row.blocked_process_id ?? dependency.id);
+    const processVersion = asText(row.blocked_process_version ?? dependency.version ?? "00.00.001");
     if (!processId) continue;
     const key = entityKey("process", processId, processVersion);
     if (!blockedByProcess.has(key)) blockedByProcess.set(key, row);
@@ -1757,9 +1925,10 @@ export function prepareBafuLeafClassificationTasks(rawOptions) {
     .sort(([left], [right]) => left.localeCompare(right))
     .slice(offset, limit === null ? undefined : offset + Math.max(0, limit));
   const tasks = selectedBlocked.map(([key, ledgerRow]) => {
-    const processId = asText(ledgerRow.blocked_process_id ?? ledgerRow.blocking_dependency?.id);
+    const dependency = jsonRecord(ledgerRow.blocking_dependency);
+    const processId = asText(ledgerRow.blocked_process_id ?? dependency.id);
     const processVersion = asText(
-      ledgerRow.blocked_process_version ?? ledgerRow.blocking_dependency?.version ?? "00.00.001",
+      ledgerRow.blocked_process_version ?? dependency.version ?? "00.00.001",
     );
     return buildTaskRow({
       ledgerRow,
@@ -1806,9 +1975,11 @@ export function prepareBafuLeafClassificationTasks(rawOptions) {
     });
   }
 
-  const missingEntityRows = tasks.filter((task) => !task.library_index_context.entity_row_found);
+  const missingEntityRows = tasks.filter(
+    (task) => !jsonRecord(task.library_index_context).entity_row_found,
+  );
   const missingScopeRows = tasks.filter(
-    (task) => !task.library_index_context.scope_projection_found,
+    (task) => !jsonRecord(task.library_index_context).scope_projection_found,
   );
   const report = {
     schema_version: 1,
@@ -1871,7 +2042,7 @@ export function prepareBafuLeafClassificationTasks(rawOptions) {
   return report;
 }
 
-export function projectBafuLeafCategoryMapDecisions(rawOptions) {
+export function projectBafuLeafCategoryMapDecisions(rawOptions: JsonRecord): JsonRecord {
   if (rawOptions.help) {
     return {
       schema_version: 1,
@@ -1909,7 +2080,7 @@ export function projectBafuLeafCategoryMapDecisions(rawOptions) {
   }
   const outDir = resolveRepoPath(
     rawOptions.outDir || path.join(path.dirname(sourceDecisionsDir), "decisions-leaf-projected"),
-  );
+  )!;
   const processSchema = loadProcessCategorySchema(rawOptions.processCategorySchema);
   const flowProductSchema = loadFlowProductCategorySchema(rawOptions.flowProductCategorySchema);
   const tasks = readJsonLines(tasksPath);
@@ -1922,14 +2093,14 @@ export function projectBafuLeafCategoryMapDecisions(rawOptions) {
     : [];
   const categoryMap = readCategoryMapDecisions(rawOptions, processSchema);
 
-  const originalByKey = new Map(
+  const originalByKey = new Map<string, JsonRecord>(
     originalClassificationRows.map((row) => [classificationLibraryKey(row), row]),
   );
-  const projectedRows = [];
-  const projectionManualReview = [];
-  const processLeafCandidates = [];
-  const flowProductCandidates = [];
-  const flowProductManualReview = [];
+  const projectedRows: JsonRecord[] = [];
+  const projectionManualReview: JsonRecord[] = [];
+  const processLeafCandidates: JsonRecord[] = [];
+  const flowProductCandidates: JsonRecord[] = [];
+  const flowProductManualReview: JsonRecord[] = [];
   const categoriesSeenByTasks = new Map();
 
   for (const task of tasks) {
@@ -1947,7 +2118,7 @@ export function projectBafuLeafCategoryMapDecisions(rawOptions) {
       categorySummary.examples.push({
         dataset_id: task.dataset_id,
         dataset_version: task.dataset_version,
-        name: task.process_context?.name ?? null,
+        name: jsonRecord(task.process_context).name ?? null,
       });
     }
 
@@ -1990,7 +2161,7 @@ export function projectBafuLeafCategoryMapDecisions(rawOptions) {
           ? {
               selected_code: repaired.selected_code,
               selected_label: repaired.selected_label,
-              repair_rule: repaired.evidence?.repair_rule ?? null,
+              repair_rule: jsonRecord(repaired.evidence).repair_rule ?? null,
               candidate_file: "process-leaf-classification-candidates.jsonl",
             }
           : null,
@@ -2032,7 +2203,7 @@ export function projectBafuLeafCategoryMapDecisions(rawOptions) {
         ? {
             selected_code: repaired.selected_code,
             selected_label: repaired.selected_label,
-            repair_rule: repaired.evidence?.repair_rule ?? null,
+            repair_rule: jsonRecord(repaired.evidence).repair_rule ?? null,
             candidate_file: "flow-product-classification-candidates.jsonl",
           }
         : null,
@@ -2160,7 +2331,10 @@ export function projectBafuLeafCategoryMapDecisions(rawOptions) {
   return report;
 }
 
-export function createBafuLeafClassificationTaskCommands(deps) {
+export function createBafuLeafClassificationTaskCommands(deps: BafuLeafRuntime): {
+  runDatasetBafuLeafClassificationTasksPrepare: typeof prepareBafuLeafClassificationTasks;
+  runDatasetBafuLeafClassificationCategoryMapProject: typeof projectBafuLeafCategoryMapDecisions;
+} {
   installBafuLeafRuntime(deps);
   return {
     runDatasetBafuLeafClassificationTasksPrepare: prepareBafuLeafClassificationTasks,
