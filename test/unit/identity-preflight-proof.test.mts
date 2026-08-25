@@ -5,7 +5,7 @@ import test from "node:test";
 import {
   createIdentityPreflightBinding,
   parseFreshIntentBoundAuthReceipt,
-  sha256Json,
+  sha256Text,
   validateBoundExecutionManifest,
   validateIdentityPreflightEvidence,
   validateIdentityPreflightExecution,
@@ -87,7 +87,7 @@ function binding() {
     datasetType: "flow",
     datasetId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
     datasetVersion: "00.00.001",
-    targetSha256: sha256Json({ id: "flow" }),
+    targetSha256: sha256Text(JSON.stringify({ id: "flow" })),
     requestText: '{"schema_version":1,"target":{"id":"flow"}}\n',
     semanticArgv: ["flow", "identity-preflight", "--json", "--timeout-ms", "60000"],
     cli: {

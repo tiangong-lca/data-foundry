@@ -429,7 +429,7 @@ export function validateIdentityPreflightEvidence(
   if (
     binding.request.bytes_sha256 !== sha256Text(input.requestText) ||
     binding.request.canonical_sha256 !== sha256Json(request) ||
-    sha256Json(request.target) !== input.targetSha256
+    sha256Text(JSON.stringify(request.target)) !== input.targetSha256
   ) {
     return { ok: false, code: "identity_preflight_manifest_request_mismatch" };
   }

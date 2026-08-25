@@ -1,4 +1,53 @@
-import { path, rel, writeJson, writeJsonLines } from "./foundry-core.mjs";
+import {
+  createIdentityPreflightBinding,
+  sha256Text,
+  validateIdentityPreflightExecution,
+} from "../../scripts/lib/identity-preflight-proof.ts";
+import { fs, path, rel, writeJson, writeJsonLines } from "./foundry-core.mjs";
+
+export function writeIdentityPreflightExecutionFixture({
+  datasetType,
+  id,
+  version = "00.00.001",
+  requestFile,
+  reportFile,
+  executionManifestFile = path.join(
+    path.dirname(reportFile),
+    "foundry-identity-preflight-execution.json",
+  ),
+}) {
+  const requestText = fs.readFileSync(requestFile, "utf8");
+  const reportText = fs.readFileSync(reportFile, "utf8");
+  const request = JSON.parse(requestText);
+  const binding = createIdentityPreflightBinding({
+    datasetType,
+    datasetId: id,
+    datasetVersion: version,
+    targetSha256: sha256Text(JSON.stringify(request.target)),
+    requestText,
+    semanticArgv: [datasetType, "identity-preflight", "--json", "--timeout-ms", "60000"],
+    cli: {
+      packageName: "@tiangong-lca/cli",
+      packageVersion: "0.1.1",
+      packageIntegrity: null,
+    },
+    authReceipt: null,
+    relevantInputHashes: {},
+  });
+  const reportMtimeMs = fs.statSync(reportFile).mtimeMs;
+  const execution = validateIdentityPreflightExecution({
+    binding,
+    exitCode: 0,
+    stdoutText: reportText,
+    diskReportText: reportText,
+    startedAtMs: reportMtimeMs - 1,
+    diskReportMtimeMs: reportMtimeMs,
+    completedAtUtc: "2026-08-25T00:00:00.000Z",
+  });
+  if (!execution.ok) throw new Error(execution.code);
+  writeJson(executionManifestFile, execution.manifest);
+  return executionManifestFile;
+}
 
 export function writeCompletedIdentityPreflightIndex(root, rows) {
   const requestsRoot = path.join(root, "identity-preflight-requests");
@@ -13,7 +62,7 @@ export function writeCompletedIdentityPreflightIndex(root, rows) {
     const candidates = Array.isArray(row.candidates) ? row.candidates : [];
     const decision = row.decision || "create_new";
     const blocked = decision === "block_duplicate";
-    writeJson(requestFile, {
+    const request = {
       schema_version: 1,
       target: row.target || { id, version, name_en: row.name || "Fixture" },
       remote_candidate_search: {
@@ -23,8 +72,9 @@ export function writeCompletedIdentityPreflightIndex(root, rows) {
         ...(row.filter ? { filter: row.filter } : {}),
         query: row.query || `${datasetType} name: ${row.name || "Fixture"}`,
       },
-    });
-    writeJson(reportFile, {
+    };
+    writeJson(requestFile, request);
+    const report = {
       schema_version: 1,
       kind: datasetType,
       status: row.status || (blocked ? "blocked" : "passed"),
@@ -76,6 +126,14 @@ export function writeCompletedIdentityPreflightIndex(root, rows) {
         row.nextAction ||
         (blocked ? "stop_duplicate" : "materialize_new_payload"),
       files: {},
+    };
+    writeJson(reportFile, report);
+    const executionManifestFile = writeIdentityPreflightExecutionFixture({
+      datasetType,
+      id,
+      version,
+      requestFile,
+      reportFile,
     });
     return {
       dataset_type: datasetType,
@@ -84,6 +142,7 @@ export function writeCompletedIdentityPreflightIndex(root, rows) {
       request_file: rel(requestFile),
       output_dir: rel(path.dirname(path.dirname(reportFile))),
       expected_report_file: rel(reportFile),
+      execution_manifest_file: rel(executionManifestFile),
       command: `tiangong-lca ${datasetType} identity-preflight --input ${path.basename(requestFile)}`,
       remote_search: {
         data_source: "tg",
