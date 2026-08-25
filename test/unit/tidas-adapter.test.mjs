@@ -9,7 +9,7 @@ import {
   runTidasHandshake,
   runTidasImport,
   runTidasRowsValidation,
-} from "../../scripts/lib/tidas-adapter.mjs";
+} from "../../scripts/lib/tidas-adapter.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 const fixture = path.join(repoRoot, "test", "fixtures", "fake-tidas.mjs");

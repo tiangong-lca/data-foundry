@@ -53,9 +53,9 @@ type PackageJson = {
 const commandHandlerHelpKeys = new Set(["help", "--help", "-h"]);
 const deprecatedNamePattern = /\b(?:legacy|deprecated|compat|compatibility|alias|old)\b/iu;
 const scriptEntrypoints = new Set([
-  "scripts/check-tidas-cutover.mjs",
+  "scripts/check-tidas-cutover.ts",
   "scripts/foundry.mjs",
-  "scripts/foundry-golden-diff.mjs",
+  "scripts/foundry-golden-diff.ts",
   "scripts/cases/production-contact-draft.ts",
   "scripts/with-lca-account.ts",
 ]);

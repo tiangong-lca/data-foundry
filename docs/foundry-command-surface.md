@@ -35,6 +35,10 @@ checkPaths:
   - scripts/lib/import-ledger.ts
   - scripts/lib/canonical-support-rewrites.ts
   - scripts/lib/bundle-sample-utils.ts
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -66,8 +70,8 @@ checkPaths:
   - test/unit/wave26-bafu-process-scope-command-migration.test.mts
   - test/unit/wave26-bafu-batch-command-migration.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: five dataset-orchestration owners move to TS7 without changing command names/categories, exports, exact help/argv/exit/report artifacts, profile defaults, adapter semantics, Worldsteel/Date.parse behavior, or remote-write modes."
+lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: dataset-orchestration and adapter/tool owners move to TS7 without changing commands/help, exports, process/report/exit artifacts, profiles, Worldsteel/Date.parse or remote-write modes."
 ---
 
 # Foundry Command Surface
@@ -96,6 +100,8 @@ Wave 25 moves `cli-wrappers`, `execution-capsule`, and `post-write-closeout` to 
 Wave 25 moves the import-curation leaf, index, and public barrels to TypeScript while command metadata continues to identify semantic owner modules. Metadata links the entry namespace contract as navigation evidence for profile listing, authoring, curation, cleanup, and mutation commands; the runtime command surface and handler injection remain unchanged.
 
 Wave 26 moves the generic library-scope owner and four BAFU orchestration owners to TypeScript. Registered names, metadata categories/exports, serialized help, option aliases/defaults, blocker and artifact order, exit mapping, resumable preflight/batch behavior and explicit-commit-only modes remain unchanged. The USLCI and Worldsteel wrappers now point directly at the typed batch owner but retain their existing frozen profile configuration.
+
+Wave 26 moves TIDAS/finalize adapters and the cutover/Golden entrypoints to native TypeScript. Public Foundry command names and help remain unchanged; package scripts now call the typed audit and Golden entrypoints while retaining the same JSON, exit, merge-base and normalized-diff contracts.
 
 ## Categories
 

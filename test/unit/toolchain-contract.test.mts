@@ -242,7 +242,7 @@ test("four-platform CI installs only from the frozen pnpm contract", () => {
 });
 
 test("golden comparison is portable and cannot collapse into HEAD self-comparison", () => {
-  const source = readText("scripts/foundry-golden-diff.mjs");
+  const source = readText("scripts/foundry-golden-diff.ts");
   assert.match(source, /merge-base/u);
   assert.match(source, /FOUNDRY_GOLDEN_BASE/u);
   assert.match(source, /pnpm["'],\s*\["install",\s*"--frozen-lockfile"/u);

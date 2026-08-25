@@ -23,6 +23,10 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - docs/safety-policy.md
   - docs/incremental-change-set-contract.md
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -70,8 +74,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: typing generic-library and BAFU orchestration changes no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse semantics, or sibling boundary; wrappers still delegate into the guarded CLI-owned mutation path."
+lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typing orchestration plus TIDAS/finalize adapters and cutover/Golden tools changes no capability owner, remote operation, external tool, search, profile, Worldsteel/Date.parse or sibling boundary."
 ---
 
 # Capability Ownership Policy

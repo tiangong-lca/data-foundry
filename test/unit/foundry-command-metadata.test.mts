@@ -165,7 +165,7 @@ test("metadata preserves exact owner, artifact, workflow, and key-test schemas",
           break;
         case "golden-diff":
           assert.deepEqual(Object.keys(keyTest).sort(), ["kind", "path"]);
-          assert.equal(keyTest.path, "scripts/foundry-golden-diff.mjs");
+          assert.equal(keyTest.path, "scripts/foundry-golden-diff.ts");
           break;
         case "node-test":
           assert.deepEqual(Object.keys(keyTest).sort(), ["assertion", "kind", "path"]);

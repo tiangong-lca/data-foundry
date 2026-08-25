@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { createPostAuthoringFinalizeUtils } from "../../scripts/lib/post-authoring-finalize-utils.mjs";
+import { createPostAuthoringFinalizeUtils } from "../../scripts/lib/post-authoring-finalize-utils.ts";
 
 // Minimal dependency stubs: preseedResolutionReuseDecisions only uses
 // asText / resolveRepoPath / fileExists / readRowsFile (plus node fs/path).

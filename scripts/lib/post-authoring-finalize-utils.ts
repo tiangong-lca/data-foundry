@@ -3,6 +3,56 @@ import fs from "node:fs";
 import path from "node:path";
 import { sha256Json } from "./import-curation/internal/hash-utils.ts";
 
+type JsonRecord = Record<string, unknown>;
+
+type FinalizeOptions = Record<string, unknown>;
+
+type StageReport = JsonRecord & {
+  status?: unknown;
+  files?: JsonRecord;
+  rewrite_rows?: unknown;
+};
+
+type IdentityPreflightCommands = {
+  identityPreflightRunIndexPath: (options: FinalizeOptions) => string | null;
+  runDatasetIdentityPreflightRequestsBuild: (options: FinalizeOptions) => StageReport;
+  runDatasetIdentityPreflightIndexMerge: (options: FinalizeOptions) => StageReport;
+  runDatasetIdentityPreflightRun: (options: FinalizeOptions) => StageReport;
+};
+
+type FinalizeFactoryDependencies = {
+  asText: (value: unknown) => string;
+  booleanOption: (value: unknown) => boolean;
+  cliWrapperCommands: {
+    runDatasetCurationQueueBuild: (options: FinalizeOptions) => StageReport;
+  };
+  countRowsFile: (filePath: string) => number;
+  datasetIdentity: (row: JsonRecord, datasetType: string) => { id: string; version: string };
+  ensureArray: <T>(value: T | T[] | null | undefined) => T[];
+  fileExists: (filePath: string | null) => boolean;
+  identityPreflightCommands: IdentityPreflightCommands;
+  identityReferenceRewriteIndexPath: (options: FinalizeOptions, rowsFile: string) => string | null;
+  normalizedList: (value: unknown) => string[];
+  readRowsFile: (filePath: string | null) => JsonRecord[];
+  referenceShortDescription: (reference: JsonRecord) => string;
+  repoRelativeMaybe: (filePath: string | null) => string | null;
+  resolveRepoPath: (value: unknown) => string | null;
+  unique: <T>(values: T[]) => T[];
+  writeJsonLines: (filePath: string, rows: JsonRecord[]) => unknown;
+};
+
+type ExternalReferenceRow = JsonRecord & {
+  id: string;
+  dataset_id: string;
+  version: string;
+  dataset_version: string;
+  references: JsonRecord[];
+};
+
+function record(value: unknown): JsonRecord | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : null;
+}
+
 export function createPostAuthoringFinalizeUtils({
   asText,
   booleanOption,
@@ -20,8 +70,11 @@ export function createPostAuthoringFinalizeUtils({
   resolveRepoPath,
   unique,
   writeJsonLines,
-}) {
-  function sourceReferenceRewritesFileForRowsFile(rowsFile, options = {}) {
+}: FinalizeFactoryDependencies) {
+  function sourceReferenceRewritesFileForRowsFile(
+    rowsFile: string | null,
+    options: FinalizeOptions = {},
+  ): string | null {
     const configured = resolveRepoPath(
       options.sourceReferenceRewrites ||
         options.sourceReferenceRewritesFile ||
@@ -39,7 +92,10 @@ export function createPostAuthoringFinalizeUtils({
     return candidates.find((candidate) => fileExists(candidate)) ?? null;
   }
 
-  function identityReferenceRewritesFileForRowsFile(rowsFile, options = {}) {
+  function identityReferenceRewritesFileForRowsFile(
+    rowsFile: string | null,
+    options: FinalizeOptions = {},
+  ): string | null {
     const configured = resolveRepoPath(
       options.identityReferenceRewrites ||
         options.identityReferenceRewritesFile ||
@@ -58,26 +114,30 @@ export function createPostAuthoringFinalizeUtils({
     return candidates.find((candidate) => fileExists(candidate)) ?? null;
   }
 
-  function existingSiblingRowsFile(rowsFile, fileName) {
+  function existingSiblingRowsFile(rowsFile: string | null, fileName: string): string | null {
     if (!rowsFile) return null;
     const candidate = path.join(path.dirname(rowsFile), fileName);
     return fileExists(candidate) && countRowsFile(candidate) > 0 ? candidate : null;
   }
 
-  function defaultFinalizeSupportRowsFiles(rowsFile) {
+  function defaultFinalizeSupportRowsFiles(rowsFile: string): string[] {
     const support = existingSiblingRowsFile(rowsFile, "support.jsonl");
     if (support) return [support];
     return [
       existingSiblingRowsFile(rowsFile, "contacts.jsonl"),
       existingSiblingRowsFile(rowsFile, "sources.jsonl"),
-    ].filter(Boolean);
+    ].filter((filePath): filePath is string => Boolean(filePath));
   }
 
-  function identityRewriteExternalFlowRefRows(identityReferenceRewriteStage) {
-    const seen = new Set();
-    const rows = [];
-    for (const rewrite of ensureArray(identityReferenceRewriteStage?.rewrite_rows)) {
-      const canonical = rewrite?.canonical ?? {};
+  function identityRewriteExternalFlowRefRows(
+    identityReferenceRewriteStage: StageReport | null,
+  ): JsonRecord[] {
+    const seen = new Set<string>();
+    const rows: JsonRecord[] = [];
+    for (const rewrite of ensureArray<JsonRecord>(
+      identityReferenceRewriteStage?.rewrite_rows as JsonRecord | JsonRecord[],
+    )) {
+      const canonical = record(rewrite.canonical) ?? {};
       const id = asText(canonical.ref_object_id ?? canonical.refObjectId ?? canonical.id);
       if (!id) continue;
       const version = asText(canonical.version) || "00.00.001";
@@ -97,7 +157,13 @@ export function createPostAuthoringFinalizeUtils({
     return rows;
   }
 
-  function writeIdentityRewriteExternalFlowRefs({ outDir, identityReferenceRewriteStage }) {
+  function writeIdentityRewriteExternalFlowRefs({
+    outDir,
+    identityReferenceRewriteStage,
+  }: {
+    outDir: string;
+    identityReferenceRewriteStage: StageReport | null;
+  }): string | null {
     const rows = identityRewriteExternalFlowRefRows(identityReferenceRewriteStage);
     if (rows.length === 0) return null;
     const filePath = path.join(outDir, "identity-reference-rewrite-external-flow-refs.jsonl");
@@ -105,7 +171,7 @@ export function createPostAuthoringFinalizeUtils({
     return filePath;
   }
 
-  function existingOptionFile(value, label) {
+  function existingOptionFile(value: unknown, label: string): string | null {
     const files = existingOptionFiles(value, label);
     if (files.length > 1) {
       throw new Error(`${label} accepts one file, received ${files.length}.`);
@@ -113,25 +179,33 @@ export function createPostAuthoringFinalizeUtils({
     return files[0] ?? null;
   }
 
-  function existingOptionFiles(value, label) {
+  function existingOptionFiles(value: unknown, label: string): string[] {
     return normalizedList(value).map((input) => {
       const resolved = resolveRepoPath(input);
       if (!fileExists(resolved)) {
         throw new Error(`${label} must point to an existing file: ${input}`);
       }
-      return resolved;
+      return resolved!;
     });
   }
 
-  function curationQueueManifestFile(queueDir) {
+  function curationQueueManifestFile(queueDir: string | null): string | null {
     if (!queueDir) return null;
     const manifest = path.join(queueDir, "outputs", "curation-queue-manifest.json");
     return fileExists(manifest) ? manifest : null;
   }
 
-  function writeProcessReferenceExternalFlowRefs({ outDir, processRowsFile, flowRowsFile }) {
+  function writeProcessReferenceExternalFlowRefs({
+    outDir,
+    processRowsFile,
+    flowRowsFile,
+  }: {
+    outDir: string;
+    processRowsFile: string | null;
+    flowRowsFile: string | null;
+  }): string | null {
     if (!processRowsFile || !fileExists(processRowsFile)) return null;
-    const localFlowKeys = new Set();
+    const localFlowKeys = new Set<string>();
     for (const row of readRowsFile(flowRowsFile)) {
       const identity = datasetIdentity(row, "flow");
       if (!identity.id) continue;
@@ -139,13 +213,16 @@ export function createPostAuthoringFinalizeUtils({
       localFlowKeys.add(`${identity.id}@@${identity.version || "00.00.001"}`);
     }
 
-    const refs = new Map();
+    const refs = new Map<string, ExternalReferenceRow>();
     for (const [rowIndex, row] of readRowsFile(processRowsFile).entries()) {
       const processIdentity = datasetIdentity(row, "process");
-      const exchanges = ensureArray(row?.processDataSet?.exchanges?.exchange);
+      const processDataSet = record(row.processDataSet);
+      const exchanges = ensureArray<JsonRecord>(
+        record(processDataSet?.exchanges)?.exchange as JsonRecord | JsonRecord[],
+      );
       for (const [exchangeIndex, exchange] of exchanges.entries()) {
-        const reference = exchange?.referenceToFlowDataSet;
-        if (!reference || typeof reference !== "object") continue;
+        const reference = record(exchange.referenceToFlowDataSet);
+        if (!reference) continue;
         const id = asText(reference["@refObjectId"]);
         if (!id) continue;
         const version = asText(reference["@version"]) || "00.00.001";
@@ -181,12 +258,12 @@ export function createPostAuthoringFinalizeUtils({
     return rows.length > 0 ? outFile : null;
   }
 
-  function readJsonIfExists(filePath) {
+  function readJsonIfExists(filePath: string | null): JsonRecord | null {
     if (!filePath || !fileExists(filePath)) return null;
-    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+    return JSON.parse(fs.readFileSync(filePath, "utf8")) as JsonRecord;
   }
 
-  function resolveIndexArtifact(indexPath, artifactPath) {
+  function resolveIndexArtifact(indexPath: string, artifactPath: unknown): string | null {
     const text = asText(artifactPath);
     if (!text) return null;
     if (path.isAbsolute(text)) return text;
@@ -195,7 +272,7 @@ export function createPostAuthoringFinalizeUtils({
     return path.resolve(path.dirname(indexPath), text);
   }
 
-  function identityPreflightIndexTargetSha(indexPath, row) {
+  function identityPreflightIndexTargetSha(indexPath: string, row: JsonRecord): string | null {
     const direct = asText(row?.target_sha256 ?? row?.targetSha256);
     if (direct) return direct;
     const requestPath = resolveIndexArtifact(indexPath, row?.request_file ?? row?.requestFile);
@@ -203,7 +280,15 @@ export function createPostAuthoringFinalizeUtils({
     return request?.target ? sha256Json(request.target) : null;
   }
 
-  function currentScopeIdentityPreflightRefreshPlan({ datasetType, rowsFile, indexPath }) {
+  function currentScopeIdentityPreflightRefreshPlan({
+    datasetType,
+    rowsFile,
+    indexPath,
+  }: {
+    datasetType: unknown;
+    rowsFile: string;
+    indexPath: string;
+  }) {
     const normalizedType = String(datasetType || "").toLowerCase();
     if (!["flow", "process"].includes(normalizedType)) {
       return {
@@ -218,7 +303,7 @@ export function createPostAuthoringFinalizeUtils({
     }
     const currentRows = readRowsFile(rowsFile);
     const indexRows = readRowsFile(indexPath);
-    const indexByKey = new Map();
+    const indexByKey = new Map<string, JsonRecord>();
     for (const row of indexRows) {
       const type = String(row?.dataset_type ?? row?.type ?? "").toLowerCase();
       const id = asText(row?.dataset_id ?? row?.entity_id ?? row?.id);
@@ -230,9 +315,9 @@ export function createPostAuthoringFinalizeUtils({
       }
     }
 
-    const staleRows = [];
-    const missingRows = [];
-    const missingTargetHashRows = [];
+    const staleRows: JsonRecord[] = [];
+    const missingRows: JsonRecord[] = [];
+    const missingTargetHashRows: JsonRecord[] = [];
     for (const payload of currentRows) {
       const identity = datasetIdentity(payload, normalizedType);
       if (!identity.id) continue;
@@ -281,6 +366,14 @@ export function createPostAuthoringFinalizeUtils({
     options,
     fullContextRequirement,
     identityReferenceRewriteStage,
+  }: {
+    datasetType: string;
+    rowsFile: string;
+    cleanedRowsFile: string;
+    outDir: string;
+    options: FinalizeOptions;
+    fullContextRequirement: unknown;
+    identityReferenceRewriteStage: StageReport | null;
   }) {
     const providedQueueDir = resolveRepoPath(options.queueDir || options.curationQueueDir);
     if (providedQueueDir) {
@@ -337,7 +430,7 @@ export function createPostAuthoringFinalizeUtils({
       ...explicitExternalFlowRefs,
       identityExternalRefs,
       processReferenceExternalRefs,
-    ]).filter(Boolean);
+    ]).filter((filePath): filePath is string => Boolean(filePath));
 
     const report = cliWrapperCommands.runDatasetCurationQueueBuild({
       processes: cleanedRowsFile,
@@ -350,10 +443,10 @@ export function createPostAuthoringFinalizeUtils({
       stage: "curation_queue",
       status: report.status,
       queue_dir: queueDir,
-      report_file: resolveRepoPath(report.files?.manifest),
+      report_file: resolveRepoPath(record(report.files)?.manifest),
       report,
       files: {
-        manifest: report.files?.manifest ?? null,
+        manifest: record(report.files)?.manifest ?? null,
         identity_external_flow_refs: repoRelativeMaybe(identityExternalRefs),
         process_reference_external_flow_refs: repoRelativeMaybe(processReferenceExternalRefs),
       },
@@ -370,7 +463,15 @@ export function createPostAuthoringFinalizeUtils({
   // completes them serially — this is a best-effort accelerator that NEVER changes the result.
   // Default 1 → no sharding → the existing serial path runs unchanged (BAFU byte-identical).
   // Applies to every profile (BAFU/USLCI/future) whenever the env var is set.
-  function runIdentityPreflightShardsInParallel({ index, outDir, options }) {
+  function runIdentityPreflightShardsInParallel({
+    index,
+    outDir,
+    options,
+  }: {
+    index: string | null;
+    outDir: string;
+    options: FinalizeOptions;
+  }): JsonRecord {
     const concurrency = Math.max(
       1,
       Number.parseInt(
@@ -387,8 +488,8 @@ export function createPostAuthoringFinalizeUtils({
       return { sharded: false, concurrency, total: total ?? 0 };
     }
     const chunk = Math.ceil(total / concurrency);
-    const foundry = resolveRepoPath("scripts/foundry.mjs");
-    const repoRoot = path.dirname(resolveRepoPath("package.json"));
+    const foundry = resolveRepoPath("scripts/foundry.mjs")!;
+    const repoRoot = path.dirname(resolveRepoPath("package.json")!);
     const timeoutMs =
       options.identityPreflightTimeoutMs ||
       options.identityPreflightTimeout ||
@@ -396,7 +497,7 @@ export function createPostAuthoringFinalizeUtils({
       options.timeout;
     const maxAttempts =
       options.identityPreflightMaxAttempts || options.identityPreflightRetryAttempts || 3;
-    const commands = [];
+    const commands: string[][] = [];
     for (let i = 0; i < concurrency; i += 1) {
       const offset = i * chunk;
       if (offset >= total) break;
@@ -444,7 +545,7 @@ export function createPostAuthoringFinalizeUtils({
     };
   }
 
-  function preseedResolutionReuseDecisions({ index }) {
+  function preseedResolutionReuseDecisions({ index }: { index: string | null }): JsonRecord {
     const mapFile = resolveRepoPath(process.env.IDENTITY_PREFLIGHT_REUSE_MAP);
     if (!mapFile || !fileExists(mapFile) || !index || !fileExists(index)) {
       return { enabled: false, seeded: 0 };
@@ -456,7 +557,15 @@ export function createPostAuthoringFinalizeUtils({
     };
   }
 
-  function runFinalizeIdentityPreflightStage({ rowsFile, outDir, options }) {
+  function runFinalizeIdentityPreflightStage({
+    rowsFile,
+    outDir,
+    options,
+  }: {
+    rowsFile: string;
+    outDir: string;
+    options: FinalizeOptions;
+  }): JsonRecord {
     if (!booleanOption(options.runIdentityPreflight)) {
       return {
         stage: "identity_preflight_run",
@@ -486,8 +595,8 @@ export function createPostAuthoringFinalizeUtils({
       indexPath: baseIndexPath,
     });
     let indexPath = baseIndexPath;
-    let refreshReport = null;
-    let mergeReport = null;
+    let refreshReport: StageReport | null = null;
+    let mergeReport: StageReport | null = null;
     const refreshForcedButExact = Boolean(
       !allowStaleIdentityPreflight && refreshRequested && !refreshPlan.required,
     );
@@ -505,14 +614,16 @@ export function createPostAuthoringFinalizeUtils({
         ...(baseIndexHasSourceContext ? { sourceIndex: baseIndexPath } : {}),
         outDir: path.join(outDir, "identity-preflight-current-scope", "requests"),
       });
-      const refreshIndex = resolveRepoPath(refreshReport.files?.identity_preflight_requests);
+      const refreshIndex = resolveRepoPath(
+        record(refreshReport.files)?.identity_preflight_requests,
+      );
       if (refreshReport.status === "ready" && refreshIndex && fileExists(refreshIndex)) {
         mergeReport = identityPreflightCommands.runDatasetIdentityPreflightIndexMerge({
           baseIndex: baseIndexPath,
           updateIndex: refreshIndex,
           outDir: path.join(outDir, "identity-preflight-current-scope", "merge"),
         });
-        const mergedIndex = resolveRepoPath(mergeReport.files?.merged_index);
+        const mergedIndex = resolveRepoPath(record(mergeReport.files)?.merged_index);
         if (mergeReport.status === "ready" && mergedIndex && fileExists(mergedIndex)) {
           indexPath = mergedIndex;
         }
@@ -523,9 +634,11 @@ export function createPostAuthoringFinalizeUtils({
         stage: "identity_preflight_run",
         status: "blocked_current_scope_refresh",
         report: refreshReport,
-        report_file: resolveRepoPath(refreshReport.files?.report),
+        report_file: resolveRepoPath(record(refreshReport.files)?.report),
         index_file: repoRelativeMaybe(indexPath),
-        refresh_report_file: repoRelativeMaybe(resolveRepoPath(refreshReport.files?.report)),
+        refresh_report_file: repoRelativeMaybe(
+          resolveRepoPath(record(refreshReport.files)?.report),
+        ),
         merge_report_file: null,
       };
     }
@@ -534,10 +647,12 @@ export function createPostAuthoringFinalizeUtils({
         stage: "identity_preflight_run",
         status: "blocked_current_scope_merge",
         report: mergeReport,
-        report_file: resolveRepoPath(mergeReport.files?.report),
+        report_file: resolveRepoPath(record(mergeReport.files)?.report),
         index_file: repoRelativeMaybe(indexPath),
-        refresh_report_file: repoRelativeMaybe(resolveRepoPath(refreshReport?.files?.report)),
-        merge_report_file: repoRelativeMaybe(resolveRepoPath(mergeReport.files?.report)),
+        refresh_report_file: repoRelativeMaybe(
+          resolveRepoPath(record(refreshReport?.files)?.report),
+        ),
+        merge_report_file: repoRelativeMaybe(resolveRepoPath(record(mergeReport.files)?.report)),
       };
     }
     // Unbound synthetic reports are intentionally disabled. A future optimization must bind the
@@ -585,7 +700,7 @@ export function createPostAuthoringFinalizeUtils({
       stage: "identity_preflight_run",
       status: report.status,
       report,
-      report_file: resolveRepoPath(report.files?.report),
+      report_file: resolveRepoPath(record(report.files)?.report),
       index_file: repoRelativeMaybe(indexPath),
       base_index_file: repoRelativeMaybe(baseIndexPath),
       refresh_required: Boolean(!allowStaleIdentityPreflight && refreshPlan.required),
@@ -594,8 +709,8 @@ export function createPostAuthoringFinalizeUtils({
       ),
       refresh_force_skipped_exact: refreshForcedButExact,
       refresh_plan: refreshPlan,
-      refresh_report_file: repoRelativeMaybe(resolveRepoPath(refreshReport?.files?.report)),
-      merge_report_file: repoRelativeMaybe(resolveRepoPath(mergeReport?.files?.report)),
+      refresh_report_file: repoRelativeMaybe(resolveRepoPath(record(refreshReport?.files)?.report)),
+      merge_report_file: repoRelativeMaybe(resolveRepoPath(record(mergeReport?.files)?.report)),
       refresh_report: refreshReport,
       merge_report: mergeReport,
       parallel_shards: parallelShards,

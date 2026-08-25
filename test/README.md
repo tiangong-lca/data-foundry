@@ -21,6 +21,10 @@ checkPaths:
   - .prettierignore
   - prettier.config.cjs
   - specs/typescript-migration-inventory.json
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -175,13 +179,17 @@ checkPaths:
   - test/commands/classification-decisions.test.mjs
   - test/commands/location-decisions.test.mjs
   - test/scenarios/flow-identity-decisions.test.mjs
+  - test/unit/tidas-adapter-migration-contract.test.mts
+  - test/unit/post-authoring-finalize-utils-contract.test.mts
+  - test/unit/tidas-cutover-script-contract.test.mts
+  - test/unit/foundry-golden-diff-contract.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: tests cover five native-only orchestration owners, exact exports/help/consumers/metadata, realistic library/scope/classification/identity blockers, resume/pause/parallel/preflight/commit delegation, artifact order, native errors, and zero type escapes."
+lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: tests cover typed orchestration plus controlled TIDAS/finalize process, blocker/artifact/order/hash behavior, cutover stdout/exit, Golden normalization, exact help and native failures."
 ---
 
 # Test Layout
@@ -266,6 +274,8 @@ Wave 25 covers the three decision command factories. `unit/wave25-identity-decis
 Wave 25 covers two re-export families. `unit/import-curation-leaf-barrels-migration.test.mts` pins the exact profile/trace namespaces and direct owner references. `unit/import-curation-entry-barrels-migration.test.mts` pins the complete eight-export index/public namespace, every owner reference, Foundry CLI injection keys, metadata owner routes, TS-only atomic entry migration, and a clean temporary TypeScript build loaded by Node 24. No fixture reads credentials, `.env`, production state, or ignored Foundry artifacts.
 
 Wave 26 covers five dependency-ordered orchestration families. The five `unit/wave26-*-command-migration.test.mts` contracts require one native zero-escape owner, every dispatcher/metadata/wrapper consumer and exact serialized help bytes. Existing command and scenario fixtures remain the behavior authority for generic-versus-BAFU configuration, library/scope/classification/identity blocker and artifact order, resume ledgers, pause/stop, bounded parallel selection, read-only preflight, guarded commit delegation, native errors and deterministic report/JSONL bytes. All fixtures are local and read neither `.env` nor production.
+
+Wave 26 covers adapters and repository tooling in four RED/GREEN families. `unit/tidas-adapter-migration-contract.test.mts` uses controlled local executables to pin argv, environment, operation reports, version gates, path resolution, hashes and native spawn failures. `unit/post-authoring-finalize-utils-contract.test.mts` pins rewrite resolution, identity reuse, queue/input order and fail-closed preflight behavior. `unit/tidas-cutover-script-contract.test.mts` pins the tracked inventory, exact stdout and exit contract. `unit/foundry-golden-diff-contract.test.mts` pins merge-base selection, normalization, cross-platform executable/argv handling, Node-native comparison, Golden diffs and failure exits. All four require zero-escape native TypeScript and prohibit real external TIDAS or production access.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

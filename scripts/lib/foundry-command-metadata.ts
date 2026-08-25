@@ -34,7 +34,7 @@ const commandSmoke = (command: string): CommandKeyTest => ({
 
 const goldenDiff: CommandKeyTest = {
   kind: "golden-diff",
-  path: "scripts/foundry-golden-diff.mjs",
+  path: "scripts/foundry-golden-diff.ts",
 };
 
 const nodeTest = (path: string, assertion: string): CommandKeyTest => ({

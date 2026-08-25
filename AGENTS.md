@@ -37,6 +37,8 @@ checkPaths:
   - scripts/lib/import-curation/index.ts
   - scripts/lib/import-curation/profiles.ts
   - scripts/lib/import-curation/trace-summary.ts
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
   - scripts/with-lca-account.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
@@ -59,6 +61,8 @@ checkPaths:
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
   - scripts/lib/foundry-runtime-utils.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/lib/location-quality-utils.ts
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
@@ -137,12 +141,16 @@ checkPaths:
   - test/unit/wave26-bafu-auto-authoring-command-migration.test.mts
   - test/unit/wave26-bafu-process-scope-command-migration.test.mts
   - test/unit/wave26-bafu-batch-command-migration.test.mts
+  - test/unit/tidas-adapter-migration-contract.test.mts
+  - test/unit/post-authoring-finalize-utils-contract.test.mts
+  - test/unit/tidas-cutover-script-contract.test.mts
+  - test/unit/foundry-golden-diff-contract.test.mts
   - specs/typescript-migration-inventory.json
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: five typed orchestration owners preserve generic-versus-BAFU configuration, library/scope/identity/classification blocker order, resume/pause/parallel/preflight/commit delegation, exact argv/artifacts/help bytes, native errors, and fail-closed write authority under local fixtures."
+lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed dataset orchestration plus TIDAS/finalize adapters and cutover/Golden tooling preserve configuration, blocker/artifact order, resumable delegation, executable argv/env, reports/hashes, audit output and fail-closed authority under local fixtures."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -196,6 +204,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - `authoring-task-workflow.ts` and `authoring-patch-workflow.ts` are reference-preserving typed facades over that SCC. `authoring-packages.ts` owns local package snapshots and task manifests; `patch-collect.ts` owns local patch admission and batch materialization. Snapshot bytes/SHA, task and operation order, blocker classification, and native JSON errors are stable contracts; blocked collection must not create a fresh executable batch.
 - `curation-gate-workflow.ts` is a reference-preserving typed aggregate over the existing evidence helpers. `curation-gate.ts` preserves source-row entity order, schema/QA/queue/context blocker order, authoring-package bytes and report aliases; `curation-cleanup.ts` preserves deep-cloned row order, JSONL bytes, annual sentinel completion, trace externalization, source-exchange proof, locator redaction and native errors. These remain local read/transform/report stages and grant no remote-write authority.
 - `workflow-reference-closure.ts` preserves reference discovery, planned-self, verified-public, proven, unresolved and foreign partition semantics plus write/reuse decision order. `workflow-source-reference-context.ts` preserves explicit/default rewrite-file priority and public-canonical proof filtering. `mutation-manifest-workflow.ts` remains a live-reference aggregate, while `mutation-manifest.ts` preserves ordered write/reference/blocked artifacts and omits executable write authority whenever any blocker remains.
+- `tidas-adapter.ts` preserves executable/config precedence, Node script argv, public performance environment, operation reports, version/asset fingerprints, batch manifests/events, atomic output replacement and native process errors. `post-authoring-finalize-utils.ts` preserves rewrite resolution, identity/reference reuse, exact-payload refresh, queue/finalization order and fail-close. `check-tidas-cutover.ts` and `foundry-golden-diff.ts` preserve their Git inventory/exit and non-HEAD normalized comparison contracts.
 - `scripts/commands/tasks.ts`, `import-completion.ts`, `commit-handoff.ts`, `identity-decision-task.ts`, and `support-cache.ts` are typed command-owner boundaries. They preserve queue/report ordering, exact report and snapshot bytes, CommandSpec executable/argv plus final-row byte/SHA binding, identity action dedupe, public-support cache ordering, fail-closed blockers, and native errors. Their tests use local filesystem fixtures, injected spies, and stubbed read-only HTTP responses only; migration grants no credential, mutation, review, or publish authority.
 - `library-scope-workflow.ts`, `bafu-leaf-classification-tasks.ts`, `bafu-auto-authoring.ts`, `bafu-process-scope-e2e.ts`, and `bafu-batch-import-run.ts` are the typed dataset-orchestration layer. Keep the generic library owner profile-agnostic and BAFU defaults explicit; preserve dependency order, resume/interruption/parallel/preflight behavior, artifact and blocker order, executable-plus-argv delegation, receipt/hash checks and explicit-commit-only gates. The USLCI and Worldsteel adapters continue to delegate into the same typed batch owner without changing profile semantics.
 - `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts` are typed runtime command boundaries. CLI wrappers preserve executable-prefix/argv arrays, inherited environment, stdout/stderr, exit mapping and native spawn errors without shell strings. Capsule admission remains offline, exclusive-write, receipt/hash/seal and no-replay evidence only. Closeout remains read-only and fail-closed on artifact drift, non-unique roots, owner/state/payload mismatch, foreign or hidden missing data, and production-test accepted-diff restrictions.

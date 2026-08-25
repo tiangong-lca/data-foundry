@@ -23,7 +23,11 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - specs/automated-lca-capability-registry.json
   - specs/capability-ownership-rules.json
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
   - scripts/with-lca-account.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -189,10 +193,14 @@ checkPaths:
   - test/unit/wave26-bafu-auto-authoring-command-migration.test.mts
   - test/unit/wave26-bafu-process-scope-command-migration.test.mts
   - test/unit/wave26-bafu-batch-command-migration.test.mts
+  - test/unit/tidas-adapter-migration-contract.test.mts
+  - test/unit/post-authoring-finalize-utils-contract.test.mts
+  - test/unit/tidas-cutover-script-contract.test.mts
+  - test/unit/foundry-golden-diff-contract.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: typed dataset orchestration preserves generic/BAFU configuration, dependency topology, resume/pause/parallel/preflight/commit delegation, blocker/artifact order, exact help/argv/receipt/hash contracts, native errors, and fail-closed authority."
+lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed orchestration and TIDAS/finalize adapter tooling preserve dependency topology, resume/preflight/commit delegation, blockers/artifacts, argv/env, reports/hashes, audit output and merge-base normalization."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -270,6 +278,8 @@ CLI wrappers, execution-capsule admission, and post-write closeout are native Ty
 The identity, classification, and location decision command factories are native TypeScript. Preserve their existing option aliases and defaults, queue/task/path encounter order, exact help and report bytes, decision-context and unclosed-queue blockers, deterministic classification/location CLI argv, stage failure short-circuiting, and identity read-only output split. Validation blockers must prevent owner-command stages; missing or malformed local artifacts retain native failures, and no factory gains direct remote-write authority.
 
 The import-curation leaf, index, and public entry barrels are native TypeScript and must remain pure direct re-exports. Preserve the exact namespace keys and live function identity through both source and emitted Node 24 modules; do not add wrappers, initialization, hidden state, alternate owners, or a parallel `.mjs` entry. The CLI injection keys and metadata owner modules remain the authoritative command-consumer topology.
+
+The TIDAS adapter, finalize utility boundary, cutover audit and Golden harness are native TypeScript. Preserve direct executable-plus-argv invocation, allowed environment forwarding, operation/version/hash reports, finalize rewrite/reuse/freshness order, authoritative Git inventory JSON/exit, and non-HEAD Node-native Golden comparison. Tests use only controlled fake executables and local Git/filesystem fixtures.
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 

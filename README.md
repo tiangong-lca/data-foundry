@@ -26,6 +26,10 @@ checkPaths:
   - scripts/lib/import-curation/index.ts
   - scripts/lib/import-curation/profiles.ts
   - scripts/lib/import-curation/trace-summary.ts
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -108,8 +112,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: native TS7 dataset orchestration preserves profile boundaries, scope/library/identity/classification gates, resume/pause/parallel/preflight/commit behavior, exact help/argv/artifact bytes and hashes, native errors, adapter delegation, and remote-write authority."
+lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed dataset orchestration and adapter/tooling owners preserve profile boundaries, resumable gates, exact help/argv/artifacts, TIDAS reports/hashes, finalize order, cutover output and Golden normalization without changing write authority."
 ---
 
 # TianGong LCA Data Foundry
@@ -191,6 +195,8 @@ Wave 25 migrates the three decision command factories in dependency order: stand
 Wave 25 migrates the import-curation re-export topology without wrappers. `profiles.ts` and `trace-summary.ts` retain their exact namespaces and owner function identity; `import-curation/index.ts` and the public `import-curation.ts` entry retain the complete eight-export namespace and direct references to the semantic owners. Node 24 loads both source and emitted entry layers, and command metadata continues to route each command to its semantic owner. Inventory moves 93→89 without changing runtime behavior, command help, profiles, Worldsteel semantics, or remote-write authority.
 
 Wave 26 migrates five dataset-orchestration owners in dependency order: generic `library-scope-workflow.ts`, then BAFU leaf classification and auto-authoring, process-scope E2E, and the shared BAFU batch engine used by the USLCI and Worldsteel adapters. Characterization preserves profile-agnostic versus BAFU configuration, library/scope/identity/classification blocker and artifact order, resume/pause/parallel/preflight/commit delegation, authoritative executable-plus-argv and receipt/hash checks, exact help/report bytes, native errors, and explicit-commit-only authority. Inventory moves 79→74 without changing command names, profile defaults, Golden artifacts, Worldsteel semantics, Date.parse behavior, or production authority; every case is local and reads neither `.env` nor production.
+
+Wave 26 migrates four adapter/tool boundaries. `tidas-adapter.ts` retains executable/config precedence, controlled script argv/env, operation/version/asset reports, batch document hashes and atomic rollback. `post-authoring-finalize-utils.ts` retains rewrite discovery, identity reuse, payload-freshness hashes, external-reference and finalize order. `check-tidas-cutover.ts` retains authoritative Git inventory and JSON/exit behavior; `foundry-golden-diff.ts` retains non-HEAD merge-base selection, cross-platform path/argv normalization and Node-native comparison. Inventory moves 89→85 without changing help, profiles, Worldsteel, Date.parse or remote-write authority.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
+import type { SpawnSyncReturns } from "node:child_process";
 import {
   chmodSync,
   existsSync,
@@ -15,6 +16,28 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+
+type JsonRecord = Record<string, unknown>;
+
+type RunOptions = {
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
+  expectedStatus?: number;
+};
+
+type GoldenBase = {
+  commit: string;
+  comparisonRef: string;
+};
+
+type FixturePaths = {
+  processRows: string;
+  supportRows: string;
+  processSchemaReport: string;
+  processQaReport: string;
+  bundlesDir: string;
+  authoringPackage: string;
+};
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const keepArtifacts = process.argv.includes("--keep");
@@ -37,7 +60,7 @@ const skillsCommandReferencePattern = new RegExp(
   "gu",
 );
 
-function resolveGoldenBase() {
+function resolveGoldenBase(): GoldenBase {
   const explicitBase = String(process.env.FOUNDRY_GOLDEN_BASE ?? "").trim();
   const candidates = explicitBase ? [explicitBase] : ["origin/main", "main"];
   const head = run("git", ["rev-parse", "HEAD"], { cwd: repoRoot }).stdout.trim();
@@ -62,14 +85,14 @@ function resolveGoldenBase() {
   );
 }
 
-function pathVariants(value) {
+function pathVariants(value: string): string[] {
   const variants = new Set([value, value.replaceAll("\\", "/")]);
   if (value.startsWith("/var/")) variants.add(`/private${value}`);
   if (value.startsWith("/private/var/")) variants.add(value.replace(/^\/private/u, ""));
   return [...variants].sort((a, b) => b.length - a.length);
 }
 
-function replacePathVariants(value, variants, replacement) {
+function replacePathVariants(value: string, variants: string[], replacement: string): string {
   let output = value;
   for (const variant of variants) {
     output = output.replaceAll(variant, replacement);
@@ -77,7 +100,7 @@ function replacePathVariants(value, variants, replacement) {
   return output;
 }
 
-function run(command, args, options = {}) {
+function run(command: string, args: string[], options: RunOptions = {}): SpawnSyncReturns<string> {
   const result = spawnSync(command, args, {
     cwd: options.cwd ?? repoRoot,
     env: options.env ?? process.env,
@@ -99,12 +122,12 @@ function run(command, args, options = {}) {
   return result;
 }
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   mkdirSync(path.dirname(filePath), { recursive: true });
   writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function writeJsonLines(filePath, rows) {
+function writeJsonLines(filePath: string, rows: unknown[]): void {
   mkdirSync(path.dirname(filePath), { recursive: true });
   writeFileSync(
     filePath,
@@ -112,11 +135,11 @@ function writeJsonLines(filePath, rows) {
   );
 }
 
-function ml(text) {
+function ml(text: string): { "@xml:lang": "en"; "#text": string } {
   return { "@xml:lang": "en", "#text": text };
 }
 
-function contactRef(id = contactId, text = "Fixture Data Steward") {
+function contactRef(id = contactId, text = "Fixture Data Steward"): JsonRecord {
   return {
     "@type": "contact data set",
     "@refObjectId": id,
@@ -126,7 +149,7 @@ function contactRef(id = contactId, text = "Fixture Data Steward") {
   };
 }
 
-function sourceRef(id = sourceId, text = "Fixture source report") {
+function sourceRef(id = sourceId, text = "Fixture source report"): JsonRecord {
   return {
     "@type": "source data set",
     "@refObjectId": id,
@@ -136,7 +159,7 @@ function sourceRef(id = sourceId, text = "Fixture source report") {
   };
 }
 
-function supportRows() {
+function supportRows(): JsonRecord[] {
   return [
     {
       contactDataSet: {
@@ -184,7 +207,7 @@ function supportRows() {
   ];
 }
 
-function processRow() {
+function processRow(): JsonRecord {
   return {
     processDataSet: {
       processInformation: {
@@ -216,7 +239,7 @@ function processRow() {
   };
 }
 
-function authoringPackage(root) {
+function authoringPackage(root: string): string {
   const contextDir = path.join(root, "context");
   const contextFiles = [
     ["schema", "schema.json", "{}"],
@@ -271,7 +294,7 @@ function authoringPackage(root) {
   return packagePath;
 }
 
-function prepareFixtures() {
+function prepareFixtures(): FixturePaths {
   const rowsDir = path.join(fixtureRoot, "rows");
   const reportsDir = path.join(fixtureRoot, "reports");
   writeJsonLines(path.join(rowsDir, "processes.jsonl"), [processRow()]);
@@ -313,7 +336,7 @@ function prepareFixtures() {
   };
 }
 
-function stubCliScript() {
+function stubCliScript(): string {
   const cliPath = path.join(tempRoot, "stub-tiangong-lca.mjs");
   writeFileSync(
     cliPath,
@@ -413,14 +436,14 @@ if (args[0] === "dataset" && args[1] === "validate") {
   return cliPath;
 }
 
-function installBaselineDependencies(root) {
+function installBaselineDependencies(root: string): void {
   run("pnpm", ["install", "--frozen-lockfile", "--ignore-scripts"], {
     cwd: root,
     env: { ...process.env, HUSKY: "0" },
   });
 }
 
-function linkLegacyInstalledCliAssets() {
+function linkLegacyInstalledCliAssets(): void {
   const installedCliRoot = path.join(beforeRoot, "node_modules", "@tiangong-lca", "cli");
   const legacyCliRoot = path.join(tempRoot, "tiangong-lca-cli");
   if (!existsSync(installedCliRoot) || existsSync(legacyCliRoot)) return;
@@ -429,7 +452,7 @@ function linkLegacyInstalledCliAssets() {
   symlinkSync(installedCliRoot, legacyCliRoot, process.platform === "win32" ? "junction" : "dir");
 }
 
-function normalizeBaselineLineEndings() {
+function normalizeBaselineLineEndings(): void {
   if (process.platform !== "win32") return;
   const tracked = run("git", ["ls-files", "-z"], { cwd: beforeRoot })
     .stdout.split("\0")
@@ -444,17 +467,28 @@ function normalizeBaselineLineEndings() {
   }
 }
 
-function foundryCommand(root, args, outFile, env = {}, expectedStatus = 0) {
+function foundryCommand(
+  root: string,
+  args: string[],
+  outFile: string,
+  env: NodeJS.ProcessEnv = {},
+  expectedStatus = 0,
+): JsonRecord {
   const result = run(process.execPath, ["scripts/foundry.mjs", ...args], {
     cwd: root,
     env: { ...process.env, ...env },
     expectedStatus,
   });
   writeFileSync(outFile, result.stdout);
-  return JSON.parse(result.stdout);
+  return JSON.parse(result.stdout) as JsonRecord;
 }
 
-function runSide(label, root, fixture, cliPath) {
+function runSide(
+  label: "before" | "after",
+  root: string,
+  fixture: FixturePaths,
+  cliPath: string,
+): void {
   const sideOut = label === "before" ? beforeOut : afterOut;
   const commandOut = path.join(sideOut, "commands");
   mkdirSync(commandOut, { recursive: true });
@@ -554,6 +588,7 @@ function runSide(label, root, fixture, cliPath) {
     path.join(commandOut, "dataset-post-authoring-finalize.json"),
     commonEnv,
   );
+  const finalizeFiles = finalize.files as JsonRecord;
   foundryCommand(
     root,
     [
@@ -561,13 +596,13 @@ function runSide(label, root, fixture, cliPath) {
       "--type",
       "support",
       "--rows-file",
-      path.resolve(root, finalize.files.final_rows),
+      path.resolve(root, String(finalizeFiles.final_rows)),
       "--schema-report",
-      path.resolve(root, finalize.files.schema_report),
+      path.resolve(root, String(finalizeFiles.schema_report)),
       "--cleanup-report",
-      path.resolve(root, finalize.files.cleanup_report),
+      path.resolve(root, String(finalizeFiles.cleanup_report)),
       "--dry-run-report",
-      path.resolve(root, finalize.files.dry_run_report),
+      path.resolve(root, String(finalizeFiles.dry_run_report)),
       "--target-user-id",
       "00000000-0000-4000-8000-000000000000",
       "--out-dir",
@@ -578,7 +613,7 @@ function runSide(label, root, fixture, cliPath) {
   );
 }
 
-function normalizeKnownContractMigration(value) {
+function normalizeKnownContractMigration(value: JsonRecord): JsonRecord {
   if (value.id === "foundry.dataset.commit-handoff-plan") {
     return {
       ...value,
@@ -594,7 +629,7 @@ function normalizeKnownContractMigration(value) {
     };
   }
   if (
-    ["safety_policy", "profile_context"].includes(value.kind) &&
+    ["safety_policy", "profile_context"].includes(String(value.kind ?? "")) &&
     typeof value.path === "string" &&
     Object.hasOwn(value, "sha256")
   ) {
@@ -603,14 +638,18 @@ function normalizeKnownContractMigration(value) {
   return value;
 }
 
-function normalize(value) {
+function normalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalize);
   if (value && typeof value === "object") {
-    if (value.schema === "tiangong-foundry.command-spec.v1" && typeof value.display === "string") {
-      return normalize(value.display);
+    const valueRecord = value as JsonRecord;
+    if (
+      valueRecord.schema === "tiangong-foundry.command-spec.v1" &&
+      typeof valueRecord.display === "string"
+    ) {
+      return normalize(valueRecord.display);
     }
-    const normalizedContract = normalizeKnownContractMigration(value);
-    const volatileValues = {
+    const normalizedContract = normalizeKnownContractMigration(valueRecord);
+    const volatileValues: JsonRecord = {
       generated_at_utc: "<generated_at_utc>",
       started_at_utc: "<started_at_utc>",
       finished_at_utc: "<finished_at_utc>",
@@ -660,7 +699,7 @@ function normalize(value) {
     .replace(/foundry-golden-diff-[A-Za-z0-9._-]+/gu, "foundry-golden-diff-<id>");
 }
 
-function collapseNestedShellQuotes(value) {
+function collapseNestedShellQuotes(value: string): string {
   const escapedQuote = `'\\''`;
   const collapsed = value.replaceAll(escapedQuote, "'");
   return collapsed.startsWith("''") && collapsed.endsWith("''")
@@ -668,12 +707,12 @@ function collapseNestedShellQuotes(value) {
     : collapsed;
 }
 
-function normalizeJsonFile(inputFile, outputFile) {
+function normalizeJsonFile(inputFile: string, outputFile: string): void {
   const value = JSON.parse(readFileSync(inputFile, "utf8"));
   writeJson(outputFile, normalize(value));
 }
 
-function normalizeOutputs() {
+function normalizeOutputs(): void {
   for (const label of ["before", "after"]) {
     const sideOut = label === "before" ? beforeOut : afterOut;
     const normalizedOut = path.join(normalizedRoot, label);
@@ -696,13 +735,13 @@ function normalizeOutputs() {
   }
 }
 
-function compareNormalizedOutputs() {
+function compareNormalizedOutputs(): void {
   const baselineRoot = path.join(normalizedRoot, "before");
   const currentRoot = path.join(normalizedRoot, "after");
   const baselineFiles = listRelativeFiles(baselineRoot);
   const currentFiles = listRelativeFiles(currentRoot);
   const files = [...new Set([...baselineFiles, ...currentFiles])].sort();
-  const differences = [];
+  const differences: string[] = [];
   for (const file of files) {
     const baselinePath = path.join(baselineRoot, file);
     const currentPath = path.join(currentRoot, file);
@@ -730,11 +769,11 @@ function compareNormalizedOutputs() {
   }
 }
 
-function summarizeJsonDifferences(baselinePath, currentPath) {
+function summarizeJsonDifferences(baselinePath: string, currentPath: string): string[] {
   try {
     const baseline = JSON.parse(readFileSync(baselinePath, "utf8"));
     const current = JSON.parse(readFileSync(currentPath, "utf8"));
-    const differences = [];
+    const differences: string[] = [];
     collectJsonDifferences(baseline, current, "", differences, 8);
     return differences;
   } catch {
@@ -742,7 +781,13 @@ function summarizeJsonDifferences(baselinePath, currentPath) {
   }
 }
 
-function collectJsonDifferences(baseline, current, pointer, differences, limit) {
+function collectJsonDifferences(
+  baseline: unknown,
+  current: unknown,
+  pointer: string,
+  differences: string[],
+  limit: number,
+): void {
   if (differences.length >= limit || Object.is(baseline, current)) return;
   const baselineRecord = baseline && typeof baseline === "object";
   const currentRecord = current && typeof current === "object";
@@ -753,12 +798,14 @@ function collectJsonDifferences(baseline, current, pointer, differences, limit) 
     return;
   }
   const keys = [...new Set([...Object.keys(baseline), ...Object.keys(current)])].sort();
+  const baselineValues = baseline as JsonRecord;
+  const currentValues = current as JsonRecord;
   for (const key of keys) {
     if (differences.length >= limit) return;
     const escapedKey = key.replaceAll("~", "~0").replaceAll("/", "~1");
     collectJsonDifferences(
-      baseline[key],
-      current[key],
+      baselineValues[key],
+      currentValues[key],
       `${pointer}/${escapedKey}`,
       differences,
       limit,
@@ -766,14 +813,14 @@ function collectJsonDifferences(baseline, current, pointer, differences, limit) 
   }
 }
 
-function compactJsonValue(value) {
+function compactJsonValue(value: unknown): string {
   const text = JSON.stringify(value);
   if (text === undefined) return "<missing>";
   return text.length <= 240 ? text : `${text.slice(0, 237)}...`;
 }
 
-function listRelativeFiles(root, relative = "") {
-  const files = [];
+function listRelativeFiles(root: string, relative = ""): string[] {
+  const files: string[] = [];
   const directory = path.join(root, relative);
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const child = relative ? path.join(relative, entry.name) : entry.name;

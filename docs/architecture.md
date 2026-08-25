@@ -24,6 +24,10 @@ checkPaths:
   - specs/capability-ownership-rules.json
   - specs/automated-lca-capability-registry.json
   - specs/typescript-migration-inventory.json
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -109,8 +113,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: typed library/BAFU orchestration preserves profile boundaries, dependency order, resumable bounded execution, deterministic gates/artifacts, shell-free argv and guarded commit delegation without moving CLI, schema, search, profile, Worldsteel, database, or production authority."
+lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed orchestration and adapter/tooling layers preserve profile/dependency boundaries, resumable gates, deterministic artifacts, process/report/hash and audit/comparison behavior without moving CLI, schema, search or database authority."
 ---
 
 # Architecture
@@ -205,6 +209,8 @@ The typed runtime-command layer also includes CLI wrappers, offline capsule admi
 The typed decision command boundary now includes `identity-decisions.ts`, `classification-decisions.ts`, and `location-decisions.ts`. Identity validation partitions local rows into write candidates, reference reuse, and unresolved evidence without executing a remote mutation. Classification and location validate task-bound decisions, preserve queue grouping and schema/path order, and delegate deterministic apply through the existing CLI argv boundary only after blockers are empty. Their reports and artifacts remain Foundry-local evidence; schema vocabularies, search, mutation, and readback authority remain with their existing owners.
 
 The import-curation entry topology is typed end to end. `profiles.ts` and `trace-summary.ts` are identity-preserving leaf barrels; `import-curation/index.ts` aggregates the eight semantic owner exports; `import-curation.ts` is the public entry consumed by `foundry.mjs`. These modules contain no runtime wrapper or initialization logic. The CLI dispatcher still receives the same injected functions, and command metadata still names the semantic owner modules rather than assigning behavior to a barrel.
+
+The typed adapter/tooling layer keeps external ownership explicit. `tidas-adapter.ts` only selects and validates the Rust machine contract; finalize utilities coordinate existing CLI/identity stages; cutover audit reads Git inventory; Golden comparison creates isolated worktrees and compares normalized local outputs. None owns converter rules, database behavior or production mutation.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

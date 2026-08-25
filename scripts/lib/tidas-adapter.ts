@@ -1,8 +1,96 @@
 import { spawnSync } from "node:child_process";
+import type { SpawnSyncReturns } from "node:child_process";
 import { createHash } from "node:crypto";
+import type { BinaryLike } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+
+type JsonRecord = Record<string, unknown>;
+
+export type TidasAdapterOptions = Record<string, unknown> & {
+  tidasBin?: unknown;
+  tidasExecutable?: unknown;
+  tidasConfig?: unknown;
+  config?: unknown;
+  memoryBudgetMib?: unknown;
+  queueCapacity?: unknown;
+  input?: unknown;
+  source?: unknown;
+  output?: unknown;
+  outDir?: unknown;
+  fromFormat?: unknown;
+  target?: unknown;
+  writeMapping?: unknown;
+  noProcessBundles?: unknown;
+  failOnWarning?: unknown;
+  maxEntryMib?: unknown;
+  inputFormat?: unknown;
+  issues?: unknown;
+  rowsFile?: unknown;
+  type?: unknown;
+  datasetType?: unknown;
+};
+
+export type TidasInvocation = {
+  executable: string;
+  executable_source: "option" | "TIDAS_BIN" | "PATH";
+  config: string | null;
+  config_source: "option" | "TIDAS_CONFIG" | "none";
+};
+
+export type TidasProcessCommand = {
+  command: string;
+  prefixArgs: string[];
+};
+
+type TidasOperationSummary = JsonRecord & {
+  binary_version?: unknown;
+  operation_report_schema?: unknown;
+  validation_describe?: unknown;
+  import?: unknown;
+  validation?: unknown;
+  validation_batch_final?: unknown;
+};
+
+export type TidasOperationReport = JsonRecord & {
+  schema_version?: unknown;
+  command?: unknown;
+  status?: unknown;
+  completeness?: unknown;
+  exit_class?: unknown;
+  diagnostics?: unknown;
+  artifacts?: unknown;
+  next_actions?: unknown;
+  summary?: TidasOperationSummary;
+};
+
+type ValidationDescribe = JsonRecord & {
+  schema_version?: unknown;
+  protocols?: string[];
+  event_schema_versions?: string[];
+  asset_fingerprint?: unknown;
+};
+
+type TidasOperationResult = JsonRecord & {
+  command: string;
+  executable: string;
+  executable_source: string;
+  config_source: string;
+  args: string[];
+  exit_code: number;
+  stderr: string;
+  binary_version: string;
+  handshake: TidasOperationReport;
+  validation_describe: ValidationDescribe;
+  validation_describe_report: TidasOperationReport;
+  report: TidasOperationReport;
+};
+
+type RootCategoryConfig = {
+  category: string;
+  informationKey: string;
+};
 
 export const TIDAS_OPERATION_REPORT_SCHEMA = "tidas.operation-report.v1";
 export const TIDAS_IMPORT_REPORT_SCHEMA = "tidas.import-execution-report.v1";
@@ -21,7 +109,7 @@ const EXIT_CODES = new Map([
   ["cancelled", 130],
 ]);
 
-const ROOT_CATEGORY = new Map([
+const ROOT_CATEGORY = new Map<string, RootCategoryConfig>([
   ["contactDataSet", { category: "contacts", informationKey: "contactInformation" }],
   [
     "flowPropertyDataSet",
@@ -38,13 +126,13 @@ const ROOT_CATEGORY = new Map([
   ["unitGroupDataSet", { category: "unitgroups", informationKey: "unitGroupInformation" }],
 ]);
 
-function record(value) {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+function record(value: unknown): JsonRecord | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : null;
 }
 
-function parseJsonOutput(result, label) {
+function parseJsonOutput(result: SpawnSyncReturns<string>, label: string): TidasOperationReport {
   try {
-    return JSON.parse(result.stdout || "{}");
+    return JSON.parse(result.stdout || "{}") as TidasOperationReport;
   } catch {
     throw new Error(
       [
@@ -58,13 +146,19 @@ function parseJsonOutput(result, label) {
   }
 }
 
-function assertOperationReport(report, command, exitCode) {
-  const expectedExitCode = EXIT_CODES.get(report?.exit_class);
+function assertOperationReport(
+  report: TidasOperationReport,
+  command: string,
+  exitCode: number,
+): TidasOperationReport {
+  const expectedExitCode = EXIT_CODES.get(String(report.exit_class ?? ""));
   if (
     report?.schema_version !== TIDAS_OPERATION_REPORT_SCHEMA ||
     report?.command !== command ||
-    !["succeeded", "completed-with-issues", "failed", "cancelled"].includes(report?.status) ||
-    !["complete", "partial", "not-started"].includes(report?.completeness) ||
+    !["succeeded", "completed-with-issues", "failed", "cancelled"].includes(
+      String(report.status ?? ""),
+    ) ||
+    !["complete", "partial", "not-started"].includes(String(report.completeness ?? "")) ||
     expectedExitCode === undefined ||
     !Array.isArray(report?.diagnostics) ||
     !Array.isArray(report?.artifacts) ||
@@ -80,7 +174,7 @@ function assertOperationReport(report, command, exitCode) {
   return report;
 }
 
-function assertCompatibleVersion(report) {
+function assertCompatibleVersion(report: TidasOperationReport): string {
   const version = String(report?.summary?.binary_version ?? "");
   const match = /^(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?$/u.exec(version);
   if (!match) throw new Error(`tidas_version_invalid:${version || "missing"}`);
@@ -92,7 +186,10 @@ function assertCompatibleVersion(report) {
   return version;
 }
 
-export function resolveTidasInvocation(options = {}, env = process.env) {
+export function resolveTidasInvocation(
+  options: TidasAdapterOptions = {},
+  env: NodeJS.ProcessEnv = process.env,
+): TidasInvocation {
   const explicit = String(options.tidasBin ?? options.tidasExecutable ?? "").trim();
   const environment = String(env.TIDAS_BIN ?? "").trim();
   const executable = explicit || environment || "tidas";
@@ -106,7 +203,7 @@ export function resolveTidasInvocation(options = {}, env = process.env) {
   };
 }
 
-export function resolveTidasProcessCommand(executable) {
+export function resolveTidasProcessCommand(executable: string): TidasProcessCommand {
   if (/\.(?:cjs|js|mjs)$/iu.test(executable)) {
     return {
       command: process.execPath,
@@ -119,7 +216,7 @@ export function resolveTidasProcessCommand(executable) {
   };
 }
 
-function globalArgs(invocation, options = {}) {
+function globalArgs(invocation: TidasInvocation, options: TidasAdapterOptions = {}): string[] {
   const args = ["--format", "json", "--progress", "never"];
   if (invocation.config) args.push("--config", invocation.config);
   const memoryBudgetMib = options.memoryBudgetMib ?? process.env.TIDAS_MEMORY_BUDGET_MIB;
@@ -133,11 +230,16 @@ function globalArgs(invocation, options = {}) {
   return args;
 }
 
-function portableRelativePath(repoRoot, filePath) {
+function portableRelativePath(repoRoot: string, filePath: string): string {
   return path.relative(repoRoot, filePath).split(path.sep).join(path.posix.sep);
 }
 
-function runProcess(invocation, args, cwd, maxBuffer = 512 * 1024 * 1024) {
+function runProcess(
+  invocation: TidasInvocation,
+  args: string[],
+  cwd: string,
+  maxBuffer = 512 * 1024 * 1024,
+): SpawnSyncReturns<string> {
   const processCommand = resolveTidasProcessCommand(invocation.executable);
   const result = spawnSync(processCommand.command, [...processCommand.prefixArgs, ...args], {
     cwd,
@@ -149,7 +251,13 @@ function runProcess(invocation, args, cwd, maxBuffer = 512 * 1024 * 1024) {
   return result;
 }
 
-export function runTidasHandshake({ repoRoot, options = {} }) {
+export function runTidasHandshake({
+  repoRoot,
+  options = {},
+}: {
+  repoRoot: string;
+  options?: TidasAdapterOptions;
+}) {
   const invocation = resolveTidasInvocation(options);
   const args = ["version", ...globalArgs(invocation, options)];
   const result = runProcess(invocation, args, repoRoot);
@@ -171,7 +279,9 @@ export function runTidasHandshake({ repoRoot, options = {} }) {
     "validate",
     describeExitCode,
   );
-  const validationDescribe = record(describeReport?.summary?.validation_describe);
+  const validationDescribe: ValidationDescribe | null = record(
+    describeReport?.summary?.validation_describe,
+  );
   if (
     validationDescribe?.schema_version !== TIDAS_VALIDATION_DESCRIBE_SCHEMA ||
     !validationDescribe.protocols?.includes("document-validation-batch.v1") ||
@@ -193,7 +303,17 @@ export function runTidasHandshake({ repoRoot, options = {} }) {
   };
 }
 
-function runTidasOperation({ repoRoot, command, commandArgs, options = {} }) {
+function runTidasOperation({
+  repoRoot,
+  command,
+  commandArgs,
+  options = {},
+}: {
+  repoRoot: string;
+  command: string;
+  commandArgs: string[];
+  options?: TidasAdapterOptions;
+}): TidasOperationResult {
   const handshake = runTidasHandshake({ repoRoot, options });
   const args = [command, ...commandArgs, ...globalArgs(handshake.invocation, options)];
   const result = runProcess(handshake.invocation, args, repoRoot);
@@ -219,7 +339,13 @@ function runTidasOperation({ repoRoot, command, commandArgs, options = {} }) {
   };
 }
 
-export function runTidasImport({ repoRoot, options = {} }) {
+export function runTidasImport({
+  repoRoot,
+  options = {},
+}: {
+  repoRoot: string;
+  options?: TidasAdapterOptions;
+}): TidasOperationResult {
   const input = path.resolve(repoRoot, String(options.input ?? options.source ?? ""));
   const output = path.resolve(repoRoot, String(options.output ?? options.outDir ?? ""));
   if (!options.input && !options.source) throw new Error("--input is required.");
@@ -252,7 +378,13 @@ export function runTidasImport({ repoRoot, options = {} }) {
   return operation;
 }
 
-export function runTidasPackageValidation({ repoRoot, options = {} }) {
+export function runTidasPackageValidation({
+  repoRoot,
+  options = {},
+}: {
+  repoRoot: string;
+  options?: TidasAdapterOptions;
+}): TidasOperationResult {
   const input = path.resolve(repoRoot, String(options.input ?? ""));
   if (!options.input) throw new Error("--input is required.");
   const args = [input, "--input-format", String(options.inputFormat ?? "tidas-json")];
@@ -279,21 +411,21 @@ export function runTidasPackageValidation({ repoRoot, options = {} }) {
   return operation;
 }
 
-function readRows(filePath) {
+function readRows(filePath: string): JsonRecord[] {
   const text = fs.readFileSync(filePath, "utf8");
   if (filePath.toLowerCase().endsWith(".jsonl")) {
     return text
       .split(/\r?\n/u)
       .filter((line) => line.trim())
-      .map((line) => JSON.parse(line));
+      .map((line) => JSON.parse(line) as JsonRecord);
   }
-  const value = JSON.parse(text);
+  const value = JSON.parse(text) as JsonRecord | JsonRecord[];
   if (Array.isArray(value)) return value;
   if (Array.isArray(value?.rows)) return value.rows;
   return [value];
 }
 
-function payloadForRow(row) {
+function payloadForRow(row: JsonRecord): JsonRecord {
   for (const key of [
     "payload",
     "contact",
@@ -305,19 +437,20 @@ function payloadForRow(row) {
     "source",
     "unitgroup",
   ]) {
-    if (record(row?.[key])) return row[key];
+    const payload = record(row[key]);
+    if (payload) return payload;
   }
   return row;
 }
 
-function documentCategory(payload) {
+function documentCategory(payload: JsonRecord): RootCategoryConfig & { rootKey: string } {
   for (const [rootKey, config] of ROOT_CATEGORY) {
     if (record(payload?.[rootKey])) return { rootKey, ...config };
   }
   throw new Error("tidas_row_category_unknown");
 }
 
-function firstText(value) {
+function firstText(value: unknown): string {
   if (typeof value === "string") return value.trim();
   if (Array.isArray(value)) {
     for (const item of value) {
@@ -325,31 +458,37 @@ function firstText(value) {
       if (text) return text;
     }
   }
-  if (record(value)) return firstText(value["#text"]);
+  const valueRecord = record(value);
+  if (valueRecord) return firstText(valueRecord["#text"]);
   return "";
 }
 
-function identityForPayload(payload, rootKey, informationKey) {
-  const root = payload[rootKey];
-  const information = root?.[informationKey]?.dataSetInformation ?? root?.dataSetInformation ?? {};
+function identityForPayload(
+  payload: JsonRecord,
+  rootKey: string,
+  informationKey: string,
+): { id: string | null; version: string | null } {
+  const root = record(payload[rootKey]) ?? {};
+  const informationRecord = record(root[informationKey]);
+  const information =
+    record(informationRecord?.dataSetInformation) ?? record(root.dataSetInformation) ?? {};
   const id = firstText(information?.["common:UUID"]) || null;
-  const version =
-    firstText(
-      root?.administrativeInformation?.publicationAndOwnership?.["common:dataSetVersion"],
-    ) || null;
+  const administrative = record(root.administrativeInformation);
+  const publication = record(administrative?.publicationAndOwnership);
+  const version = firstText(publication?.["common:dataSetVersion"]) || null;
   return { id, version };
 }
 
-function sha256(bytes) {
+function sha256(bytes: BinaryLike): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function writeJsonl(filePath, values) {
+function writeJsonl(filePath: string, values: unknown[]): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(
     filePath,
@@ -357,7 +496,7 @@ function writeJsonl(filePath, values) {
   );
 }
 
-function replaceDirectoryAtomically(staging, output) {
+function replaceDirectoryAtomically(staging: string, output: string): void {
   const parent = path.dirname(output);
   fs.mkdirSync(parent, { recursive: true });
   const backup = `${output}.rollback-${process.pid}`;
@@ -376,7 +515,13 @@ function replaceDirectoryAtomically(staging, output) {
   }
 }
 
-export function runTidasRowsValidation({ repoRoot, options = {} }) {
+export function runTidasRowsValidation({
+  repoRoot,
+  options = {},
+}: {
+  repoRoot: string;
+  options?: TidasAdapterOptions;
+}): TidasOperationResult {
   const rowsFile = path.resolve(repoRoot, String(options.rowsFile ?? options.input ?? ""));
   const outDir = path.resolve(repoRoot, String(options.outDir ?? ""));
   if (!options.rowsFile && !options.input) throw new Error("--rows-file is required.");
@@ -386,7 +531,17 @@ export function runTidasRowsValidation({ repoRoot, options = {} }) {
   const staging = fs.mkdtempSync(path.join(path.dirname(outDir), ".tidas-validate-stage-"));
   try {
     const inputRoot = path.join(staging, "input");
-    const manifest = [];
+    const manifest: Array<{
+      document_key: string;
+      category: string;
+      relative_path: string;
+      content_sha256: string;
+      identity: {
+        dataset_type: string;
+        dataset_id: string | null;
+        dataset_version: string | null;
+      };
+    }> = [];
     for (const [ordinal, row] of rows.entries()) {
       const payload = payloadForRow(row);
       const { rootKey, category, informationKey } = documentCategory(payload);
@@ -435,26 +590,25 @@ export function runTidasRowsValidation({ repoRoot, options = {} }) {
     ) {
       throw new Error("tidas_validation_batch_final_invalid");
     }
-    if (
-      finalEvent.fingerprints?.asset_fingerprint !== operation.validation_describe.asset_fingerprint
-    ) {
+    const finalFingerprints = record(finalEvent.fingerprints);
+    if (finalFingerprints?.asset_fingerprint !== operation.validation_describe.asset_fingerprint) {
       throw new Error("tidas_validation_asset_fingerprint_mismatch");
     }
     const events = fs
       .readFileSync(eventsPath, "utf8")
       .split(/\r?\n/u)
       .filter((line) => line.trim())
-      .map((line) => JSON.parse(line));
-    const issuesByOrdinal = new Map();
+      .map((line) => JSON.parse(line) as JsonRecord);
+    const issuesByOrdinal = new Map<number, unknown[]>();
     for (const event of events) {
       if (event.type !== "issue") continue;
       const ordinal = Number(event.document_ordinal);
       if (!issuesByOrdinal.has(ordinal)) issuesByOrdinal.set(ordinal, []);
-      issuesByOrdinal.get(ordinal).push(event.issue);
+      issuesByOrdinal.get(ordinal)!.push(event.issue);
     }
     const invalidOrdinals = new Set(
       events
-        .filter((event) => event.type === "issue" && event.issue?.severity === "error")
+        .filter((event) => event.type === "issue" && record(event.issue)?.severity === "error")
         .map((event) => Number(event.document_ordinal)),
     );
     const validRows = rows.filter((_, ordinal) => !invalidOrdinals.has(ordinal));
@@ -483,7 +637,7 @@ export function runTidasRowsValidation({ repoRoot, options = {} }) {
         total: rows.length,
         valid: validRows.length,
         invalid: invalidRows.length,
-        issues: Number(finalEvent.summary?.issue_count ?? 0),
+        issues: Number(record(finalEvent.summary)?.issue_count ?? 0),
         blockers: invalidRows.length,
       },
       rust_contract: {
@@ -492,7 +646,7 @@ export function runTidasRowsValidation({ repoRoot, options = {} }) {
         protocol: finalEvent.protocol,
         profile: finalEvent.profile,
         logical_issue_stream_sha256: finalEvent.logical_issue_stream_sha256,
-        asset_fingerprint: finalEvent.fingerprints?.asset_fingerprint ?? null,
+        asset_fingerprint: finalFingerprints?.asset_fingerprint ?? null,
         validation_describe_schema: TIDAS_VALIDATION_DESCRIBE_SCHEMA,
       },
       files: {

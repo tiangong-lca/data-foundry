@@ -21,6 +21,10 @@ checkPaths:
   - docs/import-profiles/bafu/constraints.md
   - specs/automated-lca-capability-registry.json
   - specs/workspace-capability-adapters.md
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -62,8 +66,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: typed library/BAFU orchestration preserves blocker and artifact order, read-only preflight, resume/interruption/bounded parallelism, shell-free argv, receipt/hash binding and explicit-commit-only fail-close without broadening production authority."
+lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed orchestration and adapters/tools preserve blocker/artifact order, read-only preflight, shell-free process errors, finalize fail-close, cutover audit and non-HEAD Golden proof without broadening write authority."
 ---
 
 # Safety Policy

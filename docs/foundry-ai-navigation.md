@@ -21,6 +21,10 @@ checkPaths:
   - scripts/lib/import-curation/index.ts
   - scripts/lib/import-curation/profiles.ts
   - scripts/lib/import-curation/trace-summary.ts
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
   - scripts/commands/commit-handoff.ts
@@ -95,8 +99,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
-lastReviewedNote: "Reviewed for Issue #67 Wave 26: navigation records the typed generic-library through BAFU batch topology, wrapper delegation, exact help/argv/artifact contracts, resumable execution and fail-closed commit boundary under local evidence."
+lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: navigation records typed dataset orchestration plus TIDAS/finalize adapters and cutover/Golden tools, their topology, process/hash/order/audit contracts, controlled fixtures and consumers."
 ---
 
 # Foundry AI Navigation
@@ -199,6 +203,8 @@ The typed high-level orchestration path is `library-scope-workflow.ts` for profi
 The typed runtime command owners are `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts`. Navigate to the wrapper for direct executable/argv delegation and process diagnostics, to the capsule for offline immutable admission and attempt-state evidence, and to closeout for already-produced commit/readback aggregation. Root uniqueness and accepted-difference decisions remain in `post-write-root-proof.ts` and `remote-verification-accepted-diff.ts`.
 
 The typed import-curation entry chain is `scripts/lib/import-curation.ts` → `import-curation/index.ts` → semantic owners. `profiles.ts` and `trace-summary.ts` are pure typed leaf barrels. Navigate through the public/index barrels to discover the complete namespace, but edit behavior only in the semantic owner named by command metadata.
+
+The typed adapter/tooling owners are `tidas-adapter.ts` for the external Rust machine contract, `post-authoring-finalize-utils.ts` for finalize-stage path/reuse/preflight coordination, `check-tidas-cutover.ts` for authoritative cutover inventory, and `foundry-golden-diff.ts` for isolated non-HEAD normalized comparison. Tests use controlled executables and local Git/filesystem fixtures only.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 

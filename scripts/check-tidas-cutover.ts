@@ -26,7 +26,22 @@ const forbidden = [
   /python(?:3)?\s+-m\s+tidas_tools/u,
 ];
 
-function trackedAuthoritativeFiles() {
+export type TidasCutoverFinding = {
+  file: string;
+  line: number;
+  pattern: string;
+};
+
+export type TidasCutoverAuditReport = {
+  schema_version: 1;
+  status: "passed" | "failed";
+  active_files_scanned: number;
+  historical_documents_excluded: string[];
+  forbidden_patterns: string[];
+  findings: TidasCutoverFinding[];
+};
+
+function trackedAuthoritativeFiles(): string[] {
   const result = spawnSync(
     "git",
     [
@@ -60,15 +75,15 @@ function trackedAuthoritativeFiles() {
     .filter((file) => fs.existsSync(path.join(repoRoot, file)));
 }
 
-export function auditTidasCutover() {
+export function auditTidasCutover(): TidasCutoverAuditReport {
   const files = trackedAuthoritativeFiles().filter(
     (file) =>
       !historicalDocs.has(file) &&
-      file !== "scripts/check-tidas-cutover.mjs" &&
+      file !== "scripts/check-tidas-cutover.ts" &&
       !file.startsWith("reports/") &&
       /\.(?:js|json|md|mjs|ya?ml)$/u.test(file),
   );
-  const findings = [];
+  const findings: TidasCutoverFinding[] = [];
   for (const file of files) {
     const lines = fs.readFileSync(path.join(repoRoot, file), "utf8").split(/\r?\n/u);
     lines.forEach((line, index) => {
