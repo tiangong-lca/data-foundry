@@ -6,6 +6,7 @@ import {
   commandCategories,
   commandMetadata,
   commandMetadataEntries,
+  commandMetadataFor,
 } from "../../scripts/lib/foundry-command-metadata.mjs";
 import {
   datasetPolicyCommands,
@@ -22,9 +23,10 @@ type MetadataEntry = {
   navigationPath: string[];
   inputs: string[];
   outputs: string[];
-  keyTests: Array<{ kind: string; path?: string; assertion?: string }>;
+  keyTests: Array<{ kind: string; path?: string; assertion?: string; command?: string }>;
   workflowEntry: { status: string; entry_kind: string };
 };
+type MetadataEntryWithCommand = MetadataEntry & { command: string };
 const metadataByCommand = commandMetadata as unknown as Record<string, MetadataEntry>;
 
 function repoFileExists(filePath: string): boolean {
@@ -39,6 +41,19 @@ test("foundry command metadata covers every registered command", () => {
   const metadataCommands = Object.keys(commandMetadata).sort();
   assert.deepEqual(metadataCommands, [...knownCommands].sort());
   assert.equal(commandMetadataEntries().length, knownCommands.length);
+});
+
+test("metadata entries preserve declared order and exact command lookup", () => {
+  const entries = commandMetadataEntries() as MetadataEntryWithCommand[];
+  assert.deepEqual(
+    entries.map((entry) => entry.command),
+    Object.keys(commandMetadata),
+  );
+  for (const [index, command] of Object.keys(commandMetadata).entries()) {
+    assert.strictEqual(commandMetadataFor(command), metadataByCommand[command]);
+    assert.deepEqual(entries[index], { command, ...metadataByCommand[command] });
+  }
+  assert.equal(commandMetadataFor("not-a-foundry-command"), null);
 });
 
 test("foundry command metadata classifies public and dataset commands", () => {
@@ -98,6 +113,68 @@ test("foundry command metadata is navigable and evidence backed", () => {
         );
       }
       assert.ok(keyTest.kind, `${entry.command} key test is missing kind`);
+    }
+  }
+});
+
+test("metadata preserves exact owner, artifact, workflow, and key-test schemas", () => {
+  assert.deepEqual(commandCategories, ["public", "workflow-internal", "cli-wrapper"]);
+  for (const entry of commandMetadataEntries() as MetadataEntryWithCommand[]) {
+    assert.deepEqual(
+      Object.keys(entry)
+        .filter((key) => key !== "command")
+        .sort(),
+      [
+        "category",
+        "inputs",
+        "keyTests",
+        "navigationPath",
+        "outputs",
+        "ownerExport",
+        "ownerModule",
+        "workflowEntry",
+      ],
+      `${entry.command} metadata keys drifted`,
+    );
+    assert.deepEqual(Object.keys(entry.workflowEntry).sort(), ["entry_kind", "status"]);
+    for (const [field, values] of [
+      ["inputs", entry.inputs],
+      ["outputs", entry.outputs],
+    ] as const) {
+      assert.ok(values.every((value) => typeof value === "string" && value.length > 0));
+      assert.equal(new Set(values).size, values.length, `${entry.command} has duplicate ${field}`);
+    }
+
+    const ownerMatch = /^(?:(\w+)\(\)\.)?(\w+)$/u.exec(entry.ownerExport);
+    assert.ok(ownerMatch, `${entry.command} ownerExport is not navigable: ${entry.ownerExport}`);
+    const ownerSource = readRepoFile(entry.ownerModule);
+    for (const token of [ownerMatch[1], ownerMatch[2]].filter(Boolean)) {
+      assert.match(
+        ownerSource,
+        new RegExp(`\\b${token}\\b`, "u"),
+        `${entry.command} owner module does not expose ${token}`,
+      );
+    }
+
+    for (const keyTest of entry.keyTests) {
+      switch (keyTest.kind) {
+        case "command-smoke":
+          assert.deepEqual(Object.keys(keyTest).sort(), ["command", "kind"]);
+          assert.ok(keyTest.command);
+          assert.match(keyTest.command, /^node scripts\/foundry\.mjs /u);
+          break;
+        case "golden-diff":
+          assert.deepEqual(Object.keys(keyTest).sort(), ["kind", "path"]);
+          assert.equal(keyTest.path, "scripts/foundry-golden-diff.mjs");
+          break;
+        case "node-test":
+          assert.deepEqual(Object.keys(keyTest).sort(), ["assertion", "kind", "path"]);
+          assert.ok(keyTest.path && repoFileExists(keyTest.path));
+          assert.ok(keyTest.assertion);
+          break;
+        default:
+          assert.fail(`${entry.command} has unknown key test kind ${keyTest.kind}`);
+      }
     }
   }
 });

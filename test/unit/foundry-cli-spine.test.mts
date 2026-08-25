@@ -291,7 +291,12 @@ test("CLI spine leaves are native TypeScript and every static consumer targets t
 });
 
 test("active documentation and source contain no references to removed CLI spine modules", () => {
-  const removedModulePaths = ["foundry-args.mjs", "foundry-command-registry.mjs"];
+  const removedModulePaths = [
+    "foundry-args.mjs",
+    "foundry-command-registry.mjs",
+    "foundry-command-metadata.mjs",
+    "surface-audit.mjs",
+  ];
   const files = [
     "AGENTS.md",
     "README.md",
