@@ -285,7 +285,9 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
     "cleanup",
     "processes.cleaned.jsonl",
   );
-  writeJsonLines(staleCleanedRows, [{ stale: "must-not-survive-a-blocked-rerun" }]);
+  const staleManagedBytes = writeJsonLines(staleCleanedRows, [
+    { retained: "blocked-rerun-never-deletes-prior-artifact-by-path" },
+  ]);
 
   const result = record(
     runDatasetCurationCleanup({
@@ -302,24 +304,33 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
   assert.equal(result.status, "blocked_invalid_datetime_metadata");
   assert.equal(result.cleaned_rows_file, null);
   assert.deepEqual(result.source_exchange_completeness_proofs, []);
-  assert.deepEqual(records(result.blockers), [
-    {
-      code: "invalid_datetime_metadata",
-      dataset_type: "process",
-      dataset_id: processId,
-      version: "00.00.001",
-      row_index: 1,
-      path: "$.process.processDataSet.administrativeInformation.dataEntryBy.common:timeStamp",
-      value: "2025-02-30T00:00:00Z",
-      reason: "invalid_calendar_date",
-      action:
-        "Correct the source timestamp or provide a schema-valid exact datetime before cleanup.",
-    },
-  ]);
+  const resultBlockers = records(result.blockers);
+  assert.deepEqual(
+    resultBlockers.map((blocker) => blocker.code),
+    ["invalid_datetime_metadata", "stale_cleanup_artifact_not_invalidated"],
+  );
+  assert.deepEqual(resultBlockers[0], {
+    code: "invalid_datetime_metadata",
+    dataset_type: "process",
+    dataset_id: processId,
+    version: "00.00.001",
+    row_index: 1,
+    path: "$.process.processDataSet.administrativeInformation.dataEntryBy.common:timeStamp",
+    value: "2025-02-30T00:00:00Z",
+    reason: "invalid_calendar_date",
+    action: "Correct the source timestamp or provide a schema-valid exact datetime before cleanup.",
+  });
+  assert.deepEqual(resultBlockers[1], {
+    code: "stale_cleanup_artifact_not_invalidated",
+    path: ".foundry/workspaces/cleanup/processes.cleaned.jsonl",
+    reason: "blocked_cleanup_preserves_existing_artifacts",
+    action:
+      "Preserve and inspect the stale cleaned artifact manually; use a new output path for the repaired rerun.",
+  });
   const counts = record(result.counts);
   assert.deepEqual(counts, {
     rows: 2,
-    blockers: 1,
+    blockers: 2,
     removed_source_trace_blocks: 0,
     externalized_source_trace_summaries: 0,
     redacted_foundry_trace_evidence_locators: 0,
@@ -330,7 +341,7 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
   });
   const files = record(result.files);
   assert.equal(files.cleaned_rows, null);
-  assert.equal(fs.existsSync(staleCleanedRows), false);
+  assert.equal(fs.readFileSync(staleCleanedRows, "utf8"), staleManagedBytes);
   assert.equal(
     fs.readFileSync(path.join(root, String(files.report)), "utf8"),
     `${JSON.stringify(result, null, 2)}\n`,
@@ -432,6 +443,46 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
     ["invalid_datetime_metadata", "stale_cleanup_artifact_not_invalidated"],
   );
   assert.equal(fs.readFileSync(replacedOutput, "utf8"), replacementBytes);
+
+  writeJsonLines(rowsFile, [valid]);
+  const managedReplacedOutput = path.join(
+    root,
+    ".foundry",
+    "workspaces",
+    "prior-valid-output",
+    "processes.cleaned.jsonl",
+  );
+  const managedPriorValidResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: ".foundry/workspaces/prior-valid-output",
+      },
+    }),
+  );
+  assert.equal(managedPriorValidResult.status, "completed");
+  const managedReplacementBytes = writeJsonLines(managedReplacedOutput, [
+    { retained: "managed-same-path-artifact-replaced-after-valid-run" },
+  ]);
+  writeJsonLines(rowsFile, [invalid]);
+  const managedReplacedResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: ".foundry/workspaces/prior-valid-output",
+      },
+    }),
+  );
+  assert.equal(managedReplacedResult.status, "blocked_invalid_datetime_metadata");
+  assert.deepEqual(
+    records(managedReplacedResult.blockers).map((blocker) => blocker.code),
+    ["invalid_datetime_metadata", "stale_cleanup_artifact_not_invalidated"],
+  );
+  assert.equal(fs.readFileSync(managedReplacedOutput, "utf8"), managedReplacementBytes);
 });
 
 test("lexically managed cleanup path cannot mint ownership or delete through a symlink ancestor", (t) => {

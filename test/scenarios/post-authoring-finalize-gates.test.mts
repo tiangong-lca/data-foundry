@@ -984,25 +984,27 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
     schema: "tiangong-foundry.command-spec.v1",
     display: "must never survive the blocked rerun",
   });
-  for (const staleDirectory of [
+  const staleDirectories = [
+    "mutation-manifest",
+    "commit-handoff",
     "source-contact-support-finalize",
     "precommit-verify-remote",
     "curation-queue-inputs",
     "identity-preflight-run-parallel",
     "identity-preflight-current-scope",
-  ]) {
+  ];
+  for (const staleDirectory of staleDirectories.slice(2)) {
     writeJson(path.join(finalizeDir, staleDirectory, "stale-evidence.json"), {
       stale: true,
     });
   }
-  writeText(
-    path.join(finalizeDir, "identity-reference-rewrite-external-flow-refs.jsonl"),
-    '{"stale":true}\n',
-  );
-  writeText(
-    path.join(finalizeDir, "process-reference-external-flow-refs.jsonl"),
-    '{"stale":true}\n',
-  );
+  const staleFiles = [
+    "identity-reference-rewrite-external-flow-refs.jsonl",
+    "process-reference-external-flow-refs.jsonl",
+  ];
+  for (const staleFile of staleFiles) {
+    writeText(path.join(finalizeDir, staleFile), '{"stale":true}\n');
+  }
 
   try {
     const finalize = runFoundry([
@@ -1028,7 +1030,11 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
     assert.equal((finalize.json.commit_handoff as FixtureRecord).status, "not_requested");
     assert.deepEqual(
       finalize.json.blockers.map((blocker) => blocker.code),
-      ["invalid_datetime_metadata", "curation_cleanup_not_ready"],
+      [
+        "invalid_datetime_metadata",
+        "curation_cleanup_not_ready",
+        "stale_finalize_artifacts_not_invalidated",
+      ],
     );
     assert.deepEqual(
       finalize.json.stages.map((stage) => stage.stage),
@@ -1047,29 +1053,22 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
     const importLedger = finalize.json.files.import_ledger as unknown as FixtureRecord;
     assert.ok(importLedger.blocked_scopes);
     assert.equal(fs.existsSync(path.join(repoRoot, String(importLedger.blocked_scopes))), true);
+    for (const staleDirectory of staleDirectories) {
+      assert.equal(fs.existsSync(path.join(finalizeDir, staleDirectory)), true, staleDirectory);
+    }
+    for (const staleFile of staleFiles) {
+      assert.equal(fs.existsSync(path.join(finalizeDir, staleFile)), true, staleFile);
+    }
     for (const absent of [
-      "source-contact-support-finalize",
       "identity-preflight-run",
-      "identity-preflight-run-parallel",
-      "identity-preflight-current-scope",
       "curation-queue",
-      "curation-queue-inputs",
       "schema",
       "qa",
       "location-audit",
       "curation-gate",
       "dry-run",
-      "precommit-verify-remote",
-      "mutation-manifest",
-      "commit-handoff",
     ]) {
       assert.equal(fs.existsSync(path.join(finalizeDir, absent)), false, absent);
-    }
-    for (const absentFile of [
-      "identity-reference-rewrite-external-flow-refs.jsonl",
-      "process-reference-external-flow-refs.jsonl",
-    ]) {
-      assert.equal(fs.existsSync(path.join(finalizeDir, absentFile)), false, absentFile);
     }
 
     const unownedFinalizeDir = path.join(root, "unowned-finalize");
