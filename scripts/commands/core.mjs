@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { runSurfaceAudit } from "../lib/surface-audit.mjs";
+import { runSurfaceAudit } from "../lib/surface-audit.ts";
 
 const capabilityRegistryPath = "specs/automated-lca-capability-registry.json";
 const runtimeDirs = [

@@ -1,16 +1,43 @@
-export const commandCategories = ["public", "workflow-internal", "cli-wrapper"];
+export type CommandCategory = "public" | "workflow-internal" | "cli-wrapper";
 
-const commandSmoke = (command) => ({
+export type CommandKeyTest =
+  | { kind: "command-smoke"; command: string }
+  | { kind: "golden-diff"; path: string }
+  | { kind: "node-test"; path: string; assertion: string };
+
+export type CommandWorkflowEntry = {
+  status: string;
+  entry_kind: string;
+};
+
+export type FoundryCommandMetadata = {
+  category: CommandCategory;
+  ownerModule: string;
+  ownerExport: string;
+  navigationPath: string[];
+  inputs: string[];
+  outputs: string[];
+  keyTests: CommandKeyTest[];
+  workflowEntry: CommandWorkflowEntry;
+};
+
+type MetadataInput = Omit<FoundryCommandMetadata, "navigationPath" | "workflowEntry"> & {
+  workflowEntry?: CommandWorkflowEntry;
+};
+
+export const commandCategories: CommandCategory[] = ["public", "workflow-internal", "cli-wrapper"];
+
+const commandSmoke = (command: string): CommandKeyTest => ({
   kind: "command-smoke",
   command: `node scripts/foundry.mjs ${command}`,
 });
 
-const goldenDiff = {
+const goldenDiff: CommandKeyTest = {
   kind: "golden-diff",
   path: "scripts/foundry-golden-diff.mjs",
 };
 
-const nodeTest = (path, assertion) => ({
+const nodeTest = (path: string, assertion: string): CommandKeyTest => ({
   kind: "node-test",
   path,
   assertion,
@@ -19,9 +46,9 @@ const nodeTest = (path, assertion) => ({
 const coreOwner = "scripts/commands/core.mjs";
 const taskOwner = "scripts/commands/tasks.mjs";
 const tidasOwner = "scripts/commands/tidas-workflow.mjs";
-const importOwner = (moduleName) => `scripts/lib/import-curation/${moduleName}.mjs`;
+const importOwner = (moduleName: string): string => `scripts/lib/import-curation/${moduleName}.mjs`;
 
-function workflowEntryForCategory(category) {
+function workflowEntryForCategory(category: string): CommandWorkflowEntry {
   switch (category) {
     case "public":
       return {
@@ -54,7 +81,7 @@ function metadata({
   outputs,
   keyTests,
   workflowEntry,
-}) {
+}: MetadataInput): FoundryCommandMetadata {
   return {
     category,
     ownerModule,
@@ -67,7 +94,7 @@ function metadata({
   };
 }
 
-export const commandMetadata = {
+export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   init: metadata({
     category: "public",
     ownerModule: coreOwner,
@@ -1176,13 +1203,13 @@ export const commandMetadata = {
   }),
 };
 
-export function commandMetadataEntries() {
+export function commandMetadataEntries(): Array<FoundryCommandMetadata & { command: string }> {
   return Object.entries(commandMetadata).map(([command, value]) => ({
     command,
     ...value,
   }));
 }
 
-export function commandMetadataFor(command) {
+export function commandMetadataFor(command: string): FoundryCommandMetadata | null {
   return commandMetadata[command] ?? null;
 }

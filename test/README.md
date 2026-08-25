@@ -23,6 +23,8 @@ checkPaths:
   - specs/typescript-migration-inventory.json
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
+  - scripts/lib/foundry-command-metadata.ts
+  - scripts/lib/surface-audit.ts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
@@ -54,6 +56,8 @@ Every behavior or migration slice starts with a failing focused test or a realis
 `../specs/typescript-migration-inventory.json` records the Issue #63 baseline of 160 tracked JavaScript artifacts. `unit/toolchain-contract.test.mts` enforces pnpm-only locking, Node.js 24, TypeScript `7.0.2` as the sole compiler graph, Oxlint, forbidden legacy bridges, and inventory accounting. Update the inventory in the same change that migrates a module; a wrapper or extension-only rename is not enough.
 
 `unit/foundry-cli-spine.test.mts` characterizes the typed argument parser and command registry: scalar/argv parsing, exact command/help JSON order, exit-code families, and every static consumer import. Keep that focused contract green before relying on broader command or Golden gates.
+
+`unit/foundry-command-metadata.test.mts` and `unit/surface-audit-typescript.test.mts` characterize the typed metadata/audit leaves: every registered command's exact owner/export/artifact/key-test schema, TS import discovery, portable paths, test-only inbound exclusion, orphan/profile docs, declared entrypoints, hidden handlers, and report JSON. The spine guard rejects active docs or source that retain removed module names; immutable inventory history is outside that scan.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

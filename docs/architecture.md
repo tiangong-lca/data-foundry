@@ -26,6 +26,8 @@ checkPaths:
   - specs/typescript-migration-inventory.json
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
+  - scripts/lib/foundry-command-metadata.ts
+  - scripts/lib/surface-audit.ts
   - .prettierignore
   - package.json
   - pnpm-lock.yaml
@@ -45,7 +47,7 @@ lastReviewedNote: "Reviewed for Issue #65: typed CommandSpecs make handoffs cont
 
 Foundry is a thin local control plane. It owns task intake, profile locks, workspace ledgers, owner routing, and gate aggregation. It does not own reusable dataset execution logic.
 
-For command ownership and navigation, use `docs/foundry-ai-navigation.md`, `docs/foundry-command-surface.md`, and the checked `scripts/lib/foundry-command-metadata.mjs` map. Those files classify every Foundry command and link each command to its owner module, artifacts, and tests without changing the runtime `help` output.
+For command ownership and navigation, use `docs/foundry-ai-navigation.md`, `docs/foundry-command-surface.md`, and the checked `scripts/lib/foundry-command-metadata.ts` map. Those files classify every Foundry command and link each command to its owner module, artifacts, and tests without changing the runtime `help` output.
 
 The minimum runtime shape is:
 
@@ -82,7 +84,7 @@ entrypoint + args
 
 This boundary avoids a misleading bulk rename. Each module remains in the inventory until a TypeScript replacement preserves its command, artifact, stdout, exit, and safety behavior under focused tests. Completion means no untyped business-runtime modules remain and the full case-driven suite is green.
 
-The argument parser and command registry are the first native TypeScript leaves on this path. Their focused characterization preserves scalar/argv parsing, exact help JSON and command order, exit-code families, and every static consumer import before later entrypoint and dispatcher slices move across the boundary.
+The argument parser, command registry, command metadata, and surface audit are the first native TypeScript leaves on this path. Their focused characterization preserves scalar/argv parsing, exact help JSON and command order, exit-code families, 63-command metadata schemas, portable source/import auditing, orphan/entrypoint policy, and every static consumer before later entrypoint and dispatcher slices move across the boundary.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

@@ -17,7 +17,8 @@ checkPaths:
   - test/README.md
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
-  - scripts/lib/foundry-command-metadata.mjs
+  - scripts/lib/foundry-command-metadata.ts
+  - scripts/lib/surface-audit.ts
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
@@ -31,7 +32,8 @@ Foundry CLI-spine and command governance has three checked contracts:
 
 - `scripts/lib/foundry-args.ts` is the typed positional/option/scalar parsing contract.
 - `scripts/lib/foundry-command-registry.ts` is the typed runtime command list, help JSON, and exit-code policy.
-- `scripts/lib/foundry-command-metadata.mjs` is the AI-readable navigation and ownership map.
+- `scripts/lib/foundry-command-metadata.ts` is the typed AI-readable navigation and ownership map.
+- `scripts/lib/surface-audit.ts` checks hidden handlers, category coverage, orphan docs, declared entrypoints, and script-only inbound imports with portable report paths.
 
 The metadata module must cover every command returned by `node scripts/foundry.mjs help`. It records each command category, owner module, owner export, input artifacts, output artifacts, workflow entry audit state, and key behavior checks.
 
@@ -72,7 +74,7 @@ Public command owner paths must be at most two jumps from `scripts/foundry.mjs`.
 When a command is added, removed, renamed, moved, or reclassified, update both:
 
 1. `scripts/lib/foundry-command-registry.ts`
-2. `scripts/lib/foundry-command-metadata.mjs`
+2. `scripts/lib/foundry-command-metadata.ts`
 
 Then run:
 

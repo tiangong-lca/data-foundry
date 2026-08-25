@@ -20,7 +20,8 @@ checkPaths:
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-cli.mjs
   - scripts/lib/foundry-command-registry.ts
-  - scripts/lib/foundry-command-metadata.mjs
+  - scripts/lib/foundry-command-metadata.ts
+  - scripts/lib/surface-audit.ts
   - scripts/commands/incremental-change-set.mjs
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
@@ -43,7 +44,7 @@ scripts/foundry.mjs
   -> command owner module
 ```
 
-The checked source of truth for command ownership is `scripts/lib/foundry-command-metadata.mjs`. It maps every command returned by `node scripts/foundry.mjs help` to:
+The checked source of truth for command ownership is `scripts/lib/foundry-command-metadata.ts`. It maps every command returned by `node scripts/foundry.mjs help` to:
 
 - category
 - owner module
@@ -71,6 +72,8 @@ entrypoint + argument contract
 Migrate downward in that order, starting each slice with a failing characterization or realistic case. Keep the existing `.mjs` implementation until the TypeScript replacement preserves help, stdout, exit, stage, artifact, and safety contracts. Update the inventory in the same change; a typed wrapper around an untyped business module does not complete that module.
 
 The first characterized CLI-spine leaves are `scripts/lib/foundry-args.ts` and `scripts/lib/foundry-command-registry.ts`. Navigate to the former for positional, kebab-to-camel, repeated-option, inline-value, flag, and scalar coercion behavior. Navigate to the latter for the exact public/dataset command order, help JSON ownership note, and exit-code mapping. `test/unit/foundry-cli-spine.test.mts` pins those behaviors and verifies every static consumer imports the native TypeScript modules.
+
+The typed navigation/governance leaves are `scripts/lib/foundry-command-metadata.ts` and `scripts/lib/surface-audit.ts`. The metadata module owns the exact command-to-owner/export/input/output/key-test map. The audit module owns hidden-handler, category, orphan-doc, declared-entrypoint, and script-only inbound checks; it recognizes explicit and dynamic TS imports, emits portable POSIX report paths on every OS, and deliberately excludes test-only imports from runtime reachability evidence. Their focused unit tests also reject active references to removed migration paths.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 

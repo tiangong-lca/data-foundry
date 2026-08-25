@@ -7,7 +7,7 @@ import {
   commandMetadata,
   commandMetadataEntries,
   commandMetadataFor,
-} from "../../scripts/lib/foundry-command-metadata.mjs";
+} from "../../scripts/lib/foundry-command-metadata.ts";
 import {
   datasetPolicyCommands,
   knownCommands,
@@ -106,7 +106,7 @@ test("foundry command metadata is navigable and evidence backed", () => {
       `${entry.command} should have active workflow audit state`,
     );
     for (const keyTest of entry.keyTests) {
-      if (keyTest.path) {
+      if ("path" in keyTest && keyTest.path) {
         assert.ok(
           repoFileExists(keyTest.path),
           `${entry.command} key test path is missing: ${keyTest.path}`,

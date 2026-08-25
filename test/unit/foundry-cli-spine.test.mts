@@ -275,7 +275,7 @@ test("CLI spine leaves are native TypeScript and every static consumer targets t
   const expectedImports = [
     ["scripts/foundry.mjs", "./lib/foundry-args.ts"],
     ["scripts/foundry.mjs", "./lib/foundry-command-registry.ts"],
-    ["scripts/lib/surface-audit.mjs", "./foundry-command-registry.ts"],
+    ["scripts/lib/surface-audit.ts", "./foundry-command-registry.ts"],
     [
       "test/unit/foundry-command-metadata.test.mts",
       "../../scripts/lib/foundry-command-registry.ts",

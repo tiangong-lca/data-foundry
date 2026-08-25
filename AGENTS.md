@@ -36,7 +36,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
-  - scripts/lib/foundry-command-metadata.mjs
+  - scripts/lib/foundry-command-metadata.ts
+  - scripts/lib/surface-audit.ts
   - specs/typescript-migration-inventory.json
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
@@ -76,7 +77,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - The owner CLI is installed as the exact project dependency `@tiangong-lca/cli@0.1.1` and invoked with `pnpm exec tiangong-lca`; Foundry runtime adapters and the account wrapper resolve the same installed package manifest and bin directly. Do not use `dlx` or `@latest` for the owner CLI. The external `skills@latest` package remains intentionally floating and its resolved upstream ref must still be recorded in task evidence.
 - The pre-migration inventory at commit `c996633832ea23bf7883c7b219f524bf28e6ce7e` contains 160 tracked JavaScript artifacts: 95 runtime `.mjs` files (59,692 lines), 64 `.mjs` tests (30,273 lines), and one Prettier `.cjs` config, with no TypeScript source. `specs/typescript-migration-inventory.json` is the checked migration ledger; update it when a file crosses the boundary rather than claiming the repository is fully typed.
 - Issue #63 establishes the pnpm/TS7 toolchain and the typed spine. Migrate entrypoints, command registry/metadata, argument and runtime I/O contracts, artifact/receipt primitives, then command families and tests. Existing `.mjs` modules remain executable until their typed replacements have equivalent characterization and case coverage; the final migration gate is zero untyped business-runtime modules, not a bulk extension rename.
-- The first characterized TypeScript leaves are `scripts/lib/foundry-args.ts` and `scripts/lib/foundry-command-registry.ts`; `test/unit/foundry-cli-spine.test.mts` pins their parser, help JSON, exit mapping, and static-consumer behavior.
+- The first characterized TypeScript leaves are `scripts/lib/foundry-args.ts`, `scripts/lib/foundry-command-registry.ts`, `scripts/lib/foundry-command-metadata.ts`, and `scripts/lib/surface-audit.ts`; focused tests pin parser/help/exit behavior, exact metadata schemas, portable script-import auditing, test-only inbound exclusion, orphan/entrypoint policy, and every static consumer.
 - Toolchain and migration tests must pass from a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. They must not depend on the superproject checkout, another worktree's `node_modules`, absolute developer paths, ignored `.foundry` state, or credentials.
 - The Golden gate must compare against a non-`HEAD` merge-base with full Git history and a Node-native comparator. Cross-platform fixtures use executable-plus-argv dispatch; a `.js`/`.mjs`/`.cjs` test script must run through `process.execPath`, not OS executable-bit behavior. `.gitattributes` keeps repository text at LF on every runner; only Windows launcher files may opt into CRLF.
 - Foundry artifact-to-scope matching and transitional command parsers must accept both path separators. Durable JSON/JSONL writers flush the writable descriptor they opened; POSIX permission-bit assertions are not imposed on Windows filesystems.

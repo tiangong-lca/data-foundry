@@ -1,7 +1,54 @@
 import fs from "node:fs";
 import path from "node:path";
-import { commandCategories, commandMetadata } from "./foundry-command-metadata.mjs";
+import { commandCategories, commandMetadata } from "./foundry-command-metadata.ts";
 import { knownCommands } from "./foundry-command-registry.ts";
+
+export type SurfaceAuditFinding = {
+  code: string;
+  message?: string;
+  command?: string;
+  script?: string;
+  category?: string;
+  path?: string;
+};
+
+export type SurfaceAuditCheck = {
+  name: string;
+  ok: boolean;
+  errors: SurfaceAuditFinding[];
+  warnings: SurfaceAuditFinding[];
+  scanned?: number;
+  category_counts?: Record<string, number>;
+};
+
+export type SurfaceAuditReport = {
+  schema_version: number;
+  generated_at_utc: string;
+  status: "passed" | "failed";
+  checks: SurfaceAuditCheck[];
+  counts: {
+    checks: number;
+    errors: number;
+    warnings: number;
+  };
+};
+
+type SurfaceAuditOptions = {
+  repoRoot: string;
+  nowIso: () => string;
+};
+
+type FileLocationRegistry = {
+  policy_doc?: string;
+  entries?: Array<{
+    current_path?: string;
+    referenced_by?: string[];
+  }>;
+};
+
+type PackageJson = {
+  scripts?: Record<string, unknown>;
+};
 
 const commandHandlerHelpKeys = new Set(["help", "--help", "-h"]);
 const deprecatedNamePattern = /\b(?:legacy|deprecated|compat|compatibility|alias|old)\b/iu;
@@ -13,11 +60,16 @@ const scriptEntrypoints = new Set([
   "scripts/with-lca-account.ts",
 ]);
 
-function portablePath(filePath) {
+function portablePath(filePath: string): string {
   return filePath.split(path.sep).join(path.posix.sep);
 }
 
-function walkFiles(root, relativeDir, predicate, files = []) {
+function walkFiles(
+  root: string,
+  relativeDir: string,
+  predicate: (relativePath: string) => boolean,
+  files: string[] = [],
+): string[] {
   const absoluteDir = path.join(root, relativeDir);
   if (!fs.existsSync(absoluteDir)) return files;
   for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
@@ -31,24 +83,24 @@ function walkFiles(root, relativeDir, predicate, files = []) {
   return files;
 }
 
-function readTextIfExists(root, relativePath) {
+function readTextIfExists(root: string, relativePath: string): string {
   const absolutePath = path.join(root, relativePath);
   return fs.existsSync(absolutePath) ? fs.readFileSync(absolutePath, "utf8") : "";
 }
 
-function commandHandlerKeys(repoRoot) {
+function commandHandlerKeys(repoRoot: string): string[] {
   const source = readTextIfExists(repoRoot, "scripts/lib/foundry-cli.mjs");
   const match = source.match(/const commandHandlers = \{([\s\S]*?)\n  \};/u);
   if (!match) return [];
   return [...match[1].matchAll(/^\s*(?:"([^"]+)"|([A-Za-z_$][\w$-]*))\s*:/gmu)]
     .map((item) => item[1] ?? item[2])
-    .filter(Boolean);
+    .filter((value): value is string => Boolean(value));
 }
 
-function auditLegacyAliases(repoRoot) {
-  const errors = [];
-  const warnings = [];
-  const known = new Set(knownCommands);
+function auditLegacyAliases(repoRoot: string): SurfaceAuditCheck {
+  const errors: SurfaceAuditFinding[] = [];
+  const warnings: SurfaceAuditFinding[] = [];
+  const known = new Set<string>(knownCommands);
   const hiddenHandlers = commandHandlerKeys(repoRoot).filter(
     (command) => !known.has(command) && !commandHandlerHelpKeys.has(command),
   );
@@ -69,7 +121,7 @@ function auditLegacyAliases(repoRoot) {
       });
     }
   }
-  const packageJson = JSON.parse(readTextIfExists(repoRoot, "package.json"));
+  const packageJson = JSON.parse(readTextIfExists(repoRoot, "package.json")) as PackageJson;
   for (const scriptName of Object.keys(packageJson.scripts ?? {})) {
     if (deprecatedNamePattern.test(scriptName)) {
       warnings.push({
@@ -87,11 +139,13 @@ function auditLegacyAliases(repoRoot) {
   };
 }
 
-function auditMetadataCategories() {
-  const errors = [];
-  const warnings = [];
+function auditMetadataCategories(): SurfaceAuditCheck {
+  const errors: SurfaceAuditFinding[] = [];
+  const warnings: SurfaceAuditFinding[] = [];
   const entries = Object.entries(commandMetadata);
-  const categoryCounts = Object.fromEntries(commandCategories.map((category) => [category, 0]));
+  const categoryCounts = Object.fromEntries(
+    commandCategories.map((category) => [category, 0]),
+  ) as Record<string, number>;
   for (const [command, metadata] of entries) {
     if (!metadata?.category) {
       errors.push({
@@ -127,15 +181,15 @@ function auditMetadataCategories() {
   };
 }
 
-function registeredDocPaths(repoRoot) {
-  const registered = new Set();
+function registeredDocPaths(repoRoot: string): Set<string> {
+  const registered = new Set<string>();
   const docpactText = readTextIfExists(repoRoot, ".docpact/config.yaml");
   for (const match of docpactText.matchAll(/docs\/[A-Za-z0-9._/-]+\.md/gu)) {
     registered.add(match[0]);
   }
   const registry = JSON.parse(
     readTextIfExists(repoRoot, "docs/file-location-registry.json") || '{"entries":[]}',
-  );
+  ) as FileLocationRegistry;
   if (registry.policy_doc) registered.add(registry.policy_doc);
   for (const entry of registry.entries ?? []) {
     if (entry.current_path?.endsWith(".md")) registered.add(entry.current_path);
@@ -146,9 +200,9 @@ function registeredDocPaths(repoRoot) {
   return registered;
 }
 
-function auditOrphanDocs(repoRoot) {
-  const errors = [];
-  const warnings = [];
+function auditOrphanDocs(repoRoot: string): SurfaceAuditCheck {
+  const errors: SurfaceAuditFinding[] = [];
+  const warnings: SurfaceAuditFinding[] = [];
   const docs = walkFiles(repoRoot, "docs", (file) => file.endsWith(".md")).sort();
   const registered = registeredDocPaths(repoRoot);
   const searchFiles = [
@@ -184,8 +238,8 @@ function auditOrphanDocs(repoRoot) {
   };
 }
 
-function importedModulePaths(repoRoot) {
-  const imported = new Set();
+function importedModulePaths(repoRoot: string): Set<string> {
+  const imported = new Set<string>();
   const sourceFiles = [
     ...walkFiles(repoRoot, "scripts", (file) => /\.(?:[cm]?[jt]s)$/u.test(file)),
   ];
@@ -209,9 +263,9 @@ function importedModulePaths(repoRoot) {
   return imported;
 }
 
-function auditInboundModules(repoRoot) {
-  const errors = [];
-  const warnings = [];
+function auditInboundModules(repoRoot: string): SurfaceAuditCheck {
+  const errors: SurfaceAuditFinding[] = [];
+  const warnings: SurfaceAuditFinding[] = [];
   const modules = walkFiles(repoRoot, "scripts", (file) => /\.(?:mjs|mts|ts)$/u.test(file)).sort();
   const imported = importedModulePaths(repoRoot);
   const metadataOwnerModules = new Set(
@@ -238,7 +292,7 @@ function auditInboundModules(repoRoot) {
   };
 }
 
-export function runSurfaceAudit({ repoRoot, nowIso }) {
+export function runSurfaceAudit({ repoRoot, nowIso }: SurfaceAuditOptions): SurfaceAuditReport {
   const checks = [
     auditLegacyAliases(repoRoot),
     auditMetadataCategories(),

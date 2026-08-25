@@ -26,7 +26,11 @@ checkPaths:
   - scripts/with-lca-account.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
+  - scripts/lib/foundry-command-metadata.ts
+  - scripts/lib/surface-audit.ts
   - test/unit/foundry-cli-spine.test.mts
+  - test/unit/foundry-command-metadata.test.mts
+  - test/unit/surface-audit-typescript.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
 lastReviewedCommit: f5206e37987e7ff8db7f5f207965dcd8b5204201

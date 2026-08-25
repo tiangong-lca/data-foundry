@@ -24,6 +24,8 @@ checkPaths:
   - scripts/foundry.mjs
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
+  - scripts/lib/foundry-command-metadata.ts
+  - scripts/lib/surface-audit.ts
   - docs/architecture.md
   - docs/runtime-skill-management.md
   - docs/foundry-task-contracts.md
@@ -53,6 +55,8 @@ Foundry is a pnpm-only Node.js 24 project. The reproducible toolchain is `pnpm@1
 Issue #63 starts the typed spine without pretending that the existing JavaScript estate is already migrated. At the baseline commit, 160 tracked JavaScript artifacts comprise 95 runtime `.mjs` files (59,692 lines), 64 `.mjs` tests (30,273 lines), and one Prettier `.cjs` config. `specs/typescript-migration-inventory.json` records that boundary. Entrypoints, command metadata/registry, runtime I/O, and artifact/receipt contracts migrate first; command families and tests follow under characterization and real-case TDD. A module leaves the inventory only when its typed replacement and behavior evidence pass.
 
 The first completed CLI-spine slice migrates `scripts/lib/foundry-args.ts` and `scripts/lib/foundry-command-registry.ts`. Its focused test fixes parser coercion, exact help JSON and command order, exit-code families, and all static consumer imports before later entrypoint and dispatcher slices proceed.
+
+The next slice migrates `scripts/lib/foundry-command-metadata.ts` and `scripts/lib/surface-audit.ts`. Characterization fixes all 63 metadata owner/export/artifact contracts plus TS import discovery, portable report paths, test-only inbound exclusion, orphan docs, declared entrypoints, hidden handlers, report JSON, and static consumers.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 
