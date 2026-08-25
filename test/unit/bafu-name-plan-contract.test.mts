@@ -36,8 +36,10 @@ test("BAFU name-plan is a pure typed leaf imported by the command owner and its 
   assert.doesNotMatch(moduleSource, /\bprocess\.env\b|\bfetch\s*\(|\bXMLHttpRequest\b/u);
   assert.match(moduleSource, /export interface BafuNamePlan\s*\{/u);
   assert.match(ownerSource, /from "\.\.\/lib\/bafu-authoring\/name-plan\.ts"/u);
+  assert.doesNotMatch(ownerSource, /function normalizeIdentityText\s*\(/u);
   assert.doesNotMatch(ownerSource, /function splitBafuNamePlan\s*\(/u);
   assert.doesNotMatch(ownerSource, /function splitBafuNamePlanFromNameParts\s*\(/u);
+  assert.doesNotMatch(ownerSource, /function textFromMultilang\s*\(/u);
 
   assert.equal(bafuAutoAuthoringTestHooks.splitBafuNamePlan, splitBafuNamePlan);
   assert.equal(
