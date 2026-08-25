@@ -805,7 +805,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-library-index-build": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/library-scope-workflow.mjs",
+    ownerModule: "scripts/commands/library-scope-workflow.ts",
     ownerExport: "createLibraryScopeWorkflowCommands().runDatasetLibraryIndexBuild",
     inputs: ["root TIDAS library directory", "process-bundles/index.json"],
     outputs: [
@@ -822,7 +822,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-library-authoring-plan": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/library-scope-workflow.mjs",
+    ownerModule: "scripts/commands/library-scope-workflow.ts",
     ownerExport: "createLibraryScopeWorkflowCommands().runDatasetLibraryAuthoringPlan",
     inputs: ["library-entity-index.jsonl", "scope-projection.jsonl"],
     outputs: [
@@ -839,7 +839,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-library-identity-decisions-from-preflight": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/library-scope-workflow.mjs",
+    ownerModule: "scripts/commands/library-scope-workflow.ts",
     ownerExport:
       "createLibraryScopeWorkflowCommands().runDatasetLibraryIdentityDecisionsFromPreflight",
     inputs: ["library index", "elementary flow identity-preflight request index and reports"],
@@ -853,11 +853,15 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "test/scenarios/library-scope-workflow.test.mjs",
         "library identity decisions from preflight emits reuse decisions and manual review rows",
       ),
+      nodeTest(
+        "test/commands/library-scope-workflow-elementary-identity.test.mjs",
+        "elementary identity evaluation preserves source/openLCA compartments and conservative candidate matching",
+      ),
     ],
   }),
   "dataset-library-decisions-apply": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/library-scope-workflow.mjs",
+    ownerModule: "scripts/commands/library-scope-workflow.ts",
     ownerExport: "createLibraryScopeWorkflowCommands().runDatasetLibraryDecisionsApply",
     inputs: [
       "library index",
@@ -881,7 +885,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-process-scope-run": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/library-scope-workflow.mjs",
+    ownerModule: "scripts/commands/library-scope-workflow.ts",
     ownerExport: "createLibraryScopeWorkflowCommands().runDatasetProcessScopeRun",
     inputs: ["process-bundles directory", "library-resolution.json", "scope file"],
     outputs: [

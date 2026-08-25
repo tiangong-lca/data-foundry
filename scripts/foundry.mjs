@@ -18,7 +18,7 @@ import { createIdentityReferenceRewriteCommands } from "./commands/identity-refe
 import { createImportCompletionCommands } from "./commands/import-completion.ts";
 import { createImportLedgerCommands } from "./commands/import-ledger.ts";
 import { createIncrementalChangeSetCommands } from "./commands/incremental-change-set.mjs";
-import { createLibraryScopeWorkflowCommands } from "./commands/library-scope-workflow.mjs";
+import { createLibraryScopeWorkflowCommands } from "./commands/library-scope-workflow.ts";
 import { createPostAuthoringFinalizeCommands } from "./commands/post-authoring-finalize.mjs";
 import { createPostWriteCloseoutCommands } from "./commands/post-write-closeout.ts";
 import { createSupportCacheCommands } from "./commands/support-cache.ts";

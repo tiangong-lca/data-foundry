@@ -4,6 +4,262 @@ import os from "node:os";
 import path from "node:path";
 import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface DatasetIdentity {
+  id: string;
+  version: string;
+}
+
+interface EntityReference extends JsonRecord {
+  entity_key?: string;
+  id?: string;
+  version?: string;
+  dataset_id?: string;
+  dataset_version?: string;
+}
+
+interface EntityRow extends JsonRecord {
+  entity_key: string;
+  dataset_type: string;
+  dataset_id: string;
+  dataset_version: string;
+  source_kind?: string;
+  source_file: string;
+  source_files?: string[];
+  payload?: JsonRecord;
+  flow_type?: string | null;
+  flow_property_refs?: EntityReference[];
+  reference_unit_group?: EntityReference | null;
+  units?: JsonRecord[];
+  names?: string[];
+  classification_path?: unknown;
+  payload_sha256?: string;
+  payload_hashes?: unknown[];
+}
+
+interface ScopeProjection extends JsonRecord {
+  process_id: string;
+  process_version: string;
+  process_entity_key: string;
+  bundle_id?: string;
+  bundle_dir?: string;
+  manifest?: string;
+  tidas_dir?: string;
+  dependency_ids: {
+    flows: EntityReference[];
+    flowproperties: EntityReference[];
+    unitgroups: EntityReference[];
+  };
+  usage_refs: {
+    process_exchange_flow_refs: EntityReference[];
+  };
+  unresolved_references?: unknown[];
+}
+
+interface BundleEntry extends JsonRecord {
+  process_id: string;
+  bundle_id: string;
+  bundle_dir: string;
+  manifest: string;
+  tidas_dir: string;
+}
+
+interface ProcessExchangeReference extends EntityReference {
+  flow_id: string;
+  flow_version: string;
+  exchange_index: number;
+}
+
+interface DependencyReference extends EntityReference {
+  id: string;
+  version: string;
+  source: string;
+}
+
+interface EntityMaps {
+  byKey: Map<string, EntityRow>;
+  byTypeId: Map<string, EntityRow>;
+}
+
+interface ReferenceRow extends JsonRecord {
+  path: string;
+  type: string;
+  id: string;
+  version: string;
+  short_description: string;
+}
+
+interface PayloadFile {
+  filePath: string;
+  payload: JsonRecord;
+}
+
+interface BundlePayloads {
+  manifest: JsonRecord;
+  payloads: Record<string, PayloadFile[]>;
+}
+
+interface EntityRowInput {
+  payload: JsonRecord;
+  type: string;
+  sourceFile: string;
+  sourceKind: string;
+}
+
+interface UsageStats {
+  input: number;
+  output: number;
+  other: number;
+  process_ids: string[];
+}
+
+interface MutableUsageStats extends Omit<UsageStats, "process_ids"> {
+  process_ids: Set<string>;
+}
+
+interface SourceClassification {
+  category: string;
+  subCategory: string;
+}
+
+interface TargetCategoryInput {
+  targetNames: unknown[];
+  targetCategories: unknown[];
+  usage?: UsageStats | null;
+}
+
+interface TraceCompartment {
+  kind: string;
+  longTerm: boolean;
+  subCategory: string;
+  pattern: RegExp | null;
+  fallbackPattern: RegExp | null;
+}
+
+interface ScoredCandidate {
+  candidate: JsonRecord;
+  index: number;
+  fields: JsonRecord;
+  candidateNames: unknown[];
+  candidateCas: string;
+  candidateCategories: unknown[];
+  nameScore: number;
+  nameTier: number;
+  exactCompartmentMatched: boolean;
+  fallbackCompartmentMatched: boolean;
+  compartmentMatched: boolean;
+  dimensionLabelOverridden: boolean;
+  sameCas: boolean;
+  score: number;
+  blockerCodes: string[];
+}
+
+interface ElementaryIdentityEvaluationInput {
+  entity: EntityRow;
+  report: JsonRecord | null;
+  usage?: UsageStats | null;
+}
+
+interface ElementaryIdentityEvaluation extends JsonRecord {
+  decision: string;
+  reason: string;
+  candidate?: JsonRecord;
+  evidence: JsonRecord;
+}
+
+interface RewriteResult extends JsonRecord {
+  rewritten_process_file: string | null;
+  rewrite_rows: JsonRecord[];
+}
+
+interface ReasonAccumulator {
+  reason: string;
+  blocked_ledger_rows: number;
+  blocked_scope_ids: Set<string>;
+  blocking_dependency_types: Map<string, number>;
+  messages: Set<string>;
+  required_human_actions: Set<string>;
+  sample_blocking_dependencies: JsonRecord[];
+}
+
+interface ScopeAccumulator {
+  process_id: string;
+  process_version: string;
+  blocker_count: number;
+  reasons: Map<string, number>;
+  sample_blocking_dependencies: JsonRecord[];
+  rerun_commands: Set<string>;
+}
+
+interface BlockedScopeReportInput {
+  command: string;
+  blockedRows: JsonRecord[];
+  blockedLedgerPath: string;
+  reportPath: string;
+}
+
+interface SelectedScope extends JsonRecord {
+  process_id: string;
+  process_version: string;
+  state: string;
+  bundle_dir: unknown;
+  rewritten_process_file: unknown;
+  commit_command: string[];
+  verify_command: string[];
+}
+
+interface ScopeCommandOptions {
+  cwd: string;
+  logDir: string;
+  token: string;
+  stage: string;
+}
+
+interface CanonicalTarget extends JsonRecord {
+  id: string;
+  version: string;
+  uri: string;
+  short_description: string;
+  type: string;
+}
+
+interface LibraryScopeWorkflowDependencies {
+  asText: (value: unknown) => string;
+  booleanOption: (value: unknown, fallback?: boolean) => boolean;
+  profileFor: (repoRoot: string, profileId: string, options?: JsonRecord) => JsonRecord;
+  repoRoot: string;
+  bundleClassificationPath: (payload: unknown, datasetType: string) => unknown;
+  cloneJson: <T>(value: T) => T;
+  datasetIdentity: (row: unknown, datasetType: string) => DatasetIdentity;
+  directoryExists: (filePath: string | null | undefined) => boolean;
+  ensureArray: <T>(value: T | readonly T[] | null | undefined) => T[];
+  fileExists: (filePath: string | null | undefined) => boolean;
+  flowTypeOfDataSet: (payload: unknown) => string;
+  jsonSha256: (value: unknown) => string;
+  nowIso: () => string;
+  positiveIntegerOption: (value: unknown, fallback: number) => number;
+  readJson: (filePath: string) => JsonRecord;
+  readJsonLines: (filePath: string) => JsonRecord[];
+  repoRelativeMaybe: (filePath: string | null | undefined) => string | null;
+  repoRelativePath: (filePath: string) => string;
+  resolveRepoPath: (filePath: unknown) => string | null;
+  sha256Text: (value: unknown) => string;
+  textValue: (value: unknown) => string;
+  writeJson: (filePath: string, value: unknown) => void;
+  writeJsonLines: (filePath: string, rows: readonly unknown[]) => void;
+}
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function jsonRecord(value: unknown): JsonRecord {
+  return isJsonRecord(value) ? value : {};
+}
+
 const libraryScopeStageContract = readOnlyStageContract([
   {
     stage: "library_index",
@@ -52,7 +308,8 @@ const libraryScopeStageContract = readOnlyStageContract([
   },
 ]);
 
-const indexedEntityTypes = ["process", "flow", "flowproperty", "unitgroup"];
+const indexedEntityTypes = ["process", "flow", "flowproperty", "unitgroup"] as const;
+type IndexedEntityType = (typeof indexedEntityTypes)[number];
 
 export function createLibraryScopeWorkflowCommands({
   asText,
@@ -78,34 +335,33 @@ export function createLibraryScopeWorkflowCommands({
   textValue,
   writeJson,
   writeJsonLines,
-}) {
-  const typePlural = {
+}: LibraryScopeWorkflowDependencies) {
+  const typePlural: Record<IndexedEntityType, string> = {
     process: "processes",
     flow: "flows",
     flowproperty: "flowproperties",
     unitgroup: "unitgroups",
   };
 
-  function help(command, purpose, usage) {
+  function help(command: string, purpose: string, usage: string[]): JsonRecord {
     return {
       schema_version: 1,
       status: "help",
       command,
       purpose,
       usage,
-      remote_write_mode: "read-only",
       ...libraryScopeStageContract,
     };
   }
 
-  function normalizedText(value) {
+  function normalizedText(value: unknown): string {
     return String(value ?? "")
       .trim()
       .replace(/\s+/gu, " ")
       .toLowerCase();
   }
 
-  function listJsonFiles(dir) {
+  function listJsonFiles(dir: string): string[] {
     if (!directoryExists(dir)) return [];
     return fs
       .readdirSync(dir, { withFileTypes: true })
@@ -114,11 +370,14 @@ export function createLibraryScopeWorkflowCommands({
       .sort();
   }
 
-  function sourceDirOption(options) {
+  function sourceDirOption(options: JsonRecord): string | null {
     return resolveRepoPath(options.sourceDir || options.input || options.root);
   }
 
-  function processBundlesDirOption(options, sourceDir = null) {
+  function processBundlesDirOption(
+    options: JsonRecord,
+    sourceDir: string | null = null,
+  ): string | null {
     return resolveRepoPath(
       options.processBundlesDir ||
         options.bundlesDir ||
@@ -126,32 +385,41 @@ export function createLibraryScopeWorkflowCommands({
     );
   }
 
-  function libraryIndexDirOption(options) {
+  function libraryIndexDirOption(options: JsonRecord): string | null {
     const resolved = resolveRepoPath(options.libraryIndex || options.indexDir);
     if (!resolved) return null;
     return fileExists(resolved) ? path.dirname(resolved) : resolved;
   }
 
-  function datasetDataSetInformation(payload, type) {
+  function datasetDataSetInformation(payload: JsonRecord, type: string): JsonRecord {
     if (type === "flow") {
-      return payload?.flowDataSet?.flowInformation?.dataSetInformation ?? {};
+      return jsonRecord(
+        jsonRecord(jsonRecord(payload.flowDataSet).flowInformation).dataSetInformation,
+      );
     }
     if (type === "process") {
-      return payload?.processDataSet?.processInformation?.dataSetInformation ?? {};
+      return jsonRecord(
+        jsonRecord(jsonRecord(payload.processDataSet).processInformation).dataSetInformation,
+      );
     }
     if (type === "flowproperty") {
-      return payload?.flowPropertyDataSet?.flowPropertiesInformation?.dataSetInformation ?? {};
+      return jsonRecord(
+        jsonRecord(jsonRecord(payload.flowPropertyDataSet).flowPropertiesInformation)
+          .dataSetInformation,
+      );
     }
     if (type === "unitgroup") {
-      return payload?.unitGroupDataSet?.unitGroupInformation?.dataSetInformation ?? {};
+      return jsonRecord(
+        jsonRecord(jsonRecord(payload.unitGroupDataSet).unitGroupInformation).dataSetInformation,
+      );
     }
     return {};
   }
 
-  function datasetName(payload, type) {
+  function datasetName(payload: JsonRecord, type: string): string {
     const info = datasetDataSetInformation(payload, type);
     if (type === "flow" || type === "process") {
-      const name = info.name ?? {};
+      const name = jsonRecord(info.name);
       return [
         textValue(name.baseName),
         textValue(name.treatmentStandardsRoutes),
@@ -165,34 +433,37 @@ export function createLibraryScopeWorkflowCommands({
     return textValue(info["common:name"] ?? info["common:shortName"]);
   }
 
-  function referenceRows(value, pathSegments = []) {
+  function referenceRows(
+    value: unknown,
+    pathSegments: Array<string | number> = [],
+  ): ReferenceRow[] {
     if (!value || typeof value !== "object") return [];
     if (Array.isArray(value)) {
       return value.flatMap((item, index) => referenceRows(item, [...pathSegments, index]));
     }
-    const rows = [];
-    if (value["@refObjectId"]) {
+    const record = jsonRecord(value);
+    const rows: ReferenceRow[] = [];
+    if (record["@refObjectId"]) {
       rows.push({
         path: pathSegments.join("."),
-        type: asText(value["@type"]),
-        id: asText(value["@refObjectId"]),
-        version: asText(value["@version"]) || "00.00.001",
-        short_description: textValue(value["common:shortDescription"]),
+        type: asText(record["@type"]),
+        id: asText(record["@refObjectId"]),
+        version: asText(record["@version"]) || "00.00.001",
+        short_description: textValue(record["common:shortDescription"]),
       });
     }
-    for (const [key, child] of Object.entries(value)) {
+    for (const [key, child] of Object.entries(record)) {
       rows.push(...referenceRows(child, [...pathSegments, key]));
     }
     return rows;
   }
 
-  function classificationPath(payload, type) {
+  function classificationPath(payload: JsonRecord, type: string): unknown {
     if (type === "flow") {
       const info = datasetDataSetInformation(payload, type);
-      const categories =
-        info.classificationInformation?.["common:elementaryFlowCategorization"]?.[
-          "common:category"
-        ];
+      const categories = jsonRecord(
+        jsonRecord(info.classificationInformation)["common:elementaryFlowCategorization"],
+      )["common:category"];
       const elementaryPath = ensureArray(categories)
         .map((entry) => textValue(entry))
         .filter(Boolean)
@@ -202,20 +473,25 @@ export function createLibraryScopeWorkflowCommands({
     return bundleClassificationPath(payload, type);
   }
 
-  function unitGroupUnits(payload) {
-    return ensureArray(payload?.unitGroupDataSet?.units?.unit)
+  function unitGroupUnits(payload: JsonRecord): JsonRecord[] {
+    const units = jsonRecord(jsonRecord(payload.unitGroupDataSet).units).unit;
+    return ensureArray(units)
+      .map((value) => jsonRecord(value))
       .map((unit) => ({
-        internal_id: asText(unit?.["@dataSetInternalID"]),
-        name: textValue(unit?.name ?? unit?.["common:name"]),
-        mean_value: asText(unit?.meanValue),
+        internal_id: asText(unit["@dataSetInternalID"]),
+        name: textValue(unit.name ?? unit["common:name"]),
+        mean_value: asText(unit.meanValue),
       }))
       .filter((unit) => unit.name || unit.internal_id);
   }
 
-  function flowPropertyReferenceUnitGroup(payload) {
-    const ref =
-      payload?.flowPropertyDataSet?.flowPropertiesInformation?.quantitativeReference
-        ?.referenceToReferenceUnitGroup ?? {};
+  function flowPropertyReferenceUnitGroup(payload: JsonRecord): EntityReference {
+    const flowPropertiesInformation = jsonRecord(
+      jsonRecord(payload.flowPropertyDataSet).flowPropertiesInformation,
+    );
+    const ref = jsonRecord(
+      jsonRecord(flowPropertiesInformation.quantitativeReference).referenceToReferenceUnitGroup,
+    );
     return {
       id: asText(ref["@refObjectId"]),
       version: asText(ref["@version"]) || "00.00.001",
@@ -223,38 +499,42 @@ export function createLibraryScopeWorkflowCommands({
     };
   }
 
-  function flowPropertyRefs(payload) {
-    return ensureArray(payload?.flowDataSet?.flowProperties?.flowProperty)
+  function flowPropertyRefs(payload: JsonRecord): EntityReference[] {
+    const properties = jsonRecord(jsonRecord(payload.flowDataSet).flowProperties).flowProperty;
+    return ensureArray(properties)
+      .map((value) => jsonRecord(value))
       .map((property) => {
-        const ref = property?.referenceToFlowPropertyDataSet ?? {};
+        const ref = jsonRecord(property.referenceToFlowPropertyDataSet);
         return {
           id: asText(ref["@refObjectId"]),
           version: asText(ref["@version"]) || "00.00.001",
           short_description: textValue(ref["common:shortDescription"]),
-          internal_id: asText(property?.["@dataSetInternalID"]),
-          mean_value: asText(property?.meanValue),
+          internal_id: asText(property["@dataSetInternalID"]),
+          mean_value: asText(property.meanValue),
         };
       })
       .filter((ref) => ref.id);
   }
 
-  function processExchangeRefs(payload) {
-    return ensureArray(payload?.processDataSet?.exchanges?.exchange)
+  function processExchangeRefs(payload: JsonRecord): ProcessExchangeReference[] {
+    const exchanges = jsonRecord(jsonRecord(payload.processDataSet).exchanges).exchange;
+    return ensureArray(exchanges)
+      .map((value) => jsonRecord(value))
       .map((exchange, index) => {
-        const ref = exchange?.referenceToFlowDataSet ?? {};
+        const ref = jsonRecord(exchange.referenceToFlowDataSet);
         return {
           exchange_index: index,
           flow_id: asText(ref["@refObjectId"]),
           flow_version: asText(ref["@version"]) || "00.00.001",
-          direction: asText(exchange?.exchangeDirection),
-          amount: asText(exchange?.meanAmount ?? exchange?.resultingAmount),
+          direction: asText(exchange.exchangeDirection),
+          amount: asText(exchange.meanAmount ?? exchange.resultingAmount),
           short_description: textValue(ref["common:shortDescription"]),
         };
       })
       .filter((ref) => ref.flow_id);
   }
 
-  function entitySemanticKey(payload, type) {
+  function entitySemanticKey(payload: JsonRecord, type: string): string {
     const info = datasetDataSetInformation(payload, type);
     const parts = [
       type,
@@ -272,12 +552,17 @@ export function createLibraryScopeWorkflowCommands({
     return parts.filter(Boolean).join("|");
   }
 
-  function entityRowFromPayload({ payload, type, sourceFile, sourceKind }) {
+  function entityRowFromPayload({
+    payload,
+    type,
+    sourceFile,
+    sourceKind,
+  }: EntityRowInput): EntityRow {
     const identity = datasetIdentity(payload, type);
     const id = identity.id || path.basename(sourceFile, ".json");
     const version = identity.version || "00.00.001";
     const flowType = type === "flow" ? flowTypeOfDataSet(payload) : null;
-    const row = {
+    const row: EntityRow = {
       schema_version: 1,
       entity_key: `${type}:${id}:${version}`,
       dataset_type: type,
@@ -294,7 +579,7 @@ export function createLibraryScopeWorkflowCommands({
       reference_only:
         type === "unitgroup" ||
         type === "flowproperty" ||
-        (type === "flow" && /^elementary flow$/iu.test(flowType)),
+        (type === "flow" && /^elementary flow$/iu.test(flowType ?? "")),
       references: referenceRows(payload),
     };
     if (type === "flow") {
@@ -309,21 +594,22 @@ export function createLibraryScopeWorkflowCommands({
     return row;
   }
 
-  function addEntityRow(rowMap, row) {
+  function addEntityRow(rowMap: Map<string, EntityRow>, row: EntityRow): void {
     const existing = rowMap.get(row.entity_key);
     if (!existing) {
       rowMap.set(row.entity_key, { ...row, source_files: [row.source_file] });
       return;
     }
-    existing.source_files.push(row.source_file);
+    existing.source_files ??= [];
+    existing.source_files.push(row.source_file ?? "");
     existing.duplicate_source_file_count = existing.source_files.length;
     existing.payload_hashes = [
       ...new Set([...(existing.payload_hashes ?? [existing.payload_sha256]), row.payload_sha256]),
     ];
   }
 
-  function buildEntityIndex(sourceDir) {
-    const rowMap = new Map();
+  function buildEntityIndex(sourceDir: string): EntityRow[] {
+    const rowMap = new Map<string, EntityRow>();
     for (const type of indexedEntityTypes) {
       const dir = path.join(sourceDir, "tidas", typePlural[type]);
       for (const filePath of listJsonFiles(dir)) {
@@ -344,9 +630,9 @@ export function createLibraryScopeWorkflowCommands({
     );
   }
 
-  function entityMaps(entityRows) {
+  function entityMaps(entityRows: EntityRow[]): EntityMaps {
     const byKey = new Map(entityRows.map((row) => [row.entity_key, row]));
-    const byTypeId = new Map();
+    const byTypeId = new Map<string, EntityRow>();
     for (const row of entityRows) {
       byTypeId.set(`${row.dataset_type}:${row.dataset_id}`, row);
       byTypeId.set(`${row.dataset_type}:${row.dataset_id}:${row.dataset_version}`, row);
@@ -354,23 +640,25 @@ export function createLibraryScopeWorkflowCommands({
     return { byKey, byTypeId };
   }
 
-  function processBundleEntries(processBundlesDir) {
-    function resolveBundlePath(value, expectedKind) {
+  function processBundleEntries(processBundlesDir: string): BundleEntry[] {
+    function resolveBundlePath(value: unknown, expectedKind: "file" | "dir"): string | null {
       if (!value) return null;
-      if (path.isAbsolute(value)) return value;
-      const fromBundleRoot = path.join(processBundlesDir, value);
+      const text = asText(value);
+      if (path.isAbsolute(text)) return text;
+      const fromBundleRoot = path.join(processBundlesDir, text);
       if (
         (expectedKind === "file" && fileExists(fromBundleRoot)) ||
         (expectedKind === "dir" && directoryExists(fromBundleRoot))
       ) {
         return fromBundleRoot;
       }
-      return resolveRepoPath(value);
+      return resolveRepoPath(text);
     }
     const indexFile = path.join(processBundlesDir, "index.json");
     if (fileExists(indexFile)) {
       const index = readJson(indexFile);
-      return ensureArray(index.bundles).map((bundle) => {
+      return ensureArray(index.bundles).map((value) => {
+        const bundle = jsonRecord(value);
         const manifest = resolveBundlePath(bundle.manifest, "file");
         const tidasDir = resolveBundlePath(bundle.tidas_dir, "dir");
         const bundleDir = manifest
@@ -380,6 +668,7 @@ export function createLibraryScopeWorkflowCommands({
             : path.join(processBundlesDir, asText(bundle.process_id));
         return {
           process_id: asText(bundle.process_id),
+          bundle_id: asText(bundle.bundle_id ?? bundle.process_id),
           bundle_dir: bundleDir,
           manifest: manifest || path.join(bundleDir, "manifest.json"),
           tidas_dir: tidasDir || path.join(bundleDir, "tidas"),
@@ -395,6 +684,7 @@ export function createLibraryScopeWorkflowCommands({
         const bundleDir = path.join(processBundlesDir, entry.name);
         return {
           process_id: entry.name,
+          bundle_id: entry.name,
           bundle_dir: bundleDir,
           manifest: path.join(bundleDir, "manifest.json"),
           tidas_dir: path.join(bundleDir, "tidas"),
@@ -405,12 +695,15 @@ export function createLibraryScopeWorkflowCommands({
       .sort((left, right) => left.process_id.localeCompare(right.process_id));
   }
 
-  function bundlePayloadsFromManifest(bundle) {
+  function bundlePayloadsFromManifest(bundle: BundleEntry): BundlePayloads {
     const manifest = fileExists(bundle.manifest) ? readJson(bundle.manifest) : {};
-    const payloads = Object.fromEntries(indexedEntityTypes.map((type) => [type, []]));
+    const payloads: Record<string, PayloadFile[]> = Object.fromEntries(
+      indexedEntityTypes.map((type) => [type, []]),
+    );
     for (const type of indexedEntityTypes) {
       const plural = typePlural[type];
-      for (const relativeFile of ensureArray(manifest.files?.[plural])) {
+      const files = jsonRecord(manifest.files)[plural];
+      for (const relativeFile of ensureArray(files).map(asText)) {
         const filePath = path.join(bundle.bundle_dir, relativeFile);
         if (!fileExists(filePath)) continue;
         payloads[type].push({ filePath, payload: readJson(filePath) });
@@ -419,11 +712,16 @@ export function createLibraryScopeWorkflowCommands({
     return { manifest, payloads };
   }
 
-  function entityKeyForRef(type, id, version = "00.00.001") {
+  function entityKeyForRef(type: string, id: string, version = "00.00.001"): string {
     return `${type}:${id}:${version || "00.00.001"}`;
   }
 
-  function rootEntityForRef(maps, type, id, version = "00.00.001") {
+  function rootEntityForRef(
+    maps: EntityMaps,
+    type: string,
+    id: string,
+    version = "00.00.001",
+  ): EntityRow | null {
     return (
       maps.byKey.get(entityKeyForRef(type, id, version)) ||
       maps.byTypeId.get(`${type}:${id}:${version}`) ||
@@ -432,7 +730,7 @@ export function createLibraryScopeWorkflowCommands({
     );
   }
 
-  function projectionForBundle(bundle, maps) {
+  function projectionForBundle(bundle: BundleEntry, maps: EntityMaps): ScopeProjection {
     const { manifest, payloads } = bundlePayloadsFromManifest(bundle);
     const processPayload =
       payloads.process[0]?.payload ||
@@ -454,9 +752,9 @@ export function createLibraryScopeWorkflowCommands({
             sourceKind: "bundle_fallback",
           })
         : null);
-    const flowDeps = new Map();
-    const flowPropertyDeps = new Map();
-    const unitGroupDeps = new Map();
+    const flowDeps = new Map<string, DependencyReference>();
+    const flowPropertyDeps = new Map<string, DependencyReference>();
+    const unitGroupDeps = new Map<string, DependencyReference>();
     const exchangeRefs = processPayload ? processExchangeRefs(processPayload) : [];
 
     for (const flow of payloads.flow) {
@@ -481,6 +779,7 @@ export function createLibraryScopeWorkflowCommands({
     for (const dep of flowDeps.values()) {
       const rootFlow = rootEntityForRef(maps, "flow", dep.id, dep.version);
       for (const fp of ensureArray(rootFlow?.flow_property_refs)) {
+        if (!fp.id) continue;
         flowPropertyDeps.set(fp.id, {
           id: fp.id,
           version: fp.version || "00.00.001",
@@ -577,7 +876,7 @@ export function createLibraryScopeWorkflowCommands({
     };
   }
 
-  function runDatasetLibraryIndexBuild(options) {
+  function runDatasetLibraryIndexBuild(options: JsonRecord): JsonRecord {
     if (options.help) {
       return help(
         "dataset-library-index-build",
@@ -597,7 +896,7 @@ export function createLibraryScopeWorkflowCommands({
     }
     const outDir = resolveRepoPath(
       options.outDir || path.join(sourceDir, ".foundry", "library-index"),
-    );
+    )!;
     const entityRows = buildEntityIndex(sourceDir);
     const maps = entityMaps(entityRows);
     const projectionRows = processBundleEntries(processBundlesDir).map((bundle) =>
@@ -626,7 +925,7 @@ export function createLibraryScopeWorkflowCommands({
         process_scopes: projectionRows.length,
         ...countsByType,
         elementary_flows: entityRows.filter(
-          (row) => row.dataset_type === "flow" && /^elementary flow$/iu.test(row.flow_type),
+          (row) => row.dataset_type === "flow" && /^elementary flow$/iu.test(row.flow_type ?? ""),
         ).length,
         reference_only_support: entityRows.filter((row) =>
           ["flowproperty", "unitgroup"].includes(row.dataset_type),
@@ -647,15 +946,20 @@ export function createLibraryScopeWorkflowCommands({
     return report;
   }
 
-  function chunkRows(rows, chunkSize) {
-    const chunks = [];
+  function chunkRows<T>(rows: T[], chunkSize: number): T[][] {
+    const chunks: T[][] = [];
     for (let index = 0; index < rows.length; index += chunkSize) {
       chunks.push(rows.slice(index, index + chunkSize));
     }
     return chunks;
   }
 
-  function writeChunkFiles(outDir, stem, rows, chunkSize) {
+  function writeChunkFiles<T>(
+    outDir: string,
+    stem: string,
+    rows: T[],
+    chunkSize: number,
+  ): string[] {
     const chunksDir = path.join(outDir, "chunks");
     return chunkRows(rows, chunkSize).map((chunk, index) => {
       const filePath = path.join(
@@ -667,7 +971,7 @@ export function createLibraryScopeWorkflowCommands({
     });
   }
 
-  function runDatasetLibraryAuthoringPlan(options) {
+  function runDatasetLibraryAuthoringPlan(options: JsonRecord): JsonRecord {
     if (options.help) {
       return help(
         "dataset-library-authoring-plan",
@@ -688,10 +992,10 @@ export function createLibraryScopeWorkflowCommands({
     }
     const outDir = resolveRepoPath(
       options.outDir || path.join(path.dirname(indexDir), "authoring-plan"),
-    );
+    )!;
     const chunkSize = positiveIntegerOption(options.chunkSize, 200);
-    const entityRows = readJsonLines(entityIndexPath);
-    const projectionRows = readJsonLines(scopeProjectionPath);
+    const entityRows = readJsonLines(entityIndexPath) as EntityRow[];
+    const projectionRows = readJsonLines(scopeProjectionPath) as ScopeProjection[];
     const usedEntityKeys = new Set(
       projectionRows.flatMap((scope) => [
         scope.process_entity_key,
@@ -704,7 +1008,7 @@ export function createLibraryScopeWorkflowCommands({
       .filter(
         (row) =>
           row.dataset_type === "flow" &&
-          /^elementary flow$/iu.test(row.flow_type) &&
+          /^elementary flow$/iu.test(row.flow_type ?? "") &&
           usedEntityKeys.has(row.entity_key),
       )
       .map((row) => ({
@@ -725,7 +1029,7 @@ export function createLibraryScopeWorkflowCommands({
         (row) =>
           usedEntityKeys.has(row.entity_key) &&
           (row.dataset_type === "process" ||
-            (row.dataset_type === "flow" && !/^elementary flow$/iu.test(row.flow_type))),
+            (row.dataset_type === "flow" && !/^elementary flow$/iu.test(row.flow_type ?? ""))),
       )
       .map((row) => ({
         schema_version: 1,
@@ -804,13 +1108,17 @@ export function createLibraryScopeWorkflowCommands({
     return report;
   }
 
-  function readDecisionRows(decisionsDir, fileName, optionValue) {
+  function readDecisionRows(
+    decisionsDir: string,
+    fileName: string,
+    optionValue: unknown,
+  ): JsonRecord[] {
     const explicit = resolveRepoPath(optionValue);
     const filePath = explicit || path.join(decisionsDir, fileName);
     return fileExists(filePath) ? readJsonLines(filePath) : [];
   }
 
-  function identityDecisionKey(row) {
+  function identityDecisionKey(row: JsonRecord): string {
     return [
       "flow",
       asText(row.source_dataset_id || row.dataset_id || row.source_flow_id || row.id),
@@ -818,7 +1126,7 @@ export function createLibraryScopeWorkflowCommands({
     ].join(":");
   }
 
-  function classificationDecisionDatasetType(row) {
+  function classificationDecisionDatasetType(row: JsonRecord): string {
     const explicitType = asText(row.dataset_type || row.type);
     if (explicitType) {
       return explicitType;
@@ -833,7 +1141,7 @@ export function createLibraryScopeWorkflowCommands({
     return categoryType;
   }
 
-  function classificationDecisionKey(row) {
+  function classificationDecisionKey(row: JsonRecord): string {
     return [
       classificationDecisionDatasetType(row),
       asText(row.dataset_id || row.id),
@@ -841,7 +1149,7 @@ export function createLibraryScopeWorkflowCommands({
     ].join(":");
   }
 
-  function supportDecisionKey(row) {
+  function supportDecisionKey(row: JsonRecord): string {
     return [
       asText(row.support_type || row.dataset_type || row.type),
       asText(row.source_support_id || row.dataset_id || row.id),
@@ -849,9 +1157,9 @@ export function createLibraryScopeWorkflowCommands({
     ].join(":");
   }
 
-  function canonicalTarget(row, type) {
+  function canonicalTarget(row: JsonRecord | null | undefined, type: string): CanonicalTarget {
     const source = row ?? {};
-    const target = source.canonical_target || source.target || {};
+    const target = jsonRecord(source.canonical_target || source.target);
     return {
       id: asText(
         source.canonical_flow_id ||
@@ -876,14 +1184,17 @@ export function createLibraryScopeWorkflowCommands({
     };
   }
 
-  function classificationDecisionCode(row) {
+  function classificationDecisionCode(row: JsonRecord | null | undefined): string {
     const source = row ?? {};
     return asText(
       source.selected_code || source.code || source.leaf_code || source.class_id || source.cat_id,
     );
   }
 
-  function decisionIsCompleteClassification(row, { datasetType = null } = {}) {
+  function decisionIsCompleteClassification(
+    row: JsonRecord | null | undefined,
+    { datasetType = null }: { datasetType?: string | null } = {},
+  ): boolean {
     const code = classificationDecisionCode(row);
     if (!code) return false;
     const categoryType = asText(row?.category_type ?? row?.categoryType);
@@ -900,24 +1211,31 @@ export function createLibraryScopeWorkflowCommands({
     return true;
   }
 
-  function exchangePreservationHash(exchange) {
+  function exchangePreservationHash(exchange: JsonRecord): string {
     const clone = cloneJson(exchange);
     delete clone.referenceToFlowDataSet;
     return jsonSha256(clone);
   }
 
-  function rewriteProcessExchangeReferences(scope, identityByKey, maps, outDir) {
+  function rewriteProcessExchangeReferences(
+    scope: ScopeProjection,
+    identityByKey: Map<string, JsonRecord>,
+    maps: EntityMaps,
+    outDir: string,
+  ): RewriteResult {
     const processFile = resolveRepoPath(scope.process_file);
     if (!processFile || !fileExists(processFile)) {
       return { rewritten_process_file: null, rewrite_rows: [] };
     }
     const payload = readJson(processFile);
-    const exchanges = ensureArray(payload?.processDataSet?.exchanges?.exchange);
-    const rewriteRows = [];
+    const exchanges = ensureArray(
+      jsonRecord(jsonRecord(payload.processDataSet).exchanges).exchange,
+    ).map(jsonRecord);
+    const rewriteRows: JsonRecord[] = [];
     exchanges.forEach((exchange, index) => {
-      const ref = exchange?.referenceToFlowDataSet;
-      const flowId = asText(ref?.["@refObjectId"]);
-      const flowVersion = asText(ref?.["@version"]) || "00.00.001";
+      const ref = jsonRecord(exchange.referenceToFlowDataSet);
+      const flowId = asText(ref["@refObjectId"]);
+      const flowVersion = asText(ref["@version"]) || "00.00.001";
       const rootFlow = rootEntityForRef(maps, "flow", flowId, flowVersion);
       if (!rootFlow) return;
       // Reuse-by-reference is gated by an explicit reuse_existing_reference decision, NOT
@@ -928,18 +1246,19 @@ export function createLibraryScopeWorkflowCommands({
       // authoritative gate, so this stays a no-op for any flow without a reuse decision.
       const decision = identityByKey.get(`flow:${flowId}:${flowVersion}`);
       if (asText(decision?.decision) !== "reuse_existing_reference") return;
+      if (!decision) return;
       const target = canonicalTarget(decision, "flow data set");
       if (!target.id) return;
       const beforePreservationHash = exchangePreservationHash(exchange);
       const previousReference = cloneJson(ref);
       exchange.referenceToFlowDataSet = {
-        "@type": previousReference?.["@type"] || "flow data set",
+        "@type": previousReference["@type"] || "flow data set",
         "@refObjectId": target.id,
         "@version": target.version,
         "@uri": target.uri || `../flows/${target.id}.json`,
         "common:shortDescription":
           decision.canonical_short_description ||
-          previousReference?.["common:shortDescription"] ||
+          previousReference["common:shortDescription"] ||
           target.short_description ||
           undefined,
       };
@@ -975,7 +1294,13 @@ export function createLibraryScopeWorkflowCommands({
     };
   }
 
-  function blockRow(scope, dependency, code, message, requiredHumanAction) {
+  function blockRow(
+    scope: JsonRecord,
+    dependency: unknown,
+    code: string,
+    message: string,
+    requiredHumanAction: string,
+  ): JsonRecord {
     return {
       schema_version: 1,
       blocked_process_id: scope.process_id,
@@ -989,7 +1314,7 @@ export function createLibraryScopeWorkflowCommands({
     };
   }
 
-  function identityPreflightReportPath(row) {
+  function identityPreflightReportPath(row: JsonRecord): string | null {
     const explicit =
       row.expected_report_file ||
       row.identity_decision_file ||
@@ -998,21 +1323,23 @@ export function createLibraryScopeWorkflowCommands({
       row.reportFile;
     if (explicit) return resolveRepoPath(explicit);
     const outputDir = row.output_dir || row.outputDir;
-    return outputDir
-      ? path.join(resolveRepoPath(outputDir), "outputs", "identity-decision.json")
+    const resolvedOutputDir = resolveRepoPath(outputDir);
+    return resolvedOutputDir
+      ? path.join(resolvedOutputDir, "outputs", "identity-decision.json")
       : null;
   }
 
-  function identityPreflightCandidatePath(row) {
+  function identityPreflightCandidatePath(row: JsonRecord): string | null {
     const explicit = row.expected_candidates_file || row.candidates_file || row.candidatesFile;
     if (explicit) return resolveRepoPath(explicit);
     const outputDir = row.output_dir || row.outputDir;
-    return outputDir
-      ? path.join(resolveRepoPath(outputDir), "outputs", "identity-candidates.jsonl")
+    const resolvedOutputDir = resolveRepoPath(outputDir);
+    return resolvedOutputDir
+      ? path.join(resolvedOutputDir, "outputs", "identity-candidates.jsonl")
       : null;
   }
 
-  function identityPreflightKey(row) {
+  function identityPreflightKey(row: JsonRecord): string {
     return [
       asText(row.dataset_type || row.type || "flow"),
       asText(row.dataset_id || row.source_dataset_id || row.entity_id || row.id),
@@ -1020,20 +1347,20 @@ export function createLibraryScopeWorkflowCommands({
     ].join(":");
   }
 
-  function compactIdentityText(value) {
+  function compactIdentityText(value: unknown): string {
     return normalizedText(value)
       .replace(/[^a-z0-9]+/gu, "")
       .trim();
   }
 
-  function identityTokens(value) {
+  function identityTokens(value: unknown): string[] {
     return normalizedText(value)
       .replace(/[^a-z0-9]+/gu, " ")
       .split(/\s+/u)
       .filter((token) => token.length >= 2 && !["the", "and", "with"].includes(token));
   }
 
-  function normalizedCas(value) {
+  function normalizedCas(value: unknown): string {
     // BAFU/ecoinvent zero-pads CAS numbers ("000124-38-9"); the remote library stores the
     // canonical unpadded form ("124-38-9"). Compare without leading zeros.
     return String(value ?? "")
@@ -1042,7 +1369,7 @@ export function createLibraryScopeWorkflowCommands({
       .replace(/^0+(?=\d)/u, "");
   }
 
-  function flowPropertyDimension(value) {
+  function flowPropertyDimension(value: unknown): string {
     const normalized = normalizedText(value);
     if (/\bkg\b|mass/u.test(normalized)) return "mass";
     if (/\b(kwh|mj)\b|energy|calorific/u.test(normalized)) return "energy";
@@ -1056,7 +1383,7 @@ export function createLibraryScopeWorkflowCommands({
     return normalized || "unknown";
   }
 
-  function categoryKind(categories) {
+  function categoryKind(categories: unknown): string | null {
     const text = normalizedText(ensureArray(categories).join(" > "));
     if (!text) return null;
     if (/resource|resources|from ground|in ground|water resource|biotic|land/u.test(text)) {
@@ -1073,10 +1400,10 @@ export function createLibraryScopeWorkflowCommands({
     return null;
   }
 
-  function targetUsageStats(projectionRows) {
-    const byFlow = new Map();
+  function targetUsageStats(projectionRows: ScopeProjection[]): Map<string, UsageStats> {
+    const byFlow = new Map<string, MutableUsageStats>();
     for (const scope of projectionRows) {
-      for (const ref of ensureArray(scope.usage_refs?.process_exchange_flow_refs)) {
+      for (const ref of scope.usage_refs.process_exchange_flow_refs as ProcessExchangeReference[]) {
         const key = `flow:${ref.flow_id}:${ref.flow_version || "00.00.001"}`;
         const stats = byFlow.get(key) ?? {
           input: 0,
@@ -1092,7 +1419,7 @@ export function createLibraryScopeWorkflowCommands({
         byFlow.set(key, stats);
       }
     }
-    return new Map(
+    return new Map<string, UsageStats>(
       [...byFlow.entries()].map(([key, value]) => [
         key,
         { ...value, process_ids: [...value.process_ids].sort() },
@@ -1100,7 +1427,11 @@ export function createLibraryScopeWorkflowCommands({
     );
   }
 
-  function inferTargetCategoryKind({ targetNames, targetCategories, usage }) {
+  function inferTargetCategoryKind({
+    targetNames,
+    targetCategories,
+    usage,
+  }: TargetCategoryInput): string | null {
     const nameText = normalizedText(targetNames.join(" "));
     if (
       /^energy\b|energy from|crude oil|natural gas|coal|lignite|peat|uranium|ore|resource/u.test(
@@ -1121,7 +1452,7 @@ export function createLibraryScopeWorkflowCommands({
     return null;
   }
 
-  function categoryCompatible(inferredKind, candidateKind) {
+  function categoryCompatible(inferredKind: string | null, candidateKind: string | null): boolean {
     if (!inferredKind || !candidateKind) return true;
     if (inferredKind === candidateKind) return true;
     if (inferredKind === "emission" && candidateKind.startsWith("emission")) return true;
@@ -1130,11 +1461,11 @@ export function createLibraryScopeWorkflowCommands({
     return false;
   }
 
-  function hasLongTermCategory(categories) {
+  function hasLongTermCategory(categories: unknown): boolean {
     return /\blong\s*term\b|long-term/u.test(normalizedText(ensureArray(categories).join(" ")));
   }
 
-  function overlapScore(leftNames, rightNames) {
+  function overlapScore(leftNames: unknown[], rightNames: unknown[]): number {
     let best = 0;
     for (const left of leftNames) {
       const leftNormalized = normalizedText(left);
@@ -1161,30 +1492,35 @@ export function createLibraryScopeWorkflowCommands({
     return best;
   }
 
-  function candidateShortDescription(candidate) {
-    return ensureArray(candidate?.names).find(Boolean) || candidate?.id || "";
+  function candidateShortDescription(candidate: JsonRecord): unknown {
+    return ensureArray(candidate.names).find(Boolean) || candidate.id || "";
   }
 
-  const sourceClassificationCache = new Map();
+  const sourceClassificationCache = new Map<string, SourceClassification | null>();
 
-  function entitySourceClassification(entity) {
+  function entitySourceClassification(entity: EntityRow): SourceClassification | null {
     // The BAFU→TIDAS conversion writes a uniform default elementaryFlowCategorization
     // ("Emissions to air, unspecified") on every elementary flow, but preserves the real
     // ecoinvent compartment in tidasimport:sourceTrace.payload.sourceClassification.
-    const sourceFile = asText(entity?.source_file) || ensureArray(entity?.source_files)[0];
+    const sourceFile = asText(entity.source_file) || asText(ensureArray(entity.source_files)[0]);
     if (!sourceFile) return null;
-    if (sourceClassificationCache.has(sourceFile)) return sourceClassificationCache.get(sourceFile);
-    let result = null;
+    if (sourceClassificationCache.has(sourceFile)) {
+      return sourceClassificationCache.get(sourceFile) ?? null;
+    }
+    let result: SourceClassification | null = null;
     const resolved = resolveRepoPath(sourceFile);
     if (resolved && fileExists(resolved)) {
       try {
         const payload = readJson(resolved);
-        const tracePayload =
-          payload?.flowDataSet?.flowInformation?.dataSetInformation?.["common:other"]?.[
-            "tidasimport:sourceTrace"
-          ]?.payload ?? null;
-        const trace = tracePayload?.sourceClassification ?? null;
-        if (trace && typeof trace === "object") {
+        const dataSetInformation = jsonRecord(
+          jsonRecord(jsonRecord(payload.flowDataSet).flowInformation).dataSetInformation,
+        );
+        const sourceTrace = jsonRecord(
+          jsonRecord(dataSetInformation["common:other"])["tidasimport:sourceTrace"],
+        );
+        const tracePayload = jsonRecord(sourceTrace.payload);
+        const trace = jsonRecord(tracePayload.sourceClassification);
+        if (Object.keys(trace).length > 0) {
           const category = normalizedText(trace.category || trace.localCategory);
           const subCategory = normalizedText(trace.subCategory || trace.localSubCategory);
           if (category) result = { category, subCategory };
@@ -1192,8 +1528,9 @@ export function createLibraryScopeWorkflowCommands({
         // openLCA JSON-LD lane: the converter writes the same uniform "air, unspecified"
         // default as the BAFU lane and preserves the real FEDEFL compartment only in the
         // entity trace ("Elementary flows/emission/air/troposphere/rural"). Recover it.
-        if (!result && normalizedText(tracePayload?.format) === "openlca-jsonld") {
-          result = openLcaCompartmentClassification(tracePayload?.payload?.entity?.category);
+        if (!result && normalizedText(tracePayload.format) === "openlca-jsonld") {
+          const tracedEntity = jsonRecord(jsonRecord(tracePayload.payload).entity);
+          result = openLcaCompartmentClassification(tracedEntity.category);
         }
       } catch {
         result = null;
@@ -1203,7 +1540,7 @@ export function createLibraryScopeWorkflowCommands({
     return result;
   }
 
-  function openLcaCompartmentClassification(categoryPath) {
+  function openLcaCompartmentClassification(categoryPath: unknown): SourceClassification | null {
     // Translate the FEDEFL "/"-delimited compartment path into the ecoinvent-style
     // {category, subCategory} shape that traceCompartment already maps onto remote ILCD
     // category patterns, so the openLCA lane reuses the BAFU-tested compartment tiering.
@@ -1244,7 +1581,9 @@ export function createLibraryScopeWorkflowCommands({
     return null;
   }
 
-  function traceCompartment(sourceClassification) {
+  function traceCompartment(
+    sourceClassification: SourceClassification | null,
+  ): TraceCompartment | null {
     if (!sourceClassification) return null;
     const { category, subCategory } = sourceClassification;
     let kind = null;
@@ -1288,9 +1627,14 @@ export function createLibraryScopeWorkflowCommands({
     return { kind, longTerm, subCategory: base, pattern, fallbackPattern };
   }
 
-  function evaluateElementaryIdentityDecision({ entity, report, usage }) {
-    const target = report?.target ?? {};
-    const targetFields = target.fields ?? {};
+  function evaluateElementaryIdentityDecision({
+    entity,
+    report,
+    usage,
+  }: ElementaryIdentityEvaluationInput): ElementaryIdentityEvaluation {
+    const reportRecord = report ?? {};
+    const target = jsonRecord(reportRecord.target);
+    const targetFields = jsonRecord(target.fields);
     const targetNames = [
       ...ensureArray(target.names),
       entity.name,
@@ -1311,7 +1655,7 @@ export function createLibraryScopeWorkflowCommands({
         usage,
       });
     const targetHasLongTerm = trace ? trace.longTerm : hasLongTermCategory(targetCategories);
-    const rawCandidates = ensureArray(report?.candidates);
+    const rawCandidates = ensureArray(reportRecord.candidates).map(jsonRecord);
 
     if (!report || typeof report !== "object") {
       return {
@@ -1322,7 +1666,7 @@ export function createLibraryScopeWorkflowCommands({
     }
     // A preflight "create_new" is a candidate suggestion, not an authoritative decision;
     // elementary flows may still match an existing remote flow, so evaluate candidates anyway.
-    const preflightSuggestedCreateNew = report.decision === "create_new";
+    const preflightSuggestedCreateNew = reportRecord.decision === "create_new";
 
     const targetCompacts = targetNames.map((name) => compactIdentityText(name)).filter(Boolean);
     const BAFU_DEFAULT_ELEMENTARY_PATH =
@@ -1332,10 +1676,10 @@ export function createLibraryScopeWorkflowCommands({
     // converted categories as evidence when they differ from the default.
     const targetCategoriesReliable =
       Boolean(targetCategoryText) && targetCategoryText !== BAFU_DEFAULT_ELEMENTARY_PATH;
-    const scoredCandidates = rawCandidates.map((candidate, index) => {
-      const fields = candidate?.fields ?? {};
+    const scoredCandidates: ScoredCandidate[] = rawCandidates.map((candidate, index) => {
+      const fields = jsonRecord(candidate.fields);
       const candidateType = normalizedText(fields.type_of_dataset);
-      const candidateNames = ensureArray(candidate?.names);
+      const candidateNames = ensureArray(candidate.names);
       const candidateCas = normalizedCas(fields.cas);
       const candidateDimension = flowPropertyDimension(fields.flow_property);
       const candidateCategories = ensureArray(fields.categories);
@@ -1363,11 +1707,11 @@ export function createLibraryScopeWorkflowCommands({
       // Chemical-name inversion ("Ethane, 1,1,2,2-tetrachloro-" ↔ "1,1,2,2-tetrachloroethane"):
       // after separating digit locants, some permutation of the target's word tokens
       // concatenates to the candidate's word part and the digit multisets agree.
-      const digitsOf = (value) =>
+      const digitsOf = (value: unknown): string =>
         Array.from(String(value).replace(/[^0-9]+/gu, ""))
           .sort()
           .join("");
-      const wordPartOf = (value) => String(value).replace(/[0-9]+/gu, "");
+      const wordPartOf = (value: unknown): string => String(value).replace(/[0-9]+/gu, "");
       const permutationCompactEqual = candidateCompacts.some((cn) => {
         const candidateWord = wordPartOf(cn);
         if (candidateWord.length < 6) return false;
@@ -1380,7 +1724,7 @@ export function createLibraryScopeWorkflowCommands({
             .filter((token) => token.length >= 2);
           if (tokens.length < 2 || tokens.length > 4) return false;
           if (tokens.join("").length !== candidateWord.length) return false;
-          const permute = (rest, acc) => {
+          const permute = (rest: string[], acc: string): boolean => {
             if (rest.length === 0) return acc === candidateWord;
             if (!candidateWord.startsWith(acc)) return false;
             return rest.some((token, i) =>
@@ -1496,7 +1840,7 @@ export function createLibraryScopeWorkflowCommands({
         (sameCategoryPath ? 14 : 0) +
         legacyAirUnspecifiedBonus -
         longTermPenalty;
-      const blockerCodes = [];
+      const blockerCodes: string[] = [];
       if (candidateType !== "elementary flow") blockerCodes.push("candidate_not_elementary_flow");
       if (casConflict) blockerCodes.push("cas_conflict");
       if (!dimensionCompatible) blockerCodes.push("flow_property_dimension_conflict");
@@ -1560,8 +1904,8 @@ export function createLibraryScopeWorkflowCommands({
               ? "elementary_flow_create_new_forbidden"
               : "no_candidate_passed_guardrails",
         evidence: {
-          preflight_status: report.status ?? null,
-          preflight_decision: report.decision ?? null,
+          preflight_status: reportRecord.status ?? null,
+          preflight_decision: reportRecord.decision ?? null,
           target_dimension: targetDimension,
           inferred_category_kind: inferredKind,
           source_trace_compartment: trace
@@ -1603,8 +1947,8 @@ export function createLibraryScopeWorkflowCommands({
         decision: "block_unresolved",
         reason: competing.length > 0 ? "multiple_plausible_candidates" : "candidate_score_too_low",
         evidence: {
-          preflight_status: report.status ?? null,
-          preflight_decision: report.decision ?? null,
+          preflight_status: reportRecord.status ?? null,
+          preflight_decision: reportRecord.decision ?? null,
           target_dimension: targetDimension,
           inferred_category_kind: inferredKind,
           source_trace_compartment: trace
@@ -1634,8 +1978,8 @@ export function createLibraryScopeWorkflowCommands({
       reason: "single_candidate_passed_physical_guardrails",
       candidate: top.candidate,
       evidence: {
-        preflight_status: report.status ?? null,
-        preflight_decision: report.decision ?? null,
+        preflight_status: reportRecord.status ?? null,
+        preflight_decision: reportRecord.decision ?? null,
         target_names: targetNames.slice(0, 6),
         target_cas: targetCas || null,
         target_dimension: targetDimension,
@@ -1675,7 +2019,7 @@ export function createLibraryScopeWorkflowCommands({
     };
   }
 
-  function runDatasetLibraryIdentityDecisionsFromPreflight(options) {
+  function runDatasetLibraryIdentityDecisionsFromPreflight(options: JsonRecord): JsonRecord {
     if (options.help) {
       return help(
         "dataset-library-identity-decisions-from-preflight",
@@ -1704,13 +2048,11 @@ export function createLibraryScopeWorkflowCommands({
     }
     const outDir = resolveRepoPath(
       options.outDir || path.join(path.dirname(indexDir), "decisions"),
-    );
-    const entityRows = readJsonLines(entityIndexPath);
-    const projectionRows = readJsonLines(scopeProjectionPath);
+    )!;
+    const entityRows = readJsonLines(entityIndexPath) as EntityRow[];
+    const projectionRows = readJsonLines(scopeProjectionPath) as ScopeProjection[];
     const usedEntityKeys = new Set(
-      projectionRows.flatMap((scope) =>
-        ensureArray(scope.dependency_ids?.flows).map((dep) => dep.entity_key),
-      ),
+      projectionRows.flatMap((scope) => scope.dependency_ids.flows.map((dep) => dep.entity_key)),
     );
     const usageByFlow = targetUsageStats(projectionRows);
     const preflightRows = readJsonLines(preflightIndexPath);
@@ -1718,13 +2060,13 @@ export function createLibraryScopeWorkflowCommands({
     const elementaryRows = entityRows.filter(
       (row) =>
         row.dataset_type === "flow" &&
-        /^elementary flow$/iu.test(row.flow_type) &&
+        /^elementary flow$/iu.test(row.flow_type ?? "") &&
         usedEntityKeys.has(row.entity_key),
     );
 
-    const decisions = [];
-    const manualReviewRows = [];
-    const reasonCounts = new Map();
+    const decisions: JsonRecord[] = [];
+    const manualReviewRows: JsonRecord[] = [];
+    const reasonCounts = new Map<string, number>();
     for (const entity of elementaryRows) {
       const key = `flow:${entity.dataset_id}:${entity.dataset_version || "00.00.001"}`;
       const preflightRow = preflightByKey.get(key);
@@ -1745,7 +2087,7 @@ export function createLibraryScopeWorkflowCommands({
       });
       increment(reasonCounts, evaluation.reason);
       if (evaluation.decision === "reuse_existing_reference") {
-        const candidate = evaluation.candidate;
+        const candidate = jsonRecord(evaluation.candidate);
         decisions.push({
           schema_version: 1,
           dataset_type: "flow",
@@ -1757,18 +2099,21 @@ export function createLibraryScopeWorkflowCommands({
           decision: "reuse_existing_reference",
           identity_decision: "reuse_existing_reference",
           decision_status: "completed",
-          canonical_flow_id: candidate.id,
-          canonical_flow_version: candidate.version || "00.00.001",
+          canonical_flow_id: candidate?.id,
+          canonical_flow_version: candidate?.version || "00.00.001",
           canonical_short_description: candidateShortDescription(candidate),
           canonical: {
             table: "flows",
-            ref_object_id: candidate.id,
-            version: candidate.version || "00.00.001",
+            ref_object_id: candidate?.id,
+            version: candidate?.version || "00.00.001",
             short_description: candidateShortDescription(candidate),
           },
           basis:
             "Selected from identity-preflight candidates because exactly one existing elementary flow passed physical-equivalence guardrails.",
-          confidence: evaluation.evidence?.selected_candidate?.score >= 95 ? "high" : "medium",
+          confidence:
+            Number(jsonRecord(evaluation.evidence.selected_candidate).score) >= 95
+              ? "high"
+              : "medium",
           used_context_kinds: ["library_index", "scope_projection", "identity_preflight"],
           closes_action_items: ["elementary_flow_identity_manual_review"],
           physical_equivalence_evidence: evaluation.reason,
@@ -1847,19 +2192,19 @@ export function createLibraryScopeWorkflowCommands({
     return report;
   }
 
-  function increment(map, key, count = 1) {
+  function increment(map: Map<string, number>, key: unknown, count = 1): void {
     const normalizedKey = asText(key) || "unknown";
     map.set(normalizedKey, (map.get(normalizedKey) ?? 0) + count);
   }
 
-  function sortedCountObject(map) {
+  function sortedCountObject(map: Map<string, number>): Record<string, number> {
     return Object.fromEntries(
       [...map.entries()].sort(([left], [right]) => left.localeCompare(right)),
     );
   }
 
-  function compactBlockingDependency(row) {
-    const dependency = row.blocking_dependency ?? {};
+  function compactBlockingDependency(row: JsonRecord): JsonRecord {
+    const dependency = jsonRecord(row.blocking_dependency);
     return {
       dataset_type: asText(dependency.dataset_type || dependency.type) || "unknown",
       id: asText(dependency.id || dependency.dataset_id),
@@ -1870,18 +2215,23 @@ export function createLibraryScopeWorkflowCommands({
     };
   }
 
-  function blockerScopeKey(row) {
+  function blockerScopeKey(row: JsonRecord): string {
     return [
       asText(row.blocked_process_id || row.process_id),
       asText(row.blocked_process_version || row.process_version) || "00.00.001",
     ].join(":");
   }
 
-  function buildBlockedScopeReport({ command, blockedRows, blockedLedgerPath, reportPath }) {
+  function buildBlockedScopeReport({
+    command,
+    blockedRows,
+    blockedLedgerPath,
+    reportPath,
+  }: BlockedScopeReportInput): JsonRecord {
     const sampleLimit = 20;
-    const reasonMap = new Map();
-    const scopeMap = new Map();
-    const dependencyTypeCounts = new Map();
+    const reasonMap = new Map<string, ReasonAccumulator>();
+    const scopeMap = new Map<string, ScopeAccumulator>();
+    const dependencyTypeCounts = new Map<string, number>();
     for (const row of blockedRows) {
       const reason = asText(row.reason) || "unknown";
       const dependency = compactBlockingDependency(row);
@@ -1898,7 +2248,7 @@ export function createLibraryScopeWorkflowCommands({
           sample_blocking_dependencies: [],
         });
       }
-      const reasonEntry = reasonMap.get(reason);
+      const reasonEntry = reasonMap.get(reason)!;
       reasonEntry.blocked_ledger_rows += 1;
       reasonEntry.blocked_scope_ids.add(asText(row.blocked_process_id));
       increment(reasonEntry.blocking_dependency_types, dependency.dataset_type);
@@ -1925,7 +2275,7 @@ export function createLibraryScopeWorkflowCommands({
           rerun_commands: new Set(),
         });
       }
-      const scopeEntry = scopeMap.get(scopeKey);
+      const scopeEntry = scopeMap.get(scopeKey)!;
       scopeEntry.blocker_count += 1;
       increment(scopeEntry.reasons, reason);
       if (row.rerun_command) scopeEntry.rerun_commands.add(asText(row.rerun_command));
@@ -1979,7 +2329,7 @@ export function createLibraryScopeWorkflowCommands({
     };
   }
 
-  function runDatasetLibraryDecisionsApply(options) {
+  function runDatasetLibraryDecisionsApply(options: JsonRecord): JsonRecord {
     if (options.help) {
       return help(
         "dataset-library-decisions-apply",
@@ -2013,9 +2363,9 @@ export function createLibraryScopeWorkflowCommands({
     const decisionsDir = resolveRepoPath(options.decisionsDir || options.decisions) || indexDir;
     const outDir = resolveRepoPath(
       options.outDir || path.join(path.dirname(indexDir), "library-resolution"),
-    );
-    const entityRows = readJsonLines(entityIndexPath);
-    const scopeRows = readJsonLines(scopeProjectionPath);
+    )!;
+    const entityRows = readJsonLines(entityIndexPath) as EntityRow[];
+    const scopeRows = readJsonLines(scopeProjectionPath) as ScopeProjection[];
     const maps = entityMaps(entityRows);
     const identityRows = readDecisionRows(
       decisionsDir,
@@ -2037,13 +2387,13 @@ export function createLibraryScopeWorkflowCommands({
       classificationRows.map((row) => [classificationDecisionKey(row), row]),
     );
     const supportByKey = new Map(supportRows.map((row) => [supportDecisionKey(row), row]));
-    const checkpoints = [];
-    const blockedLedger = [];
-    const readyScopes = [];
-    const rewriteRows = [];
+    const checkpoints: JsonRecord[] = [];
+    const blockedLedger: JsonRecord[] = [];
+    const readyScopes: JsonRecord[] = [];
+    const rewriteRows: JsonRecord[] = [];
 
     for (const scope of scopeRows) {
-      const blockers = [];
+      const blockers: JsonRecord[] = [];
       const processClassification = classificationByKey.get(
         `process:${scope.process_id}:${scope.process_version || "00.00.001"}`,
       );
@@ -2063,9 +2413,9 @@ export function createLibraryScopeWorkflowCommands({
         );
       }
 
-      for (const dep of ensureArray(scope.dependency_ids?.flows)) {
-        const entity = maps.byKey.get(dep.entity_key);
-        if (entity && /^elementary flow$/iu.test(entity.flow_type)) {
+      for (const dep of scope.dependency_ids.flows) {
+        const entity = maps.byKey.get(asText(dep.entity_key));
+        if (entity && /^elementary flow$/iu.test(entity.flow_type ?? "")) {
           const decision = identityByKey.get(`flow:${dep.id}:${dep.version || "00.00.001"}`);
           const target = canonicalTarget(decision, "flow data set");
           if (
@@ -2101,7 +2451,7 @@ export function createLibraryScopeWorkflowCommands({
           }
         }
       }
-      for (const dep of ensureArray(scope.dependency_ids?.flowproperties)) {
+      for (const dep of scope.dependency_ids.flowproperties) {
         const mapping = supportByKey.get(`flowproperty:${dep.id}:${dep.version || "00.00.001"}`);
         const target = canonicalTarget(mapping, "flow property data set");
         if (!target.id && !allowAccountLocalSupportAndElementary) {
@@ -2116,7 +2466,7 @@ export function createLibraryScopeWorkflowCommands({
           );
         }
       }
-      for (const dep of ensureArray(scope.dependency_ids?.unitgroups)) {
+      for (const dep of scope.dependency_ids.unitgroups) {
         const mapping = supportByKey.get(`unitgroup:${dep.id}:${dep.version || "00.00.001"}`);
         const target = canonicalTarget(mapping, "unit group data set");
         if (!target.id && !allowAccountLocalSupportAndElementary) {
@@ -2143,9 +2493,9 @@ export function createLibraryScopeWorkflowCommands({
         bundle_dir: scope.bundle_dir,
         rewritten_process_file: rewrite.rewritten_process_file,
         dependency_counts: {
-          flows: ensureArray(scope.dependency_ids?.flows).length,
-          flowproperties: ensureArray(scope.dependency_ids?.flowproperties).length,
-          unitgroups: ensureArray(scope.dependency_ids?.unitgroups).length,
+          flows: scope.dependency_ids.flows.length,
+          flowproperties: scope.dependency_ids.flowproperties.length,
+          unitgroups: scope.dependency_ids.unitgroups.length,
         },
       };
       checkpoints.push(checkpoint);
@@ -2214,27 +2564,31 @@ export function createLibraryScopeWorkflowCommands({
     return resolution;
   }
 
-  function scopeRowsFromFile(scopeFile) {
+  function scopeRowsFromFile(scopeFile: string | null): JsonRecord[] {
     if (!scopeFile || !fileExists(scopeFile)) return [];
     if (scopeFile.toLowerCase().endsWith(".jsonl")) return readJsonLines(scopeFile);
-    const value = readJson(scopeFile);
+    const value: unknown = readJson(scopeFile);
     if (Array.isArray(value)) return value;
-    if (Array.isArray(value.rows)) return value.rows;
-    if (Array.isArray(value.scopes)) return value.scopes;
-    return [value];
+    const record = jsonRecord(value);
+    if (Array.isArray(record.rows)) return record.rows.map(jsonRecord);
+    if (Array.isArray(record.scopes)) return record.scopes.map(jsonRecord);
+    return [record];
   }
 
-  function commandArrayFromScope(scope, key) {
+  function commandArrayFromScope(scope: JsonRecord, key: string): string[] {
     const value =
-      scope?.[key] ||
-      scope?.checkpoint?.[key] ||
-      scope?.handoff?.[key] ||
-      scope?.commit_handoff?.[key];
+      scope[key] ||
+      jsonRecord(scope.checkpoint)[key] ||
+      jsonRecord(scope.handoff)[key] ||
+      jsonRecord(scope.commit_handoff)[key];
     if (Array.isArray(value)) return value.map(String).filter(Boolean);
     return [];
   }
 
-  function runScopeHandoffCommand(argv, { cwd, logDir, token, stage }) {
+  function runScopeHandoffCommand(
+    argv: string[],
+    { cwd, logDir, token, stage }: ScopeCommandOptions,
+  ): JsonRecord | null {
     if (!Array.isArray(argv) || argv.length === 0) return null;
     const stdoutLog = path.join(logDir, `${token}.${stage}.stdout.log`);
     const stderrLog = path.join(logDir, `${token}.${stage}.stderr.log`);
@@ -2266,7 +2620,7 @@ export function createLibraryScopeWorkflowCommands({
     };
   }
 
-  function runDatasetProcessScopeRun(options) {
+  function runDatasetProcessScopeRun(options: JsonRecord): JsonRecord {
     if (options.help) {
       return help(
         "dataset-process-scope-run",
@@ -2286,27 +2640,29 @@ export function createLibraryScopeWorkflowCommands({
       throw new Error("--library-resolution is required.");
     }
     const resolution = readJson(libraryResolutionPath);
-    const scopeFile = resolveRepoPath(options.scopeFile || resolution.files?.ready_scopes);
+    const scopeFile = resolveRepoPath(
+      options.scopeFile || jsonRecord(resolution.files).ready_scopes,
+    );
     const scopeRows = scopeRowsFromFile(scopeFile);
-    const readyIds = new Set(ensureArray(resolution.ready_scope_ids));
+    const readyIds = new Set(ensureArray(resolution.ready_scope_ids).map(asText));
     const outDir = resolveRepoPath(
       options.outDir || path.join(path.dirname(libraryResolutionPath), "process-scope-run"),
-    );
+    )!;
     const parallel = positiveIntegerOption(
       options.parallel,
       Math.min(12, Math.max(1, os.cpus().length - 1)),
     );
     const commit = booleanOption(options.commit);
     const dryRun = booleanOption(options.dryRun) || !commit;
-    const checkpoints = [];
-    const blocked = [];
-    const selectedScopes = scopeRows.map((scope) => ({
+    const checkpoints: JsonRecord[] = [];
+    const blocked: JsonRecord[] = [];
+    const selectedScopes: SelectedScope[] = scopeRows.map((scope) => ({
       process_id: asText(scope.process_id || scope.id),
       process_version: asText(scope.process_version || scope.version) || "00.00.001",
-      state: asText(scope.state || scope.closure_status || scope.checkpoint?.state),
+      state: asText(scope.state || scope.closure_status || jsonRecord(scope.checkpoint).state),
       bundle_dir: scope.bundle_dir,
       rewritten_process_file:
-        scope.rewritten_process_file || scope.checkpoint?.rewritten_process_file,
+        scope.rewritten_process_file || jsonRecord(scope.checkpoint).rewritten_process_file,
       commit_command: commandArrayFromScope(scope, "commit_command"),
       verify_command: commandArrayFromScope(scope, "verify_command"),
     }));
@@ -2332,7 +2688,7 @@ export function createLibraryScopeWorkflowCommands({
         });
         continue;
       }
-      const commandStages = [];
+      const commandStages: Array<JsonRecord | null> = [];
       let state = dryRun ? "dry_run_planned" : "commit_handoff_planned";
       if (commit && scope.commit_command.length > 0) {
         const token = `${scope.process_id}-${scope.process_version}`.replace(
@@ -2386,7 +2742,7 @@ export function createLibraryScopeWorkflowCommands({
     });
     writeJson(blockedReportPath, blockedReport);
     const commandFailures = checkpoints.filter((row) =>
-      ["commit_failed", "verify_failed"].includes(row.state),
+      ["commit_failed", "verify_failed"].includes(asText(row.state)),
     );
     const report = {
       schema_version: 1,
@@ -2406,7 +2762,7 @@ export function createLibraryScopeWorkflowCommands({
       counts: {
         selected_scopes: selectedScopes.length,
         ready_scopes_planned: checkpoints.filter((row) =>
-          ["dry_run_planned", "commit_handoff_planned"].includes(row.state),
+          ["dry_run_planned", "commit_handoff_planned"].includes(asText(row.state)),
         ).length,
         committed: checkpoints.filter((row) => row.state === "committed").length,
         verified: checkpoints.filter((row) => row.state === "verified").length,

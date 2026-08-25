@@ -367,6 +367,7 @@ test("active documentation and source contain no references to removed CLI spine
     "import-curation/index.mjs",
     "import-curation/profiles.mjs",
     "import-curation/trace-summary.mjs",
+    "commands/library-scope-workflow.mjs",
   ];
   const files = [
     "AGENTS.md",
