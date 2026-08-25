@@ -1086,7 +1086,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-post-authoring-finalize": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/post-authoring-finalize.mjs",
+    ownerModule: "scripts/commands/post-authoring-finalize.ts",
     ownerExport: "createPostAuthoringFinalizeCommands().runDatasetPostAuthoringFinalize",
     inputs: [
       "patched or decision-applied rows",

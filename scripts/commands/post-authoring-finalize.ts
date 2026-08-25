@@ -2,6 +2,252 @@ import fs from "node:fs";
 import path from "node:path";
 import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
+type JsonRecord = Record<string, unknown>;
+
+interface DatasetReference extends JsonRecord {
+  "@refObjectId"?: string;
+  refObjectId?: string;
+  ref_object_id?: string;
+  "@version"?: string;
+}
+
+interface VersionedAdministration extends JsonRecord {
+  publicationAndOwnership?: JsonRecord;
+}
+
+interface FlowPropertyDataSet extends JsonRecord {
+  flowPropertiesInformation?: {
+    quantitativeReference?: { referenceToReferenceUnitGroup?: DatasetReference };
+  };
+  administrativeInformation?: VersionedAdministration;
+}
+
+interface ContactDataSet extends JsonRecord {
+  contactInformation: {
+    dataSetInformation: { "common:name"?: { "#text"?: string } };
+  };
+}
+
+interface DatasetRow extends JsonRecord {
+  processDataSet?: JsonRecord;
+  flowDataSet?: JsonRecord;
+  lifeCycleModelDataSet?: JsonRecord;
+  contactDataSet?: ContactDataSet;
+  sourceDataSet?: JsonRecord;
+  flowPropertyDataSet?: FlowPropertyDataSet;
+  unitGroupDataSet?: { administrativeInformation?: VersionedAdministration } & JsonRecord;
+}
+
+interface CountMap extends JsonRecord {
+  blockers?: number;
+  write_candidates?: number;
+  flow_reference_rewrites?: number;
+  reference_rows?: number;
+  externalized_exchanges?: number;
+  input_rows?: number;
+  output_rows?: number;
+  support_source_rows?: number;
+  support_account_local_fp_ug_rows?: number;
+  source_reference_rewrites?: number;
+  contact_reference_rewrites?: number;
+  support_rows?: number;
+  canonical_unit_group_reference_proofs?: number;
+  canonical_flow_property_reference_rewrites?: number;
+  deferred_rows?: number;
+  deferred_blockers?: number;
+  request_rows?: number;
+  replaced_rows?: number;
+  selected_rows?: number;
+  completed?: number;
+  skipped_existing_report?: number;
+  failed?: number;
+  location_targets?: number;
+  invalid?: number;
+  ai_patch_evidence_entries?: number;
+  ai_classification_decision_entries?: number;
+  ai_location_decision_entries?: number;
+  ai_identity_decision_entries?: number;
+  source_contact_rewrite_semantic_evidence_entries?: number;
+  unresolved_trace_entries?: number;
+  blocked_flow_dependency_externalized?: number;
+  source_exchange_completeness_entries?: number;
+  identity_reference_rewrites?: number;
+  tasks?: number;
+  process_rows?: number;
+  flow_rows?: number;
+  external_flow_refs?: number;
+  entries_written?: number;
+}
+
+interface FileMap extends JsonRecord {
+  report?: string | null;
+  output_rows?: string | null;
+  support_rows?: string | null;
+  source_reference_rewrites?: string | null;
+  source_support_semantics?: string | null;
+  source_support_repairs?: string | null;
+  cleaned_rows?: string | null;
+  canonical_support_rewrites?: string | null;
+  canonical_support_blockers?: string | null;
+  deferred_rows?: string | null;
+  final_rows?: string | null;
+  commit_handoff_plan?: string | null;
+  unresolved_traces?: string | null;
+  source_exchange_completeness_traces?: string | null;
+  identity_reference_rewrites?: string | null;
+  traces?: string | null;
+}
+
+interface FinalizeStage extends JsonRecord {
+  stage?: string;
+  status?: string;
+  command?: string;
+  executable?: string;
+  args?: string[];
+  exit_code?: number;
+  stderr?: string;
+  report?: FinalizeStage;
+  report_file?: string | null;
+  rust_report?: unknown;
+  binary_version?: unknown;
+  counts?: CountMap;
+  files?: FileMap;
+  blockers?: JsonRecord[];
+  output_rows_file?: string | null;
+  cleaned_rows_file?: string | null;
+  rewrite_file?: string | null;
+  reference_rows_file?: string | null;
+  index_file?: string | null;
+  base_index_file?: string | null;
+  refresh_required?: boolean;
+  refresh_forced?: boolean;
+  refresh_plan?: { reason?: string };
+  refresh_force_skipped_exact?: boolean;
+  refresh_report?: FinalizeStage;
+  refresh_report_file?: string | null;
+  merge_report?: FinalizeStage;
+  merge_report_file?: string | null;
+  queue_dir?: string | null;
+  cli_package?: JsonRecord;
+  evidence?: {
+    scope_blockers?: JsonRecord[];
+    patch_evidence_file?: string | null;
+  };
+  items?: Array<{
+    dataset_type?: string;
+    entity_id?: string;
+    version?: string;
+    blockers?: JsonRecord[];
+  }>;
+  profile?: string;
+  commands?: { commit?: unknown; post_write_verify?: unknown };
+  commit_handoff?: { status?: string; blockers?: JsonRecord[] };
+  foundry_wrapper?: { stderr?: string };
+}
+
+interface SourceReferenceRow extends JsonRecord {
+  relation?: string;
+  referenced_source_kind?: string;
+  ref_object_id?: string;
+  version?: string;
+  path?: string;
+}
+
+interface SourceSummary extends JsonRecord {
+  dataset_id: string;
+  kind: string;
+}
+
+interface FinalizeOptions extends JsonRecord {
+  help?: boolean;
+}
+
+interface FinalizeDependencies {
+  appendOption: (args: string[], name: string, value: unknown) => void;
+  applyCanonicalSupportRewrites: (input: JsonRecord) => FinalizeStage;
+  applyIdentityReferenceRewrites: (input: JsonRecord) => FinalizeStage;
+  asText: (value: unknown) => string;
+  profileFor?: (
+    repoRoot: string,
+    profile: string,
+    options: FinalizeOptions,
+  ) => { allowAccountLocalSupportAndElementary?: boolean };
+  blockersFromLocationAuditStage: (stage: FinalizeStage) => JsonRecord[];
+  buildLibraryContactPayload: (
+    options: FinalizeOptions,
+    seed: unknown,
+    context: JsonRecord,
+  ) => DatasetRow;
+  booleanOption: (value: unknown) => boolean;
+  compactStageReport: (stage: FinalizeStage) => FinalizeStage;
+  cloneJson: <T>(value: T) => T;
+  contactGlobalReference: (input: JsonRecord) => JsonRecord;
+  datasetIdentity: (row: DatasetRow, datasetType: string) => { id: string; version: string };
+  datasetRowsFileStem: (datasetType: string) => string;
+  ensureArray: (value: unknown) => JsonRecord[];
+  externalizeUnresolvedProcessFlowExchanges: (input: JsonRecord) => FinalizeStage;
+  fileExists: (filePath: string | null | undefined) => boolean;
+  normalizedList: (value: unknown) => string[];
+  nowIso: () => string;
+  postAuthoringPrewriteGateBlockers: (input: JsonRecord) => JsonRecord[];
+  processSourceReferenceRows: (
+    row: DatasetRow,
+    sourceLookup: Map<string, SourceSummary>,
+    rowsFile: string,
+  ) => SourceReferenceRow[];
+  profileFullContextRequirement: (profile: unknown, datasetType: string) => unknown;
+  repoRelativeMaybe: (filePath: unknown) => string | null;
+  loadCanonicalSupportCache: (options: FinalizeOptions) => {
+    index: {
+      unitGroupById: Map<string, { version?: string }>;
+      flowPropertyById: Map<string, unknown>;
+    };
+  };
+  repoRelativePath: (filePath: string) => string;
+  repoRoot: string;
+  reportFileFromCliStage: (
+    stage: FinalizeStage,
+    paths: string[],
+    fallback: string,
+  ) => string | null;
+  readRowsFile: (filePath: string) => DatasetRow[];
+  repairTrueSourceClassification: (row: DatasetRow, context: JsonRecord) => void;
+  repairTrueSourceDescription: (row: DatasetRow, context: JsonRecord) => void;
+  repairTrueSourceIdentity: (row: DatasetRow, context: JsonRecord) => void;
+  resolveRepoPath: (filePath: unknown) => string | null;
+  rewriteCanonicalSourceReferences: (row: DatasetRow, context: JsonRecord) => void;
+  rewriteContactReferences: (row: DatasetRow, reference: JsonRecord, stats: JsonRecord) => void;
+  rewriteTrueSourceReferenceDescriptions: (row: JsonRecord, context: JsonRecord) => void;
+  runDatasetCommitHandoffPlan: (options: JsonRecord) => FinalizeStage;
+  runDatasetCurationCleanup: (input: JsonRecord) => FinalizeStage;
+  runDatasetCurationGate: (input: JsonRecord) => FinalizeStage;
+  runDatasetMutationManifest: (input: JsonRecord) => FinalizeStage;
+  runFinalizeAutoCurationQueue: (input: JsonRecord) => FinalizeStage;
+  runFinalizeIdentityPreflightStage: (input: JsonRecord) => FinalizeStage;
+  runTidasRowsValidation: (input: JsonRecord) => FinalizeStage;
+  runTiangongJsonStage: (stage: string, args: string[]) => FinalizeStage;
+  skippedPrewriteStage: (stage: string, reason: string) => FinalizeStage;
+  sourceReferenceSemanticBlockers?: (rows: SourceReferenceRow[]) => JsonRecord[];
+  sourceReferenceRewritesFileForRowsFile: (
+    rowsFile: string,
+    options: FinalizeOptions,
+  ) => string | null;
+  sourceSemanticSummary: (row: DatasetRow, sourceFile: string) => SourceSummary;
+  unique: <T>(values: T[]) => T[];
+  writeFinalizeImportLedger?: (input: JsonRecord) => FinalizeStage;
+  writeJson: (filePath: string, value: unknown) => void;
+  writeJsonLines: (filePath: string, rows: readonly unknown[]) => void;
+}
+
+interface FinalizeTiming extends JsonRecord {
+  stage: string;
+  status: string;
+  started_at_utc: string;
+  finished_at_utc: string;
+  duration_ms: number;
+  error?: string;
+}
+
 const postAuthoringFinalizeStageContract = readOnlyStageContract([
   {
     stage: "prepare_scope",
@@ -58,7 +304,7 @@ const postAuthoringFinalizeStageContract = readOnlyStageContract([
   },
 ]);
 
-function verifiedReferenceLedgerFilesForDir(ledgerDir) {
+function verifiedReferenceLedgerFilesForDir(ledgerDir: string | null): string[] {
   if (!ledgerDir) return [];
   return [
     "ok.flows.verified.jsonl",
@@ -123,13 +369,17 @@ export function createPostAuthoringFinalizeCommands({
   writeFinalizeImportLedger,
   writeJson,
   writeJsonLines,
-}) {
-  function stageStatus(value) {
+}: FinalizeDependencies) {
+  function stageStatus(value: FinalizeStage | null | undefined): string {
     if (!value || typeof value !== "object") return "completed";
     return value.status ?? value.report?.status ?? "completed";
   }
 
-  function timedFinalizeStage(timings, stage, fn) {
+  function timedFinalizeStage<T extends FinalizeStage>(
+    timings: FinalizeTiming[],
+    stage: string,
+    fn: () => T,
+  ): T {
     const startedAtUtc = nowIso();
     const startedAtMs = Date.now();
     try {
@@ -142,22 +392,25 @@ export function createPostAuthoringFinalizeCommands({
         duration_ms: Date.now() - startedAtMs,
       });
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
       timings.push({
         stage,
         status: "failed",
         started_at_utc: startedAtUtc,
         finished_at_utc: nowIso(),
         duration_ms: Date.now() - startedAtMs,
-        error: String(error?.message || error),
+        error: String(error instanceof Error ? error.message : error),
       });
       throw error;
     }
   }
 
-  function compactStageReportWithTiming(stageReport, timingsByStage) {
+  function compactStageReportWithTiming(
+    stageReport: FinalizeStage,
+    timingsByStage: Map<string, FinalizeTiming>,
+  ): FinalizeStage {
     const compacted = compactStageReport(stageReport);
-    const timing = timingsByStage.get(compacted.stage);
+    const timing = compacted.stage ? timingsByStage.get(compacted.stage) : undefined;
     if (!timing) return compacted;
     return {
       ...compacted,
@@ -167,7 +420,7 @@ export function createPostAuthoringFinalizeCommands({
     };
   }
 
-  function rowDatasetType(payload, fallbackType) {
+  function rowDatasetType(payload: DatasetRow, fallbackType: string): string {
     if (payload?.processDataSet) return "process";
     if (payload?.flowDataSet) return "flow";
     if (payload?.lifeCycleModelDataSet) return "lifecyclemodel";
@@ -189,7 +442,11 @@ export function createPostAuthoringFinalizeCommands({
   // in scope. This generic support-mint flag is currently used by the USLCI route;
   // BAFU private incubation uses its separate candidate registry and guarded owner-draft path.
   // Read a Flow Property row's referenceToReferenceUnitGroup id + version.
-  function flowPropertyReferenceUnitGroup(fpRow) {
+  function flowPropertyReferenceUnitGroup(fpRow: DatasetRow): {
+    reference: DatasetReference | null;
+    id: string;
+    version: string;
+  } {
     const referenceUnitGroup =
       fpRow?.flowPropertyDataSet?.flowPropertiesInformation?.quantitativeReference
         ?.referenceToReferenceUnitGroup;
@@ -216,7 +473,10 @@ export function createPostAuthoringFinalizeCommands({
   // same support set are written and proven via plannedRootKeys, never here. Empty unless
   // the account-local override is active; the frozen profile determines which candidate
   // path may consume the proof.
-  function deriveCanonicalUnitGroupProofKeysFromSupportRows(supportRows, options) {
+  function deriveCanonicalUnitGroupProofKeysFromSupportRows(
+    supportRows: DatasetRow[],
+    options: FinalizeOptions,
+  ): Array<{ id: string; version: string }> {
     const { index } = loadCanonicalSupportCache(options);
     const writtenUnitGroupIds = new Set(
       supportRows
@@ -245,7 +505,10 @@ export function createPostAuthoringFinalizeCommands({
     return proofKeys;
   }
 
-  function collectAccountLocalFpUgSupportRows(options) {
+  function collectAccountLocalFpUgSupportRows(options: FinalizeOptions): {
+    rows: DatasetRow[];
+    canonicalUnitGroupProofKeys: Array<{ id: string; version: string }>;
+  } {
     if (!booleanOption(options.mintUnmatchedFpUgSupport))
       return { rows: [], canonicalUnitGroupProofKeys: [] };
     const { index } = loadCanonicalSupportCache(options);
@@ -273,9 +536,12 @@ export function createPostAuthoringFinalizeCommands({
     // incubation must use its profile-specific guarded owner-draft path unless that
     // generic mint route is explicitly reviewed and enabled later.
     const ACCOUNT_LOCAL_MINT_VERSION = "00.00.001";
-    const setSupportOwnVersion = (row, rootKey) => {
+    const setSupportOwnVersion = (
+      row: DatasetRow,
+      rootKey: "flowPropertyDataSet" | "unitGroupDataSet",
+    ): DatasetRow => {
       const next = cloneJson(row);
-      const admin = next?.[rootKey]?.administrativeInformation;
+      const admin = next[rootKey]?.administrativeInformation;
       if (admin) {
         admin.publicationAndOwnership = admin.publicationAndOwnership || {};
         admin.publicationAndOwnership["common:dataSetVersion"] = ACCOUNT_LOCAL_MINT_VERSION;
@@ -306,8 +572,8 @@ export function createPostAuthoringFinalizeCommands({
     // force-wrote the canonical UG @00.00.001 and added a `version_outdated` (root role).
     // Entirely within the separately gated mintUnmatchedFpUgSupport branch; enabling the
     // broader account-local profile policy alone does not enter this generic mint path.
-    const canonicalUnitGroupProofKeys = [];
-    const seenCanonicalProofKeys = new Set();
+    const canonicalUnitGroupProofKeys: Array<{ id: string; version: string }> = [];
+    const seenCanonicalProofKeys = new Set<string>();
     const rewrittenFlowProperties = mintFlowProperties.map((fpRow) => {
       const { id: ugId, version: currentVersion } = flowPropertyReferenceUnitGroup(fpRow);
       const canonicalUnitGroup = ugId ? index.unitGroupById.get(ugId) : null;
@@ -325,7 +591,7 @@ export function createPostAuthoringFinalizeCommands({
           }
           if (currentVersion !== canonicalVersion) {
             out = cloneJson(fpRow);
-            out.flowPropertyDataSet.flowPropertiesInformation.quantitativeReference.referenceToReferenceUnitGroup[
+            out.flowPropertyDataSet!.flowPropertiesInformation!.quantitativeReference!.referenceToReferenceUnitGroup![
               "@version"
             ] = canonicalVersion;
           }
@@ -343,7 +609,17 @@ export function createPostAuthoringFinalizeCommands({
     };
   }
 
-  function applySourceContactRewrites({ datasetType, rowsFile, outDir, options }) {
+  function applySourceContactRewrites({
+    datasetType,
+    rowsFile,
+    outDir,
+    options,
+  }: {
+    datasetType: string;
+    rowsFile: string;
+    outDir: string;
+    options: FinalizeOptions;
+  }): FinalizeStage {
     const profile = String(options.profile || "generic")
       .trim()
       .toLowerCase();
@@ -419,7 +695,7 @@ export function createPostAuthoringFinalizeCommands({
     }
 
     const rows = readRowsFile(rowsFile);
-    const sourceReferenceRewriteRows = [];
+    const sourceReferenceRewriteRows: JsonRecord[] = [];
     const stats = {
       source_reference_rewrites: 0,
       true_source_identity_repairs: 0,
@@ -427,15 +703,17 @@ export function createPostAuthoringFinalizeCommands({
       true_source_classification_repairs: 0,
       true_source_reference_description_repairs: 0,
     };
-    const sourceSupportRepairRows = [];
-    const sourceSupportSemanticsRows = [];
+    const sourceSupportRepairRows: JsonRecord[] = [];
+    const sourceSupportSemanticsRows: SourceSummary[] = [];
     const libraryContact = buildLibraryContactPayload(options, null, {
       rewriteRows: sourceReferenceRewriteRows,
       stats,
     });
     const libraryContactIdentity = datasetIdentity(libraryContact, "contact");
     const libraryContactName = asText(
-      libraryContact.contactDataSet.contactInformation.dataSetInformation["common:name"]?.["#text"],
+      libraryContact.contactDataSet!.contactInformation.dataSetInformation["common:name"]?.[
+        "#text"
+      ],
     );
     const libraryContactRef = contactGlobalReference({
       id: libraryContactIdentity.id,
@@ -446,44 +724,44 @@ export function createPostAuthoringFinalizeCommands({
     const sourceSupportRowsFile = resolveRepoPath(
       options.sourceSupportRowsFile || options.supportSourceRowsFile || options.sourceSupportRows,
     );
-    const sourceSupportPayloads = new Map();
-    const sourceLookup = new Map();
+    const sourceSupportPayloads = new Map<string, DatasetRow>();
+    const sourceLookup = new Map<string, SourceSummary>();
     if (fileExists(sourceSupportRowsFile)) {
       const supportContactRewriteStats = {
         rewritten: 0,
         previous_ids: new Set(),
         previous_descriptions: new Set(),
       };
-      for (const sourceRow of readRowsFile(sourceSupportRowsFile)) {
+      for (const sourceRow of readRowsFile(sourceSupportRowsFile!)) {
         if (!sourceRow?.sourceDataSet) continue;
         const payload = cloneJson(sourceRow);
         const identity = datasetIdentity(payload, "source");
         if (!identity.id) continue;
         rewriteContactReferences(payload, libraryContactRef, supportContactRewriteStats);
         repairTrueSourceIdentity(payload, {
-          sourceFile: sourceSupportRowsFile,
+          sourceFile: sourceSupportRowsFile!,
           stats,
           repairRows: sourceSupportRepairRows,
         });
         repairTrueSourceDescription(payload, {
-          sourceFile: sourceSupportRowsFile,
+          sourceFile: sourceSupportRowsFile!,
           stats,
           repairRows: sourceSupportRepairRows,
         });
         repairTrueSourceClassification(payload, {
-          sourceFile: sourceSupportRowsFile,
+          sourceFile: sourceSupportRowsFile!,
           stats,
           repairRows: sourceSupportRepairRows,
         });
         rewriteCanonicalSourceReferences(payload, {
           datasetType: "source",
-          sourceFile: sourceSupportRowsFile,
+          sourceFile: sourceSupportRowsFile!,
           stats,
           rewriteRows: sourceReferenceRewriteRows,
           datasetIdentityCache: datasetIdentity(payload, "source"),
         });
         const repairedIdentity = datasetIdentity(payload, "source");
-        const summary = sourceSemanticSummary(payload, sourceSupportRowsFile);
+        const summary = sourceSemanticSummary(payload, sourceSupportRowsFile!);
         sourceSupportSemanticsRows.push(summary);
         sourceLookup.set(summary.dataset_id, summary);
         sourceSupportPayloads.set(
@@ -519,7 +797,7 @@ export function createPostAuthoringFinalizeCommands({
           allowAccountLocalSupportAndElementary && sourceLookup.size > 0 ? sourceLookup : null,
       });
       if (type === "process" && sourceLookup.size > 0) {
-        rewriteTrueSourceReferenceDescriptions(payload.processDataSet, {
+        rewriteTrueSourceReferenceDescriptions(payload.processDataSet!, {
           sourceLookup,
           sourceFile: rowsFile,
           stats,
@@ -584,7 +862,7 @@ export function createPostAuthoringFinalizeCommands({
     }
     const referencedTrueSourceRows = [...referencedTrueSourceKeys]
       .map((key) => sourceSupportPayloads.get(key))
-      .filter(Boolean);
+      .filter((row): row is DatasetRow => Boolean(row));
 
     writeJsonLines(outputRowsFile, rewrittenRows);
     writeJsonLines(sourceReferenceRewritesPath, sourceReferenceRewriteRows);
@@ -647,7 +925,7 @@ export function createPostAuthoringFinalizeCommands({
       },
       source_support: {
         source_support_rows_file: fileExists(sourceSupportRowsFile)
-          ? repoRelativePath(sourceSupportRowsFile)
+          ? repoRelativePath(sourceSupportRowsFile!)
           : null,
         referenced_true_source_ids: referencedTrueSourceRows.map(
           (payload) => datasetIdentity(payload, "source").id,
@@ -686,11 +964,12 @@ export function createPostAuthoringFinalizeCommands({
     };
   }
 
-  function runDatasetPostAuthoringFinalize(options) {
+  function runDatasetPostAuthoringFinalize(options: FinalizeOptions): FinalizeStage {
     const finalizeStartedAtUtc = nowIso();
     const finalizeStartedAtMs = Date.now();
-    const finalizeTimings = [];
-    const timeStage = (stage, fn) => timedFinalizeStage(finalizeTimings, stage, fn);
+    const finalizeTimings: FinalizeTiming[] = [];
+    const timeStage = <T extends FinalizeStage>(stage: string, fn: () => T): T =>
+      timedFinalizeStage(finalizeTimings, stage, fn);
     const datasetType = String(options.type || options.datasetType || "process")
       .trim()
       .toLowerCase();
@@ -740,7 +1019,7 @@ export function createPostAuthoringFinalizeCommands({
 
     const outDir = resolveRepoPath(
       options.outDir || `.foundry/workspaces/${datasetType}-post-authoring-finalize`,
-    );
+    )!;
     fs.mkdirSync(outDir, { recursive: true });
     const fullContextRequirement = profileFullContextRequirement(options.profile, datasetType);
     const identityPreflightRequired =
@@ -765,7 +1044,7 @@ export function createPostAuthoringFinalizeCommands({
     );
     const identityRewrittenRowsFile =
       Number(identityReferenceRewriteStage.counts?.flow_reference_rewrites ?? 0) > 0
-        ? resolveRepoPath(identityReferenceRewriteStage.output_rows_file)
+        ? resolveRepoPath(identityReferenceRewriteStage.output_rows_file)!
         : rowsFile;
     const unresolvedExchangeExternalizeStage = timeStage(
       "unresolved_exchange_externalization",
@@ -784,7 +1063,7 @@ export function createPostAuthoringFinalizeCommands({
     );
     const preCleanupRowsFile =
       Number(unresolvedExchangeExternalizeStage.counts?.externalized_exchanges ?? 0) > 0
-        ? resolveRepoPath(unresolvedExchangeExternalizeStage.output_rows_file)
+        ? resolveRepoPath(unresolvedExchangeExternalizeStage.output_rows_file)!
         : identityRewrittenRowsFile;
     const sourceContactRewriteStage = timeStage("source_contact_rewrites", () =>
       applySourceContactRewrites({
@@ -796,7 +1075,7 @@ export function createPostAuthoringFinalizeCommands({
     );
     const sourceContactRowsFile = resolveRepoPath(
       sourceContactRewriteStage.files?.output_rows || sourceContactRewriteStage.output_rows_file,
-    );
+    )!;
     const sourceContactSupportRowsFile = resolveRepoPath(
       sourceContactRewriteStage.files?.support_rows,
     );
@@ -881,7 +1160,7 @@ export function createPostAuthoringFinalizeCommands({
     const canonicalSupportRowsFile = resolveRepoPath(
       canonicalSupportRewriteStage.files?.output_rows ||
         canonicalSupportRewriteStage.output_rows_file,
-    );
+    )!;
     const canonicalSupportReportFile = resolveRepoPath(canonicalSupportRewriteStage.files?.report);
     const canonicalSupportPrewriteBlockers = ensureArray(canonicalSupportRewriteStage.blockers).map(
       (blocker) => ({
@@ -911,7 +1190,7 @@ export function createPostAuthoringFinalizeCommands({
     );
     const cleanedRowsFile = resolveRepoPath(
       cleanup.files?.cleaned_rows || cleanup.cleaned_rows_file,
-    );
+    )!;
     const cleanupReportFile = resolveRepoPath(cleanup.files?.report);
     const identityPreflightRunStage = timeStage("identity_preflight_run", () =>
       runFinalizeIdentityPreflightStage({
@@ -1201,8 +1480,8 @@ export function createPostAuthoringFinalizeCommands({
       return stage;
     });
 
-    let remoteVerifyStage = null;
-    let remoteVerifyReportFile = null;
+    let remoteVerifyStage: FinalizeStage | null = null;
+    let remoteVerifyReportFile: string | null = null;
     if (booleanOption(options.verifyRemote || options.precommitVerifyRemote)) {
       const remoteOutDir = path.join(outDir, "precommit-verify-remote");
       const remoteArgs = [
@@ -1252,7 +1531,7 @@ export function createPostAuthoringFinalizeCommands({
     ]);
     const identityDecisionApplyReportFiles = identityDecisionApplyReportOptions
       .map(resolveRepoPath)
-      .filter(fileExists);
+      .filter((file): file is string => Boolean(file) && fileExists(file));
     const verifiedReferenceLedgerDir = resolveRepoPath(
       options.ledgerDir || options.importLedgerDir || path.join(outDir, "import-ledger"),
     );
@@ -1341,7 +1620,7 @@ export function createPostAuthoringFinalizeCommands({
           "planned",
           "completed",
           "completed_with_identity_findings",
-        ].includes(identityPreflightRunStage.status)
+        ].includes(identityPreflightRunStage.status ?? "")
           ? 0
           : 1,
         command:
@@ -1355,7 +1634,7 @@ export function createPostAuthoringFinalizeCommands({
       {
         stage: "identity_reference_rewrites",
         status: identityReferenceRewriteStage.status,
-        exit_code: identityReferenceRewriteStage.blockers.length > 0 ? 1 : 0,
+        exit_code: (identityReferenceRewriteStage.blockers ?? []).length > 0 ? 1 : 0,
         command: "foundry.dataset-identity-reference-rewrites-apply",
         args: [],
         stderr: "",
@@ -1393,7 +1672,7 @@ export function createPostAuthoringFinalizeCommands({
       {
         stage: "canonical_support_rewrites",
         status: canonicalSupportRewriteStage.status,
-        exit_code: canonicalSupportRewriteStage.counts?.blockers > 0 ? 1 : 0,
+        exit_code: (canonicalSupportRewriteStage.counts?.blockers ?? 0) > 0 ? 1 : 0,
         command: "foundry.dataset-canonical-support-rewrites-apply",
         args: [],
         stderr: "",
@@ -1433,7 +1712,7 @@ export function createPostAuthoringFinalizeCommands({
         status: curationGate.status,
         exit_code:
           !requiresCurationGate ||
-          ["ready", "ready_with_profile_waivers"].includes(curationGate.status)
+          ["ready", "ready_with_profile_waivers"].includes(curationGate.status ?? "")
             ? 0
             : 1,
         command: "foundry.dataset-curation-gate",
@@ -1447,7 +1726,7 @@ export function createPostAuthoringFinalizeCommands({
         stage: "mutation_manifest",
         status: mutationManifest.status,
         exit_code: ["ready_for_remote_write", "ready_reference_only"].includes(
-          mutationManifest.status,
+          mutationManifest.status ?? "",
         )
           ? 0
           : 1,
@@ -1459,11 +1738,11 @@ export function createPostAuthoringFinalizeCommands({
     ];
     const timingsByStage = new Map(finalizeTimings.map((timing) => [timing.stage, timing]));
     const mutationBlockerCount = Number(mutationManifest.counts?.blockers ?? 0);
-    const mutationManifestBlockers = [];
-    const seenMutationBlockers = new Set();
-    const addMutationBlocker = (blocker, extra = {}) => {
+    const mutationManifestBlockers: JsonRecord[] = [];
+    const seenMutationBlockers = new Set<string>();
+    const addMutationBlocker = (blocker: JsonRecord, extra: JsonRecord = {}): void => {
       if (!blocker || typeof blocker !== "object") return;
-      const normalized = {
+      const normalized: JsonRecord = {
         ...blocker,
         stage: blocker.stage || "mutation_manifest",
         source: "mutation_manifest",
