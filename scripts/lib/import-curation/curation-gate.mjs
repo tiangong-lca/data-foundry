@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import * as curationGateWorkflow from "./internal/curation-gate-workflow.mjs";
+import * as curationGateWorkflow from "./internal/curation-gate-workflow.ts";
 
 const {
   authoringQueueRowsForIdentity,

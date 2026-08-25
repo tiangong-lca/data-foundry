@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import * as facadeModule from "../../scripts/lib/import-curation/internal/curation-gate-workflow.mjs";
+import * as facadeModule from "../../scripts/lib/import-curation/internal/curation-gate-workflow.ts";
 import * as artifactInputs from "../../scripts/lib/import-curation/internal/artifact-inputs.ts";
 import * as contextInputs from "../../scripts/lib/import-curation/internal/context-inputs.ts";
 import * as datasetPayload from "../../scripts/lib/import-curation/internal/dataset-payload.ts";
