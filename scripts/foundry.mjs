@@ -16,7 +16,7 @@ import { createIdentityDecisionCommands } from "./commands/identity-decisions.mj
 import { createIdentityPreflightRunCommands } from "./commands/identity-preflight-run.mjs";
 import { createIdentityReferenceRewriteCommands } from "./commands/identity-reference-rewrites.mjs";
 import { createImportCompletionCommands } from "./commands/import-completion.mjs";
-import { createImportLedgerCommands } from "./commands/import-ledger.mjs";
+import { createImportLedgerCommands } from "./commands/import-ledger.ts";
 import { createIncrementalChangeSetCommands } from "./commands/incremental-change-set.mjs";
 import { createLibraryScopeWorkflowCommands } from "./commands/library-scope-workflow.mjs";
 import { createPostAuthoringFinalizeCommands } from "./commands/post-authoring-finalize.mjs";

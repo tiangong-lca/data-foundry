@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createImportLedgerCommands } from "../../scripts/commands/import-ledger.mjs";
+import { createImportLedgerCommands } from "../../scripts/commands/import-ledger.ts";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");

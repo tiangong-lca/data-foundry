@@ -1161,7 +1161,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-import-ledger-report": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/import-ledger.mjs",
+    ownerModule: "scripts/commands/import-ledger.ts",
     ownerExport: "createImportLedgerCommands().runDatasetImportLedgerReport",
     inputs: ["task import ledger directory with ok/blocked/retry JSONL files"],
     outputs: [
