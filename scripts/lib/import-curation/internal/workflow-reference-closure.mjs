@@ -31,7 +31,7 @@ import {
 } from "./workflow-decision-full-context.mjs";
 import { normalizeDryRunOperation } from "./workflow-dry-run-context.mjs";
 import { prewriteIdentityBlockers } from "./workflow-identity-preflight.mjs";
-import { readJsonLines } from "./workflow-patch-collect.mjs";
+import { readJsonLines } from "./workflow-patch-collect.ts";
 import {
   hasImportOnlyTrace,
   patchEvidenceForRow,

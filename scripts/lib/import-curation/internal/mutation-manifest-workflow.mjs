@@ -42,7 +42,7 @@ export {
   readJsonArtifactsIfOption,
   readJsonIfOption,
   readRowsIfExists,
-} from "./workflow-patch-collect.mjs";
+} from "./workflow-patch-collect.ts";
 export { readPatchApplyContext, readPolicySnapshots } from "./workflow-patch-evidence-context.mjs";
 export {
   buildFullContextAiCompletionBlockers,

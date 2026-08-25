@@ -51,7 +51,7 @@ export {
   identityDecisionApplyReportOptionValues,
   readJsonArtifactsIfOption,
   readJsonIfOption,
-} from "./workflow-patch-collect.mjs";
+} from "./workflow-patch-collect.ts";
 export {
   authoringQueueRowsForIdentity,
   buildQueueAuthoringContext,

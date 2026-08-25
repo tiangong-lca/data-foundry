@@ -3,7 +3,7 @@ import {
   defaultSourceReferenceRewriteFile,
   normalizeSourceReferenceRewriteRow,
   readJsonLines,
-} from "./workflow-patch-collect.mjs";
+} from "./workflow-patch-collect.ts";
 import { referenceKey } from "./workflow-reference-closure.mjs";
 
 export function readSourceReferenceRewriteContext({ repoRoot, rowsFile, options, writeRows }) {

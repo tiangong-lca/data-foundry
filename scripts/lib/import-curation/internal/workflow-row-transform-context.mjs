@@ -13,7 +13,7 @@ import {
   resolveRepoPath,
   sameArtifactPath,
 } from "./runtime-io.ts";
-import { readRowsIfExists } from "./workflow-patch-collect.mjs";
+import { readRowsIfExists } from "./workflow-patch-collect.ts";
 
 export function readUnresolvedExchangeExternalizationContext(repoRoot, artifact) {
   if (!artifact) return null;

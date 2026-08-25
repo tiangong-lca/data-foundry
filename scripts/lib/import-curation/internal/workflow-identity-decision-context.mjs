@@ -14,7 +14,7 @@ import {
   resolveRepoPath,
   unique,
 } from "./runtime-io.ts";
-import { readJsonLines } from "./workflow-patch-collect.mjs";
+import { readJsonLines } from "./workflow-patch-collect.ts";
 
 function identityDecisionCompletionStatus(decision) {
   return asText(decision?.decision_status ?? decision?.decisionStatus ?? decision?.status);

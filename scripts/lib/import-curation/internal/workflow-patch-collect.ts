@@ -43,16 +43,71 @@ import {
 } from "./workflow-patch-evidence.mjs";
 import { allowedPatchResolutionModes } from "./workflow-semantic-actions.mjs";
 
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface PatchTask extends JsonRecord {
+  entity?: unknown;
+}
+
+interface PatchSet extends JsonRecord {
+  row_index?: unknown;
+  rowIndex?: unknown;
+}
+
+interface PatchOperation extends JsonRecord {
+  op?: unknown;
+  path?: unknown;
+}
+
+interface ValidateCollectedPatchSetOptions {
+  repoRoot: string;
+  task: PatchTask;
+  patchSet: PatchSet;
+  patchSetIndex: unknown;
+  patchPath: unknown;
+}
+
+export interface JsonArtifact {
+  path: string;
+  value: unknown;
+}
+
+interface IdentityDecisionApplyReportOptions {
+  identityDecisionApplyReport?: unknown;
+  identityDecisionsApplyReport?: unknown;
+  identityDecisionApplyReports?: unknown;
+  identityDecisionsApplyReports?: unknown;
+}
+
+export interface NormalizedSourceReferenceRewriteRow extends JsonRecord {
+  dataset_type: string | null;
+  dataset_id: string;
+  dataset_version: string;
+  relation: string | null;
+  path: string | null;
+  action: string;
+  reason: string | null;
+  evidence: JsonRecord;
+}
+
 // part-05.mjs
-export function validateCollectedPatchSet({ repoRoot, task, patchSet, patchSetIndex, patchPath }) {
-  const blockers = [];
-  const operations = patchSetOperations(patchSet);
-  const entity = task.entity ?? {};
+export function validateCollectedPatchSet({
+  repoRoot,
+  task,
+  patchSet,
+  patchSetIndex,
+  patchPath,
+}: ValidateCollectedPatchSetOptions): JsonRecord[] {
+  const blockers: JsonRecord[] = [];
+  const operations = patchSetOperations(patchSet) as PatchOperation[] | null;
+  const entity = (task.entity ?? {}) as JsonRecord;
   const datasetId = patchSetDatasetId(patchSet);
   const datasetVersion = patchSetDatasetVersion(patchSet);
   const expectedPackage = taskAuthoringPackageName(repoRoot, task);
   const authoringPackage = patchSetAuthoringPackage(patchSet);
-  const patchLocation = repoRelativePath(repoRoot, patchPath);
+  const patchLocation = repoRelativePath(repoRoot, patchPath as string);
 
   if (!operations) {
     blockers.push({
@@ -135,7 +190,7 @@ export function validateCollectedPatchSet({ repoRoot, task, patchSet, patchSetIn
     });
   }
 
-  const closed = new Set(nonTestOperations.flatMap(operationClosureKeys));
+  const closed = new Set<string>(nonTestOperations.flatMap(operationClosureKeys));
   for (const required of taskActionItemKeys(task)) {
     const [code, itemPath] = required.split("\u0000");
     const matched = [...closed].some((closure) => {
@@ -190,7 +245,7 @@ export function validateCollectedPatchSet({ repoRoot, task, patchSet, patchSetIn
             entity,
           });
         }
-        for (const actionItem of taskActionItemsForOperation(task, operation)) {
+        for (const actionItem of taskActionItemsForOperation(task, operation) as JsonRecord[]) {
           const allowedModes = ensureArray(actionItem?.allowed_resolution_modes)
             .map((item) => asText(item))
             .filter(Boolean);
@@ -236,7 +291,7 @@ export function validateCollectedPatchSet({ repoRoot, task, patchSet, patchSetIn
             entity,
           });
         }
-        const traceContractBlockers =
+        const traceContractBlockers: JsonRecord[] =
           mode === "deferred_to_common_other"
             ? validateDeferredCommonOtherTrace({
                 operation,
@@ -378,15 +433,17 @@ export function validateCollectedPatchSet({ repoRoot, task, patchSet, patchSetIn
           entity,
         });
       }
-      operationFullContextEvidenceBlockers({ operation, task }).forEach((blocker) => {
-        blockers.push({
-          ...blocker,
-          patch_file: patchLocation,
-          patch_set_index: patchSetIndex,
-          operation_index: operationIndex,
-          entity,
-        });
-      });
+      (operationFullContextEvidenceBlockers({ operation, task }) as JsonRecord[]).forEach(
+        (blocker) => {
+          blockers.push({
+            ...blocker,
+            patch_file: patchLocation,
+            patch_set_index: patchSetIndex,
+            operation_index: operationIndex,
+            entity,
+          });
+        },
+      );
     }
     if (containsAiTemplatePlaceholder(operation)) {
       blockers.push({
@@ -403,9 +460,9 @@ export function validateCollectedPatchSet({ repoRoot, task, patchSet, patchSetIn
   return blockers;
 }
 
-export function readJsonLines(filePath) {
-  if (!filePath || !fileExists(filePath)) return [];
-  const text = readText(filePath).trim();
+export function readJsonLines(filePath: unknown): unknown[] {
+  if (!filePath || !fileExists(filePath as string)) return [];
+  const text = readText(filePath as string).trim();
   if (!text) return [];
   return text
     .split(/\r?\n/u)
@@ -413,16 +470,16 @@ export function readJsonLines(filePath) {
     .map((line) => JSON.parse(line));
 }
 
-export function readRowsIfExists(filePath) {
-  return filePath && fileExists(filePath) ? readRows(filePath) : [];
+export function readRowsIfExists(filePath: unknown): unknown[] {
+  return filePath && fileExists(filePath as string) ? readRows(filePath as string) : [];
 }
 
-export function readJsonIfOption(repoRoot, value) {
-  const resolved = resolveRepoPath(repoRoot, value);
+export function readJsonIfOption(repoRoot: string, value: unknown): JsonArtifact | null {
+  const resolved = resolveRepoPath(repoRoot, value as string | null | undefined);
   return resolved && fileExists(resolved) ? { path: resolved, value: readJson(resolved) } : null;
 }
 
-export function readJsonArtifactsIfOption(repoRoot, value) {
+export function readJsonArtifactsIfOption(repoRoot: string, value: unknown): JsonArtifact[] {
   return optionList(value)
     .map((entry) => {
       const resolved = resolveRepoPath(repoRoot, entry);
@@ -430,25 +487,26 @@ export function readJsonArtifactsIfOption(repoRoot, value) {
         ? { path: resolved, value: readJson(resolved) }
         : null;
     })
-    .filter(Boolean);
+    .filter(Boolean) as JsonArtifact[];
 }
 
-export function identityDecisionApplyReportOptionValues(options) {
+export function identityDecisionApplyReportOptionValues(options: unknown): string[] {
+  const typedOptions = options as IdentityDecisionApplyReportOptions;
   return unique([
-    ...optionList(options.identityDecisionApplyReport),
-    ...optionList(options.identityDecisionsApplyReport),
-    ...optionList(options.identityDecisionApplyReports),
-    ...optionList(options.identityDecisionsApplyReports),
+    ...optionList(typedOptions.identityDecisionApplyReport),
+    ...optionList(typedOptions.identityDecisionsApplyReport),
+    ...optionList(typedOptions.identityDecisionApplyReports),
+    ...optionList(typedOptions.identityDecisionsApplyReports),
   ]);
 }
 
-export function readFileArtifactIfOption(repoRoot, value) {
-  const resolved = resolveRepoPath(repoRoot, value);
+export function readFileArtifactIfOption(repoRoot: string, value: unknown): string | null {
+  const resolved = resolveRepoPath(repoRoot, value as string | null | undefined);
   return resolved && fileExists(resolved) ? resolved : null;
 }
 
-export function defaultSourceReferenceRewriteFile(rowsFile) {
-  const rowsDir = path.dirname(rowsFile);
+export function defaultSourceReferenceRewriteFile(rowsFile: unknown): string | null {
+  const rowsDir = path.dirname(rowsFile as string);
   const candidates = [
     path.join(rowsDir, "source-reference-rewrites.jsonl"),
     path.join(path.dirname(rowsDir), "source-reference-rewrites.jsonl"),
@@ -456,23 +514,26 @@ export function defaultSourceReferenceRewriteFile(rowsFile) {
   return candidates.find((candidate) => fileExists(candidate)) ?? null;
 }
 
-export function normalizeSourceReferenceRewriteRow(row) {
+export function normalizeSourceReferenceRewriteRow(
+  row: unknown,
+): NormalizedSourceReferenceRewriteRow {
+  const record = row as JsonRecord | null | undefined;
   const normalized = {
-    ...row,
-    dataset_type: asText(row?.dataset_type ?? row?.datasetType) || null,
-    dataset_id: asText(row?.dataset_id ?? row?.datasetId ?? row?.entity_id),
+    ...(row as JsonRecord),
+    dataset_type: asText(record?.dataset_type ?? record?.datasetType) || null,
+    dataset_id: asText(record?.dataset_id ?? record?.datasetId ?? record?.entity_id),
     dataset_version:
-      asText(row?.dataset_version ?? row?.datasetVersion ?? row?.version) || "00.00.001",
-    relation: asText(row?.relation) || null,
-    path: asText(row?.path) || null,
-    action: asText(row?.action) || "rewrite_to_canonical_source_reference",
-    reason: asText(row?.reason) || null,
-  };
+      asText(record?.dataset_version ?? record?.datasetVersion ?? record?.version) || "00.00.001",
+    relation: asText(record?.relation) || null,
+    path: asText(record?.path) || null,
+    action: asText(record?.action) || "rewrite_to_canonical_source_reference",
+    reason: asText(record?.reason) || null,
+  } as NormalizedSourceReferenceRewriteRow;
   normalized.evidence = {
     source: "source-reference-rewrites.jsonl",
-    source_file: asText(row?.source_file ?? row?.sourceFile) || null,
-    original: row?.original ?? null,
-    canonical: row?.canonical ?? null,
+    source_file: asText(record?.source_file ?? record?.sourceFile) || null,
+    original: record?.original ?? null,
+    canonical: record?.canonical ?? null,
     reason: normalized.reason,
   };
   return normalized;

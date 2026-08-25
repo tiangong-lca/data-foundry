@@ -12,7 +12,7 @@ import {
   unique,
 } from "./runtime-io.ts";
 import { identityDecisionApplyContextHasDecision } from "./workflow-identity-decision-context.mjs";
-import { readFileArtifactIfOption, readJsonLines } from "./workflow-patch-collect.mjs";
+import { readFileArtifactIfOption, readJsonLines } from "./workflow-patch-collect.ts";
 import { isAnnualSupplyTarget } from "./workflow-queue-context.ts";
 
 export function patchEvidenceIdentityKey(entry) {
