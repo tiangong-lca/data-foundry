@@ -141,8 +141,8 @@ checkPaths:
   - specs/import-profiles.json
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
-lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: all remaining decision, source and proof leaves plus coupled cases use semantic interfaces, narrowed unknown and AST ratchets while preserving profiles, exact artifacts/bytes/order/hashes/errors and authority boundaries."
+lastReviewedCommit: 2574513ba7233b0f3cd3d1babcde70763451878d
+lastReviewedNote: "Reviewed for Issue #67 zero-any completion: all TypeScript uses semantic interfaces or narrowed unknown under one global Oxlint AST rule while profiles, exact artifacts/bytes/order/hashes/errors and authority boundaries remain unchanged."
 ---
 
 # TianGong LCA Data Foundry
@@ -175,7 +175,7 @@ The standalone-leaf slice migrates canonical FlowProperty mappings, profile-awar
 
 The evidence/decision slice migrates decision-task context and stable hashes, identity reference rewrites, full-context completion proof, and identity-preflight request artifacts. Characterization preserves exact paths/bytes/SHA/ordering, missing or ambiguous evidence blockers, artifact-bound CommandSpecs, source-index first binding, and positive-only cache/execution reuse boundaries. The strict follow-up gives `decision-task-utils.ts` and `identity-preflight-artifacts.ts` concrete dependency, queue, context, proof, payload, request and index contracts with `unknown` at external JSON boundaries; an Oxlint AST check and the existing cases prohibit explicit `any` without changing outputs or authority.
 
-The explicit-any hardening slice removes all 197 explicit TypeScript `any` nodes from `source-semantics.ts`, `tidas-row-utils.ts`, `identity-reference-rewrite-utils.ts`, and their directly coupled contract tests. Two focused contracts run the installed Oxlint TypeScript AST rule through `process.execPath`, while the established source/profile/reference cases preserve exact rows, report bytes, order, hashes, native errors, and remote-write fail-close behavior. Other explicit-any families remain separately owned debt until the repository-wide lint ratchet is enabled from an integrated head.
+The explicit-any hardening slice removes all 197 explicit TypeScript `any` nodes from `source-semantics.ts`, `tidas-row-utils.ts`, `identity-reference-rewrite-utils.ts`, and their directly coupled contract tests. The decision/preflight and proof/signature/trace families remove the complementary debt through their own RED/GREEN cases. Focused contracts run the installed Oxlint TypeScript AST rule through `process.execPath`, while the established behavior cases preserve exact rows, report bytes, order, hashes, native errors, and remote-write fail-close behavior. The integrated repository now enables `typescript/no-explicit-any` once at the global Oxlint rule layer, with zero target-specific exceptions.
 
 The family/ledger slice migrates BAFU family signatures and the append-only import ledger. Characterization preserves normalized family names, ordered exchange skeleton/template/amount hashes, scope-order master selection and summaries, verified/blocked/retry row schemas, payload identity hashes, duplicate suppression, human-review ordering, resume/skipped artifacts, relative paths, and native parse/filesystem errors.
 

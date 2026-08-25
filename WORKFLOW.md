@@ -268,8 +268,8 @@ checkPaths:
   - test/unit/foundry-golden-diff-contract.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
-lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: Oxlint AST contracts guard decision/preflight, source/row/reference and proof/signature/trace families while established cases preserve dependency order, exact artifacts/hashes/errors, CommandSpecs, first-binding and fail-closed authority."
+lastReviewedCommit: 2574513ba7233b0f3cd3d1babcde70763451878d
+lastReviewedNote: "Reviewed for Issue #67 zero-any completion: one global Oxlint AST rule guards the full TypeScript graph while established cases preserve dependency order, exact artifacts/hashes/errors, CommandSpecs, first-binding and fail-closed authority."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -312,7 +312,7 @@ Use Node.js 24 and the repository-pinned `pnpm@11.23.0`. TypeScript `7.0.2` is t
 
 Issue #63 established the typed spine and its migration is complete. Keep the permanent `test/unit/zero-javascript-ratchet.test.mts` green: tracked first-party JavaScript, compatibility compiler includes, and mixed JS test/lint globs must remain at zero. Drive every later slice with focused characterization plus a realistic case, and verify toolchain changes from a clean arbitrary worktree after `pnpm install --frozen-lockfile`, without credentials, ignored `.foundry` artifacts, a sibling checkout, or another worktree's dependencies.
 
-For explicit-any cleanup, pair the existing behavior cases with a focused contract that runs the installed Oxlint `typescript/no-explicit-any` AST rule through `process.execPath`; do not depend on a TypeScript compiler API that the pinned TypeScript 7 package does not expose. The source-semantics, TIDAS-row, and identity-reference-rewrite boundaries plus their directly coupled fixtures must remain at zero explicit `any`, while other debt families stay independently scoped until the integrated repository-wide lint ratchet is enabled.
+For explicit-any cleanup, pair the existing behavior cases with a focused contract that runs the installed Oxlint `typescript/no-explicit-any` AST rule through `process.execPath`; do not depend on a TypeScript compiler API that the pinned TypeScript 7 package does not expose. All production, test and configuration TypeScript must remain at zero explicit `any`. The repository-wide rule is global and must not be weakened with target-specific overrides; focused family contracts remain useful characterization, not coverage exceptions.
 
 Queue authoring context must preserve manifest and JSONL encounter order, exact-version selection before id-only fallback, closure dependency/support order and native parse/filesystem/invalid-dependency failures. Missing or malformed queue evidence must not be converted into an executable or remote-write allowance.
 

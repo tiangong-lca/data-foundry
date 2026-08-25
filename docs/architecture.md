@@ -139,8 +139,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
-lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: concrete decision, source and proof types plus AST ratchets remain Foundry-local evidence and move no CLI, schema, Edge search, filesystem-error, profile or database authority."
+lastReviewedCommit: 2574513ba7233b0f3cd3d1babcde70763451878d
+lastReviewedNote: "Reviewed for Issue #67 zero-any completion: concrete decision, source and proof types plus one global AST ratchet remain Foundry-local evidence and move no CLI, schema, Edge search, filesystem-error, profile or database authority."
 ---
 
 # Architecture
@@ -189,6 +189,8 @@ This boundary avoids a misleading bulk rename. Each module remains in the invent
 The native TypeScript leaf set now also covers decision context, identity reference rewrite, full-context proof, and preflight artifact factories. Focused characterization preserves queue/context SHA scopes, exact reference rows/reports, fail-closed missing evidence, transform relevance, request/report artifact facts, CommandSpec argv, first-bound source indexes, positive-only execution reuse, and every static consumer. `decision-task-utils.ts` and `identity-preflight-artifacts.ts` now model their dependency injection, queue/context/proof, dataset request and source-index shapes directly; external JSON stays `unknown` until its local boundary, and an Oxlint AST contract keeps this family free of explicit `any` without moving search or execution authority.
 
 The source-semantics, reusable TIDAS-row, and identity-reference-rewrite leaves now expose concrete local dependency and evidence shapes with `unknown` narrowed at dynamic JSON boundaries instead of explicit `any`. Worktree-local Oxlint AST contracts guard those exact production/test targets without introducing a compiler-API dependency; the change remains type-only and does not move source policy, reference decisions, filesystem errors, CLI dispatch, or remote-write authority.
+
+After the decision, source and proof families converge, `.oxlintrc.json` promotes `typescript/no-explicit-any` to one global error and removes every family-specific override. `zero-javascript-ratchet.test.mts` validates both raw and printed rule graphs and a controlled failing fixture, so all first-party TypeScript remains covered without a TS6 compatibility compiler.
 
 The typed BAFU family and import-ledger leaves preserve two local control-plane boundaries: deterministic family grouping/ranking over ordered signature hashes, and append-only resume evidence over verified, blocked, dependency, retry, and skipped JSONL rows. They do not change database writes, command ownership, public help, profile defaults, or the owner CLI boundary.
 

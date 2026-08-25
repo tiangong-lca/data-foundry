@@ -265,8 +265,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
-lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: focused decision/preflight and source/row/reference AST contracts pair with established cases; exact bytes/order/hashes/errors and authority boundaries remain unchanged."
+lastReviewedCommit: 2574513ba7233b0f3cd3d1babcde70763451878d
+lastReviewedNote: "Reviewed for Issue #67 zero-any completion: focused family contracts and one global Oxlint AST rule cover the complete TypeScript graph while exact bytes/order/hashes/errors and authority boundaries remain unchanged."
 ---
 
 # Test Layout
@@ -305,6 +305,8 @@ The Issue #63 migration is complete. `unit/zero-javascript-ratchet.test.mts` per
 `unit/evidence-decision-leaves.test.mts` uses Oxlint's TypeScript AST rule to reject explicit `any` and suppressions across itself, `decision-task-utils.ts`, and `identity-preflight-artifacts.ts`. Its behavior cases characterize decision selection/context SHA/dedupe, missing-index fail-close and exact identity reuse rows, required full-context missing-manifest blockers, preflight request bytes/CommandSpec artifact facts, queue attachment, and source-index first binding/missing context. Existing identity scenarios retain positive-only cache and end-to-end lineage coverage.
 
 `unit/source-row-explicit-any-contract.test.mts` and `unit/identity-rewrite-explicit-any-contract.test.mts` invoke the installed Oxlint TypeScript AST rule through Node over the exact source/direct-fixture targets. They reject explicit `any` without a compiler-API dependency; the existing standalone/evidence unit tests and realistic command/scenario cases continue to pin exact source/profile/reference rows, bytes, order, hashes, native errors, and remote-write fail-close behavior.
+
+`unit/zero-javascript-ratchet.test.mts` additionally requires `typescript/no-explicit-any` as one global Oxlint error, rejects duplicate target overrides, checks the printed effective rule graph, and proves a controlled temporary `.ts` fixture fails full lint. This is the permanent whole-repository boundary; focused family contracts remain diagnostic TDD evidence.
 
 `unit/bafu-family-signatures-contract.test.mts` and `unit/import-ledger-contract.test.mts` characterize the Wave 8 leaves independently: exact normalized family and ordered exchange hashes, scope-order grouping/rank/summary/missing envelopes, then append-only verified/blocked/dependency/retry bytes, root-based row identity, payload hashes, human actions, duplicate suppression, latest-row resume ordering, artifact paths, and native errors. `unit/wave8-large-leaf-migration.test.mts` pins both native `.ts` files, their consumers, and named exports.
 

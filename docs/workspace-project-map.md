@@ -80,8 +80,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
-lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: decision, source and proof type evidence remains Foundry-local; Rust tidas, published CLI/database/Edge search/readback, profiles, Worldsteel/Date.parse and cross-repository boundaries are unchanged."
+lastReviewedCommit: 2574513ba7233b0f3cd3d1babcde70763451878d
+lastReviewedNote: "Reviewed for Issue #67 zero-any completion: decision, source, proof and global-lint evidence remains Foundry-local; Rust tidas, published CLI/database/Edge search/readback, profiles, Worldsteel/Date.parse and cross-repository boundaries are unchanged."
 ---
 
 # Workspace Project Map

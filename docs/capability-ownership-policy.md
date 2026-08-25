@@ -82,8 +82,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
-lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: local decision, source, proof and fixture narrowing changes no capability owner, Edge search, remote operation, transport/readback, schema, profile, Worldsteel/Date.parse or sibling boundary."
+lastReviewedCommit: 2574513ba7233b0f3cd3d1babcde70763451878d
+lastReviewedNote: "Reviewed for Issue #67 zero-any completion: global lint plus local decision, source, proof and fixture narrowing changes no capability owner, Edge search, remote operation, transport/readback, schema, profile, Worldsteel/Date.parse or sibling boundary."
 ---
 
 # Capability Ownership Policy

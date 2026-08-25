@@ -127,8 +127,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 9e64691a31400c9c4198caa96f3c95891bd55d3a
-lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: navigation links the focused source/row/reference AST contracts while preserving semantic owners, exact artifacts/order/errors and fail-close."
+lastReviewedCommit: 2574513ba7233b0f3cd3d1babcde70763451878d
+lastReviewedNote: "Reviewed for Issue #67 zero-any completion: navigation retains focused family contracts under one global Oxlint AST rule while preserving semantic owners, exact artifacts/order/errors and fail-close."
 ---
 
 # Foundry AI Navigation
@@ -187,6 +187,8 @@ The typed standalone policy/row leaves are `canonical-support-mappings.ts`, `sou
 The typed evidence/decision leaves are `decision-task-utils.ts`, `identity-reference-rewrite-utils.ts`, `full-context-proof.ts`, and `identity-preflight-artifacts.ts`. They own stable decision selection/context bundles, exact identity reference reuse or unresolved traces, profile-required completion lineage, and content-bound preflight requests/CommandSpecs/source-index attachments. Missing, stale, ambiguous, cross-context, or non-positive evidence remains blocking; display strings and unbound cache candidates never become execution authority.
 
 For the hardened source/row/reference boundary, navigate through `source-row-explicit-any-contract.test.mts` and `identity-rewrite-explicit-any-contract.test.mts`. They run the installed Oxlint TypeScript AST rule over the exact source and directly coupled fixture list, while the existing behavior suites remain authoritative for profile defaults, paths, bytes, encounter order, hashes, native errors, unresolved traces, and fail-closed authority.
+
+The focused contracts are local diagnostics only. The permanent repository boundary is the single global `typescript/no-explicit-any` error in `.oxlintrc.json`, verified by `zero-javascript-ratchet.test.mts`; no TypeScript path or override is exempt.
 
 The typed family/ledger leaves are `bafu-family-signatures.ts` and `import-ledger.ts`. Navigate to the former for location-aware family-name normalization, ordered skeleton/flow-template/amount-vector hashes, scope-order master selection, compact planning fields, and missing-signature summaries. Navigate to the latter for append-only verified/blocked/dependency/retry JSONL, row identity and payload hashes, human-action text, dedupe keys, manifest paths, and read-only resume/skipped reports. Preserve insertion order, exact JSON bytes, and native parse/filesystem failures during caller migrations.
 
