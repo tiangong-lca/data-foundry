@@ -1,7 +1,11 @@
 import path from "node:path";
 import { asText, ensureArray, fileExists, readJsonOrJsonl, resolveRepoPath } from "./runtime-io.ts";
 
-type JsonRecord = Record<string, any>;
+type JsonRecord = Record<string, unknown>;
+
+function asJsonRecord(value: unknown): JsonRecord {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
+}
 
 export type QaFinding = JsonRecord;
 
@@ -50,7 +54,7 @@ export function readJsonLinesIfExists(filePath: string | null | undefined): unkn
   if (!filePath || !fileExists(filePath)) return [];
   const parsed = readJsonOrJsonl(filePath);
   if (Array.isArray(parsed)) return parsed;
-  const record = parsed as JsonRecord;
+  const record = asJsonRecord(parsed);
   if (Array.isArray(record?.findings)) return record.findings;
   if (Array.isArray(record?.rows)) return record.rows;
   return [];
@@ -150,24 +154,27 @@ export function qaFindingCurationAction(finding: QaFinding, datasetType: string)
 
 export function readQaFindings(
   repoRoot: string,
-  qaReport: JsonRecord,
+  qaReport: unknown,
   qaReportPath: string,
   datasetType: string,
 ): QaFinding[] {
   const qaReportDir = path.dirname(qaReportPath);
+  const report = asJsonRecord(qaReport);
+  const reportFiles = asJsonRecord(report.files);
+  const rulesetGate = asJsonRecord(report.ruleset_gate);
   const fileRefs = [
-    qaReport?.files?.rule_findings,
-    qaReport?.files?.findings,
-    qaReport?.files?.llm_findings,
+    reportFiles.rule_findings,
+    reportFiles.findings,
+    reportFiles.llm_findings,
   ].filter(Boolean);
   const findings: unknown[] = [];
   for (const fileRef of fileRefs) {
-    const resolved = resolveArtifactPath(repoRoot, fileRef, qaReportDir);
+    const resolved = resolveArtifactPath(repoRoot, fileRef as string, qaReportDir);
     findings.push(...readJsonLinesIfExists(resolved));
   }
-  findings.push(...ensureArray(qaReport?.ruleset_gate?.blockers));
-  findings.push(...ensureArray(qaReport?.blockers));
-  findings.push(...ensureArray(qaReport?.findings));
+  findings.push(...ensureArray(rulesetGate.blockers));
+  findings.push(...ensureArray(report.blockers));
+  findings.push(...ensureArray(report.findings));
   const deduped: QaFinding[] = [];
   const seen = new Set<string>();
   for (const finding of findings) {
