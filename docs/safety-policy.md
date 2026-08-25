@@ -37,9 +37,13 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-semantic-actions.ts
   - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
   - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
+  - scripts/lib/import-curation/internal/authoring-task-workflow.ts
+  - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
+  - scripts/lib/import-curation/authoring-packages.ts
+  - scripts/lib/import-curation/patch-collect.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 2b2d7e6f9890fbfc9de583a1f27ad20842657716
-lastReviewedNote: "Reviewed for Issue #67 Wave 22: typed decision/authoring/preflight preserves exact proof, receipt, hash, source-context and blocker checks without broadening write authority."
+lastReviewedCommit: 7d8ab3800fba3269830a58036d38a443e13d3d70
+lastReviewedNote: "Reviewed for Issue #67 Wave 23: typed authoring package/patch runners preserve content-addressed inputs, blocker ordering, blocker-free batch writes, and native errors without broadening write authority."
 ---
 
 # Safety Policy

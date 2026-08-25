@@ -51,6 +51,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-semantic-actions.ts
   - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
   - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
+  - scripts/lib/import-curation/internal/authoring-task-workflow.ts
+  - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
+  - scripts/lib/import-curation/authoring-packages.ts
+  - scripts/lib/import-curation/patch-collect.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -127,10 +131,16 @@ checkPaths:
   - test/unit/wave22-authoring-scc-migration.test.mts
   - test/unit/workflow-identity-preflight-contract.test.mts
   - test/unit/wave22-identity-preflight-migration.test.mts
+  - test/unit/authoring-workflow-facades-contract.test.mts
+  - test/unit/wave23-authoring-facades-migration.test.mts
+  - test/unit/authoring-packages-runner-contract.test.mts
+  - test/unit/wave23-authoring-packages-migration.test.mts
+  - test/unit/patch-collect-runner-contract.test.mts
+  - test/unit/wave23-patch-collect-runner-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 847498c5a8c4c9eb40cee59273b876ace3d65882
-lastReviewedNote: "Reviewed across Issue #67 Wave 22 and 22b: typed decision proof, atomic authoring SCC, identity preflight, and command factories preserve proof/hash/receipt binding, order, gates, owner boundaries, and native failures; command characterization uses only injected local stubs."
+lastReviewedCommit: 7d8ab3800fba3269830a58036d38a443e13d3d70
+lastReviewedNote: "Reviewed for Issue #67 Wave 23: typed authoring facades and runners preserve export identity, package SHA/bytes/task order, patch blocker classification, patch/operation order, blocker-free batch writes, and native failures."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -192,6 +202,8 @@ Deterministic row-lineage acceptance requires an exact or content-equivalent sta
 Dry-run artifacts and exact-scope evidence remain separate checks: dry-run readers preserve per-command success/failure facts, while evidence-scope rejects missing or mismatched schema, curation, cleanup, patch, dry-run and remote reports unless an explicit deterministic transform chain proves the same final rows.
 
 Decision full-context, patch authoring, semantic actions, patch evidence, and identity-preflight now execute from native TypeScript. The three authoring modules form one characterized SCC and must cross migration/build boundaries atomically. Preserve action/trace/blocker encounter order, shared-context and authoring-package hashes, exact-version identity lookup before id-only fallback, execution-receipt and target-payload freshness checks, source-context requirements, and native parse/filesystem failures; missing or stale evidence never becomes AI completion or write authority.
+
+The authoring facade/runner layer is also native TypeScript. Facades must re-export the exact live owner functions without wrappers. Package builds preserve gate-entry order, snapshot filename SHA, source bytes, task directory names and manifest/JSONL bytes. Patch collection preserves blocker class and task order, then patch-file, patch-set and operation order; malformed task JSON is reported as a blocker, malformed manifest JSON retains its native failure, and a fresh batch is written only when blockers are empty.
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 

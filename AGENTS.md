@@ -61,6 +61,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-semantic-actions.ts
   - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
   - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
+  - scripts/lib/import-curation/internal/authoring-task-workflow.ts
+  - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
+  - scripts/lib/import-curation/authoring-packages.ts
+  - scripts/lib/import-curation/patch-collect.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -85,8 +89,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 847498c5a8c4c9eb40cee59273b876ace3d65882
-lastReviewedNote: "Reviewed across Issue #67 Wave 22 and 22b: decision full-context, the closed authoring SCC, identity preflight, and five command factories are native zero-escape TS7; receipt/hash/order/blocker behavior and injected-stub command/profile contracts remain unchanged without credentials or owner-runtime execution."
+lastReviewedCommit: 7d8ab3800fba3269830a58036d38a443e13d3d70
+lastReviewedNote: "Reviewed for Issue #67 Wave 23: typed authoring facades and runners preserve live exports, snapshot/manifest bytes and order, patch blocker classification, ordered batch construction, and native failures without credentials or remote execution."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -137,6 +141,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - `import-curation/internal/workflow-dry-run-context.ts` is the typed dry-run artifact reader. It preserves schema/curation exact-last and bare-first maps, operation normalization, flow/process/lifecycle/save-draft progress/failure overwrite order, payload aliases and planned-root remote blocker suppression.
 - `import-curation/internal/workflow-evidence-scope.ts` is the typed exact-scope admission boundary. It preserves schema, curation, QA, cleanup, patch, collect, dry-run and remote blocker order; deterministic rewrite-chain exceptions require explicit content-bound lineage and never bypass missing evidence.
 - `import-curation/internal/workflow-decision-full-context.ts` preserves exact classification/location/identity proof relevance and deterministic row-chain blockers. The characterized `workflow-authoring-tasks.ts` / `workflow-semantic-actions.ts` / `workflow-patch-evidence.ts` SCC must migrate and compile atomically; do not split it back into `.mjs`/`.ts` dual tracks or add an uncharacterized cycle edge. `workflow-identity-preflight.ts` remains fail-closed on missing execution receipts, stale payload hashes, missing source context, invalid policy evidence, and native parse/filesystem errors.
+- `authoring-task-workflow.ts` and `authoring-patch-workflow.ts` are reference-preserving typed facades over that SCC. `authoring-packages.ts` owns local package snapshots and task manifests; `patch-collect.ts` owns local patch admission and batch materialization. Snapshot bytes/SHA, task and operation order, blocker classification, and native JSON errors are stable contracts; blocked collection must not create a fresh executable batch.
 - Toolchain and migration tests must pass from a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. They must not depend on the superproject checkout, another worktree's `node_modules`, absolute developer paths, ignored `.foundry` state, or credentials.
 - The Golden gate must compare against a non-`HEAD` merge-base with full Git history and a Node-native comparator. Cross-platform fixtures use executable-plus-argv dispatch; a `.js`/`.mjs`/`.cjs` test script must run through `process.execPath`, not OS executable-bit behavior. `.gitattributes` keeps repository text at LF on every runner; only Windows launcher files may opt into CRLF.
 - Foundry artifact-to-scope matching and transitional command parsers must accept both path separators. Durable JSON/JSONL writers flush the writable descriptor they opened; POSIX permission-bit assertions are not imposed on Windows filesystems.

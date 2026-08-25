@@ -38,9 +38,13 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-semantic-actions.ts
   - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
   - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
+  - scripts/lib/import-curation/internal/authoring-task-workflow.ts
+  - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
+  - scripts/lib/import-curation/authoring-packages.ts
+  - scripts/lib/import-curation/patch-collect.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 847498c5a8c4c9eb40cee59273b876ace3d65882
-lastReviewedNote: "Reviewed across Issue #67 Wave 22 and 22b: typed decision/authoring/preflight proof and five command factories change no capability owner, remote operation, search behavior, profile authority, or sibling implementation boundary."
+lastReviewedCommit: 7d8ab3800fba3269830a58036d38a443e13d3d70
+lastReviewedNote: "Reviewed for Issue #67 Wave 23: typing authoring facades and local package/patch artifact runners changes no capability owner, remote operation, search behavior, profile authority, or sibling boundary."
 ---
 
 # Capability Ownership Policy

@@ -36,9 +36,13 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-semantic-actions.ts
   - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
   - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
+  - scripts/lib/import-curation/internal/authoring-task-workflow.ts
+  - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
+  - scripts/lib/import-curation/authoring-packages.ts
+  - scripts/lib/import-curation/patch-collect.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 847498c5a8c4c9eb40cee59273b876ace3d65882
-lastReviewedNote: "Reviewed across Issue #67 Wave 22 and 22b: decision/authoring/preflight proof and native command factories remain Foundry-local and preserve cross-repository ownership, Foundry-to-tidas/CLI routing, profile selection, search, and execution boundaries."
+lastReviewedCommit: 7d8ab3800fba3269830a58036d38a443e13d3d70
+lastReviewedNote: "Reviewed for Issue #67 Wave 23: authoring facades and package/patch artifact runners remain Foundry-local and preserve cross-repository ownership, CLI routing, profile, search, and execution boundaries."
 ---
 
 # Workspace Project Map

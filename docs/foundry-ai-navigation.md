@@ -45,6 +45,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-semantic-actions.ts
   - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
   - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
+  - scripts/lib/import-curation/internal/authoring-task-workflow.ts
+  - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
+  - scripts/lib/import-curation/authoring-packages.ts
+  - scripts/lib/import-curation/patch-collect.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -67,8 +71,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 2b2d7e6f9890fbfc9de583a1f27ad20842657716
-lastReviewedNote: "Reviewed for Issue #67 Wave 22: navigation records typed decision proof, the closed authoring SCC, and identity-preflight receipt/hash/source-context gates plus consumers."
+lastReviewedCommit: 7d8ab3800fba3269830a58036d38a443e13d3d70
+lastReviewedNote: "Reviewed for Issue #67 Wave 23: navigation records typed authoring facades, content-addressed package/task manifests, patch blocker classification, ordered batch writes, and every static consumer."
 ---
 
 # Foundry AI Navigation
@@ -157,6 +161,8 @@ The typed row lineage leaf is `import-curation/internal/workflow-row-transform-c
 The typed dry-run leaf is `import-curation/internal/workflow-dry-run-context.ts`; navigate there for schema/curation identity maps, dry-run operation names, flow/process/lifecycle/save-draft artifacts and remote blocker keys. The typed exact-scope leaf is `import-curation/internal/workflow-evidence-scope.ts`; navigate there for report-row aliases and ordered schema/curation/QA/cleanup/patch/collect/dry-run/remote scope blockers.
 
 The typed decision proof leaf is `import-curation/internal/workflow-decision-full-context.ts`; navigate there for classification/location/identity requirement relevance, package/task proof, deterministic row-chain acceptance and ordered blockers. Patch authoring is one characterized SCC: `workflow-authoring-tasks.ts` owns task/package/shared-context construction and patch evidence helpers, `workflow-semantic-actions.ts` owns semantic/content actions and patch templates, and `workflow-patch-evidence.ts` owns trace/classification/location validation. Migrate or reshape those three only as a closed cycle and keep every edge typed. `workflow-identity-preflight.ts` sits above that SCC; navigate there for result path aliases, execution-receipt validation, exact-version lookup, payload freshness and deterministic allowances, source-context requirements, AI identity actions, prewrite policy blockers, and classification/location queue decisions.
+
+The typed authoring entry layer is split by responsibility. `internal/authoring-task-workflow.ts` and `internal/authoring-patch-workflow.ts` are pure live-reference facades. `authoring-packages.ts` owns gate-entry selection, content-addressed snapshot copies, task directories and manifest/JSONL materialization. `patch-collect.ts` owns task-output admission, invalid-JSON/blocker classification, ordered patch-set aggregation and the blocker-free batch write. Navigate to the underlying workflow modules for validation rules; do not add duplicate logic to the facades or runners.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 

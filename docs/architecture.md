@@ -51,6 +51,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-semantic-actions.ts
   - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
   - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
+  - scripts/lib/import-curation/internal/authoring-task-workflow.ts
+  - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
+  - scripts/lib/import-curation/authoring-packages.ts
+  - scripts/lib/import-curation/patch-collect.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -78,8 +82,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 847498c5a8c4c9eb40cee59273b876ace3d65882
-lastReviewedNote: "Reviewed across Issue #67 Wave 22 and 22b: typed decision/authoring/preflight boundaries and five command factories remain thin Foundry-local adapters; proof, report, and profile semantics do not move tidas, CLI, search, or database authority."
+lastReviewedCommit: 7d8ab3800fba3269830a58036d38a443e13d3d70
+lastReviewedNote: "Reviewed for Issue #67 Wave 23: typed authoring facades/package/patch runners remain local artifact adapters; snapshot, manifest, blocker and batch semantics do not move CLI, schema, search or database authority."
 ---
 
 # Architecture
@@ -158,6 +162,8 @@ The typed workflow-row-transform-context boundary projects existing transform re
 The typed dry-run context projects owner-command result files into local identity maps; the typed evidence-scope context compares every required report to the exact final rows and emits ordered blockers. Neither performs validation, curation, patching, dry-run execution, verification or remote writes.
 
 The typed decision-full-context boundary evaluates existing classification, location, identity and deterministic transform proof without applying decisions. Authoring task, semantic action and patch evidence helpers form one existing, characterized SCC; they are compiled as a single native-TypeScript closure so no `.mjs`/`.ts` dual track can split their runtime identity. The typed identity-preflight boundary resolves local request/report artifacts, validates execution receipts and payload freshness, and projects read-only candidate evidence into curation blockers. These modules preserve hashes, encounter order and fail-closed errors; Edge/database search and CLI execution remain outside Foundry.
+
+The typed authoring facades expose that SCC without wrapping or duplicating it. The package runner copies immutable content-addressed authoring snapshots and writes ordered local task manifests; the patch runner classifies local task outputs and writes an ordered batch only after every blocker check passes. Both are filesystem-only Foundry adapters and neither applies patches, invokes the CLI, or grants mutation authority.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

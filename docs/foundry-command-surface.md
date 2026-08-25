@@ -23,11 +23,15 @@ checkPaths:
   - scripts/lib/import-ledger.ts
   - scripts/lib/canonical-support-rewrites.ts
   - scripts/lib/bundle-sample-utils.ts
+  - scripts/lib/import-curation/internal/authoring-task-workflow.ts
+  - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
+  - scripts/lib/import-curation/authoring-packages.ts
+  - scripts/lib/import-curation/patch-collect.ts
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 2b2d7e6f9890fbfc9de583a1f27ad20842657716
-lastReviewedNote: "Reviewed for Issue #67 Wave 22: typing decision proof, authoring SCC, and identity preflight changes no command category, owner/export metadata, help, artifact schema, exit mapping, profile default, or remote-write mode."
+lastReviewedCommit: 7d8ab3800fba3269830a58036d38a443e13d3d70
+lastReviewedNote: "Reviewed for Issue #67 Wave 23: typing authoring facades and runners changes no command category, owner/export metadata, help, exit mapping, profile default, artifact contract, or remote-write mode."
 ---
 
 # Foundry Command Surface
