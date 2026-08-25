@@ -18,8 +18,8 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - package.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1d094b7e0d9a05b1660052f704e8f7f3ca4f8e6e
-lastReviewedNote: "Reviewed for Issue #67 Wave 16 freshness: profile-config typing and the continuing TS7 inventory cutover do not change Stop-hook registration, pnpm acceptance invocation, output, artifacts, or recursion guard."
+lastReviewedCommit: 22d19db21a3077e6a74b263c5462275555d15932
+lastReviewedNote: "Reviewed for Issue #67 Wave 25 freshness: reference/mutation typing changes no Stop-hook file, registration, invocation, output, artifacts, or recursion guard; local acceptance correctly remains blocked by the pre-existing missing USLCI source-package path."
 ---
 
 # Codex Stop Hook
