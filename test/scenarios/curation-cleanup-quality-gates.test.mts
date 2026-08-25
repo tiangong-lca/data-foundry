@@ -621,7 +621,7 @@ test("output-only process exchanges require source exchange completeness trace",
           "processDataSet.exchanges.exchange[0].exchangeDirection = Output; no Input exchanges in source row.",
       },
     };
-    const patchPayload = (commonOtherValue) => ({
+    const patchPayload = (commonOtherValue: unknown) => ({
       schema_version: 1,
       kind: "tiangong_foundry_dataset_patch",
       patch_status: "completed",

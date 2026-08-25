@@ -67,7 +67,7 @@ test("decision tasks externalize full context into stable shared bundles", () =>
   const sharedContextCacheDir = path.join(root, "shared-context-cache");
 
   try {
-    const buildClassification = (outDir) =>
+    const buildClassification = (outDir: string) =>
       runFoundry([
         "dataset-classification-decision-task-build",
         "--classification-queue",
@@ -128,15 +128,15 @@ test("decision tasks externalize full context into stable shared bundles", () =>
     );
     assert.equal(classificationBundle.counts.duplicate_context_bytes_avoided, 0);
     assert.match(
-      classificationBundle.files.find((file) => file.kind === "schema").text,
+      classificationBundle.files.find((file) => file.kind === "schema")!.text,
       /process schema/u,
     );
     assert.match(
-      classificationBundle.files.find((file) => file.kind === "classification_schema").text,
+      classificationBundle.files.find((file) => file.kind === "classification_schema")!.text,
       /Fixture process category/u,
     );
 
-    const buildLocation = (outDir) =>
+    const buildLocation = (outDir: string) =>
       runFoundry([
         "dataset-location-decision-task-build",
         "--location-queue",
@@ -182,7 +182,7 @@ test("decision tasks externalize full context into stable shared bundles", () =>
       path.join(repoRoot, firstLocation.json.files.shared_context_bundle),
     );
     assert.match(
-      locationBundle.files.find((file) => file.kind === "location_schema").text,
+      locationBundle.files.find((file) => file.kind === "location_schema")!.text,
       /Switzerland/u,
     );
   } finally {
@@ -270,14 +270,11 @@ test("authoring plan propagates shared context cache to decision chunks", () => 
     assert.equal(plan.code, 0, JSON.stringify(plan.json, null, 2));
     const expectedCacheDir = rel(path.join(root, "shared-context-cache"));
     assert.equal(plan.json.context.shared_context_cache_dir, expectedCacheDir);
-    assert.match(
-      plan.json.phases.find((phase) => phase.phase === "classification_decisions").commands
-        .build_task,
-      /--shared-context-cache-dir/u,
-    );
-    const chunkCommands = plan.json.phases.find(
+    const classificationPhase = plan.json.phases.find(
       (phase) => phase.phase === "classification_decisions",
-    ).chunk_plan.commands;
+    )!;
+    assert.match(classificationPhase.commands.build_task!, /--shared-context-cache-dir/u);
+    const chunkCommands = classificationPhase.chunk_plan.commands;
     assert.equal(chunkCommands.length, 2);
     assert.equal(
       chunkCommands.every((command) => command.command.includes("--shared-context-cache-dir")),
@@ -287,10 +284,10 @@ test("authoring plan propagates shared context cache to decision chunks", () => 
       chunkCommands.every((command) => command.command.includes(expectedCacheDir)),
       true,
     );
-    const patchPhase = plan.json.phases.find((phase) => phase.phase === "field_patches");
-    assert.match(patchPhase.commands.build_task, /--shared-context-cache-dir/u);
+    const patchPhase = plan.json.phases.find((phase) => phase.phase === "field_patches")!;
+    assert.match(patchPhase.commands.build_task!, /--shared-context-cache-dir/u);
     assert.match(
-      patchPhase.commands.build_task.replaceAll("\\", "/"),
+      patchPhase.commands.build_task!.replaceAll("\\", "/"),
       new RegExp(expectedCacheDir, "u"),
     );
   } finally {

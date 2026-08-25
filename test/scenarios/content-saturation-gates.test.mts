@@ -14,15 +14,16 @@ import {
   writeJson,
   writeJsonLines,
 } from "../fixtures/foundry-core.ts";
+import type { FixtureFoundryReport, FixtureRecord } from "../fixtures/foundry-core.ts";
 import { writeContextPackFiles } from "../fixtures/full-context-fixtures.ts";
 
 const fixtureRoot = path.join(repoRoot, "tmp", "content-saturation-gates-test");
 
-function ml(text, lang = "en") {
+function ml(text: string, lang = "en") {
   return { "@xml:lang": lang, "#text": text };
 }
 
-function sourceTrace(payload) {
+function sourceTrace(payload: unknown) {
   return {
     "@xmlns:tidasimport": "https://tiangong.earth/tidas/import-trace/1.0",
     "tidasimport:sourceTrace": {
@@ -40,7 +41,7 @@ function classification() {
   };
 }
 
-function classificationFromLabels(labels) {
+function classificationFromLabels(labels: string[]) {
   return {
     "common:classification": {
       "common:class": labels.map((label, index) => ({
@@ -62,7 +63,7 @@ function hazardousWasteTreatmentClassification() {
   ]);
 }
 
-function writeGateInputs(root, datasetType, rows) {
+function writeGateInputs(root: string, datasetType: string, rows: unknown[]) {
   fs.rmSync(root, { recursive: true, force: true });
   const context = writeContextPackFiles(root);
   const rowsFile = path.join(root, "rows.jsonl");
@@ -72,8 +73,17 @@ function writeGateInputs(root, datasetType, rows) {
   writeJson(schemaReport, {
     status: "completed",
     rows: rows.map((row) => {
+      const typedRow = row as {
+        processDataSet?: FixtureRecord;
+        flowDataSet?: FixtureRecord;
+        sourceDataSet?: FixtureRecord;
+        contactDataSet?: FixtureRecord;
+      };
       const payload =
-        row.processDataSet ?? row.flowDataSet ?? row.sourceDataSet ?? row.contactDataSet;
+        typedRow.processDataSet ??
+        typedRow.flowDataSet ??
+        typedRow.sourceDataSet ??
+        typedRow.contactDataSet;
       const info =
         payload?.processInformation?.dataSetInformation ??
         payload?.flowInformation?.dataSetInformation ??
@@ -94,7 +104,7 @@ function writeGateInputs(root, datasetType, rows) {
   return { ...context, rowsFile, schemaReport, qaReport, datasetType };
 }
 
-function runGate(input) {
+function runGate(input: ReturnType<typeof writeGateInputs>): FixtureFoundryReport {
   const result = runFoundry([
     "dataset-curation-gate",
     "--type",
@@ -120,7 +130,7 @@ function runGate(input) {
   return result.json;
 }
 
-function runGateRaw(input) {
+function runGateRaw(input: ReturnType<typeof writeGateInputs>) {
   return runFoundry([
     "dataset-curation-gate",
     "--type",
@@ -144,11 +154,11 @@ function runGateRaw(input) {
   ]);
 }
 
-function actionCodesFor(report) {
+function actionCodesFor(report: FixtureFoundryReport): string[] {
   return actionItemsFor(report).map((item) => item.code);
 }
 
-function actionItemsFor(report) {
+function actionItemsFor(report: FixtureFoundryReport): FixtureRecord[] {
   const packagePath = path.join(repoRoot, report.entities[0].authoring_package);
   return readJson(packagePath).action_items;
 }

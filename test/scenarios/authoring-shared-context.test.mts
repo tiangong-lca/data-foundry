@@ -140,7 +140,7 @@ test("authoring task batch writes shared full-context bundle for repeated packag
     assert.equal(bundle.counts.files, 2);
     assert.equal(bundle.counts.references, 4);
     assert.deepEqual(bundle.files.map((file) => file.kind).sort(), ["methodology_yaml", "schema"]);
-    assert.match(bundle.files.find((file) => file.kind === "schema").text, /process schema/u);
+    assert.match(bundle.files.find((file) => file.kind === "schema")!.text, /process schema/u);
     assert.equal(
       task.json.tasks[0].context.contract_context_files.some((file) => Object.hasOwn(file, "text")),
       false,

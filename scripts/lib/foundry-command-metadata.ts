@@ -646,7 +646,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["dataset-curation-cleanup-report.json", "cleaned rows file"],
     keyTests: [
       nodeTest(
-        "test/scenarios/curation-cleanup-quality-gates.test.mjs",
+        "test/scenarios/curation-cleanup-quality-gates.test.mts",
         "curation cleanup fills placeholder annual supply with searchable sentinel",
       ),
       importCurationEntryContract,

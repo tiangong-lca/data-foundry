@@ -10,26 +10,107 @@ import { resolveInstalledTiangongLcaCliPackage } from "../../scripts/lib/foundry
 export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const testRunId = process.env.FOUNDRY_FULL_CONTEXT_TEST_RUN_ID || process.pid;
 
-export interface FixtureBlocker {
-  code: string;
+export type FixtureFiles = Record<string, string> & FixtureRecord[];
+export type FixtureCommands = Record<string, string | null> & FixtureRecord[];
+
+export interface FixtureRecord {
   [key: string]: unknown;
+  schema: string;
+  schema_version: string | number;
+  status: string;
+  code: string;
+  field: string;
+  kind: string;
+  path: string;
+  text: string;
+  sha256: string;
+  phase: string;
+  purpose: string;
+  command: string;
+  decision: string;
+  reason: string;
+  source: string;
+  "@classId": string;
+  authoring_package: string;
+  json_pointer: string;
+  action_kind: string;
+  sentinel_value: string;
+  shared_context_cache_dir: string;
+  bytes: number;
+  row_index: number;
+  enabled: boolean;
+  reused: boolean;
+  files: FixtureFiles;
+  counts: Record<string, number>;
+  policy: Record<string, boolean>;
+  commands: FixtureCommands;
+  blockers: FixtureBlocker[];
+  scope_blockers: FixtureBlocker[];
+  tasks: FixtureRecord[];
+  entities: FixtureRecord[];
+  processes: FixtureRecord[];
+  items: FixtureRecord[];
+  action_items: FixtureRecord[];
+  deterministic_cleanup_items: FixtureRecord[];
+  contract_context_files: FixtureRecord[];
+  patch_sets: FixtureRecord[];
+  phases: FixtureRecord[];
+  stages: FixtureRecord[];
+  findings: FixtureRecord[];
+  candidate_sources: FixtureRecord[];
+  decision_only_action_items: FixtureRecord[];
+  operations: FixtureRecord[];
+  rows: FixtureRecord[];
+  allowed_resolution_modes: string[];
+  required_context_file_patterns: string[];
+  detected_segments: string[];
+  context: FixtureRecord;
+  context_bundle: FixtureRecord;
+  shared_context_bundle: FixtureRecord;
+  batch_patch_contract: FixtureRecord;
+  report_contract: FixtureRecord;
+  evidence: FixtureRecord;
+  cache: FixtureRecord;
+  chunk_plan: FixtureRecord;
+  classification_authoring_context: FixtureRecord;
+  location_authoring_context: FixtureRecord;
+  full_context_ai_completion: FixtureRecord;
+  processDataSet: FixtureRecord;
+  flowDataSet: FixtureRecord;
+  processInformation: FixtureRecord;
+  flowInformation: FixtureRecord;
+  sourceInformation: FixtureRecord;
+  contactInformation: FixtureRecord;
+  dataSetInformation: FixtureRecord;
+  modellingAndValidation: FixtureRecord;
+  dataSourcesTreatmentAndRepresentativeness: FixtureRecord;
+  classificationInformation: FixtureRecord;
+  annualSupplyOrProductionVolume: FixtureRecord;
+  publicationAndOwnership: FixtureRecord;
+  "common:other": FixtureRecord;
+  "common:classification": FixtureRecord;
+  "common:class": FixtureRecord[];
+  "tiangongfoundry:sourceExchangeCompleteness": FixtureRecord[];
 }
 
-export interface FixtureFoundryReport {
+export interface FixtureBlocker extends FixtureRecord {
+  code: string;
+}
+
+export interface FixtureFoundryReport extends FixtureRecord {
   status: string;
   failure_code: string;
   binding_sha256: string;
   counts: Record<string, number>;
   policy: Record<string, boolean>;
   results: FixtureFoundryReport[];
-  blockers?: FixtureBlocker[];
-  items?: Array<{ blockers?: FixtureBlocker[] }>;
-  evidence?: { scope_blockers?: FixtureBlocker[] };
-  scope_blockers?: FixtureBlocker[];
-  [key: string]: unknown;
+  blockers: FixtureBlocker[];
+  items: FixtureRecord[];
+  evidence: FixtureRecord;
+  scope_blockers: FixtureBlocker[];
 }
 
-export interface FixtureJsonDocument {
+export interface FixtureJsonDocument extends FixtureRecord {
   schema: string;
   status: string;
   stage: string;
@@ -38,19 +119,12 @@ export interface FixtureJsonDocument {
   mutation_dispatch_count: number;
   manifest_scope_sha256: string;
   account_mode: string;
-  contact_artifact: { sha256: string };
-  files: Record<string, string>;
-  [key: string]: unknown;
+  contact_artifact: FixtureRecord;
 }
 
-export interface FixtureJsonLine extends Record<string, unknown> {
+export interface FixtureJsonLine extends FixtureRecord {
   request_bytes_sha256: string;
   target_sha256: string;
-  processDataSet: {
-    processInformation: {
-      dataSetInformation: Record<string, unknown>;
-    };
-  };
 }
 
 export interface RunFoundryOptions {

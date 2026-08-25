@@ -226,7 +226,7 @@ test("flow curation gate distinguishes elementary and product category schemas",
     );
     const outputPatchFile = path.join(repoRoot, task.json.tasks[0].files.output_patch_file);
     const authoringPackageFile = path.join(repoRoot, task.json.tasks[0].files.authoring_package);
-    const patchPayload = (value) => ({
+    const patchPayload = (value: unknown) => ({
       schema_version: 1,
       kind: "tiangong_foundry_dataset_patch",
       patch_status: "completed",
