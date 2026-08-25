@@ -36,3 +36,10 @@ test("contracts metadata registry and migration tests target typed planner tests
     }
   }
 });
+
+test("the command-test script has one TypeScript-only surface", () => {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8")) as {
+    scripts: Record<string, string>;
+  };
+  assert.equal(packageJson.scripts["test:commands"], 'node --test "test/commands/*.test.mts"');
+});
