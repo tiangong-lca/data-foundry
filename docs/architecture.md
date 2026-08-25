@@ -43,6 +43,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-patch-collect.ts
   - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
   - scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts
+  - scripts/lib/import-curation/internal/workflow-row-transform-context.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -70,8 +71,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c5c67646073da6da0d6cb8d454070362ab48f2c4
-lastReviewedNote: "Reviewed for Issue #67 Wave 19: typed patch evidence context remains Foundry-local proof projection and does not alter patch, cleanup, profile, CLI or database authority."
+lastReviewedCommit: bf55d6487391d9bdc1926971e8dfbffa05525e91
+lastReviewedNote: "Reviewed for Issue #67 Wave 20: typed row-transform context remains Foundry-local lineage proof and does not alter transforms, profile defaults, CLI or database authority."
 ---
 
 # Architecture
@@ -144,6 +145,8 @@ The typed workflow-patch-collect boundary validates AI patch-set structure, targ
 The typed workflow-identity-decision-context boundary reads identity apply/rewrite artifacts, normalizes their aliases, binds authoring-package and row-payload proof, indexes decisions for later gates and merges multiple reports without reordering first-seen evidence. It does not search, decide identity, rewrite rows or execute remote operations.
 
 The typed workflow-patch-evidence-context boundary indexes deterministic patch-apply evidence, binds input/output row hashes, checks trace evidence alternatives and snapshots active safety/profile policy. It supplies proof to mutation/reference-closure gates without applying patches, performing cleanup or granting remote-write authority.
+
+The typed workflow-row-transform-context boundary projects existing transform reports into content-bound edges and answers whether an expected rows artifact is reachable from decision outputs. It may compare exact bytes for deterministic no-op copies, but it never rewrites rows, invents an edge or grants mutation authority.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

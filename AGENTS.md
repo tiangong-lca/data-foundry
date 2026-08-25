@@ -53,6 +53,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-patch-collect.ts
   - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
   - scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts
+  - scripts/lib/import-curation/internal/workflow-row-transform-context.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -77,8 +78,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c5c67646073da6da0d6cb8d454070362ab48f2c4
-lastReviewedNote: "Reviewed for Issue #67 Wave 19: patch evidence context is native zero-any TS7 with compact/index/path/hash/blocker/snapshot order and native errors preserved."
+lastReviewedCommit: bf55d6487391d9bdc1926971e8dfbffa05525e91
+lastReviewedNote: "Reviewed for Issue #67 Wave 20: row-transform lineage is native zero-any TS7 with report aliases, hashes, entry/graph order, content equality and native errors preserved."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -125,6 +126,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - `import-curation/internal/workflow-patch-collect.ts` is the typed patch admission and local artifact-reading boundary. It preserves validation/blocker and operation order, action-item closure, allowed resolution modes, full-context structured evidence, trace/classification/location checks, JSON/JSONL parse behavior, option alias encounter order, duplicate artifact inputs and source-reference rewrite normalization. Missing or malformed evidence remains blocking or raises the established native error before apply.
 - `import-curation/internal/workflow-identity-decision-context.ts` is the typed identity decision/rewrite evidence boundary. It preserves rewrite-file priority, scoped row and exact/bare-id index order, decision aliases and normalized values, authoring-package proof dedupe, input/output payload hashes, multi-report merge/unique order, completed-action predicates and unresolved flow reference keys. Missing or malformed decision evidence cannot be promoted into reuse or completion.
 - `import-curation/internal/workflow-patch-evidence-context.ts` is the typed apply/trace evidence projection boundary. It preserves compact evidence fields, exact/bare-id/row indexes and query dedupe, report/evidence blockers, input/output payload hashes, deterministic annual/source cleanup proof, unresolved/source trace blocker order, policy snapshot SHA/order and recursive import-only trace detection. Missing or mismatched evidence remains blocking.
+- `import-curation/internal/workflow-row-transform-context.ts` is the typed deterministic row-lineage boundary. It preserves unresolved/canonical/source-contact/cleanup report aliases, trace and blocker order, payload hashes, transform-entry status matrices and fixed aggregation order, exact/content-equivalent artifact matching, multi-pass graph reachability and every patch/identity/classification/externalization chain combination. It proves lineage only and never performs a transform.
 - Toolchain and migration tests must pass from a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. They must not depend on the superproject checkout, another worktree's `node_modules`, absolute developer paths, ignored `.foundry` state, or credentials.
 - The Golden gate must compare against a non-`HEAD` merge-base with full Git history and a Node-native comparator. Cross-platform fixtures use executable-plus-argv dispatch; a `.js`/`.mjs`/`.cjs` test script must run through `process.execPath`, not OS executable-bit behavior. `.gitattributes` keeps repository text at LF on every runner; only Windows launcher files may opt into CRLF.
 - Foundry artifact-to-scope matching and transitional command parsers must accept both path separators. Durable JSON/JSONL writers flush the writable descriptor they opened; POSIX permission-bit assertions are not imposed on Windows filesystems.

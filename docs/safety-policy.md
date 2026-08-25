@@ -29,9 +29,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-patch-collect.ts
   - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
   - scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts
+  - scripts/lib/import-curation/internal/workflow-row-transform-context.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c5c67646073da6da0d6cb8d454070362ab48f2c4
-lastReviewedNote: "Reviewed for Issue #67 Wave 19: typed patch evidence context preserves apply, payload-hash, cleanup, trace and policy proof blockers without broadening write authority."
+lastReviewedCommit: bf55d6487391d9bdc1926971e8dfbffa05525e91
+lastReviewedNote: "Reviewed for Issue #67 Wave 20: typed row lineage preserves explicit content-bound transform reachability and rejects unsupported chains without broadening write authority."
 ---
 
 # Safety Policy
