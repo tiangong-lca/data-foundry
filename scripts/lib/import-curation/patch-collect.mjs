@@ -6,7 +6,7 @@ import {
   patchSetOperations,
   sharedContextBundleReadinessBlockers,
   validateCollectedPatchSet,
-} from "./internal/authoring-patch-workflow.mjs";
+} from "./internal/authoring-patch-workflow.ts";
 import {
   asText,
   ensureArray,

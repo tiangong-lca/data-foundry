@@ -22,7 +22,7 @@ test("patch collect helper exists only as native TypeScript", () => {
 
 test("every static patch collect helper consumer targets the typed module", () => {
   const consumers = [
-    "scripts/lib/import-curation/internal/authoring-patch-workflow.mjs",
+    "scripts/lib/import-curation/internal/authoring-patch-workflow.ts",
     "scripts/lib/import-curation/internal/curation-gate-workflow.mjs",
     "scripts/lib/import-curation/internal/mutation-manifest-workflow.mjs",
     "scripts/lib/import-curation/internal/workflow-dry-run-context.ts",

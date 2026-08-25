@@ -4,7 +4,7 @@ import {
   authoringPackageEntriesFromGate,
   buildDatasetAuthoringTaskFromPackage,
   writeAuthoringTaskBatchManifest,
-} from "./internal/authoring-task-workflow.mjs";
+} from "./internal/authoring-task-workflow.ts";
 import { sha256Text } from "./internal/hash-utils.ts";
 import {
   asText,
