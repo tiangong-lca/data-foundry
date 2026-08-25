@@ -1350,13 +1350,36 @@ function invalidateIdentityPreflightResultCacheEntry(identityKey) {
   const raw = process.env.BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE;
   if (!raw || !identityKey) return false;
   const cacheDir = resolveRepoPath(raw);
-  const entryDir = path.join(cacheDir, identityKey.replace(/[^A-Za-z0-9_.@-]+/gu, "-"));
+  const match = String(identityKey).match(/^([^:]+):(.+)@([^@]+)$/u);
+  if (!match || !directoryExists(cacheDir)) return false;
+  const [, datasetType, datasetId, datasetVersion] = match;
+  let removed = 0;
   try {
-    fs.rmSync(entryDir, { recursive: true, force: true });
+    for (const entry of fs.readdirSync(cacheDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const entryDir = path.join(cacheDir, entry.name);
+      const manifestPath = path.join(entryDir, "foundry-identity-preflight-execution.json");
+      if (!fileExists(manifestPath)) continue;
+      let manifest;
+      try {
+        manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+      } catch {
+        continue;
+      }
+      const dataset = manifest?.binding?.dataset;
+      if (
+        dataset?.type === datasetType &&
+        dataset?.id === datasetId &&
+        String(dataset?.version || "00.00.001") === datasetVersion
+      ) {
+        fs.rmSync(entryDir, { recursive: true, force: true });
+        removed += 1;
+      }
+    }
   } catch {
     /* best-effort invalidation */
   }
-  return true;
+  return removed > 0;
 }
 
 function identityDecisionSourceFiles(runDir) {
@@ -5566,6 +5589,7 @@ export const bafuBatchImportRunTestHooks = {
   enforceSharedContextCacheCap,
   flowRowsPendingVerification,
   identityUnresolvedReferenceBlocker,
+  invalidateIdentityPreflightResultCacheEntry,
   mergeCompletedReusableIdentityDecisions,
   postWriteVerifyRetryReason,
   preFinalizeRecoveryBlocker,
