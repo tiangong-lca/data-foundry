@@ -341,6 +341,7 @@ test("active documentation and source contain no references to removed CLI spine
     "authoring-patch-workflow.mjs",
     "authoring-packages.mjs",
     "patch-collect.mjs",
+    "curation-gate.mjs",
     "commands/import-ledger.mjs",
     "commands/tidas-workflow.mjs",
     "commands/identity-reference-rewrites.mjs",

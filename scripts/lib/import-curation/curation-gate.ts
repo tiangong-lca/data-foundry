@@ -61,7 +61,63 @@ const {
   writeText,
 } = curationGateWorkflow;
 
-export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface CurationGateOptions extends JsonRecord {
+  help?: unknown;
+  type?: unknown;
+  datasetType?: unknown;
+  kind?: unknown;
+  rowsFile?: string | null;
+  input?: string | null;
+  schemaReport?: string | null;
+  qaReport?: string | null;
+  outDir?: string | null;
+  profile?: unknown;
+  contractContext?: string | null;
+  contextFile?: string | null;
+  schemaFile?: string | null;
+  yamlFile?: string | null;
+  rulesetFile?: string | null;
+  contractFile?: string | null;
+  contextDir?: string | null;
+  queueDir?: string;
+  curationQueueDir?: string;
+  requireQueueContext?: boolean | string;
+  requireCurationQueueContext?: boolean | string;
+  classificationQueue?: string | null;
+  classificationQueueFile?: string | null;
+  locationQueue?: string | null;
+  locationQueueFile?: string | null;
+  classificationDecisionApplyReport?: string | null;
+  classificationDecisionsApplyReport?: string | null;
+  unresolvedExchangeExternalizationReport?: string | null;
+  sourceContactRewriteReport?: string | null;
+  sourceContactRewritesReport?: string | null;
+  canonicalSupportRewriteReport?: string | null;
+  canonicalSupportRewritesReport?: string | null;
+  cleanupReport?: string | null;
+}
+
+interface CurationGateArgs {
+  repoRoot?: string;
+  options?: CurationGateOptions;
+}
+
+function asJsonRecord(value: unknown): JsonRecord {
+  return value as JsonRecord;
+}
+
+type IdentityPreflightBuildOptions = Parameters<typeof buildIdentityPreflightAuthoringContext>[0];
+type IdentityPreflightGateOptions = Parameters<typeof identityPreflightGateItems>[0];
+type SemanticActionOptions = Parameters<typeof collectProfileSemanticActionItems>[0];
+
+export function runDatasetCurationGate({
+  repoRoot,
+  options = {},
+}: CurationGateArgs = {}): JsonRecord {
   const datasetType = datasetTypeFromOptions(options);
   if (options.help) {
     return {
@@ -87,15 +143,16 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
       },
     };
   }
-  const rowsFile = resolveRepoPath(repoRoot, options.rowsFile || options.input);
-  const schemaReportPath = resolveRepoPath(repoRoot, options.schemaReport);
-  const qaReportPath = resolveRepoPath(repoRoot, options.qaReport);
+  const root = repoRoot!;
+  const rowsFile = resolveRepoPath(root, options.rowsFile || options.input);
+  const schemaReportPath = resolveRepoPath(root, options.schemaReport);
+  const qaReportPath = resolveRepoPath(root, options.qaReport);
   const defaultOut = `.foundry/workspaces/${datasetType}-dataset-curation-gate`;
-  const outDir = resolveRepoPath(repoRoot, options.outDir || defaultOut);
+  const outDir = resolveRepoPath(root, options.outDir || defaultOut)!;
   const profileId = String(options.profile || "generic")
     .trim()
     .toLowerCase();
-  const profile = profileFor(repoRoot, profileId, options);
+  const profile = profileFor(root, profileId, options);
   if (!rowsFile || !fileExists(rowsFile)) {
     throw new Error("--rows-file is required and must point to a JSON/JSONL dataset row file.");
   }
@@ -109,106 +166,114 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
   }
 
   const rows = readRows(rowsFile);
-  const schemaReport = readJson(schemaReportPath);
-  const qaReport = readJson(qaReportPath);
-  const qaFindings = readQaFindings(repoRoot, qaReport, qaReportPath, datasetType);
+  const schemaReport = readJson<JsonRecord>(schemaReportPath);
+  const qaReport = readJson<JsonRecord>(qaReportPath);
+  const qaFindings = readQaFindings(root, qaReport, qaReportPath, datasetType);
   const profileContext = readContextFiles(
-    repoRoot,
-    profile.docs.map((filePath) => ["profile", filePath]),
+    root,
+    profile.docs.map((filePath): [string, string | null | undefined] => [
+      "profile",
+      filePath as string | null | undefined,
+    ]),
   );
-  const contractContext = readContextFiles(repoRoot, [
-    ...collectExplicitContextFiles(options),
-    ...collectContextDirFiles(repoRoot, options.contextDir),
-    ...collectBundledSchemaContextFiles(repoRoot),
+  const contractContext = readContextFiles(root, [
+    ...(collectExplicitContextFiles(options) as Array<[string, string | null | undefined]>),
+    ...collectContextDirFiles(root, options.contextDir),
+    ...collectBundledSchemaContextFiles(root),
   ]);
-  const fullContextRequirement = fullContextAiCompletionRequirement(profile, datasetType, repoRoot);
+  const fullContextRequirement = fullContextAiCompletionRequirement(profile, datasetType, root);
   const fullContextItems = fullContextGateItems({
     contractContext,
     requirement: fullContextRequirement,
   });
-  const queueContext = readCurationQueueContext(repoRoot, options);
+  const queueContext = readCurationQueueContext(root, options);
   const requireQueueContext =
     options.requireQueueContext === true ||
     options.requireQueueContext === "true" ||
     options.requireCurationQueueContext === true ||
     options.requireCurationQueueContext === "true";
   const classificationQueueContext = readAuthoringQueueContext(
-    repoRoot,
+    root,
     options.classificationQueue ?? options.classificationQueueFile,
     "classification",
   );
   const locationQueueContext = readAuthoringQueueContext(
-    repoRoot,
+    root,
     options.locationQueue ?? options.locationQueueFile,
     "location",
   );
-  const identityPreflightContext = readIdentityPreflightContext(repoRoot, options, rowsFile);
+  const identityPreflightContext = readIdentityPreflightContext(root, options, rowsFile);
   const classificationDecisionApplyArtifact = readJsonIfOption(
-    repoRoot,
+    root,
     options.classificationDecisionApplyReport ?? options.classificationDecisionsApplyReport,
   );
   const classificationDecisionApplyContext = classificationDecisionApplyArtifact
-    ? readClassificationDecisionApplyContext(repoRoot, classificationDecisionApplyArtifact)
+    ? readClassificationDecisionApplyContext(root, classificationDecisionApplyArtifact)
     : null;
   const identityDecisionApplyArtifacts = readJsonArtifactsIfOption(
-    repoRoot,
+    root,
     identityDecisionApplyReportOptionValues(options),
   );
   const identityDecisionApplyArtifact = identityDecisionApplyArtifacts[0] ?? null;
   const identityDecisionApplyContext = readIdentityDecisionApplyContexts(
-    repoRoot,
+    root,
     identityDecisionApplyArtifacts,
   );
   const unresolvedExchangeExternalizationArtifact = readJsonIfOption(
-    repoRoot,
+    root,
     options.unresolvedExchangeExternalizationReport,
   );
   const unresolvedExchangeExternalizationContext = readUnresolvedExchangeExternalizationContext(
-    repoRoot,
+    root,
     unresolvedExchangeExternalizationArtifact,
   );
   const sourceContactRewriteArtifact = readJsonIfOption(
-    repoRoot,
+    root,
     options.sourceContactRewriteReport ?? options.sourceContactRewritesReport,
   );
   const sourceContactRewriteContext = readSourceContactRewriteContext(
-    repoRoot,
+    root,
     sourceContactRewriteArtifact,
   );
   const canonicalSupportRewriteArtifact = readJsonIfOption(
-    repoRoot,
+    root,
     options.canonicalSupportRewriteReport ?? options.canonicalSupportRewritesReport,
   );
   const canonicalSupportRewriteContext = readCanonicalSupportRewriteContext(
-    repoRoot,
+    root,
     canonicalSupportRewriteArtifact,
   );
-  const cleanupArtifact = readJsonIfOption(repoRoot, options.cleanupReport);
-  const cleanupContext = readCleanupTransformContext(repoRoot, cleanupArtifact);
+  const cleanupArtifact = readJsonIfOption(root, options.cleanupReport);
+  const cleanupContext = readCleanupTransformContext(root, cleanupArtifact);
   const writeRows = mapRowsByIdentity(rows, datasetType);
   const identityReferenceRewriteContext = readIdentityReferenceRewriteContext({
-    repoRoot,
+    repoRoot: root,
     rowsFile,
     options,
     writeRows,
   });
-  const waivedQaCodes = new Set(profile.waivedQaCodesByType?.[datasetType] ?? []);
-  const schemaRowsById = new Map(
-    ensureArray(schemaReport.rows).map((row) => [String(row.id ?? row.dataset_id ?? ""), row]),
+  const waivedQaCodes = new Set(
+    (profile.waivedQaCodesByType?.[datasetType] ?? []) as Iterable<unknown>,
   );
-  const qaFindingsById = new Map();
+  const schemaRowsById = new Map<string, JsonRecord>(
+    ensureArray(schemaReport.rows).map((value) => {
+      const row = asJsonRecord(value);
+      return [String(row.id ?? row.dataset_id ?? ""), row];
+    }),
+  );
+  const qaFindingsById = new Map<string, JsonRecord[]>();
   for (const finding of qaFindings) {
     const id = entityIdFromFinding(finding, datasetType);
     if (!id) continue;
     if (!qaFindingsById.has(id)) qaFindingsById.set(id, []);
-    qaFindingsById.get(id).push(finding);
+    qaFindingsById.get(id)!.push(finding);
   }
 
   const packageDir = path.join(outDir, "ai-authoring-packages");
   const entityReports = rows.map((row, index) => {
     const identity = datasetIdentity(row, index, datasetType);
     const curationQueueContext = buildQueueAuthoringContext(
-      repoRoot,
+      root,
       queueContext,
       datasetType,
       identity,
@@ -218,14 +283,19 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
       datasetType,
       identity,
       curationQueueContext,
-      repoRoot,
-      classificationDecisionApplyContext,
+      repoRoot: root,
+      classificationDecisionApplyContext:
+        classificationDecisionApplyContext as unknown as IdentityPreflightBuildOptions["classificationDecisionApplyContext"],
       identityDecisionApplyContext,
-      identityReferenceRewriteContext,
-      unresolvedExchangeExternalizationContext,
-      sourceContactRewriteContext,
-      canonicalSupportRewriteContext,
-      cleanupContext,
+      identityReferenceRewriteContext:
+        identityReferenceRewriteContext as unknown as IdentityPreflightBuildOptions["identityReferenceRewriteContext"],
+      unresolvedExchangeExternalizationContext:
+        unresolvedExchangeExternalizationContext as unknown as IdentityPreflightBuildOptions["unresolvedExchangeExternalizationContext"],
+      sourceContactRewriteContext:
+        sourceContactRewriteContext as unknown as IdentityPreflightBuildOptions["sourceContactRewriteContext"],
+      canonicalSupportRewriteContext:
+        canonicalSupportRewriteContext as unknown as IdentityPreflightBuildOptions["canonicalSupportRewriteContext"],
+      cleanupContext: cleanupContext as unknown as IdentityPreflightBuildOptions["cleanupContext"],
     });
     const unresolvedExchangeExternalizationRows = unresolvedExchangeExternalizationRowsForIdentity(
       unresolvedExchangeExternalizationContext,
@@ -246,7 +316,7 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
       datasetType,
       identity,
       curationQueueContext,
-      profile,
+      profile: profile as unknown as IdentityPreflightGateOptions["profile"],
     });
     const identityPreflightActionItems = identityPreflightAuthoringActionItems({
       required: Boolean(fullContextRequirement) && ["flow", "process"].includes(datasetType),
@@ -262,7 +332,7 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
     const locationAuthoringRows = authoringQueueRowsForIdentity(locationQueueContext, identity);
     const unresolvedClassificationAuthoringRows = classificationAuthoringRows.filter((row) =>
       classificationQueueRowStillNeedsAuthoring({
-        repoRoot,
+        repoRoot: root,
         datasetType,
         payload: identity.payload,
         row,
@@ -270,7 +340,7 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
     );
     const unresolvedLocationAuthoringRows = locationAuthoringRows.filter((row) =>
       locationQueueRowStillNeedsAuthoring({
-        repoRoot,
+        repoRoot: root,
         payload: identity.payload,
         row,
       }),
@@ -289,7 +359,7 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
       qaFindingCurationAction(finding, datasetType),
     );
     const semanticActionItems = collectProfileSemanticActionItems({
-      profile,
+      profile: profile as unknown as SemanticActionOptions["profile"],
       datasetType,
       payload: identity.payload,
       hasClassificationQueueContext: unresolvedClassificationAuthoringRows.length > 0,
@@ -353,9 +423,9 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
           },
         });
       }
-      const unresolvedQueueRefs = ensureArray(
-        curationQueueContext?.closure?.dependencies?.unresolved_refs,
-      );
+      const queueClosure = curationQueueContext?.closure as JsonRecord | null | undefined;
+      const queueDependencies = queueClosure?.dependencies as JsonRecord | null | undefined;
+      const unresolvedQueueRefs = ensureArray(queueDependencies?.unresolved_refs);
       if (unresolvedQueueRefs.length > 0) {
         queueGateItems.push({
           source: "curation_queue",
@@ -393,15 +463,15 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
       packageDir,
       `${datasetType}-${sanitizeFileName(identity.id)}.authoring-package.json`,
     );
-    const packagePayload = {
+    const packagePayload: JsonRecord = {
       schema_version: 2,
       generated_at_utc: nowIso(),
       profile: profile.id,
       dataset_type: datasetType,
       entity_id: identity.id,
       version: identity.version,
-      authoring_package: repoRelativePath(repoRoot, packagePath),
-      source_rows_file: repoRelativePath(repoRoot, rowsFile),
+      authoring_package: repoRelativePath(root, packagePath),
+      source_rows_file: repoRelativePath(root, rowsFile),
       profile_context_files: profileContext.files,
       contract_context_files: contractContext.files,
       full_context_ai_completion: fullContextRequirement
@@ -448,7 +518,7 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
               ? "no_rows_for_entity"
               : "not_provided",
         source_file: identityReferenceRewriteContext.sourceFile
-          ? repoRelativePath(repoRoot, identityReferenceRewriteContext.sourceFile)
+          ? repoRelativePath(root, identityReferenceRewriteContext.sourceFile)
           : null,
         rows: identityReferenceRewrites,
         policy:
@@ -457,7 +527,7 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
       identity_decision_apply_context: {
         status: identityDecisionApplyContext ? identityDecisionApplyContext.status : "not_provided",
         report_file: identityDecisionApplyArtifact
-          ? repoRelativePath(repoRoot, identityDecisionApplyArtifact.path)
+          ? repoRelativePath(root, identityDecisionApplyArtifact.path)
           : null,
         decisions: identityDecisionApplyRows,
         policy:
@@ -465,14 +535,12 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
       },
       classification_authoring_context: {
         queue_file: classificationQueueContext
-          ? repoRelativePath(repoRoot, classificationQueueContext.path)
+          ? repoRelativePath(root, classificationQueueContext.path)
           : null,
         rows: classificationAuthoringRows,
       },
       location_authoring_context: {
-        queue_file: locationQueueContext
-          ? repoRelativePath(repoRoot, locationQueueContext.path)
-          : null,
+        queue_file: locationQueueContext ? repoRelativePath(root, locationQueueContext.path) : null,
         rows: locationAuthoringRows,
       },
       source_row: row,
@@ -520,7 +588,7 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
       location_queue_action_item_count: locationQueueActionItems.length,
       deterministic_cleanup_count: deterministicCleanupItems.length,
       blocking_item_count: blockingItemCount,
-      authoring_package: repoRelativePath(repoRoot, packagePath),
+      authoring_package: repoRelativePath(root, packagePath),
       authoring_package_sha256: sha256Text(authoringPackageText),
       authoring_package_context_file_details: authoringPackageContextDetails,
       status,
@@ -550,7 +618,7 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
   );
   const blockingItemCount = actionItemCount + deterministicCleanupCount;
   const waiverCount = entityReports.reduce((total, item) => total + item.waived_finding_count, 0);
-  const report = {
+  const report: JsonRecord = {
     schema_version: 2,
     generated_at_utc: nowIso(),
     status:
@@ -563,9 +631,9 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
             : "ready",
     profile: profile.id,
     dataset_type: datasetType,
-    rows_file: repoRelativePath(repoRoot, rowsFile),
-    schema_report: repoRelativePath(repoRoot, schemaReportPath),
-    qa_report: repoRelativePath(repoRoot, qaReportPath),
+    rows_file: repoRelativePath(root, rowsFile),
+    schema_report: repoRelativePath(root, schemaReportPath),
+    qa_report: repoRelativePath(root, qaReportPath),
     policy: {
       cli_qa_role: "deterministic_qa_report_only",
       foundry_role:
@@ -590,8 +658,8 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
           },
       curation_queue: queueContext
         ? {
-            queue_dir: repoRelativePath(repoRoot, queueContext.queueDir),
-            manifest_file: repoRelativePath(repoRoot, queueContext.manifestPath),
+            queue_dir: repoRelativePath(root, queueContext.queueDir),
+            manifest_file: repoRelativePath(root, queueContext.manifestPath),
             status: queueContext.manifest.status ?? null,
             counts: queueContext.manifest.counts ?? null,
           }
@@ -599,13 +667,13 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
       require_queue_context: requireQueueContext,
       classification_queue: classificationQueueContext
         ? {
-            queue_file: repoRelativePath(repoRoot, classificationQueueContext.path),
+            queue_file: repoRelativePath(root, classificationQueueContext.path),
             rows: classificationQueueContext.rows.length,
           }
         : null,
       location_queue: locationQueueContext
         ? {
-            queue_file: repoRelativePath(repoRoot, locationQueueContext.path),
+            queue_file: repoRelativePath(root, locationQueueContext.path),
             rows: locationQueueContext.rows.length,
           }
         : null,
@@ -622,7 +690,7 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
         : null,
       identity_preflight: identityPreflightContext
         ? {
-            index_file: repoRelativePath(repoRoot, identityPreflightContext.indexPath),
+            index_file: repoRelativePath(root, identityPreflightContext.indexPath),
             rows: identityPreflightContext.rows.length,
             completed: identityPreflightContext.completed,
             pending: identityPreflightContext.pending,
@@ -630,14 +698,14 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
         : null,
       identity_reference_rewrites: identityReferenceRewriteContext.sourceFile
         ? {
-            source_file: repoRelativePath(repoRoot, identityReferenceRewriteContext.sourceFile),
+            source_file: repoRelativePath(root, identityReferenceRewriteContext.sourceFile),
             rows: identityReferenceRewriteContext.sourceRows.length,
             scoped_rows: identityReferenceRewriteContext.scopedRows.length,
           }
         : null,
       identity_decision_apply: identityDecisionApplyContext
         ? {
-            report_file: repoRelativePath(repoRoot, identityDecisionApplyArtifact.path),
+            report_file: repoRelativePath(root, identityDecisionApplyArtifact.path),
             status: identityDecisionApplyContext.status,
             decisions: identityDecisionApplyContext.decisions.length,
             authoring_package_proofs: identityDecisionApplyContext.authoringPackageProofs.length,
@@ -677,10 +745,10 @@ export function runDatasetCurationGate({ repoRoot, options = {} } = {}) {
   return {
     ...report,
     files: {
-      report: repoRelativePath(repoRoot, reportPath),
-      entities: repoRelativePath(repoRoot, jsonlPath),
-      ...(datasetType === "process" ? { processes: repoRelativePath(repoRoot, jsonlPath) } : {}),
-      authoring_packages_dir: repoRelativePath(repoRoot, packageDir),
+      report: repoRelativePath(root, reportPath),
+      entities: repoRelativePath(root, jsonlPath),
+      ...(datasetType === "process" ? { processes: repoRelativePath(root, jsonlPath) } : {}),
+      authoring_packages_dir: repoRelativePath(root, packageDir),
     },
   };
 }

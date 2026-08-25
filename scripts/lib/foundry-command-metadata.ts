@@ -363,7 +363,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-curation-gate": metadata({
     category: "workflow-internal",
-    ownerModule: importOwner("curation-gate"),
+    ownerModule: typedImportOwner("curation-gate"),
     ownerExport: "runDatasetCurationGate",
     inputs: [
       "rows file",

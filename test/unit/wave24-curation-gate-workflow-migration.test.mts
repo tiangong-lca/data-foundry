@@ -28,7 +28,7 @@ test("typed curation gate facade is a zero-escape aggregate over typed owners", 
 });
 
 test("curation gate runner imports the typed facade", () => {
-  const source = readRepoFile("scripts/lib/import-curation/curation-gate.mjs");
+  const source = readRepoFile("scripts/lib/import-curation/curation-gate.ts");
   assert.match(source, /\.\/internal\/curation-gate-workflow\.ts/u);
   assert.doesNotMatch(source, /curation-gate-workflow\.mjs/u);
 });

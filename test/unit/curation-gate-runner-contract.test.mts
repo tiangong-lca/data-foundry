@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { runDatasetCurationGate } from "../../scripts/lib/import-curation/curation-gate.mjs";
+import { runDatasetCurationGate } from "../../scripts/lib/import-curation/curation-gate.ts";
 
 type JsonRecord = Record<string, unknown>;
 
