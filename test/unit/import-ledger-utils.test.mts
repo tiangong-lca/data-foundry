@@ -3,6 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { createImportLedgerUtils } from "../../scripts/lib/import-ledger.ts";
+import type {
+  BlockedScopeImportLedgerRow,
+  JsonRecord,
+  JsonValue,
+  VerifiedImportLedgerRow,
+} from "../../scripts/lib/import-ledger.ts";
 import {
   readJsonLines,
   rel,
@@ -12,16 +18,21 @@ import {
   writeJsonLines,
 } from "../fixtures/foundry-core.ts";
 
-function asText(value) {
+function asText(value: unknown): string {
   return value === undefined || value === null ? "" : String(value).trim();
 }
 
-function datasetIdentity(payload) {
-  const root = payload?.processDataSet ?? {};
+function datasetIdentity(payload: JsonValue) {
+  const typedPayload = payload as JsonRecord;
+  const root = (typedPayload.processDataSet ?? {}) as JsonRecord;
+  const processInformation = (root.processInformation ?? {}) as JsonRecord;
+  const dataSetInformation = (processInformation.dataSetInformation ?? {}) as JsonRecord;
+  const administrativeInformation = (root.administrativeInformation ?? {}) as JsonRecord;
+  const publicationAndOwnership = (administrativeInformation.publicationAndOwnership ??
+    {}) as JsonRecord;
   return {
-    id: root.processInformation?.dataSetInformation?.["common:UUID"] ?? null,
-    version:
-      root.administrativeInformation?.publicationAndOwnership?.["common:dataSetVersion"] ?? null,
+    id: (dataSetInformation["common:UUID"] as string | undefined) ?? null,
+    version: (publicationAndOwnership["common:dataSetVersion"] as string | undefined) ?? null,
   };
 }
 
@@ -32,15 +43,19 @@ function ledgerUtils() {
     fileExists: (filePath) => fs.existsSync(filePath) && fs.statSync(filePath).isFile(),
     nowIso: () => "2026-06-07T00:00:00.000Z",
     readJson: (filePath) => JSON.parse(fs.readFileSync(filePath, "utf8")),
-    readJsonLines,
+    readJsonLines: (filePath: string) => readJsonLines(filePath) as unknown as JsonValue[],
     repoRelativePath: (filePath) => path.relative(repoRoot, filePath),
-    resolveRepoPath: (filePath) =>
-      filePath ? (path.isAbsolute(filePath) ? filePath : path.join(repoRoot, filePath)) : null,
+    resolveRepoPath: (filePath: unknown) =>
+      filePath
+        ? path.isAbsolute(filePath as string)
+          ? (filePath as string)
+          : path.join(repoRoot, filePath as string)
+        : null,
     writeJson,
   });
 }
 
-function processPayload(id) {
+function processPayload(id: string) {
   return {
     processDataSet: {
       processInformation: {
@@ -79,7 +94,9 @@ test("closeout ledger writes verified rows and blocked rerun scopes", () => {
     },
   });
   assert.equal(okResult.status, "completed");
-  const okRows = readJsonLines(path.join(ledgerDir, "ok.scopes.verified.jsonl"));
+  const okRows = readJsonLines(
+    path.join(ledgerDir, "ok.scopes.verified.jsonl"),
+  ) as unknown as VerifiedImportLedgerRow[];
   assert.equal(okRows[0].dataset_id, "verified-process");
   assert.equal(okRows[0].status, "verified");
 
@@ -95,8 +112,10 @@ test("closeout ledger writes verified rows and blocked rerun scopes", () => {
     },
   });
   assert.equal(blockedResult.status, "completed");
-  const blockedRows = readJsonLines(path.join(ledgerDir, "blocked.scopes.human-review.jsonl"));
+  const blockedRows = readJsonLines(
+    path.join(ledgerDir, "blocked.scopes.human-review.jsonl"),
+  ) as unknown as BlockedScopeImportLedgerRow[];
   assert.equal(blockedRows[0].scope_ids[0], "verified-process");
   assert.equal(blockedRows[0].status, "blocked_human_review");
-  assert.ok(blockedRows[0].rerun_command.includes("dataset-post-write-closeout"));
+  assert.ok(blockedRows[0].rerun_command?.includes("dataset-post-write-closeout"));
 });

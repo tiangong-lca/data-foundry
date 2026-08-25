@@ -6,21 +6,38 @@ import { assert } from "../fixtures/foundry-core.ts";
 // the runtime utilities foundry.mjs wires in (asText/textValue/multiLang/pathExpression/
 // datasetIdentity/bundleClassificationPath) closely enough to exercise the real
 // rewriteCanonicalSourceReferences + sourceSemanticKind logic.
-function asText(value) {
+type JsonRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asText(value: unknown): string {
   if (value === undefined || value === null) return "";
   if (typeof value === "string" || typeof value === "number") return String(value).trim();
   if (Array.isArray(value)) return asText(value[0]);
-  if (typeof value === "object") return asText(value["#text"] ?? value.value ?? "");
+  if (isRecord(value)) return asText(value["#text"] ?? value.value ?? "");
   return "";
 }
 
-function textValue(value) {
+function textValue(value: unknown): string {
   return asText(value);
 }
 
-function bundleClassificationPath(payload, type) {
+function bundleClassificationPath(payload: unknown, type: string): string {
+  const typedPayload = payload as {
+    sourceDataSet?: {
+      sourceInformation?: {
+        dataSetInformation?: {
+          classificationInformation?: {
+            "common:classification"?: { "common:class"?: unknown };
+          };
+        };
+      };
+    };
+  };
   const dataSetInformation =
-    type === "source" ? payload?.sourceDataSet?.sourceInformation?.dataSetInformation : null;
+    type === "source" ? typedPayload.sourceDataSet?.sourceInformation?.dataSetInformation : null;
   const classes =
     dataSetInformation?.classificationInformation?.["common:classification"]?.["common:class"];
   const list = Array.isArray(classes) ? classes : classes ? [classes] : [];
@@ -30,13 +47,17 @@ function bundleClassificationPath(payload, type) {
     .join(" / ");
 }
 
-function datasetIdentity(payload, type) {
-  if (type === "source" || payload?.sourceDataSet) {
-    const ds = payload?.sourceDataSet?.sourceInformation?.dataSetInformation ?? {};
+function datasetIdentity(payload: unknown, type: string): { id: string | null; version: string } {
+  const typedPayload = payload as {
+    sourceDataSet?: { sourceInformation?: { dataSetInformation?: JsonRecord } };
+    processDataSet?: { processInformation?: { dataSetInformation?: JsonRecord } };
+  };
+  if (type === "source" || typedPayload.sourceDataSet) {
+    const ds = typedPayload.sourceDataSet?.sourceInformation?.dataSetInformation ?? {};
     return { id: asText(ds["common:UUID"]) || null, version: "00.00.001" };
   }
-  if (type === "process" || payload?.processDataSet) {
-    const ds = payload?.processDataSet?.processInformation?.dataSetInformation ?? {};
+  if (type === "process" || typedPayload.processDataSet) {
+    const ds = typedPayload.processDataSet?.processInformation?.dataSetInformation ?? {};
     return { id: asText(ds["common:UUID"]) || null, version: "00.00.001" };
   }
   return { id: null, version: "00.00.001" };
@@ -46,13 +67,13 @@ function makeUtils() {
   return createSourceSemanticUtils({
     asText,
     bundleClassificationPath,
-    cloneJson: (value) => JSON.parse(JSON.stringify(value)),
+    cloneJson: <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T,
     datasetIdentity,
-    deterministicUuid: (seed) => `det-${seed}`,
+    deterministicUuid: (seed: string) => `det-${seed}`,
     languageForText: () => "en",
-    multiLang: (text, lang = "en") => ({ "@xml:lang": lang, "#text": text }),
-    pathExpression: (parts) => parts.join("."),
-    repoRelativeMaybe: (value) => value,
+    multiLang: (text: unknown, lang = "en") => ({ "@xml:lang": lang, "#text": text }),
+    pathExpression: (parts: unknown[]) => parts.join("."),
+    repoRelativeMaybe: (value: unknown) => value,
     textValue,
   });
 }
@@ -82,7 +103,7 @@ function formatSupportSourcePayload() {
 
 // A process whose validation/review references the format support source via
 // common:referenceToCompleteReviewReport — exactly the CLASS 2 failing shape.
-function processWithReviewReportReference(sourceId) {
+function processWithReviewReportReference(sourceId: string) {
   return {
     processDataSet: {
       processInformation: {
@@ -105,7 +126,7 @@ function processWithReviewReportReference(sourceId) {
   };
 }
 
-function reviewReportReference(payload) {
+function reviewReportReference(payload: ReturnType<typeof processWithReviewReportReference>) {
   return payload.processDataSet.modellingAndValidation.validation.review[
     "common:referenceToCompleteReviewReport"
   ];
@@ -121,7 +142,7 @@ test("review-report format source is rewritten to canonical when sourceLookup is
 
   const payload = processWithReviewReportReference(FORMAT_SOURCE_ID);
   const stats = { source_reference_rewrites: 0 };
-  const rewriteRows = [];
+  const rewriteRows: JsonRecord[] = [];
   utils.rewriteCanonicalSourceReferences(payload, {
     datasetType: "process",
     sourceFile: "processes.jsonl",
@@ -149,7 +170,7 @@ test("review-report format source is left unchanged when no sourceLookup is supp
   const payload = processWithReviewReportReference(FORMAT_SOURCE_ID);
   const before = JSON.stringify(payload);
   const stats = { source_reference_rewrites: 0 };
-  const rewriteRows = [];
+  const rewriteRows: JsonRecord[] = [];
   utils.rewriteCanonicalSourceReferences(payload, {
     datasetType: "process",
     sourceFile: "processes.jsonl",
@@ -168,7 +189,7 @@ test("review-report format source is left unchanged when no sourceLookup is supp
 // citation is still recognized as format_support_source BY UUID — so it is reused
 // (referenced at the canonical version) instead of minted at the package version (which
 // would trip the source-identity prewrite gate and version_outdated the canonical).
-function canonicalFormatSourceWithPublicationClassification(uuid = CANONICAL_FORMAT_ID) {
+function canonicalFormatSourceWithPublicationClassification(uuid: string = CANONICAL_FORMAT_ID) {
   return {
     sourceDataSet: {
       sourceInformation: {
@@ -246,7 +267,7 @@ test("canonical format source on a referenceToDataSource slot is rewritten to ca
     },
   };
   const stats = { source_reference_rewrites: 0 };
-  const rewriteRows = [];
+  const rewriteRows: JsonRecord[] = [];
   utils.rewriteCanonicalSourceReferences(payload, {
     datasetType: "process",
     sourceFile: "processes.jsonl",
@@ -277,7 +298,7 @@ test("review-report true source is never rewritten by the kind-based canonical m
   const payload = processWithReviewReportReference(TRUE_SOURCE_ID);
   const before = JSON.stringify(payload);
   const stats = { source_reference_rewrites: 0 };
-  const rewriteRows = [];
+  const rewriteRows: JsonRecord[] = [];
   utils.rewriteCanonicalSourceReferences(payload, {
     datasetType: "process",
     sourceFile: "processes.jsonl",

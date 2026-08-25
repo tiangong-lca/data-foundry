@@ -10,7 +10,17 @@ import {
   normalizeBafuFamilyName,
 } from "../../scripts/lib/bafu-family-signatures.ts";
 
-function processRow({ id, name, location, inputAmount }) {
+function processRow({
+  id,
+  name,
+  location,
+  inputAmount,
+}: {
+  id: string;
+  name: string;
+  location: string;
+  inputAmount: number;
+}) {
   return {
     processDataSet: {
       processInformation: {
@@ -63,7 +73,7 @@ function processRow({ id, name, location, inputAmount }) {
   };
 }
 
-function writeBundleProcess(bundlesDir, row) {
+function writeBundleProcess(bundlesDir: string, row: ReturnType<typeof processRow>): void {
   const id = row.processDataSet.processInformation.dataSetInformation["common:UUID"];
   const filePath = path.join(bundlesDir, id, "tidas", "processes", `${id}.json`);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -149,7 +159,7 @@ test("BAFU family signatures classify same amount vectors, same skeleton variant
       [0, 1, 2, 3, 4],
     );
     assert.equal(
-      compactBafuFamilySignature(byId.get(ids[1])).source_file.endsWith(`${ids[1]}.json`),
+      compactBafuFamilySignature(byId.get(ids[1]))?.source_file.endsWith(`${ids[1]}.json`),
       true,
     );
   } finally {

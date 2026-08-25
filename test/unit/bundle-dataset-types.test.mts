@@ -190,7 +190,7 @@ test("four low-level leaves are native TypeScript with representative static con
     ["scripts/lib/tidas-row-utils.ts", "./tidas-language-utils.ts"],
     ["scripts/lib/import-curation/internal/full-context-proof.ts", "./hash-utils.ts"],
     ["scripts/lib/import-curation/internal/profiles-config.ts", "./dataset-types.ts"],
-    ["test/unit/tidas-language-utils.test.mjs", "../../scripts/lib/tidas-language-utils.ts"],
+    ["test/unit/tidas-language-utils.test.mts", "../../scripts/lib/tidas-language-utils.ts"],
     [
       "test/scenarios/mutation-lineage-helpers.test.mjs",
       "../../scripts/lib/import-curation/internal/hash-utils.ts",

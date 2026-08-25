@@ -3,23 +3,26 @@ import { createSourceSemanticUtils } from "../../scripts/lib/source-semantics.ts
 import { assert } from "../fixtures/foundry-core.ts";
 
 function utils() {
-  const asText = (value) => {
+  const asText = (value: unknown): string => {
     if (value == null) return "";
     if (typeof value === "string" || typeof value === "number") return String(value).trim();
     if (Array.isArray(value)) return value.map(asText).filter(Boolean).join("; ");
-    if (typeof value === "object") return asText(value["#text"] ?? value.value ?? value.id);
+    if (typeof value === "object") {
+      const record = value as Record<string, unknown>;
+      return asText(record["#text"] ?? record.value ?? record.id);
+    }
     return "";
   };
   return createSourceSemanticUtils({
     asText,
-    bundleClassificationPath: () => null,
-    cloneJson: (value) => JSON.parse(JSON.stringify(value)),
-    datasetIdentity: () => null,
-    deterministicUuid: (seed) => `uuid:${seed}`,
+    bundleClassificationPath: () => null as unknown as string,
+    cloneJson: <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T,
+    datasetIdentity: () => null as unknown as { id: string | null; version: string | null },
+    deterministicUuid: (seed: string) => `uuid:${seed}`,
     languageForText: () => "en",
-    multiLang: (text, lang = "en") => ({ "@xml:lang": lang, "#text": text }),
-    pathExpression: (parts) => parts.join("."),
-    repoRelativeMaybe: (value) => value,
+    multiLang: (text: unknown, lang = "en") => ({ "@xml:lang": lang, "#text": text }),
+    pathExpression: (parts: unknown[]) => parts.join("."),
+    repoRelativeMaybe: (value: unknown) => value,
     textValue: asText,
   });
 }

@@ -108,7 +108,7 @@ checkPaths:
   - test/unit/surface-audit-typescript.test.mts
   - test/unit/bundle-dataset-types.test.mts
   - test/unit/hash-utils.test.mts
-  - test/unit/tidas-language-utils.test.mjs
+  - test/unit/tidas-language-utils.test.mts
   - test/unit/runtime-io.test.mts
   - test/unit/artifact-inputs.test.mts
   - test/unit/context-inputs.test.mts
