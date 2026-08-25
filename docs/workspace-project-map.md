@@ -63,8 +63,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 51879d8e619c9f93cab0b83c6f89593f74f4a534
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 unit-test completion: native TS7 unit suites remain Foundry-local verification infrastructure; cross-repository ownership, CLI routing, readback, profiles, search, Worldsteel/Date.parse behavior, and execution boundaries are unchanged."
+lastReviewedCommit: 2173145388df1daab563cf501a1cd44658e4bc3e
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 scenario completion: native TS7 multi-command suites remain Foundry-local verification infrastructure; cross-repository ownership, CLI routing, readback, profiles, search, Worldsteel/Date.parse behavior, and execution boundaries are unchanged."
 ---
 
 # Workspace Project Map

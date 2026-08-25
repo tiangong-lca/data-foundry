@@ -65,8 +65,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 51879d8e619c9f93cab0b83c6f89593f74f4a534
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 unit-test completion: migrating all unit suites and adding test-local narrowing changes no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse semantics, or sibling boundary."
+lastReviewedCommit: 2173145388df1daab563cf501a1cd44658e4bc3e
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 scenario completion: migrating all multi-command suites and typing captured fixture reports changes no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse semantics, or sibling boundary."
 ---
 
 # Capability Ownership Policy
