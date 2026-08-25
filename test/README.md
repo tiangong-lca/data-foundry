@@ -168,8 +168,8 @@ checkPaths:
   - test/unit/wave25-mutation-manifest-migration.test.mts
   - test/unit/wave25-identity-decision-command-migration.test.mts
   - test/unit/wave25-classification-location-command-migration.test.mts
-  - test/commands/classification-decisions.test.mjs
-  - test/commands/location-decisions.test.mjs
+  - test/commands/classification-decisions.test.mts
+  - test/commands/location-decisions.test.mts
   - test/scenarios/flow-identity-decisions.test.mjs
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md

@@ -412,7 +412,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "complex workflow commands publish AI-readable stage contracts",
       ),
       nodeTest(
-        "test/commands/authoring-plan.test.mjs",
+        "test/commands/authoring-plan.test.mts",
         "dataset-authoring-plan aggregates missing AI task builds from curation gate",
       ),
     ],
@@ -431,7 +431,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     keyTests: [
       goldenDiff,
       nodeTest(
-        "test/commands/authoring-task-context.test.mjs",
+        "test/commands/authoring-task-context.test.mts",
         "authoring task build blocks AI patch authoring when full context is incomplete",
       ),
       importCurationEntryContract,
@@ -445,7 +445,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["authoring-patch-collect-report.json", "ai-patches.batch.json"],
     keyTests: [
       nodeTest(
-        "test/commands/authoring-task-context.test.mjs",
+        "test/commands/authoring-task-context.test.mts",
         "authoring patch collect blocks stale manifests that lack full-context task proof",
       ),
       importCurationEntryContract,
@@ -480,7 +480,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/classification-decisions.test.mjs",
+        "test/commands/classification-decisions.test.mts",
         "classification decision task and apply route AI choices through CLI classification apply",
       ),
     ],
@@ -502,7 +502,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/classification-decisions.test.mjs",
+        "test/commands/classification-decisions.test.mts",
         "library classification decisions project into task-bound apply decisions",
       ),
     ],
@@ -595,7 +595,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["classification-decisions-apply-report.json", "classified rows or queue outputs"],
     keyTests: [
       nodeTest(
-        "test/commands/classification-decisions.test.mjs",
+        "test/commands/classification-decisions.test.mts",
         "classification decision task and apply route AI choices through CLI classification apply",
       ),
     ],
@@ -612,7 +612,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/location-decisions.test.mjs",
+        "test/commands/location-decisions.test.mts",
         "location decision task and apply route AI location choices through CLI location apply",
       ),
     ],
@@ -633,7 +633,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/location-decisions.test.mjs",
+        "test/commands/location-decisions.test.mts",
         "location decisions suggest creates task-bound decisions for unique valid candidates",
       ),
     ],
@@ -646,7 +646,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["location-decisions-apply-report.json", "location-coded rows or queue outputs"],
     keyTests: [
       nodeTest(
-        "test/commands/location-decisions.test.mjs",
+        "test/commands/location-decisions.test.mts",
         "location decision task and apply route AI location choices through CLI location apply",
       ),
     ],
@@ -677,7 +677,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "identity decision apply closes flow identity curation and counts as full-context evidence",
       ),
       nodeTest(
-        "test/commands/authoring-task-context.test.mjs",
+        "test/commands/authoring-task-context.test.mts",
         "authoring patch collect blocks AI patches without completed status",
       ),
     ],
@@ -1092,7 +1092,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/authoring-plan.test.mjs",
+        "test/commands/authoring-plan.test.mts",
         "dataset-identity-decisions-apply filters mixed decisions by requested type",
       ),
       nodeTest(
