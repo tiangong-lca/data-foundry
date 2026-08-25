@@ -8,7 +8,7 @@
 
 - `scripts/lib/canonical-support-mappings.ts` — mapping schema 增加 `canonical_reference_unit` + `source_unit_scales`，回填全部既有映射的换算因子（取自 canonical UnitGroup 的 mean_value），并加入 3 条 pending mapping。
 - `specs/canonical-support/flow-properties-unit-groups.json` — 同步上述（rewrite 实际读取此缓存，不读 .mjs）。
-- `scripts/lib/canonical-support-rewrites.mjs` — rewrite 变 scale-aware：在 rewrite 行与报告中记录 `amount_scale_to_canonical_reference`；当 scale≠1 写入 `canonical-support-amount-scaling.jsonl` 与 `amount_scaling_requirements`；`--block-on-unscaled-canonical-support` 时升级为硬 blocker；pending mapping 产出 `canonical_support_pending_upstream` blocker。
+- `scripts/lib/canonical-support-rewrites.ts` — rewrite 变 scale-aware：在 rewrite 行与报告中记录 `amount_scale_to_canonical_reference`；当 scale≠1 写入 `canonical-support-amount-scaling.jsonl` 与 `amount_scaling_requirements`；`--block-on-unscaled-canonical-support` 时升级为硬 blocker；pending mapping 产出 `canonical_support_pending_upstream` blocker。
 - `test/commands/canonical-support-rewrites.test.mjs` — 覆盖 scale 记录 / 阻断 flag / factor=1 不触发 / pending blocker。
 
 ---
@@ -70,7 +70,7 @@ profile 文档**明确要求**单位换算，且把漏掉换算定性为严重�
 - `hiq-issue-02:110`：「the amount **must be scaled by 1000** ... **not silent generic adapter magic**. Impact: Missing the scale factor causes a **three-order-of-magnitude error**.」
 - `hiq-governance:51`：freight 换算「Apply explicit scaling decision in canonical support mapping, **not silently**.」
 
-但实现里 mapping schema 此前**无 scale 字段**，`canonical-support-rewrites.mjs` 只换 `referenceToFlowPropertyDataSet` 指针、**从不换算数值**（全代码库无任何 exchange amount 换算逻辑）。`kWh→Net calorific value` 的 **FP 名复用**是已接受的 legacy；但**数值不换算**正是文档点名禁止的「silent magic」。
+但实现里 mapping schema 此前**无 scale 字段**，`canonical-support-rewrites.ts` 只换 `referenceToFlowPropertyDataSet` 指针、**从不换算数值**（全代码库无任何 exchange amount 换算逻辑）。`kWh→Net calorific value` 的 **FP 名复用**是已接受的 legacy；但**数值不换算**正是文档点名禁止的「silent magic」。
 
 ### 端到端实证（canonical 已验证数据）
 

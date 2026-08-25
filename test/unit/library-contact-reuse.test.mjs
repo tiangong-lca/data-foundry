@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createBundleSampleUtils } from "../../scripts/lib/bundle-sample-utils.mjs";
+import { createBundleSampleUtils } from "../../scripts/lib/bundle-sample-utils.ts";
 
 // Minimal stubs for the eight dependencies buildLibraryContactPayload touches.
 function utils() {

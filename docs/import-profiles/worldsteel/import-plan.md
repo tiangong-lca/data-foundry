@@ -184,7 +184,7 @@ Input: `inputs/CUP2025-2_2022b_v10_worldsteel_products_Tiangong_v1 EF3.1 2026_01
 4. ✅ **`scripts/lib/source-semantics.ts`** (R2): `worldsteel` `databaseFallbackSourceConfig` branch (test added: "worldsteel database fallback source cites worldsteel, never BAFU").
 5. ✅ **`scripts/commands/post-authoring-finalize.mjs`**: widened the `source_contact_rewrites` gate to include `'worldsteel'`.
 6. ✅ **`specs/import-profiles.json`** + **`docs/import-profiles/worldsteel/{profile.md,constraints.md}`**: `worldsteel` profile (capped ≤17 mint, full-context on) + docs. Test added (profile registration).
-7. ✅ **`scripts/commands/worldsteel-batch-import-run.mjs`** + **`bundle-sample-utils.mjs`** (R1): runner wrapper (`mintUnmatchedFpUgSupport:false`, `applyResolutionRewrites:true`, `libraryContact` reusing contact `d5710976` via new `--library-contact-id`/`--library-contact-version` finalize flags); registered in `foundry.mjs`, `foundry-cli.mjs`, `foundry-command-registry.ts`, `foundry-command-metadata.ts`. Test added (contact reuse).
+7. ✅ **`scripts/commands/worldsteel-batch-import-run.mjs`** + **`bundle-sample-utils.ts`** (R1): runner wrapper (`mintUnmatchedFpUgSupport:false`, `applyResolutionRewrites:true`, `libraryContact` reusing contact `d5710976` via new `--library-contact-id`/`--library-contact-version` finalize flags); registered in `foundry.mjs`, `foundry-cli.mjs`, `foundry-command-registry.ts`, `foundry-command-metadata.ts`. Test added (contact reuse).
 8. ⏳ **Mega-scope speed-up (§8)**: unbound synthetic preseed reports are disabled. A replacement must bind request bytes, library-resolution bytes, canonical target, producer provenance, and report bytes before `onlyPending` may skip live identity-preflight.
 9. ⏳ **context-pack**: generate `tiangong-lca dataset context-pack --type process|flow --profile ai-import` outputs (schema.json/methodology.yaml/runtime-ruleset.json + `tidas_*_category.json`) for the classification round.
 
@@ -245,7 +245,7 @@ node scripts/foundry.mjs dataset-library-index-build   # → $RUN/library-index-
   - **17 GaBi/Sphera pseudo-elementary + any UUID miss → semantic + AI matching only.** Run identity-preflight + the **AI-first physical-equivalence round** (mirror `$RUN/ai-elementary-match-v1/`: slim ~14-candidate tasks, explicit per-batch id files, adversarial verify) for just this small tail. Residual with no canonical match → **blocked / externalized to a `common:other` trace** under reference-only governance (do not mint), unless the user authorizes a narrowly-scoped elementary mint for the ≤17 (see Open Questions).
 - **3c. Classification** (the one hard AI round): `context-pack --profile ai-import` → `dataset-bundle-sample-rows --profile worldsteel` → `dataset-classification-decision-task-build` → AI authors process→ISIC4 leaf, product-flow→CPC level-4 leaf → `dataset-library-classification-decisions-project` → `dataset-classification-decisions-apply`. **Keep the queue file byte-identical at build/project/apply** (sha binding → `classification_decision_task_queue_mismatch`). Note: worldsteel processes ship no CPC; classification is authored fresh.
 - **3d. Location** — `dataset-location-decision-task-build/-suggest/-apply` (GLO/Europe/EU; preserve, don't collapse).
-- **3e. Canonical-support** — `dataset-support-cache-refresh --out specs/canonical-support/flow-properties-unit-groups.json` (state_code=100 only) first; then reuse FP/UG by exact UUID via `canonical-support-rewrites.mjs`. **Never** write account-local FP/UG UUIDs into the shared cache. Watch `canonical_flow_property_unit_group_unproven` (EF3.1 FP family `93a60a56-a3c8-*` vs its reference UG family `93a60a57-a4c8-*`) and keep `canonical_support_amount_scaling_required` active (do not relax — no silent amount conversion).
+- **3e. Canonical-support** — `dataset-support-cache-refresh --out specs/canonical-support/flow-properties-unit-groups.json` (state_code=100 only) first; then reuse FP/UG by exact UUID via `canonical-support-rewrites.ts`. **Never** write account-local FP/UG UUIDs into the shared cache. Watch `canonical_flow_property_unit_group_unproven` (EF3.1 FP family `93a60a56-a3c8-*` vs its reference UG family `93a60a57-a4c8-*`) and keep `canonical_support_amount_scaling_required` active (do not relax — no silent amount conversion).
 
 ### Phase 3-apply — resolution
 
@@ -320,7 +320,7 @@ The vast majority of those exchanges point at EF3.1 reference flows that will re
 - **EPLCA-logo case/slash collision + pef_method.pdf shared ×7** — dedupe binary, normalize URIs, keep all source refs.
 - **Classification queue sha binding** — same queue file at build/project/apply.
 - **Over-mint carry-forward** — archive stale `decisions-*` out of `$RUN`; reuse-only governance makes this largely moot (unmatched block, not mint) but keep the discipline for process-level decisions.
-- **No silent amount scaling** — `canonical-support-rewrites.mjs` repoints FP refs but never converts amounts; keep the scale-mismatch blocker active.
+- **No silent amount scaling** — `canonical-support-rewrites.ts` repoints FP refs but never converts amounts; keep the scale-mismatch blocker active.
 - **Delete-reimport is a dead-end** — ledgers are append-only/deduped; reruns skip verified scopes. Fix code, don't delete to re-import.
 
 ---

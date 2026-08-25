@@ -2,6 +2,94 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+type JsonRecord = Record<string, any>;
+
+type DatasetIdentity = {
+  id: string | null;
+  version: string | null;
+};
+
+type MutableStats = Record<string, number>;
+
+type SourceReferenceSnapshot = {
+  ref_object_id: string | null;
+  version: string | null;
+  short_description: string | null;
+};
+
+type BundleSampleDependencies = {
+  asText: (value: unknown) => string;
+  bundleClassificationPath: (payload: JsonRecord, type: string) => unknown;
+  canonicalSourceReferenceForRelation: (relation: string) => JsonRecord | null;
+  cloneJson: <T>(value: T) => T;
+  contactGlobalReference: (options: JsonRecord) => JsonRecord;
+  datasetIdentity: (payload: JsonRecord | null, type: string) => DatasetIdentity;
+  deterministicUuid: (seed: string) => string;
+  directoryExists: (directory: string) => boolean;
+  ensureArray: (value: unknown) => unknown[];
+  fileExists: (filePath: string) => boolean;
+  flowClassificationSchemaType: (payload: JsonRecord) => string;
+  flowTypeOfDataSet: (payload: JsonRecord) => string;
+  isConvertedDefaultClassification: (classification: unknown) => boolean;
+  isObjectEmpty: (value: unknown) => boolean;
+  jsonSha256: (value: unknown) => string;
+  languageForText: (value: unknown) => string;
+  multiLang: (text: string, language?: string) => JsonRecord;
+  normalizedList: (value: unknown) => string[];
+  nowIso: () => string;
+  pathExpression: (parts: Array<string | number>) => string;
+  readJson: (filePath: string) => JsonRecord;
+  repoRelativeMaybe: (filePath: string | null) => string | null;
+  repoRelativePath: (filePath: string) => string;
+  resolveRepoPath: (filePath: unknown) => string | null;
+  sanitizePlaceholderText: (
+    text: string,
+    pathSegments: Array<string | number>,
+    stats: MutableStats,
+  ) => string;
+  sourceReferenceSnapshot: (reference: JsonRecord) => SourceReferenceSnapshot;
+  textValue: (value: unknown) => string;
+};
+
+type QualityFindingOptions = {
+  payload: JsonRecord;
+  type: string;
+  sourceFile: string;
+  sourceTraces: JsonRecord[];
+  blockers: JsonRecord[];
+  stats: MutableStats;
+  classificationQueueRows: JsonRecord[];
+  classificationCommandsByType: Record<string, unknown>;
+};
+
+type ElementaryReuseOptions = {
+  payload: JsonRecord;
+  type: string;
+  sourceFile: string;
+  sourceTraces: JsonRecord[];
+  blockers: JsonRecord[];
+  stats: MutableStats;
+  elementaryFlowReuseRows: JsonRecord[];
+  allowAccountLocalSupportAndElementary?: boolean;
+};
+
+type SanitizeContext = {
+  type: string;
+  identity: DatasetIdentity;
+  sourceFile: string;
+};
+
+type RewriteContext = {
+  rewriteRows?: JsonRecord[];
+  stats?: MutableStats;
+};
+
+type BundleSelection = {
+  seed: string | null;
+  selected: string[];
+  missing_process_ids: string[];
+};
+
 export function createBundleSampleUtils({
   asText,
   bundleClassificationPath,
@@ -11,27 +99,27 @@ export function createBundleSampleUtils({
   datasetIdentity,
   deterministicUuid,
   directoryExists,
-  ensureArray,
+  ensureArray: _ensureArray,
   fileExists,
   flowClassificationSchemaType,
   flowTypeOfDataSet,
   isConvertedDefaultClassification,
   isObjectEmpty,
   jsonSha256,
-  languageForText,
+  languageForText: _languageForText,
   multiLang,
   normalizedList,
   nowIso,
   pathExpression,
   readJson,
   repoRelativeMaybe,
-  repoRelativePath,
+  repoRelativePath: _repoRelativePath,
   resolveRepoPath,
   sanitizePlaceholderText,
   sourceReferenceSnapshot,
-  textValue,
-}) {
-  function isLikelyLocationCodeText(value) {
+  textValue: _textValue,
+}: BundleSampleDependencies) {
+  function isLikelyLocationCodeText(value: unknown): boolean {
     const text = asText(value).trim();
     if (!text || /\s/u.test(text) || text.length > 24) return false;
     return /^[A-Za-z]{2,5}(?:-[A-Za-z0-9]{1,8})*$/u.test(text);
@@ -46,7 +134,7 @@ export function createBundleSampleUtils({
     stats,
     classificationQueueRows,
     classificationCommandsByType,
-  }) {
+  }: QualityFindingOptions): void {
     if (type !== "process" && type !== "flow") return;
     if (type === "flow" && flowClassificationSchemaType(payload) !== "flow-product") return;
     const identity = datasetIdentity(payload, type);
@@ -99,7 +187,7 @@ export function createBundleSampleUtils({
     });
   }
 
-  function flowNameParts(payload) {
+  function flowNameParts(payload: JsonRecord | null) {
     const name = payload?.flowDataSet?.flowInformation?.dataSetInformation?.name ?? {};
     return {
       base_name: asText(name.baseName?.["#text"] ?? name.baseName),
@@ -124,7 +212,7 @@ export function createBundleSampleUtils({
     stats,
     elementaryFlowReuseRows,
     allowAccountLocalSupportAndElementary = false,
-  }) {
+  }: ElementaryReuseOptions): void {
     if (type !== "flow") return;
     // Override: BAFU profile may mint account-local (My Data, state_code=0) elementary
     // flows; do not require reuse-from-existing or block the bundle.
@@ -162,7 +250,11 @@ export function createBundleSampleUtils({
     });
   }
 
-  function normalizeTimestampText(text, pathSegments, stats) {
+  function normalizeTimestampText(
+    text: unknown,
+    pathSegments: Array<string | number>,
+    stats: MutableStats,
+  ): unknown {
     if (pathSegments.at(-1) !== "common:timeStamp") return text;
     const value = String(text ?? "").trim();
     if (!value) return text;
@@ -178,35 +270,37 @@ export function createBundleSampleUtils({
     return normalized;
   }
 
-  function collectSourceTracePayloads(value, traces = []) {
+  function collectSourceTracePayloads(value: unknown, traces: JsonRecord[] = []): JsonRecord[] {
     if (!value || typeof value !== "object") return traces;
     if (Array.isArray(value)) {
       for (const item of value) collectSourceTracePayloads(item, traces);
       return traces;
     }
-    const sourceTrace = value["tidasimport:sourceTrace"];
+    const record = value as JsonRecord;
+    const sourceTrace = record["tidasimport:sourceTrace"];
     if (sourceTrace && typeof sourceTrace === "object") {
-      traces.push(sourceTrace.payload ?? sourceTrace);
+      traces.push((sourceTrace.payload ?? sourceTrace) as JsonRecord);
     }
-    for (const child of Object.values(value)) collectSourceTracePayloads(child, traces);
+    for (const child of Object.values(record)) collectSourceTracePayloads(child, traces);
     return traces;
   }
 
-  function walkSourceTraceNode(node, visitor) {
+  function walkSourceTraceNode(node: unknown, visitor: (node: JsonRecord) => void): void {
     if (!node || typeof node !== "object") return;
     if (Array.isArray(node)) {
       for (const item of node) walkSourceTraceNode(item, visitor);
       return;
     }
-    visitor(node);
-    for (const child of Object.values(node)) {
+    const record = node as JsonRecord;
+    visitor(record);
+    for (const child of Object.values(record)) {
       walkSourceTraceNode(child, visitor);
     }
   }
 
-  function sourceTraceAttribute(sourceTraces, attributeName) {
+  function sourceTraceAttribute(sourceTraces: JsonRecord[], attributeName: string): string | null {
     for (const trace of sourceTraces) {
-      let found = null;
+      let found: string | null = null;
       walkSourceTraceNode(trace, (node) => {
         if (found) return;
         const attributes = Array.isArray(node.attributes) ? node.attributes : [];
@@ -220,14 +314,14 @@ export function createBundleSampleUtils({
     return null;
   }
 
-  function sourceTraceLocationCode(sourceTraces) {
+  function sourceTraceLocationCode(sourceTraces: JsonRecord[]): string | null {
     const location = sourceTraceAttribute(sourceTraces, "location");
     return isLikelyLocationCodeText(location) ? location : null;
   }
 
-  function sourceTraceChildText(sourceTraces, childName) {
+  function sourceTraceChildText(sourceTraces: JsonRecord[], childName: string): string | null {
     for (const trace of sourceTraces) {
-      let found = null;
+      let found: string | null = null;
       walkSourceTraceNode(trace, (node) => {
         if (found || node?.name !== childName) return;
         if (node.text !== undefined && node.text !== null) {
@@ -239,7 +333,7 @@ export function createBundleSampleUtils({
     return null;
   }
 
-  function processSourceClassificationSummary(sourceTraces) {
+  function processSourceClassificationSummary(sourceTraces: JsonRecord[]) {
     for (const trace of sourceTraces) {
       const sourceClassification = trace?.sourceClassification;
       if (sourceClassification && typeof sourceClassification === "object") {
@@ -259,7 +353,7 @@ export function createBundleSampleUtils({
     };
   }
 
-  function processAuthoringContextFromTrace(sourceTraces) {
+  function processAuthoringContextFromTrace(sourceTraces: JsonRecord[]) {
     return {
       source_name: sourceTraceAttribute(sourceTraces, "name"),
       source_local_name: sourceTraceAttribute(sourceTraces, "localName"),
@@ -271,9 +365,10 @@ export function createBundleSampleUtils({
     };
   }
 
-  function textItem(value) {
+  function textItem(value: unknown): JsonRecord | null {
     if (value && typeof value === "object" && !Array.isArray(value)) {
-      return typeof value["#text"] === "string" ? value : null;
+      const record = value as JsonRecord;
+      return typeof record["#text"] === "string" ? record : null;
     }
     if (Array.isArray(value)) {
       return (
@@ -285,7 +380,7 @@ export function createBundleSampleUtils({
     return null;
   }
 
-  function productionVolumeToAnnualText(value) {
+  function productionVolumeToAnnualText(value: unknown): string | null {
     const text = asText(value);
     if (!text) return null;
     let match = text.match(
@@ -302,7 +397,7 @@ export function createBundleSampleUtils({
     return `${amount} ${unit}/year`;
   }
 
-  function sourceTraceYear(sourceTraces) {
+  function sourceTraceYear(sourceTraces: JsonRecord[]): number | null {
     for (const candidate of [
       sourceTraceChildText(sourceTraces, "endYear"),
       sourceTraceChildText(sourceTraces, "startYear"),
@@ -315,7 +410,11 @@ export function createBundleSampleUtils({
     return null;
   }
 
-  function repairProcessFieldsFromSourceTrace(payload, sourceTraces, stats) {
+  function repairProcessFieldsFromSourceTrace(
+    payload: JsonRecord,
+    sourceTraces: JsonRecord[],
+    stats: MutableStats,
+  ): void {
     const root = payload?.processDataSet;
     if (!root || typeof root !== "object") return;
     const processInformation =
@@ -328,7 +427,7 @@ export function createBundleSampleUtils({
         : null;
     if (time && time["common:referenceYear"] === 9999) {
       const year = sourceTraceYear(sourceTraces);
-      if (Number.isInteger(year) && year > 0 && year < 9999) {
+      if (year !== null && Number.isInteger(year) && year > 0 && year < 9999) {
         time["common:referenceYear"] = year;
         stats.reference_year_repairs += 1;
       }
@@ -365,7 +464,13 @@ export function createBundleSampleUtils({
     }
   }
 
-  function sanitizeImportContent(value, stats, traceRows, context, pathSegments = []) {
+  function sanitizeImportContent(
+    value: unknown,
+    stats: MutableStats,
+    traceRows: JsonRecord[],
+    context: SanitizeContext,
+    pathSegments: Array<string | number> = [],
+  ): boolean {
     if (!value || typeof value !== "object") return false;
     if (Array.isArray(value)) {
       for (let index = value.length - 1; index >= 0; index -= 1) {
@@ -385,27 +490,28 @@ export function createBundleSampleUtils({
       return false;
     }
 
-    if (value["tidasimport:sourceTrace"]) {
+    const record = value as JsonRecord;
+    if (record["tidasimport:sourceTrace"]) {
       traceRows.push({
         dataset_type: context.type,
         dataset_id: context.identity.id,
         dataset_version: context.identity.version,
         source_file: repoRelativeMaybe(context.sourceFile),
         path: pathExpression([...pathSegments, "tidasimport:sourceTrace"]),
-        trace: cloneJson(value["tidasimport:sourceTrace"]),
+        trace: cloneJson(record["tidasimport:sourceTrace"]),
       });
-      delete value["tidasimport:sourceTrace"];
+      delete record["tidasimport:sourceTrace"];
       stats.removed_import_traces += 1;
     }
-    if (value["@xmlns:tidasimport"]) {
-      delete value["@xmlns:tidasimport"];
+    if (record["@xmlns:tidasimport"]) {
+      delete record["@xmlns:tidasimport"];
       stats.removed_import_trace_namespaces += 1;
     }
 
-    for (const [key, child] of Object.entries(value)) {
+    for (const [key, child] of Object.entries(record)) {
       const childPath = [...pathSegments, key];
       if (typeof child === "string") {
-        value[key] = normalizeTimestampText(
+        record[key] = normalizeTimestampText(
           sanitizePlaceholderText(child, childPath, stats),
           childPath,
           stats,
@@ -416,17 +522,24 @@ export function createBundleSampleUtils({
         continue;
       }
       if (sanitizeImportContent(child, stats, traceRows, context, childPath)) {
-        delete value[key];
+        delete record[key];
       }
     }
 
-    return pathSegments.at(-1) === "common:other" && isObjectEmpty(value);
+    return pathSegments.at(-1) === "common:other" && isObjectEmpty(record);
   }
 
-  function sanitizeBundlePayload(payload, type, sourceFile, stats, traceRows, sourceTraces = null) {
+  function sanitizeBundlePayload(
+    payload: JsonRecord | null,
+    type: string,
+    sourceFile: string,
+    stats: MutableStats,
+    traceRows: JsonRecord[],
+    sourceTraces: JsonRecord[] | null = null,
+  ): JsonRecord | null {
     sourceTraces ??= collectSourceTracePayloads(payload);
     if (type === "process") {
-      repairProcessFieldsFromSourceTrace(payload, sourceTraces, stats);
+      repairProcessFieldsFromSourceTrace(payload!, sourceTraces, stats);
     }
     const identity = datasetIdentity(payload, type);
     sanitizeImportContent(payload, stats, traceRows, {
@@ -437,7 +550,7 @@ export function createBundleSampleUtils({
     return payload;
   }
 
-  function findFirstBundleContactTemplate(bundleDirs) {
+  function findFirstBundleContactTemplate(bundleDirs: string[]): JsonRecord | null {
     for (const bundleDir of bundleDirs) {
       const contactsDir = path.join(bundleDir, "tidas", "contacts");
       if (!directoryExists(contactsDir)) continue;
@@ -450,7 +563,11 @@ export function createBundleSampleUtils({
     return null;
   }
 
-  function buildLibraryContactPayload(options, templateContact = null, rewriteContext = {}) {
+  function buildLibraryContactPayload(
+    options: JsonRecord,
+    templateContact: JsonRecord | null = null,
+    rewriteContext: RewriteContext = {},
+  ) {
     const language = asText(options.language || options.lang || "en") || "en";
     const profile = asText(options.profile || "bafu");
     // The FOEN/BAFU contact strings are fallbacks ONLY for the BAFU profile. Other import
@@ -458,7 +575,7 @@ export function createBundleSampleUtils({
     // caller passes libraryName/shortName/website/email/telephone/contactAddress/... from
     // the package metadata + research, so no BAFU contact detail (email, phone, address,
     // organisation category) can leak into a different organisation's minted contact.
-    const bafuDefault = (value) => (profile === "bafu" ? value : "");
+    const bafuDefault = (value: string): string => (profile === "bafu" ? value : "");
     const libraryName = asText(
       options.libraryName ||
         options.name ||
@@ -649,7 +766,7 @@ export function createBundleSampleUtils({
     };
   }
 
-  function listProcessBundleDirs(bundlesDir) {
+  function listProcessBundleDirs(bundlesDir: unknown): string[] {
     const root = resolveRepoPath(bundlesDir);
     if (!root || !directoryExists(root)) {
       throw new Error("--bundles-dir is required and must point to a process-bundles directory.");
@@ -665,11 +782,13 @@ export function createBundleSampleUtils({
       .sort();
   }
 
-  function selectProcessBundleDirs(allBundleDirs, options) {
+  function selectProcessBundleDirs(allBundleDirs: string[], options: JsonRecord): BundleSelection {
     const requestedProcessIds = normalizedList(options.processId || options.processIds);
     if (requestedProcessIds.length > 0) {
       const byName = new Map(allBundleDirs.map((dir) => [path.basename(dir), dir]));
-      const selected = requestedProcessIds.map((id) => byName.get(id)).filter(Boolean);
+      const selected = requestedProcessIds
+        .map((id) => byName.get(id))
+        .filter((directory): directory is string => Boolean(directory));
       return {
         seed: null,
         selected,
@@ -701,7 +820,21 @@ export function createBundleSampleUtils({
     return { seed, selected, missing_process_ids: [] };
   }
 
-  function addDedupedBundleRow({ rowsByType, sourceByType, blockers, type, payload, sourceFile }) {
+  function addDedupedBundleRow({
+    rowsByType,
+    sourceByType,
+    blockers,
+    type,
+    payload,
+    sourceFile,
+  }: {
+    rowsByType: Record<string, Map<string, JsonRecord>>;
+    sourceByType: Record<string, Map<string, string>>;
+    blockers: JsonRecord[];
+    type: string;
+    payload: JsonRecord;
+    sourceFile: string;
+  }): boolean {
     const identity = datasetIdentity(payload, type);
     const key = `${identity.id || path.basename(sourceFile)}::${identity.version || ""}`;
     if (!identity.id || !identity.version) {
@@ -724,7 +857,7 @@ export function createBundleSampleUtils({
       blockers.push({
         code: "bundle_row_duplicate_payload_conflict",
         message: `${type} ${identity.id}@${identity.version} appears with different payloads in sampled bundles.`,
-        kept_source_file: repoRelativeMaybe(sourceByType[type].get(key)),
+        kept_source_file: repoRelativeMaybe(sourceByType[type].get(key) ?? null),
         conflicting_source_file: repoRelativeMaybe(sourceFile),
       });
     }

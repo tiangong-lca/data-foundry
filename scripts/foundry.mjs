@@ -28,7 +28,7 @@ import { createTopologyConvergenceCommands } from "./commands/topology-convergen
 import { createUslciBatchImportRunCommands } from "./commands/uslci-batch-import-run.mjs";
 import { createWorldsteelBatchImportRunCommands } from "./commands/worldsteel-batch-import-run.mjs";
 import { bundleRowTypes } from "./lib/bundle-row-types.ts";
-import { createBundleSampleUtils } from "./lib/bundle-sample-utils.mjs";
+import { createBundleSampleUtils } from "./lib/bundle-sample-utils.ts";
 import { createCanonicalSupportRewriteUtils } from "./lib/canonical-support-rewrites.ts";
 import { createDecisionTaskUtils } from "./lib/decision-task-utils.ts";
 import { parseArgs, parseScalar } from "./lib/foundry-args.ts";
