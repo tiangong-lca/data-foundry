@@ -694,7 +694,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-bundle-sample-rows": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/bundle-sample-rows.mjs",
+    ownerModule: "scripts/commands/bundle-sample-rows.ts",
     ownerExport: "createBundleSampleRowsCommands().runDatasetBundleSampleRows",
     inputs: ["process-bundles directory", "sample selection options", "canonical support cache"],
     outputs: [
