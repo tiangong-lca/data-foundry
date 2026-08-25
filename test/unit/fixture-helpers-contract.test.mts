@@ -5,8 +5,11 @@ import path from "node:path";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
 
-import { writeReadyFinalizeFixture } from "../fixtures/finalize-fixtures.mjs";
-import * as fixtureRoots from "../fixtures/fixture-roots.mjs";
+import {
+  type ReadyFinalizeFixtureOptions,
+  writeReadyFinalizeFixture,
+} from "../fixtures/finalize-fixtures.ts";
+import * as fixtureRoots from "../fixtures/fixture-roots.ts";
 import { repoRoot, testRunId } from "../fixtures/foundry-core.mjs";
 
 const fixtureRootBasenames = {
@@ -51,23 +54,6 @@ const expectedFixtureRootConsumers = [
 
 const expectedInventorySha256 = "46fb880f2f76f3642c520a09661b3f8016623138c97bb4a68194b8bb3c21f322";
 const targetUserId = "00000000-0000-4000-8000-000000000001";
-
-type ReadyFinalizeFixtureOptions = {
-  root: string;
-  datasetType: string;
-  rowsFile: string;
-  profile?: string;
-  finalizeReportPath?: string | null;
-};
-
-type ReadyFinalizeFixtureResult = {
-  mutationReport: string;
-  finalizeReport: string;
-};
-
-const writeReadyFinalizeFixtureContract = writeReadyFinalizeFixture as (
-  options: ReadyFinalizeFixtureOptions,
-) => ReadyFinalizeFixtureResult;
 
 type MigrationInventory = {
   remaining_count: number;
@@ -169,7 +155,7 @@ test("fixture roots retain the exact 18-name worktree-local path contract", () =
 test("fixture roots honor a worktree-local testRunId override", () => {
   const overrideRunId = `fixture-helper-contract-${process.pid}`;
   const fixtureModuleUrl = pathToFileURL(
-    path.join(repoRoot, "test", "fixtures", "fixture-roots.mjs"),
+    path.join(repoRoot, "test", "fixtures", "fixture-roots.ts"),
   ).href;
   const result = spawnSync(
     process.execPath,
@@ -204,7 +190,7 @@ test("writeReadyFinalizeFixture preserves exact default and override report cont
     defaultRoot,
     "process-dataset-post-authoring-finalize-report.json",
   );
-  const defaultResult = writeReadyFinalizeFixtureContract({
+  const defaultResult = writeReadyFinalizeFixture({
     root: defaultRoot,
     datasetType: "process",
     rowsFile: defaultRowsFile,
@@ -240,7 +226,7 @@ test("writeReadyFinalizeFixture preserves exact default and override report cont
   const overrideRowsFile = path.join(overrideRoot, "rows", "flows.jsonl");
   const overrideMutationReport = path.join(overrideRoot, "flow-mutation-manifest.json");
   const overrideFinalizeReport = path.join(overrideRoot, "reports", "ready.json");
-  const overrideResult = writeReadyFinalizeFixtureContract({
+  const overrideResult = writeReadyFinalizeFixture({
     root: overrideRoot,
     datasetType: "flow",
     rowsFile: overrideRowsFile,

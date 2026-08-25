@@ -1,5 +1,5 @@
 import test from "node:test";
-import { fixtureRoot } from "../fixtures/fixture-roots.mjs";
+import { fixtureRoot } from "../fixtures/fixture-roots.ts";
 import {
   assert,
   blockerCodes,

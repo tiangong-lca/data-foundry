@@ -1,5 +1,5 @@
 import test from "node:test";
-import { identityPreflightRunFixtureRoot } from "../fixtures/fixture-roots.mjs";
+import { identityPreflightRunFixtureRoot } from "../fixtures/fixture-roots.ts";
 import {
   assert,
   fs,

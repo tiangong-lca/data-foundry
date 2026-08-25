@@ -3,7 +3,7 @@ import {
   finalizeIdentityPreflightFixtureRoot,
   finalizeLocationFixtureRoot,
   locationFixtureRoot,
-} from "../fixtures/fixture-roots.mjs";
+} from "../fixtures/fixture-roots.ts";
 import {
   assert,
   bundledCategorySchemaNames,

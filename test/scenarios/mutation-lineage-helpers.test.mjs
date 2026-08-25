@@ -11,7 +11,7 @@ import {
   rowsFileReachableThroughTransformChain,
   sameRowsArtifact,
 } from "../../scripts/lib/import-curation/internal/workflow-row-transform-context.mjs";
-import { fixtureRoot } from "../fixtures/fixture-roots.mjs";
+import { fixtureRoot } from "../fixtures/fixture-roots.ts";
 import {
   assert,
   fs,

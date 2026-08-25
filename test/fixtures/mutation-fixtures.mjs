@@ -1,4 +1,4 @@
-import { mutationFixtureRoot } from "./fixture-roots.mjs";
+import { mutationFixtureRoot } from "./fixture-roots.ts";
 import {
   fs,
   fullContextKinds,

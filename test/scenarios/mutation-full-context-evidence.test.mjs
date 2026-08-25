@@ -1,5 +1,5 @@
 import test from "node:test";
-import { mutationFixtureRoot } from "../fixtures/fixture-roots.mjs";
+import { mutationFixtureRoot } from "../fixtures/fixture-roots.ts";
 import {
   assert,
   fs,

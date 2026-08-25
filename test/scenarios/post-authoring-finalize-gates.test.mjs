@@ -3,7 +3,7 @@ import {
   finalizeAutoQueueFixtureRoot,
   finalizeCurationGateFixtureRoot,
   fixtureRoot,
-} from "../fixtures/fixture-roots.mjs";
+} from "../fixtures/fixture-roots.ts";
 import {
   assert,
   fs,

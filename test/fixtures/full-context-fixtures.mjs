@@ -1,4 +1,4 @@
-import { fixtureRoot, mutationFixtureRoot } from "./fixture-roots.mjs";
+import { fixtureRoot, mutationFixtureRoot } from "./fixture-roots.ts";
 import { canonicalPayloadSha256 } from "../../scripts/lib/post-write-root-proof.ts";
 import {
   fs,

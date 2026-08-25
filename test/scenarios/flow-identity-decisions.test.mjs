@@ -1,5 +1,5 @@
 import test from "node:test";
-import { flowIdentityReferenceFixtureRoot } from "../fixtures/fixture-roots.mjs";
+import { flowIdentityReferenceFixtureRoot } from "../fixtures/fixture-roots.ts";
 import {
   assert,
   blockerCodes,

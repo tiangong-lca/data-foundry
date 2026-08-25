@@ -2,7 +2,7 @@ import test from "node:test";
 import {
   elementaryFlowManifestFixtureRoot,
   flowClassificationFixtureRoot,
-} from "../fixtures/fixture-roots.mjs";
+} from "../fixtures/fixture-roots.ts";
 import {
   assert,
   blockerCodes,

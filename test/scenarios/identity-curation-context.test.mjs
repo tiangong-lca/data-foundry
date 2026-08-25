@@ -1,5 +1,5 @@
 import test from "node:test";
-import { packageContextFixtureRoot } from "../fixtures/fixture-roots.mjs";
+import { packageContextFixtureRoot } from "../fixtures/fixture-roots.ts";
 import {
   assert,
   contextTextByPathSuffix,

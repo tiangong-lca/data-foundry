@@ -2,7 +2,7 @@ import test from "node:test";
 import {
   referenceClosureFixtureRoot,
   supportManifestFixtureRoot,
-} from "../fixtures/fixture-roots.mjs";
+} from "../fixtures/fixture-roots.ts";
 import {
   assert,
   fs,

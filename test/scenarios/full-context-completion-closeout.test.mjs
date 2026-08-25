@@ -1,6 +1,6 @@
 import test from "node:test";
 import { canonicalPayloadSha256 } from "../../scripts/lib/post-write-root-proof.ts";
-import { fixtureRoot } from "../fixtures/fixture-roots.mjs";
+import { fixtureRoot } from "../fixtures/fixture-roots.ts";
 import {
   assert,
   blockerCodes,

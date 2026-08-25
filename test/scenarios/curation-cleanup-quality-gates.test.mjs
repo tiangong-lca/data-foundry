@@ -3,7 +3,7 @@ import {
   annualSupplyFixtureRoot,
   qaPathFixtureRoot,
   sourceExchangeFixtureRoot,
-} from "../fixtures/fixture-roots.mjs";
+} from "../fixtures/fixture-roots.ts";
 import {
   assert,
   blockerCodes,
