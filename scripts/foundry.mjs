@@ -12,7 +12,7 @@ import { createCommitHandoffCommands } from "./commands/commit-handoff.mjs";
 import { createCoreCommands } from "./commands/core.mjs";
 import { createExecutionCapsuleCommands } from "./commands/execution-capsule.mjs";
 import { createIdentityDecisionTaskCommands } from "./commands/identity-decision-task.mjs";
-import { createIdentityDecisionCommands } from "./commands/identity-decisions.mjs";
+import { createIdentityDecisionCommands } from "./commands/identity-decisions.ts";
 import { createIdentityPreflightRunCommands } from "./commands/identity-preflight-run.mjs";
 import { createIdentityReferenceRewriteCommands } from "./commands/identity-reference-rewrites.ts";
 import { createImportCompletionCommands } from "./commands/import-completion.mjs";

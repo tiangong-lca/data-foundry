@@ -1056,7 +1056,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-identity-decisions-apply": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/identity-decisions.mjs",
+    ownerModule: "scripts/commands/identity-decisions.ts",
     ownerExport: "createIdentityDecisionCommands().runDatasetIdentityDecisionsApply",
     inputs: ["rows file", "AI identity decisions", "identity decision task proof"],
     outputs: [
