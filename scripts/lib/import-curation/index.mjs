@@ -3,5 +3,5 @@ export { runDatasetCurationCleanup } from "./curation-cleanup.ts";
 export { runDatasetCurationGate } from "./curation-gate.ts";
 export { runDatasetMutationManifest } from "./mutation-manifest.mjs";
 export { runDatasetAuthoringPatchCollect } from "./patch-collect.ts";
-export { listImportProfiles, profileFor } from "./profiles.mjs";
-export { foundryTraceSummary } from "./trace-summary.mjs";
+export { listImportProfiles, profileFor } from "./profiles.ts";
+export { foundryTraceSummary } from "./trace-summary.ts";
