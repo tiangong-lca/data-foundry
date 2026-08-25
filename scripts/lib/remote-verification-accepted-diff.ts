@@ -2,9 +2,32 @@ import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { resolveTiangongLcaCliRuntimeCommand } from "./foundry-runtime-utils.mjs";
+import { resolveTiangongLcaCliRuntimeCommand } from "./foundry-runtime-utils.ts";
 
-type JsonRecord = Record<string, any>;
+type JsonRecord = Record<string, unknown>;
+
+interface RootPayloadMismatch extends JsonRecord {
+  code: "payload_mismatch";
+  role: "root";
+  table: string;
+}
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function asJsonRecord(value: unknown): JsonRecord {
+  return isJsonRecord(value) ? value : {};
+}
+
+function isSupportedRootPayloadMismatch(value: JsonRecord): value is RootPayloadMismatch {
+  return (
+    value.code === "payload_mismatch" &&
+    value.role === "root" &&
+    typeof value.table === "string" &&
+    supportedRootTables.has(value.table)
+  );
+}
 
 type CliGetResult = {
   ok: boolean;
@@ -49,11 +72,11 @@ function fileExists(filePath: string | null | undefined): boolean {
   return Boolean(filePath && fs.existsSync(filePath) && fs.statSync(filePath).isFile());
 }
 
-function readJson(filePath: string): any {
+function readJson(filePath: string): unknown {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
-function readJsonLines(filePath: string): JsonRecord[] {
+function readJsonLines(filePath: string): unknown[] {
   if (!fileExists(filePath)) return [];
   const text = fs.readFileSync(filePath, "utf8").trim();
   return text
@@ -64,11 +87,11 @@ function readJsonLines(filePath: string): JsonRecord[] {
     : [];
 }
 
-function readRows(filePath: string): JsonRecord[] {
+function readRows(filePath: string): unknown[] {
   if (String(filePath).toLowerCase().endsWith(".jsonl")) return readJsonLines(filePath);
   const value = readJson(filePath);
   if (Array.isArray(value)) return value;
-  if (Array.isArray(value.rows)) return value.rows;
+  if (isJsonRecord(value) && Array.isArray(value.rows)) return value.rows;
   return [value];
 }
 
@@ -101,17 +124,20 @@ function asText(value: unknown): string {
   return "";
 }
 
-function datasetIdentity(row: JsonRecord, table: string): { id: string; version: string } {
+function datasetIdentity(rowValue: unknown, table: string): { id: string; version: string } {
+  const row = asJsonRecord(rowValue);
   const type = table === "processes" ? "process" : table === "flows" ? "flow" : null;
-  const root = type ? (row?.[`${type}DataSet`] ?? row) : row;
-  const information =
-    root?.[`${type}Information`]?.dataSetInformation ??
-    root?.[`${type}Information`]?.["common:dataSetInformation"] ??
-    {};
-  const publication =
-    root?.administrativeInformation?.publicationAndOwnership ??
-    root?.administrativeInformation?.["common:publicationAndOwnership"] ??
-    {};
+  const rootValue = type ? (row[`${type}DataSet`] ?? row) : row;
+  const root = asJsonRecord(rootValue);
+  const informationContainer = asJsonRecord(root[`${type}Information`]);
+  const information = asJsonRecord(
+    informationContainer.dataSetInformation ?? informationContainer["common:dataSetInformation"],
+  );
+  const administrativeInformation = asJsonRecord(root.administrativeInformation);
+  const publication = asJsonRecord(
+    administrativeInformation.publicationAndOwnership ??
+      administrativeInformation["common:publicationAndOwnership"],
+  );
   return {
     id:
       asText(information["common:UUID"]) ||
@@ -146,15 +172,16 @@ function parseJsonStdout(stdout: unknown): JsonRecord | null {
   }
 }
 
-function stableJson(value: any): string {
+function stableJson(value: unknown): string | undefined {
   if (value == null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
-  const keys = Object.keys(value).sort();
-  return `{${keys.map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(",")}}`;
+  const record = asJsonRecord(value);
+  const keys = Object.keys(record).sort();
+  return `{${keys.map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`).join(",")}}`;
 }
 
 function sha256StableJson(value: unknown): string {
-  return crypto.createHash("sha256").update(stableJson(value)).digest("hex");
+  return crypto.createHash("sha256").update(stableJson(value)!).digest("hex");
 }
 
 function traceHashPath(pathParts: string[]): string {
@@ -162,16 +189,16 @@ function traceHashPath(pathParts: string[]): string {
 }
 
 function stripTraceHashFromImportTraceSummary(
-  value: any,
+  value: unknown,
   pathParts: string[] = [],
   removed: string[] = [],
-): any {
+): unknown {
   if (Array.isArray(value)) {
     return value.map((entry, index) =>
       stripTraceHashFromImportTraceSummary(entry, [...pathParts, String(index)], removed),
     );
   }
-  if (!value || typeof value !== "object") return value;
+  if (!isJsonRecord(value)) return value;
   const output: JsonRecord = {};
   for (const [key, child] of Object.entries(value)) {
     if (key === "tiangongfoundry:importTraceSummary") {
@@ -183,13 +210,13 @@ function stripTraceHashFromImportTraceSummary(
   return output;
 }
 
-function stripTraceHashValue(value: any, pathParts: string[], removed: string[]): any {
+function stripTraceHashValue(value: unknown, pathParts: string[], removed: string[]): unknown {
   if (Array.isArray(value)) {
     return value.map((entry, index) =>
       stripTraceHashValue(entry, [...pathParts, String(index)], removed),
     );
   }
-  if (!value || typeof value !== "object") return value;
+  if (!isJsonRecord(value)) return value;
   const output: JsonRecord = {};
   for (const [key, child] of Object.entries(value)) {
     if (key === "traceHash") {
@@ -202,7 +229,7 @@ function stripTraceHashValue(value: any, pathParts: string[], removed: string[])
 }
 
 export function normalizeAllowedTraceHashDifference(payload: unknown): {
-  normalized: any;
+  normalized: unknown;
   removed_paths: string[];
   normalized_sha256: string;
 } {
@@ -219,7 +246,7 @@ function extractPayloadFromGet(table: string, json: JsonRecord | null): JsonReco
   const config = supportedRootTables.get(table);
   if (!config || !json || typeof json !== "object") return null;
   for (const key of config.payloadKeys) {
-    if (json[key] && typeof json[key] === "object") return json[key];
+    if (isJsonRecord(json[key])) return json[key];
   }
   if (table === "flows" && json.flowDataSet) return json;
   if (table === "processes" && json.processDataSet) return json;
@@ -283,12 +310,10 @@ function rewriteCounts(counts: JsonRecord | undefined, acceptedCount: number): J
     0,
     Number(output.root_payload_mismatches ?? 0) - acceptedCount,
   );
-  output.by_status = { ...(output.by_status ?? {}) };
-  output.by_status.payload_mismatch = Math.max(
-    0,
-    Number(output.by_status.payload_mismatch ?? 0) - acceptedCount,
-  );
-  output.by_status.ok = Number(output.by_status.ok ?? 0) + acceptedCount;
+  const byStatus = { ...asJsonRecord(output.by_status) };
+  byStatus.payload_mismatch = Math.max(0, Number(byStatus.payload_mismatch ?? 0) - acceptedCount);
+  byStatus.ok = Number(byStatus.ok ?? 0) + acceptedCount;
+  output.by_status = byStatus;
   return output;
 }
 
@@ -322,44 +347,42 @@ export function acceptTraceHashOnlyRemoteVerificationMismatch({
   if (!fileExists(verifyReportPath)) {
     return { accepted: false, reason: "verify_report_missing" };
   }
-  const verifyReport = readJson(verifyReportPath);
-  const blockers = Array.isArray(verifyReport.blockers) ? verifyReport.blockers : [];
+  const verifyReport = asJsonRecord(readJson(verifyReportPath));
+  const blockers = Array.isArray(verifyReport.blockers)
+    ? verifyReport.blockers.map(asJsonRecord)
+    : [];
   if (verifyReport.status === "passed_remote_verification" || blockers.length === 0) {
     return { accepted: false, reason: "verify_report_has_no_blocked_payload_mismatches" };
   }
-  if (
-    blockers.some(
-      (blocker: JsonRecord) =>
-        blocker?.code !== "payload_mismatch" ||
-        blocker?.role !== "root" ||
-        !supportedRootTables.has(blocker?.table),
-    )
-  ) {
+  const rootPayloadMismatches = blockers.filter(isSupportedRootPayloadMismatch);
+  if (rootPayloadMismatches.length !== blockers.length) {
     return { accepted: false, reason: "verify_report_has_non_accepted_blockers" };
   }
 
   const inputPath = path.resolve(String(verifyReport.input_path || ""));
   if (!fileExists(inputPath)) return { accepted: false, reason: "verify_report_input_missing" };
-  const checksPath = path.resolve(String(verifyReport.files?.checks || ""));
+  const verifyFiles = asJsonRecord(verifyReport.files);
+  const checksPath = path.resolve(String(verifyFiles.checks || ""));
   if (!fileExists(checksPath)) return { accepted: false, reason: "verify_checks_missing" };
   const rows = readRows(inputPath);
-  const checks = readJsonLines(checksPath);
+  const checks = readJsonLines(checksPath).map(asJsonRecord);
   const acceptedDir = path.join(outDir, "accepted-post-write-verify");
   const outputsDir = path.join(acceptedDir, "outputs");
   const remoteDir = path.join(acceptedDir, "remote-readback");
-  const acceptedByKey = new Map();
-  const evidence = [];
+  const acceptedByKey = new Map<string, JsonRecord>();
+  const evidence: JsonRecord[] = [];
 
-  for (const blocker of blockers) {
+  for (const blocker of rootPayloadMismatches) {
     const rowIndex = Number(blocker.row_index);
     if (!Number.isInteger(rowIndex) || rowIndex < 0 || rowIndex >= rows.length) {
       return { accepted: false, reason: "payload_mismatch_row_index_missing", blocker };
     }
     const localPayload = rows[rowIndex];
     const localIdentity = datasetIdentity(localPayload, blocker.table);
+    const blockerVersion = String(blocker.version || "00.00.001");
     if (
       localIdentity.id !== blocker.id ||
-      String(localIdentity.version || "00.00.001") !== String(blocker.version || "00.00.001")
+      String(localIdentity.version || "00.00.001") !== blockerVersion
     ) {
       return {
         accepted: false,
@@ -371,8 +394,8 @@ export function acceptTraceHashOnlyRemoteVerificationMismatch({
 
     const remote = runCliGet({
       table: blocker.table,
-      id: blocker.id,
-      version: blocker.version || "00.00.001",
+      id: localIdentity.id,
+      version: blockerVersion,
       outDir: remoteDir,
       repoRoot,
     });
@@ -423,17 +446,26 @@ export function acceptTraceHashOnlyRemoteVerificationMismatch({
       remote_readback_stdout_log: remote.stdout_log ?? null,
       remote_readback_stderr_log: remote.stderr_log ?? null,
     };
-    acceptedByKey.set(acceptanceKey({ ...blocker, row_index: rowIndex }), accepted);
+    acceptedByKey.set(
+      acceptanceKey({
+        table: blocker.table,
+        id: localIdentity.id,
+        version: blockerVersion,
+        row_index: rowIndex,
+        path: typeof blocker.path === "string" ? blocker.path : null,
+      }),
+      accepted,
+    );
     evidence.push(accepted);
   }
 
   const acceptedChecks = checks.map((check) => {
     const key = acceptanceKey({
-      table: check.table,
-      id: check.id,
-      version: check.version || "00.00.001",
+      table: String(check.table ?? ""),
+      id: String(check.id ?? ""),
+      version: String(check.version || "00.00.001"),
       row_index: Number(check.row_index),
-      path: check.path,
+      path: check.path == null ? null : String(check.path),
     });
     const accepted = acceptedByKey.get(key);
     if (!accepted) return check;
@@ -471,10 +503,10 @@ export function acceptTraceHashOnlyRemoteVerificationMismatch({
     ...verifyReport,
     generated_at_utc: nowIso(),
     status: "passed_remote_verification",
-    counts: rewriteCounts(verifyReport.counts, evidence.length),
+    counts: rewriteCounts(asJsonRecord(verifyReport.counts), evidence.length),
     blockers: [],
     files: {
-      ...(verifyReport.files ?? {}),
+      ...verifyFiles,
       report: acceptedReportPath,
       checks: acceptedChecksPath,
       blockers: acceptedBlockersPath,

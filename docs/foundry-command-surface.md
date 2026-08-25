@@ -15,25 +15,115 @@ whenToUpdate:
 checkPaths:
   - docs/foundry-command-surface.md
   - test/README.md
-  - scripts/lib/foundry-command-registry.mjs
-  - scripts/lib/foundry-command-metadata.mjs
+  - scripts/lib/foundry-args.ts
+  - scripts/lib/foundry-command-registry.ts
+  - scripts/lib/foundry-command-metadata.ts
+  - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-paths.ts
+  - scripts/commands/identity-decisions.ts
+  - scripts/commands/classification-decisions.ts
+  - scripts/commands/location-decisions.ts
+  - scripts/commands/library-scope-workflow.ts
+  - scripts/commands/bafu-leaf-classification-tasks.ts
+  - scripts/commands/bafu-auto-authoring.ts
+  - scripts/commands/bafu-process-scope-e2e.ts
+  - scripts/commands/bafu-batch-import-run.ts
+  - scripts/lib/import-curation.ts
+  - scripts/lib/import-curation/index.ts
+  - scripts/lib/import-curation/profiles.ts
+  - scripts/lib/import-curation/trace-summary.ts
+  - scripts/lib/bafu-family-signatures.ts
+  - scripts/lib/import-ledger.ts
+  - scripts/lib/canonical-support-rewrites.ts
+  - scripts/lib/bundle-sample-utils.ts
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
+  - scripts/commands/tasks.ts
+  - scripts/commands/import-completion.ts
+  - scripts/commands/commit-handoff.ts
+  - scripts/commands/identity-decision-task.ts
+  - scripts/commands/support-cache.ts
+  - scripts/commands/cli-wrappers.ts
+  - scripts/commands/execution-capsule.ts
+  - scripts/commands/post-write-closeout.ts
+  - scripts/commands/authoring-plan.ts
+  - scripts/commands/bundle-sample-rows.ts
+  - scripts/commands/incremental-change-set.ts
+  - scripts/commands/topology-convergence.ts
+  - scripts/commands/core.ts
+  - scripts/commands/identity-preflight-run.ts
+  - scripts/commands/post-authoring-finalize.ts
+  - scripts/lib/import-curation/internal/authoring-task-workflow.ts
+  - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
+  - scripts/lib/import-curation/internal/curation-gate-workflow.ts
+  - scripts/lib/import-curation/authoring-packages.ts
+  - scripts/lib/import-curation/patch-collect.ts
+  - scripts/lib/import-curation/curation-gate.ts
+  - scripts/lib/import-curation/curation-cleanup.ts
+  - scripts/lib/import-curation/internal/workflow-reference-closure.ts
+  - scripts/lib/import-curation/internal/workflow-source-reference-context.ts
+  - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
+  - scripts/lib/import-curation/mutation-manifest.ts
   - docs/incremental-change-set-contract.md
+  - docs/topology-convergence-contract.md
   - test/unit/foundry-command-metadata.test.mts
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
-lastReviewedNote: "Reviewed for Issue #65: CommandSpec handoff artifacts and typed metadata tests."
+  - test/unit/foundry-entry-closure-migration.test.mts
+  - test/unit/wave25-identity-decision-command-migration.test.mts
+  - test/unit/wave25-classification-location-command-migration.test.mts
+  - test/unit/import-curation-entry-barrels-migration.test.mts
+  - test/unit/import-curation-leaf-barrels-migration.test.mts
+  - test/unit/wave26-library-scope-command-migration.test.mts
+  - test/unit/wave26-bafu-leaf-classification-command-migration.test.mts
+  - test/unit/wave26-bafu-auto-authoring-command-migration.test.mts
+  - test/unit/wave26-bafu-process-scope-command-migration.test.mts
+  - test/unit/wave26-bafu-batch-command-migration.test.mts
+  - test/unit/core-command-factory.test.mts
+  - test/unit/identity-preflight-run-command-factory.test.mts
+  - test/unit/post-authoring-finalize-command-factory.test.mts
+  - test/commands/*.test.mts
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
+lastReviewedNote: "Reviewed for Issue #67 emitted-runtime hardening: all 63 source/emitted commands share the trusted repository root and active entry while help, categories, profiles, nested argv and remote-write modes remain stable."
 ---
 
 # Foundry Command Surface
 
-Foundry command governance has two layers:
+Foundry CLI-spine and command governance has three checked contracts:
 
-- `scripts/lib/foundry-command-registry.mjs` is the runtime command list and exit-code policy.
-- `scripts/lib/foundry-command-metadata.mjs` is the AI-readable navigation and ownership map.
+- `scripts/lib/foundry-args.ts` is the typed positional/option/scalar parsing contract.
+- `scripts/lib/foundry-command-registry.ts` is the typed runtime command list, help JSON, and exit-code policy.
+- `scripts/lib/foundry-command-metadata.ts` is the typed AI-readable navigation and ownership map.
+- `scripts/lib/surface-audit.ts` checks hidden handlers, category coverage, orphan docs, declared entrypoints, and script-only inbound imports with portable report paths.
 
-The metadata module must cover every command returned by `node scripts/foundry.mjs help`. It records each command category, owner module, owner export, input artifacts, output artifacts, workflow entry audit state, and key behavior checks.
+The metadata module must cover every command returned by `node scripts/foundry.ts help`. It records each command category, owner module, owner export, input artifacts, output artifacts, workflow entry audit state, and key behavior checks.
 
-Issue #63 does not change the public command categories or behavior. It introduces the Node.js 24 / pnpm 11.23 / TypeScript 7.0.2 typed spine underneath the same surface. Migration work must preserve the registered command name, help, stdout, exit code, stage contract, input/output artifacts, and remote-write mode before removing a JavaScript implementation from `specs/typescript-migration-inventory.json`. Use focused characterization and real cases; do not treat an extension rename as command migration.
+Issue #63 preserved the public command categories and behavior while establishing the Node.js 24 / pnpm 11.23 / TypeScript 7.0.2 spine. The argument parser and command registry are native TypeScript leaves; `test/unit/foundry-cli-spine.test.mts` fixes scalar/argv parsing, exact help JSON, exit mapping, and static consumers. The migration is complete, and `test/unit/zero-javascript-ratchet.test.mts` prevents JavaScript owners or compatibility globs from returning. Later work must still preserve command names, help, stdout, exit codes, stage contracts, artifacts, and remote-write modes through focused characterization and real cases.
+
+Wave 25 moves the existing identity, classification, and location owner factories to `.ts` without changing their command metadata or dispatcher topology. The migration tests fix owner/export identity and exact help bytes, while the existing command/scenario fixtures remain the behavior authority for aliases, defaults, queue/path order, blockers, deterministic CLI apply stages, local artifacts, and fail-closed errors.
+
+The Wave 8 BAFU family-signature and import-ledger migrations remain supporting typed leaves beneath the existing `dataset-bafu-batch-import-run` and `dataset-import-ledger-report` owners. Their command registry and metadata entries, help JSON, artifact schemas, exit mapping, and remote-write modes are unchanged.
+
+Wave 9 keeps `dataset-bundle-sample-rows` under its existing command owner and read-only mode. Its metadata now advertises the conditional `canonical-support-amount-scaling.jsonl` artifact and its command test: the explicit blocking flag retains known or unresolved scale evidence in the report and process-scope ledger rather than letting an early canonical-reference rewrite erase the source-unit safety decision.
+
+Wave 24 moves `tasks`, `import-completion`, `commit-handoff`, `identity-decision-task`, and `support-cache` to native TypeScript. Their registered command names, help payloads, owner exports, artifact lists, output ordering, fail-closed states, and read-only modes are unchanged. Focused tests pin exact Markdown/JSON/JSONL bytes, CommandSpec final-row binding and argv, identity snapshot/dedupe order, support-cache HTTP read order and native errors.
+
+Wave 25 moves `cli-wrappers`, `execution-capsule`, and `post-write-closeout` to native TypeScript. The wrappers still delegate executable plus argv arrays and surface process output/errors; capsule admission remains offline and zero-authority; closeout remains read-only and accepts only exact, unique, account/state-bound readback proof under the existing ordinary/production accepted-diff policy.
+
+Wave 25 moves the import-curation leaf, index, and public barrels to TypeScript while command metadata continues to identify semantic owner modules. Metadata links the entry namespace contract as navigation evidence for profile listing, authoring, curation, cleanup, and mutation commands; the runtime command surface and handler injection remain unchanged.
+
+Wave 26 moves the generic library-scope owner and four BAFU orchestration owners to TypeScript. Registered names, metadata categories/exports, serialized help, option aliases/defaults, blocker and artifact order, exit mapping, resumable preflight/batch behavior and explicit-commit-only modes remain unchanged. The USLCI and Worldsteel wrappers now point directly at the typed batch owner but retain their existing frozen profile configuration.
+
+Wave 26 moves TIDAS/finalize adapters and the cutover/Golden entrypoints to native TypeScript. Public Foundry command names and help remain unchanged; package scripts now call the typed audit and Golden entrypoints while retaining the same JSON, exit, merge-base and normalized-diff contracts.
+
+Wave 26 moves `authoring-plan`, `bundle-sample-rows`, `incremental-change-set`, and `topology-convergence` to native TypeScript. Their registered command names, categories, exports, exact help payloads, artifacts, exit mapping and write modes are unchanged. Realistic fixtures pin deterministic phase/row/sample/F-P-D order, path and hash bytes, scale and graph fail-close, terminal receipt and no-authority handoff semantics, native JSON/filesystem failures, and fresh-output boundaries.
+
+Wave 26 moves `core`, `identity-preflight-run`, and `post-authoring-finalize` to native TypeScript. Core retains all public bootstrap/diagnostic/route commands and exact global help. The identity-preflight family retains its four workflow-internal commands, receipt-bound shell-free argv and fail-closed execution evidence. Finalize retains the existing read-only stage pipeline, report/artifact schema, blocker order and handoff plan. Metadata binds each command to the new focused contract tests without changing registry order or categories.
+
+Wave 27 moves every remaining `test/commands/*.test.mjs` contract to `.test.mts` and makes `pnpm test:commands` a single TypeScript-only glob. Command metadata, retained contracts and file-location references point to the renamed tests; runtime owner modules and the command registry remain unchanged.
+
+The completed emitted-runtime hardening keeps the same command surface while removing an output-directory ambiguity: source `scripts/foundry.ts` and emitted `dist/scripts/foundry.js` resolve one trusted package root independently of CWD, and batch, process-scope and finalize self-invocations use the active entry rather than a hard-coded source path. The entry-closure contract pins full profile discovery, exact help/unknown behavior and nested entry identity for both forms.
 
 ## Categories
 
@@ -58,19 +148,19 @@ Every command must have `workflowEntry.status: "active"` and at least one key be
 Every command must be reachable through this path:
 
 ```text
-scripts/foundry.mjs
-  -> scripts/lib/foundry-cli.mjs
+scripts/foundry.ts
+  -> scripts/lib/foundry-cli.ts
   -> owner module in scripts/commands or scripts/lib/import-curation
 ```
 
-Public command owner paths must be at most two jumps from `scripts/foundry.mjs`. For semantic import-curation commands, prefer owner modules such as `profiles.mjs`, `curation-gate.mjs`, `authoring-packages.mjs`, `patch-collect.mjs`, `curation-cleanup.mjs`, `trace-summary.mjs`, and `mutation-manifest.mjs` over mechanical part names. Reusable import-curation logic should be exposed through focused workflow facets under `scripts/lib/import-curation/internal/*-workflow.mjs`.
+Public command owner paths must be at most two jumps from `scripts/foundry.ts`. For semantic import-curation commands, prefer owner modules such as `profiles.ts`, `curation-gate.ts`, `authoring-packages.ts`, `patch-collect.ts`, `curation-cleanup.ts`, `trace-summary.ts`, and `mutation-manifest.ts` over mechanical part names. Reusable import-curation logic is exposed through focused TypeScript workflow facets under `scripts/lib/import-curation/internal/*-workflow.ts`.
 
 ## Maintenance Rule
 
 When a command is added, removed, renamed, moved, or reclassified, update both:
 
-1. `scripts/lib/foundry-command-registry.mjs`
-2. `scripts/lib/foundry-command-metadata.mjs`
+1. `scripts/lib/foundry-command-registry.ts`
+2. `scripts/lib/foundry-command-metadata.ts`
 
 Then run:
 

@@ -65,16 +65,16 @@
       "current_path": "specs/automated-lca-capability-registry.json",
       "previous_paths": [],
       "owner": "tiangong-lca-data-foundry",
-      "referenced_by": ["specs/workspace-capability-adapters.md", "scripts/foundry.mjs"],
+      "referenced_by": ["specs/workspace-capability-adapters.md", "scripts/foundry.ts"],
       "sensitivity": "non-sensitive command and artifact contracts; no credentials or private payloads",
       "tracked": true,
       "notes": "Routes deterministic import/conversion/schema validation to unified Rust tidas and keeps CLI context, QA/curation, remote operations, and Foundry-owned gates explicit."
     },
     {
-      "id": "typescript-migration-inventory",
+      "id": "zero-javascript-ratchet",
       "status": "active",
-      "classification": "toolchain-migration-ledger",
-      "current_path": "specs/typescript-migration-inventory.json",
+      "classification": "toolchain-permanent-ratchet",
+      "current_path": "test/unit/zero-javascript-ratchet.test.mts",
       "previous_paths": [],
       "owner": "tiangong-lca-data-foundry",
       "referenced_by": [
@@ -84,9 +84,9 @@
         "docs/foundry-ai-navigation.md",
         "test/README.md"
       ],
-      "sensitivity": "non-sensitive tracked source/test path inventory; no runtime payloads or credentials",
+      "sensitivity": "non-sensitive tracked source/test extension contract; no runtime payloads or credentials",
       "tracked": true,
-      "notes": "Records the Issue #63 JavaScript baseline and the staged TypeScript 7 migration boundary; update it in the same change that moves a module across the typed spine."
+      "notes": "Permanently rejects tracked first-party JavaScript and compatibility compiler/test/lint globs after completion of the Issue #63 TypeScript 7 migration."
     },
     {
       "id": "foundry-command-spec",
@@ -105,9 +105,9 @@
         "docs/foundry-command-surface.md",
         "docs/foundry-task-contracts.md",
         "docs/safety-policy.md",
-        "scripts/commands/commit-handoff.mjs",
-        "scripts/commands/bafu-batch-import-run.mjs",
-        "scripts/commands/bafu-process-scope-e2e.mjs",
+        "scripts/commands/commit-handoff.ts",
+        "scripts/commands/bafu-batch-import-run.ts",
+        "scripts/commands/bafu-process-scope-e2e.ts",
         "test/unit/foundry-command-spec.test.mts"
       ],
       "sensitivity": "non-sensitive typed executable/argv and artifact-fact contract; contains no credentials or runtime payloads",
@@ -123,7 +123,7 @@
       "owner": "tiangong-lca-data-foundry",
       "referenced_by": [
         "README.md",
-        "scripts/lib/import-curation.mjs",
+        "scripts/lib/import-curation.ts",
         "docs/import-profiles/bafu/profile.md",
         "docs/import-profiles/bafu/constraints.md",
         "docs/import-profiles/bafu/leaf-process-classification-authoring.md"
@@ -230,7 +230,7 @@
       "referenced_by": [
         "README.md",
         "docs/foundry-command-surface.md",
-        "scripts/commands/execution-capsule.mjs"
+        "scripts/commands/execution-capsule.ts"
       ],
       "sensitivity": "non-sensitive local evidence contract; no credentials or private payloads",
       "tracked": true,
@@ -245,8 +245,8 @@
       "owner": "tiangong-lca-data-foundry",
       "referenced_by": [
         "docs/execution-capsule-contract.md",
-        "scripts/commands/execution-capsule.mjs",
-        "test/commands/execution-capsule.test.mjs"
+        "scripts/commands/execution-capsule.ts",
+        "test/commands/execution-capsule.test.mts"
       ],
       "sensitivity": "non-sensitive schema; no credentials or private payloads",
       "tracked": true,
@@ -264,7 +264,7 @@
         "README.md",
         "WORKFLOW.md",
         "docs/foundry-command-surface.md",
-        "scripts/commands/incremental-change-set.mjs"
+        "scripts/commands/incremental-change-set.ts"
       ],
       "sensitivity": "non-sensitive local planning contract; private payloads remain in ignored workspaces",
       "tracked": true,
@@ -279,8 +279,8 @@
       "owner": "tiangong-lca-data-foundry",
       "referenced_by": [
         "docs/incremental-change-set-contract.md",
-        "scripts/commands/incremental-change-set.mjs",
-        "test/commands/incremental-change-set.test.mjs"
+        "scripts/commands/incremental-change-set.ts",
+        "test/commands/incremental-change-set.test.mts"
       ],
       "sensitivity": "non-sensitive schema; no credentials or private payloads",
       "tracked": true,
@@ -298,7 +298,7 @@
         "README.md",
         "WORKFLOW.md",
         "docs/foundry-command-surface.md",
-        "scripts/commands/topology-convergence.mjs"
+        "scripts/commands/topology-convergence.ts"
       ],
       "sensitivity": "non-sensitive planning contract; private candidate and owner payloads remain in ignored workspaces",
       "tracked": true,
@@ -313,8 +313,8 @@
       "owner": "tiangong-lca-data-foundry",
       "referenced_by": [
         "docs/topology-convergence-contract.md",
-        "scripts/commands/topology-convergence.mjs",
-        "test/commands/topology-convergence.test.mjs"
+        "scripts/commands/topology-convergence.ts",
+        "test/commands/topology-convergence.test.mts"
       ],
       "sensitivity": "non-sensitive schema; no credentials or private payloads",
       "tracked": true,

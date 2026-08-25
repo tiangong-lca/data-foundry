@@ -63,7 +63,7 @@ The latest checked-out `tiangong-lca-cli` already implements the following primi
 
 | Area | Current command surface |
 | --- | --- |
-| Local schema gates | `node scripts/foundry.mjs dataset-tidas-validate` → Rust `tidas validate` |
+| Local schema gates | `node scripts/foundry.ts dataset-tidas-validate` → Rust `tidas validate` |
 | Remote readback/reference checks | `tiangong-lca dataset verify-remote` |
 | Reference refresh | `tiangong-lca dataset references refresh-remote` |
 | Reference rewrite | `tiangong-lca dataset references rewrite` |
@@ -163,7 +163,7 @@ Default stages:
 | Stage | Owner | Current reusable surface |
 | --- | --- | --- |
 | 1. Source intake | Foundry + top-level skill | Foundry source manifest and checksum checkpoint. |
-| 2. Normalize | top-level skill -> normalization child skill | `node scripts/foundry.mjs dataset-tidas-import` → Rust `tidas import`. |
+| 2. Normalize | top-level skill -> normalization child skill | `node scripts/foundry.ts dataset-tidas-import` → Rust `tidas import`. |
 | 3. Conversion QA | top-level skill + Rust tidas + CLI QA | `dataset-tidas-validate`, conversion mapping checks, source trace checks, then type-specific CLI QA. |
 | 4. Contact/source/unit group/flow property authoring | child skills or top-level until split | Prefer existing records; use public CLI validation and evidence artifacts. |
 | 5. Flow authoring | `flow-governance-review` now; future `flow-authoring` alias/name | `flow identity-preflight`, `flow build-plan`, flow candidate search, flow QA/repair, source-language name-plan. |

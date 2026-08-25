@@ -15,8 +15,8 @@ checkPaths:
   - docs/uslci-import-runbook.md
   - docs/import-profiles/uslci/**
   - specs/import-profiles.json
-lastReviewedAt: 2026-07-27
-lastReviewedCommit: d29e522562245956d5a146e582a26ddf2a68613e
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
 related:
   - docs/uslci-import-runbook.md
   - docs/import-profiles/uslci/profile.md
@@ -151,7 +151,7 @@ related:
 
 每个 process 能否导入由两个杠杆决定（取代早期"931+139 永久非可导入尾巴"框架）：
 
-- **杠杆 1 — classification 授权**（唯一硬必须的 AI 工作）：3,750 个 leaf 决策（process→ISIC4 + flow-product→CPC4-5；NAICS 仅弱提示），走 generic `dataset-classification-decisions.mjs`。0.0.34 转换器现在原生写 `@name` + 支持多体系，但 leaf code 不变，决策契约沿用。
+- **杠杆 1 — classification 授权**（唯一硬必须的 AI 工作）：3,750 个 leaf 决策（process→ISIC4 + flow-product→CPC4-5；NAICS 仅弱提示），走 generic `dataset-classification-decisions.ts`。0.0.34 转换器现在原生写 `@name` + 支持多体系，但 leaf code 不变，决策契约沿用。
 - **杠杆 2 — account-local "My Data" override**（profile 数据驱动通用能力，零 gate 代码改动）：`specs/import-profiles.json` 的 `allow_account_local_support_and_elementary`（uslci `enabled:true`，D4 已授权）。把无公共 canonical 匹配的 elementary flow / 本地 FP / UG 铸为 account-local（state_code=0），而非留作非可导入。
   - elementary：remap-first（FEDEFL trace 全候选池 re-judge）/ mint-last。
   - FP/UG：按 §6 P1a 在依赖 flow 前 mint-once 并提交为 support。
@@ -163,7 +163,7 @@ related:
 
 ## 8. Runner 机制（foundry，本会话落地，2026-06 发布不含）
 
-USLCI runner = `dataset-uslci-batch-import-run`（`scripts/commands/uslci-batch-import-run.mjs`），薄包装 `createBafuBatchImportRunCommands(deps, config)`，BAFU 引擎零回归（`npm test` 206/206）。uslci 配置：`profile:"uslci"`、autofill OFF、family-signatures OFF、NREL libraryContact、`commitFlowSupportInline:true`、`mintUnmatchedFpUgSupport:true`。
+USLCI runner = `dataset-uslci-batch-import-run`（`scripts/commands/uslci-batch-import-run.ts`），薄包装 `createBafuBatchImportRunCommands(deps, config)`，BAFU 引擎零回归（`npm test` 206/206）。uslci 配置：`profile:"uslci"`、autofill OFF、family-signatures OFF、NREL libraryContact、`commitFlowSupportInline:true`、`mintUnmatchedFpUgSupport:true`。
 
 机制要点：
 

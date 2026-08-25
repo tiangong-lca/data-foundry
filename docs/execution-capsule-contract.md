@@ -14,11 +14,13 @@ whenToUpdate:
 checkPaths:
   - docs/execution-capsule-contract.md
   - specs/schemas/execution-capsule-stage.schema.json
-  - scripts/commands/execution-capsule.mjs
-  - test/commands/execution-capsule.test.mjs
-  - test/unit/execution-capsule-attempt-state.test.mjs
-lastReviewedAt: 2026-07-23
-lastReviewedCommit: 2f1e80b02173fc20231f01ac9e6da62c16d63109
+  - scripts/commands/execution-capsule.ts
+  - test/commands/execution-capsule.test.mts
+  - test/unit/execution-capsule-attempt-state.test.mts
+  - test/unit/execution-capsule-command-factory.test.mts
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 command and attempt-state suites preserve immutable outputs, receipt/hash lineage, CAS/reviewer/boundary checks, seals, zero dispatch and no replay."
 ---
 
 # Execution Capsule Admission Contract
@@ -30,7 +32,7 @@ lastReviewedCommit: 2f1e80b02173fc20231f01ac9e6da62c16d63109
 Prepare a `foundry-execution-capsule-stage.v1` manifest and its content-addressed leaves, then run:
 
 ```bash
-node scripts/foundry.mjs execution-capsule-admit \
+node scripts/foundry.ts execution-capsule-admit \
   --stage-manifest .foundry/workspaces/<task-id>/stage-revisions/revision-0001.json \
   --out-dir .foundry/workspaces/<task-id>/admissions/revision-0001
 ```

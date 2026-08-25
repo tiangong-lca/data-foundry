@@ -80,13 +80,13 @@
       "id": "source-package-conversion",
       "route_to": "tidas-tools",
       "use_when": ["the input is a supported packaged LCA dataset"],
-      "examples": ["tidas import", "node scripts/foundry.mjs dataset-tidas-import"]
+      "examples": ["tidas import", "node scripts/foundry.ts dataset-tidas-import"]
     },
     {
       "id": "schema-validation",
       "route_to": "tidas-tools",
       "use_when": ["candidate TIDAS documents require deterministic schema validation"],
-      "examples": ["tidas validate", "node scripts/foundry.mjs dataset-tidas-validate"]
+      "examples": ["tidas validate", "node scripts/foundry.ts dataset-tidas-validate"]
     },
     {
       "id": "source-document-authoring",

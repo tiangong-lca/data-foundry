@@ -31,22 +31,22 @@ pnpm capabilities:list -- --class external-lca-package-conversion
 pnpm capabilities:list -- --class source-document-authoring
 pnpm capabilities:list -- --class source-evidence-runtime-skill
 pnpm task:route -- --kind external-dataset-curated-import --dataset-type process --required-gates contract,schema,qa,curation
-node scripts/foundry.mjs tidas-handshake
-node scripts/foundry.mjs dataset-tidas-import --input ./source-package --output ./conversion
-node scripts/foundry.mjs dataset-tidas-validate --rows-file ./rows/processes.jsonl --type process --out-dir ./schema
+node scripts/foundry.ts tidas-handshake
+node scripts/foundry.ts dataset-tidas-import --input ./source-package --output ./conversion
+node scripts/foundry.ts dataset-tidas-validate --rows-file ./rows/processes.jsonl --type process --out-dir ./schema
 pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth
 pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search --full-depth
 pnpm exec tiangong-lca dataset curation-queue build --processes ./rows/processes.jsonl --flows ./rows/flows.jsonl --support ./rows/sources.jsonl --out-dir ./curation-queue
 pnpm exec tiangong-lca dataset curation-queue next --queue-dir ./curation-queue --json
 pnpm exec tiangong-lca dataset curation-queue verify --queue-dir ./curation-queue --type process --json
-node scripts/foundry.mjs dataset-curation-gate --type process --rows-file ./rows/processes.jsonl --schema-report ./schema/report.json --qa-report ./qa/process-qa-report.json --schema-file ./contract/schema.json --yaml-file ./contract/methodology.yaml --profile bafu --queue-dir ./curation-queue --classification-queue ./classification-authoring-queue.jsonl --location-queue ./location-authoring-queue.jsonl
-node scripts/foundry.mjs dataset-authoring-task-build --curation-gate-report ./curation-gate/dataset-curation-gate-report.json --out-dir ./authoring-tasks
-node scripts/foundry.mjs dataset-authoring-patch-collect --task-manifest ./authoring-tasks/authoring-task-manifest.json
-node scripts/foundry.mjs dataset-patch-apply --input ./rows/processes.jsonl --patch ./authoring-tasks/ai-patches.batch.json --out ./rows/processes.patched.jsonl --out-dir ./patch-apply --authoring-package-dir ./curation-gate/ai-authoring-packages --require-authoring-package --require-action-item-closure
-node scripts/foundry.mjs dataset-post-authoring-finalize --type <process|flow|lifecyclemodel> --rows-file ./rows/<type>.patched.jsonl --out-dir ./post-authoring-finalize --profile bafu --queue-dir ./curation-queue --classification-queue ./classification-authoring-queue.jsonl --location-queue ./location-authoring-queue.jsonl --schema-file ./contract/schema.json --yaml-file ./contract/methodology.yaml --ruleset-file ./contract/runtime-ruleset.json --classification-decision-apply-report ./classification-decision-apply/classification-decisions-apply-report.json --location-decision-apply-report ./location-decision-apply/location-decisions-apply-report.json --patch-collect-report ./authoring-tasks/authoring-patch-collect-report.json --require-patch-collect-report --patch-apply-report ./patch-apply/outputs/dataset-patch-apply-report.json --target-user-id <uuid> --verify-remote
-node scripts/foundry.mjs dataset-commit-handoff-plan --finalize-report ./post-authoring-finalize/dataset-post-authoring-finalize-report.json --state-code <expected-state-code>
-node scripts/foundry.mjs dataset-post-write-closeout --handoff-plan ./post-authoring-finalize/commit-handoff/dataset-commit-handoff-plan.json --commit-report ./post-authoring-finalize/commit/<type-command>/<summary-or-report>.json --post-write-verify-report ./post-authoring-finalize/commit-handoff/post-write-verify/outputs/remote-verification-report.json --out-dir ./post-write-closeout
-node scripts/foundry.mjs dataset-import-completion-report --task-dir . --require-type process --out-dir ./import-completion
+node scripts/foundry.ts dataset-curation-gate --type process --rows-file ./rows/processes.jsonl --schema-report ./schema/report.json --qa-report ./qa/process-qa-report.json --schema-file ./contract/schema.json --yaml-file ./contract/methodology.yaml --profile bafu --queue-dir ./curation-queue --classification-queue ./classification-authoring-queue.jsonl --location-queue ./location-authoring-queue.jsonl
+node scripts/foundry.ts dataset-authoring-task-build --curation-gate-report ./curation-gate/dataset-curation-gate-report.json --out-dir ./authoring-tasks
+node scripts/foundry.ts dataset-authoring-patch-collect --task-manifest ./authoring-tasks/authoring-task-manifest.json
+node scripts/foundry.ts dataset-patch-apply --input ./rows/processes.jsonl --patch ./authoring-tasks/ai-patches.batch.json --out ./rows/processes.patched.jsonl --out-dir ./patch-apply --authoring-package-dir ./curation-gate/ai-authoring-packages --require-authoring-package --require-action-item-closure
+node scripts/foundry.ts dataset-post-authoring-finalize --type <process|flow|lifecyclemodel> --rows-file ./rows/<type>.patched.jsonl --out-dir ./post-authoring-finalize --profile bafu --queue-dir ./curation-queue --classification-queue ./classification-authoring-queue.jsonl --location-queue ./location-authoring-queue.jsonl --schema-file ./contract/schema.json --yaml-file ./contract/methodology.yaml --ruleset-file ./contract/runtime-ruleset.json --classification-decision-apply-report ./classification-decision-apply/classification-decisions-apply-report.json --location-decision-apply-report ./location-decision-apply/location-decisions-apply-report.json --patch-collect-report ./authoring-tasks/authoring-patch-collect-report.json --require-patch-collect-report --patch-apply-report ./patch-apply/outputs/dataset-patch-apply-report.json --target-user-id <uuid> --verify-remote
+node scripts/foundry.ts dataset-commit-handoff-plan --finalize-report ./post-authoring-finalize/dataset-post-authoring-finalize-report.json --state-code <expected-state-code>
+node scripts/foundry.ts dataset-post-write-closeout --handoff-plan ./post-authoring-finalize/commit-handoff/dataset-commit-handoff-plan.json --commit-report ./post-authoring-finalize/commit/<type-command>/<summary-or-report>.json --post-write-verify-report ./post-authoring-finalize/commit-handoff/post-write-verify/outputs/remote-verification-report.json --out-dir ./post-write-closeout
+node scripts/foundry.ts dataset-import-completion-report --task-dir . --require-type process --out-dir ./import-completion
 pnpm task:route -- --kind source-evidence-dataset-development --dataset-type process --required-gates context,schema,qa,curation
 ```
 

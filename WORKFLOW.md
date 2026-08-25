@@ -23,11 +23,260 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - specs/automated-lca-capability-registry.json
   - specs/capability-ownership-rules.json
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
+  - scripts/check-lint-suppressions.ts
+  - scripts/clean-build-output.ts
   - scripts/with-lca-account.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
+  - scripts/commands/tasks.ts
+  - scripts/commands/import-completion.ts
+  - scripts/commands/commit-handoff.ts
+  - scripts/commands/identity-decision-task.ts
+  - scripts/commands/support-cache.ts
+  - scripts/commands/cli-wrappers.ts
+  - scripts/commands/execution-capsule.ts
+  - scripts/commands/post-write-closeout.ts
+  - scripts/commands/core.ts
+  - scripts/commands/identity-preflight-run.ts
+  - scripts/commands/post-authoring-finalize.ts
+  - scripts/commands/identity-decisions.ts
+  - scripts/commands/classification-decisions.ts
+  - scripts/commands/location-decisions.ts
+  - scripts/commands/library-scope-workflow.ts
+  - scripts/commands/bafu-leaf-classification-tasks.ts
+  - scripts/commands/bafu-auto-authoring.ts
+  - scripts/commands/bafu-process-scope-e2e.ts
+  - scripts/commands/bafu-batch-import-run.ts
+  - scripts/commands/authoring-plan.ts
+  - scripts/commands/bundle-sample-rows.ts
+  - scripts/commands/incremental-change-set.ts
+  - scripts/commands/topology-convergence.ts
+  - scripts/lib/foundry-args.ts
+  - scripts/lib/foundry-command-registry.ts
+  - scripts/lib/foundry-command-metadata.ts
+  - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-environment.ts
+  - scripts/lib/foundry-runtime-paths.ts
+  - scripts/lib/foundry-runtime-utils.ts
+  - scripts/lib/import-curation.ts
+  - scripts/lib/import-curation/index.ts
+  - scripts/lib/import-curation/profiles.ts
+  - scripts/lib/import-curation/trace-summary.ts
+  - scripts/lib/location-quality-utils.ts
+  - scripts/lib/bundle-row-types.ts
+  - scripts/lib/tidas-language-utils.ts
+  - scripts/lib/import-curation/internal/hash-utils.ts
+  - scripts/lib/import-curation/internal/dataset-types.ts
+  - scripts/lib/import-curation/internal/runtime-io.ts
+  - scripts/lib/import-curation/internal/prewrite-cleanup.ts
+  - scripts/lib/import-curation/internal/workflow-queue-context.ts
+  - scripts/lib/import-curation/internal/full-context-proof.ts
+  - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
+  - scripts/lib/import-curation/internal/profiles-config.ts
+  - scripts/lib/import-curation/internal/workflow-patch-collect.ts
+  - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
+  - scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts
+  - scripts/lib/import-curation/internal/workflow-row-transform-context.ts
+  - scripts/lib/import-curation/internal/workflow-dry-run-context.ts
+  - scripts/lib/import-curation/internal/workflow-evidence-scope.ts
+  - scripts/lib/import-curation/internal/workflow-decision-full-context.ts
+  - scripts/lib/import-curation/internal/workflow-authoring-tasks.ts
+  - scripts/lib/import-curation/internal/workflow-semantic-actions.ts
+  - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
+  - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
+  - scripts/lib/import-curation/internal/authoring-task-workflow.ts
+  - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
+  - scripts/lib/import-curation/internal/curation-gate-workflow.ts
+  - scripts/lib/import-curation/authoring-packages.ts
+  - scripts/lib/import-curation/patch-collect.ts
+  - scripts/lib/import-curation/curation-gate.ts
+  - scripts/lib/import-curation/curation-cleanup.ts
+  - scripts/lib/import-curation/internal/workflow-reference-closure.ts
+  - scripts/lib/import-curation/internal/workflow-source-reference-context.ts
+  - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
+  - scripts/lib/import-curation/mutation-manifest.ts
+  - scripts/lib/import-curation/internal/artifact-inputs.ts
+  - scripts/lib/import-curation/internal/context-inputs.ts
+  - scripts/lib/import-curation/internal/dataset-payload.ts
+  - scripts/lib/import-curation/internal/trace-summary.ts
+  - scripts/lib/canonical-support-mappings.ts
+  - scripts/lib/source-semantics.ts
+  - scripts/lib/trace-coverage.ts
+  - scripts/lib/tidas-row-utils.ts
+  - scripts/lib/decision-task-utils.ts
+  - scripts/lib/identity-reference-rewrite-utils.ts
+  - scripts/lib/full-context-proof.ts
+  - scripts/lib/identity-preflight-artifacts.ts
+  - scripts/lib/bafu-family-signatures.ts
+  - scripts/lib/import-ledger.ts
+  - scripts/lib/canonical-support-rewrites.ts
+  - scripts/lib/bundle-sample-utils.ts
+  - test/fixtures/fixture-roots.ts
+  - test/fixtures/finalize-fixtures.ts
+  - test/fixtures/fake-tidas.ts
+  - test/fixtures/foundry-core.ts
+  - test/fixtures/full-context-fixtures.ts
+  - test/fixtures/identity-fixtures.ts
+  - test/fixtures/incremental-change-set-fixtures.ts
+  - test/fixtures/mutation-fixtures.ts
+  - test/fixtures/row-builders.ts
+  - test/fixtures/topology-convergence-fixtures.ts
+  - test/unit/foundry-cli-spine.test.mts
+  - test/unit/foundry-command-metadata.test.mts
+  - test/unit/surface-audit-typescript.test.mts
+  - test/unit/bundle-dataset-types.test.mts
+  - test/unit/hash-utils.test.mts
+  - test/unit/tidas-language-utils.test.mts
+  - test/unit/runtime-io.test.mts
+  - test/unit/artifact-inputs.test.mts
+  - test/unit/context-inputs.test.mts
+  - test/unit/dataset-payload.test.mts
+  - test/unit/trace-summary.test.mts
+  - test/unit/canonical-support-mappings.test.mts
+  - test/unit/source-semantics-contract.test.mts
+  - test/unit/trace-coverage.test.mts
+  - test/unit/tidas-row-utils.test.mts
+  - test/unit/evidence-decision-leaves.test.mts
+  - test/unit/evidence-leaf-migration.test.mts
+  - test/unit/source-row-explicit-any-contract.test.mts
+  - test/unit/identity-rewrite-explicit-any-contract.test.mts
+  - test/unit/bafu-family-signatures-contract.test.mts
+  - test/unit/import-ledger-contract.test.mts
+  - test/unit/wave8-large-leaf-migration.test.mts
+  - test/unit/canonical-support-rewrites-contract.test.mts
+  - test/unit/bundle-sample-utils-contract.test.mts
+  - test/unit/wave9-canonical-bundle-migration.test.mts
+  - test/unit/import-ledger-type-contract.test.mts
+  - test/unit/fixture-helpers-contract.test.mts
+  - test/unit/fixture-executable-core-migration.test.mts
+  - test/unit/row-builders-fixture-migration.test.mts
+  - test/unit/context-identity-mutation-fixture-migration.test.mts
+  - test/unit/incremental-fixture-migration.test.mts
+  - test/unit/topology-fixture-migration.test.mts
+  - test/unit/bafu-family-signatures.test.mts
+  - test/unit/canonical-source-review-report-rewrite.test.mts
+  - test/unit/content-policy-profile-waiver.test.mts
+  - test/unit/execution-capsule-attempt-state.test.mts
+  - test/unit/finalize-resolution-reuse-seed.test.mts
+  - test/unit/foundry-stage-contract.test.mts
+  - test/unit/import-ledger-utils.test.mts
+  - test/unit/incremental-change-set.test.mts
+  - test/unit/library-contact-reuse.test.mts
+  - test/unit/runtime-skill-config.test.mts
+  - test/unit/source-semantics.test.mts
+  - test/unit/support-closure-proof-keys.test.mts
+  - test/unit/tidas-adapter.test.mts
+  - test/unit/tidas-cutover-audit.test.mts
+  - test/unit/topology-convergence.test.mts
+  - test/unit/workflow-semantic-actions.test.mts
+  - test/unit/unit-source-ledger-test-migration.test.mts
+  - test/unit/unit-execution-library-test-migration.test.mts
+  - test/unit/unit-algorithm-adapter-test-migration.test.mts
+  - test/unit/unit-runtime-policy-test-migration.test.mts
+  - test/scenarios/authoring-shared-context.test.mts
+  - test/scenarios/bafu-mydata-override.test.mts
+  - test/scenarios/content-saturation-gates.test.mts
+  - test/scenarios/curation-cleanup-quality-gates.test.mts
+  - test/scenarios/decision-task-context-and-classification.test.mts
+  - test/scenarios/flow-classification-authoring.test.mts
+  - test/scenarios/flow-identity-decisions.test.mts
+  - test/scenarios/flow-reference-reuse-and-traces.test.mts
+  - test/scenarios/full-context-completion-closeout.test.mts
+  - test/scenarios/identity-curation-context.test.mts
+  - test/scenarios/identity-preflight-run-and-merge.test.mts
+  - test/scenarios/incremental-change-set-handoff.test.mts
+  - test/scenarios/library-scope-workflow.test.mts
+  - test/scenarios/location-and-finalize-gates.test.mts
+  - test/scenarios/mutation-full-context-evidence.test.mts
+  - test/scenarios/mutation-lineage-helpers.test.mts
+  - test/scenarios/mutation-manifest-reference-closure.test.mts
+  - test/scenarios/post-authoring-finalize-gates.test.mts
+  - test/scenarios/topology-convergence-handoff.test.mts
+  - test/scenarios/scenario-authoring-curation-test-migration.test.mts
+  - test/scenarios/scenario-identity-reference-test-migration.test.mts
+  - test/scenarios/scenario-mutation-finalize-test-migration.test.mts
+  - test/scenarios/scenario-library-algorithm-test-migration.test.mts
+  - test/unit/foundry-runtime-utils-contract.test.mts
+  - test/unit/wave10-runtime-migration.test.mts
+  - test/unit/location-quality-utils-contract.test.mts
+  - test/unit/wave11-location-migration.test.mts
+  - test/unit/prewrite-cleanup-contract.test.mts
+  - test/unit/wave12-prewrite-migration.test.mts
+  - test/unit/workflow-queue-context-contract.test.mts
+  - test/unit/workflow-queue-context-native-errors.test.mts
+  - test/unit/wave13-queue-context-migration.test.mts
+  - test/unit/full-context-proof-contract.test.mts
+  - test/unit/wave14-full-context-proof-migration.test.mts
+  - test/unit/workflow-decision-apply-context-contract.test.mts
+  - test/unit/wave15-decision-apply-context-migration.test.mts
+  - test/unit/profiles-config-contract.test.mts
+  - test/unit/wave16-profiles-config-migration.test.mts
+  - test/unit/workflow-patch-collect-contract.test.mts
+  - test/unit/wave17-patch-collect-migration.test.mts
+  - test/unit/workflow-identity-decision-context-contract.test.mts
+  - test/unit/wave18-identity-decision-context-migration.test.mts
+  - test/unit/workflow-patch-evidence-context-contract.test.mts
+  - test/unit/wave19-patch-evidence-context-migration.test.mts
+  - test/unit/workflow-row-transform-context-contract.test.mts
+  - test/unit/wave20-row-transform-context-migration.test.mts
+  - test/unit/workflow-dry-run-context-contract.test.mts
+  - test/unit/wave21-dry-run-context-migration.test.mts
+  - test/unit/workflow-evidence-scope-contract.test.mts
+  - test/unit/wave21-evidence-scope-migration.test.mts
+  - test/unit/workflow-decision-full-context-contract.test.mts
+  - test/unit/wave22-decision-full-context-migration.test.mts
+  - test/unit/workflow-authoring-scc-contract.test.mts
+  - test/unit/wave22-authoring-scc-migration.test.mts
+  - test/unit/workflow-identity-preflight-contract.test.mts
+  - test/unit/wave22-identity-preflight-migration.test.mts
+  - test/unit/authoring-workflow-facades-contract.test.mts
+  - test/unit/wave23-authoring-facades-migration.test.mts
+  - test/unit/authoring-packages-runner-contract.test.mts
+  - test/unit/wave23-authoring-packages-migration.test.mts
+  - test/unit/patch-collect-runner-contract.test.mts
+  - test/unit/wave23-patch-collect-runner-migration.test.mts
+  - test/unit/curation-gate-workflow-facade-contract.test.mts
+  - test/unit/wave24-curation-gate-workflow-migration.test.mts
+  - test/unit/curation-gate-runner-contract.test.mts
+  - test/unit/wave24-curation-gate-runner-migration.test.mts
+  - test/unit/curation-cleanup-runner-contract.test.mts
+  - test/unit/wave24-curation-cleanup-runner-migration.test.mts
+  - test/unit/workflow-reference-closure-contract.test.mts
+  - test/unit/wave25-reference-closure-migration.test.mts
+  - test/unit/workflow-source-reference-context-contract.test.mts
+  - test/unit/wave25-source-reference-context-migration.test.mts
+  - test/unit/mutation-manifest-workflow-facade-contract.test.mts
+  - test/unit/mutation-manifest-runner-contract.test.mts
+  - test/unit/wave25-mutation-manifest-migration.test.mts
+  - test/unit/cli-wrapper-command-factory.test.mts
+  - test/unit/execution-capsule-command-factory.test.mts
+  - test/unit/post-write-closeout-command-factory.test.mts
+  - test/unit/core-command-factory.test.mts
+  - test/unit/identity-preflight-run-command-factory.test.mts
+  - test/unit/post-authoring-finalize-command-factory.test.mts
+  - test/commands/*.test.mts
+  - test/unit/wave25-identity-decision-command-migration.test.mts
+  - test/unit/wave25-classification-location-command-migration.test.mts
+  - test/unit/import-curation-leaf-barrels-migration.test.mts
+  - test/unit/import-curation-entry-barrels-migration.test.mts
+  - test/unit/wave26-library-scope-command-migration.test.mts
+  - test/unit/wave26-bafu-leaf-classification-command-migration.test.mts
+  - test/unit/wave26-bafu-auto-authoring-command-migration.test.mts
+  - test/unit/wave26-bafu-process-scope-command-migration.test.mts
+  - test/unit/wave26-bafu-batch-command-migration.test.mts
+  - test/unit/tidas-adapter-migration-contract.test.mts
+  - test/unit/post-authoring-finalize-utils-contract.test.mts
+  - test/unit/tidas-cutover-script-contract.test.mts
+  - test/unit/foundry-golden-diff-contract.test.mts
+  - test/unit/foundry-entry-closure-migration.test.mts
+  - test/unit/foundry-runtime-environment.test.mts
+  - test/unit/lint-suppression-audit.test.mts
   - test/README.md
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: f5206e37987e7ff8db7f5f207965dcd8b5204201
-lastReviewedNote: "Reviewed for Issue #65: CommandSpecs prevent byte drift, foreign hidden drafts remain blocked, and credential-scoped execution requires the fail-closed typed CLI 0.1.1 receipt wrapper."
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: 6d1f1dd4019f26024d4fd282f1b5ebba1e9271ca
+lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry/root parity, isolated Golden environments, suppression-resistant complete TS coverage, erasable syntax, clean builds and TS-aware cutover audit preserve workflow authority and fail-close boundaries."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -66,11 +315,61 @@ Choose one lane:
 
 ## Toolchain Preflight
 
-Use Node.js 24 and the repository-pinned `pnpm@11.23.0`. TypeScript `7.0.2` is the sole compiler, Oxlint is the linter, and Prettier is the formatter. Do not create npm/Yarn lockfiles, TypeScript 5/6 aliases, or compiler-API lint/format bridges.
+Use Node.js 24 and the repository-pinned `pnpm@11.23.0`. TypeScript `7.0.2` is the sole compiler, Oxlint is the linter, and Prettier is the formatter. TypeScript must keep `erasableSyntaxOnly`; Git-enumerated `.ts`/`.mts`/`.cts` files must all appear in the intentional first-party Oxlint and typecheck graphs, while tracked `.jsx`/`.tsx` are forbidden in this non-JSX control plane. Root lint ignores nested Oxlint configs, bans `@ts-ignore`/`@ts-nocheck`/`@ts-expect-error`, and runs the comment-aware native-disable audit before Oxlint, so inline suppression cannot bypass zero-any or erasable-syntax enforcement. Suppression inventory and temp-repository fixtures clear inherited repository-local Git variables before selecting their target root. The build removes stale `dist` output before compiling and emits nothing on TypeScript diagnostics; it does not promise atomic recovery from arbitrary filesystem failure. Source and emitted commands must resolve the same trusted root, use their active `.ts`/`.js` entry for nested argv, and remain equivalent from an unrelated CWD. Do not create npm/Yarn lockfiles, TypeScript 5/6 aliases, or compiler-API lint/format bridges.
 
-Issue #63 is the typed-spine foundation, not a declaration that the 160 tracked JavaScript artifacts are already TypeScript. Keep `specs/typescript-migration-inventory.json` synchronized, migrate one characterized boundary or command family at a time, and drive each slice with focused tests plus a realistic case. Toolchain changes must also pass from a clean arbitrary worktree after `pnpm install --frozen-lockfile`, without credentials, ignored `.foundry` artifacts, a sibling checkout, or another worktree's dependencies.
+Issue #63 established the typed spine and its migration is complete. Keep the permanent `test/unit/zero-javascript-ratchet.test.mts` green: tracked first-party JavaScript, compatibility compiler includes, and mixed JS test/lint globs must remain at zero. Drive every later slice with focused characterization plus a realistic case, and verify toolchain changes from a clean arbitrary worktree after `pnpm install --frozen-lockfile`, without credentials, ignored `.foundry` artifacts, a sibling checkout, or another worktree's dependencies.
 
-`pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
+For explicit-any cleanup, pair the existing behavior cases with a focused contract that runs the installed Oxlint `typescript/no-explicit-any` AST rule through `process.execPath`; do not depend on a TypeScript compiler API that the pinned TypeScript 7 package does not expose. All production, test and configuration TypeScript must remain at zero explicit `any`. The repository-wide rule is global and must not be weakened with target-specific overrides; focused family contracts remain useful characterization, not coverage exceptions.
+
+Queue authoring context must preserve manifest and JSONL encounter order, exact-version selection before id-only fallback, closure dependency/support order and native parse/filesystem/invalid-dependency failures. Missing or malformed queue evidence must not be converted into an executable or remote-write allowance.
+
+Full-context package and decision-task proof must remain bound to exact file bytes, recorded hashes and non-empty required context. Shared context follows embedded task context in the existing order; missing, malformed, hash-drifted or incomplete proof remains blocking and cannot be converted into remote-write authority.
+
+Decision-task and identity-preflight artifact helpers must keep concrete queue, context, proof, request and source-index contracts with `unknown` narrowed at JSON/dependency boundaries. Preserve selection and dedupe order, stable queue/context hashes, exact CommandSpec artifact facts, first-bound source indexes and native fail-close behavior; typing these local artifacts must not absorb Edge search or CLI execution authority.
+
+Classification decision apply context must preserve the apply report's decision/task order, exact resolved input/output paths and content hashes. A missing decision file stays empty, while malformed readable JSON or an invalid path type retains its native failure; evidence aggregation never executes decisions.
+
+Profile normalization and lookup must preserve configured profile order, alias precedence, requested/default/generic fallback and base-before-operator additions. A TypeScript migration cannot invent a waiver, broaden an account-local override or change the generic/BAFU/USLCI/worldsteel defaults.
+
+Patch collection remains an admission gate: every non-test operation needs a valid pointer, allowed resolution, evidence and required action closure. Annual-supply deferral, unresolved templates, incomplete full-context proof, trace mismatches and malformed readable artifacts must remain fail-closed before patch apply or mutation planning.
+
+Identity decision context may close an action only from a completed, matching decision and may surface reusable canonical identity only from the established decision value and aliases. File ordering, package proof, payload hashes, rewrite evidence and unresolved-flow keys remain bound evidence for later gates.
+
+Patch apply and trace evidence must remain bound to the exact row identity/index, payload hashes, resolution mode and closure codes. Deterministic cleanup substitutes only when owner, status, identity, row, trace hash and exchange signatures all match; otherwise reference closure remains blocked.
+
+Deterministic row-lineage acceptance requires an exact or content-equivalent starting artifact followed by an explicit transform chain to the expected rows. First-seen transform order, status gates and payload hashes remain evidence; unreachable or malformed chains do not become freshness or write proof.
+
+Dry-run artifacts and exact-scope evidence remain separate checks: dry-run readers preserve per-command success/failure facts, while evidence-scope rejects missing or mismatched schema, curation, cleanup, patch, dry-run and remote reports unless an explicit deterministic transform chain proves the same final rows.
+
+Decision full-context, patch authoring, semantic actions, patch evidence, and identity-preflight now execute from native TypeScript. The three authoring modules form one characterized SCC and must cross migration/build boundaries atomically. Preserve action/trace/blocker encounter order, shared-context and authoring-package hashes, exact-version identity lookup before id-only fallback, execution-receipt and target-payload freshness checks, source-context requirements, and native parse/filesystem failures; missing or stale evidence never becomes AI completion or write authority.
+
+The authoring facade/runner layer is also native TypeScript. Facades must re-export the exact live owner functions without wrappers. Package builds preserve gate-entry order, snapshot filename SHA, source bytes, task directory names and manifest/JSONL bytes. Patch collection preserves blocker class and task order, then patch-file, patch-set and operation order; malformed task JSON is reported as a blocker, malformed manifest JSON retains its native failure, and a fresh batch is written only when blockers are empty.
+
+The curation planning boundary is native TypeScript as well. Its aggregate facade must retain exact owner references; the gate runner preserves row-derived entity order, blocker families, context files, authoring packages and report aliases/bytes; cleanup preserves deep-cloned row order, deterministic sentinel/trace/source-exchange transformations, JSONL bytes and complete counts. Missing or malformed local evidence remains blocking or raises the existing native error, and none of these modules execute remote operations.
+
+The task/completion, commit-handoff/identity-task, and support-cache command owners are native TypeScript. Preserve queue and closeout order, exact task/report/snapshot bytes, final-row artifact facts, authoritative CommandSpec argv, identity action dedupe, support-cache paging and row order, and every established blocker/native error. Credential-bearing support refresh remains a read-only operator command; ordinary tests must use local HTTP stubs and must not read `.env` or access production.
+
+The mutation reference stack is native TypeScript. Preserve reference DFS and table resolution, planned-self/public-remote/proven/unresolved/foreign closure partitions, explicit-before-default source rewrite selection, public-canonical source proof filtering, write/reference/blocked item order and report/items bytes. A blocked manifest must keep write-candidates empty; rendered plans and evidence never become mutation authority.
+
+The high-level dataset orchestration layer is native TypeScript. `library-scope-workflow.ts` stays profile-agnostic; BAFU classification, auto-authoring, process-scope and batch owners retain their established BAFU defaults, while USLCI and Worldsteel wrappers delegate into the shared typed batch engine. Preserve resume ledgers, pause/stop and bounded-parallel selection, read-only preflight, exact scope/library/identity/classification gate order, local artifact bytes, shell-free argv and receipt/hash binding. Only the existing explicit `--commit` path may reach a guarded CLI handoff.
+
+CLI wrappers, execution-capsule admission, and post-write closeout are native TypeScript. Wrappers must pass executable plus argv arrays directly, retain the existing environment/CWD/stdout/stderr/exit contract, and surface native spawn errors without executing display text. Capsule admission stays offline and unattempted until exact external dispatch evidence exists. Closeout stays read-only and requires one exact owner/state/payload readback per intended root; production-test mode accepts no traceHash normalization, and foreign or RLS-hidden missing rows never pass.
+
+Core commands, the identity-preflight runner, and post-authoring finalize are native TypeScript. Core must retain runtime directory, workflow, storage, environment, surface, route, doctor and exact help behavior. Identity preflight must keep receipt-bound executable/argv arrays, request/target/binding hashes, positive-only cache reuse, stale disk and stdout/disk mismatch failures, nonzero exit handling and only-pending fail-close without a shell. Finalize must preserve identity/source/contact/canonical rewrite order, cleanup and validation gates, mutation evidence and read-only commit-handoff preparation; a blocked prerequisite never becomes dry-run or write authority.
+
+The identity, classification, and location decision command factories are native TypeScript. Preserve their existing option aliases and defaults, queue/task/path encounter order, exact help and report bytes, decision-context and unclosed-queue blockers, deterministic classification/location CLI argv, stage failure short-circuiting, and identity read-only output split. Validation blockers must prevent owner-command stages; missing or malformed local artifacts retain native failures, and no factory gains direct remote-write authority.
+
+The import-curation leaf, index, and public entry barrels are native TypeScript and must remain pure direct re-exports. Preserve the exact namespace keys and live function identity through both source and emitted Node 24 modules; do not add wrappers, initialization, hidden state, alternate owners, or a parallel `.mjs` entry. The CLI injection keys and metadata owner modules remain the authoritative command-consumer topology.
+
+The TIDAS adapter, finalize utility boundary, cutover audit and Golden harness are native TypeScript. Preserve direct executable-plus-argv invocation, operation/version/hash reports, finalize rewrite/reuse/freshness order, authoritative Git inventory JSON/exit, and non-HEAD Node-native Golden comparison. Golden baseline/current children receive one byte-identical allowlisted environment with isolated HOME/temp/config state and filesystem env loading disabled; ambient credentials and live `.env` state are never forwarded. Tests use only controlled fake executables and local Git/filesystem fixtures.
+
+All shared fixtures are native TypeScript. Keep `foundry-core.ts`, `row-builders.ts`, full-context/identity/mutation fixtures and incremental/topology packages deterministic and worktree-local. `fake-tidas.ts` must be invoked through `process.execPath` plus its script argv, never through an executable bit, shell, or platform-specific launcher; fixtures must not read credentials, `.env`, production state, or ignored historical artifacts.
+
+All unit suites are native `.test.mts`. Preserve the exact existing cases before and after each rename, keep shared fixture imports on `.ts`, and use explicit narrowing or test-local dependency casts only where the runtime owner still exposes a JavaScript-shaped boundary. Unit-test typing must not modify owner behavior, profile defaults, Worldsteel/Date.parse semantics, or remote authority.
+
+All scenario suites are native `.test.mts`. Preserve every multi-command artifact, row and blocker order, content hash, native error, fail-closed stage and remote-write boundary before and after rename. Shared recursive report typing is test-only; runtime owners and production validation remain authoritative.
+
+`pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only TypeScript executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 
 Do not parse or execute rendered command strings. `tiangong-foundry.command-spec.v1` makes `executable` plus `argv` authoritative and keeps `display` reader-only. Its SHA-256 binds the authoritative command and exact artifact facts; commit and verify both bind the final rows path, bytes, and SHA-256, and runners reject same-path drift before `shell=false` spawn. Artifact-to-scope matching still normalizes platform separators. Durable writers fsync writable file descriptors, not read-only reopened handles.
 
@@ -92,9 +391,9 @@ pnpm exec tiangong-lca dataset context-pack \
   --json
 ```
 
-4. For packaged imports, convert with `node scripts/foundry.mjs dataset-tidas-import --input <source> --output <conversion-dir>`. The adapter delegates format detection/import/conversion to Rust `tidas`, accepts compatible 0.2.x binaries, and enforces the stable operation report and exit contract. Keep the generated `process-bundles/index.json`; this is the generic package-level process-closure manifest used to build or shard downstream entity queues. Bundle `manifest` and `tidas_dir` entries may be relative to the bundle index directory and must be resolved before scope execution.
+4. For packaged imports, convert with `node scripts/foundry.ts dataset-tidas-import --input <source> --output <conversion-dir>`. The adapter delegates format detection/import/conversion to Rust `tidas`, accepts compatible 0.2.x binaries, and enforces the stable operation report and exit contract. Keep the generated `process-bundles/index.json`; this is the generic package-level process-closure manifest used to build or shard downstream entity queues. Bundle `manifest` and `tidas_dir` entries may be relative to the bundle index directory and must be resolved before scope execution.
 5. For source-document authoring, extract source evidence first and keep unresolved assumptions explicit. For document fulltext extraction, resolve the latest `document-granular-decompose` skill from `https://github.com/tiangong-ai/skills` with `pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth` before parsing the source file. For SCI paper or scientific journal evidence, resolve the latest `tiangong-kb-sci-search` skill from the same repository before retrieval. Then write `.foundry/workspaces/<task-id>/runtime-skills/runtime-skill-resolution.json` with the `pnpm dlx skills` command, the `git ls-remote https://github.com/tiangong-ai/skills.git refs/heads/main` commit, skill name, timestamp, and evidence channel. Runtime-installed shared skills may live under `.agents/skills`, but their directories and `skills-lock.json` stay untracked unless the task explicitly chooses pinned reproducibility.
-6. Validate generated rows with `node scripts/foundry.mjs dataset-tidas-validate --rows-file <rows> --type <type> --out-dir <schema-dir>`.
+6. Validate generated rows with `node scripts/foundry.ts dataset-tidas-validate --rows-file <rows> --type <type> --out-dir <schema-dir>`.
 7. Run deterministic QA with `pnpm exec tiangong-lca qa <type>`.
 8. Build the entity-level import curation queue:
 
@@ -118,10 +417,10 @@ Before AI curation for process/flow imports, audit and then run the generated id
 The remote search contract has one lexical branch over database-owned `extracted_md`. Foundry therefore emits one `lexical_weight` (default `0.8`) plus `semantic_weight` (default `0.2`) and forwards no second lexical control.
 
 ```bash
-node scripts/foundry.mjs dataset-identity-preflight-query-audit \
+node scripts/foundry.ts dataset-identity-preflight-query-audit \
   --index .foundry/workspaces/<task-id>/identity-preflight-requests/identity-preflight-requests.jsonl \
   --out-dir .foundry/workspaces/<task-id>/identity-preflight-query-audit
-node scripts/foundry.mjs dataset-identity-preflight-run \
+node scripts/foundry.ts dataset-identity-preflight-run \
   --index .foundry/workspaces/<task-id>/identity-preflight-requests/identity-preflight-requests.jsonl \
   --out-dir .foundry/workspaces/<task-id>/identity-preflight-run \
   --only-pending
@@ -130,18 +429,18 @@ node scripts/foundry.mjs dataset-identity-preflight-run \
 If a later AI patch or deterministic cleanup changes the current process/flow rows, rebuild and rerun identity preflight for the exact patched rows. Pass the original full index as `--source-index` so refreshed requests inherit the original `source_file` trace context; then merge that refreshed current-scope index back into the original full index so dependency evidence is preserved:
 
 ```bash
-node scripts/foundry.mjs dataset-identity-preflight-requests-build \
+node scripts/foundry.ts dataset-identity-preflight-requests-build \
   --type process \
   --rows-file .foundry/workspaces/<task-id>/rows/processes.patched.jsonl \
   --source-index .foundry/workspaces/<task-id>/identity-preflight-requests/identity-preflight-requests.jsonl \
   --out-dir .foundry/workspaces/<task-id>/identity-preflight-refresh
-node scripts/foundry.mjs dataset-identity-preflight-query-audit \
+node scripts/foundry.ts dataset-identity-preflight-query-audit \
   --index .foundry/workspaces/<task-id>/identity-preflight-refresh/identity-preflight-requests/identity-preflight-requests.jsonl \
   --out-dir .foundry/workspaces/<task-id>/identity-preflight-refresh-query-audit
-node scripts/foundry.mjs dataset-identity-preflight-run \
+node scripts/foundry.ts dataset-identity-preflight-run \
   --index .foundry/workspaces/<task-id>/identity-preflight-refresh/identity-preflight-requests/identity-preflight-requests.jsonl \
   --out-dir .foundry/workspaces/<task-id>/identity-preflight-refresh-run
-node scripts/foundry.mjs dataset-identity-preflight-index-merge \
+node scripts/foundry.ts dataset-identity-preflight-index-merge \
   --base-index .foundry/workspaces/<task-id>/identity-preflight-requests/identity-preflight-requests.jsonl \
   --update-index .foundry/workspaces/<task-id>/identity-preflight-refresh/identity-preflight-requests/identity-preflight-requests.jsonl \
   --out-dir .foundry/workspaces/<task-id>/identity-preflight-index-merge
@@ -150,7 +449,7 @@ node scripts/foundry.mjs dataset-identity-preflight-index-merge \
 9. Run Foundry curation:
 
 ```bash
-node scripts/foundry.mjs dataset-curation-gate \
+node scripts/foundry.ts dataset-curation-gate \
   --type <process|flow|lifecyclemodel> \
   --rows-file <rows.jsonl> \
   --schema-report <dataset-validate-report.json> \
@@ -168,17 +467,17 @@ node scripts/foundry.mjs dataset-curation-gate \
 
 The classification and location queue files may be empty, but when they exist they must be passed through so taxonomy and `tidas_locations_category.json` blockers enter the AI authoring package. For process/flow imports, the identity-preflight index must also be passed through; full-context process/flow profiles automatically block AI authoring on missing or pending current/dependency identity results until the runner has produced evidence. Foundry also attaches the bundled TIDAS category schemas and location schema as full-text contract context so AI decisions can cite the taxonomy it used. Decision task build must return a ready status before AI authoring; `blocked_missing_full_context` means schema, methodology YAML, runtime ruleset, category/location schema, identity-preflight evidence, authoring package, or converted row payload context is incomplete and must be fixed first. The same full-context rule applies to non-decision authoring tasks built from curation-gate packages; a `blocked_missing_full_context` task manifest is not valid AI input.
 
-Before choosing one of the AI authoring paths below, run `node scripts/foundry.mjs dataset-authoring-plan --curation-gate-report <dataset-curation-gate-report.json>`. The plan is read-only: it aggregates identity/classification/location/field-patch readiness, points to missing task builds or deterministic apply commands, emits `rows_chain` for the required classification/location/patch/identity row lineage, and prevents skipping from a blocked curation gate directly to write planning. When `rows_chain` is present, run chained commands in order and rerun the plan after each deterministic apply so downstream evidence is bound to the current rows file.
+Before choosing one of the AI authoring paths below, run `node scripts/foundry.ts dataset-authoring-plan --curation-gate-report <dataset-curation-gate-report.json>`. The plan is read-only: it aggregates identity/classification/location/field-patch readiness, points to missing task builds or deterministic apply commands, emits `rows_chain` for the required classification/location/patch/identity row lineage, and prevents skipping from a blocked curation gate directly to write planning. When `rows_chain` is present, run chained commands in order and rerun the plan after each deterministic apply so downstream evidence is bound to the current rows file.
 
-10. If curation is blocked on identity manual-review action items, Codex/skills should output structured identity decisions only from a ready `identity-decision-task.json`, preserve each template decision's `decision_status=completed`, `authoring_package`, `authoring_package_sha256`, `used_context_kinds`, structured `evidence`, and `closes_action_items`, then apply them through `node scripts/foundry.mjs dataset-identity-decisions-apply` with the matching `--authoring-package-dir` whenever the package directory is available. `reuse_existing_reference` must include canonical id/version. Product/process rows may choose `create_new` only with full candidate evidence. Elementary flow rows must choose `reuse_existing_reference` or `block_unresolved` by default; they may choose `create_new` only when the frozen profile explicitly authorizes account-local elementary candidates and the decision binds same-owner `state_code=0`, full identity evidence, private closure, and exclusion from the global LCIA cache. Do not patch row JSON directly for identity decisions.
-11. If curation is blocked on classification queue rows, Codex/skills should output structured classification decisions only from a ready `classification-decision-task.json`, preserve each template decision's `decision_status=completed` and `authoring_context.context_bundle_sha256`, then apply them through `node scripts/foundry.mjs dataset-classification-decisions-apply --decision-task <classification-decision-task.json>`. Large queues may be split with `--dataset-type`, `--bundle-id`/`--process-id`, `--limit`, `--offset`, and `--chunk-label`; use one `--shared-context-cache-dir` across chunks so repeated schema/YAML/category/location context is read from one stable bundle, and when decisions from multiple chunk tasks are applied to the source queue, pass every task with repeated `--decision-task`. Do not patch classification JSON directly when the classification decision workflow is available.
-12. If curation is blocked on location queue rows, Codex/skills should output structured location decisions only from a ready `location-decision-task.json`, preserve each template decision's `decision_status=completed` and `authoring_context.context_bundle_sha256`, then apply them through `node scripts/foundry.mjs dataset-location-decisions-apply --decision-task <location-decision-task.json>`. Large queues may be split with the same chunk flags and the same `--shared-context-cache-dir`; when decisions from multiple chunk tasks are applied to the source queue, pass every task with repeated `--decision-task`. Do not patch location fields directly when the location decision workflow is available.
+10. If curation is blocked on identity manual-review action items, Codex/skills should output structured identity decisions only from a ready `identity-decision-task.json`, preserve each template decision's `decision_status=completed`, `authoring_package`, `authoring_package_sha256`, `used_context_kinds`, structured `evidence`, and `closes_action_items`, then apply them through `node scripts/foundry.ts dataset-identity-decisions-apply` with the matching `--authoring-package-dir` whenever the package directory is available. `reuse_existing_reference` must include canonical id/version. Product/process rows may choose `create_new` only with full candidate evidence. Elementary flow rows must choose `reuse_existing_reference` or `block_unresolved` by default; they may choose `create_new` only when the frozen profile explicitly authorizes account-local elementary candidates and the decision binds same-owner `state_code=0`, full identity evidence, private closure, and exclusion from the global LCIA cache. Do not patch row JSON directly for identity decisions.
+11. If curation is blocked on classification queue rows, Codex/skills should output structured classification decisions only from a ready `classification-decision-task.json`, preserve each template decision's `decision_status=completed` and `authoring_context.context_bundle_sha256`, then apply them through `node scripts/foundry.ts dataset-classification-decisions-apply --decision-task <classification-decision-task.json>`. Large queues may be split with `--dataset-type`, `--bundle-id`/`--process-id`, `--limit`, `--offset`, and `--chunk-label`; use one `--shared-context-cache-dir` across chunks so repeated schema/YAML/category/location context is read from one stable bundle, and when decisions from multiple chunk tasks are applied to the source queue, pass every task with repeated `--decision-task`. Do not patch classification JSON directly when the classification decision workflow is available.
+12. If curation is blocked on location queue rows, Codex/skills should output structured location decisions only from a ready `location-decision-task.json`, preserve each template decision's `decision_status=completed` and `authoring_context.context_bundle_sha256`, then apply them through `node scripts/foundry.ts dataset-location-decisions-apply --decision-task <location-decision-task.json>`. Large queues may be split with the same chunk flags and the same `--shared-context-cache-dir`; when decisions from multiple chunk tasks are applied to the source queue, pass every task with repeated `--decision-task`. Do not patch location fields directly when the location decision workflow is available.
 13. For non-identity/non-classification/non-location curation blockers, first build explicit authoring tasks with `dataset-authoring-task-build`. Use the same `--shared-context-cache-dir` as decision tasks when rebuilding or splitting work so repeated schema/YAML/ruleset/category/location context is read from one stable bundle. The manifest must be `ready_for_ai_authoring_batch`; if it is `blocked_missing_full_context`, fix the missing schema/YAML/ruleset/category/location/source-row context before Codex/skills write patches. AI patch files must declare `patch_status=completed`; `dataset-authoring-patch-collect` rechecks full-context readiness from the manifest/tasks, verifies any referenced shared-context bundle still exists with the recorded stable `sha256`, and blocks stale, draft, incomplete, or non-completed task artifacts. Do not write the database directly from AI output.
 14. Apply identity decisions, classification decisions, location decisions, patches, or build plans through deterministic CLI/SDK paths, then rerun schema, QA, queue build when references changed, and curation.
 15. Run cleanup after source trace has been captured in authoring packages:
 
 ```bash
-node scripts/foundry.mjs dataset-curation-cleanup \
+node scripts/foundry.ts dataset-curation-cleanup \
   --type <process|flow|lifecyclemodel> \
   --rows-file <rows.jsonl> \
   --source-rows-file <original-source-rows.jsonl> \
@@ -188,7 +487,7 @@ node scripts/foundry.mjs dataset-curation-cleanup \
 Use `--source-rows-file` for process scopes when the import source row may itself be output-only. Cleanup may generate deterministic `tiangongfoundry:sourceExchangeCompleteness` proof only if the source row is output-only and the final row preserves the non-flow-reference exchange signature.
 
 16. Revalidate cleaned rows before dry-run/publish planning. For every final write scope, including mixed support rows and process/flow/lifecyclemodel rows, run the post-authoring finalizer so `pnpm exec tiangong-lca dataset classification audit --type location` checks schema-derived location-code fields against `tidas_locations_category.json`; `counts.location_audit_blockers` must be `0`.
-17. The post-authoring mutation manifest must prove reference closure before commit handoff. For mutually-referencing writable support records, use a mixed `--type support` scope containing only contact/source rows, so the support closure is proven inside one exact scope and committed through `pnpm exec tiangong-lca dataset save-draft --type auto`. For profile-generated source/contact dependencies, `dataset-post-authoring-finalize --finalize-source-contact-support` may prepare the shared contact/source support finalize and commit-handoff artifacts, but dependent process/flow/lifecyclemodel scopes still wait until that support row is actually committed and verified. Flow Properties and Unit Groups reuse `specs/canonical-support/flow-properties-unit-groups.json` public rows by default. If the frozen profile explicitly authorizes account-local support and no acceptable public row exists, use a separate candidate registry and only same-owner `state_code=0` FP/UG references through the profile-specific guarded CLI/database path; never insert those candidates into the public cache or mix them with public targets in one alias batch. Source rows in the support scope must be true reports, publications, or traceable source records; `ILCD format`, `Not specified`, data-format, and compliance-system identities are blocked as source rows and should remain only as canonical reference rewrites/provenance. True source rows must not keep empty or type-only descriptions such as `Report`; Foundry repairs those from citation/name evidence during bundle materialization. Missing `annualSupplyOrProductionVolume` source evidence is not deferred to `common:other`; Foundry writes `9999 missing-data-sentinel/year`, an intentionally non-physical searchable sentinel that later database-side curation owns replacing. If final rows contain `common:other.tiangongfoundry:*` trace, the manifest must prove same-row AI patch evidence created or accepted that trace, or a matching deterministic cleanup proof for source-only-output exchange completeness; identity/classification/location decisions alone cannot authorize trace入库. References outside the exact write scope must either already exist in the remote account/public library as proven by `dataset verify-remote`, or their writable rows must be written in an earlier scope and verified before the dependent process/flow/lifecyclemodel scope can proceed. Any blocked finalize must write an import ledger under `--ledger-dir` or the finalize output directory, including `blocked.scopes.human-review.jsonl` plus categorized `blocked.dependencies.*.jsonl` rows with required human action and rerun path.
+17. The post-authoring mutation manifest must prove reference closure before commit handoff. For mutually-referencing writable support records, use a mixed `--type support` scope containing only contact/source rows, so the support closure is proven inside one exact scope and committed through `pnpm exec tiangong-lca dataset save-draft --type auto`. For profile-generated source/contact dependencies, `dataset-post-authoring-finalize --finalize-source-contact-support` may prepare the shared contact/source support finalize and commit-handoff artifacts, but dependent process/flow/lifecyclemodel scopes still wait until that support row is actually committed and verified. Flow Properties and Unit Groups reuse `specs/canonical-support/flow-properties-unit-groups.json` public rows by default. Bundle materialization must pass `--block-on-unscaled-canonical-support` when the task requires strict scale proof: known finite positive non-1 factors remain `canonical_support_amount_scaling_required`, while missing, non-finite, zero, or negative factors remain `canonical_support_amount_scale_unresolved`; both must survive in scaling JSONL, the command report, and process-scope ledger before a canonical UUID rewrite can erase source-unit evidence. If the frozen profile explicitly authorizes account-local support and no acceptable public row exists, use a separate candidate registry and only same-owner `state_code=0` FP/UG references through the profile-specific guarded CLI/database path; never insert those candidates into the public cache or mix them with public targets in one alias batch. Source rows in the support scope must be true reports, publications, or traceable source records; `ILCD format`, `Not specified`, data-format, and compliance-system identities are blocked as source rows and should remain only as canonical reference rewrites/provenance. True source rows must not keep empty or type-only descriptions such as `Report`; Foundry repairs those from citation/name evidence during bundle materialization. Missing `annualSupplyOrProductionVolume` source evidence is not deferred to `common:other`; Foundry writes `9999 missing-data-sentinel/year`, an intentionally non-physical searchable sentinel that later database-side curation owns replacing. If final rows contain `common:other.tiangongfoundry:*` trace, the manifest must prove same-row AI patch evidence created or accepted that trace, or a matching deterministic cleanup proof for source-only-output exchange completeness; identity/classification/location decisions alone cannot authorize trace入库. References outside the exact write scope must either already exist in the remote account/public library as proven by `dataset verify-remote`, or their writable rows must be written in an earlier scope and verified before the dependent process/flow/lifecyclemodel scope can proceed. Any blocked finalize must write an import ledger under `--ledger-dir` or the finalize output directory, including `blocked.scopes.human-review.jsonl` plus categorized `blocked.dependencies.*.jsonl` rows with required human action and rerun path.
 18. Remote writes require explicit task write policy, dry-run evidence, location-code audit evidence, reference-closure evidence, verification evidence, and a ready commit handoff. Human approval is required for policy changes and exceptional waivers, not for every gate-passing batch when the task policy allows automated commit.
 19. When restarting after a successful post-authoring finalize, reuse existing finalize artifacts only if the report is current for the exact rows file, the mutation manifest and full-context proof still pass, and a fresh `dataset-commit-handoff-plan` is generated. Foundry does not own direct database mutation; the handoff plan exposes the CLI commands that a CLI/skill maintenance or publish workflow must execute under the approved account context, followed by post-write verify, closeout, and task completion reporting.
 20. After `dataset-commit-handoff-plan` has proven every final-row `common:other.tiangongfoundry:unresolvedTrace` / `sourceExchangeCompleteness` entry matches the retained trace queue JSONL, the batch runner may execute the generated commit CommandSpec for that exact scope when the task write policy permits automated commit. Then execute the post-write verify CommandSpec and run `dataset-post-write-closeout` for each committed write scope; both specs and both reports must bind the same final rows bytes from handoff, profile-required full schema/YAML/context AI proof and evidence counts must still be attached, closeout must recheck the same trace queue coverage for later database-side curation, and successful closeout must append `ok.*.verified.jsonl` import-ledger rows. A foreign or RLS-hidden `state_code=0` reference reported as `missing_dataset` stays blocked; no trusted-reference allowlist or cross-account observation may rewrite it to passed. Production-test account cases accept no normalized difference.

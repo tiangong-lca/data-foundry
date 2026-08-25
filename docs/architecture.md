@@ -23,18 +23,131 @@ checkPaths:
   - docs/workspace-project-map.md
   - specs/capability-ownership-rules.json
   - specs/automated-lca-capability-registry.json
-  - specs/typescript-migration-inventory.json
+  - test/unit/zero-javascript-ratchet.test.mts
+  - test/unit/source-row-explicit-any-contract.test.mts
+  - test/unit/identity-rewrite-explicit-any-contract.test.mts
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
+  - scripts/check-lint-suppressions.ts
+  - scripts/clean-build-output.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
+  - scripts/commands/tasks.ts
+  - scripts/commands/import-completion.ts
+  - scripts/commands/commit-handoff.ts
+  - scripts/commands/identity-decision-task.ts
+  - scripts/commands/support-cache.ts
+  - scripts/commands/cli-wrappers.ts
+  - scripts/commands/execution-capsule.ts
+  - scripts/commands/post-write-closeout.ts
+  - scripts/commands/authoring-plan.ts
+  - scripts/commands/bundle-sample-rows.ts
+  - scripts/commands/incremental-change-set.ts
+  - scripts/commands/topology-convergence.ts
+  - scripts/commands/core.ts
+  - scripts/commands/identity-preflight-run.ts
+  - scripts/commands/post-authoring-finalize.ts
+  - scripts/lib/foundry-args.ts
+  - scripts/commands/identity-decisions.ts
+  - scripts/commands/classification-decisions.ts
+  - scripts/commands/location-decisions.ts
+  - scripts/commands/library-scope-workflow.ts
+  - scripts/commands/bafu-leaf-classification-tasks.ts
+  - scripts/commands/bafu-auto-authoring.ts
+  - scripts/commands/bafu-process-scope-e2e.ts
+  - scripts/commands/bafu-batch-import-run.ts
+  - scripts/lib/foundry-command-registry.ts
+  - scripts/lib/foundry-command-metadata.ts
+  - scripts/lib/surface-audit.ts
+  - scripts/lib/foundry-runtime-environment.ts
+  - scripts/lib/foundry-runtime-paths.ts
+  - scripts/lib/foundry-runtime-utils.ts
+  - scripts/lib/location-quality-utils.ts
+  - scripts/lib/bundle-row-types.ts
+  - scripts/lib/tidas-language-utils.ts
+  - scripts/lib/import-curation/internal/hash-utils.ts
+  - scripts/lib/import-curation.ts
+  - scripts/lib/import-curation/index.ts
+  - scripts/lib/import-curation/profiles.ts
+  - scripts/lib/import-curation/trace-summary.ts
+  - scripts/lib/import-curation/internal/dataset-types.ts
+  - scripts/lib/import-curation/internal/runtime-io.ts
+  - scripts/lib/import-curation/internal/prewrite-cleanup.ts
+  - scripts/lib/import-curation/internal/workflow-queue-context.ts
+  - scripts/lib/import-curation/internal/full-context-proof.ts
+  - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
+  - scripts/lib/import-curation/internal/profiles-config.ts
+  - scripts/lib/import-curation/internal/workflow-patch-collect.ts
+  - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
+  - scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts
+  - scripts/lib/import-curation/internal/workflow-row-transform-context.ts
+  - scripts/lib/import-curation/internal/workflow-dry-run-context.ts
+  - scripts/lib/import-curation/internal/workflow-evidence-scope.ts
+  - scripts/lib/import-curation/internal/workflow-decision-full-context.ts
+  - scripts/lib/import-curation/internal/workflow-authoring-tasks.ts
+  - scripts/lib/import-curation/internal/workflow-semantic-actions.ts
+  - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
+  - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
+  - scripts/lib/import-curation/internal/authoring-task-workflow.ts
+  - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
+  - scripts/lib/import-curation/internal/curation-gate-workflow.ts
+  - scripts/lib/import-curation/authoring-packages.ts
+  - scripts/lib/import-curation/patch-collect.ts
+  - scripts/lib/import-curation/curation-gate.ts
+  - scripts/lib/import-curation/curation-cleanup.ts
+  - scripts/lib/import-curation/internal/workflow-reference-closure.ts
+  - scripts/lib/import-curation/internal/workflow-source-reference-context.ts
+  - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
+  - scripts/lib/import-curation/mutation-manifest.ts
+  - scripts/lib/import-curation/internal/artifact-inputs.ts
+  - scripts/lib/import-curation/internal/context-inputs.ts
+  - scripts/lib/import-curation/internal/dataset-payload.ts
+  - scripts/lib/import-curation/internal/trace-summary.ts
+  - scripts/lib/canonical-support-mappings.ts
+  - scripts/lib/source-semantics.ts
+  - scripts/lib/trace-coverage.ts
+  - scripts/lib/tidas-row-utils.ts
+  - scripts/lib/decision-task-utils.ts
+  - scripts/lib/identity-reference-rewrite-utils.ts
+  - scripts/lib/full-context-proof.ts
+  - scripts/lib/identity-preflight-artifacts.ts
+  - scripts/lib/bafu-family-signatures.ts
+  - scripts/lib/import-ledger.ts
+  - scripts/lib/canonical-support-rewrites.ts
+  - scripts/lib/bundle-sample-utils.ts
+  - test/fixtures/fixture-roots.ts
+  - test/fixtures/finalize-fixtures.ts
+  - test/commands/*.test.mts
+  - test/fixtures/fake-tidas.ts
+  - test/fixtures/foundry-core.ts
+  - test/fixtures/full-context-fixtures.ts
+  - test/fixtures/identity-fixtures.ts
+  - test/fixtures/incremental-change-set-fixtures.ts
+  - test/fixtures/mutation-fixtures.ts
+  - test/fixtures/row-builders.ts
+  - test/fixtures/topology-convergence-fixtures.ts
+  - test/unit/unit-source-ledger-test-migration.test.mts
+  - test/unit/unit-execution-library-test-migration.test.mts
+  - test/unit/unit-algorithm-adapter-test-migration.test.mts
+  - test/unit/unit-runtime-policy-test-migration.test.mts
+  - test/scenarios/scenario-authoring-curation-test-migration.test.mts
+  - test/scenarios/scenario-identity-reference-test-migration.test.mts
+  - test/scenarios/scenario-mutation-finalize-test-migration.test.mts
+  - test/scenarios/scenario-library-algorithm-test-migration.test.mts
   - .prettierignore
   - package.json
   - pnpm-lock.yaml
   - pnpm-workspace.yaml
-  - prettier.config.cjs
+  - prettier.config.ts
   - tsconfig*.json
   - scripts/with-lca-account.ts
+  - test/unit/foundry-entry-closure-migration.test.mts
+  - test/unit/foundry-runtime-environment.test.mts
+  - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: f5206e37987e7ff8db7f5f207965dcd8b5204201
-lastReviewedNote: "Reviewed for Issue #65: typed CommandSpecs make handoffs content-addressed, foreign hidden drafts stay excluded, and the TS account boundary consumes CLI 0.1.1 identity receipts fail-closed."
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: 6d1f1dd4019f26024d4fd282f1b5ebba1e9271ca
+lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry/root parity, isolated Golden environments, suppression-resistant complete TS coverage, erasable syntax, clean builds and TS-aware cutover audit remain Foundry-local delivery evidence."
 ---
 
 # Architecture
@@ -43,7 +156,7 @@ lastReviewedNote: "Reviewed for Issue #65: typed CommandSpecs make handoffs cont
 
 Foundry is a thin local control plane. It owns task intake, profile locks, workspace ledgers, owner routing, and gate aggregation. It does not own reusable dataset execution logic.
 
-For command ownership and navigation, use `docs/foundry-ai-navigation.md`, `docs/foundry-command-surface.md`, and the checked `scripts/lib/foundry-command-metadata.mjs` map. Those files classify every Foundry command and link each command to its owner module, artifacts, and tests without changing the runtime `help` output.
+For command ownership and navigation, use `docs/foundry-ai-navigation.md`, `docs/foundry-command-surface.md`, and the checked `scripts/lib/foundry-command-metadata.ts` map. Those files classify every Foundry command and link each command to its owner module, artifacts, and tests without changing the runtime `help` output.
 
 The minimum runtime shape is:
 
@@ -66,9 +179,9 @@ profiles
 
 ## Toolchain And Typed-Spine Boundary
 
-Foundry's Node runtime is standardized on Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2`, Oxlint, and Prettier. pnpm is the sole dependency manager and owns the only root workspace and lockfile. The compiler graph must contain TypeScript 7.0.2 only; TypeScript 5/6 aliases, `@typescript-eslint`, and formatting plugins that load the TypeScript compiler API are not compatibility paths.
+Foundry's non-JSX Node runtime is standardized on Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2`, Oxlint, and Prettier. pnpm is the sole dependency manager and owns the only root workspace and lockfile. The compiler graph must contain TypeScript 7.0.2 only and enforce erasable-only runtime syntax; tracked `.jsx`/`.tsx`, TypeScript 5/6 aliases, `@typescript-eslint`, and formatting plugins that load the TypeScript compiler API are not compatibility paths. Git inventory is reconciled against intentional first-party Oxlint and typecheck file lists; root lint disables nested configs, bans TypeScript suppression comments, and runs a comment-aware tracked-TypeScript native-disable audit before Oxlint. Repository-local Git environment is stripped before that audit or its fixture commands target another root, keeping hook state out of the parent index. The build removes the exact stale `dist` tree before compilation, and `noEmitOnError` prevents TypeScript diagnostics from emitting replacement JavaScript; arbitrary I/O failures are outside that guarantee. Emitted and source runtimes use one trusted-root/active-entry resolver rather than deriving repository state from an output directory or CWD.
 
-At the Issue #63 baseline, the estate is still 160 tracked JavaScript artifacts: 95 `.mjs` runtime files (59,692 lines), 64 `.mjs` test files (30,273 lines), and one Prettier `.cjs` config. That inventory is explicit in `specs/typescript-migration-inventory.json`. The typed spine is introduced in dependency order:
+The historical Issue #63 baseline contained 160 tracked JavaScript artifacts: 95 runtime files, 64 tests, and one Prettier config. The migration is complete. A permanent zero-JavaScript ratchet and TS-only compiler/test/lint graph now replace the retired migration ledger. The typed spine was introduced in dependency order:
 
 ```text
 entrypoint + args
@@ -79,6 +192,70 @@ entrypoint + args
 ```
 
 This boundary avoids a misleading bulk rename. Each module remains in the inventory until a TypeScript replacement preserves its command, artifact, stdout, exit, and safety behavior under focused tests. Completion means no untyped business-runtime modules remain and the full case-driven suite is green.
+
+The native TypeScript leaf set now also covers decision context, identity reference rewrite, full-context proof, and preflight artifact factories. Focused characterization preserves queue/context SHA scopes, exact reference rows/reports, fail-closed missing evidence, transform relevance, request/report artifact facts, CommandSpec argv, first-bound source indexes, positive-only execution reuse, and every static consumer. `decision-task-utils.ts` and `identity-preflight-artifacts.ts` now model their dependency injection, queue/context/proof, dataset request and source-index shapes directly; external JSON stays `unknown` until its local boundary, and an Oxlint AST contract keeps this family free of explicit `any` without moving search or execution authority.
+
+The source-semantics, reusable TIDAS-row, and identity-reference-rewrite leaves now expose concrete local dependency and evidence shapes with `unknown` narrowed at dynamic JSON boundaries instead of explicit `any`. Worktree-local Oxlint AST contracts guard those exact production/test targets without introducing a compiler-API dependency; the change remains type-only and does not move source policy, reference decisions, filesystem errors, CLI dispatch, or remote-write authority.
+
+After the decision, source and proof families converge, `.oxlintrc.json` promotes `typescript/no-explicit-any` to one global error and removes every family-specific override. `zero-javascript-ratchet.test.mts` validates both raw and printed rule graphs and a controlled failing fixture, so all first-party TypeScript remains covered without a TS6 compatibility compiler.
+
+The typed BAFU family and import-ledger leaves preserve two local control-plane boundaries: deterministic family grouping/ranking over ordered signature hashes, and append-only resume evidence over verified, blocked, dependency, retry, and skipped JSONL rows. They do not change database writes, command ownership, public help, profile defaults, or the owner CLI boundary.
+
+The typed canonical-support and bundle-sampling leaves own local reference rewriting and source-package materialization, not amount conversion or remote execution. Canonical scale evidence is collected before the package-local FP reference is replaced: the explicit blocking flag distinguishes a known positive non-1 factor from an unresolved missing/non-finite/non-positive factor, and projects either blocker into the report and process-scope ledger. Without that flag, existing profile behavior remains compatible.
+
+The typed import-ledger boundary now models its JSON graph, external dependencies, report state unions, every emitted row family, manifest and write results directly. Unknown external values are narrowed at the boundary and no explicit `any` remains; the emitted append-only schema and byte/order/hash behavior are unchanged. Typed fixture roots/finalize builders remain test-only delivery infrastructure and do not enter the runtime dependency graph.
+
+The high-fan-in runtime utility boundary is native TypeScript and owns only Foundry-local file/path/frontmatter/env-file/stage mechanics plus exact installed-package discovery. The focused runtime-path leaf resolves a trusted package root and the active source/emitted entry; the runtime-environment leaf creates allowlisted child environments with isolated local state. Runtime tests execute only local Node subprocesses and explicit temporary env files or the internal filesystem-env-disabled policy; production credentials and repository `.env` remain outside the test boundary.
+
+The typed location-quality boundary reads the installed CLI location vocabulary and discovers only schema/fallback-declared location fields. It creates local authoring commands, queue context and blockers; the CLI owns classification lookup/apply and the schema package owns valid codes. Missing schema evidence yields an empty valid-code map rather than approving unknown values, and invalid targets remain blocking before finalize.
+
+The typed prewrite-cleanup boundary performs deterministic transformations only after authoring evidence exists: required-field sentinel completion, metadata normalization, source/final exchange proof, import-only trace externalization, namespace repair and local locator redaction. Source and final exchange signatures exclude only permitted flow-reference rewrites; their array and object order remains content-addressed. It cannot invent source evidence or grant write authority.
+
+The typed workflow-queue-context boundary reads local queue manifests, task rows, closure dependencies and optional authoring JSONL indexes without changing their encounter order or evidence bytes. It attaches that evidence to curation packages using exact-version then id-only lookup and retains native missing, malformed and invalid-dependency failures; it does not execute queue work or expand remote-write authority.
+
+The typed internal full-context-proof boundary reads content-addressed authoring packages, decision tasks, shared context bundles and row artifacts. It verifies exact bytes, required non-empty kinds/files, task kind/status and payload identity hashes while preserving evidence encounter order and existing parse envelopes. It constructs blockers only; schema ownership, AI decisions and remote execution remain outside this module.
+
+The typed decision-apply-context boundary projects an existing classification apply report into local evidence: normalized decisions, bound decision-task proof, resolved input/output row paths, content hashes and applied count. It preserves report order and aliases and performs no decision application, schema mutation or remote operation.
+
+The typed profiles-config boundary reads and normalizes the repository's declarative import profiles, then projects profile lookup and listing views. It preserves configuration order, fallbacks, waiver scopes and account-local override evidence; it does not own schema rules or permit a profile to bypass downstream gates beyond its already-declared policy.
+
+The typed workflow-patch-collect boundary validates AI patch-set structure, targets, action closure, resolution/evidence contracts and specialized trace/classification/location decisions, then exposes local artifact readers used by downstream context modules. It neither applies patches nor writes remotely; deterministic blocker order and native malformed-artifact failures remain part of admission evidence.
+
+The typed workflow-identity-decision-context boundary reads identity apply/rewrite artifacts, normalizes their aliases, binds authoring-package and row-payload proof, indexes decisions for later gates and merges multiple reports without reordering first-seen evidence. It does not search, decide identity, rewrite rows or execute remote operations.
+
+The typed workflow-patch-evidence-context boundary indexes deterministic patch-apply evidence, binds input/output row hashes, checks trace evidence alternatives and snapshots active safety/profile policy. It supplies proof to mutation/reference-closure gates without applying patches, performing cleanup or granting remote-write authority.
+
+The typed workflow-row-transform-context boundary projects existing transform reports into content-bound edges and answers whether an expected rows artifact is reachable from decision outputs. It may compare exact bytes for deterministic no-op copies, but it never rewrites rows, invents an edge or grants mutation authority.
+
+The typed dry-run context projects owner-command result files into local identity maps; the typed evidence-scope context compares every required report to the exact final rows and emits ordered blockers. Neither performs validation, curation, patching, dry-run execution, verification or remote writes.
+
+The typed decision-full-context boundary evaluates existing classification, location, identity and deterministic transform proof without applying decisions. Authoring task, semantic action and patch evidence helpers form one existing, characterized SCC; they are compiled as a single native-TypeScript closure so no `.mjs`/`.ts` dual track can split their runtime identity. The typed identity-preflight boundary resolves local request/report artifacts, validates execution receipts and payload freshness, and projects read-only candidate evidence into curation blockers. These modules preserve hashes, encounter order and fail-closed errors; Edge/database search and CLI execution remain outside Foundry.
+
+The typed authoring facades expose that SCC without wrapping or duplicating it. The package runner copies immutable content-addressed authoring snapshots and writes ordered local task manifests; the patch runner classifies local task outputs and writes an ordered batch only after every blocker check passes. Both are filesystem-only Foundry adapters and neither applies patches, invokes the CLI, or grants mutation authority.
+
+The typed curation planning boundary follows those authoring layers. `curation-gate-workflow.ts` is a live-reference aggregate; `curation-gate.ts` reads local rows and evidence into ordered blockers, authoring packages and reports; `curation-cleanup.ts` deep-clones rows and performs the already-governed deterministic sentinel, trace, proof and redaction transforms. Their byte/order contracts are local Foundry evidence only and do not execute or authorize a database mutation.
+
+The typed command-owner layer now includes filesystem task/completion aggregation, commit handoff and identity task preparation, and canonical support-cache refresh/autofill. These factories keep their injected/local orchestration boundaries: task/report bytes and order remain content-stable, handoff only emits artifact-bound CommandSpecs, identity tasks only snapshot and package local evidence, and support refresh performs authenticated read-only queries. No factory implements CLI mutation, database semantics, review, or publication.
+
+The typed mutation reference stack remains an offline planning boundary. Reference closure classifies local roots and externally proven dependencies without querying or mutating the database; source context admits only ordered, in-scope public-canonical proofs; mutation manifest aggregates exact evidence and writes JSON/JSONL partitions. If any item is blocked, no write-candidate payload is emitted for execution.
+
+The typed dataset-orchestration layer composes those owners without absorbing them. The generic library workflow prepares deduplicated library and scope artifacts; BAFU classification, auto-authoring and process-scope owners retain dataset-specific policy; the shared batch engine adds resumable ledgers, bounded parallelism, interruption/preflight modes and explicit handoff delegation. It owns local ordering and checkpoints, not CLI mutation, profile meaning, remote state or publication.
+
+The typed runtime-command layer also includes CLI wrappers, offline capsule admission and post-write closeout. Wrappers delegate to the installed CLI with an executable and argv array; capsule admission writes immutable local evidence with zero dispatch; closeout aggregates already-produced commit/readback proof without issuing a remote operation. Unique-root, owner/state/payload, accepted-diff and production-test rules remain in their typed proof owners rather than moving into transport code.
+
+The typed command-owner layer now also includes `core.ts`, `identity-preflight-run.ts`, and `post-authoring-finalize.ts`. Core owns local runtime/bootstrap and diagnostic projection. Identity preflight invokes only the published read-only CLI through receipt-bound executable/argv arrays and content-bound request evidence. Finalize orders existing rewrite, cleanup, validation, curation, dry-run, mutation-manifest and handoff adapters. None of these owners implement schema/search semantics, direct database mutation, review, or publication.
+
+The typed decision command boundary now includes `identity-decisions.ts`, `classification-decisions.ts`, and `location-decisions.ts`. Identity validation partitions local rows into write candidates, reference reuse, and unresolved evidence without executing a remote mutation. Classification and location validate task-bound decisions, preserve queue grouping and schema/path order, and delegate deterministic apply through the existing CLI argv boundary only after blockers are empty. Their reports and artifacts remain Foundry-local evidence; schema vocabularies, search, mutation, and readback authority remain with their existing owners.
+
+The import-curation entry topology is typed end to end. `profiles.ts` and `trace-summary.ts` are identity-preserving leaf barrels; `import-curation/index.ts` aggregates the eight semantic owner exports; `import-curation.ts` is the public entry consumed by `foundry.ts`. These modules contain no runtime wrapper or initialization logic. The CLI dispatcher still receives the same injected functions, and command metadata still names the semantic owner modules rather than assigning behavior to a barrel.
+
+The typed adapter/tooling layer keeps external ownership explicit. `tidas-adapter.ts` only selects and validates the Rust machine contract; finalize utilities coordinate existing CLI/identity stages; cutover audit reads the TypeScript-aware Git inventory; Golden comparison creates isolated worktrees and compares normalized local outputs under one identical credential-free environment. None owns converter rules, database behavior or production mutation.
+
+The shared fixture topology is typed end to end but remains outside the production build. `foundry-core.ts` provides worktree-local filesystem and command helpers; `row-builders.ts` feeds full-context, identity and mutation evidence fixtures; incremental and topology packages remain separate algorithm fixtures. The fake tidas process is a published-report/exit harness only and is launched through Node executable-plus-argv even without an executable bit. This layer cannot acquire credentials, network access, schema ownership, or mutation authority.
+
+The unit-test topology is now TypeScript-only. Four migration contracts retain the established behavior families and verify that governed paths no longer name `.test.mjs`; test-local types narrow fixture/report values while the production runtime dependency graph and owner module specifiers remain unchanged.
+
+The scenario topology is also TypeScript-only. Four migration contracts retain authoring/curation, identity/reference, mutation/finalize and library/algorithm workflow evidence; the broad fixture-report vocabulary exists only to type already-produced test JSON and grants no runtime or remote authority.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

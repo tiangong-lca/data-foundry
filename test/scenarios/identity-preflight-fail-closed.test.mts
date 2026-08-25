@@ -14,8 +14,8 @@ import {
   writeJson,
   writeJsonLines,
   writeText,
-} from "../fixtures/foundry-core.mjs";
-import { testAuthIdentityReceipt } from "../fixtures/identity-fixtures.mjs";
+} from "../fixtures/foundry-core.ts";
+import { testAuthIdentityReceipt } from "../fixtures/identity-fixtures.ts";
 
 const root = path.join(repoRoot, "tmp", "identity-preflight-fail-closed");
 const FLOW_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
@@ -352,7 +352,7 @@ test("explicit receipt cannot substitute another receipt-bound account", () => {
   const result = spawnSync(
     process.execPath,
     [
-      "scripts/foundry.mjs",
+      "scripts/foundry.ts",
       "dataset-identity-preflight-run",
       "--index",
       rel(fixture.indexFile),

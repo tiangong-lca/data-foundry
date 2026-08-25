@@ -14,10 +14,10 @@ whenToUpdate:
 checkPaths:
   - docs/file-organization.md
   - docs/file-location-registry.json
-  - specs/typescript-migration-inventory.json
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
-lastReviewedNote: "Reviewed for Issue #63: pnpm acceptance commands and the checked TypeScript migration inventory location."
+  - test/unit/zero-javascript-ratchet.test.mts
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: native TypeScript configuration and the permanent zero-JavaScript ratchet replace the completed migration inventory without a compatibility ledger."
 ---
 
 # Repository File Organization
@@ -36,7 +36,7 @@ Before creating or moving a file, classify it by role:
 - reusable policies and operator guides: `docs/`
 - executable contracts and schemas: `specs/`
 - local utilities: `scripts/`
-- TypeScript migration ledger and toolchain tests: `specs/typescript-migration-inventory.json` and focused tests under `test/unit/`
+- permanent zero-JavaScript and toolchain contracts: `test/unit/zero-javascript-ratchet.test.mts`, `test/unit/toolchain-contract.test.mts`, and focused tests under `test/unit/`
 
 If a file does not fit one of these roles, create or update the smallest repo-owned placement rule before adding it.
 

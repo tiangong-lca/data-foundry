@@ -8,8 +8,10 @@ layout: repo
 # Review note, 2026-08-25: Issue #63 establishes the pnpm 11.23 / Node 24 / TypeScript 7.0.2 typed spine, explicit JavaScript migration inventory, Oxlint boundary, CLI 0.1.0 command pin, and clean arbitrary-worktree validation. Existing ownership and routing semantics are unchanged.
 # Review note, 2026-08-25: Issue #65 removes the foreign/RLS-hidden state-0 missing-dataset accepted-diff path from the helper, shared batch runner, and worldsteel config; legitimate root traceHash-only normalization remains, and the touched helper/test migrate to TypeScript.
 # Review note, 2026-08-25: Issue #65 adds the typed CommandSpec envelope, authoritative executable/argv handoffs, final-row byte/SHA binding, and shell-free BAFU execution. Ownership and routing semantics are unchanged.
+# Review note, 2026-08-25: Issue #67 Wave 24 B3 migrates the curation aggregate, gate runner, and cleanup runner under the existing scripts/** and test/** ownership/rule coverage. No catalog, routing, rule, profile, environment, or remote-authority semantics change.
+# Review note, 2026-08-25: Issue #67 Wave 24 migrates five existing command-owner paths to TypeScript with local characterization. Existing control-plane, test-layout, ownership, and documentation routes already cover the moved paths; no rule or authority boundary changes.
 lastReviewedAt: "2026-08-25"
-lastReviewedCommit: "e94db0428e3508e68617bb1878c7e8dbec904def"
+lastReviewedCommit: "a9f003156cd58f223ae2bd4557616c9d9ee65b71"
 
 catalog:
   repos:
@@ -59,14 +61,14 @@ ownership:
           - package.json
           - pnpm-lock.yaml
           - pnpm-workspace.yaml
-          - prettier.config.cjs
+          - prettier.config.ts
           - scripts/**
           - specs/automated-lca-capability-registry.json
           - specs/canonical-support/**
           - specs/capability-ownership-rules.json
           - specs/data-foundry-service.md
           - specs/schemas/**
-          - specs/typescript-migration-inventory.json
+          - test/unit/zero-javascript-ratchet.test.mts
           - specs/workspace-capability-adapters.md
           - tsconfig*.json
       ownerRepo: data-foundry
@@ -108,7 +110,7 @@ coverage:
     - package.json
     - pnpm-lock.yaml
     - pnpm-workspace.yaml
-    - prettier.config.cjs
+    - prettier.config.ts
     - scripts/**
     - test/**
     - specs/**
@@ -149,14 +151,14 @@ routing:
         - package.json
         - pnpm-lock.yaml
         - pnpm-workspace.yaml
-        - prettier.config.cjs
+        - prettier.config.ts
         - scripts/**
         - specs/automated-lca-capability-registry.json
         - specs/canonical-support/**
         - specs/capability-ownership-rules.json
         - specs/data-foundry-service.md
         - specs/schemas/**
-        - specs/typescript-migration-inventory.json
+        - test/unit/zero-javascript-ratchet.test.mts
         - specs/workspace-capability-adapters.md
         - tsconfig*.json
     import-profile:
@@ -175,7 +177,7 @@ routing:
         - docs/foundry-task-contracts.md
     proof:
       paths:
-        - scripts/foundry.mjs
+        - scripts/foundry.ts
         - package.json
         - README.md
         - WORKFLOW.md
@@ -272,7 +274,7 @@ rules:
         kind: dependency-lock
       - path: pnpm-workspace.yaml
         kind: package-workspace-contract
-      - path: prettier.config.cjs
+      - path: prettier.config.ts
         kind: formatter-contract
       - path: scripts/**
         kind: local-runtime
@@ -286,8 +288,10 @@ rules:
         kind: service-contract
       - path: specs/schemas/**
         kind: artifact-schema-contract
-      - path: specs/typescript-migration-inventory.json
-        kind: typed-migration-ledger
+      - path: specs/typescript-migration-*.json
+        kind: retired-typescript-migration-artifact
+      - path: test/unit/zero-javascript-ratchet.test.mts
+        kind: zero-javascript-ratchet
       - path: specs/workspace-capability-adapters.md
         kind: adapter-contract
       - path: tsconfig*.json
@@ -298,6 +302,8 @@ rules:
         kind: command-navigation
       - path: docs/foundry-command-surface.md
         kind: command-surface-doc
+      - path: docs/countable-product-functional-unit-design.md
+        kind: functional-unit-design
     requiredDocs:
       - path: README.md
         mode: review_or_update
@@ -313,6 +319,8 @@ rules:
         mode: must_exist
       - path: docs/env-surface-policy.md
         mode: must_exist
+      - path: test/unit/zero-javascript-ratchet.test.mts
+        mode: review_or_update
       - path: specs/capability-ownership-rules.json
         mode: must_exist
     reason: Command wrappers, route plans, and capability ownership changes must preserve Foundry as task/workspace/profile/gate control.
@@ -340,11 +348,11 @@ rules:
         kind: execution-capsule-contract
       - path: specs/schemas/execution-capsule-stage.schema.json
         kind: execution-capsule-schema
-      - path: scripts/commands/execution-capsule.mjs
+      - path: scripts/commands/execution-capsule.ts
         kind: execution-capsule-command
-      - path: test/commands/execution-capsule.test.mjs
+      - path: test/commands/execution-capsule.test.mts
         kind: execution-capsule-command-test
-      - path: test/unit/execution-capsule-attempt-state.test.mjs
+      - path: test/unit/execution-capsule-attempt-state.test.mts
         kind: execution-capsule-state-test
     requiredDocs:
       - path: docs/execution-capsule-contract.md
@@ -358,13 +366,13 @@ rules:
         kind: incremental-change-set-contract
       - path: specs/schemas/incremental-change-set.schema.json
         kind: incremental-change-set-schema
-      - path: scripts/commands/incremental-change-set.mjs
+      - path: scripts/commands/incremental-change-set.ts
         kind: incremental-change-set-command
-      - path: test/unit/incremental-change-set.test.mjs
+      - path: test/unit/incremental-change-set.test.mts
         kind: incremental-change-set-unit-test
-      - path: test/commands/incremental-change-set.test.mjs
+      - path: test/commands/incremental-change-set.test.mts
         kind: incremental-change-set-command-test
-      - path: test/scenarios/incremental-change-set-handoff.test.mjs
+      - path: test/scenarios/incremental-change-set-handoff.test.mts
         kind: incremental-change-set-scenario-test
     requiredDocs:
       - path: docs/incremental-change-set-contract.md
@@ -382,15 +390,15 @@ rules:
         kind: topology-convergence-contract
       - path: specs/schemas/topology-convergence.schema.json
         kind: topology-convergence-schema
-      - path: scripts/commands/topology-convergence.mjs
+      - path: scripts/commands/topology-convergence.ts
         kind: topology-convergence-command
-      - path: test/fixtures/topology-convergence-fixtures.mjs
+      - path: test/fixtures/topology-convergence-fixtures.ts
         kind: topology-convergence-fixture
-      - path: test/unit/topology-convergence.test.mjs
+      - path: test/unit/topology-convergence.test.mts
         kind: topology-convergence-unit-test
-      - path: test/commands/topology-convergence.test.mjs
+      - path: test/commands/topology-convergence.test.mts
         kind: topology-convergence-command-test
-      - path: test/scenarios/topology-convergence-handoff.test.mjs
+      - path: test/scenarios/topology-convergence-handoff.test.mts
         kind: topology-convergence-scenario-test
     requiredDocs:
       - path: docs/topology-convergence-contract.md

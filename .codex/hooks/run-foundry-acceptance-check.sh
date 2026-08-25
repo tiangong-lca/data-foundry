@@ -23,9 +23,9 @@ NODE
   exit 0
 fi
 
-if [[ ! -f package.json || ! -f scripts/foundry.mjs ]]; then
+if [[ ! -f package.json || ! -f scripts/foundry.ts ]]; then
   node - <<'NODE'
-const message = 'Foundry acceptance Stop hook skipped because package.json or scripts/foundry.mjs was not found at the repository root.';
+const message = 'Foundry acceptance Stop hook skipped because package.json or scripts/foundry.ts was not found at the repository root.';
 console.log(JSON.stringify({ systemMessage: message }));
 NODE
   exit 0

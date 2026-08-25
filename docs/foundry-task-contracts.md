@@ -169,7 +169,7 @@ Each line records one durable artifact:
   "artifact_id": "schema-process",
   "kind": "schema-report",
   "path": "schema/process/outputs/validation-report.json",
-  "owner_command": "node scripts/foundry.mjs dataset-tidas-validate --type process",
+  "owner_command": "node scripts/foundry.ts dataset-tidas-validate --type process",
   "sha256": "<sha256>",
   "created_at_utc": "2026-06-04T00:00:00Z"
 }

@@ -238,7 +238,7 @@ test("account wrapper package and surface metadata point only at the typed entry
     fs.readFileSync(path.join(repositoryRoot, "package.json"), "utf8"),
   );
   const surfaceAudit = fs.readFileSync(
-    path.join(repositoryRoot, "scripts", "lib", "surface-audit.mjs"),
+    path.join(repositoryRoot, "scripts", "lib", "surface-audit.ts"),
     "utf8",
   );
   const wrapperSource = fs.readFileSync(

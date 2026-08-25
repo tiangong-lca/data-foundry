@@ -31,7 +31,7 @@ Profile for the worldsteel EF3.1 native ILCD 1.1 package (`inputs/CUP2025-2_2022
 - **Reuse by UUID:** the canonical DB already holds the EF3.1 flows under their original UUIDs, so the ~1,315 reference flows are reused deterministically by UUID (no semantic search). See `docs/import-profiles/worldsteel/import-plan.md` §7.
 - **Capped elementary mint:** `allow_account_local_support_and_elementary` is enabled **only** as a capped escape hatch for the ≤17 GaBi/Sphera pseudo-elementary flows (dataSetVersion 20.25.x) with no canonical match. These are NOT matched by UUID — the AI judges reuse-vs-mint from full context. FP/UG are reference-only (`mintUnmatchedFpUgSupport=false`). Final mint count is reviewed after the UUID-reuse pass.
 - **Library/attribution contact:** the package's own worldsteel contact `d5710976-d600-11da-a94d-0800200c9a66` (World Steel Association) is **reused** as the single shared library contact, not minted fresh. Threaded via the runner's `libraryContact.contactId`/`contactVersion`.
-- **Database fallback source:** worldsteel processes whose data source resolves to a placeholder cite the synthesized `worldsteel LCI database` source (`source-semantics.mjs` worldsteel branch), never the BAFU default.
+- **Database fallback source:** worldsteel processes whose data source resolves to a placeholder cite the synthesized `worldsteel LCI database` source (`source-semantics.ts` worldsteel branch), never the BAFU default.
 - **External documents:** the 13 `referenceToDigitalFile` binaries are uploaded to the `external_docs` storage bucket and the source `@uri` rewritten by the `tiangong-lca dataset source upload-attachments` CLI command, authenticated as `data@worldsteel.org`, before write.
 - **Version:** preserve the source `dataSetVersion` (e.g. `20.25.x` products / `03.00.004` reference) — do NOT renumber to `00.00.001`.
 
@@ -43,7 +43,7 @@ Profile for the worldsteel EF3.1 native ILCD 1.1 package (`inputs/CUP2025-2_2022
 
 ## Runner
 
-`scripts/commands/worldsteel-batch-import-run.mjs` (`dataset-worldsteel-batch-import-run`) wraps the BAFU per-scope engine with: `enableBafuAutofill=false`, `enableFamilySignatures=false`, `commitFlowSupportInline=true`, `mintUnmatchedFpUgSupport=false`, `applyResolutionRewrites=true`, and the reused worldsteel `libraryContact`.
+`scripts/commands/worldsteel-batch-import-run.ts` (`dataset-worldsteel-batch-import-run`) wraps the BAFU per-scope engine with: `enableBafuAutofill=false`, `enableFamilySignatures=false`, `commitFlowSupportInline=true`, `mintUnmatchedFpUgSupport=false`, `applyResolutionRewrites=true`, and the reused worldsteel `libraryContact`.
 
 ## Open Decisions
 

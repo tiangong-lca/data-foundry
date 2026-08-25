@@ -163,7 +163,7 @@ profile 文档要求 kWh→MJ ×3.6、tkm→kg\*km ×1000 且禁止「silent」�
 
 **三类上游补齐**：
 
-1. **缺失 elementary flow（305 个）**—— [upstream canonical DB]。`disposition=upstream_new_elementary_*`：280 物质 + 17 PM 分箱 + 8 Noise。远端确无等价（80 候选/流穷尽重判过）。按 CSV 建：`name`→baseName、`cas`→CASNumber、`source_category/subCategory`→目标 ILCD 隔间（映射规则 = `library-scope-workflow.mjs` 的 `traceCompartment`）、`reference_flow_property`→参考属性。优先：`Particulates <2.5um`(2,254 scope)、`Dinitrogen monoxide`(639)、Noise 系列。
+1. **缺失 elementary flow（305 个）**—— [upstream canonical DB]。`disposition=upstream_new_elementary_*`：280 物质 + 17 PM 分箱 + 8 Noise。远端确无等价（80 候选/流穷尽重判过）。按 CSV 建：`name`→baseName、`cas`→CASNumber、`source_category/subCategory`→目标 ILCD 隔间（映射规则 = `library-scope-workflow.ts` 的 `traceCompartment`）、`reference_flow_property`→参考属性。优先：`Particulates <2.5um`(2,254 scope)、`Dinitrogen monoxide`(639)、Noise 系列。
 2. **converter 类型误判（163 个）**—— [upstream tidas-tools]。`disposition=flow_type_retype_converter_upstream`：§2-C 根因，technosphere product/service 被误写成 elementary。修 `_flow_classification()` 按 ecoSpold group→type 映射（inputGroup=4/outputGroup=4→Elementary；inputGroup=5→Product；inputGroup=3/service→Service；outputGroup=3→Waste；见 README 表）。重转后这些成 product/waste/service flow → 正常导入（product flow 可新建，非 reference-only）。
 3. **5 对 FP/UG**—— [upstream canonical DB]。完整规格 + 激活步骤见 `fp-ug-canonical-support-governance.md` §2（去重 3 维度 Length\*time/Time/Person\*distance，pending mapping 已就位待填 UUID）。
 

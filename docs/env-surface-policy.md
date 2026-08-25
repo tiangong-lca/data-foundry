@@ -16,11 +16,16 @@ checkPaths:
   - .env.example
   - .codex/hooks/run-foundry-acceptance-check.sh
   - docs/env-surface-policy.md
-  - scripts/foundry.mjs
+  - scripts/foundry.ts
+  - scripts/foundry-golden-diff.ts
+  - scripts/commands/core.ts
   - scripts/with-lca-account.ts
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: 097eeb85d08167c87aef8b0efb8270311fc6baa8
-lastReviewedNote: "Reviewed for Issue #65 after final four-platform validation: account profiles, receipt bindings, the restricted TS7 child environment, and credential-free Golden baseline isolation remain aligned."
+  - scripts/lib/foundry-runtime-environment.ts
+  - scripts/lib/foundry-runtime-utils.ts
+  - test/unit/foundry-runtime-environment.test.mts
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
+lastReviewedNote: "Reviewed for Issue #67 Golden isolation: the internal filesystem-env-disabled child policy and allowlisted temporary HOME/config environment are not public .env inputs and forward no ambient credentials."
 ---
 
 # Environment Surface Policy
@@ -69,8 +74,12 @@ When a variable is needed by more than one project, record the owner before docu
 
 The account wrapper reads credential and expected project/user intent only from the selected ignored account profile. `FOUNDRY_AUTH_RECEIPT_*` values are safe, wrapper-generated child bindings and must not be configured in `.env` or account profiles. `FOUNDRY_ACCOUNT_PROFILE_SKIP_AUTH_CHECK` and equivalent bypass variables are unsupported and must not be documented or propagated.
 
+## Internal Credential-Free Child Policy
+
+`FOUNDRY_RUNTIME_ENV_FILE_POLICY=disabled` is an internal child-process binding, not a user-configurable `.env.example` variable. The Golden harness sets it only inside an explicit allowlisted environment shared byte-for-byte by baseline and current commands. That environment replaces HOME, temp, XDG, npm, git and Corepack state with task-local directories, preserves only required platform launcher keys, accepts only `TIANGONG_LCA_CLI_BIN` and `TIDAS_BIN` as caller overrides, and drops ambient `NODE_OPTIONS`, tokens, keys, passwords, sessions, credential URLs and other configuration injection. Ordinary Foundry execution keeps the existing default of loading the repository `.env`; tests seed only a temporary `.env` to prove the disabled and default paths.
+
 ## Automatic Check
 
-`pnpm env:check` validates `.env.example` against the allowlist and forbidden-key list in `scripts/foundry.mjs`.
+`pnpm env:check` validates `.env.example` against the allowlist and forbidden-key list in `scripts/foundry.ts`.
 
 The same env-surface check is included in `pnpm acceptance:check`, so the Codex Stop hook can block future automatic runs when an internal variable is accidentally promoted into Foundry's public env example. The clean arbitrary-worktree toolchain gate is offline and must not read `.env`, account profiles, or `.foundry` runtime state.

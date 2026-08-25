@@ -4,9 +4,8 @@
     "lib": ["ES2024"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "allowJs": true,
-    "checkJs": false,
     "strict": true,
+    "erasableSyntaxOnly": true,
     "noEmit": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -17,15 +16,10 @@
     "types": ["node"]
   },
   "include": [
-    "scripts/**/*.js",
-    "scripts/**/*.mjs",
-    "scripts/**/*.cjs",
+    "prettier.config.ts",
     "scripts/**/*.ts",
     "scripts/**/*.mts",
     "scripts/**/*.cts",
-    "test/**/*.js",
-    "test/**/*.mjs",
-    "test/**/*.cjs",
     "test/**/*.ts",
     "test/**/*.mts",
     "test/**/*.cts"

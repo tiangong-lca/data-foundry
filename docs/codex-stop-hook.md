@@ -17,9 +17,10 @@ checkPaths:
   - .codex/hooks.json
   - .codex/hooks/run-foundry-acceptance-check.sh
   - package.json
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: db0d3129414884234cb24452ba71168c02e64d60
-lastReviewedNote: "Reviewed for Issue #65: the Stop hook still invokes the pnpm-only acceptance surface after the receipt, CommandSpec, case-TDD, and typed-surface changes."
+  - scripts/commands/core.ts
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 owners and pnpm-only gates do not change Stop-hook registration, output, artifacts, recursion guard or authoritative local inputs."
 ---
 
 # Codex Stop Hook

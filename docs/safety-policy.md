@@ -21,9 +21,56 @@ checkPaths:
   - docs/import-profiles/bafu/constraints.md
   - specs/automated-lca-capability-registry.json
   - specs/workspace-capability-adapters.md
+  - scripts/foundry-golden-diff.ts
+  - scripts/check-tidas-cutover.ts
+  - scripts/lib/tidas-adapter.ts
+  - scripts/lib/post-authoring-finalize-utils.ts
+  - scripts/commands/tasks.ts
+  - scripts/commands/import-completion.ts
+  - scripts/commands/commit-handoff.ts
+  - scripts/commands/identity-decision-task.ts
+  - scripts/commands/support-cache.ts
+  - scripts/commands/cli-wrappers.ts
+  - scripts/commands/execution-capsule.ts
+  - scripts/commands/post-write-closeout.ts
+  - scripts/commands/library-scope-workflow.ts
+  - scripts/commands/bafu-leaf-classification-tasks.ts
+  - scripts/commands/bafu-auto-authoring.ts
+  - scripts/commands/bafu-process-scope-e2e.ts
+  - scripts/commands/bafu-batch-import-run.ts
+  - scripts/commands/core.ts
+  - scripts/commands/identity-preflight-run.ts
+  - scripts/commands/post-authoring-finalize.ts
+  - scripts/lib/import-curation/internal/prewrite-cleanup.ts
+  - scripts/lib/import-curation/internal/workflow-queue-context.ts
+  - scripts/lib/import-curation/internal/full-context-proof.ts
+  - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
+  - scripts/lib/import-curation/internal/profiles-config.ts
+  - scripts/lib/import-curation/internal/workflow-patch-collect.ts
+  - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
+  - scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts
+  - scripts/lib/import-curation/internal/workflow-row-transform-context.ts
+  - scripts/lib/import-curation/internal/workflow-dry-run-context.ts
+  - scripts/lib/import-curation/internal/workflow-evidence-scope.ts
+  - scripts/lib/import-curation/internal/workflow-decision-full-context.ts
+  - scripts/lib/import-curation/internal/workflow-authoring-tasks.ts
+  - scripts/lib/import-curation/internal/workflow-semantic-actions.ts
+  - scripts/lib/import-curation/internal/workflow-patch-evidence.ts
+  - scripts/lib/import-curation/internal/workflow-identity-preflight.ts
+  - scripts/lib/import-curation/internal/authoring-task-workflow.ts
+  - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
+  - scripts/lib/import-curation/internal/curation-gate-workflow.ts
+  - scripts/lib/import-curation/authoring-packages.ts
+  - scripts/lib/import-curation/patch-collect.ts
+  - scripts/lib/import-curation/curation-gate.ts
+  - scripts/lib/import-curation/curation-cleanup.ts
+  - scripts/lib/import-curation/internal/workflow-reference-closure.ts
+  - scripts/lib/import-curation/internal/workflow-source-reference-context.ts
+  - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
+  - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
-lastReviewedNote: "Reviewed for Issue #65: authoritative argv handoffs bind final-row bytes, and foreign/RLS-hidden state-0 missing rows never count as successful readback."
+lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed orchestration, adapters/tools and final core/preflight/finalize owners preserve blockers/artifacts, shell-free receipt-bound argv, request/cache/report hashes, ordered mutation/handoff proof and native fail-close without broadening authority."
 ---
 
 # Safety Policy
@@ -61,6 +108,7 @@ Remote database writes are blocked unless:
 - missing canonical unitgroups, flowproperties, elementary flows, compliance sources, data-format sources, contacts, or true sources block only the dependent write scope and are recorded for human/database governance; independent scopes with proven closure may continue
 - blocked write scopes must append machine-readable import-ledger rows under `blocked.scopes.human-review.jsonl` and categorized `blocked.dependencies.*.jsonl` files with concrete blocker reasons, required human action, and the rerun path; successful readback-verified scopes must append `ok.*.verified.jsonl` rows so later batch reruns can skip already imported rows
 - curation cleanup has run and cleaned rows were revalidated
+- deterministic cleanup may externalize import-only source trace only after hashing it into a safe summary; circular/unserializable trace evidence fails before deletion. Retained Foundry trace evidence must carry its namespace, local machine locators must be deleted or SHA-redacted, and source-only-output proof remains bound to exact ordered non-flow-reference exchange signatures.
 - post-authoring Foundry curation gate passes on the exact final rows and references a deterministic QA report for those rows
 - state-code-aware mutation plan exists
 - Foundry `dataset-mutation-manifest` is `ready_for_remote_write` for the exact write scope
@@ -79,6 +127,7 @@ Remote database writes are blocked unless:
 - after commit and readback, Foundry `dataset-post-write-closeout` reports `completed`; it must prove the handoff was ready, the CLI commit report was a real commit with no row failures, post-write verification used the same final rows, root readback checks have equal local/remote payload hashes, owner/state_code match the handoff, profile-required full schema/YAML/context AI proof and evidence counts remain attached, and any `common:other` trace queues remain attached
 - for a task with one or more committed scopes, Foundry `dataset-import-completion-report` reports `completed` after aggregating every closeout report required by the task; missing closeouts, duplicate closeouts for the same dataset type/final rows, non-completed closeouts, mismatched finalize/mutation scopes, missing profile-required full-context proof or evidence counts, unreadable trace queues, or missing required dataset types keep the task blocked
 - for resumable batch imports, Foundry `dataset-import-ledger-report` must be able to summarize the append-only import ledger into `resume.skipped-verified.jsonl` and `resume.plan.jsonl`, preserving ready-only execution across reruns
+- high-level library/BAFU orchestration may resume, pause, stop claiming scopes, run bounded workers, or emit read-only preflight plans, but none of those states grants write authority; only an explicit commit request may delegate an artifact-bound, receipt-checked executable-plus-argv handoff after every scope gate passes
 - Foundry task state moves from `tasks/active` to `tasks/done` only through `task-complete`, which requires a matching `dataset-import-completion-report.completed` for the same task id, at least one post-write closeout scope, and profile-required full schema/YAML/context AI completion proof before entry
 
 For `state_code=0`, ordinary account-owned working-data repair should use update-first semantics. For missing or ambiguous `state_code`, stop at dry-run and create a follow-up task.

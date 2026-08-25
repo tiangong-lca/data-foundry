@@ -1,4 +1,7 @@
 ---
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: only the Foundry entry check path moves to native TypeScript; countable-product and functional-unit semantics are unchanged."
 title: Countable Product Functional Unit Design
 docType: design
 scope: data-foundry
@@ -16,7 +19,7 @@ whenToUpdate:
   - when a countable-product target-quality exemplar is written and verified
 checkPaths:
   - specs/data-foundry-service.md
-  - scripts/foundry.mjs
+  - scripts/foundry.ts
   - ../tiangong-lca-cli/src/**
   - ../tiangong-lca-data/tiangong_lca_data/external_docs/pef_method.pdf
   - ../tiangong-lca-data/tiangong_lca_data/external_docs/pefcr_guidance_v6.3-2.pdf

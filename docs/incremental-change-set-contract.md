@@ -14,14 +14,17 @@ whenToUpdate:
 checkPaths:
   - docs/incremental-change-set-contract.md
   - specs/schemas/incremental-change-set.schema.json
-  - scripts/commands/incremental-change-set.mjs
-  - test/unit/incremental-change-set.test.mjs
-  - test/commands/incremental-change-set.test.mjs
-  - test/scenarios/incremental-change-set-handoff.test.mjs
+  - scripts/commands/incremental-change-set.ts
+  - test/unit/incremental-command-migration.test.mts
+  - test/fixtures/incremental-change-set-fixtures.ts
+  - test/unit/incremental-fixture-migration.test.mts
+  - test/unit/incremental-change-set.test.mts
+  - test/commands/incremental-change-set.test.mts
+  - test/scenarios/incremental-change-set-handoff.test.mts
   - docs/execution-capsule-contract.md
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: 4d415fac33799011d37094ac79122c1eef3a7855
-lastReviewedNote: "Reviewed for Issue #63: the stage-contract module moved to TypeScript without changing incremental composition semantics or artifacts."
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 command, fixture, unit and handoff suites preserve canonical hashes, merge/noise/array rules, dependency activation, artifacts, native errors and zero dispatch."
 ---
 
 # Incremental Change-Set Contract
@@ -37,7 +40,7 @@ The command produces a candidate change set and audit evidence. It never connect
 ## Invocation
 
 ```bash
-node scripts/foundry.mjs dataset-incremental-change-set-compose \
+node scripts/foundry.ts dataset-incremental-change-set-compose \
   --request .foundry/workspaces/<task-id>/incremental/request.json \
   --out-dir .foundry/workspaces/<task-id>/incremental/composition-0001
 ```

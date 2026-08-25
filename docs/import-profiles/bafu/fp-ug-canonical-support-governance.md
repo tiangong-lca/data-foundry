@@ -6,10 +6,13 @@
 
 代码侧已落地（本仓库）：
 
-- `scripts/lib/canonical-support-mappings.mjs` — mapping schema 增加 `canonical_reference_unit` + `source_unit_scales`，回填全部既有映射的换算因子（取自 canonical UnitGroup 的 mean_value），并加入 3 条 pending mapping。
+- `scripts/lib/canonical-support-mappings.ts` — mapping schema 增加 `canonical_reference_unit` + `source_unit_scales`，回填全部既有映射的换算因子（取自 canonical UnitGroup 的 mean_value），并加入 3 条 pending mapping。
 - `specs/canonical-support/flow-properties-unit-groups.json` — 同步上述（rewrite 实际读取此缓存，不读 .mjs）。
-- `scripts/lib/canonical-support-rewrites.mjs` — rewrite 变 scale-aware：在 rewrite 行与报告中记录 `amount_scale_to_canonical_reference`；当 scale≠1 写入 `canonical-support-amount-scaling.jsonl` 与 `amount_scaling_requirements`；`--block-on-unscaled-canonical-support` 时升级为硬 blocker；pending mapping 产出 `canonical_support_pending_upstream` blocker。
-- `test/commands/canonical-support-rewrites.test.mjs` — 覆盖 scale 记录 / 阻断 flag / factor=1 不触发 / pending blocker。
+- `scripts/lib/canonical-support-rewrites.ts` — rewrite 变 scale-aware：在 rewrite 行与报告中记录 `amount_scale_to_canonical_reference`；当 scale≠1 写入 `canonical-support-amount-scaling.jsonl` 与 `amount_scaling_requirements`；`--block-on-unscaled-canonical-support` 时升级为硬 blocker；pending mapping 产出 `canonical_support_pending_upstream` blocker。
+- `dataset-bundle-sample-rows` — materialization 必须把同一 scaling requirement、block flag 和 blocker 传入 canonical rewrite；一旦提前把源 FP 改为 canonical UUID，后续 finalize 已无法从 canonical 引用恢复原始单位尺度。带 flag 的 scale≠1 scope 会进入 `process-scope-ledger.jsonl` 的 `needs_ai_authoring`，并保留独立 scaling JSONL。
+- blocking flag 下 scale 合同 fail-closed：已知、有限且为正的非 1 因子使用 `canonical_support_amount_scaling_required`；缺失、NaN、无限、0 或负数使用 `canonical_support_amount_scale_unresolved`。后者不得被当作普通 scale≠1，也不得用 account-local override 放行。
+- 当前保留的独立 precedence 决策：若引用已是 canonical UUID 但版本过旧、cache 又缺该 FP 的 Unit Group proof，显式 account-local override 会跳过 proof blocker，同时不做 version bump，结果为 `completed_no_rewrites`；后续 readback 仍可能因 stale version 阻断。Wave 9 仅锁定该既有行为，是否改为 fail-closed/bump 必须另行评审，不能夹带在 TS 迁移中。
+- `test/commands/canonical-support-rewrites.test.mts` — 覆盖 scale 记录 / 阻断 flag / factor=1 不触发 / pending blocker。
 
 ---
 
@@ -70,7 +73,7 @@ profile 文档**明确要求**单位换算，且把漏掉换算定性为严重�
 - `hiq-issue-02:110`：「the amount **must be scaled by 1000** ... **not silent generic adapter magic**. Impact: Missing the scale factor causes a **three-order-of-magnitude error**.」
 - `hiq-governance:51`：freight 换算「Apply explicit scaling decision in canonical support mapping, **not silently**.」
 
-但实现里 mapping schema 此前**无 scale 字段**，`canonical-support-rewrites.mjs` 只换 `referenceToFlowPropertyDataSet` 指针、**从不换算数值**（全代码库无任何 exchange amount 换算逻辑）。`kWh→Net calorific value` 的 **FP 名复用**是已接受的 legacy；但**数值不换算**正是文档点名禁止的「silent magic」。
+但实现里 mapping schema 此前**无 scale 字段**，`canonical-support-rewrites.ts` 只换 `referenceToFlowPropertyDataSet` 指针、**从不换算数值**（全代码库无任何 exchange amount 换算逻辑）。`kWh→Net calorific value` 的 **FP 名复用**是已接受的 legacy；但**数值不换算**正是文档点名禁止的「silent magic」。
 
 ### 端到端实证（canonical 已验证数据）
 
@@ -84,7 +87,7 @@ flow `b84dea0f`（"Electricity, at cogen with biogas engine"，经 process `c908
 
 ### 回补（pending 决策；本文档不擅自改已验证数据）
 
-1. 用 `--block-on-unscaled-canonical-support` 重跑 canonical-support rewrite，定位全部 `amount_scaling_required` 行（现已可机器产出 `canonical-support-amount-scaling.jsonl`）。
+1. 用 `--block-on-unscaled-canonical-support` 重跑 bundle sampling/canonical-support rewrite，定位全部 `amount_scaling_required` 行（两条路径均保留 `canonical-support-amount-scaling.jsonl`；bundle sampling 同步写 scope ledger blocker）。
 2. 对每条受影响 **process exchange** 的 `meanAmount`/`resultingAmount` 乘 `amount_scale_to_canonical_reference`（kWh ×3.6、tkm/km ×1000），附换算证据；这是跨数据集步骤（flow rewrite 那一 pass 不碰 process 数值）。
 3. 重新 readback 校验。
 4. 若上游后续提供 generic `Energy` FP（参考单位即 kWh）等「参考单位 = 源单位」的 canonical，则该量纲换算因子归 1，从根上消除此类风险。

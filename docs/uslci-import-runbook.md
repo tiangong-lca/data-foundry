@@ -15,8 +15,9 @@ checkPaths:
   - docs/uslci-import-plan.md
   - docs/import-profiles/uslci/**
   - scripts/lib/import-curation/**
-lastReviewedAt: 2026-07-27
-lastReviewedCommit: d29e522562245956d5a146e582a26ddf2a68613e
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
+lastReviewedNote: "Reviewed for Issue #67 Wave 22b: the typed USLCI profile wrapper preserves its exact configuration and leaves this retained Python-era runbook historical and non-authoritative."
 related:
   - docs/uslci-import-plan.md
   - docs/import-profiles/uslci/profile.md
@@ -187,7 +188,7 @@ inputs(合并源包) → tidas-tools 转换（CLI 包装入口，见 §5 Phase 1
 
 ### Phase 3A — classification 授权（process 2,112 + flow-product 1,638 = 3,750，杠杆 1）✅ 链已验证
 
-走**完全 generic、profile 中立**的链（`classification-decisions.mjs` 零 bafu 引用）。**pilot（15 process + 85 flow-product）已端到端打通**：6 scope 仅凭 classification 即 ready、pilot-15 classification blocker 归零。**经验证的精确配方 + 坑**（细节见 `$RUN/phase-journal.md`）：
+走**完全 generic、profile 中立**的链（`classification-decisions.ts` 零 bafu 引用）。**pilot（15 process + 85 flow-product）已端到端打通**：6 scope 仅凭 classification 即 ready、pilot-15 classification blocker 归零。**经验证的精确配方 + 坑**（细节见 `$RUN/phase-journal.md`）：
 
 1. **context pack**（USLCI 此前无，必须生成；process/flow 各一次，profile 值是 `ai-import` 不是 uslci）： `tiangong-lca dataset context-pack --type <process|flow> --profile ai-import --out-dir <SR>/context/<type> --json`。
 2. **队列**：`dataset-bundle-sample-rows --profile uslci --bundles-dir $RUN/conversion-v3/process-bundles [--sample-size N] --out-dir <SR>` → `classification-authoring-queue.jsonl`（含两类）+ `rows/*.jsonl`。⚠️ `authoring-plan-v1` 模板和 resolution blocked-ledger **都不能替代**队列（缺 `classification_workflow.commands.input_rows`）。

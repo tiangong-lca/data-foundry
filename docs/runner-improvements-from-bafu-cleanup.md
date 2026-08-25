@@ -15,8 +15,9 @@ checkPaths:
   - docs/import-profiles/bafu/**
   - docs/import-profiles/uslci/**
   - scripts/lib/import-curation/**
-lastReviewedAt: 2026-07-27
-lastReviewedCommit: d29e522562245956d5a146e582a26ddf2a68613e
+lastReviewedAt: 2026-08-25
+lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
+lastReviewedNote: "Reviewed for Issue #67 Wave 25: native decision command paths do not change this historical BAFU/USLCI cleanup evidence, its owner routing, or the interpretation of classification and identity decision rounds."
 related:
   - docs/import-profiles/bafu/profile.md
   - docs/import-profiles/uslci/profile.md

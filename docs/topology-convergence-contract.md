@@ -15,15 +15,16 @@ whenToUpdate:
 checkPaths:
   - docs/topology-convergence-contract.md
   - specs/schemas/topology-convergence.schema.json
-  - scripts/commands/topology-convergence.mjs
-  - test/fixtures/topology-convergence-fixtures.mjs
-  - test/unit/topology-convergence.test.mjs
-  - test/commands/topology-convergence.test.mjs
-  - test/scenarios/topology-convergence-handoff.test.mjs
+  - scripts/commands/topology-convergence.ts
+  - test/unit/topology-command-migration.test.mts
+  - test/fixtures/topology-convergence-fixtures.ts
+  - test/unit/topology-convergence.test.mts
+  - test/commands/topology-convergence.test.mts
+  - test/scenarios/topology-convergence-handoff.test.mts
   - docs/execution-capsule-contract.md
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: 4d415fac33799011d37094ac79122c1eef3a7855
-lastReviewedNote: "Reviewed for Issue #63: the stage-contract module moved to TypeScript without changing topology composition semantics or artifacts."
+lastReviewedAt: 2026-08-26
+lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
+lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 command, fixture, unit and handoff suites preserve occurrence identity, graph/F-P-D order, admission/activation, artifacts, native errors and zero dispatch."
 ---
 
 # Topology Convergence Contract
@@ -39,7 +40,7 @@ The command never connects to a network or database, invokes the CLI, performs D
 ## Invocation
 
 ```bash
-node scripts/foundry.mjs dataset-topology-convergence-compose \
+node scripts/foundry.ts dataset-topology-convergence-compose \
   --request .foundry/workspaces/<task>/topology/request.json \
   --out-dir .foundry/workspaces/<task>/topology/composition-0001
 ```
