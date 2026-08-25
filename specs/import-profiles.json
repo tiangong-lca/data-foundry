@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at_utc": "2026-08-25T02:15:00Z",
+  "updated_at_utc": "2026-08-25T00:00:00Z",
   "default_profile": "generic",
   "profiles": {
     "generic": {
@@ -100,7 +100,7 @@
     },
     "worldsteel": {
       "id": "worldsteel",
-      "description": "worldsteel EF3.1-reference native ILCD 1.1 package (33 steel LCI-result processes plus ~74 new product/waste/other and GaBi/Sphera pseudo-elementary flows) sitting on a large EF3.1 reference layer (~1,315 reference elementary flows, most flowproperties/unitgroups, 25 LCIA methods, and EF/PEF/OEF/ILCD compliance boilerplate). The reference layer is reused by its ORIGINAL canonical UUID through deterministic exchange-reference-rewrites (applyResolutionRewrites), never minted; foreign or RLS-hidden state_code=0 references remain missing_dataset blockers until replaced by public or same-owner visible rows. Validation uses Rust tidas' locked corrected eILCD schemas, not raw EF3.1. Source binaries referenced via referenceToDigitalFile are uploaded to the external_docs storage bucket by the tiangong-lca-cli `dataset source upload-attachments` command and the source @uri rewritten before write. One canonical worldsteel library/attribution contact (reused from the package); worldsteel database fallback source.",
+      "description": "worldsteel EF3.1-reference native ILCD 1.1 package (33 steel LCI-result processes plus ~74 new product/waste/other and GaBi/Sphera pseudo-elementary flows) sitting on a large EF3.1 reference layer (~1,315 reference elementary flows, most flowproperties/unitgroups, 25 LCIA methods, and EF/PEF/OEF/ILCD compliance boilerplate). The reference layer is reused by its ORIGINAL canonical UUID through deterministic exchange-reference-rewrites (applyResolutionRewrites), never minted. Validation uses Rust tidas' locked corrected eILCD schemas, not raw EF3.1. Source binaries referenced via referenceToDigitalFile are uploaded to the external_docs storage bucket by the tiangong-lca-cli `dataset source upload-attachments` command and the source @uri rewritten before write. One canonical worldsteel library/attribution contact (reused from the package); worldsteel database fallback source.",
       "docs": [
         "docs/import-profiles/worldsteel/profile.md",
         "docs/import-profiles/worldsteel/constraints.md",
