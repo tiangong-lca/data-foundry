@@ -85,3 +85,49 @@ test("post-write proof rejects extra, wrong-index, payload, owner, and state roo
     );
   }
 });
+
+test("ordinary closeout accepts only exact traceHash normalization while production rejects it", () => {
+  const normalizedSha = "a".repeat(64);
+  const removedPath = "/flowDataSet/common:other/importTraceSummary/traceHash";
+  const acceptedCheck = {
+    ...check(0),
+    local_payload_sha256: normalizedSha,
+    remote_payload_sha256: normalizedSha,
+    foundry_verification_mode: "accepted_normalized_payload",
+    foundry_original_status: "payload_mismatch",
+    foundry_original_local_payload_sha256: "b".repeat(64),
+    foundry_original_remote_payload_sha256: "c".repeat(64),
+    foundry_accepted_differences: [
+      {
+        accepted_difference: "tiangongfoundry_import_trace_summary_trace_hash_only",
+        normalized_payload_sha256: normalizedSha,
+        local_removed_paths: [removedPath],
+        remote_removed_paths: [removedPath],
+      },
+    ],
+  };
+  const intendedWithNormalization = [
+    {
+      ...intended[0],
+      acceptedNormalizedPayloadSha256: normalizedSha,
+      acceptedNormalizedRemovedPaths: [removedPath],
+    },
+  ];
+  const ordinary = validateUniqueRootReadbacks({
+    intended: intendedWithNormalization,
+    checks: [acceptedCheck],
+    targetUserId: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+    expectedStateCode: 0,
+    allowTraceHashOnlyNormalization: true,
+  } as never);
+  assert.deepEqual(ordinary.blockers, []);
+
+  const production = validateUniqueRootReadbacks({
+    intended: intendedWithNormalization,
+    checks: [acceptedCheck],
+    targetUserId: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+    expectedStateCode: 0,
+    allowTraceHashOnlyNormalization: false,
+  } as never);
+  assert.ok(production.blockers.some((item) => item.code === "root_readback_payload_mismatch"));
+});
