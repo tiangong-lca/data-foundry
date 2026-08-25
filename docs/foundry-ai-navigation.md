@@ -38,6 +38,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
   - scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts
   - scripts/lib/import-curation/internal/workflow-row-transform-context.ts
+  - scripts/lib/import-curation/internal/workflow-dry-run-context.ts
+  - scripts/lib/import-curation/internal/workflow-evidence-scope.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -60,8 +62,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: bf55d6487391d9bdc1926971e8dfbffa05525e91
-lastReviewedNote: "Reviewed for Issue #67 Wave 20: navigation records typed row-transform report readers, entry/status order, artifact equality, graph reachability and chain helpers."
+lastReviewedCommit: 928355cb582ce13499403a553cb7f09e8a8bcdd2
+lastReviewedNote: "Reviewed for Issue #67 Wave 21: navigation records typed dry-run maps/remote blockers and evidence-scope report binding/blocker order plus consumers."
 ---
 
 # Foundry AI Navigation
@@ -146,6 +148,8 @@ The typed identity decision leaf is `import-curation/internal/workflow-identity-
 The typed patch evidence leaf is `import-curation/internal/workflow-patch-evidence-context.ts`. Navigate there for compact patch evidence, identity/row lookup, patch-apply report and payload hashes, closure codes, deterministic annual/source cleanup proof, unresolved/source trace blockers, policy snapshots and import-only trace detection. Mutation and reference-closure facets consume it.
 
 The typed row lineage leaf is `import-curation/internal/workflow-row-transform-context.ts`. Navigate there for unresolved-exchange, canonical-support, source/contact and cleanup report contexts; deterministic transform-entry aggregation; exact/content-equivalent rows; multi-pass reachability; and direct patch, identity, classification and externalization chain predicates. Curation, mutation, evidence-scope, preflight, decision and reference-closure facets consume it.
+
+The typed dry-run leaf is `import-curation/internal/workflow-dry-run-context.ts`; navigate there for schema/curation identity maps, dry-run operation names, flow/process/lifecycle/save-draft artifacts and remote blocker keys. The typed exact-scope leaf is `import-curation/internal/workflow-evidence-scope.ts`; navigate there for report-row aliases and ordered schema/curation/QA/cleanup/patch/collect/dry-run/remote scope blockers.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 

@@ -26,8 +26,8 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: bf55d6487391d9bdc1926971e8dfbffa05525e91
-lastReviewedNote: "Reviewed for Issue #67 Wave 20: typing row-transform lineage changes no command category, owner/export metadata, help, artifact schema, exit mapping, profile default, or remote-write mode."
+lastReviewedCommit: 928355cb582ce13499403a553cb7f09e8a8bcdd2
+lastReviewedNote: "Reviewed for Issue #67 Wave 21: typing dry-run and evidence-scope contexts changes no command category, owner/export metadata, help, artifact schema, exit mapping, profile default, or remote-write mode."
 ---
 
 # Foundry Command Surface

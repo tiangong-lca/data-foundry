@@ -41,6 +41,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
   - scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts
   - scripts/lib/import-curation/internal/workflow-row-transform-context.ts
+  - scripts/lib/import-curation/internal/workflow-dry-run-context.ts
+  - scripts/lib/import-curation/internal/workflow-evidence-scope.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -90,13 +92,17 @@ checkPaths:
   - test/unit/wave19-patch-evidence-context-migration.test.mts
   - test/unit/workflow-row-transform-context-contract.test.mts
   - test/unit/wave20-row-transform-context-migration.test.mts
+  - test/unit/workflow-dry-run-context-contract.test.mts
+  - test/unit/wave21-dry-run-context-migration.test.mts
+  - test/unit/workflow-evidence-scope-contract.test.mts
+  - test/unit/wave21-evidence-scope-migration.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: bf55d6487391d9bdc1926971e8dfbffa05525e91
-lastReviewedNote: "Reviewed for Issue #67 Wave 20: tests cover transform report aliases, trace/blocker/hash order, entries/status, content equality, graph reachability, chains and errors."
+lastReviewedCommit: 928355cb582ce13499403a553cb7f09e8a8bcdd2
+lastReviewedNote: "Reviewed for Issue #67 Wave 21: tests cover dry-run maps/readers/remote suppression plus exact-scope aliases, blocker order, deterministic chains, QA envelopes and native errors."
 ---
 
 # Test Layout
@@ -161,6 +167,8 @@ Every behavior or migration slice starts with a failing focused test or a realis
 `unit/workflow-patch-evidence-context-contract.test.mts` characterizes compact evidence aliases, identity/row indexes, exact-bare-row query/dedupe order, apply report blockers, output path and payload hash order, closure codes, exact deterministic cleanup proof, unresolved/source trace alternatives, policy snapshot SHA/order, recursive import-only trace detection and native parse/path/cycle failures. `unit/wave19-patch-evidence-context-migration.test.mts` pins the zero-any native module, ten runtime exports and both pre-existing workflow consumers.
 
 `unit/workflow-row-transform-context-contract.test.mts` characterizes unresolved/canonical/generic report aliases, trace/count/blocker/proof order, payload hashes, transform cross-products and fixed aggregation order, status gates, exact/content-equivalent rows, unordered/cyclic graph reachability, cleanup/decision aliases and every direct patch/identity/classification/externalization chain helper. `unit/wave20-row-transform-context-migration.test.mts` pins the zero-any native module, thirty-one runtime exports and all seven workflow plus scenario consumers.
+
+`unit/workflow-dry-run-context-contract.test.mts` pins exact-last/bare-first maps, operation normalization, flow aliases, three progress/failure readers, overwrite order and planned-root blocker suppression. `unit/workflow-evidence-scope-contract.test.mts` pins portable blocker envelopes, row aliases, all-missing/valid/mismatch stage order, deterministic rewrite-chain acceptance, QA parse envelopes and native path errors. Their Wave 21 migration tests pin native zero-any sources and every consumer.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

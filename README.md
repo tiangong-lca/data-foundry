@@ -42,6 +42,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
   - scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts
   - scripts/lib/import-curation/internal/workflow-row-transform-context.ts
+  - scripts/lib/import-curation/internal/workflow-dry-run-context.ts
+  - scripts/lib/import-curation/internal/workflow-evidence-scope.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -70,8 +72,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: bf55d6487391d9bdc1926971e8dfbffa05525e91
-lastReviewedNote: "Reviewed for Issue #67 Wave 20: row transform contexts and lineage graph are native zero-any TS7 with aliases, hashes, order, reachability and errors unchanged."
+lastReviewedCommit: 928355cb582ce13499403a553cb7f09e8a8bcdd2
+lastReviewedNote: "Reviewed for Issue #67 Wave 21: dry-run readers and evidence-scope blockers are native zero-any TS7 with maps, aliases, ordering, deterministic exceptions and errors unchanged."
 ---
 
 # TianGong LCA Data Foundry
@@ -131,6 +133,8 @@ The identity-decision context wave migrates `import-curation/internal/workflow-i
 The patch-evidence context wave migrates `import-curation/internal/workflow-patch-evidence-context.ts`, the apply/trace evidence adapter shared by mutation and reference closure. Characterization pins compact aliases, identity/row indexes, exact-bare-row query/dedupe order, apply blockers, output path priority, payload hash last-write, closure codes, exact deterministic cleanup proof, unresolved-before-source trace blockers, safety/profile snapshot SHA/order, recursive import-only trace detection and native JSON/path/cycle failures. It remains zero-any and fail-closed; inventory moves from 119 to 118.
 
 The row-transform context wave migrates `import-curation/internal/workflow-row-transform-context.ts`, the lineage boundary shared by seven workflow modules. Characterization pins unresolved/canonical/generic report aliases, trace/blocker/proof order, payload hash last-write, transform-entry cross products and fixed family order, allowed status matrices, exact/content-equivalent artifacts, unordered multi-pass/cycle-safe graph reachability, cleanup/decision aliases and every direct patch/identity/classification/externalization chain. It remains zero-any and read-only; inventory moves from 118 to 117.
+
+Wave 21 batches two independent low-fan-in families. `workflow-dry-run-context.ts` preserves schema/curation map precedence, operation normalization, flow payload aliases, progress/failure overwrite order and planned-root blocker suppression; inventory moves 117→116. `workflow-evidence-scope.ts` preserves portable blocker envelopes, dry-run aliases, complete stage blocker order, QA parse envelopes and deterministic patch/rewrite chain acceptance; inventory moves 116→115. Both remain zero-any and fail-closed.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

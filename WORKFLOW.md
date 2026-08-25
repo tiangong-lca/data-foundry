@@ -44,6 +44,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
   - scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts
   - scripts/lib/import-curation/internal/workflow-row-transform-context.ts
+  - scripts/lib/import-curation/internal/workflow-dry-run-context.ts
+  - scripts/lib/import-curation/internal/workflow-evidence-scope.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -110,10 +112,14 @@ checkPaths:
   - test/unit/wave19-patch-evidence-context-migration.test.mts
   - test/unit/workflow-row-transform-context-contract.test.mts
   - test/unit/wave20-row-transform-context-migration.test.mts
+  - test/unit/workflow-dry-run-context-contract.test.mts
+  - test/unit/wave21-dry-run-context-migration.test.mts
+  - test/unit/workflow-evidence-scope-contract.test.mts
+  - test/unit/wave21-evidence-scope-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: bf55d6487391d9bdc1926971e8dfbffa05525e91
-lastReviewedNote: "Reviewed for Issue #67 Wave 20: typed row lineage preserves report aliases, payload hashes, transform order/status, content equality, graph reachability and native failures."
+lastReviewedCommit: 928355cb582ce13499403a553cb7f09e8a8bcdd2
+lastReviewedNote: "Reviewed for Issue #67 Wave 21: typed dry-run and evidence-scope helpers preserve map precedence, artifact aliases, blocker stage order, deterministic lineage exceptions and native failures."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -171,6 +177,8 @@ Identity decision context may close an action only from a completed, matching de
 Patch apply and trace evidence must remain bound to the exact row identity/index, payload hashes, resolution mode and closure codes. Deterministic cleanup substitutes only when owner, status, identity, row, trace hash and exchange signatures all match; otherwise reference closure remains blocked.
 
 Deterministic row-lineage acceptance requires an exact or content-equivalent starting artifact followed by an explicit transform chain to the expected rows. First-seen transform order, status gates and payload hashes remain evidence; unreachable or malformed chains do not become freshness or write proof.
+
+Dry-run artifacts and exact-scope evidence remain separate checks: dry-run readers preserve per-command success/failure facts, while evidence-scope rejects missing or mismatched schema, curation, cleanup, patch, dry-run and remote reports unless an explicit deterministic transform chain proves the same final rows.
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 

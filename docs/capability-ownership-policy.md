@@ -31,9 +31,11 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
   - scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts
   - scripts/lib/import-curation/internal/workflow-row-transform-context.ts
+  - scripts/lib/import-curation/internal/workflow-dry-run-context.ts
+  - scripts/lib/import-curation/internal/workflow-evidence-scope.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: bf55d6487391d9bdc1926971e8dfbffa05525e91
-lastReviewedNote: "Reviewed for Issue #67 Wave 20: typed row-transform context remains Foundry-owned lineage proof and adds no sibling transform, CLI or database behavior."
+lastReviewedCommit: 928355cb582ce13499403a553cb7f09e8a8bcdd2
+lastReviewedNote: "Reviewed for Issue #67 Wave 21: typed dry-run/evidence-scope contexts remain Foundry-owned proof projection and add no sibling command, CLI or database behavior."
 ---
 
 # Capability Ownership Policy
