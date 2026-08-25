@@ -22,8 +22,8 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: f5206e37987e7ff8db7f5f207965dcd8b5204201
-lastReviewedNote: "Reviewed for Issue #65: typed handoff/profile guards stay Foundry-owned, while CLI 0.1.1 owns receipts/mutation and CLI/RLS owns visible foreign-draft truth."
+lastReviewedCommit: 231489cff1ebf662397317de36da6eb88a09640a
+lastReviewedNote: "Reviewed for Issue #67: the native TypeScript parser and command registry remain Foundry-local delivery tooling; no cross-repository owner or normal execution surface changes."
 ---
 
 # Workspace Project Map

@@ -24,8 +24,8 @@ checkPaths:
   - docs/safety-policy.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: f5206e37987e7ff8db7f5f207965dcd8b5204201
-lastReviewedNote: "Reviewed for Issue #65: Foundry owns typed handoff, account intent, and process isolation; CLI 0.1.1 owns live receipts/sessions, and CLI/RLS visibility cannot be waived for foreign drafts."
+lastReviewedCommit: 231489cff1ebf662397317de36da6eb88a09640a
+lastReviewedNote: "Reviewed for Issue #67: typing the Foundry-owned argument and command-registry leaves preserves the existing thin-control-plane ownership boundary and adds no sibling CLI, skill, SDK, converter, database, or Edge behavior."
 ---
 
 # Capability Ownership Policy
