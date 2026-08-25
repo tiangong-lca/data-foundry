@@ -659,7 +659,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: [
       "dataset-curation-cleanup-report.json",
       "completed: cleaned rows file",
-      "blocked_invalid_datetime_metadata: ordered blockers, null cleaned rows, and preserved untrusted stale outputs",
+      "blocked_invalid_datetime_metadata: ordered blockers, null cleaned rows, and every pre-existing stale output preserved",
     ],
     keyTests: [
       nodeTest(
@@ -673,10 +673,6 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       nodeTest(
         "test/unit/curation-cleanup-runner-contract.test.mts",
         "impossible datetime blocks the whole cleanup before partial transforms or cleaned-row output",
-      ),
-      nodeTest(
-        "test/unit/managed-output-safety.test.mts",
-        "trusted managed output requires the physical repository root and a strict task descendant",
       ),
       importCurationEntryContract,
     ],
@@ -1138,7 +1134,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       "cleanup-complete: final rows file",
       "cleanup-complete: schema and dry-run reports",
       "cleanup-blocked: ordered blockers, blocked import ledger, null final rows, no CommandSpec",
-      "cleanup-blocked: stale invalidation only inside a trusted physical managed task root",
+      "cleanup-blocked: every pre-existing stale artifact is preserved and reported",
     ],
     keyTests: [
       goldenDiff,

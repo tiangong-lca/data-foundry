@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { isTrustedManagedWorkspaceDescendant } from "../lib/managed-output-safety.ts";
 import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
 type JsonRecord = Record<string, unknown>;
@@ -1045,7 +1044,6 @@ export function createPostAuthoringFinalizeCommands({
       options.outDir || `.foundry/workspaces/${datasetType}-post-authoring-finalize`,
     )!;
     fs.mkdirSync(outDir, { recursive: true });
-    const mayInvalidateManagedArtifacts = isTrustedManagedWorkspaceDescendant(repoRoot, outDir);
     const fullContextRequirement = profileFullContextRequirement(options.profile, datasetType);
     const identityPreflightRequired =
       ["flow", "process"].includes(datasetType) &&
@@ -1228,14 +1226,6 @@ export function createPostAuthoringFinalizeCommands({
           .map((file) => path.join(outDir, file))
           .filter((file) => fs.existsSync(file)),
       ];
-      if (mayInvalidateManagedArtifacts) {
-        for (const directory of postCleanupArtifactDirectories) {
-          fs.rmSync(path.join(outDir, directory), { recursive: true, force: true });
-        }
-        for (const file of postCleanupArtifactFiles) {
-          fs.rmSync(path.join(outDir, file), { force: true });
-        }
-      }
       const priorStageBlockers = [
         ...ensureArray(identityReferenceRewriteStage.blockers).map((blocker) => ({
           ...blocker,
@@ -1286,7 +1276,7 @@ export function createPostAuthoringFinalizeCommands({
           "Resolve every cleanup blocker and rerun post-authoring finalize before any downstream prewrite stage.",
       };
       const invalidationBlockers =
-        staleManagedArtifacts.length > 0 && !mayInvalidateManagedArtifacts
+        staleManagedArtifacts.length > 0
           ? [
               {
                 code: "stale_finalize_artifacts_not_invalidated",
@@ -1295,7 +1285,7 @@ export function createPostAuthoringFinalizeCommands({
                 severity: "error",
                 paths: staleManagedArtifacts.map((artifact) => repoRelativeMaybe(artifact)),
                 action:
-                  "Use a new empty or .foundry/workspaces finalize directory, or explicitly verify and remove stale artifacts before rerun.",
+                  "Preserve and inspect the stale artifacts manually, then use a new output directory for the repaired rerun.",
               },
             ]
           : [];

@@ -1,6 +1,4 @@
-import { rmSync } from "node:fs";
 import path from "node:path";
-import { isTrustedManagedWorkspaceDescendant } from "../managed-output-safety.ts";
 import { datasetTypeFromOptions, datasetTypePlural } from "./internal/dataset-types.ts";
 import { datasetIdentity } from "./internal/dataset-payload.ts";
 import {
@@ -87,9 +85,6 @@ export function runDatasetCurationCleanup({
   const defaultOutFile = path.join(outDir, `${datasetTypePlural[datasetType]}.cleaned.jsonl`);
   const explicitOutFile = resolveRepoPath(root, options.out || options.outFile);
   const outFile = explicitOutFile || defaultOutFile;
-  const managedDefaultOutput =
-    isTrustedManagedWorkspaceDescendant(root, outDir) &&
-    isTrustedManagedWorkspaceDescendant(root, outFile);
   if (!rowsFile || !fileExists(rowsFile)) {
     throw new Error("--rows-file is required and must point to a JSON/JSONL dataset row file.");
   }
@@ -136,15 +131,13 @@ export function runDatasetCurationCleanup({
 
   if (invalidDateTimeBlockers.length > 0) {
     let staleDefaultOutputBlocker: JsonRecord | null = null;
-    if (!explicitOutFile && outFile !== rowsFile && fileExists(outFile) && managedDefaultOutput) {
-      rmSync(outFile);
-    } else if (!explicitOutFile && outFile !== rowsFile && fileExists(outFile)) {
+    if (!explicitOutFile && outFile !== rowsFile && fileExists(outFile)) {
       staleDefaultOutputBlocker = {
         code: "stale_cleanup_artifact_not_invalidated",
         path: repoRelativePath(root, outFile),
-        reason: "output_is_outside_trusted_managed_workspace",
+        reason: "blocked_cleanup_preserves_existing_artifacts",
         action:
-          "Preserve and inspect the stale cleaned artifact manually; use a new strict descendant of the repository's physical .foundry/workspaces root for automatic invalidation.",
+          "Preserve and inspect the stale cleaned artifact manually; use a new output path for the repaired rerun.",
       };
     }
     const blockers = staleDefaultOutputBlocker
