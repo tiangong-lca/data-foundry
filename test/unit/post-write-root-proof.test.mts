@@ -95,12 +95,14 @@ test("ordinary closeout accepts only exact traceHash normalization while product
     remote_payload_sha256: normalizedSha,
     foundry_verification_mode: "accepted_normalized_payload",
     foundry_original_status: "payload_mismatch",
-    foundry_original_local_payload_sha256: "b".repeat(64),
+    foundry_original_local_payload_sha256: intended[0].payloadSha256,
     foundry_original_remote_payload_sha256: "c".repeat(64),
     foundry_accepted_differences: [
       {
         accepted_difference: "tiangongfoundry_import_trace_summary_trace_hash_only",
         normalized_payload_sha256: normalizedSha,
+        original_local_payload_sha256: intended[0].payloadSha256,
+        original_remote_payload_sha256: "c".repeat(64),
         local_removed_paths: [removedPath],
         remote_removed_paths: [removedPath],
       },
@@ -119,7 +121,7 @@ test("ordinary closeout accepts only exact traceHash normalization while product
     targetUserId: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
     expectedStateCode: 0,
     allowTraceHashOnlyNormalization: true,
-  } as never);
+  });
   assert.deepEqual(ordinary.blockers, []);
 
   const production = validateUniqueRootReadbacks({
@@ -128,6 +130,6 @@ test("ordinary closeout accepts only exact traceHash normalization while product
     targetUserId: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
     expectedStateCode: 0,
     allowTraceHashOnlyNormalization: false,
-  } as never);
+  });
   assert.ok(production.blockers.some((item) => item.code === "root_readback_payload_mismatch"));
 });

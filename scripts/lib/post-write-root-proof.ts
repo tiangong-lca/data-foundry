@@ -83,6 +83,7 @@ function acceptedTraceHashPayloadMatches(
     typeof check.foundry_original_remote_payload_sha256 !== "string" ||
     !/^[a-f0-9]{64}$/u.test(check.foundry_original_local_payload_sha256) ||
     !/^[a-f0-9]{64}$/u.test(check.foundry_original_remote_payload_sha256) ||
+    check.foundry_original_local_payload_sha256 !== root.payloadSha256 ||
     check.foundry_original_local_payload_sha256 === check.foundry_original_remote_payload_sha256 ||
     !Array.isArray(check.foundry_accepted_differences) ||
     check.foundry_accepted_differences.length !== 1
@@ -97,6 +98,8 @@ function acceptedTraceHashPayloadMatches(
   return Boolean(
     record.accepted_difference === "tiangongfoundry_import_trace_summary_trace_hash_only" &&
     record.normalized_payload_sha256 === root.acceptedNormalizedPayloadSha256 &&
+    record.original_local_payload_sha256 === check.foundry_original_local_payload_sha256 &&
+    record.original_remote_payload_sha256 === check.foundry_original_remote_payload_sha256 &&
     localRemovedPaths?.length &&
     remoteRemovedPaths?.length &&
     sameStrings(localRemovedPaths, root.acceptedNormalizedRemovedPaths) &&
