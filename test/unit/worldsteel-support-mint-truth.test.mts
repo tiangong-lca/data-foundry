@@ -15,7 +15,6 @@ type WorldsteelProfileFile = {
       docs: string[];
       allow_account_local_support_and_elementary: {
         enabled: boolean;
-        mint_unmatched_fp_ug_support: boolean;
         scope: string[];
         authorized_by: string;
         note: string;
@@ -53,17 +52,13 @@ test("Worldsteel runtime, profile authorization, and every active document expos
 
   assert.ok(runtimeConfig, "Worldsteel factory must pass a profile config to the batch engine");
   const runtimeValue = runtimeConfig.mintUnmatchedFpUgSupport;
-  assert.equal(typeof runtimeValue, "boolean");
+  assert.equal(runtimeValue, true, "retained PR #20 delivery evidence freezes the runtime on");
 
   const profile = JSON.parse(
     fs.readFileSync(path.join(repoRoot, "specs", "import-profiles.json"), "utf8"),
   ) as WorldsteelProfileFile;
   const worldsteel = profile.profiles.worldsteel;
   assert.equal(worldsteel.allow_account_local_support_and_elementary.enabled, true);
-  assert.equal(
-    worldsteel.allow_account_local_support_and_elementary.mint_unmatched_fp_ug_support,
-    runtimeValue,
-  );
   assert.deepEqual(
     new Set(worldsteel.allow_account_local_support_and_elementary.scope),
     new Set([
@@ -73,6 +68,19 @@ test("Worldsteel runtime, profile authorization, and every active document expos
       "unitgroup_write",
       "canonical_support_local_mint",
     ]),
+  );
+  assert.deepEqual(
+    [
+      ...new Set(
+        documentedRuntimeValues(worldsteel.allow_account_local_support_and_elementary.note),
+      ),
+    ],
+    [runtimeValue],
+    "The structured profile authorization must document the frozen executable value",
+  );
+  assert.match(
+    worldsteel.allow_account_local_support_and_elementary.note,
+    /enabled=false only when both the R3 elementary residual and R5 FP\/UG support/iu,
   );
 
   const activeDocs = activeWorldsteelDocs();
@@ -92,7 +100,20 @@ test("Worldsteel runtime, profile authorization, and every active document expos
     assert.match(source, /state_code=0/iu, relativePath);
     assert.match(source, /defer/iu, relativePath);
     assert.match(source, /independent ready scope/iu, relativePath);
-    assert.match(source, /(?:allow|white)list/iu, relativePath);
+    assert.match(
+      source,
+      /(?:not a runtime|no LANCA|neither)[^.\n]*(?:allow|white)list/iu,
+      relativePath,
+    );
+    assert.match(
+      source,
+      /(?:Unit Groups? (?:are )?(?:ordered before|precede) Flow Propert|Unit Group before Flow Property)/iu,
+      relativePath,
+    );
+    assert.match(source, /00\.00\.001/u, relativePath);
+    for (const line of source.split("\n").filter((value) => value.includes("enabled=false"))) {
+      assert.match(line, /both .*R3.*R5 .*FP\/UG/iu, relativePath);
+    }
   }
 
   const retainedEvidence = fs.readFileSync(

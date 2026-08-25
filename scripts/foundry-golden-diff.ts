@@ -83,6 +83,15 @@ const worldsteelProfileContractMigrations = new Map<string, string>([
       "docs/import-profiles/worldsteel/import-coverage.md",
     ]),
   ],
+  [
+    "4d33ab773546d7055db900899e33f4f3179f41b815009fdedf232bfcdf0cd297",
+    JSON.stringify([
+      "docs/import-profiles/worldsteel/profile.md",
+      "docs/import-profiles/worldsteel/constraints.md",
+      "docs/import-profiles/worldsteel/import-plan.md",
+      "docs/import-profiles/worldsteel/import-coverage.md",
+    ]),
+  ],
 ]);
 
 function resolveGoldenBase(): GoldenBase {
