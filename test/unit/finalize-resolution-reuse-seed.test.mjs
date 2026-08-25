@@ -40,7 +40,7 @@ function withReuseMapEnv(value, fn) {
   }
 }
 
-test("preseedResolutionReuseDecisions seeds reuse decisions and skips the remote search", () => {
+test("preseedResolutionReuseDecisions refuses unbound synthetic execution evidence", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ws-reuse-seed-"));
   try {
     const reuseMap = path.join(dir, "exchange-reference-rewrites.jsonl");
@@ -91,17 +91,12 @@ test("preseedResolutionReuseDecisions seeds reuse decisions and skips the remote
       utils.preseedResolutionReuseDecisions({ index }),
     );
 
-    assert.equal(result.enabled, true);
-    assert.equal(result.seeded, 1);
-    assert.equal(result.reuse_map_size, 1);
-
-    // The reuse-proven flow got a synthesized block_duplicate decision.
-    const seeded = JSON.parse(fs.readFileSync(reusedReport, "utf8"));
-    assert.equal(seeded.decision, "block_duplicate");
-    assert.equal(seeded.next_action, "stop_duplicate");
-    assert.equal(seeded.candidates[0].id, "canon-1");
-    assert.equal(seeded.candidates[0].version, "03.00.004");
-    assert.deepEqual(seeded.candidates[0].match_reasons, ["library_resolution_proven_reuse"]);
+    assert.deepEqual(result, {
+      enabled: false,
+      seeded: 0,
+      reason: "bound_library_resolution_seed_manifest_required",
+    });
+    assert.equal(fs.existsSync(reusedReport), false);
 
     // The existing decision was preserved (not clobbered).
     assert.equal(JSON.parse(fs.readFileSync(existingReport, "utf8")).decision, "real");

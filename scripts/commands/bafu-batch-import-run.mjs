@@ -20,6 +20,7 @@ import {
 } from "../lib/foundry-command-spec.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.mjs";
 import { stageContract } from "../lib/stage-contract.ts";
+import { assertReceiptBoundHandoffAccount } from "../lib/production-case-policy.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const commandName = "dataset-bafu-batch-import-run";
@@ -1043,6 +1044,22 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
         {
           code: "handoff_plan_not_ready",
           message: `${label} handoff plan status is ${handoffPlan.status || "missing"}.`,
+          handoff_plan: repoRelative(handoffPlanPath),
+        },
+      ],
+      stages,
+      handoffPlan,
+    };
+  }
+  try {
+    assertReceiptBoundHandoffAccount(handoffPlan, process.env);
+  } catch (error) {
+    return {
+      status: "blocked",
+      blockers: [
+        {
+          code: "handoff_account_evidence_mismatch",
+          message: String(error?.message || error),
           handoff_plan: repoRelative(handoffPlanPath),
         },
       ],
@@ -5118,23 +5135,6 @@ export function createBafuBatchImportRunCommands(deps, config = {}) {
       applyResolutionRewrites() && libraryResolutionDir
         ? loadResolutionRewritesByProcess(libraryResolutionDir)
         : new Map();
-    // Mega-scope speed-up: when applying the library resolution, also expose its
-    // exchange-reference-rewrites to every per-scope finalize as
-    // IDENTITY_PREFLIGHT_REUSE_MAP. The finalize stage then PRE-SEEDS a reuse decision
-    // for each reuse-proven flow and SKIPS the redundant per-flow REMOTE identity
-    // preflight (the dominant cost on worldsteel's ~2,000-2,543-exchange mega-scopes).
-    // The finalize subprocess inherits process.env. Respect an operator-set value; no-op
-    // for BAFU (applyResolutionRewrites off) and when the rewrites file is absent.
-    if (
-      applyResolutionRewrites() &&
-      libraryResolutionDir &&
-      !asText(process.env.IDENTITY_PREFLIGHT_REUSE_MAP)
-    ) {
-      const reuseMapFile = path.join(libraryResolutionDir, "exchange-reference-rewrites.jsonl");
-      if (fs.existsSync(reuseMapFile)) {
-        process.env.IDENTITY_PREFLIGHT_REUSE_MAP = reuseMapFile;
-      }
-    }
     const pauseFile = asText(options.pauseFile) ? resolveRepoPath(options.pauseFile) : null;
     const stopAfterBlocked =
       options.stopAfterBlocked == null
