@@ -51,15 +51,15 @@ import {
 import { createImportLedgerUtils } from "./lib/import-ledger.mjs";
 import { createLocationQualityUtils } from "./lib/location-quality-utils.mjs";
 import { createPostAuthoringFinalizeUtils } from "./lib/post-authoring-finalize-utils.mjs";
-import { createSourceSemanticUtils } from "./lib/source-semantics.mjs";
+import { createSourceSemanticUtils } from "./lib/source-semantics.ts";
 import {
   runTidasHandshake,
   runTidasImport,
   runTidasPackageValidation,
   runTidasRowsValidation,
 } from "./lib/tidas-adapter.mjs";
-import { createTidasRowUtils } from "./lib/tidas-row-utils.mjs";
-import { createTraceCoverageUtils } from "./lib/trace-coverage.mjs";
+import { createTidasRowUtils } from "./lib/tidas-row-utils.ts";
+import { createTraceCoverageUtils } from "./lib/trace-coverage.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const foundryTraceNamespace = "https://tiangong-lca.dev/foundry/import-curation/1";

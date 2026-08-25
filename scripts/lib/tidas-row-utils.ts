@@ -1,7 +1,21 @@
 import { normalizeTidasLanguageCode, tidasLanguageForText } from "./tidas-language-utils.ts";
 
-export function createTidasRowUtils({ asText, bundleRowTypes, cloneJson, ensureArray, writeText }) {
-  function datasetRowsFileStem(datasetType) {
+export type TidasRowUtilsDependencies = {
+  asText: (value: any) => string;
+  bundleRowTypes: Record<string, { plural: string; rootKey: string; informationKey: string }>;
+  cloneJson: <T>(value: T) => T;
+  ensureArray: (value: any) => any[];
+  writeText: (filePath: string, text: string) => any;
+};
+
+export function createTidasRowUtils({
+  asText,
+  bundleRowTypes,
+  cloneJson,
+  ensureArray,
+  writeText,
+}: TidasRowUtilsDependencies) {
+  function datasetRowsFileStem(datasetType: any) {
     return (
       {
         contact: "contacts",
@@ -16,29 +30,29 @@ export function createTidasRowUtils({ asText, bundleRowTypes, cloneJson, ensureA
     );
   }
 
-  function multiLang(text, language = "en") {
+  function multiLang(text: any, language: any = "en") {
     return {
       "@xml:lang": normalizeTidasLanguageCode(language),
       "#text": String(text ?? "").trim(),
     };
   }
 
-  function containsCjk(text) {
+  function containsCjk(text: any) {
     return /[\u3400-\u9fff\uf900-\ufaff]/u.test(String(text ?? ""));
   }
 
-  function languageForText(text, fallback = "en") {
+  function languageForText(text: any, fallback: any = "en") {
     const value = String(text ?? "").trim();
     if (!value) return normalizeTidasLanguageCode(fallback);
     return containsCjk(value) ? "zh" : tidasLanguageForText(value, fallback);
   }
 
-  function preferredSourceLanguageText(values) {
+  function preferredSourceLanguageText(values: any) {
     const texts = ensureArray(values).map(asText).filter(Boolean);
     return texts.find((text) => !containsCjk(text)) || texts[0] || "";
   }
 
-  function contactGlobalReference({ id, version, shortDescription, language = "en" }) {
+  function contactGlobalReference({ id, version, shortDescription, language = "en" }: any) {
     return {
       "@type": "contact data set",
       "@refObjectId": id,
@@ -48,7 +62,7 @@ export function createTidasRowUtils({ asText, bundleRowTypes, cloneJson, ensureA
     };
   }
 
-  function datasetIdentity(payload, type) {
+  function datasetIdentity(payload: any, type: string) {
     const config = bundleRowTypes[type];
     if (!config || !payload || typeof payload !== "object" || Array.isArray(payload)) {
       return { id: null, version: null };
@@ -80,7 +94,7 @@ export function createTidasRowUtils({ asText, bundleRowTypes, cloneJson, ensureA
     };
   }
 
-  function contactDescriptionText(reference) {
+  function contactDescriptionText(reference: any) {
     const description = reference?.["common:shortDescription"];
     if (typeof description === "string") return description;
     if (description && typeof description === "object" && !Array.isArray(description)) {
@@ -89,7 +103,7 @@ export function createTidasRowUtils({ asText, bundleRowTypes, cloneJson, ensureA
     return "";
   }
 
-  function rewriteContactReferences(value, contactRef, stats) {
+  function rewriteContactReferences(value: any, contactRef: any, stats: any): void {
     if (!value || typeof value !== "object") return;
     if (Array.isArray(value)) {
       for (const item of value) rewriteContactReferences(item, contactRef, stats);
@@ -115,17 +129,17 @@ export function createTidasRowUtils({ asText, bundleRowTypes, cloneJson, ensureA
     }
   }
 
-  function isObjectEmpty(value) {
+  function isObjectEmpty(value: any) {
     return (
       value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0
     );
   }
 
-  function pathExpression(pathSegments) {
+  function pathExpression(pathSegments: any[]) {
     return pathSegments.map(String).join(".");
   }
 
-  function cleanEcoSpoldNameText(text) {
+  function cleanEcoSpoldNameText(text: any) {
     return String(text ?? "")
       .replace(/^\s*x+\s+/iu, "")
       .replace(/\s*\{[A-Za-z][A-Za-z0-9_-]*\}/gu, "")
@@ -133,7 +147,7 @@ export function createTidasRowUtils({ asText, bundleRowTypes, cloneJson, ensureA
       .trim();
   }
 
-  function sanitizePlaceholderText(text, pathSegments, stats) {
+  function sanitizePlaceholderText(text: any, pathSegments: any[], stats: any) {
     const original = String(text ?? "");
     let next = original;
     if (/^\s*0\s+Not declared in source package\s*$/iu.test(next)) {
@@ -156,7 +170,7 @@ export function createTidasRowUtils({ asText, bundleRowTypes, cloneJson, ensureA
     return next;
   }
 
-  function bundleClassificationEntries(payload, type) {
+  function bundleClassificationEntries(payload: any, type: string) {
     const config = bundleRowTypes[type];
     const root = payload?.[config?.rootKey];
     const information = root?.[config?.informationKey];
@@ -173,32 +187,32 @@ export function createTidasRowUtils({ asText, bundleRowTypes, cloneJson, ensureA
       .filter((item) => item.text);
   }
 
-  function bundleClassificationPath(payload, type) {
+  function bundleClassificationPath(payload: any, type: string) {
     return bundleClassificationEntries(payload, type)
       .map((entry) => entry.text)
       .join(" > ");
   }
 
-  function isConvertedDefaultClassification(classificationPath) {
+  function isConvertedDefaultClassification(classificationPath: any) {
     return /Other service activities\s*>\s*Activities of membership organizations\s*>\s*Activities of other membership organizations\s*>\s*Activities of other membership organizations n\.e\.c\.|Community,\s*social and personal services\s*>\s*Sewage and waste collection,\s*treatment and disposal and other environmental protection services\s*>\s*Other environmental protection services n\.e\.c\./iu.test(
       classificationPath,
     );
   }
 
-  function flowTypeOfDataSet(payload) {
+  function flowTypeOfDataSet(payload: any) {
     return asText(
       payload?.flowDataSet?.modellingAndValidation?.LCIMethod?.typeOfDataSet ??
         payload?.flowDataSet?.flowInformation?.dataSetInformation?.typeOfDataSet,
     );
   }
 
-  function flowClassificationSchemaType(payload) {
+  function flowClassificationSchemaType(payload: any) {
     return /^elementary flow$/iu.test(flowTypeOfDataSet(payload))
       ? "flow-elementary"
       : "flow-product";
   }
 
-  function textValue(value) {
+  function textValue(value: any): string {
     if (typeof value === "string") return value.trim();
     if (value && typeof value === "object" && !Array.isArray(value)) {
       return asText(value["#text"]) || asText(value.value);
@@ -212,14 +226,14 @@ export function createTidasRowUtils({ asText, bundleRowTypes, cloneJson, ensureA
     return "";
   }
 
-  function writeJsonLines(filePath, rows) {
+  function writeJsonLines(filePath: string, rows: any[]) {
     writeText(
       filePath,
       rows.map((row) => JSON.stringify(row)).join("\n") + (rows.length ? "\n" : ""),
     );
   }
 
-  function printJson(value) {
+  function printJson(value: any) {
     console.log(JSON.stringify(value, null, 2));
   }
 

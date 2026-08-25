@@ -1,5 +1,5 @@
 import test from "node:test";
-import { createSourceSemanticUtils } from "../../scripts/lib/source-semantics.mjs";
+import { createSourceSemanticUtils } from "../../scripts/lib/source-semantics.ts";
 import { assert } from "../fixtures/foundry-core.mjs";
 
 function utils() {

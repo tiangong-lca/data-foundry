@@ -35,6 +35,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
   - scripts/lib/import-curation/internal/trace-summary.ts
+  - scripts/lib/canonical-support-mappings.ts
+  - scripts/lib/source-semantics.ts
+  - scripts/lib/trace-coverage.ts
+  - scripts/lib/tidas-row-utils.ts
   - docs/architecture.md
   - docs/runtime-skill-management.md
   - docs/foundry-task-contracts.md
@@ -72,6 +76,8 @@ The following low-level slice migrates bundle row/root mappings, the complete TI
 The runtime I/O slice migrates the shared `runtime-io.ts` leaf without changing its synchronous visible contract: parent creation, exact text/pretty-JSON/JSONL bytes, direct overwrite, JSONL prefix retention on mid-stream serialization failure, descriptor closure, native filesystem/parse errors, JSON row envelopes, and portable repository/artifact paths.
 
 The next internal-contract slice migrates artifact/QA inputs, dataset payload identity, compact trace summaries, and full-context inputs. Characterization preserves path fallback, file/hash facts, dedupe and traversal order, installed CLI schema resolution, missing/duplicate/drift findings, exact trace hashes, and native JSON/filesystem errors.
+
+The standalone-leaf slice migrates canonical FlowProperty mappings, profile-aware source semantics, trace queue coverage, and reusable TIDAS row helpers. Characterization preserves all scale factors and pending defaults, BAFU/USLCI/worldsteel source identities, canonical reference rewrites, trace evidence keys/blockers, multilingual/root/id/version helpers, and invalid-input behavior.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

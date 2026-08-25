@@ -1,3 +1,16 @@
+export type SourceSemanticDependencies = {
+  asText: (value: any) => string;
+  bundleClassificationPath: (payload: any, type: string) => string;
+  cloneJson: <T>(value: T) => T;
+  datasetIdentity: (payload: any, type: string) => { id: any; version: any };
+  deterministicUuid: (seed: string) => string;
+  languageForText: (text: any, fallback?: any) => string;
+  multiLang: (text: any, language?: any) => any;
+  pathExpression: (parts: any[]) => string;
+  repoRelativeMaybe: (value: any) => any;
+  textValue: (value: any) => string;
+};
+
 export function createSourceSemanticUtils({
   asText,
   bundleClassificationPath,
@@ -9,15 +22,15 @@ export function createSourceSemanticUtils({
   pathExpression,
   repoRelativeMaybe,
   textValue,
-}) {
-  function sourceDataSetInformation(payload) {
+}: SourceSemanticDependencies) {
+  function sourceDataSetInformation(payload: any) {
     return payload?.sourceDataSet?.sourceInformation?.dataSetInformation &&
       typeof payload.sourceDataSet.sourceInformation.dataSetInformation === "object"
       ? payload.sourceDataSet.sourceInformation.dataSetInformation
       : {};
   }
 
-  function sourceShortName(payload) {
+  function sourceShortName(payload: any) {
     const dataSetInformation = sourceDataSetInformation(payload);
     return (
       textValue(dataSetInformation["common:shortName"]) ||
@@ -26,30 +39,30 @@ export function createSourceSemanticUtils({
     );
   }
 
-  function sourceCitationText(payload) {
+  function sourceCitationText(payload: any) {
     const dataSetInformation = sourceDataSetInformation(payload);
     return textValue(dataSetInformation.sourceCitation);
   }
 
-  function sourceDescriptionText(payload) {
+  function sourceDescriptionText(payload: any) {
     const dataSetInformation = sourceDataSetInformation(payload);
     return textValue(dataSetInformation.sourceDescriptionOrComment);
   }
 
-  function isBareSourceDescriptionText(value) {
+  function isBareSourceDescriptionText(value: any) {
     const text = asText(value).trim();
     return text === "" || /^(Report|Publication|Source)$/iu.test(text);
   }
 
-  function isGenericEcoSpoldCompatibilitySourceText(value) {
+  function isGenericEcoSpoldCompatibilitySourceText(value: any) {
     return /^Created for EcoSpold 1 compatibility$/iu.test(asText(value));
   }
 
-  function isPlaceholderSourceIdentityText(value) {
+  function isPlaceholderSourceIdentityText(value: any) {
     return /^(Not specified|Not declared|Unspecified)$/iu.test(asText(value));
   }
 
-  function sourceMetadataFromDescription(description) {
+  function sourceMetadataFromDescription(description: any) {
     const text = asText(description).replace(/\\n/gu, "\n");
     if (!text) return null;
     const originalTitle = text.match(/^Original title:\s*(.+)$/imu)?.[1]?.trim();
@@ -72,13 +85,13 @@ export function createSourceSemanticUtils({
     };
   }
 
-  function normalizeDoi(value) {
+  function normalizeDoi(value: any) {
     const text = asText(value);
     const doi = text.match(/\b10\.\d{4,9}\/[-._;()/:A-Z0-9]+/iu)?.[0];
     return doi ? doi.replace(/[),.;\s]+$/u, "") : "";
   }
 
-  function cleanOriginalSourceText(value) {
+  function cleanOriginalSourceText(value: any) {
     return asText(value)
       .replace(/\s+/gu, " ")
       .replace(/\s*UUID:\s*[0-9a-f-]{36}\b.*$/iu, "")
@@ -86,7 +99,7 @@ export function createSourceSemanticUtils({
       .trim();
   }
 
-  function processSourceContextTexts(payload) {
+  function processSourceContextTexts(payload: any) {
     const process = payload?.processDataSet ?? payload;
     const dataSetInformation = process?.processInformation?.dataSetInformation ?? {};
     const treatment =
@@ -101,7 +114,7 @@ export function createSourceSemanticUtils({
       .filter((text) => text && !/^(Unspecified|Not specified|Not declared)$/iu.test(text));
   }
 
-  function authorLastName(value) {
+  function authorLastName(value: any) {
     const firstAuthor = asText(value)
       .split(/\s*(?:,| and )\s*/u)
       .find(Boolean);
@@ -118,7 +131,7 @@ export function createSourceSemanticUtils({
     return last;
   }
 
-  function originalSourceMetadataFromText(value) {
+  function originalSourceMetadataFromText(value: any) {
     const text = cleanOriginalSourceText(value);
     if (!text) return null;
     const markerMatch = text.match(/Original source:\s*(.+)$/isu);
@@ -153,7 +166,7 @@ export function createSourceSemanticUtils({
     };
   }
 
-  function processOriginalSourceMetadata(payload) {
+  function processOriginalSourceMetadata(payload: any) {
     for (const text of processSourceContextTexts(payload)) {
       const metadata = originalSourceMetadataFromText(text);
       if (metadata) return metadata;
@@ -161,7 +174,7 @@ export function createSourceSemanticUtils({
     return null;
   }
 
-  function sourceSummaryMatchesOriginalMetadata(source, metadata) {
+  function sourceSummaryMatchesOriginalMetadata(source: any, metadata: any) {
     if (!source?.dataset_id || !metadata) return false;
     const haystack = [
       source.short_name,
@@ -178,7 +191,7 @@ export function createSourceSemanticUtils({
     return Boolean(title && haystack.includes(title));
   }
 
-  function repairTrueSourceIdentity(payload, { sourceFile, stats, repairRows }) {
+  function repairTrueSourceIdentity(payload: any, { sourceFile, stats, repairRows }: any) {
     if (sourceSemanticKind(payload) !== "true_source") return;
     const dataSetInformation = sourceDataSetInformation(payload);
     if (!dataSetInformation || typeof dataSetInformation !== "object") return;
@@ -210,7 +223,7 @@ export function createSourceSemanticUtils({
     });
   }
 
-  function repairTrueSourceDescription(payload, { sourceFile, stats, repairRows }) {
+  function repairTrueSourceDescription(payload: any, { sourceFile, stats, repairRows }: any) {
     if (sourceSemanticKind(payload) !== "true_source") return;
     const dataSetInformation = sourceDataSetInformation(payload);
     if (!dataSetInformation || typeof dataSetInformation !== "object") return;
@@ -236,7 +249,7 @@ export function createSourceSemanticUtils({
     });
   }
 
-  function sourceSemanticKind(payload) {
+  function sourceSemanticKind(payload: any) {
     // A reference to a known public canonical support source — the ILCD format spec
     // (a97a0155) or the ILCD Data Network compliance system (d92a1a12) — IS that canonical
     // dataset by identity, regardless of how a converted package classifies or names it.
@@ -281,7 +294,7 @@ export function createSourceSemanticUtils({
     return "unresolved_source_semantics";
   }
 
-  function repairTrueSourceClassification(payload, { sourceFile, stats, repairRows }) {
+  function repairTrueSourceClassification(payload: any, { sourceFile, stats, repairRows }: any) {
     if (sourceSemanticKind(payload) !== "true_source") return;
     const currentClassification = bundleClassificationPath(payload, "source");
     if (currentClassification && !/^Other source types$/iu.test(currentClassification)) {
@@ -298,7 +311,7 @@ export function createSourceSemanticUtils({
     };
     const identity = datasetIdentity(payload, "source");
     const alreadyReported = repairRows.some(
-      (row) =>
+      (row: any) =>
         row.dataset_id === identity.id &&
         row.dataset_version === identity.version &&
         row.relation === "true_source_publication_classification",
@@ -317,7 +330,7 @@ export function createSourceSemanticUtils({
     });
   }
 
-  function sourceSemanticSummary(payload, sourceFile) {
+  function sourceSemanticSummary(payload: any, sourceFile: any) {
     const identity = datasetIdentity(payload, "source");
     const kind = sourceSemanticKind(payload);
     return {
@@ -340,7 +353,7 @@ export function createSourceSemanticUtils({
     return "7d6cb661-93f8-5c42-b23f-c3b73f8a6f97";
   }
 
-  function processContextSourceId(metadata) {
+  function processContextSourceId(metadata: any) {
     const identityText =
       normalizeDoi(metadata?.doi) || asText(metadata?.citation) || asText(metadata?.shortName);
     if (typeof deterministicUuid === "function") {
@@ -356,17 +369,17 @@ export function createSourceSemanticUtils({
     version = "00.00.001",
     language = "en",
     timestamp = null,
-  } = {}) {
+  }: any = {}) {
     if (!metadata?.shortName || !metadata?.citation) return null;
     const sourceId = asText(id) || processContextSourceId(metadata);
-    const dataEntryBy = {
+    const dataEntryBy: any = {
       "common:referenceToDataSetFormat":
         canonicalSourceReferenceForRelation("dataset_format_source"),
     };
     if (timestamp) {
       dataEntryBy["common:timeStamp"] = timestamp;
     }
-    const publicationAndOwnership = {
+    const publicationAndOwnership: any = {
       "common:dataSetVersion": version,
       "common:permanentDataSetURI": `https://www.bafu.admin.ch/bafu-2025-v2/sources/${sourceId}`,
     };
@@ -415,7 +428,7 @@ export function createSourceSemanticUtils({
   // belong to the package being imported — a USLCI process must cite the USLCI
   // database, never BAFU's. The BAFU branch is kept byte-identical to the
   // original so already-imported BAFU rows are unaffected.
-  function databaseFallbackSourceConfig(profile) {
+  function databaseFallbackSourceConfig(profile: any) {
     const key = asText(profile).toLowerCase();
     if (key === "uslci") {
       return {
@@ -427,7 +440,7 @@ export function createSourceSemanticUtils({
           "U.S. Life Cycle Inventory Database (USLCI), National Renewable Energy Laboratory (NREL), U.S. Federal LCA Commons, 2025.",
         description:
           "Database-level fallback source used when the converted USLCI package has no more specific report, publication, or data-source evidence for the process scope.",
-        permanentDataSetUri: (sourceId) => `https://www.lcacommons.gov/uslci/${sourceId}`,
+        permanentDataSetUri: (sourceId: any) => `https://www.lcacommons.gov/uslci/${sourceId}`,
       };
     }
     if (key === "worldsteel") {
@@ -445,7 +458,7 @@ export function createSourceSemanticUtils({
           "worldsteel Life Cycle Inventory (LCI) database, World Steel Association (worldsteel), 2022.",
         description:
           "Database-level fallback source used when the converted worldsteel package has no more specific report, publication, or data-source evidence for the process scope.",
-        permanentDataSetUri: (sourceId) => `https://worldsteel.org/lci/${sourceId}`,
+        permanentDataSetUri: (sourceId: any) => `https://worldsteel.org/lci/${sourceId}`,
       };
     }
     // Default (BAFU and any unspecified profile): preserve the original behavior.
@@ -456,7 +469,7 @@ export function createSourceSemanticUtils({
         "BAFU 2025 Version 2 LCA database, Federal Office for the Environment (FOEN), 2025.",
       description:
         "Database-level fallback source used when the converted BAFU package has no more specific report, publication, or data-source evidence for the process scope.",
-      permanentDataSetUri: (sourceId) => `https://www.bafu.admin.ch/bafu-2025-v2/${sourceId}`,
+      permanentDataSetUri: (sourceId: any) => `https://www.bafu.admin.ch/bafu-2025-v2/${sourceId}`,
     };
   }
 
@@ -467,7 +480,7 @@ export function createSourceSemanticUtils({
     version = "00.00.001",
     language = "en",
     timestamp = null,
-  } = {}) {
+  }: any = {}) {
     const config = databaseFallbackSourceConfig(profile);
     const sourceId = asText(id) || config.id;
     const shortName = config.shortName;
@@ -477,13 +490,13 @@ export function createSourceSemanticUtils({
     // ILCD expects the format reference inside dataEntryBy (see
     // buildBafuProcessContextSourcePayload); at the administrativeInformation
     // root it fails schema validation as an unknown member.
-    const dataEntryBy = {
+    const dataEntryBy: any = {
       "common:referenceToDataSetFormat": dataFormatReference,
     };
     if (timestamp) {
       dataEntryBy["common:timeStamp"] = timestamp;
     }
-    const admin = {
+    const admin: any = {
       dataEntryBy,
       publicationAndOwnership: {
         "common:dataSetVersion": version,
@@ -526,11 +539,11 @@ export function createSourceSemanticUtils({
   // Backward-compatible alias: existing callers that explicitly want the BAFU
   // database-level fallback source. New callers should use
   // buildDatabaseFallbackSourcePayload({ profile }).
-  function buildBafuFallbackSourcePayload(options = {}) {
+  function buildBafuFallbackSourcePayload(options: any = {}) {
     return buildDatabaseFallbackSourcePayload({ ...options, profile: "bafu" });
   }
 
-  function sourceReferenceFromSummary(source, language = "en") {
+  function sourceReferenceFromSummary(source: any, language: any = "en") {
     const id = asText(source?.dataset_id);
     if (!id) return null;
     const version = asText(source?.dataset_version) || "00.00.001";
@@ -544,7 +557,7 @@ export function createSourceSemanticUtils({
     };
   }
 
-  function sourceReferenceKind(pathSegments) {
+  function sourceReferenceKind(pathSegments: any[]) {
     const pathText = pathSegments.join(".");
     if (pathText.includes("referenceToDataSource")) return "process_data_source";
     if (pathText.includes("referenceToDataSetFormat")) return "dataset_format_source";
@@ -552,7 +565,7 @@ export function createSourceSemanticUtils({
     return "other_source_reference";
   }
 
-  const canonicalSourceReferences = {
+  const canonicalSourceReferences: Record<string, any> = {
     dataset_format_source: {
       "@type": "source data set",
       "@refObjectId": "a97a0155-0234-4b87-b4ce-a45da52f2a40",
@@ -569,7 +582,7 @@ export function createSourceSemanticUtils({
     },
   };
 
-  function canonicalSourceReferenceForRelation(relation) {
+  function canonicalSourceReferenceForRelation(relation: any) {
     const reference = canonicalSourceReferences[relation];
     return reference ? cloneJson(reference) : null;
   }
@@ -580,12 +593,12 @@ export function createSourceSemanticUtils({
   // format/compliance source landing in a non-format/compliance slot (e.g.
   // modellingAndValidation/validation/review/common:referenceToCompleteReviewReport)
   // is rewritten to the same public canonical source it would get on its format slot.
-  const canonicalSourceReferenceByKind = {
+  const canonicalSourceReferenceByKind: Record<string, string> = {
     format_support_source: "dataset_format_source",
     compliance_support_source: "compliance_system_source",
   };
 
-  function canonicalSourceReferenceForSourceKind(kind) {
+  function canonicalSourceReferenceForSourceKind(kind: any) {
     const relation = canonicalSourceReferenceByKind[asText(kind)];
     return relation ? canonicalSourceReferenceForRelation(relation) : null;
   }
@@ -594,7 +607,7 @@ export function createSourceSemanticUtils({
   // own UUID to its canonical support KIND, so a public canonical support source is
   // recognized by identity even when its converted classification/shortName would not
   // otherwise resolve to format_support_source / compliance_support_source.
-  function canonicalSupportSourceKindForId(refObjectId) {
+  function canonicalSupportSourceKindForId(refObjectId: any) {
     const id = asText(refObjectId);
     if (!id) return null;
     for (const [kind, relation] of Object.entries(canonicalSourceReferenceByKind)) {
@@ -605,7 +618,7 @@ export function createSourceSemanticUtils({
     return null;
   }
 
-  function sourceReferenceSnapshot(reference) {
+  function sourceReferenceSnapshot(reference: any) {
     return {
       ref_object_id: asText(reference?.["@refObjectId"]) || null,
       version: asText(reference?.["@version"]) || null,
@@ -615,7 +628,7 @@ export function createSourceSemanticUtils({
   }
 
   function rewriteCanonicalSourceReferences(
-    value,
+    value: any,
     {
       datasetType,
       sourceFile,
@@ -624,7 +637,7 @@ export function createSourceSemanticUtils({
       pathSegments = [],
       datasetIdentityCache = null,
       sourceLookup = null,
-    },
+    }: any,
   ) {
     if (!value || typeof value !== "object") return;
     if (Array.isArray(value)) {
@@ -715,7 +728,7 @@ export function createSourceSemanticUtils({
   }
 
   function rewriteTrueSourceReferenceDescriptions(
-    value,
+    value: any,
     {
       sourceLookup,
       sourceFile,
@@ -723,7 +736,7 @@ export function createSourceSemanticUtils({
       rewriteRows,
       pathSegments = [],
       datasetIdentityCache = null,
-    },
+    }: any,
   ) {
     if (!value || typeof value !== "object") return;
     if (Array.isArray(value)) {
@@ -791,7 +804,7 @@ export function createSourceSemanticUtils({
   }
 
   function rewriteProcessDataSourceReferences(
-    value,
+    value: any,
     {
       sourceLookup,
       replacementSource = null,
@@ -804,7 +817,7 @@ export function createSourceSemanticUtils({
       pathSegments = [],
       datasetIdentityCache = null,
       language = "en",
-    },
+    }: any,
   ) {
     if (!value || typeof value !== "object") return;
     if (Array.isArray(value)) {
@@ -925,7 +938,7 @@ export function createSourceSemanticUtils({
     }
   }
 
-  function collectSourceReferences(value, pathSegments = [], refs = []) {
+  function collectSourceReferences(value: any, pathSegments: any[] = [], refs: any[] = []) {
     if (!value || typeof value !== "object") return refs;
     if (Array.isArray(value)) {
       value.forEach((item, index) => collectSourceReferences(item, [...pathSegments, index], refs));
@@ -948,7 +961,7 @@ export function createSourceSemanticUtils({
     return refs;
   }
 
-  function processSourceReferenceRows(payload, sourceLookup, sourceFile) {
+  function processSourceReferenceRows(payload: any, sourceLookup: any, sourceFile: any) {
     if (!payload?.processDataSet) return [];
     const identity = datasetIdentity(payload, "process");
     return collectSourceReferences(payload.processDataSet).map((ref) => ({
@@ -964,7 +977,7 @@ export function createSourceSemanticUtils({
     }));
   }
 
-  function sourceReferenceSemanticBlockers(processSourceReferenceRows) {
+  function sourceReferenceSemanticBlockers(processSourceReferenceRows: any[]) {
     return processSourceReferenceRows
       .filter(
         (row) =>

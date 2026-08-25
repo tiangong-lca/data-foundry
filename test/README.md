@@ -34,6 +34,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
   - scripts/lib/import-curation/internal/trace-summary.ts
+  - scripts/lib/canonical-support-mappings.ts
+  - scripts/lib/source-semantics.ts
+  - scripts/lib/trace-coverage.ts
+  - scripts/lib/tidas-row-utils.ts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
@@ -73,6 +77,8 @@ Every behavior or migration slice starts with a failing focused test or a realis
 `unit/runtime-io.test.mts` characterizes every shared I/O export: coercion/list/name helpers, parent creation, exact text/JSON/JSONL bytes, direct overwrite and partial-prefix behavior, close-on-error, immediate rename/read visibility, parse/filesystem errors, missing probes, row envelopes, and separator-neutral repository/artifact paths.
 
 `unit/artifact-inputs.test.mts`, `unit/dataset-payload.test.mts`, `unit/trace-summary.test.mts`, and `unit/context-inputs.test.mts` characterize the next internal contracts: artifact IDs/path fallback/QA dedupe, payload/root/id/version precedence, trace DFS paths/group order/hash/error behavior, and installed schema plus schema/methodology/classification/location context resolution with missing, duplicate, and drift evidence.
+
+`unit/canonical-support-mappings.test.mts`, `unit/source-semantics-contract.test.mts`, `unit/trace-coverage.test.mts`, and `unit/tidas-row-utils.test.mts` characterize standalone leaves: mapping completeness/scales/pending support, source kinds/profile fallbacks/canonical rewrites, trace count/missing/stale/duplicate/evidence blockers, and TIDAS root/id/version/multilingual/cleanup/JSONL helpers with invalid inputs.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

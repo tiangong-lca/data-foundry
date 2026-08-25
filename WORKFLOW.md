@@ -37,6 +37,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
   - scripts/lib/import-curation/internal/trace-summary.ts
+  - scripts/lib/canonical-support-mappings.ts
+  - scripts/lib/source-semantics.ts
+  - scripts/lib/trace-coverage.ts
+  - scripts/lib/tidas-row-utils.ts
   - test/unit/foundry-cli-spine.test.mts
   - test/unit/foundry-command-metadata.test.mts
   - test/unit/surface-audit-typescript.test.mts
@@ -48,6 +52,10 @@ checkPaths:
   - test/unit/context-inputs.test.mts
   - test/unit/dataset-payload.test.mts
   - test/unit/trace-summary.test.mts
+  - test/unit/canonical-support-mappings.test.mts
+  - test/unit/source-semantics-contract.test.mts
+  - test/unit/trace-coverage.test.mts
+  - test/unit/tidas-row-utils.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
 lastReviewedCommit: cafacf6683810777a91bc1b03e014d708e817b1e

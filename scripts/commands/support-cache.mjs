@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { defaultCanonicalFlowPropertyMappings } from "../lib/canonical-support-mappings.mjs";
+import { defaultCanonicalFlowPropertyMappings } from "../lib/canonical-support-mappings.ts";
 
 const defaultCanonicalSupportCacheFile = "specs/canonical-support/flow-properties-unit-groups.json";
 const defaultMappingsFileName = "canonical-support-mappings.jsonl";

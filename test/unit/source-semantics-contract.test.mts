@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createSourceSemanticUtils } from "../../scripts/lib/source-semantics.mjs";
+import { createSourceSemanticUtils } from "../../scripts/lib/source-semantics.ts";
 
 function asText(value: any): string {
   if (value === undefined || value === null) return "";

@@ -3,10 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-import * as canonicalMappings from "../../scripts/lib/canonical-support-mappings.mjs";
-import * as sourceSemantics from "../../scripts/lib/source-semantics.mjs";
-import * as tidasRows from "../../scripts/lib/tidas-row-utils.mjs";
-import * as traceCoverage from "../../scripts/lib/trace-coverage.mjs";
+import * as canonicalMappings from "../../scripts/lib/canonical-support-mappings.ts";
+import * as sourceSemantics from "../../scripts/lib/source-semantics.ts";
+import * as tidasRows from "../../scripts/lib/tidas-row-utils.ts";
+import * as traceCoverage from "../../scripts/lib/trace-coverage.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 

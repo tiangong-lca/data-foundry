@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { createTraceCoverageUtils } from "../../scripts/lib/trace-coverage.mjs";
+import { createTraceCoverageUtils } from "../../scripts/lib/trace-coverage.ts";
 
 type TraceRow = Record<string, unknown>;
 

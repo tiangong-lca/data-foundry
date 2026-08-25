@@ -37,6 +37,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
   - scripts/lib/import-curation/internal/trace-summary.ts
+  - scripts/lib/canonical-support-mappings.ts
+  - scripts/lib/source-semantics.ts
+  - scripts/lib/trace-coverage.ts
+  - scripts/lib/tidas-row-utils.ts
   - .prettierignore
   - package.json
   - pnpm-lock.yaml
@@ -93,7 +97,7 @@ entrypoint + args
 
 This boundary avoids a misleading bulk rename. Each module remains in the inventory until a TypeScript replacement preserves its command, artifact, stdout, exit, and safety behavior under focused tests. Completion means no untyped business-runtime modules remain and the full case-driven suite is green.
 
-The native TypeScript leaf set now covers the CLI spine, vocabulary/hash/runtime I/O, artifact/QA inputs, dataset payload identity, compact trace summaries, and full-context resolution. Focused characterization preserves help/report JSON, exact bytes/hashes, path and identity precedence, DFS/dedupe order, installed schema assets, missing/duplicate/drift envelopes, current synchronous I/O/error behavior, and every static consumer before higher workflow facets move across the boundary.
+The native TypeScript leaf set now covers the CLI and internal contracts plus standalone canonical-support, source-semantics, trace-coverage, and TIDAS-row factories. Focused characterization preserves exact mapping bytes/scales, profile defaults and source rewrites, trace queue blocker algebra, root/id/version/multilingual transforms, path/hash/order/error behavior, and every static consumer before higher workflow facets move across the boundary.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

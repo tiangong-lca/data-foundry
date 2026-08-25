@@ -1,4 +1,15 @@
-export function defaultCanonicalFlowPropertyMappings() {
+export type CanonicalFlowPropertyMapping = {
+  source_units: string[];
+  canonical_flow_property_id: string | null;
+  canonical_reference_unit: string;
+  source_unit_scales: Record<string, number>;
+  reason: string;
+  pending_canonical_support?: boolean;
+  pending_upstream_note?: string;
+  legacy_support_note?: string;
+};
+
+export function defaultCanonicalFlowPropertyMappings(): CanonicalFlowPropertyMapping[] {
   return [
     {
       source_units: ["kg", "g", "mg", "ug", "t", "kt", "mg"],

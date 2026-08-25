@@ -6,7 +6,7 @@
 
 代码侧已落地（本仓库）：
 
-- `scripts/lib/canonical-support-mappings.mjs` — mapping schema 增加 `canonical_reference_unit` + `source_unit_scales`，回填全部既有映射的换算因子（取自 canonical UnitGroup 的 mean_value），并加入 3 条 pending mapping。
+- `scripts/lib/canonical-support-mappings.ts` — mapping schema 增加 `canonical_reference_unit` + `source_unit_scales`，回填全部既有映射的换算因子（取自 canonical UnitGroup 的 mean_value），并加入 3 条 pending mapping。
 - `specs/canonical-support/flow-properties-unit-groups.json` — 同步上述（rewrite 实际读取此缓存，不读 .mjs）。
 - `scripts/lib/canonical-support-rewrites.mjs` — rewrite 变 scale-aware：在 rewrite 行与报告中记录 `amount_scale_to_canonical_reference`；当 scale≠1 写入 `canonical-support-amount-scaling.jsonl` 与 `amount_scaling_requirements`；`--block-on-unscaled-canonical-support` 时升级为硬 blocker；pending mapping 产出 `canonical_support_pending_upstream` blocker。
 - `test/commands/canonical-support-rewrites.test.mjs` — 覆盖 scale 记录 / 阻断 flag / factor=1 不触发 / pending blocker。

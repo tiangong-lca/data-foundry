@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { bundleRowTypes } from "../../scripts/lib/bundle-row-types.ts";
 import { asText, ensureArray } from "../../scripts/lib/import-curation/internal/runtime-io.ts";
-import { createTidasRowUtils } from "../../scripts/lib/tidas-row-utils.mjs";
+import { createTidasRowUtils } from "../../scripts/lib/tidas-row-utils.ts";
 
 function createUtils(writes = new Map<string, string>()) {
   return createTidasRowUtils({

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import test from "node:test";
 
-import { defaultCanonicalFlowPropertyMappings } from "../../scripts/lib/canonical-support-mappings.mjs";
+import { defaultCanonicalFlowPropertyMappings } from "../../scripts/lib/canonical-support-mappings.ts";
 
 test("canonical flow-property mappings preserve complete bytes, counts, and pending boundaries", () => {
   const mappings = defaultCanonicalFlowPropertyMappings();

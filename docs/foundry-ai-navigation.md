@@ -31,6 +31,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
   - scripts/lib/import-curation/internal/trace-summary.ts
+  - scripts/lib/canonical-support-mappings.ts
+  - scripts/lib/source-semantics.ts
+  - scripts/lib/trace-coverage.ts
+  - scripts/lib/tidas-row-utils.ts
   - scripts/commands/incremental-change-set.mjs
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
@@ -89,6 +93,8 @@ The typed low-level data leaves are `scripts/lib/bundle-row-types.ts`, `scripts/
 The high-fan-in typed I/O leaf is `scripts/lib/import-curation/internal/runtime-io.ts`. It owns generic coercion, JSON/JSONL/text reading and synchronous writing, filesystem probes, repository/artifact path normalization, row-envelope loading, option lists, unique values, and safe filename fragments. Its current writer contract is direct synchronous overwrite rather than transactional rename: JSONL closes its descriptor on success and error, while a serialization failure after earlier rows leaves the completed prefix visible. Do not change those semantics implicitly during consumer migrations.
 
 The typed contracts immediately above runtime I/O are `artifact-inputs.ts`, `dataset-payload.ts`, `trace-summary.ts`, and `context-inputs.ts`. They own QA/artifact file fallback and dedupe, TIDAS payload/root/type/id/version extraction, ordered `common:other` trace aggregation and compact hashing, and exact installed-CLI schema/methodology/classification/location context resolution. Missing files, duplicate resolved paths, context-byte drift, invalid JSON, trace serialization errors, and fallback identities remain explicit evidence rather than silently repaired input.
+
+The typed standalone policy/row leaves are `canonical-support-mappings.ts`, `source-semantics.ts`, `trace-coverage.ts`, and `tidas-row-utils.ts`. Navigate there for exact canonical FP/UG scales and pending support, profile-aware source kind/fallback/reference decisions, final-row-to-trace-queue coverage keys and blocker envelopes, or reusable root/id/version/multilingual row transforms. These factories retain existing BAFU/USLCI/worldsteel defaults and must not silently normalize units, sources, trace evidence, or row payloads during migration.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 
