@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { commandCategories, commandMetadata } from "./foundry-command-metadata.mjs";
-import { knownCommands } from "./foundry-command-registry.mjs";
+import { knownCommands } from "./foundry-command-registry.ts";
 
 const commandHandlerHelpKeys = new Set(["help", "--help", "-h"]);
 const deprecatedNamePattern = /\b(?:legacy|deprecated|compat|compatibility|alias|old)\b/iu;

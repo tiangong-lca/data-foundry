@@ -24,6 +24,9 @@ checkPaths:
   - specs/automated-lca-capability-registry.json
   - specs/capability-ownership-rules.json
   - scripts/with-lca-account.ts
+  - scripts/lib/foundry-args.ts
+  - scripts/lib/foundry-command-registry.ts
+  - test/unit/foundry-cli-spine.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
 lastReviewedCommit: f5206e37987e7ff8db7f5f207965dcd8b5204201

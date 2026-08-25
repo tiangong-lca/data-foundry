@@ -14,7 +14,7 @@ export const publicCommands = [
   "tasks-check",
   "task-complete",
   "tidas-handshake",
-];
+] as const;
 
 export const datasetPolicyCommands = [
   "dataset-tidas-import",
@@ -65,9 +65,22 @@ export const datasetPolicyCommands = [
   "dataset-import-completion-report",
   "dataset-import-ledger-report",
   "dataset-mutation-manifest",
-];
+] as const;
 
 export const knownCommands = [...publicCommands, ...datasetPolicyCommands];
+
+export type FoundryCommand = (typeof knownCommands)[number];
+
+type CommandResult = {
+  status?: string;
+  ok?: boolean;
+  foundry_adapter?: { exit_code?: number };
+  foundry_wrapper?: { exit_code?: number };
+  workflow_check?: { ok?: boolean };
+  storage_check?: { ok?: boolean };
+  env_example_surface?: { ok?: boolean };
+  surface_audit?: { status?: string };
+};
 
 export function usage() {
   return {
@@ -79,11 +92,14 @@ export function usage() {
   };
 }
 
-function statusIs(result, allowed) {
-  return allowed.includes(result?.status);
+function statusIs(result: CommandResult | null | undefined, allowed: readonly string[]): boolean {
+  return allowed.includes(result?.status as string);
 }
 
-export function exitCodeForCommand(command, result) {
+export function exitCodeForCommand(
+  command: string,
+  result: CommandResult | null | undefined,
+): number {
   switch (command) {
     case "tidas-handshake":
       return result?.foundry_adapter?.exit_code ?? (result?.status === "help" ? 0 : 1);

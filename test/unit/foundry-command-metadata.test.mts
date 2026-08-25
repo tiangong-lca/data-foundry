@@ -11,7 +11,7 @@ import {
   datasetPolicyCommands,
   knownCommands,
   publicCommands,
-} from "../../scripts/lib/foundry-command-registry.mjs";
+} from "../../scripts/lib/foundry-command-registry.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 const allowedCategories = new Set(commandCategories);

@@ -119,7 +119,7 @@ export const commandMetadata = {
     category: "public",
     ownerModule: coreOwner,
     ownerExport: "createCoreCommands().surfaceAuditCheck",
-    inputs: ["command registry", "command metadata", "docs/**/*.md", "scripts/**/*.mjs"],
+    inputs: ["command registry", "command metadata", "docs/**/*.md", "scripts/**/*.{mjs,ts}"],
     outputs: ["surface audit JSON status report"],
     keyTests: [commandSmoke("surface-audit"), commandSmoke("doctor")],
   }),

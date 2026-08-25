@@ -24,6 +24,8 @@ checkPaths:
   - specs/capability-ownership-rules.json
   - specs/automated-lca-capability-registry.json
   - specs/typescript-migration-inventory.json
+  - scripts/lib/foundry-args.ts
+  - scripts/lib/foundry-command-registry.ts
   - .prettierignore
   - package.json
   - pnpm-lock.yaml
@@ -79,6 +81,8 @@ entrypoint + args
 ```
 
 This boundary avoids a misleading bulk rename. Each module remains in the inventory until a TypeScript replacement preserves its command, artifact, stdout, exit, and safety behavior under focused tests. Completion means no untyped business-runtime modules remain and the full case-driven suite is green.
+
+The argument parser and command registry are the first native TypeScript leaves on this path. Their focused characterization preserves scalar/argv parsing, exact help JSON and command order, exit-code families, and every static consumer import before later entrypoint and dispatcher slices move across the boundary.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

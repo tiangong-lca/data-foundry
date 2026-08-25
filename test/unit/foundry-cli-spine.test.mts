@@ -3,14 +3,14 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { parseArgs, parseScalar } from "../../scripts/lib/foundry-args.mjs";
+import { parseArgs, parseScalar } from "../../scripts/lib/foundry-args.ts";
 import {
   datasetPolicyCommands,
   exitCodeForCommand,
   knownCommands,
   publicCommands,
   usage,
-} from "../../scripts/lib/foundry-command-registry.mjs";
+} from "../../scripts/lib/foundry-command-registry.ts";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");

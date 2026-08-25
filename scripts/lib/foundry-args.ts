@@ -1,4 +1,11 @@
-export function parseScalar(value) {
+export type ParsedScalar = boolean | number | string;
+
+export type ParsedArgs = {
+  _: string[];
+  [key: string]: ParsedScalar | ParsedScalar[];
+};
+
+export function parseScalar(value: unknown): ParsedScalar {
   const text = String(value ?? "").trim();
   if (text === "true") return true;
   if (text === "false") return false;
@@ -6,8 +13,8 @@ export function parseScalar(value) {
   return text.replace(/^["']|["']$/gu, "");
 }
 
-export function parseArgs(argv) {
-  const options = { _: [] };
+export function parseArgs(argv: readonly string[]): ParsedArgs {
+  const options: ParsedArgs = { _: [] };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (!arg.startsWith("--")) {
@@ -15,7 +22,7 @@ export function parseArgs(argv) {
       continue;
     }
     const [rawKey, inlineValue] = arg.slice(2).split("=", 2);
-    const key = rawKey.replace(/-([a-z])/gu, (_, letter) => letter.toUpperCase());
+    const key = rawKey.replace(/-([a-z])/gu, (_, letter: string) => letter.toUpperCase());
     const value = inlineValue ?? argv[index + 1];
     if (inlineValue === undefined && value && !String(value).startsWith("--")) {
       index += 1;

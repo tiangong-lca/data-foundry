@@ -15,7 +15,8 @@ whenToUpdate:
 checkPaths:
   - docs/foundry-command-surface.md
   - test/README.md
-  - scripts/lib/foundry-command-registry.mjs
+  - scripts/lib/foundry-args.ts
+  - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.mjs
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
@@ -26,14 +27,15 @@ lastReviewedNote: "Reviewed for Issue #65: CommandSpec handoff artifacts and typ
 
 # Foundry Command Surface
 
-Foundry command governance has two layers:
+Foundry CLI-spine and command governance has three checked contracts:
 
-- `scripts/lib/foundry-command-registry.mjs` is the runtime command list and exit-code policy.
+- `scripts/lib/foundry-args.ts` is the typed positional/option/scalar parsing contract.
+- `scripts/lib/foundry-command-registry.ts` is the typed runtime command list, help JSON, and exit-code policy.
 - `scripts/lib/foundry-command-metadata.mjs` is the AI-readable navigation and ownership map.
 
 The metadata module must cover every command returned by `node scripts/foundry.mjs help`. It records each command category, owner module, owner export, input artifacts, output artifacts, workflow entry audit state, and key behavior checks.
 
-Issue #63 does not change the public command categories or behavior. It introduces the Node.js 24 / pnpm 11.23 / TypeScript 7.0.2 typed spine underneath the same surface. Migration work must preserve the registered command name, help, stdout, exit code, stage contract, input/output artifacts, and remote-write mode before removing a JavaScript implementation from `specs/typescript-migration-inventory.json`. Use focused characterization and real cases; do not treat an extension rename as command migration.
+Issue #63 does not change the public command categories or behavior. It introduces the Node.js 24 / pnpm 11.23 / TypeScript 7.0.2 typed spine underneath the same surface. The argument parser and command registry are native TypeScript leaves; `test/unit/foundry-cli-spine.test.mts` fixes their scalar/argv parsing, exact help JSON, exit mapping, and static consumer contract. Later migration work must preserve the registered command name, help, stdout, exit code, stage contract, input/output artifacts, and remote-write mode before removing a JavaScript implementation from `specs/typescript-migration-inventory.json`. Use focused characterization and real cases; do not treat an extension rename as command migration.
 
 ## Categories
 
@@ -69,7 +71,7 @@ Public command owner paths must be at most two jumps from `scripts/foundry.mjs`.
 
 When a command is added, removed, renamed, moved, or reclassified, update both:
 
-1. `scripts/lib/foundry-command-registry.mjs`
+1. `scripts/lib/foundry-command-registry.ts`
 2. `scripts/lib/foundry-command-metadata.mjs`
 
 Then run:
