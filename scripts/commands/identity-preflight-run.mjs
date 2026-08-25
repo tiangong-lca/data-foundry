@@ -2,6 +2,12 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import {
+  createIdentityPreflightBinding,
+  parseFreshIntentBoundAuthReceipt,
+  validateBoundExecutionManifest,
+  validateIdentityPreflightExecution,
+} from "../lib/identity-preflight-proof.ts";
 import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
 // Run-level identity-preflight RESULT cache (env-gated; off unless
@@ -17,10 +23,9 @@ function identityPreflightResultCacheDir(resolveRepoPath) {
   const raw = process.env.BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE;
   return raw ? resolveRepoPath(raw) : null;
 }
-function identityPreflightResultCacheEntryDir(cacheDir, datasetType, datasetId, datasetVersion) {
-  if (!cacheDir || !datasetId) return null;
-  const key = `${datasetType || "flow"}:${datasetId}@${datasetVersion || "00.00.001"}`;
-  return path.join(cacheDir, key.replace(/[^A-Za-z0-9_.@-]+/gu, "-"));
+function identityPreflightResultCacheEntryDir(cacheDir, bindingSha256) {
+  if (!cacheDir || !bindingSha256) return null;
+  return path.join(cacheDir, bindingSha256);
 }
 
 const identityPreflightRunStageContract = readOnlyStageContract([
@@ -263,6 +268,29 @@ export function createIdentityPreflightRunCommands({
           display: resolveTiangongLcaCliBin(),
           package: null,
         };
+    const authReceiptPath = resolveRepoPath(
+      options.authReceipt || options.authIdentityReceipt || options.accountReceipt,
+    );
+    let authReceipt = null;
+    if (authReceiptPath) {
+      if (!fileExists(authReceiptPath)) {
+        throw new Error("--auth-receipt must point to a readable CLI AuthIdentityReceipt.");
+      }
+      const expectedProjectRef = asText(
+        options.expectedProjectRef || options.expectedProject || options.projectRef,
+      );
+      const expectedUserId = asText(options.expectedUserId || options.targetUserId);
+      if (!expectedProjectRef || !expectedUserId) {
+        throw new Error("--auth-receipt requires --expected-project-ref and --expected-user-id.");
+      }
+      authReceipt = parseFreshIntentBoundAuthReceipt(readJson(authReceiptPath), {
+        nowMs: Date.now(),
+        maxAgeMs: positiveIntegerOption(options.authReceiptMaxAgeMs, 300_000),
+        expectedProjectRef,
+        expectedUserId,
+        requireFreshSignin: booleanOption(options.productionCase || options.requireFreshSignin),
+      });
+    }
     const logDir = path.join(outDir, "logs");
     const resultRows = [];
     const resultCacheDir = identityPreflightResultCacheDir(resolveRepoPath);
@@ -279,76 +307,6 @@ export function createIdentityPreflightRunCommands({
       const stdoutLog = path.join(logDir, `${logToken}.stdout.json`);
       const stderrLog = path.join(logDir, `${logToken}.stderr.log`);
 
-      // Restore a cached search result for this flow identity (skips the remote search).
-      const resultCacheEntryDir = identityPreflightResultCacheEntryDir(
-        resultCacheDir,
-        datasetType,
-        datasetId,
-        datasetVersion,
-      );
-      if (resultCacheEntryDir && reportFile && outputDir && !fileExists(reportFile)) {
-        const cachedReport = path.join(resultCacheEntryDir, "identity-decision.json");
-        let restoredReport = null;
-        if (fileExists(cachedReport)) {
-          try {
-            // Best-effort restore. A racing/partial cache entry (a concurrent writer
-            // mid-publish) must never crash the stage — fall through to a fresh search.
-            fs.mkdirSync(outputDir, { recursive: true });
-            fs.cpSync(resultCacheEntryDir, path.join(outputDir, "outputs"), { recursive: true });
-            if (fileExists(reportFile)) {
-              restoredReport = readJson(reportFile);
-            }
-          } catch {
-            restoredReport = null;
-          }
-          if (!restoredReport) {
-            // The cache entry was unusable (racing/partial/truncated JSON). Remove the
-            // half-copied outputs so a stale, corrupt reportFile cannot poison the
-            // onlyPending short-circuit below; fall through to a fresh search instead.
-            try {
-              fs.rmSync(path.join(outputDir, "outputs"), { recursive: true, force: true });
-            } catch {
-              /* best-effort cleanup */
-            }
-          }
-        }
-        if (restoredReport) {
-          resultRows.push({
-            selected_index: selectedIndex,
-            dataset_type: datasetType,
-            dataset_id: datasetId,
-            dataset_version: datasetVersion,
-            status: "restored_from_result_cache",
-            cli_exit_code: null,
-            report_status: restoredReport.status ?? null,
-            decision: restoredReport.decision ?? null,
-            request_file: repoRelativeMaybe(requestFile),
-            output_dir: repoRelativeMaybe(outputDir),
-            report_file: repoRelativeMaybe(reportFile),
-            result_cache_entry: repoRelativeMaybe(resultCacheEntryDir),
-          });
-          return;
-        }
-      }
-
-      if (onlyPending && reportFile && fileExists(reportFile)) {
-        const existingReport = readJson(reportFile);
-        resultRows.push({
-          selected_index: selectedIndex,
-          dataset_type: datasetType,
-          dataset_id: datasetId,
-          dataset_version: datasetVersion,
-          status: "skipped_existing_report",
-          cli_exit_code: null,
-          report_status: existingReport.status ?? null,
-          decision: existingReport.decision ?? null,
-          request_file: repoRelativeMaybe(requestFile),
-          output_dir: repoRelativeMaybe(outputDir),
-          report_file: repoRelativeMaybe(reportFile),
-        });
-        return;
-      }
-
       const cliArgs = [
         datasetType,
         "identity-preflight",
@@ -360,7 +318,7 @@ export function createIdentityPreflightRunCommands({
         "--timeout-ms",
         String(timeoutMs),
       ];
-      const baseRow = {
+      let baseRow = {
         selected_index: selectedIndex,
         dataset_type: datasetType,
         dataset_id: datasetId,
@@ -372,6 +330,12 @@ export function createIdentityPreflightRunCommands({
         executable: cli.command,
         cli_package: cli.package,
         cli_args: cliArgs,
+        command_spec: {
+          schema: "tiangong-foundry.command-spec.v1",
+          executable: cli.command,
+          argv: [...cli.args, ...cliArgs],
+          argv_sha256: jsonSha256([cli.command, ...cli.args, ...cliArgs]),
+        },
         stdout_log: repoRelativePath(stdoutLog),
         stderr_log: repoRelativePath(stderrLog),
       };
@@ -409,6 +373,184 @@ export function createIdentityPreflightRunCommands({
         });
         return;
       }
+      const requestText = fs.readFileSync(requestFile, "utf8");
+      const requestBytesSha256 = sha256Text(requestText);
+      if (row.request_bytes_sha256 && asText(row.request_bytes_sha256) !== requestBytesSha256) {
+        resultRows.push({
+          ...baseRow,
+          status: "failed",
+          failure_code: "identity_preflight_request_hash_drift",
+          cli_exit_code: null,
+          report_status: null,
+          decision: null,
+        });
+        return;
+      }
+      let requestValue;
+      try {
+        requestValue = JSON.parse(requestText);
+      } catch {
+        resultRows.push({
+          ...baseRow,
+          status: "failed",
+          failure_code: "identity_preflight_request_non_json",
+          cli_exit_code: null,
+          report_status: null,
+          decision: null,
+        });
+        return;
+      }
+      if (row.request_json_sha256 && asText(row.request_json_sha256) !== jsonSha256(requestValue)) {
+        resultRows.push({
+          ...baseRow,
+          status: "failed",
+          failure_code: "identity_preflight_request_json_hash_drift",
+          cli_exit_code: null,
+          report_status: null,
+          decision: null,
+        });
+        return;
+      }
+      const requestTargetSha256 = jsonSha256(requestValue?.target);
+      const declaredTargetSha256 = asText(row.target_sha256) || requestTargetSha256;
+      if (declaredTargetSha256 !== requestTargetSha256) {
+        resultRows.push({
+          ...baseRow,
+          status: "failed",
+          failure_code: "identity_preflight_target_hash_drift",
+          cli_exit_code: null,
+          report_status: null,
+          decision: null,
+        });
+        return;
+      }
+      const relevantInputHashes = {
+        ...(row.relevant_input_hashes && typeof row.relevant_input_hashes === "object"
+          ? row.relevant_input_hashes
+          : {}),
+      };
+      const sourceFile = resolveRepoPath(row.source_file || row.sourceFile);
+      if (sourceFile && fileExists(sourceFile)) {
+        relevantInputHashes.source_file = sha256Text(fs.readFileSync(sourceFile, "utf8"));
+      }
+      const packageSpec = asText(cli.package);
+      const packageAt = packageSpec.lastIndexOf("@");
+      const packageName =
+        packageAt > 0 ? packageSpec.slice(0, packageAt) : packageSpec || "cli-override";
+      const packageVersion =
+        asText(cli.package_version) ||
+        (packageAt > 0 ? packageSpec.slice(packageAt + 1) : "override");
+      const binPath = asText(cli.bin_path);
+      const packageIntegrity =
+        binPath && fileExists(binPath)
+          ? `sha256-${sha256Text(fs.readFileSync(binPath, "utf8"))}`
+          : null;
+      let executionBinding;
+      try {
+        executionBinding = createIdentityPreflightBinding({
+          datasetType,
+          datasetId,
+          datasetVersion,
+          targetSha256: declaredTargetSha256,
+          requestText,
+          semanticArgv: [
+            datasetType,
+            "identity-preflight",
+            "--json",
+            "--timeout-ms",
+            String(timeoutMs),
+          ],
+          cli: { packageName, packageVersion, packageIntegrity },
+          authReceipt,
+          relevantInputHashes,
+        });
+      } catch {
+        resultRows.push({
+          ...baseRow,
+          status: "failed",
+          failure_code: "identity_preflight_execution_binding_invalid",
+          cli_exit_code: null,
+          report_status: null,
+          decision: null,
+        });
+        return;
+      }
+      const executionManifestFile = path.join(
+        outputDir,
+        "outputs",
+        "foundry-identity-preflight-execution.json",
+      );
+      const resultCacheEntryDir = identityPreflightResultCacheEntryDir(
+        resultCacheDir,
+        executionBinding.binding_sha256,
+      );
+      baseRow = {
+        ...baseRow,
+        request_bytes_sha256: requestBytesSha256,
+        binding_sha256: executionBinding.binding_sha256,
+        execution_manifest_file: repoRelativeMaybe(executionManifestFile),
+      };
+
+      if (resultCacheEntryDir && reportFile && outputDir && !fileExists(reportFile)) {
+        const cachedReportFile = path.join(resultCacheEntryDir, "identity-decision.json");
+        const cachedManifestFile = path.join(
+          resultCacheEntryDir,
+          "foundry-identity-preflight-execution.json",
+        );
+        if (fileExists(cachedReportFile) && fileExists(cachedManifestFile)) {
+          try {
+            const cachedReportText = fs.readFileSync(cachedReportFile, "utf8");
+            const cachedManifest = readJson(cachedManifestFile);
+            if (
+              validateBoundExecutionManifest(cachedManifest, executionBinding, cachedReportText).ok
+            ) {
+              const outputsDir = path.join(outputDir, "outputs");
+              fs.mkdirSync(outputsDir, { recursive: true });
+              fs.cpSync(resultCacheEntryDir, outputsDir, { recursive: true });
+              const restoredReport = JSON.parse(cachedReportText);
+              resultRows.push({
+                ...baseRow,
+                status: "restored_from_bound_cache",
+                cli_exit_code: null,
+                report_status: restoredReport.status ?? null,
+                decision: restoredReport.decision ?? null,
+                result_cache_entry: repoRelativeMaybe(resultCacheEntryDir),
+              });
+              return;
+            }
+          } catch {
+            // Invalid or racing cache entries are ignored and never become evidence.
+          }
+        }
+      }
+
+      if (
+        onlyPending &&
+        reportFile &&
+        fileExists(reportFile) &&
+        fileExists(executionManifestFile)
+      ) {
+        try {
+          const existingReportText = fs.readFileSync(reportFile, "utf8");
+          const existingManifest = readJson(executionManifestFile);
+          if (
+            validateBoundExecutionManifest(existingManifest, executionBinding, existingReportText)
+              .ok
+          ) {
+            const existingReport = JSON.parse(existingReportText);
+            resultRows.push({
+              ...baseRow,
+              status: "skipped_bound_execution",
+              cli_exit_code: null,
+              report_status: existingReport.status ?? null,
+              decision: existingReport.decision ?? null,
+            });
+            return;
+          }
+        } catch {
+          // Existing bytes without a valid exact binding must be executed again.
+        }
+      }
       if (dryRun) {
         resultRows.push({
           ...baseRow,
@@ -431,6 +573,7 @@ export function createIdentityPreflightRunCommands({
         const attemptStderrLog =
           maxAttempts > 1 ? path.join(logDir, `${logToken}${attemptSuffix}.stderr.log`) : stderrLog;
         const spawnArgs = [...cli.args, ...cliArgs];
+        const startedAtMs = Date.now();
         const result = spawnSync(cli.command, spawnArgs, {
           cwd: repoRoot,
           env: process.env,
@@ -447,8 +590,25 @@ export function createIdentityPreflightRunCommands({
         if (result.error && !timedOut) throw result.error;
         const cliExitCode = typeof result.status === "number" ? result.status : 1;
         const stdoutReport = parseJsonMaybe(result.stdout);
-        const diskReport = reportFile && fileExists(reportFile) ? readJson(reportFile) : null;
+        const diskReportText =
+          reportFile && fileExists(reportFile) ? fs.readFileSync(reportFile, "utf8") : null;
+        const diskReport = parseJsonMaybe(diskReportText);
         const report = stdoutReport || diskReport;
+        const executionValidation = timedOut
+          ? null
+          : validateIdentityPreflightExecution({
+              binding: executionBinding,
+              exitCode: cliExitCode,
+              stdoutText: result.stdout || "",
+              diskReportText,
+              startedAtMs,
+              diskReportMtimeMs:
+                reportFile && fileExists(reportFile) ? fs.statSync(reportFile).mtimeMs : null,
+              completedAtUtc: nowIso(),
+            });
+        if (executionValidation?.ok) {
+          writeJson(executionManifestFile, executionValidation.manifest);
+        }
         const attemptRow = timedOut
           ? {
               ...baseRow,
@@ -476,8 +636,10 @@ export function createIdentityPreflightRunCommands({
               attempts: attempt,
               stdout_log: repoRelativePath(attemptStdoutLog),
               stderr_log: repoRelativePath(attemptStderrLog),
-              status: report ? "completed" : "failed",
-              failure_code: report ? null : "identity_preflight_report_missing_or_non_json",
+              status: executionValidation?.ok ? "completed" : "failed",
+              failure_code: executionValidation?.ok
+                ? null
+                : executionValidation?.code || "identity_preflight_execution_invalid",
               cli_exit_code: cliExitCode,
               report_status: report?.status ?? null,
               decision: report?.decision ?? null,
@@ -491,8 +653,7 @@ export function createIdentityPreflightRunCommands({
         if (!retriableIdentityPreflightFailure(attemptRow)) break;
       }
       const finalAttempt = attemptRows.at(-1);
-      // Persist a freshly produced result into the run-level cache (keyed by flow
-      // identity) so other scopes referencing the same flow restore it instead of re-searching.
+      // Persist only a fully validated result under its complete execution binding.
       if (
         resultCacheEntryDir &&
         finalAttempt?.status === "completed" &&
@@ -514,7 +675,7 @@ export function createIdentityPreflightRunCommands({
           const tmpDir = `${resultCacheEntryDir}.tmp-${process.pid}-${selectedIndex}`;
           fs.rmSync(tmpDir, { recursive: true, force: true });
           fs.cpSync(path.join(outputDir, "outputs"), tmpDir, { recursive: true });
-          if (fileExists(resultCacheEntryDir)) {
+          if (fs.existsSync(resultCacheEntryDir)) {
             fs.rmSync(tmpDir, { recursive: true, force: true });
           } else {
             try {
@@ -585,6 +746,14 @@ export function createIdentityPreflightRunCommands({
           package: cli.package,
           source: cli.source,
         },
+        auth_receipt: authReceipt
+          ? {
+              file: repoRelativeMaybe(authReceiptPath),
+              project_ref: authReceipt.project.project_ref,
+              user_id: authReceipt.identity.user_id,
+              receipt_scope_sha256: authReceipt.receipt_scope_sha256,
+            }
+          : null,
       },
       counts: {
         index_rows: rows.length,
@@ -594,6 +763,12 @@ export function createIdentityPreflightRunCommands({
         attempts: resultRows.reduce((total, row) => total + Number(row.attempts ?? 0), 0),
         planned: resultRows.filter((row) => row.status === "planned").length,
         completed: resultRows.filter((row) => row.status === "completed").length,
+        restored_from_bound_cache: resultRows.filter(
+          (row) => row.status === "restored_from_bound_cache",
+        ).length,
+        skipped_bound_execution: resultRows.filter(
+          (row) => row.status === "skipped_bound_execution",
+        ).length,
         skipped_existing_report: resultRows.filter(
           (row) => row.status === "skipped_existing_report",
         ).length,
@@ -607,8 +782,10 @@ export function createIdentityPreflightRunCommands({
         blockers: blockers.length,
       },
       policy: {
-        valid_identity_findings_are_not_tool_failures:
-          "CLI identity-preflight status blocked/needs_review is retained as evidence for Foundry AI authoring and does not fail this batch runner.",
+        fail_closed_execution:
+          "Every nonzero CLI exit, missing/malformed stdout or disk report, stale disk report, stdout/disk mismatch, ok:false, failed/error status, or execution-binding drift fails the selected row and batch.",
+        valid_identity_findings:
+          "A blocked/needs_review report remains diagnostic evidence only when the CLI exits zero and stdout/disk bytes are bound by a valid execution manifest.",
         curation_gate_usage:
           "Pass this same index to dataset-curation-gate with --identity-preflight-index so authoring packages include current and dependency identity-preflight context.",
       },

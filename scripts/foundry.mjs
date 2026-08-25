@@ -510,6 +510,7 @@ const {
   repoRelativePath,
   resolveRepoPath,
   safeFileToken,
+  sha256Text,
   shellQuote,
   sourceTraceLocationCode,
   textValue,
