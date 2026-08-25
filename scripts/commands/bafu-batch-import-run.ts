@@ -1106,7 +1106,7 @@ function appendPathOptions(args: string[], name: string, values: unknown): void 
 }
 
 function foundryCommand(command: string, options: JsonRecord = {}): string[] {
-  const args = [process.execPath, "scripts/foundry.mjs", command];
+  const args = [process.execPath, "scripts/foundry.ts", command];
   for (const [key, value] of Object.entries(options)) {
     const flag = `--${key.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`)}`;
     if (Array.isArray(value)) {
@@ -1658,7 +1658,7 @@ async function executeHandoff({
   const closeoutDir = path.join(outDir, "closeout");
   const closeoutArgv = [
     process.execPath,
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "dataset-post-write-closeout",
     "--handoff-plan",
     repoRelative(handoffPlanPath),
@@ -2753,8 +2753,8 @@ function runDatasetBafuUniverseCoverageReport(options: JsonRecord = {}): JsonRec
       status: "help",
       command: coverageCommandName,
       usage: [
-        "node scripts/foundry.mjs dataset-bafu-universe-coverage-report --run-dir .foundry/workspaces/<bafu-run> --ledger-source-dir <batch/import-ledger> --out-dir <coverage-dir>",
-        "node scripts/foundry.mjs dataset-bafu-universe-coverage-report --input-dir 'inputs/BAFU-2025 Version 2 - TIDAS 2026-03-09' --scope-file <ready-scopes.jsonl> --ledger-source-dir <batch/import-ledger>",
+        "node scripts/foundry.ts dataset-bafu-universe-coverage-report --run-dir .foundry/workspaces/<bafu-run> --ledger-source-dir <batch/import-ledger> --out-dir <coverage-dir>",
+        "node scripts/foundry.ts dataset-bafu-universe-coverage-report --input-dir 'inputs/BAFU-2025 Version 2 - TIDAS 2026-03-09' --scope-file <ready-scopes.jsonl> --ledger-source-dir <batch/import-ledger>",
       ],
       purpose:
         "Build a read-only BAFU full-universe coverage report from process-bundles, ready scopes, flow references, and explicit ledger sources.",
@@ -3679,7 +3679,7 @@ function recordScopeExecutionException({
     report: null,
     rerunCommand: commandString([
       process.execPath,
-      "scripts/foundry.mjs",
+      "scripts/foundry.ts",
       commandName,
       "--scope-file",
       repoRelative(asText(paths.scopeFile)),
@@ -3823,7 +3823,7 @@ function buildFinalizeArgs({
 }: FinalizeArgsInput): string[] {
   const args = [
     process.execPath,
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "dataset-post-authoring-finalize",
     "--type",
     type,
@@ -4406,7 +4406,7 @@ async function runIdentityAndPatch({
     stage: `${stagePrefix}.patch_apply`,
     argv: [
       process.execPath,
-      "scripts/foundry.mjs",
+      "scripts/foundry.ts",
       "dataset-patch-apply",
       "--input",
       repoRelative(identityOutputRows),
@@ -4804,7 +4804,7 @@ async function runOneScope({
   };
   const rerunCommand = commandString([
     process.execPath,
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     commandName,
     "--scope-file",
     repoRelative(paths.scopeFile),
@@ -4962,7 +4962,7 @@ async function runOneScope({
     stage: "classification.task",
     argv: [
       process.execPath,
-      "scripts/foundry.mjs",
+      "scripts/foundry.ts",
       "dataset-classification-decision-task-build",
       "--classification-queue",
       repoRelative(materialized.classificationQueue),
@@ -5127,7 +5127,7 @@ async function runOneScope({
       stage: "location.task",
       argv: [
         process.execPath,
-        "scripts/foundry.mjs",
+        "scripts/foundry.ts",
         "dataset-location-decision-task-build",
         "--location-queue",
         repoRelative(materialized.locationQueue),
@@ -5758,14 +5758,14 @@ export function createBafuBatchImportRunCommands(
         status: "help",
         command: activeCommandName(),
         usage: [
-          "node scripts/foundry.mjs dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --process-bundles-dir <.../process-bundles> --run-dir <run-dir> --out-dir <run-dir>/batch-import --parallel 5 --commit",
-          "node scripts/foundry.mjs dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --out-dir <existing-batch-dir> --pending-only --selection-order estimated-weight-asc --limit 20 --pause-file <pause.flag> --commit",
-          "node scripts/foundry.mjs dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --pending-only --selection-order family-master-first --preflight-only",
-          "node scripts/foundry.mjs dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --pending-only --require-leaf-classification --preflight-only",
-          "node scripts/foundry.mjs dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --out-dir <new-batch-dir> --ledger-source-dir <previous-batch-dir> --pending-only --preflight-only",
-          "node scripts/foundry.mjs dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --out-dir <existing-batch-dir> --pending-only --selection-order estimated-weight-asc --preflight-only",
-          "node scripts/foundry.mjs dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --process-id <uuid> --commit",
-          "node scripts/foundry.mjs dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --process-id-file <retry-ids.txt> --commit (one id per line; blank lines and # comments ignored)",
+          "node scripts/foundry.ts dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --process-bundles-dir <.../process-bundles> --run-dir <run-dir> --out-dir <run-dir>/batch-import --parallel 5 --commit",
+          "node scripts/foundry.ts dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --out-dir <existing-batch-dir> --pending-only --selection-order estimated-weight-asc --limit 20 --pause-file <pause.flag> --commit",
+          "node scripts/foundry.ts dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --pending-only --selection-order family-master-first --preflight-only",
+          "node scripts/foundry.ts dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --pending-only --require-leaf-classification --preflight-only",
+          "node scripts/foundry.ts dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --out-dir <new-batch-dir> --ledger-source-dir <previous-batch-dir> --pending-only --preflight-only",
+          "node scripts/foundry.ts dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --out-dir <existing-batch-dir> --pending-only --selection-order estimated-weight-asc --preflight-only",
+          "node scripts/foundry.ts dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --process-id <uuid> --commit",
+          "node scripts/foundry.ts dataset-bafu-batch-import-run --scope-file <ready-scopes.jsonl> --process-id-file <retry-ids.txt> --commit (one id per line; blank lines and # comments ignored)",
         ],
         purpose:
           "Run BAFU ready process scopes through materialize, semantic decisions, dependency flow commit, support commit, process commit, readback verify, and resumable ledgers.",

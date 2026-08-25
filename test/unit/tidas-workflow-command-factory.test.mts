@@ -48,7 +48,7 @@ test("tidas workflow help payloads are exact and never invoke an adapter", () =>
     status: "help",
     command: "tidas-handshake",
     usage: [
-      "node scripts/foundry.mjs tidas-handshake [--tidas-bin /path/to/tidas] [--tidas-config /path/to/config]",
+      "node scripts/foundry.ts tidas-handshake [--tidas-bin /path/to/tidas] [--tidas-config /path/to/config]",
     ],
     owner: "tidas",
     remote_write_mode: "read-only",
@@ -133,7 +133,7 @@ test("tidas workflow command factory exists only as zero-any native TypeScript",
 
 test("all active tidas workflow owner consumers target the typed command factory", () => {
   for (const consumer of [
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "scripts/lib/foundry-command-metadata.ts",
     "test/unit/tidas-workflow-command-factory.test.mts",
   ]) {

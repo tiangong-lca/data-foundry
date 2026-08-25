@@ -61,7 +61,7 @@ export function createIdentityReferenceRewriteCommands({
         status: "help",
         command: "dataset-identity-reference-rewrites-apply",
         usage: [
-          "node scripts/foundry.mjs dataset-identity-reference-rewrites-apply --type process --rows-file <processes.jsonl> --identity-preflight-index <identity-preflight-requests.jsonl> --out <rewritten-processes.jsonl>",
+          "node scripts/foundry.ts dataset-identity-reference-rewrites-apply --type process --rows-file <processes.jsonl> --identity-preflight-index <identity-preflight-requests.jsonl> --out <rewritten-processes.jsonl>",
         ],
         purpose:
           "Apply completed identity-preflight block_duplicate flow decisions to local process exchange references before validation and write planning.",

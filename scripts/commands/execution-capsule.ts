@@ -887,7 +887,7 @@ export function createExecutionCapsuleCommands({ repoRoot }: { repoRoot: string 
         status: "help",
         command: "execution-capsule-admit",
         usage:
-          "node scripts/foundry.mjs execution-capsule-admit --stage-manifest <revision.json> [--predecessor-stage-manifest <previous-revision.json>] --out-dir <fresh-dir>",
+          "node scripts/foundry.ts execution-capsule-admit --stage-manifest <revision.json> [--predecessor-stage-manifest <previous-revision.json>] --out-dir <fresh-dir>",
         effects: "local evidence files only; zero network, database, CLI dispatch, and mutation",
       };
     }

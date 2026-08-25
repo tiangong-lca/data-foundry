@@ -32,7 +32,7 @@ test("identity decision command exists only as native TypeScript", () => {
 });
 
 test("identity decision static consumers and metadata target the typed factory", () => {
-  for (const consumer of ["scripts/foundry.mjs", "scripts/lib/foundry-command-metadata.ts"]) {
+  for (const consumer of ["scripts/foundry.ts", "scripts/lib/foundry-command-metadata.ts"]) {
     const source = readRepoFile(consumer);
     assert.match(source, /identity-decisions\.ts/u, consumer);
     assert.doesNotMatch(source, /identity-decisions\.mjs/u, consumer);
@@ -62,7 +62,7 @@ test("identity decision help report retains exact serialized bytes", async () =>
         status: "help",
         command: "dataset-identity-decisions-apply",
         usage: [
-          "node scripts/foundry.mjs dataset-identity-decisions-apply --type flow --rows-file <flows.jsonl> --decisions <identity-decisions.jsonl> --out-dir <apply-dir> --authoring-package-dir <ai-authoring-packages>",
+          "node scripts/foundry.ts dataset-identity-decisions-apply --type flow --rows-file <flows.jsonl> --decisions <identity-decisions.jsonl> --out-dir <apply-dir> --authoring-package-dir <ai-authoring-packages>",
         ],
         purpose:
           "Validate AI-authored identity decisions and deterministically split rows into write candidates and reference-reuse rows before post-authoring finalize.",

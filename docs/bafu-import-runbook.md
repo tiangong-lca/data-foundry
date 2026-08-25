@@ -126,7 +126,7 @@ EOF
 全部 `errors=0、missing=0` 才能进入第 5 步。5. 组装 projection 输入目录：复制旧 shards、**删掉本轮要重写的类目的旧行**（避免 code 冲突 → manual review），加新 shard。模板：`$RUN/leaf-process-classification-authoring/category-map-decisions-v50/`。6. 投影：
 
 ```bash
-node scripts/foundry.mjs dataset-bafu-leaf-classification-category-map-project \
+node scripts/foundry.ts dataset-bafu-leaf-classification-category-map-project \
   --task-dir "$RUN/leaf-process-classification-authoring" \
   --category-map-decisions-dir "$RUN/leaf-process-classification-authoring/category-map-decisions-vNN" \
   --source-decisions-dir "$RUN/decisions-v11-direct-process-leaf" \
@@ -147,7 +147,7 @@ node scripts/foundry.mjs dataset-bafu-leaf-classification-category-map-project \
 ### 4.4 重新 resolution
 
 ```bash
-node scripts/foundry.mjs dataset-library-decisions-apply \
+node scripts/foundry.ts dataset-library-decisions-apply \
   --library-index "$RUN/library-index" \
   --decisions-dir "$RUN/decisions-vNN" \
   --out-dir "$RUN/library-resolution-vNN"
@@ -162,7 +162,7 @@ node scripts/foundry.mjs dataset-library-decisions-apply \
 ### 5.1 Preflight（只读，先跑）
 
 ```bash
-node scripts/foundry.mjs dataset-bafu-batch-import-run \
+node scripts/foundry.ts dataset-bafu-batch-import-run \
   --scope-file "$RUN/library-resolution-v14-energy-override/ready-scopes.jsonl" \
   --run-dir "$RUN" \
   --out-dir "$RUN/batch-import-vNN-preflight" \
@@ -182,7 +182,7 @@ node scripts/foundry.mjs dataset-bafu-batch-import-run \
 ### 5.2 Commit 批次
 
 ```bash
-node scripts/foundry.mjs dataset-bafu-batch-import-run \
+node scripts/foundry.ts dataset-bafu-batch-import-run \
   ...（同 preflight 全部参数，去掉 --preflight-only）... \
   --target-user-id dab05739-1a42-421b-8170-3b77146d1d64 \
   --limit 25 --parallel 5 --stop-after-blocked 3 \
@@ -198,7 +198,7 @@ node scripts/foundry.mjs dataset-bafu-batch-import-run \
 - 后台运行 + 监控模板：
 
 ```bash
-( node scripts/foundry.mjs dataset-bafu-batch-import-run ... --commit \
+( node scripts/foundry.ts dataset-bafu-batch-import-run ... --commit \
     > /tmp/bafu-vNN-commit.log 2>&1; echo "exit=$?" >> /tmp/bafu-vNN-commit.log ) &
 # 进度 = ledger 行数（注意 §0 已 export RUN）：
 while sleep 30; do
@@ -215,21 +215,21 @@ done
 - `blocked.scopes.human-review.jsonl`：修复根因（代码规则/决策）后，用**显式 process id** 重试（显式请求绕过 blocked 过滤）。**首选 `--process-id-file`**（一行一个 id，空行与 `#` 注释行忽略），从根本上规避 zsh 分词陷阱（§7-10）；文件不存在会直接报错（`--process-id-file not found: <path>`），不会静默空跑：
 
 ```bash
-node scripts/foundry.mjs dataset-bafu-batch-import-run ...（完整参数）... \
+node scripts/foundry.ts dataset-bafu-batch-import-run ...（完整参数）... \
   --process-id-file /tmp/bafu-vNN-blocked-retry-ids.txt --commit
 ```
 
 旧的 `--process-id <uuid>`（可重复）仍然支持，并可与 `--process-id-file` 合并使用：
 
 ```bash
-node scripts/foundry.mjs dataset-bafu-batch-import-run ...（完整参数）... \
+node scripts/foundry.ts dataset-bafu-batch-import-run ...（完整参数）... \
   --process-id <uuid1> --process-id <uuid2> --commit
 ```
 
 ### 5.4 Coverage 报告（每轮收尾）
 
 ```bash
-node scripts/foundry.mjs dataset-bafu-universe-coverage-report \
+node scripts/foundry.ts dataset-bafu-universe-coverage-report \
   --input-dir "inputs/BAFU-2025 Version 2 - TIDAS 2026-03-09" \
   --run-dir "$RUN" \
   --scope-file "$RUN/library-resolution-v14-energy-override/ready-scopes.jsonl" \

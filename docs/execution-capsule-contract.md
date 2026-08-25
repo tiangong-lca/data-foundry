@@ -32,7 +32,7 @@ lastReviewedNote: "Reviewed for Issue #67 Wave 25: the native TS7 owner preserve
 Prepare a `foundry-execution-capsule-stage.v1` manifest and its content-addressed leaves, then run:
 
 ```bash
-node scripts/foundry.mjs execution-capsule-admit \
+node scripts/foundry.ts execution-capsule-admit \
   --stage-manifest .foundry/workspaces/<task-id>/stage-revisions/revision-0001.json \
   --out-dir .foundry/workspaces/<task-id>/admissions/revision-0001
 ```

@@ -60,7 +60,7 @@ export function createTidasWorkflowCommands({
     runTidasHandshake(options: TidasWorkflowOptions = {}): TidasWorkflowReport {
       if (options.help) {
         return help("tidas-handshake", [
-          "node scripts/foundry.mjs tidas-handshake [--tidas-bin /path/to/tidas] [--tidas-config /path/to/config]",
+          "node scripts/foundry.ts tidas-handshake [--tidas-bin /path/to/tidas] [--tidas-config /path/to/config]",
         ]);
       }
       const result = runTidasHandshake({ repoRoot, options });
@@ -78,7 +78,7 @@ export function createTidasWorkflowCommands({
     runTidasImport(options: TidasWorkflowOptions = {}): TidasWorkflowReport {
       if (options.help) {
         return help("dataset-tidas-import", [
-          "node scripts/foundry.mjs dataset-tidas-import --input <source> --output <dir> [--from-format <format>] [--target tidas|ilcd|both] [--write-mapping]",
+          "node scripts/foundry.ts dataset-tidas-import --input <source> --output <dir> [--from-format <format>] [--target tidas|ilcd|both] [--write-mapping]",
         ]);
       }
       const result = runTidasImport({ repoRoot, options });
@@ -90,8 +90,8 @@ export function createTidasWorkflowCommands({
     runTidasPackageValidation(options: TidasWorkflowOptions = {}): TidasWorkflowReport {
       if (options.help) {
         return help("dataset-tidas-validate", [
-          "node scripts/foundry.mjs dataset-tidas-validate --input <package-dir> [--input-format tidas-json|ilcd-xml]",
-          "node scripts/foundry.mjs dataset-tidas-validate --rows-file <rows.jsonl> --type <type> --out-dir <dir>",
+          "node scripts/foundry.ts dataset-tidas-validate --input <package-dir> [--input-format tidas-json|ilcd-xml]",
+          "node scripts/foundry.ts dataset-tidas-validate --rows-file <rows.jsonl> --type <type> --out-dir <dir>",
         ]);
       }
       const result = options.rowsFile

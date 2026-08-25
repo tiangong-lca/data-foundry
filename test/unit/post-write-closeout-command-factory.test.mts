@@ -43,7 +43,7 @@ test("post-write closeout help is exact and invokes no artifact or verification 
     status: "help",
     command: "dataset-post-write-closeout",
     usage: [
-      "node scripts/foundry.mjs dataset-post-write-closeout --handoff-plan <dataset-commit-handoff-plan.json> --commit-report <summary-or-sync-report.json> --post-write-verify-report <remote-verification-report.json> --out-dir <closeout-dir> --ledger-dir <task-import-ledger-dir>",
+      "node scripts/foundry.ts dataset-post-write-closeout --handoff-plan <dataset-commit-handoff-plan.json> --commit-report <summary-or-sync-report.json> --post-write-verify-report <remote-verification-report.json> --out-dir <closeout-dir> --ledger-dir <task-import-ledger-dir>",
     ],
     purpose:
       "Close an explicit remote write only after Foundry handoff, CLI commit report, and post-write verify-root-payload evidence prove the exact same final rows were written and read back.",
@@ -78,7 +78,7 @@ test("post-write closeout exists only as zero-escape native TypeScript", () => {
 
 test("post-write closeout consumers target the typed command factory", () => {
   for (const consumer of [
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "scripts/lib/foundry-command-metadata.ts",
     "test/unit/post-write-closeout-command-factory.test.mts",
   ]) {

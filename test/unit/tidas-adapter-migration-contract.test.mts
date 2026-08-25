@@ -101,7 +101,7 @@ test("TIDAS adapter exists only as zero-escape native TypeScript", () => {
 
 test("TIDAS adapter consumers target the typed owner", () => {
   for (const consumer of [
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "test/unit/tidas-adapter.test.mjs",
     "test/unit/tidas-adapter-migration-contract.test.mts",
   ]) {

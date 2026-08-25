@@ -2870,7 +2870,7 @@ export function createBafuAutoAuthoringCommands({
         status: "help",
         command: "dataset-bafu-identity-decisions-autofill",
         usage: [
-          "node scripts/foundry.mjs dataset-bafu-identity-decisions-autofill --identity-decision-task <identity-decision-task.json>",
+          "node scripts/foundry.ts dataset-bafu-identity-decisions-autofill --identity-decision-task <identity-decision-task.json>",
         ],
         purpose:
           "Write BAFU-specific identity-decisions.jsonl for safe, auditable product-flow create_new cases. This command never writes the remote database.",
@@ -2929,7 +2929,7 @@ export function createBafuAutoAuthoringCommands({
         status: "help",
         command: "dataset-bafu-authoring-patches-autofill",
         usage: [
-          "node scripts/foundry.mjs dataset-bafu-authoring-patches-autofill --task-manifest <authoring-task-manifest.json>",
+          "node scripts/foundry.ts dataset-bafu-authoring-patches-autofill --task-manifest <authoring-task-manifest.json>",
         ],
         purpose:
           "Write per-task BAFU AI patch artifacts for supported high-confidence name-plan and flow-property saturation action items. This command never writes the remote database.",

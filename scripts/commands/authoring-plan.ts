@@ -1262,7 +1262,7 @@ export function createAuthoringPlanCommands({
         status: "help",
         command: "dataset-authoring-plan",
         usage: [
-          "node scripts/foundry.mjs dataset-authoring-plan --curation-gate-report <dataset-curation-gate-report.json> --out-dir <plan-dir>",
+          "node scripts/foundry.ts dataset-authoring-plan --curation-gate-report <dataset-curation-gate-report.json> --out-dir <plan-dir>",
         ],
         purpose:
           "Summarize the next required AI authoring, deterministic apply, and post-authoring validation steps from a Foundry curation gate report. This command never writes the database.",

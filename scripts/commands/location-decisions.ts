@@ -316,7 +316,7 @@ export function createLocationDecisionCommands({
         status: "help",
         command: "dataset-location-decision-task-build",
         usage: [
-          "node scripts/foundry.mjs dataset-location-decision-task-build --location-queue <location-authoring-queue.jsonl> --rows-file <current-rows.jsonl> --schema-file <schema.json> --yaml-file <methodology.yaml> --ruleset-file <runtime-ruleset.json> --classification-schema <tidas_*_category.json> --location-schema <tidas_locations_category.json> --out-dir <task-dir> [--shared-context-cache-dir <cache-dir>]",
+          "node scripts/foundry.ts dataset-location-decision-task-build --location-queue <location-authoring-queue.jsonl> --rows-file <current-rows.jsonl> --schema-file <schema.json> --yaml-file <methodology.yaml> --ruleset-file <runtime-ruleset.json> --classification-schema <tidas_*_category.json> --location-schema <tidas_locations_category.json> --out-dir <task-dir> [--shared-context-cache-dir <cache-dir>]",
         ],
         purpose:
           "Build an AI-facing location coding task from Foundry location queue rows. AI fills TIDAS location codes; deterministic apply is handled by dataset-location-decisions-apply.",
@@ -678,7 +678,7 @@ export function createLocationDecisionCommands({
         status: "help",
         command: "dataset-location-decisions-suggest",
         usage: [
-          "node scripts/foundry.mjs dataset-location-decisions-suggest --location-queue <location-authoring-queue.jsonl> --decision-task <location-decision-task.json> --location-schema <tidas_locations_category.json> --out-dir <decisions-dir>",
+          "node scripts/foundry.ts dataset-location-decisions-suggest --location-queue <location-authoring-queue.jsonl> --decision-task <location-decision-task.json> --location-schema <tidas_locations_category.json> --out-dir <decisions-dir>",
         ],
         purpose:
           "Generate completed location decisions only for queue rows that already contain one provable TIDAS location code candidate, binding each decision to the exact location decision task context bundle.",
@@ -840,7 +840,7 @@ export function createLocationDecisionCommands({
         command: "dataset-location-decisions-apply",
         wraps: "tiangong-lca dataset classification apply --type location",
         usage: [
-          "node scripts/foundry.mjs dataset-location-decisions-apply --location-queue <location-authoring-queue.jsonl> --decisions <location-decisions.jsonl> --decision-task <location-decision-task.json> --out-dir <apply-dir>",
+          "node scripts/foundry.ts dataset-location-decisions-apply --location-queue <location-authoring-queue.jsonl> --decisions <location-decisions.jsonl> --decision-task <location-decision-task.json> --out-dir <apply-dir>",
         ],
         purpose:
           "Validate AI-authored location decisions against the Foundry queue and AI context task, then call the CLI location classification apply command for each required row file.",

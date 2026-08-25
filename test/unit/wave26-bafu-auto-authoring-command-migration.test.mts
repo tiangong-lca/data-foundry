@@ -18,13 +18,13 @@ function readRepoFile(relativePath: string): string {
 const helpContracts = [
   [
     "dataset-bafu-identity-decisions-autofill",
-    407,
-    "6c9a528cd1250cf1e8c455f4520050074600ace38fb624b00be7d59c6b538a8f",
+    406,
+    "9ce97fe0eff54e564b6180b6515a468ba3cba71e0b184b3fe855ad284a522baa",
   ],
   [
     "dataset-bafu-authoring-patches-autofill",
-    423,
-    "19a6ce0f5626c486a77284d19607eec283fa942108470f2f5a08e37ab0ea5e37",
+    422,
+    "1d97b21eb4921b6b16d5fdbcad7354c065f1d050301872108fb9f73928e2e233",
   ],
 ] as const;
 
@@ -42,7 +42,7 @@ test("BAFU auto-authoring owner exists only as zero-escape native TypeScript", a
 });
 
 test("BAFU auto-authoring consumers and metadata target typed local fixtures", () => {
-  const entrySource = readRepoFile("scripts/foundry.mjs");
+  const entrySource = readRepoFile("scripts/foundry.ts");
   const metadataSource = readRepoFile("scripts/lib/foundry-command-metadata.ts");
   assert.match(entrySource, /from "\.\/commands\/bafu-auto-authoring\.ts"/u);
   assert.doesNotMatch(entrySource, /bafu-auto-authoring\.mjs/u);
@@ -53,7 +53,7 @@ test("BAFU auto-authoring consumers and metadata target typed local fixtures", (
 
 test("BAFU auto-authoring help retains exact serialized bytes", () => {
   for (const [command, bytes, sha256] of helpContracts) {
-    const result = spawnSync(process.execPath, ["scripts/foundry.mjs", command, "--help"], {
+    const result = spawnSync(process.execPath, ["scripts/foundry.ts", command, "--help"], {
       cwd: repoRoot,
       encoding: "utf8",
     });

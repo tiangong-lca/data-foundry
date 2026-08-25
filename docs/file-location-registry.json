@@ -65,7 +65,7 @@
       "current_path": "specs/automated-lca-capability-registry.json",
       "previous_paths": [],
       "owner": "tiangong-lca-data-foundry",
-      "referenced_by": ["specs/workspace-capability-adapters.md", "scripts/foundry.mjs"],
+      "referenced_by": ["specs/workspace-capability-adapters.md", "scripts/foundry.ts"],
       "sensitivity": "non-sensitive command and artifact contracts; no credentials or private payloads",
       "tracked": true,
       "notes": "Routes deterministic import/conversion/schema validation to unified Rust tidas and keeps CLI context, QA/curation, remote operations, and Foundry-owned gates explicit."

@@ -692,7 +692,7 @@ export function createBundleSampleRowsCommands({
   }): string {
     return [
       "node",
-      "scripts/foundry.mjs",
+      "scripts/foundry.ts",
       "dataset-bundle-sample-rows",
       "--bundles-dir",
       repoRelativeMaybe(resolveRepoPath(bundlesDir)) || bundlesDir,
@@ -829,7 +829,7 @@ export function createBundleSampleRowsCommands({
         status: "help",
         command: "dataset-bundle-sample-rows",
         usage: [
-          "node scripts/foundry.mjs dataset-bundle-sample-rows --bundles-dir tmp/bafu-2025-v2-tidas/process-bundles --sample-size 3 --out-dir .foundry/workspaces/bafu-sample-rows",
+          "node scripts/foundry.ts dataset-bundle-sample-rows --bundles-dir tmp/bafu-2025-v2-tidas/process-bundles --sample-size 3 --out-dir .foundry/workspaces/bafu-sample-rows",
         ],
         purpose:
           "Sample process bundles, materialize support/process JSONL rows, replace all converted tool contacts with one library-level contact, and write authoring input row files.",
@@ -1414,7 +1414,7 @@ export function createBundleSampleRowsCommands({
     ) =>
       [
         "node",
-        "scripts/foundry.mjs",
+        "scripts/foundry.ts",
         "dataset-curation-cleanup",
         "--type",
         type,
@@ -1431,7 +1431,7 @@ export function createBundleSampleRowsCommands({
     ) =>
       [
         "node",
-        "scripts/foundry.mjs",
+        "scripts/foundry.ts",
         "dataset-tidas-validate",
         "--rows-file",
         inputFile,
@@ -1477,7 +1477,7 @@ export function createBundleSampleRowsCommands({
     const curationGateCommand = (type: BundleRowType) =>
       [
         "node",
-        "scripts/foundry.mjs",
+        "scripts/foundry.ts",
         "dataset-curation-gate",
         "--type",
         type,

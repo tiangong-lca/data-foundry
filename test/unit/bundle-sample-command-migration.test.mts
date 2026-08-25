@@ -28,7 +28,7 @@ test("bundle-sample command exists only as native TypeScript", () => {
 });
 
 test("bundle-sample consumers and metadata target the typed factory", () => {
-  for (const consumer of ["scripts/foundry.mjs", "scripts/lib/foundry-command-metadata.ts"]) {
+  for (const consumer of ["scripts/foundry.ts", "scripts/lib/foundry-command-metadata.ts"]) {
     const source = readRepoFile(consumer);
     assert.match(source, /bundle-sample-rows\.ts/u, consumer);
     assert.doesNotMatch(source, /bundle-sample-rows\.mjs/u, consumer);
@@ -38,12 +38,12 @@ test("bundle-sample consumers and metadata target the typed factory", () => {
 test("bundle-sample help report retains exact bytes", () => {
   const output = execFileSync(
     process.execPath,
-    ["scripts/foundry.mjs", "dataset-bundle-sample-rows", "--help"],
+    ["scripts/foundry.ts", "dataset-bundle-sample-rows", "--help"],
     { cwd: repoRoot, encoding: "utf8" },
   );
-  assert.equal(Buffer.byteLength(output, "utf8"), 4925);
+  assert.equal(Buffer.byteLength(output, "utf8"), 4924);
   assert.equal(
     createHash("sha256").update(output).digest("hex"),
-    "216a68ada74cd500d8e63b957dc44cf95c6fa1e215ae2598607927c35b6f16da",
+    "3a323fb07d2ab82ab267cd923432990496db5877f6b0b97ad99123a992b3b8c7",
   );
 });

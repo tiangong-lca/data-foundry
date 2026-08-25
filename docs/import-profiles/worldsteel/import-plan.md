@@ -184,7 +184,7 @@ Input: `inputs/CUP2025-2_2022b_v10_worldsteel_products_Tiangong_v1 EF3.1 2026_01
 4. ✅ **`scripts/lib/source-semantics.ts`** (R2): `worldsteel` `databaseFallbackSourceConfig` branch (test added: "worldsteel database fallback source cites worldsteel, never BAFU").
 5. ✅ **`scripts/commands/post-authoring-finalize.ts`**: widened the `source_contact_rewrites` gate to include `'worldsteel'`.
 6. ✅ **`specs/import-profiles.json`** + **`docs/import-profiles/worldsteel/{profile.md,constraints.md}`**: `worldsteel` profile (capped ≤17 mint, full-context on) + docs. Test added (profile registration).
-7. ✅ **`scripts/commands/worldsteel-batch-import-run.ts`** + **`bundle-sample-utils.ts`** (R1): runner wrapper (`mintUnmatchedFpUgSupport:false`, `applyResolutionRewrites:true`, `libraryContact` reusing contact `d5710976` via new `--library-contact-id`/`--library-contact-version` finalize flags); registered in `foundry.mjs`, `foundry-cli.mjs`, `foundry-command-registry.ts`, `foundry-command-metadata.ts`. Test added (contact reuse).
+7. ✅ **`scripts/commands/worldsteel-batch-import-run.ts`** + **`bundle-sample-utils.ts`** (R1): runner wrapper (`mintUnmatchedFpUgSupport:false`, `applyResolutionRewrites:true`, `libraryContact` reusing contact `d5710976` via new `--library-contact-id`/`--library-contact-version` finalize flags); registered in `foundry.mjs`, `foundry-cli.ts`, `foundry-command-registry.ts`, `foundry-command-metadata.ts`. Test added (contact reuse).
 8. ⏳ **Mega-scope speed-up (§8)**: unbound synthetic preseed reports are disabled. A replacement must bind request bytes, library-resolution bytes, canonical target, producer provenance, and report bytes before `onlyPending` may skip live identity-preflight.
 9. ⏳ **context-pack**: generate `tiangong-lca dataset context-pack --type process|flow --profile ai-import` outputs (schema.json/methodology.yaml/runtime-ruleset.json + `tidas_*_category.json`) for the classification round.
 
@@ -232,7 +232,7 @@ Uploads each of the 13 binaries once (dedupe; percent-encode keys), then rewrite
 ### Phase 2 — library index
 
 ```bash
-node scripts/foundry.mjs dataset-library-index-build   # → $RUN/library-index-v1  (entity index + scope-projection.jsonl)
+node scripts/foundry.ts dataset-library-index-build   # → $RUN/library-index-v1  (entity index + scope-projection.jsonl)
 ```
 
 ### Phase 3 — decision rounds (author on the FINAL conversion only)
@@ -250,7 +250,7 @@ node scripts/foundry.mjs dataset-library-index-build   # → $RUN/library-index-
 ### Phase 3-apply — resolution
 
 ```bash
-node scripts/foundry.mjs dataset-library-decisions-apply \
+node scripts/foundry.ts dataset-library-decisions-apply \
   --library-index "$RUN/library-index-v1" --decisions-dir "$RUN/decisions-v1" --profile worldsteel
 # → ready-scopes.jsonl, blocked-scope-ledger, rewritten-processes/<id>.json, exchange-reference-rewrites.jsonl
 ```
@@ -260,7 +260,7 @@ Archive any stale `decisions-*` dirs **out of `$RUN`** so the runner's carry-for
 ### Phase 4 — per-scope finalize + commit (the runner)
 
 ```bash
-node scripts/foundry.mjs dataset-worldsteel-batch-import-run \
+node scripts/foundry.ts dataset-worldsteel-batch-import-run \
   --run-dir "$RUN" \
   --process-bundles-dir "$RUN/conversion-v1/process-bundles" \
   --library-resolution "$RUN/library-resolution-v1" \
@@ -274,7 +274,7 @@ Per-scope stages (inside `scope_commit_gate`, flows-first then process): `finali
 
 ### Phase 5 — coverage + delivery
 
-- `node scripts/foundry.mjs dataset-import-ledger-report --ledger-dir <dir>` (the BAFU `universe-coverage-report` is BAFU-hardcoded — do not use). Target: verified + minimal registered-non-importable = universe, gap 0.
+- `node scripts/foundry.ts dataset-import-ledger-report --ledger-dir <dir>` (the BAFU `universe-coverage-report` is BAFU-hardcoded — do not use). Target: verified + minimal registered-non-importable = universe, gap 0.
 - Trace workbook: fork `reports/uslci-import/` (BAFU/USLCI builders are path-hardcoded, not drop-in) → `reports/worldsteel-import/`.
 - Delivery: one PR to `tiangong-lca/data-foundry` main with final rows + validation/QA/curation reports + mutation-manifest + commit-handoff + post-write verify + completeness snapshot; pass the **docpact** pre-push gate (review-mark + commit doc, covering AGENTS.md/WORKFLOW.md/docs/specs/scripts); then bump the `tiangong-lca-data-foundry` submodule pointer in the meta-repo. The tidas-tools adapter + export changes ship as their own PR/release (≥ the version the CLI bundles) **before** the foundry import runs.
 

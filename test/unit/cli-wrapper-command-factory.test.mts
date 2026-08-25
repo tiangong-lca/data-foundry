@@ -287,7 +287,7 @@ test("CLI wrapper exists only as zero-escape native TypeScript with no shell-str
 
 test("CLI wrapper consumers target the typed command factory", () => {
   for (const consumer of [
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "scripts/lib/foundry-command-metadata.ts",
     "test/unit/cli-wrapper-command-factory.test.mts",
   ]) {

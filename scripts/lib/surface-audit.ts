@@ -54,7 +54,7 @@ const commandHandlerHelpKeys = new Set(["help", "--help", "-h"]);
 const deprecatedNamePattern = /\b(?:legacy|deprecated|compat|compatibility|alias|old)\b/iu;
 const scriptEntrypoints = new Set([
   "scripts/check-tidas-cutover.ts",
-  "scripts/foundry.mjs",
+  "scripts/foundry.ts",
   "scripts/foundry-golden-diff.ts",
   "scripts/cases/production-contact-draft.ts",
   "scripts/with-lca-account.ts",
@@ -89,7 +89,7 @@ function readTextIfExists(root: string, relativePath: string): string {
 }
 
 function commandHandlerKeys(repoRoot: string): string[] {
-  const source = readTextIfExists(repoRoot, "scripts/lib/foundry-cli.mjs");
+  const source = readTextIfExists(repoRoot, "scripts/lib/foundry-cli.ts");
   const match = source.match(/const commandHandlers = \{([\s\S]*?)\n  \};/u);
   if (!match) return [];
   return [...match[1].matchAll(/^\s*(?:"([^"]+)"|([A-Za-z_$][\w$-]*))\s*:/gmu)]

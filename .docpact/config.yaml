@@ -177,7 +177,7 @@ routing:
         - docs/foundry-task-contracts.md
     proof:
       paths:
-        - scripts/foundry.mjs
+        - scripts/foundry.ts
         - package.json
         - README.md
         - WORKFLOW.md

@@ -25,8 +25,8 @@ Use this skill for Foundry external dataset curation after `dataset-curation-gat
 - Every non-test operation needs `basis` or `evidence`.
 - For full-context tasks, every non-test operation needs both `basis` and structured `evidence` with a source/context identifier plus `quote_or_trace`, source path, field path, citation, or equivalent pointer.
 - Every non-test operation needs `resolution.mode` and `resolution.used_context_kinds`; for full-context profiles this must include `schema`, `methodology_yaml`, `ruleset`, `classification_schema`, and `location_schema` when those context kinds are present in the authoring task.
-- Identity manual-review action items from curation packages should be authored as `identity-decisions.jsonl` entries with `dataset_type`, `dataset_id`, `dataset_version`, `decision_status=completed`, `identity_decision`, `basis`, `used_context_kinds`, structured `evidence`, `closes_action_items`, `authoring_package`, and `authoring_package_sha256`, then applied through `node scripts/foundry.mjs dataset-identity-decisions-apply`. `reuse_existing_reference` decisions must include canonical id/version; elementary flow decisions must never choose `create_new`.
-- Classification action items from `classification-authoring-queue.jsonl` should be authored as `classification-decisions.jsonl` entries with `dataset_id`, `dataset_version`, `category_type`, `decision_status=completed`, `code`, `basis`, template `authoring_context.context_bundle_sha256`, and structured `evidence`, then applied through `node scripts/foundry.mjs dataset-classification-decisions-apply` with the matching `--decision-task`. Location action items from `location-authoring-queue.jsonl` should be authored as `location-decisions.jsonl` entries with `dataset_id`, `dataset_version`, `category_type=location`, `decision_status=completed`, `code`, `target_path`, `basis`, template `authoring_context.context_bundle_sha256`, and structured `evidence`, then applied through `node scripts/foundry.mjs dataset-location-decisions-apply` with the matching `--decision-task`. Only non-identity/non-classification/non-location field gaps should use JSON patch operations.
+- Identity manual-review action items from curation packages should be authored as `identity-decisions.jsonl` entries with `dataset_type`, `dataset_id`, `dataset_version`, `decision_status=completed`, `identity_decision`, `basis`, `used_context_kinds`, structured `evidence`, `closes_action_items`, `authoring_package`, and `authoring_package_sha256`, then applied through `node scripts/foundry.ts dataset-identity-decisions-apply`. `reuse_existing_reference` decisions must include canonical id/version; elementary flow decisions must never choose `create_new`.
+- Classification action items from `classification-authoring-queue.jsonl` should be authored as `classification-decisions.jsonl` entries with `dataset_id`, `dataset_version`, `category_type`, `decision_status=completed`, `code`, `basis`, template `authoring_context.context_bundle_sha256`, and structured `evidence`, then applied through `node scripts/foundry.ts dataset-classification-decisions-apply` with the matching `--decision-task`. Location action items from `location-authoring-queue.jsonl` should be authored as `location-decisions.jsonl` entries with `dataset_id`, `dataset_version`, `category_type=location`, `decision_status=completed`, `code`, `target_path`, `basis`, template `authoring_context.context_bundle_sha256`, and structured `evidence`, then applied through `node scripts/foundry.ts dataset-location-decisions-apply` with the matching `--decision-task`. Only non-identity/non-classification/non-location field gaps should use JSON patch operations.
 - For large queues, build per-bundle or per-type decision tasks with `--dataset-type`, `--bundle-id`/`--process-id`, `--limit`, `--offset`, and `--chunk-label`, and pass the same `--shared-context-cache-dir` to every chunk so repeated schema/YAML/category/location text is cached under one stable bundle path. When applying decisions back to the source queue, pass every chunk task with repeated `--decision-task`; the apply report and mutation manifest must preserve all context-bundle proofs.
 - Treat source rows as source evidence objects, not format/compliance records. `ILCD format`, `Not specified`, `Data set formats`, and `Compliance systems` may appear in rewrite/provenance traces but must not be authored as BAFU-owned source identity. True source rows must also have evidence-bearing descriptions; empty or type-only values such as `Report` should be repaired from `sourceCitation` / `common:shortName`.
 - Every AI-required action item must be closed by `closes_action_items` unless the task remains blocked.
@@ -37,7 +37,7 @@ Use this skill for Foundry external dataset curation after `dataset-curation-gat
 For process / flow identity manual-review action items, build the dedicated decision task from the curation gate report:
 
 ```bash
-node scripts/foundry.mjs dataset-identity-decision-task-build \
+node scripts/foundry.ts dataset-identity-decision-task-build \
   --curation-gate-report .foundry/workspaces/<task-id>/curation-gate/dataset-curation-gate-report.json \
   --out-dir .foundry/workspaces/<task-id>/identity-decision-task
 ```
@@ -54,7 +54,7 @@ Decision rules:
 Then apply through:
 
 ```bash
-node scripts/foundry.mjs dataset-identity-decisions-apply \
+node scripts/foundry.ts dataset-identity-decisions-apply \
   --type <flow|process> \
   --rows-file .foundry/workspaces/<task-id>/rows/<type>.jsonl \
   --decisions .foundry/workspaces/<task-id>/identity-decision-task/identity-decisions.jsonl \
@@ -69,7 +69,7 @@ The apply report must be `completed`. Use `files.output_rows` as the next rows f
 For process / flow classification queue rows, build the dedicated decision task:
 
 ```bash
-node scripts/foundry.mjs dataset-classification-decision-task-build \
+node scripts/foundry.ts dataset-classification-decision-task-build \
   --classification-queue .foundry/workspaces/<task-id>/classification-authoring-queue.jsonl \
   --schema-file .foundry/workspaces/<task-id>/context/<type>/outputs/schema.json \
   --yaml-file .foundry/workspaces/<task-id>/context/<type>/outputs/methodology.yaml \
@@ -89,7 +89,7 @@ node scripts/foundry.mjs dataset-classification-decision-task-build \
 Read `classification-decision-task.json` as the primary package. It includes queue rows, attached target row payloads, provenance rows such as source semantics/reference rewrites when present, a stable `context_bundle.sha256`, and a shared context bundle reference for schema/YAML/ruleset/category/location text. Read `files.shared_context_bundle` once, then fill only `classification-decisions.jsonl` using valid leaf codes from the CLI classification tree. Every decision must preserve the template `decision_status=completed` and `authoring_context.context_bundle_sha256`, carry `used_context_kinds`, and include evidence that points back to the queue row and target payload. Then apply through:
 
 ```bash
-node scripts/foundry.mjs dataset-classification-decisions-apply \
+node scripts/foundry.ts dataset-classification-decisions-apply \
   --classification-queue .foundry/workspaces/<task-id>/classification-authoring-queue.jsonl \
   --decisions .foundry/workspaces/<task-id>/classification-decision-task/classification-decisions.jsonl \
   --decision-task .foundry/workspaces/<task-id>/classification-decision-task/classification-decision-task.json \
@@ -103,7 +103,7 @@ The apply report must be `completed` and include the decision task/context bundl
 For location queue rows, build the dedicated decision task:
 
 ```bash
-node scripts/foundry.mjs dataset-location-decision-task-build \
+node scripts/foundry.ts dataset-location-decision-task-build \
   --location-queue .foundry/workspaces/<task-id>/location-authoring-queue.jsonl \
   --schema-file .foundry/workspaces/<task-id>/context/<type>/outputs/schema.json \
   --yaml-file .foundry/workspaces/<task-id>/context/<type>/outputs/methodology.yaml \
@@ -123,7 +123,7 @@ node scripts/foundry.mjs dataset-location-decision-task-build \
 Read `location-decision-task.json` as the primary package. It includes queue rows, target paths, attached target row payloads, provenance rows when present, a stable `context_bundle.sha256`, and a shared context bundle reference for schema/YAML/ruleset/location text. Read `files.shared_context_bundle` once, then fill only `location-decisions.jsonl` using valid codes from `tidas_locations_category.json`; each decision must preserve the template `decision_status=completed` and `authoring_context.context_bundle_sha256`, include `target_path`, `used_context_kinds`, and evidence that points back to the queue row and target payload. Then apply through:
 
 ```bash
-node scripts/foundry.mjs dataset-location-decisions-apply \
+node scripts/foundry.ts dataset-location-decisions-apply \
   --location-queue .foundry/workspaces/<task-id>/location-authoring-queue.jsonl \
   --decisions .foundry/workspaces/<task-id>/location-decision-task/location-decisions.jsonl \
   --decision-task .foundry/workspaces/<task-id>/location-decision-task/location-decision-task.json \
@@ -137,7 +137,7 @@ The apply report must be `completed` and include the decision task/context bundl
 1. Start from an authoring task manifest:
 
 ```bash
-node scripts/foundry.mjs dataset-authoring-task-build \
+node scripts/foundry.ts dataset-authoring-task-build \
   --curation-gate-report .foundry/workspaces/<task-id>/curation-gate/dataset-curation-gate-report.json \
   --shared-context-cache-dir .foundry/workspaces/<task-id>/shared-context-cache \
   --out-dir .foundry/workspaces/<task-id>/authoring-tasks
@@ -216,7 +216,7 @@ Foundry cleanup adds `@xmlns:tiangongfoundry` to `common:other` containers that 
 5. Collect all per-task patches:
 
 ```bash
-node scripts/foundry.mjs dataset-authoring-patch-collect \
+node scripts/foundry.ts dataset-authoring-patch-collect \
   --task-manifest .foundry/workspaces/<task-id>/authoring-tasks/authoring-task-manifest.json
 ```
 
@@ -225,7 +225,7 @@ If collect reports `blocked`, repair the per-task patch files or regenerate miss
 6. Only after collect reports `ready_for_patch_apply`, run deterministic apply with the manifest command or:
 
 ```bash
-node scripts/foundry.mjs dataset-patch-apply \
+node scripts/foundry.ts dataset-patch-apply \
   --input .foundry/workspaces/<task-id>/rows/<type>.jsonl \
   --patch .foundry/workspaces/<task-id>/authoring-tasks/ai-patches.batch.json \
   --out .foundry/workspaces/<task-id>/rows/<type>.patched.jsonl \
@@ -237,4 +237,4 @@ node scripts/foundry.mjs dataset-patch-apply \
 
 7. If the patched rows are process or flow rows and an existing full identity-preflight index was used for the previous curation gate, rebuild identity preflight for the exact patched rows with the original full index passed as `--source-index`, run `dataset-identity-preflight-query-audit` on the refreshed index, rerun identity preflight, then merge that refreshed current-scope index into the original full index with `dataset-identity-preflight-index-merge`. Passing only the small refreshed current index to curation drops dependency preflight evidence and source trace context, and should remain blocked.
 
-8. After apply and any required preflight index merge, use `node scripts/foundry.mjs dataset-post-authoring-finalize --type <process|flow|lifecyclemodel> ...` for process, flow, or lifecyclemodel rows. It reruns native Rust `tidas` validation, deterministic QA, Foundry cleanup, post-authoring curation gate, type-specific dry-run save/publish, optional remote verification, mutation manifest, and commit handoff plan generation on one exact rows-file scope. For authoring-task patches, pass `--patch-collect-report <authoring-patch-collect-report.json> --require-patch-collect-report --patch-apply-report <dataset-patch-apply-report.json>` and stop on any blocker. Commit remains a CLI-owned step only after `dataset-commit-handoff-plan.json` reports `ready_for_explicit_commit` and the task write policy permits the exact scope; a policy-gated batch runner may execute that generated command. The handoff must prove every final-row `common:other.tiangongfoundry:unresolvedTrace` / `sourceExchangeCompleteness` entry is present in the retained trace queue JSONL. After commit, run post-write remote verification and `node scripts/foundry.mjs dataset-post-write-closeout` before treating the import as complete; closeout rechecks the same trace queue coverage so later database-side curation has exact queue entries.
+8. After apply and any required preflight index merge, use `node scripts/foundry.ts dataset-post-authoring-finalize --type <process|flow|lifecyclemodel> ...` for process, flow, or lifecyclemodel rows. It reruns native Rust `tidas` validation, deterministic QA, Foundry cleanup, post-authoring curation gate, type-specific dry-run save/publish, optional remote verification, mutation manifest, and commit handoff plan generation on one exact rows-file scope. For authoring-task patches, pass `--patch-collect-report <authoring-patch-collect-report.json> --require-patch-collect-report --patch-apply-report <dataset-patch-apply-report.json>` and stop on any blocker. Commit remains a CLI-owned step only after `dataset-commit-handoff-plan.json` reports `ready_for_explicit_commit` and the task write policy permits the exact scope; a policy-gated batch runner may execute that generated command. The handoff must prove every final-row `common:other.tiangongfoundry:unresolvedTrace` / `sourceExchangeCompleteness` entry is present in the retained trace queue JSONL. After commit, run post-write remote verification and `node scripts/foundry.ts dataset-post-write-closeout` before treating the import as complete; closeout rechecks the same trace queue coverage so later database-side curation has exact queue entries.

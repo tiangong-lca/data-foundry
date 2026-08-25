@@ -16,7 +16,7 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
   - test/README.md
-  - scripts/foundry.mjs
+  - scripts/foundry.ts
   - scripts/lib/import-curation.ts
   - scripts/lib/import-curation/index.ts
   - scripts/lib/import-curation/profiles.ts
@@ -46,7 +46,7 @@ checkPaths:
   - scripts/commands/identity-preflight-run.ts
   - scripts/commands/post-authoring-finalize.ts
   - scripts/lib/foundry-args.ts
-  - scripts/lib/foundry-cli.mjs
+  - scripts/lib/foundry-cli.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
@@ -121,12 +121,12 @@ Foundry is a thin control plane. Start from commands and artifacts, then move to
 Every command follows this route:
 
 ```text
-scripts/foundry.mjs
-  -> scripts/lib/foundry-cli.mjs
+scripts/foundry.ts
+  -> scripts/lib/foundry-cli.ts
   -> command owner module
 ```
 
-The checked source of truth for command ownership is `scripts/lib/foundry-command-metadata.ts`. It maps every command returned by `node scripts/foundry.mjs help` to:
+The checked source of truth for command ownership is `scripts/lib/foundry-command-metadata.ts`. It maps every command returned by `node scripts/foundry.ts help` to:
 
 - category
 - owner module
@@ -135,7 +135,7 @@ The checked source of truth for command ownership is `scripts/lib/foundry-comman
 - output artifacts
 - key tests
 
-`test/unit/foundry-command-metadata.test.mts` enforces that the metadata covers all registered commands, that public commands remain reachable within two jumps from `scripts/foundry.mjs`, and that commit handoff metadata advertises the authoritative CommandSpec and final-row artifact evidence.
+`test/unit/foundry-command-metadata.test.mts` enforces that the metadata covers all registered commands, that public commands remain reachable within two jumps from `scripts/foundry.ts`, and that commit handoff metadata advertises the authoritative CommandSpec and final-row artifact evidence.
 
 The incremental lane is owned by `scripts/commands/incremental-change-set.ts`, with its authoritative artifact and activation boundary in `docs/incremental-change-set-contract.md`. It composes Foundry-owned task evidence and stops before the CLI-owned mutation boundary. The related typed algorithm owners are `authoring-plan.ts` for row/task planning, `bundle-sample-rows.ts` for deterministic representative sampling, and `topology-convergence.ts` for occurrence-aware F/P/D convergence; each remains behind the same registered command and write-authority contract.
 
@@ -281,7 +281,7 @@ Dependencies should point downward only outside the explicitly characterized aut
 
 ## Cleanup Checks
 
-Before deleting a Foundry-local surface, prove the current replacement path and check command metadata, tests, docs, and docpact coverage. Safe deletions include old package-script aliases, empty metadata categories, and draft orchestration docs with no remaining consumer. Do not delete runtime skills, task templates, profile docs, or account-safety docs only because they are low-frequency; those may be agent entrypoints rather than code imports. Run `node scripts/foundry.mjs surface-audit` to automate the local scan for hidden command aliases, empty metadata categories, unregistered orphan docs, and script modules without inbound imports.
+Before deleting a Foundry-local surface, prove the current replacement path and check command metadata, tests, docs, and docpact coverage. Safe deletions include old package-script aliases, empty metadata categories, and draft orchestration docs with no remaining consumer. Do not delete runtime skills, task templates, profile docs, or account-safety docs only because they are low-frequency; those may be agent entrypoints rather than code imports. Run `node scripts/foundry.ts surface-audit` to automate the local scan for hidden command aliases, empty metadata categories, unregistered orphan docs, and script modules without inbound imports.
 
 ## Behavior Freeze
 
@@ -301,7 +301,7 @@ pnpm test:toolchain
 pnpm lint
 pnpm typecheck
 pnpm build
-node scripts/foundry.mjs doctor
+node scripts/foundry.ts doctor
 git diff --check
 ```
 

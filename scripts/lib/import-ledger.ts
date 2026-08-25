@@ -676,7 +676,7 @@ export function createImportLedgerUtils({
         finalize_report: relativeInput(report.finalize_report),
         mutation_manifest: relativeInput(report.mutation_manifest),
         closeout_report: repoRelativePath(reportPath),
-        rerun_command: `node scripts/foundry.mjs dataset-post-write-closeout --handoff-plan <dataset-commit-handoff-plan.json> --commit-report <commit-report.json> --post-write-verify-report <remote-verification-report.json> --ledger-dir ${repoRelativePath(ledgerDir)}`,
+        rerun_command: `node scripts/foundry.ts dataset-post-write-closeout --handoff-plan <dataset-commit-handoff-plan.json> --commit-report <commit-report.json> --post-write-verify-report <remote-verification-report.json> --ledger-dir ${repoRelativePath(ledgerDir)}`,
         ledger_key: `blocked:closeout:${scopeKey}:${sha256(
           JSON.stringify(uniqueBlockerCodes),
         )}:${repoRelativePath(reportPath)}`,
@@ -886,7 +886,7 @@ export function createImportLedgerUtils({
       curation_gate_report: relativeInput(reportFiles?.curation_gate_report),
       mutation_manifest: relativeInput(reportFiles?.mutation_manifest),
       commit_handoff_plan: relativeInput(reportFiles?.commit_handoff_plan),
-      rerun_command: `node scripts/foundry.mjs dataset-post-authoring-finalize --rows-file ${relativeInput(report.rows_file) ?? "<rows.jsonl>"} --type ${report.dataset_type ?? "<type>"} --out-dir <finalize-dir>`,
+      rerun_command: `node scripts/foundry.ts dataset-post-authoring-finalize --rows-file ${relativeInput(report.rows_file) ?? "<rows.jsonl>"} --type ${report.dataset_type ?? "<type>"} --out-dir <finalize-dir>`,
       ledger_key: `blocked:scope:${scopeKey}:${sha256(
         JSON.stringify(uniqueBlockerCodes),
       )}:${repoRelativePath(reportPath)}`,
@@ -1008,7 +1008,7 @@ export function createImportLedgerUtils({
         status: "help",
         command: "dataset-import-ledger-report",
         usage: [
-          "node scripts/foundry.mjs dataset-import-ledger-report --ledger-dir .foundry/workspaces/<task-id>/import-ledger --out-dir .foundry/workspaces/<task-id>/import-ledger",
+          "node scripts/foundry.ts dataset-import-ledger-report --ledger-dir .foundry/workspaces/<task-id>/import-ledger --out-dir .foundry/workspaces/<task-id>/import-ledger",
         ],
         purpose:
           "Build a read-only resume report from append-only ok/blocked/retry import ledgers. It never writes the database.",

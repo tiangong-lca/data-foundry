@@ -40,7 +40,7 @@ The command never connects to a network or database, invokes the CLI, performs D
 ## Invocation
 
 ```bash
-node scripts/foundry.mjs dataset-topology-convergence-compose \
+node scripts/foundry.ts dataset-topology-convergence-compose \
   --request .foundry/workspaces/<task>/topology/request.json \
   --out-dir .foundry/workspaces/<task>/topology/composition-0001
 ```

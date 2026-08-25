@@ -341,7 +341,7 @@ export function createIdentityDecisionCommands({
         status: "help",
         command: "dataset-identity-decisions-apply",
         usage: [
-          "node scripts/foundry.mjs dataset-identity-decisions-apply --type flow --rows-file <flows.jsonl> --decisions <identity-decisions.jsonl> --out-dir <apply-dir> --authoring-package-dir <ai-authoring-packages>",
+          "node scripts/foundry.ts dataset-identity-decisions-apply --type flow --rows-file <flows.jsonl> --decisions <identity-decisions.jsonl> --out-dir <apply-dir> --authoring-package-dir <ai-authoring-packages>",
         ],
         purpose:
           "Validate AI-authored identity decisions and deterministically split rows into write candidates and reference-reuse rows before post-authoring finalize.",

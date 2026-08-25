@@ -29,7 +29,7 @@ export const commandCategories: CommandCategory[] = ["public", "workflow-interna
 
 const commandSmoke = (command: string): CommandKeyTest => ({
   kind: "command-smoke",
-  command: `node scripts/foundry.mjs ${command}`,
+  command: `node scripts/foundry.ts ${command}`,
 });
 
 const goldenDiff: CommandKeyTest = {
@@ -105,7 +105,7 @@ function metadata({
     category,
     ownerModule,
     ownerExport,
-    navigationPath: ["scripts/foundry.mjs", "scripts/lib/foundry-cli.mjs", ownerModule],
+    navigationPath: ["scripts/foundry.ts", "scripts/lib/foundry-cli.ts", ownerModule],
     inputs,
     outputs,
     keyTests,

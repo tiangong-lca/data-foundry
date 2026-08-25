@@ -16,7 +16,7 @@ checkPaths:
   - .env.example
   - .codex/hooks/run-foundry-acceptance-check.sh
   - docs/env-surface-policy.md
-  - scripts/foundry.mjs
+  - scripts/foundry.ts
   - scripts/commands/core.ts
   - scripts/with-lca-account.ts
   - scripts/lib/foundry-runtime-utils.ts
@@ -73,6 +73,6 @@ The account wrapper reads credential and expected project/user intent only from 
 
 ## Automatic Check
 
-`pnpm env:check` validates `.env.example` against the allowlist and forbidden-key list in `scripts/foundry.mjs`.
+`pnpm env:check` validates `.env.example` against the allowlist and forbidden-key list in `scripts/foundry.ts`.
 
 The same env-surface check is included in `pnpm acceptance:check`, so the Codex Stop hook can block future automatic runs when an internal variable is accidentally promoted into Foundry's public env example. The clean arbitrary-worktree toolchain gate is offline and must not read `.env`, account profiles, or `.foundry` runtime state.

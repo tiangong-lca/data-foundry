@@ -18,7 +18,7 @@ The helper is a Foundry workflow-internal command. It prepares deterministic, sh
 ## Build Shards
 
 ```bash
-node scripts/foundry.mjs dataset-bafu-leaf-classification-tasks-prepare \
+node scripts/foundry.ts dataset-bafu-leaf-classification-tasks-prepare \
   --library-index .foundry/workspaces/bafu-full-import-20260607T080646Z/library-index \
   --blocked-ledger .foundry/workspaces/bafu-full-import-20260607T080646Z/library-resolution-v3-leaf-gated/blocked-scope-ledger.jsonl \
   --library-decisions .foundry/workspaces/bafu-full-import-20260607T080646Z/decisions/classification-decisions.jsonl \
@@ -142,7 +142,7 @@ Each shard author should write completed rows in JSONL. Use the template fields 
 After shard decisions are reviewed, merge them into the run's `decisions/classification-decisions.jsonl` process rows and rerun:
 
 ```bash
-node scripts/foundry.mjs dataset-library-decisions-apply \
+node scripts/foundry.ts dataset-library-decisions-apply \
   --library-index .foundry/workspaces/bafu-full-import-20260607T080646Z/library-index \
   --decisions-dir .foundry/workspaces/bafu-full-import-20260607T080646Z/decisions \
   --out-dir .foundry/workspaces/bafu-full-import-20260607T080646Z/library-resolution-v4-leaf-gated

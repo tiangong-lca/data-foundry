@@ -1525,7 +1525,7 @@ function commandHelp() {
     status: "help",
     command: "dataset-incremental-change-set-compose",
     usage:
-      "node scripts/foundry.mjs dataset-incremental-change-set-compose --request <file> --out-dir <fresh-directory>",
+      "node scripts/foundry.ts dataset-incremental-change-set-compose --request <file> --out-dir <fresh-directory>",
     ...contract,
     production_authority: false,
   };
@@ -2104,7 +2104,7 @@ function materializeArtifacts({
       condition:
         "Only offline inputs or policy may be corrected; a fresh output directory is required.",
       command:
-        "node scripts/foundry.mjs dataset-incremental-change-set-compose --request <file> --out-dir <fresh-directory>",
+        "node scripts/foundry.ts dataset-incremental-change-set-compose --request <file> --out-dir <fresh-directory>",
     },
     next_gate:
       "Fresh SELECT-only reconciliation, fresh owner session, independent review, and execution-capsule admission are required before separately authorized CLI execution.",

@@ -19,7 +19,7 @@ function writeJson(filePath, value) {
 }
 
 function runFoundry(args, expectedStatus = 0) {
-  const result = spawnSync(process.execPath, ["scripts/foundry.mjs", ...args], {
+  const result = spawnSync(process.execPath, ["scripts/foundry.ts", ...args], {
     cwd: repoRoot,
     encoding: "utf8",
   });

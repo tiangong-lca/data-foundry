@@ -488,7 +488,7 @@ export function createPostAuthoringFinalizeUtils({
       return { sharded: false, concurrency, total: total ?? 0 };
     }
     const chunk = Math.ceil(total / concurrency);
-    const foundry = resolveRepoPath("scripts/foundry.mjs")!;
+    const foundry = resolveRepoPath("scripts/foundry.ts")!;
     const repoRoot = path.dirname(resolveRepoPath("package.json")!);
     const timeoutMs =
       options.identityPreflightTimeoutMs ||

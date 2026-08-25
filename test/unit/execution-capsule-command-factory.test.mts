@@ -21,7 +21,7 @@ test("execution capsule help is exact and does not touch the filesystem", () => 
     status: "help",
     command: "execution-capsule-admit",
     usage:
-      "node scripts/foundry.mjs execution-capsule-admit --stage-manifest <revision.json> [--predecessor-stage-manifest <previous-revision.json>] --out-dir <fresh-dir>",
+      "node scripts/foundry.ts execution-capsule-admit --stage-manifest <revision.json> [--predecessor-stage-manifest <previous-revision.json>] --out-dir <fresh-dir>",
     effects: "local evidence files only; zero network, database, CLI dispatch, and mutation",
   });
 });
@@ -118,7 +118,7 @@ test("execution capsule exists only as zero-escape native TypeScript", () => {
 
 test("execution capsule consumers and contract target the typed command owner", () => {
   for (const consumer of [
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "scripts/lib/foundry-command-metadata.ts",
     "test/commands/execution-capsule.test.mjs",
     "test/unit/execution-capsule-attempt-state.test.mjs",

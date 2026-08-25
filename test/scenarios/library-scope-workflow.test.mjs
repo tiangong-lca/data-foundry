@@ -60,7 +60,7 @@ function readJsonLines(filePath) {
 }
 
 function runFoundry(args, expectedStatus = 0, env = {}) {
-  const result = spawnSync(process.execPath, ["scripts/foundry.mjs", ...args], {
+  const result = spawnSync(process.execPath, ["scripts/foundry.ts", ...args], {
     cwd: repoRoot,
     env: { ...process.env, ...env },
     encoding: "utf8",

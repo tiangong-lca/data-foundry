@@ -82,11 +82,11 @@ test("source index and public entry preserve the complete namespace and live ref
 });
 
 test("entry consumers and command metadata retain the complete owner contract", () => {
-  const foundrySource = readRepoFile("scripts/foundry.mjs");
+  const foundrySource = readRepoFile("scripts/foundry.ts");
   assert.match(foundrySource, /from "\.\/lib\/import-curation\.ts"/u);
   assert.doesNotMatch(foundrySource, /from "\.\/lib\/import-curation\.mjs"/u);
 
-  const cliSource = readRepoFile("scripts/lib/foundry-cli.mjs");
+  const cliSource = readRepoFile("scripts/lib/foundry-cli.ts");
   for (const name of [
     "listImportProfiles",
     "runDatasetAuthoringPatchCollect",

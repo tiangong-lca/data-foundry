@@ -18,7 +18,7 @@ test("location quality utilities exist only as native TypeScript", () => {
 
 test("every static location quality consumer targets the typed module explicitly", () => {
   assert.match(
-    readRepoFile("scripts/foundry.mjs"),
+    readRepoFile("scripts/foundry.ts"),
     /from ["']\.\/lib\/location-quality-utils\.ts["']/u,
   );
   assert.match(

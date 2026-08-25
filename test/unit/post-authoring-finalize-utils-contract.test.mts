@@ -276,7 +276,7 @@ test("post-authoring finalize utils exist only as zero-escape native TypeScript"
 
 test("post-authoring finalize utils consumers target the typed owner", () => {
   for (const consumer of [
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "test/unit/finalize-resolution-reuse-seed.test.mjs",
     "test/unit/post-authoring-finalize-utils-contract.test.mts",
   ]) {

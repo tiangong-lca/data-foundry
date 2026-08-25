@@ -94,7 +94,7 @@ Foundry CLI-spine and command governance has three checked contracts:
 - `scripts/lib/foundry-command-metadata.ts` is the typed AI-readable navigation and ownership map.
 - `scripts/lib/surface-audit.ts` checks hidden handlers, category coverage, orphan docs, declared entrypoints, and script-only inbound imports with portable report paths.
 
-The metadata module must cover every command returned by `node scripts/foundry.mjs help`. It records each command category, owner module, owner export, input artifacts, output artifacts, workflow entry audit state, and key behavior checks.
+The metadata module must cover every command returned by `node scripts/foundry.ts help`. It records each command category, owner module, owner export, input artifacts, output artifacts, workflow entry audit state, and key behavior checks.
 
 Issue #63 does not change the public command categories or behavior. It introduces the Node.js 24 / pnpm 11.23 / TypeScript 7.0.2 typed spine underneath the same surface. The argument parser and command registry are native TypeScript leaves; `test/unit/foundry-cli-spine.test.mts` fixes their scalar/argv parsing, exact help JSON, exit mapping, and static consumer contract. Later migration work must preserve the registered command name, help, stdout, exit code, stage contract, input/output artifacts, and remote-write mode before removing a JavaScript implementation from `specs/typescript-migration-inventory.json`. Use focused characterization and real cases; do not treat an extension rename as command migration.
 
@@ -141,12 +141,12 @@ Every command must have `workflowEntry.status: "active"` and at least one key be
 Every command must be reachable through this path:
 
 ```text
-scripts/foundry.mjs
-  -> scripts/lib/foundry-cli.mjs
+scripts/foundry.ts
+  -> scripts/lib/foundry-cli.ts
   -> owner module in scripts/commands or scripts/lib/import-curation
 ```
 
-Public command owner paths must be at most two jumps from `scripts/foundry.mjs`. For semantic import-curation commands, prefer owner modules such as `profiles.mjs`, `curation-gate.ts`, `authoring-packages.ts`, `patch-collect.ts`, `curation-cleanup.ts`, `trace-summary.mjs`, and `mutation-manifest.ts` over mechanical part names. Reusable import-curation logic should be exposed through focused workflow facets under `scripts/lib/import-curation/internal/*-workflow.{ts,mjs}` while migration remains incomplete.
+Public command owner paths must be at most two jumps from `scripts/foundry.ts`. For semantic import-curation commands, prefer owner modules such as `profiles.mjs`, `curation-gate.ts`, `authoring-packages.ts`, `patch-collect.ts`, `curation-cleanup.ts`, `trace-summary.mjs`, and `mutation-manifest.ts` over mechanical part names. Reusable import-curation logic should be exposed through focused workflow facets under `scripts/lib/import-curation/internal/*-workflow.{ts,mjs}` while migration remains incomplete.
 
 ## Maintenance Rule
 

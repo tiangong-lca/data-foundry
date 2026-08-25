@@ -77,7 +77,7 @@ function processRow(id = processId) {
 function runHelper(args) {
   const result = spawnSync(
     process.execPath,
-    ["scripts/foundry.mjs", "dataset-bafu-process-scope-e2e", ...args],
+    ["scripts/foundry.ts", "dataset-bafu-process-scope-e2e", ...args],
     {
       cwd: repoRoot,
       encoding: "utf8",
@@ -348,7 +348,7 @@ test("BAFU process scope helper reads verified support identities for handoff re
         commit: createFoundryCommandSpec({
           executable: process.execPath,
           argv: [
-            "scripts/foundry.mjs",
+            "scripts/foundry.ts",
             "dataset",
             "save-draft",
             "--type",

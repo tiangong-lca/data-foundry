@@ -146,7 +146,7 @@ export function createTaskCommands({
         status: "help",
         command: "task-complete",
         usage: [
-          "node scripts/foundry.mjs task-complete --task <task-id|tasks/active/file.md> --completion-report <dataset-import-completion-report.json>",
+          "node scripts/foundry.ts task-complete --task <task-id|tasks/active/file.md> --completion-report <dataset-import-completion-report.json>",
         ],
         purpose:
           "Move one filesystem task from tasks/active to tasks/done only when the task-level import completion report is completed.",

@@ -395,7 +395,7 @@ function helperRerunCommand({
 }): string {
   const args = [
     "node",
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "dataset-bafu-process-scope-e2e",
     "--rows-file",
     repoRelative(rowsFile) || "<rows.jsonl>",
@@ -699,7 +699,7 @@ function closeoutCommand({
 }): string[] {
   const args = [
     process.execPath,
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "dataset-post-write-closeout",
     "--handoff-plan",
     repoRelative(handoffPlanPath),
@@ -957,7 +957,7 @@ function buildFinalizeCommand({
   const finalizeDir = resolveRepoPath(options.finalizeDir) || path.join(outDir, "finalize");
   const args = [
     process.execPath,
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "dataset-post-authoring-finalize",
     "--type",
     "process",
@@ -1140,7 +1140,7 @@ function runPostFinalizeIdentityRecovery({
     stage: `post-finalize-${attempt}.identity-task`,
     argv: [
       process.execPath,
-      "scripts/foundry.mjs",
+      "scripts/foundry.ts",
       "dataset-identity-decision-task-build",
       "--curation-gate-report",
       repoRelative(gateReportPath),
@@ -1159,7 +1159,7 @@ function runPostFinalizeIdentityRecovery({
           stage: `post-finalize-${attempt}.identity-task`,
           command: commandString([
             process.execPath,
-            "scripts/foundry.mjs",
+            "scripts/foundry.ts",
             "dataset-identity-decision-task-build",
           ]),
           result: identityTask.result,
@@ -1180,7 +1180,7 @@ function runPostFinalizeIdentityRecovery({
       stage: `post-finalize-${attempt}.identity-task`,
       command: commandString([
         process.execPath,
-        "scripts/foundry.mjs",
+        "scripts/foundry.ts",
         "dataset-identity-decision-task-build",
         "--curation-gate-report",
         repoRelative(gateReportPath),
@@ -1220,7 +1220,7 @@ function runPostFinalizeIdentityRecovery({
   );
   const identityAutofillArgv = [
     process.execPath,
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "dataset-bafu-identity-decisions-autofill",
     "--identity-decision-task",
     repoRelative(path.join(identityTaskDir, "identity-decision-task.json")),
@@ -1269,7 +1269,7 @@ function runPostFinalizeIdentityRecovery({
   const identityApplyReport = path.join(identityApplyDir, "identity-decisions-apply-report.json");
   const identityApplyArgv = [
     process.execPath,
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "dataset-identity-decisions-apply",
     "--type",
     "process",
@@ -1349,7 +1349,7 @@ function runPostFinalizeSemanticRecovery({
   const taskManifest = path.join(authoringDir, "authoring-task-manifest.json");
   const taskBuildArgv = [
     process.execPath,
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "dataset-authoring-task-build",
     "--curation-gate-report",
     repoRelative(gateReportPath),
@@ -1412,7 +1412,7 @@ function runPostFinalizeSemanticRecovery({
   );
   const patchAutofillArgv = [
     process.execPath,
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "dataset-bafu-authoring-patches-autofill",
     "--task-manifest",
     repoRelative(taskManifest),
@@ -1460,7 +1460,7 @@ function runPostFinalizeSemanticRecovery({
   const patchCollectReport = path.join(authoringDir, "authoring-patch-collect-report.json");
   const patchCollectArgv = [
     process.execPath,
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "dataset-authoring-patch-collect",
     "--task-manifest",
     repoRelative(taskManifest),
@@ -1516,7 +1516,7 @@ function runPostFinalizeSemanticRecovery({
   const patchApplyDir = path.join(authoringDir, "patch-apply");
   const patchApplyArgv = [
     process.execPath,
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "dataset-patch-apply",
     "--input",
     repoRelative(currentRowsFile),
@@ -1697,10 +1697,10 @@ function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
       status: "help",
       command: commandName,
       usage: [
-        "node scripts/foundry.mjs dataset-bafu-process-scope-e2e --rows-file <one-process.jsonl> --source-support-rows-file <sources.jsonl> --out-dir <scope-run-dir>",
-        "node scripts/foundry.mjs dataset-bafu-process-scope-e2e --rows-file <one-process.jsonl> --source-support-rows-file <sources.jsonl> --out-dir <scope-run-dir> --execute",
-        "node scripts/foundry.mjs dataset-bafu-process-scope-e2e --rows-file <one-process.jsonl> --source-support-rows-file <sources.jsonl> --out-dir <scope-run-dir> --execute --commit-support --commit",
-        "node scripts/foundry.mjs dataset-bafu-process-scope-e2e --rows-file <one-process.jsonl> --out-dir <scope-run-dir> --execute --commit-support --verified-support-identities-file <cache.jsonl>",
+        "node scripts/foundry.ts dataset-bafu-process-scope-e2e --rows-file <one-process.jsonl> --source-support-rows-file <sources.jsonl> --out-dir <scope-run-dir>",
+        "node scripts/foundry.ts dataset-bafu-process-scope-e2e --rows-file <one-process.jsonl> --source-support-rows-file <sources.jsonl> --out-dir <scope-run-dir> --execute",
+        "node scripts/foundry.ts dataset-bafu-process-scope-e2e --rows-file <one-process.jsonl> --source-support-rows-file <sources.jsonl> --out-dir <scope-run-dir> --execute --commit-support --commit",
+        "node scripts/foundry.ts dataset-bafu-process-scope-e2e --rows-file <one-process.jsonl> --out-dir <scope-run-dir> --execute --commit-support --verified-support-identities-file <cache.jsonl>",
       ],
       purpose:
         "Plan, resume, execute, or explicitly commit the existing Foundry BAFU post-authoring finalize chain for exactly one process scope.",

@@ -70,8 +70,8 @@ test("patch collect preserves exact help without reading a manifest", () => {
     status: "help",
     command: "dataset-authoring-patch-collect",
     usage: [
-      "node scripts/foundry.mjs dataset-authoring-patch-collect --task-manifest <authoring-task-manifest.json>",
-      "node scripts/foundry.mjs dataset-authoring-patch-collect --task-manifest ./authoring-tasks/authoring-task-manifest.json",
+      "node scripts/foundry.ts dataset-authoring-patch-collect --task-manifest <authoring-task-manifest.json>",
+      "node scripts/foundry.ts dataset-authoring-patch-collect --task-manifest ./authoring-tasks/authoring-task-manifest.json",
     ],
     purpose:
       "Collect per-task AI patch outputs into one batch patch file and block if any task output is missing or structurally invalid. This command is local-only and never writes the database.",
@@ -102,7 +102,7 @@ test("blocker and invalid-JSON classification preserves task order and never wri
   writeJson(path.join(root, "manifest.json"), {
     tasks,
     batch_patch_contract: { output_patch_file: "out/ai-patches.batch.json" },
-    commands: { apply_all_patches: "node scripts/foundry.mjs dataset-patch-apply" },
+    commands: { apply_all_patches: "node scripts/foundry.ts dataset-patch-apply" },
   });
 
   const report = runPatchCollect({

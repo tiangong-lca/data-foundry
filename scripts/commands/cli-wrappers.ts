@@ -122,7 +122,7 @@ export function createCliWrapperCommands({
         wraps: "tiangong-lca dataset curation-queue build",
         usage: [
           "tiangong-lca dataset curation-queue build --processes <processes.jsonl> --out-dir <queue-dir>",
-          "node scripts/foundry.mjs dataset-curation-queue-build --processes ./rows/processes.jsonl --flows ./rows/flows.jsonl --support ./rows/sources.jsonl --out-dir ./curation-queue",
+          "node scripts/foundry.ts dataset-curation-queue-build --processes ./rows/processes.jsonl --flows ./rows/flows.jsonl --support ./rows/sources.jsonl --out-dir ./curation-queue",
         ],
         foundry_wrapper: {
           exit_code: 0,
@@ -180,8 +180,8 @@ export function createCliWrapperCommands({
         command: "dataset-patch-apply",
         wraps: "tiangong-lca dataset patch apply",
         usage: [
-          "node scripts/foundry.mjs dataset-patch-apply --input <rows.jsonl> --patch <ai-patches.json> --out <patched.jsonl> --out-dir <apply-dir>",
-          "node scripts/foundry.mjs dataset-patch-apply --input ./rows/processes.jsonl --patch ./curation/patches.json --out ./rows/processes.patched.jsonl --out-dir ./patch-apply --authoring-package-dir ./curation-gate/ai-authoring-packages --require-action-item-closure",
+          "node scripts/foundry.ts dataset-patch-apply --input <rows.jsonl> --patch <ai-patches.json> --out <patched.jsonl> --out-dir <apply-dir>",
+          "node scripts/foundry.ts dataset-patch-apply --input ./rows/processes.jsonl --patch ./curation/patches.json --out ./rows/processes.patched.jsonl --out-dir ./patch-apply --authoring-package-dir ./curation-gate/ai-authoring-packages --require-action-item-closure",
         ],
         foundry_wrapper: {
           exit_code: 0,

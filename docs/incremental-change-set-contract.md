@@ -38,7 +38,7 @@ The command produces a candidate change set and audit evidence. It never connect
 ## Invocation
 
 ```bash
-node scripts/foundry.mjs dataset-incremental-change-set-compose \
+node scripts/foundry.ts dataset-incremental-change-set-compose \
   --request .foundry/workspaces/<task-id>/incremental/request.json \
   --out-dir .foundry/workspaces/<task-id>/incremental/composition-0001
 ```

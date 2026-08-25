@@ -28,7 +28,7 @@ test("authoring-plan command exists only as native TypeScript", () => {
 });
 
 test("authoring-plan consumers and metadata target the typed factory", () => {
-  for (const consumer of ["scripts/foundry.mjs", "scripts/lib/foundry-command-metadata.ts"]) {
+  for (const consumer of ["scripts/foundry.ts", "scripts/lib/foundry-command-metadata.ts"]) {
     const source = readRepoFile(consumer);
     assert.match(source, /authoring-plan\.ts/u, consumer);
     assert.doesNotMatch(source, /authoring-plan\.mjs/u, consumer);
@@ -38,12 +38,12 @@ test("authoring-plan consumers and metadata target the typed factory", () => {
 test("authoring-plan help report retains exact bytes", () => {
   const output = execFileSync(
     process.execPath,
-    ["scripts/foundry.mjs", "dataset-authoring-plan", "--help"],
+    ["scripts/foundry.ts", "dataset-authoring-plan", "--help"],
     { cwd: repoRoot, encoding: "utf8" },
   );
-  assert.equal(Buffer.byteLength(output, "utf8"), 3158);
+  assert.equal(Buffer.byteLength(output, "utf8"), 3157);
   assert.equal(
     createHash("sha256").update(output).digest("hex"),
-    "04547bafa8a2ca75e79075fe5c5b127b597b18f2acbaf971181b8cd261561274",
+    "9abf3422859cc0db29e7dd6e84bfed4eae37682b48e396156a7af4759fd33db7",
   );
 });

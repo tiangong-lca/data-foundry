@@ -20,34 +20,30 @@ test("identity-preflight command help bytes remain exact for all four exports", 
   const expected = [
     {
       command: "dataset-identity-preflight-requests-build",
-      bytes: 893,
-      sha256: "e2940e4d2be9bc7d256c89ca85894f7fe955b899868a4ce4caf865757b524c71",
+      bytes: 890,
+      sha256: "918dcb2f34a0a54fab5684fa722348c1291b93f8d86c882c4c79e146e8875012",
     },
     {
       command: "dataset-identity-preflight-query-audit",
-      bytes: 458,
-      sha256: "7f90e3e7393fec5cb845448e80861cff98d4fb04fdda3dabc2a63049e1671ea5",
+      bytes: 457,
+      sha256: "0a22ecb83e482ceac6fc84b17f4ffa4b6ef56d323cfb865bb0faf9f8d9b15b27",
     },
     {
       command: "dataset-identity-preflight-run",
-      bytes: 4534,
-      sha256: "70ef0d4681efc448f3fa5597730d06037d0ef5f6f2c0a2a6f9bf485d364ed3be",
+      bytes: 4531,
+      sha256: "918bd3aff37a471a01ce9ec9715ef93fc5f6de05b3643d139b8ce1f23542a685",
     },
     {
       command: "dataset-identity-preflight-index-merge",
-      bytes: 749,
-      sha256: "1496914f7246be1d52e18288c48f92f00f3444041117ed719ad6205a34b89b3e",
+      bytes: 747,
+      sha256: "8b60ceb7d6a69f5cc87a4da5ecf0b52afadc8bade3c74c4174926b474ea294e7",
     },
   ];
   for (const contract of expected) {
-    const result = spawnSync(
-      process.execPath,
-      ["scripts/foundry.mjs", contract.command, "--help"],
-      {
-        cwd: repoRoot,
-        encoding: null,
-      },
-    );
+    const result = spawnSync(process.execPath, ["scripts/foundry.ts", contract.command, "--help"], {
+      cwd: repoRoot,
+      encoding: null,
+    });
     assert.equal(result.status, 0, contract.command);
     assert.equal(result.stderr.length, 0, contract.command);
     assert.equal(result.stdout.length, contract.bytes, contract.command);
@@ -99,7 +95,7 @@ test("identity-preflight command owner exists only as zero-escape native TypeScr
 
 test("identity-preflight consumers and metadata target the typed owner", () => {
   for (const consumer of [
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "scripts/lib/foundry-command-metadata.ts",
     "scripts/commands/bafu-batch-import-run.ts",
   ]) {

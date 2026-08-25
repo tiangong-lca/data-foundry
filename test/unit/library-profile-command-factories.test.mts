@@ -127,7 +127,7 @@ test("all active library profile wrapper consumers target native TypeScript", ()
     ["worldsteel-batch-import-run", "createWorldsteelBatchImportRunCommands"],
   ] as const;
   const consumers = [
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "scripts/lib/foundry-command-metadata.ts",
     "docs/uslci-import-plan.md",
     "docs/import-profiles/worldsteel/profile.md",

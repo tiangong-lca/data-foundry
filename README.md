@@ -21,7 +21,7 @@ checkPaths:
   - pnpm-workspace.yaml
   - prettier.config.cjs
   - tsconfig*.json
-  - scripts/foundry.mjs
+  - scripts/foundry.ts
   - scripts/lib/import-curation.ts
   - scripts/lib/import-curation/index.ts
   - scripts/lib/import-curation/profiles.ts
@@ -271,13 +271,13 @@ pnpm skills:list
 pnpm workspace:map
 pnpm capabilities:list -- --class tidas-contract-context
 pnpm profiles:list
-node scripts/foundry.mjs tidas-handshake
+node scripts/foundry.ts tidas-handshake
 pnpm task:route -- --kind external-dataset-curated-import --dataset-type process --required-gates contract,schema,qa,curation
 pnpm task:route -- --kind source-evidence-dataset-development --dataset-type process --required-gates context,schema,qa,curation
 pnpm skills:source-evidence:use:document
 pnpm skills:source-evidence:use:sci
-node scripts/foundry.mjs dataset-incremental-change-set-compose --request <request.json> --out-dir <fresh-output-dir>
-node scripts/foundry.mjs dataset-topology-convergence-compose --request <request.json> --out-dir <fresh-output-dir>
+node scripts/foundry.ts dataset-incremental-change-set-compose --request <request.json> --out-dir <fresh-output-dir>
+node scripts/foundry.ts dataset-topology-convergence-compose --request <request.json> --out-dir <fresh-output-dir>
 ```
 
 Tests are organized by behavior layer in `test/README.md`. Use `pnpm test` for the full suite and `pnpm test:unit|test:commands|test:scenarios` for targeted checks; `pnpm test:toolchain` protects the pnpm/TS7 contract. Old incident-numbered test aliases are not part of the maintained surface.
@@ -285,11 +285,11 @@ Tests are organized by behavior layer in `test/README.md`. Use `pnpm test` for t
 Use owner-routed execution commands for dataset work:
 
 ```bash
-node scripts/foundry.mjs dataset-tidas-import \
+node scripts/foundry.ts dataset-tidas-import \
   --input ./source-package \
   --output ./.foundry/workspaces/<task-id>/conversion
 
-node scripts/foundry.mjs dataset-tidas-validate \
+node scripts/foundry.ts dataset-tidas-validate \
   --rows-file ./rows/processes.jsonl \
   --type process \
   --out-dir ./schema
@@ -309,7 +309,7 @@ pnpm exec tiangong-lca dataset curation-queue verify \
   --type process \
   --json
 
-node scripts/foundry.mjs dataset-curation-gate \
+node scripts/foundry.ts dataset-curation-gate \
   --type process \
   --rows-file ./rows/processes.jsonl \
   --schema-report ./schema/report.json \
@@ -335,21 +335,21 @@ For BAFU ready-scope resumes, `dataset-bafu-batch-import-run` supports `--pendin
 Whole-library packaged imports should first deduplicate root TIDAS entities, then project the resulting decisions back to process scopes:
 
 ```bash
-node scripts/foundry.mjs dataset-library-index-build \
+node scripts/foundry.ts dataset-library-index-build \
   --source-dir <converted-library-root> \
   --process-bundles-dir <converted-library-root>/process-bundles \
   --out-dir <run-dir>/library-index
 
-node scripts/foundry.mjs dataset-library-authoring-plan \
+node scripts/foundry.ts dataset-library-authoring-plan \
   --library-index <run-dir>/library-index \
   --out-dir <run-dir>/authoring-plan
 
-node scripts/foundry.mjs dataset-library-decisions-apply \
+node scripts/foundry.ts dataset-library-decisions-apply \
   --library-index <run-dir>/library-index \
   --decisions-dir <run-dir>/decisions \
   --out-dir <run-dir>/library-resolution
 
-node scripts/foundry.mjs dataset-process-scope-run \
+node scripts/foundry.ts dataset-process-scope-run \
   --process-bundles-dir <converted-library-root>/process-bundles \
   --library-resolution <run-dir>/library-resolution/library-resolution.json \
   --scope-file <run-dir>/library-resolution/scope-checkpoints.jsonl \
@@ -408,7 +408,7 @@ Installed shared runtime skills such as `.agents/skills/tiangong-kb-sci-search/`
 
 ## Repository Shape
 
-- `scripts/foundry.mjs`: small Foundry command surface.
+- `scripts/foundry.ts`: small Foundry command surface.
 - `scripts/lib/import-curation.ts`: typed public barrel for generic dataset curation/cleanup owners.
 - `.agents/shared-skills.json`: configured Foundry-local and shared runtime skills that may appear under `.agents/skills`.
 - `specs/automated-lca-capability-registry.json`: capability routing registry.

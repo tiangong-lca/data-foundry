@@ -474,7 +474,10 @@ function foundryCommand(
   env: NodeJS.ProcessEnv = {},
   expectedStatus = 0,
 ): JsonRecord {
-  const result = run(process.execPath, ["scripts/foundry.mjs", ...args], {
+  const typedEntry = path.join("scripts", "foundry.ts");
+  const legacyEntry = path.join("scripts", "foundry.mjs");
+  const entry = existsSync(path.join(root, typedEntry)) ? typedEntry : legacyEntry;
+  const result = run(process.execPath, [entry, ...args], {
     cwd: root,
     env: { ...process.env, ...env },
     expectedStatus,
@@ -676,6 +679,7 @@ function normalize(value: unknown): unknown {
   output = replacePathVariants(output, pathVariants(repoRoot), "<repo-root>");
   output = replacePathVariants(output, pathVariants(tempRoot), "<temp-root>");
   return output
+    .replace(/scripts\/foundry\.(?:mjs|ts)/gu, "scripts/foundry.<entry>")
     .replace(/(?:\.\.[\\/])+before-output/gu, "<side-output>")
     .replace(/(?:\.\.[\\/])+after-output/gu, "<side-output>")
     .replace(/(?:\.\.[\\/])+fixtures/gu, "<temp-root>/fixtures")

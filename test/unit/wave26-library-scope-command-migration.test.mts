@@ -18,28 +18,28 @@ function readRepoFile(relativePath: string): string {
 const helpContracts = [
   [
     "dataset-library-index-build",
-    3651,
-    "0c04ecad33546dd354d1ec890d77c235827c71c208c92c475b43ef0eeb3b398f",
+    3650,
+    "dfca6ccba490158bf25162098b5fc991e57f76475f46673220ab2421473a9408",
   ],
   [
     "dataset-library-authoring-plan",
-    3639,
-    "78de4ed6925fcf2f6acd31488ea1011429fc8b678a062a0ff79ee8652c2b6205",
+    3638,
+    "7bb46790b910e58e36e9dab27764cb2a74ef9956b51b30027633611649cd8b11",
   ],
   [
     "dataset-library-identity-decisions-from-preflight",
-    3730,
-    "69bcfa9119acefc2a72e02af10f76b91d69b34ae9abadfdc51bb071ba51b419e",
+    3729,
+    "f9e597e81354ecfaf3f053e083e5430ac7aa8cb2343477a1ce6a6ee57674ddeb",
   ],
   [
     "dataset-library-decisions-apply",
-    3656,
-    "511b255464b764ac371af3062bd3bb3310c4a559083c757244dd2c5f09cfb958",
+    3655,
+    "3d0dbc3aab91b73c1165f6f15d41ead80899627e08b31eef11b481617cc73f54",
   ],
   [
     "dataset-process-scope-run",
-    3881,
-    "5b0d517c432bc17d99850e04b9f909514d82a47376ba8079f796351373bccea2",
+    3879,
+    "02356f508f23d9fae4bfe1a420ed7bb25a760a1b5c6197c940f497e77d95d693",
   ],
 ] as const;
 
@@ -54,7 +54,7 @@ test("library-scope orchestration exists only as native zero-escape TypeScript",
 });
 
 test("library-scope entry and metadata target the typed semantic owner", () => {
-  const entrySource = readRepoFile("scripts/foundry.mjs");
+  const entrySource = readRepoFile("scripts/foundry.ts");
   const metadataSource = readRepoFile("scripts/lib/foundry-command-metadata.ts");
   assert.match(entrySource, /from "\.\/commands\/library-scope-workflow\.ts"/u);
   assert.doesNotMatch(entrySource, /library-scope-workflow\.mjs/u);
@@ -69,7 +69,7 @@ test("library-scope entry and metadata target the typed semantic owner", () => {
 
 test("library-scope help reports retain exact serialized bytes", () => {
   for (const [command, bytes, sha256] of helpContracts) {
-    const result = spawnSync(process.execPath, ["scripts/foundry.mjs", command, "--help"], {
+    const result = spawnSync(process.execPath, ["scripts/foundry.ts", command, "--help"], {
       cwd: repoRoot,
       encoding: "utf8",
     });

@@ -394,9 +394,9 @@ export function createIdentityPreflightRunCommands({
         purpose:
           "Execute Foundry-generated process/flow identity-preflight request indexes through the CLI without writing the database.",
         usage: [
-          "node scripts/foundry.mjs dataset-identity-preflight-run --index <identity-preflight-requests.jsonl> --out-dir <run-dir> --timeout-ms 60000",
-          "node scripts/foundry.mjs dataset-identity-preflight-run --index ./identity-preflight-requests/identity-preflight-requests.jsonl --only-pending --timeout-ms 60000",
-          "node scripts/foundry.mjs dataset-identity-preflight-run --index ./identity-preflight-requests/identity-preflight-requests.jsonl --retry-failed ./identity-preflight-run/dataset-identity-preflight-run-report.json --max-attempts 3",
+          "node scripts/foundry.ts dataset-identity-preflight-run --index <identity-preflight-requests.jsonl> --out-dir <run-dir> --timeout-ms 60000",
+          "node scripts/foundry.ts dataset-identity-preflight-run --index ./identity-preflight-requests/identity-preflight-requests.jsonl --only-pending --timeout-ms 60000",
+          "node scripts/foundry.ts dataset-identity-preflight-run --index ./identity-preflight-requests/identity-preflight-requests.jsonl --retry-failed ./identity-preflight-run/dataset-identity-preflight-run-report.json --max-attempts 3",
         ],
         ...identityPreflightRunStageContract,
       };
@@ -1080,8 +1080,8 @@ export function createIdentityPreflightRunCommands({
         purpose:
           "Merge refreshed current-scope identity-preflight request rows into an existing index while preserving dependency preflight evidence. This command is local-only and never writes the database.",
         usage: [
-          "node scripts/foundry.mjs dataset-identity-preflight-index-merge --base-index <old identity-preflight-requests.jsonl> --update-index <fresh current identity-preflight-requests.jsonl> --out-dir <merge-dir>",
-          "node scripts/foundry.mjs dataset-identity-preflight-index-merge --base-index ./identity-preflight-requests.jsonl --update-index ./fresh/identity-preflight-requests.jsonl",
+          "node scripts/foundry.ts dataset-identity-preflight-index-merge --base-index <old identity-preflight-requests.jsonl> --update-index <fresh current identity-preflight-requests.jsonl> --out-dir <merge-dir>",
+          "node scripts/foundry.ts dataset-identity-preflight-index-merge --base-index ./identity-preflight-requests.jsonl --update-index ./fresh/identity-preflight-requests.jsonl",
         ],
         remote_write_mode: "read-only",
       };
@@ -1217,9 +1217,9 @@ export function createIdentityPreflightRunCommands({
         status: "help",
         command: "dataset-identity-preflight-requests-build",
         usage: [
-          "node scripts/foundry.mjs dataset-identity-preflight-requests-build --type process --rows-file ./rows/processes.jsonl --out-dir ./.foundry/workspaces/task/identity-preflight-refresh",
-          "node scripts/foundry.mjs dataset-identity-preflight-requests-build --type flow --rows-file ./rows/flows.jsonl --out-dir ./.foundry/workspaces/task/identity-preflight-refresh",
-          "node scripts/foundry.mjs dataset-identity-preflight-requests-build --type process --rows-file ./rows/patched-processes.jsonl --source-index ./identity-preflight-requests/identity-preflight-requests.jsonl --out-dir ./identity-preflight-refresh",
+          "node scripts/foundry.ts dataset-identity-preflight-requests-build --type process --rows-file ./rows/processes.jsonl --out-dir ./.foundry/workspaces/task/identity-preflight-refresh",
+          "node scripts/foundry.ts dataset-identity-preflight-requests-build --type flow --rows-file ./rows/flows.jsonl --out-dir ./.foundry/workspaces/task/identity-preflight-refresh",
+          "node scripts/foundry.ts dataset-identity-preflight-requests-build --type process --rows-file ./rows/patched-processes.jsonl --source-index ./identity-preflight-requests/identity-preflight-requests.jsonl --out-dir ./identity-preflight-refresh",
         ],
         purpose:
           "Build a fresh CLI identity-preflight request index from the exact current process or flow rows file.",
@@ -1621,7 +1621,7 @@ export function createIdentityPreflightRunCommands({
         status: "help",
         command: "dataset-identity-preflight-query-audit",
         usage: [
-          "node scripts/foundry.mjs dataset-identity-preflight-query-audit --index ./identity-preflight-requests/identity-preflight-requests.jsonl --out-dir ./identity-preflight-query-audit",
+          "node scripts/foundry.ts dataset-identity-preflight-query-audit --index ./identity-preflight-requests/identity-preflight-requests.jsonl --out-dir ./identity-preflight-query-audit",
         ],
         purpose:
           "Audit generated process/flow identity-preflight hybrid-search queries before remote candidate search.",

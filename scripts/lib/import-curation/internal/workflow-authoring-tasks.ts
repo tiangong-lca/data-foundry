@@ -500,7 +500,7 @@ export function buildDatasetAuthoringTaskFromPackage({
     : null;
   const applyArgs = [
     "node",
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "dataset-patch-apply",
     "--input",
     sourceRowsFile ?? "<source-rows.jsonl>",
@@ -572,7 +572,7 @@ export function buildDatasetAuthoringTaskFromPackage({
     },
     commands: {
       apply_patch: applyArgs.map(shellQuote).join(" "),
-      validate_after_apply: `node scripts/foundry.mjs dataset-tidas-validate --type ${datasetType} --rows-file ${shellQuote(repoRelativePath(repoRoot, patchedRowsFile))} --out-dir ${shellQuote(path.join(repoRelativePath(repoRoot, outDir), "dataset-validate"))}`,
+      validate_after_apply: `node scripts/foundry.ts dataset-tidas-validate --type ${datasetType} --rows-file ${shellQuote(repoRelativePath(repoRoot, patchedRowsFile))} --out-dir ${shellQuote(path.join(repoRelativePath(repoRoot, outDir), "dataset-validate"))}`,
     },
   };
 
@@ -809,7 +809,7 @@ export function writeAuthoringTaskBatchManifest(
   const applyBatchArgs = canApplyBatch
     ? [
         "node",
-        "scripts/foundry.mjs",
+        "scripts/foundry.ts",
         "dataset-patch-apply",
         "--input",
         sourceRowsFiles[0],

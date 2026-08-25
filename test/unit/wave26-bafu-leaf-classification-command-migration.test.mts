@@ -18,13 +18,13 @@ function readRepoFile(relativePath: string): string {
 const helpContracts = [
   [
     "dataset-bafu-leaf-classification-tasks-prepare",
-    490,
-    "47a7637ccdeb3d80116525b32a2f374084abe774a79c5a5c7efa8c104b8af71c",
+    489,
+    "379e65ae514fa0df3cc3f29a872a1be13ae198b197eaf4e6c78a0e2c8ade43f9",
   ],
   [
     "dataset-bafu-leaf-classification-category-map-project",
-    742,
-    "596668c00c169c310ffe6f165f722cb00713a723995eb975555512c1cef209ef",
+    741,
+    "2aec46c9e85226488d42f32908f4cfad389d2e6e1d07add726192d08366d9897",
   ],
 ] as const;
 
@@ -43,7 +43,7 @@ test("BAFU leaf classification owner exists only as zero-escape native TypeScrip
 });
 
 test("BAFU leaf consumers and metadata target the typed owner and real fixture", () => {
-  const entrySource = readRepoFile("scripts/foundry.mjs");
+  const entrySource = readRepoFile("scripts/foundry.ts");
   const metadataSource = readRepoFile("scripts/lib/foundry-command-metadata.ts");
   assert.match(entrySource, /from "\.\/commands\/bafu-leaf-classification-tasks\.ts"/u);
   assert.doesNotMatch(entrySource, /bafu-leaf-classification-tasks\.mjs/u);
@@ -57,7 +57,7 @@ test("BAFU leaf consumers and metadata target the typed owner and real fixture",
 
 test("BAFU leaf classification help retains exact serialized bytes", () => {
   for (const [command, bytes, sha256] of helpContracts) {
-    const result = spawnSync(process.execPath, ["scripts/foundry.mjs", command, "--help"], {
+    const result = spawnSync(process.execPath, ["scripts/foundry.ts", command, "--help"], {
       cwd: repoRoot,
       encoding: "utf8",
     });

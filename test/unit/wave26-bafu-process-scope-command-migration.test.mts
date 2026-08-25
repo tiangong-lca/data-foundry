@@ -29,7 +29,7 @@ test("BAFU process-scope owner exists only as zero-escape native TypeScript", as
 });
 
 test("BAFU process-scope entry and metadata target typed realistic fixtures", () => {
-  const entrySource = readRepoFile("scripts/foundry.mjs");
+  const entrySource = readRepoFile("scripts/foundry.ts");
   const metadataSource = readRepoFile("scripts/lib/foundry-command-metadata.ts");
   assert.match(entrySource, /from "\.\/commands\/bafu-process-scope-e2e\.ts"/u);
   assert.doesNotMatch(entrySource, /bafu-process-scope-e2e\.mjs/u);
@@ -41,13 +41,13 @@ test("BAFU process-scope entry and metadata target typed realistic fixtures", ()
 test("BAFU process-scope help retains exact serialized bytes", () => {
   const result = spawnSync(
     process.execPath,
-    ["scripts/foundry.mjs", "dataset-bafu-process-scope-e2e", "--help"],
+    ["scripts/foundry.ts", "dataset-bafu-process-scope-e2e", "--help"],
     { cwd: repoRoot, encoding: "utf8" },
   );
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.equal(Buffer.byteLength(result.stdout), 992);
+  assert.equal(Buffer.byteLength(result.stdout), 988);
   assert.equal(
     createHash("sha256").update(result.stdout).digest("hex"),
-    "66e2a0a3c368a34aba860d7307f2323a85aa14d4bad6070bd797c252e3f63182",
+    "8ceb89d5e9ad91e26865e69dd13be7b6b8833ede8b678c6a00855a2d5fcc68e2",
   );
 });

@@ -510,7 +510,7 @@ export function createIdentityDecisionTaskCommands({
         status: "help",
         command: "dataset-identity-decision-task-build",
         usage: [
-          "node scripts/foundry.mjs dataset-identity-decision-task-build --curation-gate-report <dataset-curation-gate-report.json> --out-dir <task-dir> [--shared-context-cache-dir <cache-dir>]",
+          "node scripts/foundry.ts dataset-identity-decision-task-build --curation-gate-report <dataset-curation-gate-report.json> --out-dir <task-dir> [--shared-context-cache-dir <cache-dir>]",
         ],
         purpose:
           "Build an AI-facing identity decision task from Foundry curation gate authoring packages. AI decides reuse_existing_reference/create_new/block_unresolved; deterministic apply is handled by dataset-identity-decisions-apply.",

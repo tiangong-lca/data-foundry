@@ -322,7 +322,7 @@ export function createClassificationDecisionCommands({
         status: "help",
         command: "dataset-classification-decision-task-build",
         usage: [
-          "node scripts/foundry.mjs dataset-classification-decision-task-build --classification-queue <classification-authoring-queue.jsonl> --rows-file <current-rows.jsonl> --schema-file <schema.json> --yaml-file <methodology.yaml> --ruleset-file <runtime-ruleset.json> --classification-schema <tidas_*_category.json> --location-schema <tidas_locations_category.json> --out-dir <task-dir> [--shared-context-cache-dir <cache-dir>]",
+          "node scripts/foundry.ts dataset-classification-decision-task-build --classification-queue <classification-authoring-queue.jsonl> --rows-file <current-rows.jsonl> --schema-file <schema.json> --yaml-file <methodology.yaml> --ruleset-file <runtime-ruleset.json> --classification-schema <tidas_*_category.json> --location-schema <tidas_locations_category.json> --out-dir <task-dir> [--shared-context-cache-dir <cache-dir>]",
         ],
         purpose:
           "Build an AI-facing classification decision task from Foundry classification queue rows. AI fills TIDAS category codes; deterministic apply is handled by dataset-classification-decisions-apply.",
@@ -696,7 +696,7 @@ export function createClassificationDecisionCommands({
         status: "help",
         command: "dataset-library-classification-decisions-project",
         usage: [
-          "node scripts/foundry.mjs dataset-library-classification-decisions-project --classification-queue <classification-authoring-queue.jsonl> --library-decisions <run-dir>/decisions/classification-decisions.jsonl --decision-task <classification-decision-task.json> --out-dir <projection-dir>",
+          "node scripts/foundry.ts dataset-library-classification-decisions-project --classification-queue <classification-authoring-queue.jsonl> --library-decisions <run-dir>/decisions/classification-decisions.jsonl --decision-task <classification-decision-task.json> --out-dir <projection-dir>",
         ],
         purpose:
           "Project library-level semantic classification decisions into a scope-local decision file bound to an exact classification decision task before deterministic apply.",
@@ -910,7 +910,7 @@ export function createClassificationDecisionCommands({
         command: "dataset-classification-decisions-apply",
         wraps: "tiangong-lca dataset classification apply",
         usage: [
-          "node scripts/foundry.mjs dataset-classification-decisions-apply --classification-queue <classification-authoring-queue.jsonl> --decisions <classification-decisions.jsonl> --decision-task <classification-decision-task.json> --out-dir <apply-dir>",
+          "node scripts/foundry.ts dataset-classification-decisions-apply --classification-queue <classification-authoring-queue.jsonl> --decisions <classification-decisions.jsonl> --decision-task <classification-decision-task.json> --out-dir <apply-dir>",
         ],
         purpose:
           "Validate AI-authored classification decisions against the Foundry queue and AI context task, then call the CLI classification apply command for each required schema type and row file.",

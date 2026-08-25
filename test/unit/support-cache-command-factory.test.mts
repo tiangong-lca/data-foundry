@@ -397,7 +397,7 @@ test("support cache factory exists only as zero-escape native TypeScript", () =>
 
 test("support cache consumers target the typed command factory", () => {
   for (const consumer of [
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "scripts/lib/foundry-command-metadata.ts",
     "test/unit/support-cache-command-factory.test.mts",
   ]) {

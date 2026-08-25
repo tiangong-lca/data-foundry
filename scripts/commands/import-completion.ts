@@ -341,8 +341,8 @@ export function createImportCompletionCommands({
         status: "help",
         command: "dataset-import-completion-report",
         usage: [
-          "node scripts/foundry.mjs dataset-import-completion-report --task-dir .foundry/workspaces/<task-id> --out-dir .foundry/workspaces/<task-id>/import-completion",
-          "node scripts/foundry.mjs dataset-import-completion-report --closeout-report <dataset-post-write-closeout-report.json> [--closeout-report <...>] --require-type process --out-dir <completion-dir>",
+          "node scripts/foundry.ts dataset-import-completion-report --task-dir .foundry/workspaces/<task-id> --out-dir .foundry/workspaces/<task-id>/import-completion",
+          "node scripts/foundry.ts dataset-import-completion-report --closeout-report <dataset-post-write-closeout-report.json> [--closeout-report <...>] --require-type process --out-dir <completion-dir>",
         ],
         purpose:
           "Build a read-only task-level completion report from one or more completed dataset-post-write-closeout reports. It never writes the database.",

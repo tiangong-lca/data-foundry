@@ -62,7 +62,7 @@ test("identity rewrite help is exact and factory construction has no effects", (
     status: "help",
     command: "dataset-identity-reference-rewrites-apply",
     usage: [
-      "node scripts/foundry.mjs dataset-identity-reference-rewrites-apply --type process --rows-file <processes.jsonl> --identity-preflight-index <identity-preflight-requests.jsonl> --out <rewritten-processes.jsonl>",
+      "node scripts/foundry.ts dataset-identity-reference-rewrites-apply --type process --rows-file <processes.jsonl> --identity-preflight-index <identity-preflight-requests.jsonl> --out <rewritten-processes.jsonl>",
     ],
     purpose:
       "Apply completed identity-preflight block_duplicate flow decisions to local process exchange references before validation and write planning.",
@@ -150,7 +150,7 @@ test("identity rewrite command factory exists only as zero-any native TypeScript
 
 test("all active identity rewrite owner consumers target the typed command factory", () => {
   for (const consumer of [
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "scripts/lib/foundry-command-metadata.ts",
     "test/unit/identity-reference-rewrite-command-factory.test.mts",
   ]) {

@@ -180,7 +180,7 @@ test("task completion dry-run is non-mutating and completed execution moves exac
       status: "help",
       command: "task-complete",
       usage: [
-        "node scripts/foundry.mjs task-complete --task <task-id|tasks/active/file.md> --completion-report <dataset-import-completion-report.json>",
+        "node scripts/foundry.ts task-complete --task <task-id|tasks/active/file.md> --completion-report <dataset-import-completion-report.json>",
       ],
       purpose:
         "Move one filesystem task from tasks/active to tasks/done only when the task-level import completion report is completed.",
@@ -389,7 +389,7 @@ test("task and completion consumers target the typed command factories", () => {
     ["import-completion", "createImportCompletionCommands"],
   ] as const) {
     for (const consumer of [
-      "scripts/foundry.mjs",
+      "scripts/foundry.ts",
       "scripts/lib/foundry-command-metadata.ts",
       "test/unit/task-completion-command-factories.test.mts",
     ]) {

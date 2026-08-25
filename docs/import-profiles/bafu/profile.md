@@ -142,7 +142,7 @@ Record the exact source zip, checksum, source location, package title/version, a
 
 ### 2. Normalize
 
-Use `node scripts/foundry.mjs dataset-tidas-import` as the conversion entrypoint so unified Rust `tidas` owns the stable conversion contract. Produce ILCD output when requested, TIDAS JSON, mapping CSV, `import-report.json`, `issues.jsonl`, and default per-process dependency bundles under `process-bundles/` in the task workspace. The normalized output is not yet TianGong-ready data. For BAFU whole-package imports, downstream process curation starts from the bundle index and per-process bundle directories so each process closure can be claimed, blocked, retried, or committed independently; direct traversal of the root `tidas/` tree is only a fallback for conversion audit or rebuilding bundle-derived row files.
+Use `node scripts/foundry.ts dataset-tidas-import` as the conversion entrypoint so unified Rust `tidas` owns the stable conversion contract. Produce ILCD output when requested, TIDAS JSON, mapping CSV, `import-report.json`, `issues.jsonl`, and default per-process dependency bundles under `process-bundles/` in the task workspace. The normalized output is not yet TianGong-ready data. For BAFU whole-package imports, downstream process curation starts from the bundle index and per-process bundle directories so each process closure can be claimed, blocked, retried, or committed independently; direct traversal of the root `tidas/` tree is only a fallback for conversion audit or rebuilding bundle-derived row files.
 
 ### 3. Conversion QA
 

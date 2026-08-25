@@ -52,7 +52,10 @@ test("Golden harness rejects a HEAD self-comparison before producing artifacts",
 test("Golden source preserves Node-native comparison and executable-plus-argv portability", () => {
   const source = fs.readFileSync(path.join(repoRoot, "scripts/foundry-golden-diff.ts"), "utf8");
   assert.match(source, /merge-base/u);
-  assert.match(source, /process\.execPath,\s*\["scripts\/foundry\.mjs",\s*\.\.\.args\]/u);
+  assert.match(source, /path\.join\("scripts",\s*"foundry\.ts"\)/u);
+  assert.match(source, /path\.join\("scripts",\s*"foundry\.mjs"\)/u);
+  assert.match(source, /scripts\\\/foundry\\\.\(\?:mjs\|ts\)/u);
+  assert.match(source, /process\.execPath,\s*\[entry,\s*\.\.\.args\]/u);
   assert.match(source, /readFileSync\(baselinePath\)\.equals\(readFileSync\(currentPath\)\)/u);
   assert.match(source, /resolveTidasProcessCommand|fake-tidas\.mjs/u);
   assert.doesNotMatch(source, /spawnSync\(\s*["']diff["']/u);

@@ -84,7 +84,7 @@ test("foundry command metadata is navigable and evidence backed", () => {
     assert.ok(entry.ownerExport, `${entry.command} is missing ownerExport`);
     assert.deepEqual(
       entry.navigationPath,
-      ["scripts/foundry.mjs", "scripts/lib/foundry-cli.mjs", entry.ownerModule],
+      ["scripts/foundry.ts", "scripts/lib/foundry-cli.ts", entry.ownerModule],
       `${entry.command} navigation path should be entrypoint -> dispatcher -> owner`,
     );
     assert.ok(
@@ -161,7 +161,7 @@ test("metadata preserves exact owner, artifact, workflow, and key-test schemas",
         case "command-smoke":
           assert.deepEqual(Object.keys(keyTest).sort(), ["command", "kind"]);
           assert.ok(keyTest.command);
-          assert.match(keyTest.command, /^node scripts\/foundry\.mjs /u);
+          assert.match(keyTest.command, /^node scripts\/foundry\.ts /u);
           break;
         case "golden-diff":
           assert.deepEqual(Object.keys(keyTest).sort(), ["kind", "path"]);
@@ -184,7 +184,7 @@ test("public command implementation paths are at most two jumps from the CLI ent
     const pathLength = metadataByCommand[command].navigationPath.length;
     assert.ok(
       pathLength <= 3,
-      `${command} should be reachable as foundry.mjs -> foundry-cli.mjs -> owner`,
+      `${command} should be reachable as foundry.mjs -> foundry-cli.ts -> owner`,
     );
   }
 });

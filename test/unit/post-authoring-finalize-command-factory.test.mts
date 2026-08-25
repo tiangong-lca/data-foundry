@@ -23,15 +23,15 @@ function readRepoFile(relativePath: string): string {
 test("post-authoring finalize help retains exact stage, type, and byte contract", () => {
   const result = spawnSync(
     process.execPath,
-    ["scripts/foundry.mjs", "dataset-post-authoring-finalize", "--help"],
+    ["scripts/foundry.ts", "dataset-post-authoring-finalize", "--help"],
     { cwd: repoRoot, encoding: null },
   );
   assert.equal(result.status, 0);
   assert.equal(result.stderr.length, 0);
-  assert.equal(result.stdout.length, 5607);
+  assert.equal(result.stdout.length, 5606);
   assert.equal(
     createHash("sha256").update(result.stdout).digest("hex"),
-    "409362cf935be46017d0565f4a22a0f6d478595668ff2ec8f5a6d6f8c87edcfd",
+    "6919541f20242fdaedce027a9dfb4e39a53fdcad5d99317b06d194707334a0bb",
   );
   const help = JSON.parse(result.stdout.toString()) as Record<string, unknown>;
   assert.deepEqual(help.supported_types, [
@@ -104,7 +104,7 @@ test("post-authoring finalize owner exists only as zero-escape native TypeScript
 });
 
 test("post-authoring finalize consumers and metadata target the typed owner", () => {
-  for (const consumer of ["scripts/foundry.mjs", "scripts/lib/foundry-command-metadata.ts"]) {
+  for (const consumer of ["scripts/foundry.ts", "scripts/lib/foundry-command-metadata.ts"]) {
     const source = readRepoFile(consumer);
     assert.match(
       source,

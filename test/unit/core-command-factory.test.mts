@@ -289,7 +289,7 @@ test("core diagnostics retain surface/doctor envelopes and native filesystem or 
 });
 
 test("core migration preserves exact Foundry help bytes", () => {
-  const result = spawnSync(process.execPath, ["scripts/foundry.mjs", "help"], {
+  const result = spawnSync(process.execPath, ["scripts/foundry.ts", "help"], {
     cwd: repoRoot,
     encoding: null,
   });
@@ -315,7 +315,7 @@ test("core command owner exists only as zero-escape native TypeScript", () => {
 });
 
 test("core command consumers and metadata target the typed owner", () => {
-  for (const consumer of ["scripts/foundry.mjs", "scripts/lib/foundry-command-metadata.ts"]) {
+  for (const consumer of ["scripts/foundry.ts", "scripts/lib/foundry-command-metadata.ts"]) {
     const source = fs.readFileSync(path.join(repoRoot, consumer), "utf8");
     assert.match(source, /(?:commands\/|scripts\/commands\/)core\.ts/u, consumer);
     assert.doesNotMatch(source, /(?:commands\/|scripts\/commands\/)core\.mjs/u, consumer);

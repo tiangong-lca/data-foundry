@@ -1045,7 +1045,7 @@ function commandHelp(): unknown {
     status: "help",
     command: "dataset-topology-convergence-compose",
     usage:
-      "node scripts/foundry.mjs dataset-topology-convergence-compose --request <request.json> --out-dir <fresh-directory>",
+      "node scripts/foundry.ts dataset-topology-convergence-compose --request <request.json> --out-dir <fresh-directory>",
     production_authority: false,
     ...readOnlyStageContract([
       {

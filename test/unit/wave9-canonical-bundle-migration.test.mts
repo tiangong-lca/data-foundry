@@ -50,7 +50,7 @@ test("bundle sample utilities exist only as native TypeScript", () => {
 
 test("canonical support rewrite consumers target the typed module explicitly", () => {
   assertStaticImports([
-    ["scripts/foundry.mjs", "./lib/canonical-support-rewrites.ts"],
+    ["scripts/foundry.ts", "./lib/canonical-support-rewrites.ts"],
     [
       "test/commands/canonical-support-rewrites.test.mjs",
       "../../scripts/lib/canonical-support-rewrites.ts",
@@ -64,7 +64,7 @@ test("canonical support rewrite consumers target the typed module explicitly", (
 
 test("bundle sample consumers target the typed module explicitly", () => {
   assertStaticImports([
-    ["scripts/foundry.mjs", "./lib/bundle-sample-utils.ts"],
+    ["scripts/foundry.ts", "./lib/bundle-sample-utils.ts"],
     ["test/unit/library-contact-reuse.test.mjs", "../../scripts/lib/bundle-sample-utils.ts"],
     ["test/unit/bundle-sample-utils-contract.test.mts", "../../scripts/lib/bundle-sample-utils.ts"],
   ]);

@@ -139,7 +139,7 @@ test("deprecated package-script warnings use package-manager-neutral wording", (
 
 test("surface audit resolves explicit TypeScript and dynamic imports", () => {
   const report = auditFixture({
-    "scripts/foundry.mjs": [
+    "scripts/foundry.ts": [
       'import { explicit } from "./lib/explicit.ts";',
       'const dynamic = await import("./lib/dynamic.ts");',
       "void [explicit, dynamic];",
@@ -154,8 +154,8 @@ test("surface audit resolves explicit TypeScript and dynamic imports", () => {
 
 test("surface audit emits portable POSIX paths and ignores test-only inbound imports", () => {
   const report = auditFixture({
-    "scripts/foundry.mjs": 'import { run } from "./lib/foundry-cli.mjs";\nvoid run;\n',
-    "scripts/lib/foundry-cli.mjs": "export const run = true;\n",
+    "scripts/foundry.ts": 'import { run } from "./lib/foundry-cli.ts";\nvoid run;\n',
+    "scripts/lib/foundry-cli.ts": "export const run = true;\n",
     "scripts/lib/only-from-test.ts": "export const testOnly = true;\n",
     "test/unit/consumer.test.mts":
       'import { testOnly } from "../../scripts/lib/only-from-test.ts";\nvoid testOnly;\n',
@@ -185,7 +185,7 @@ test("surface audit keeps registered and profile docs while reporting true orpha
 test("surface audit exempts declared entrypoints but detects hidden handlers and random scripts", () => {
   const entrypointReport = auditFixture({
     "scripts/check-tidas-cutover.ts": "export {};\n",
-    "scripts/foundry.mjs": "export {};\n",
+    "scripts/foundry.ts": "export {};\n",
     "scripts/foundry-golden-diff.ts": "export {};\n",
     "scripts/cases/production-contact-draft.ts": "export {};\n",
     "scripts/with-lca-account.ts": "export {};\n",
@@ -195,9 +195,9 @@ test("surface audit exempts declared entrypoints but detects hidden handlers and
   assert.deepEqual(entrypointInbound.errors, []);
 
   const guardedReport = auditFixture({
-    "scripts/foundry.mjs":
-      'import { commandHandlers } from "./lib/foundry-cli.mjs";\nvoid commandHandlers;\n',
-    "scripts/lib/foundry-cli.mjs": [
+    "scripts/foundry.ts":
+      'import { commandHandlers } from "./lib/foundry-cli.ts";\nvoid commandHandlers;\n',
+    "scripts/lib/foundry-cli.ts": [
       "const commandHandlers = {",
       "    help: () => null,",
       '    "hidden-command": () => null,',

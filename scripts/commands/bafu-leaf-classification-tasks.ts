@@ -1821,7 +1821,7 @@ function buildTaskRow({
       preserve_source_classification_as_evidence: true,
       do_not_edit_rows_directly: true,
       deterministic_rerun:
-        "node scripts/foundry.mjs dataset-library-decisions-apply --library-index <library-index> --decisions-dir <decisions-dir> --out-dir <library-resolution>",
+        "node scripts/foundry.ts dataset-library-decisions-apply --library-index <library-index> --decisions-dir <decisions-dir> --out-dir <library-resolution>",
     },
     decision_template: buildDecisionTemplate({
       processId,
@@ -1841,7 +1841,7 @@ export function prepareBafuLeafClassificationTasks(rawOptions: JsonRecord): Json
       status: "help",
       command: prepareCommandName,
       usage: [
-        "node scripts/foundry.mjs dataset-bafu-leaf-classification-tasks-prepare --library-index <library-index-dir> --blocked-ledger <blocked-scope-ledger.jsonl> --out-dir <task-dir> [--library-decisions <classification-decisions.jsonl>] [--shard-size 100]",
+        "node scripts/foundry.ts dataset-bafu-leaf-classification-tasks-prepare --library-index <library-index-dir> --blocked-ledger <blocked-scope-ledger.jsonl> --out-dir <task-dir> [--library-decisions <classification-decisions.jsonl>] [--shard-size 100]",
       ],
       purpose:
         "Prepare sharded AI authoring tasks for BAFU process classifications blocked by leaf gating.",
@@ -2049,7 +2049,7 @@ export function projectBafuLeafCategoryMapDecisions(rawOptions: JsonRecord): Jso
       status: "help",
       command: projectCommandName,
       usage: [
-        "node scripts/foundry.mjs dataset-bafu-leaf-classification-category-map-project --task-dir <leaf-authoring-dir> --category-map-decisions-dir <category-map-decisions-dir> --source-decisions-dir <run-dir>/decisions --out-dir <run-dir>/decisions-v4-leaf-category-map --process-category-schema <tidas_processes_category.json> [--flow-product-category-schema <tidas_flows_product_category.json>]",
+        "node scripts/foundry.ts dataset-bafu-leaf-classification-category-map-project --task-dir <leaf-authoring-dir> --category-map-decisions-dir <category-map-decisions-dir> --source-decisions-dir <run-dir>/decisions --out-dir <run-dir>/decisions-v4-leaf-category-map --process-category-schema <tidas_processes_category.json> [--flow-product-category-schema <tidas_flows_product_category.json>]",
       ],
       purpose:
         "Project task-bound BAFU category-cluster process leaf decisions into library-level classification-decisions.jsonl, while writing rule-derived suggestions only as non-authoritative candidate rows.",

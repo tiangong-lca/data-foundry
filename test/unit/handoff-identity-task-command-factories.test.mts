@@ -551,7 +551,7 @@ test("handoff and identity task factories exist only as zero-escape native TypeS
 test("handoff and identity task consumers target the typed command factories", () => {
   for (const moduleName of ["commit-handoff", "identity-decision-task"]) {
     for (const consumer of [
-      "scripts/foundry.mjs",
+      "scripts/foundry.ts",
       "scripts/lib/foundry-command-metadata.ts",
       "test/unit/handoff-identity-task-command-factories.test.mts",
     ]) {

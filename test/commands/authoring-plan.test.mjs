@@ -23,7 +23,7 @@ function writeJsonLines(filePath, rows) {
 }
 
 function runFoundry(args, expectedStatus = 0) {
-  const result = spawnSync(process.execPath, ["scripts/foundry.mjs", ...args], {
+  const result = spawnSync(process.execPath, ["scripts/foundry.ts", ...args], {
     cwd: repoRoot,
     encoding: "utf8",
   });
@@ -196,7 +196,7 @@ test("dataset-authoring-plan detects ready tasks and waits for AI outputs", () =
     status: "ready_for_ai_authoring_batch",
     counts: { action_items: 3 },
     commands: {
-      apply_all_patches: "node scripts/foundry.mjs dataset-patch-apply --input rows.jsonl",
+      apply_all_patches: "node scripts/foundry.ts dataset-patch-apply --input rows.jsonl",
     },
   });
 
@@ -261,7 +261,7 @@ test("dataset-authoring-plan detects ready tasks and waits for AI outputs", () =
   assert.equal(patchPhase.commands.apply_patches, null);
   assert.equal(
     patchPhase.commands.apply_patches_manifest,
-    "node scripts/foundry.mjs dataset-patch-apply --input rows.jsonl",
+    "node scripts/foundry.ts dataset-patch-apply --input rows.jsonl",
   );
   assert.match(
     patchPhase.commands.apply_patches_unavailable_reason,
@@ -347,7 +347,7 @@ test("dataset-authoring-plan chains classification output through patch and iden
     },
     commands: {
       apply_all_patches:
-        "node scripts/foundry.mjs dataset-patch-apply --input tmp/old/processes.jsonl",
+        "node scripts/foundry.ts dataset-patch-apply --input tmp/old/processes.jsonl",
     },
   });
   writeJson(path.join(fixtureRoot, "authoring-tasks", "authoring-patch-collect-report.json"), {

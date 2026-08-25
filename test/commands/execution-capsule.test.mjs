@@ -408,7 +408,7 @@ test("execution capsule admission refuses to overwrite immutable evidence", () =
   const second = spawnSync(
     process.execPath,
     [
-      "scripts/foundry.mjs",
+      "scripts/foundry.ts",
       "execution-capsule-admit",
       "--stage-manifest",
       rel(fixture.manifestPath),

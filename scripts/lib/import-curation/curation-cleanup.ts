@@ -57,7 +57,7 @@ export function runDatasetCurationCleanup({
       status: "help",
       command: "dataset-curation-cleanup",
       usage: [
-        "node scripts/foundry.mjs dataset-curation-cleanup --type <process|flow|lifecyclemodel|support|contact|source> --rows-file <rows.jsonl> [--source-rows-file <source-rows.jsonl>] --out-dir <cleanup-dir>",
+        "node scripts/foundry.ts dataset-curation-cleanup --type <process|flow|lifecyclemodel|support|contact|source> --rows-file <rows.jsonl> [--source-rows-file <source-rows.jsonl>] --out-dir <cleanup-dir>",
       ],
       purpose:
         "Run deterministic prewrite cleanup transforms: annual-supply sentinel completion, import trace externalization, Foundry trace namespace repair, local locator redaction, and timestamp normalization.",

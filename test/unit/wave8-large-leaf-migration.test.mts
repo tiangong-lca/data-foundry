@@ -61,7 +61,7 @@ test("BAFU family signature consumers target the typed module explicitly", () =>
 
 test("import ledger consumers target the typed module explicitly", () => {
   assertStaticImports([
-    ["scripts/foundry.mjs", "./lib/import-ledger.ts"],
+    ["scripts/foundry.ts", "./lib/import-ledger.ts"],
     ["test/unit/import-ledger-utils.test.mjs", "../../scripts/lib/import-ledger.ts"],
     ["test/unit/import-ledger-contract.test.mts", "../../scripts/lib/import-ledger.ts"],
   ]);

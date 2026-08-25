@@ -18,13 +18,13 @@ function readRepoFile(relativePath: string): string {
 const helpContracts = [
   [
     "dataset-bafu-batch-import-run",
-    5758,
-    "7f92b364113c4f37eb0000d0d96e51cdfc31c81ec2532535474875156df7a384",
+    5750,
+    "fb1fc712fe3b101e49fe9cbfb2f112eef79babdbf340acc9864a691a7e4c442f",
   ],
   [
     "dataset-bafu-universe-coverage-report",
-    688,
-    "4ea0f3b00ea6d7469ca3f7d7a8a9113edfad8618a3ca46e62ad2f331a9fa3225",
+    686,
+    "d2b258d312c6e93f4b609abdc39130c06b3f610ef850d4fa3917e95a7a59492e",
   ],
 ] as const;
 
@@ -43,7 +43,7 @@ test("BAFU batch owner exists only as zero-escape native TypeScript", async () =
 });
 
 test("BAFU/USLCI/Worldsteel consumers and metadata target one typed batch owner", () => {
-  const entrySource = readRepoFile("scripts/foundry.mjs");
+  const entrySource = readRepoFile("scripts/foundry.ts");
   const metadataSource = readRepoFile("scripts/lib/foundry-command-metadata.ts");
   const uslciSource = readRepoFile("scripts/commands/uslci-batch-import-run.ts");
   const worldsteelSource = readRepoFile("scripts/commands/worldsteel-batch-import-run.ts");
@@ -60,7 +60,7 @@ test("BAFU/USLCI/Worldsteel consumers and metadata target one typed batch owner"
 
 test("BAFU batch and coverage help retain exact serialized bytes", () => {
   for (const [command, bytes, sha256] of helpContracts) {
-    const result = spawnSync(process.execPath, ["scripts/foundry.mjs", command, "--help"], {
+    const result = spawnSync(process.execPath, ["scripts/foundry.ts", command, "--help"], {
       cwd: repoRoot,
       encoding: "utf8",
     });

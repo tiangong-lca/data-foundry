@@ -60,8 +60,8 @@ export function runDatasetAuthoringPatchCollect({
       status: "help",
       command: "dataset-authoring-patch-collect",
       usage: [
-        "node scripts/foundry.mjs dataset-authoring-patch-collect --task-manifest <authoring-task-manifest.json>",
-        "node scripts/foundry.mjs dataset-authoring-patch-collect --task-manifest ./authoring-tasks/authoring-task-manifest.json",
+        "node scripts/foundry.ts dataset-authoring-patch-collect --task-manifest <authoring-task-manifest.json>",
+        "node scripts/foundry.ts dataset-authoring-patch-collect --task-manifest ./authoring-tasks/authoring-task-manifest.json",
       ],
       purpose:
         "Collect per-task AI patch outputs into one batch patch file and block if any task output is missing or structurally invalid. This command is local-only and never writes the database.",

@@ -476,7 +476,7 @@ export function createSupportCacheCommands({
         status: "help",
         command: "dataset-support-cache-refresh",
         usage: [
-          "node scripts/foundry.mjs dataset-support-cache-refresh --out specs/canonical-support/flow-properties-unit-groups.json",
+          "node scripts/foundry.ts dataset-support-cache-refresh --out specs/canonical-support/flow-properties-unit-groups.json",
         ],
         purpose:
           "Refresh the small canonical Flow Properties and Unit Groups cache used to select existing database support rows instead of creating account-local support rows.",
@@ -558,8 +558,8 @@ export function createSupportCacheCommands({
         status: "help",
         command: "dataset-canonical-support-mappings-autofill",
         usage: [
-          "node scripts/foundry.mjs dataset-canonical-support-mappings-autofill --template <canonical-support-mappings.template.jsonl> --out-dir <decisions-dir>",
-          "node scripts/foundry.mjs dataset-canonical-support-mappings-autofill --authoring-plan <authoring-plan-dir> --out-dir <decisions-dir>",
+          "node scripts/foundry.ts dataset-canonical-support-mappings-autofill --template <canonical-support-mappings.template.jsonl> --out-dir <decisions-dir>",
+          "node scripts/foundry.ts dataset-canonical-support-mappings-autofill --authoring-plan <authoring-plan-dir> --out-dir <decisions-dir>",
         ],
         purpose:
           "Generate high-confidence canonical-support-mappings.jsonl from generated support templates and the public canonical support cache; unresolved units are written to manual review.",

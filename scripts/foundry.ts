@@ -32,7 +32,7 @@ import { createBundleSampleUtils } from "./lib/bundle-sample-utils.ts";
 import { createCanonicalSupportRewriteUtils } from "./lib/canonical-support-rewrites.ts";
 import { createDecisionTaskUtils } from "./lib/decision-task-utils.ts";
 import { parseArgs, parseScalar } from "./lib/foundry-args.ts";
-import { runFoundryCli } from "./lib/foundry-cli.mjs";
+import { runFoundryCli } from "./lib/foundry-cli.ts";
 import { exitCodeForCommand, usage } from "./lib/foundry-command-registry.ts";
 import { createFoundryRuntimeUtils } from "./lib/foundry-runtime-utils.ts";
 import { createFullContextProofUtils } from "./lib/full-context-proof.ts";
@@ -64,6 +64,15 @@ import { createTraceCoverageUtils } from "./lib/trace-coverage.ts";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const foundryTraceNamespace = "https://tiangong-lca.dev/foundry/import-curation/1";
 
+type DependencyFactory = (dependencies: never) => unknown;
+
+function bindFactory<Factory extends DependencyFactory>(
+  factory: Factory,
+  dependencies: unknown,
+): ReturnType<Factory> {
+  return factory(dependencies as never) as ReturnType<Factory>;
+}
+
 const {
   appendOption,
   appendRepeatedOptions,
@@ -80,7 +89,6 @@ const {
   fileExists,
   findFilesByName,
   hasUnresolvedAiPlaceholder,
-  hasUsableEnvValue,
   integerOption,
   isPlaceholderEnvValue,
   jsonSha256,
@@ -110,12 +118,11 @@ const {
   shellQuote,
   skippedPrewriteStage,
   splitFrontmatter,
-  stageExitBlocker,
   taskMetaFromFile,
   unique,
   writeJson,
   writeText,
-} = createFoundryRuntimeUtils({ parseScalar, repoRoot });
+} = bindFactory(createFoundryRuntimeUtils, { parseScalar, repoRoot });
 
 loadRuntimeEnv();
 
@@ -138,7 +145,7 @@ const {
   sanitizePlaceholderText,
   textValue,
   writeJsonLines,
-} = createTidasRowUtils({
+} = bindFactory(createTidasRowUtils, {
   asText,
   bundleRowTypes,
   cloneJson,
@@ -151,11 +158,7 @@ const {
   classificationQueueRowType,
   classificationQueueInputRows,
   classificationQueueOutputRows,
-  queueRowSourceFile,
-  queueRowBundleId,
   hasQueueSelectionOptions,
-  queueSelectionSummary,
-  queueRowMatchesSelection,
   selectDecisionTaskQueueRows,
   safeFileToken,
   decisionTaskChunkLabel,
@@ -166,34 +169,22 @@ const {
   classificationQueueTargetKey,
   classificationDecisionCode,
   classificationDecisionUsedContextKinds,
-  readClassificationTaskJsonlContextRows,
   buildClassificationTaskProvenanceContext,
-  decisionTaskContextFileDetails,
-  decisionTaskContextFileWithText,
   decisionTaskContextFileSummary,
   dedupeDecisionTaskContextFiles,
   writeDecisionTaskSharedContextBundle,
-  stableDecisionTaskQueueRows,
-  decisionTaskQueueSha256,
-  decisionTaskProvenanceFileDetails,
   buildDecisionTaskContextBundle,
   decisionAuthoringContext,
-  classificationDecisionTaskContextKind,
   buildClassificationDecisionTaskContextFiles,
   decisionTaskContextBlockers,
   decisionTaskBuildStatus,
-  decisionTaskOptionPath,
-  decisionTaskOptionPaths,
-  readDecisionTaskSharedContextBundleProof,
-  readDecisionTaskProofFromPath,
-  readDecisionTaskProof,
   readDecisionTaskProofs,
   decisionContextBundleSha256,
   decisionCompletionStatus,
   decisionTaskReportPayload,
   decisionTaskProofList,
   decisionTaskContextBundleHashes,
-} = createDecisionTaskUtils({
+} = bindFactory(createDecisionTaskUtils, {
   asText,
   cloneJson,
   ensureArray,
@@ -214,7 +205,7 @@ const {
 });
 
 const { completionFullContextBlockers, fullContextProofCheck, profileFullContextRequirement } =
-  createFullContextProofUtils({
+  bindFactory(createFullContextProofUtils, {
     asText,
     classificationDecisionUsedContextKinds,
     decisionCompletionStatus,
@@ -234,7 +225,7 @@ const { completionFullContextBlockers, fullContextProofCheck, profileFullContext
     unique,
   });
 
-const { validateTraceQueueCoverageForRows } = createTraceCoverageUtils({
+const { validateTraceQueueCoverageForRows } = bindFactory(createTraceCoverageUtils, {
   asText,
   datasetIdentity,
   fileExists,
@@ -250,7 +241,7 @@ const {
   loadCanonicalSupportCache,
   rewriteCanonicalFlowPropertyReferences,
   supportText,
-} = createCanonicalSupportRewriteUtils({
+} = bindFactory(createCanonicalSupportRewriteUtils, {
   asText,
   booleanOption,
   cloneJson,
@@ -270,7 +261,7 @@ const {
   writeJsonLines,
 });
 
-const coreCommands = createCoreCommands({
+const coreCommands = bindFactory(createCoreCommands, {
   ensureArray,
   fileExists,
   isPlaceholderEnvValue,
@@ -287,7 +278,7 @@ const coreCommands = createCoreCommands({
   writeJson,
 });
 
-const taskCommands = createTaskCommands({
+const taskCommands = bindFactory(createTaskCommands, {
   asText,
   booleanOption,
   completionFullContextBlockers,
@@ -304,10 +295,10 @@ const taskCommands = createTaskCommands({
   writeText,
 });
 
-const executionCapsuleCommands = createExecutionCapsuleCommands({ repoRoot });
-const incrementalChangeSetCommands = createIncrementalChangeSetCommands({ repoRoot });
-const topologyConvergenceCommands = createTopologyConvergenceCommands({ repoRoot });
-const tidasWorkflowCommands = createTidasWorkflowCommands({
+const executionCapsuleCommands = bindFactory(createExecutionCapsuleCommands, { repoRoot });
+const incrementalChangeSetCommands = bindFactory(createIncrementalChangeSetCommands, { repoRoot });
+const topologyConvergenceCommands = bindFactory(createTopologyConvergenceCommands, { repoRoot });
+const tidasWorkflowCommands = bindFactory(createTidasWorkflowCommands, {
   repoRoot,
   runTidasHandshake,
   runTidasImport,
@@ -315,7 +306,7 @@ const tidasWorkflowCommands = createTidasWorkflowCommands({
   runTidasRowsValidation,
 });
 
-const cliWrapperCommands = createCliWrapperCommands({
+const cliWrapperCommands = bindFactory(createCliWrapperCommands, {
   appendOption,
   appendRepeatedOptions,
   repoRoot,
@@ -323,7 +314,7 @@ const cliWrapperCommands = createCliWrapperCommands({
   resolveTiangongLcaCliBin,
 });
 
-const commitHandoffCommands = createCommitHandoffCommands({
+const commitHandoffCommands = bindFactory(createCommitHandoffCommands, {
   appendOption,
   asText,
   countJsonLinesFile,
@@ -342,7 +333,7 @@ const commitHandoffCommands = createCommitHandoffCommands({
   writeJson,
 });
 
-const importLedgerUtils = createImportLedgerUtils({
+const importLedgerUtils = bindFactory(createImportLedgerUtils, {
   asText,
   datasetIdentity,
   fileExists,
@@ -354,11 +345,11 @@ const importLedgerUtils = createImportLedgerUtils({
   writeJson,
 });
 
-const importLedgerCommands = createImportLedgerCommands({
+const importLedgerCommands = bindFactory(createImportLedgerCommands, {
   runDatasetImportLedgerReport: importLedgerUtils.runDatasetImportLedgerReport,
 });
 
-const postWriteCloseoutCommands = createPostWriteCloseoutCommands({
+const postWriteCloseoutCommands = bindFactory(createPostWriteCloseoutCommands, {
   asText,
   countJsonLinesFile,
   countRowsFile,
@@ -380,7 +371,7 @@ const postWriteCloseoutCommands = createPostWriteCloseoutCommands({
   writeJson,
 });
 
-const importCompletionCommands = createImportCompletionCommands({
+const importCompletionCommands = bindFactory(createImportCompletionCommands, {
   asText,
   countJsonLinesFile,
   countRowsFile,
@@ -399,7 +390,7 @@ const importCompletionCommands = createImportCompletionCommands({
   writeJson,
 });
 
-const supportCacheCommands = createSupportCacheCommands({
+const supportCacheCommands = bindFactory(createSupportCacheCommands, {
   asText,
   ensureArray,
   fileExists,
@@ -428,7 +419,7 @@ const {
   sourceReferenceSnapshot,
   sourceSummaryMatchesOriginalMetadata,
   sourceSemanticSummary,
-} = createSourceSemanticUtils({
+} = bindFactory(createSourceSemanticUtils, {
   asText,
   bundleClassificationPath,
   cloneJson,
@@ -454,9 +445,8 @@ const {
   processSourceClassificationSummary,
   sanitizeBundlePayload,
   selectProcessBundleDirs,
-  sourceTraceAttribute,
   sourceTraceLocationCode,
-} = createBundleSampleUtils({
+} = bindFactory(createBundleSampleUtils, {
   asText,
   bundleClassificationPath,
   canonicalSourceReferenceForRelation,
@@ -491,7 +481,7 @@ const {
   buildIdentityPreflightArtifacts,
   identityPreflightSourceIndexPaths,
   loadIdentityPreflightSourceFileMap,
-} = createIdentityPreflightArtifactUtils({
+} = bindFactory(createIdentityPreflightArtifactUtils, {
   asText,
   bundleClassificationPath,
   cleanEcoSpoldNameText,
@@ -525,7 +515,7 @@ const {
   collectLocationQualityFindings,
   loadTidasLocationCodeMap,
   locationAuthoringCommands,
-} = createLocationQualityUtils({
+} = bindFactory(createLocationQualityUtils, {
   asText,
   bundleRowTypes,
   datasetIdentity,
@@ -540,7 +530,7 @@ const {
   shellQuote,
 });
 
-const identityPreflightCommands = createIdentityPreflightRunCommands({
+const identityPreflightCommands = bindFactory(createIdentityPreflightRunCommands, {
   asText,
   booleanOption,
   buildIdentityPreflightArtifacts,
@@ -572,7 +562,7 @@ const identityPreflightCommands = createIdentityPreflightRunCommands({
   writeText,
 });
 
-const libraryScopeWorkflowCommands = createLibraryScopeWorkflowCommands({
+const libraryScopeWorkflowCommands = bindFactory(createLibraryScopeWorkflowCommands, {
   asText,
   booleanOption,
   profileFor,
@@ -598,7 +588,7 @@ const libraryScopeWorkflowCommands = createLibraryScopeWorkflowCommands({
   writeJsonLines,
 });
 
-const bafuProcessScopeE2eCommands = createBafuProcessScopeE2eCommands({
+const bafuProcessScopeE2eCommands = bindFactory(createBafuProcessScopeE2eCommands, {
   booleanOption,
   fileExists,
   nowIso,
@@ -628,10 +618,19 @@ const batchImportRunDeps = {
   writeJson,
   writeJsonLines,
 };
-const bafuBatchImportRunCommands = createBafuBatchImportRunCommands(batchImportRunDeps);
-const uslciBatchImportRunCommands = createUslciBatchImportRunCommands(batchImportRunDeps);
-const worldsteelBatchImportRunCommands = createWorldsteelBatchImportRunCommands(batchImportRunDeps);
-const bafuLeafClassificationTaskCommands = createBafuLeafClassificationTaskCommands({
+const bafuBatchImportRunCommands = bindFactory(
+  createBafuBatchImportRunCommands,
+  batchImportRunDeps,
+);
+const uslciBatchImportRunCommands = bindFactory(
+  createUslciBatchImportRunCommands,
+  batchImportRunDeps,
+);
+const worldsteelBatchImportRunCommands = bindFactory(
+  createWorldsteelBatchImportRunCommands,
+  batchImportRunDeps,
+);
+const bafuLeafClassificationTaskCommands = bindFactory(createBafuLeafClassificationTaskCommands, {
   asText: textValue,
   ensureArray,
   integerOption,
@@ -644,7 +643,7 @@ const bafuLeafClassificationTaskCommands = createBafuLeafClassificationTaskComma
   writeJson,
   writeJsonLines,
 });
-const bafuAutoAuthoringCommands = createBafuAutoAuthoringCommands({
+const bafuAutoAuthoringCommands = bindFactory(createBafuAutoAuthoringCommands, {
   ensureArray,
   fileExists,
   nowIso,
@@ -661,7 +660,7 @@ const {
   externalizeUnresolvedProcessFlowExchanges,
   identityReferenceRewriteIndexPath,
   referenceShortDescription,
-} = createIdentityReferenceRewriteUtils({
+} = bindFactory(createIdentityReferenceRewriteUtils, {
   asText,
   cloneJson,
   countRowsFile,
@@ -693,7 +692,7 @@ const {
   runFinalizeAutoCurationQueue,
   runFinalizeIdentityPreflightStage,
   sourceReferenceRewritesFileForRowsFile,
-} = createPostAuthoringFinalizeUtils({
+} = bindFactory(createPostAuthoringFinalizeUtils, {
   asText,
   booleanOption,
   cliWrapperCommands,
@@ -712,7 +711,7 @@ const {
   writeJsonLines,
 });
 
-const authoringPlanCommands = createAuthoringPlanCommands({
+const authoringPlanCommands = bindFactory(createAuthoringPlanCommands, {
   appendOption,
   appendRepeatedOptions,
   asText,
@@ -736,7 +735,7 @@ const authoringPlanCommands = createAuthoringPlanCommands({
   writeJson,
 });
 
-const identityReferenceRewriteCommands = createIdentityReferenceRewriteCommands({
+const identityReferenceRewriteCommands = bindFactory(createIdentityReferenceRewriteCommands, {
   applyIdentityReferenceRewrites,
   asText,
   datasetRowsFileStem,
@@ -747,7 +746,7 @@ const identityReferenceRewriteCommands = createIdentityReferenceRewriteCommands(
   writeJson,
 });
 
-const identityDecisionCommands = createIdentityDecisionCommands({
+const identityDecisionCommands = bindFactory(createIdentityDecisionCommands, {
   asText,
   datasetIdentity,
   datasetRowsFileStem,
@@ -771,7 +770,7 @@ const identityDecisionCommands = createIdentityDecisionCommands({
   writeJsonLines,
 });
 
-const identityDecisionTaskCommands = createIdentityDecisionTaskCommands({
+const identityDecisionTaskCommands = bindFactory(createIdentityDecisionTaskCommands, {
   asText,
   datasetRowsFileStem,
   decisionAuthoringContext,
@@ -797,7 +796,7 @@ const identityDecisionTaskCommands = createIdentityDecisionTaskCommands({
   writeJsonLines,
 });
 
-const postAuthoringFinalizeCommands = createPostAuthoringFinalizeCommands({
+const postAuthoringFinalizeCommands = bindFactory(createPostAuthoringFinalizeCommands, {
   appendOption,
   applyCanonicalSupportRewrites,
   loadCanonicalSupportCache,
@@ -837,7 +836,8 @@ const postAuthoringFinalizeCommands = createPostAuthoringFinalizeCommands({
   runDatasetMutationManifest,
   runFinalizeAutoCurationQueue,
   runFinalizeIdentityPreflightStage,
-  runTidasRowsValidation: (options) => runTidasRowsValidation({ repoRoot, options }),
+  runTidasRowsValidation: (options: Record<string, unknown>) =>
+    runTidasRowsValidation({ repoRoot, options }),
   runTiangongJsonStage,
   skippedPrewriteStage,
   sourceReferenceSemanticBlockers,
@@ -850,7 +850,7 @@ const postAuthoringFinalizeCommands = createPostAuthoringFinalizeCommands({
   writeJsonLines,
 });
 
-const bundleSampleRowsCommands = createBundleSampleRowsCommands({
+const bundleSampleRowsCommands = bindFactory(createBundleSampleRowsCommands, {
   addDedupedBundleRow,
   asText,
   attachIdentityPreflightRows,

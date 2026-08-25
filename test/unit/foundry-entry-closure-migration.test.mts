@@ -27,12 +27,17 @@ function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function runEntry(entry: string, args: string[]): ReturnType<typeof spawnSync> {
-  return spawnSync(process.execPath, [entry, ...args], {
-    cwd: repoRoot,
+function runEntry(
+  entry: string,
+  args: string[],
+  cwd = repoRoot,
+): { status: number | null; stdout: string; stderr: string } {
+  const result = spawnSync(process.execPath, [entry, ...args], {
+    cwd,
     encoding: "utf8",
     env: process.env,
   });
+  return { status: result.status, stdout: String(result.stdout), stderr: String(result.stderr) };
 }
 
 function walkFiles(relativeDirectory: string): string[] {
@@ -51,8 +56,8 @@ function historicalDocument(relativePath: string): boolean {
   );
 }
 
-function assertHelpAndUnknown(entry: string): void {
-  const help = runEntry(entry, ["help"]);
+function assertHelpAndUnknown(entry: string, cwd = repoRoot): void {
+  const help = runEntry(entry, ["help"], cwd);
   assert.equal(help.status, 0, help.stderr || help.stdout);
   assert.equal(help.stderr, "");
   assert.equal(Buffer.byteLength(help.stdout), helpBytes);
@@ -60,12 +65,14 @@ function assertHelpAndUnknown(entry: string): void {
   const parsed = JSON.parse(help.stdout) as { commands?: unknown[] };
   assert.equal(parsed.commands?.length, 63);
 
-  const alias = runEntry(entry, ["--help"]);
-  assert.equal(alias.status, 0, alias.stderr || alias.stdout);
-  assert.equal(alias.stdout, help.stdout);
-  assert.equal(alias.stderr, "");
+  for (const aliasArgs of [[], ["--help"], ["-h"]]) {
+    const alias = runEntry(entry, aliasArgs, cwd);
+    assert.equal(alias.status, 0, alias.stderr || alias.stdout);
+    assert.equal(alias.stdout, help.stdout);
+    assert.equal(alias.stderr, "");
+  }
 
-  const unknown = runEntry(entry, ["definitely-unknown"]);
+  const unknown = runEntry(entry, ["definitely-unknown"], cwd);
   assert.equal(unknown.status, 2);
   assert.equal(unknown.stdout, "");
   assert.equal(Buffer.byteLength(unknown.stderr), unknownBytes);
@@ -119,7 +126,8 @@ test("entry composition preserves all typed owners, registry metadata, and produ
   assert.match(cliSource, /from "\.\.\/commands\/classification-decisions\.ts"/u);
   assert.match(cliSource, /from "\.\.\/commands\/location-decisions\.ts"/u);
   for (const command of knownCommands) {
-    assert.match(cliSource, new RegExp(`"${command.replaceAll("-", "\\-")}"`, "u"), command);
+    const escaped = command.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+    assert.match(cliSource, new RegExp(`(?:"${escaped}"|\\b${escaped})\\s*:`, "u"), command);
   }
   assert.match(entrySource, /runFoundryCli\(\{/u);
 
@@ -137,11 +145,18 @@ test("entry composition preserves all typed owners, registry metadata, and produ
 });
 
 test("Node 24 source and emitted entries preserve exact help, stderr, and exit behavior", () => {
-  assertHelpAndUnknown("scripts/foundry.ts");
-
+  const sourceRoot = path.join(repoRoot, "tmp", `foundry-entry-source-${process.pid}`);
   const buildRoot = path.join(repoRoot, "tmp", `foundry-entry-build-${process.pid}`);
+  fs.rmSync(sourceRoot, { recursive: true, force: true });
   fs.rmSync(buildRoot, { recursive: true, force: true });
   try {
+    fs.mkdirSync(sourceRoot, { recursive: true });
+    fs.cpSync(path.join(repoRoot, "scripts"), path.join(sourceRoot, "scripts"), {
+      recursive: true,
+    });
+    assert.equal(fs.existsSync(path.join(sourceRoot, ".env")), false);
+    assertHelpAndUnknown(path.join(sourceRoot, "scripts", "foundry.ts"), sourceRoot);
+
     execFileSync(
       process.execPath,
       [
@@ -159,8 +174,10 @@ test("Node 24 source and emitted entries preserve exact help, stderr, and exit b
     );
     const emittedEntry = path.join(buildRoot, "scripts", "foundry.js");
     assert.equal(fs.existsSync(emittedEntry), true);
-    assertHelpAndUnknown(emittedEntry);
+    assert.equal(fs.existsSync(path.join(buildRoot, ".env")), false);
+    assertHelpAndUnknown(emittedEntry, buildRoot);
   } finally {
+    fs.rmSync(sourceRoot, { recursive: true, force: true });
     fs.rmSync(buildRoot, { recursive: true, force: true });
   }
 });
@@ -173,14 +190,17 @@ test("active entry consumers contain no retired Foundry entry path", () => {
     "WORKFLOW.md",
     ...walkFiles(".agents"),
     ...walkFiles(".codex"),
+    ...walkFiles(".docpact"),
     ...walkFiles("docs"),
     ...walkFiles("scripts"),
+    ...walkFiles("specs"),
     ...walkFiles("test"),
   ].filter(
     (relativePath) =>
       !historicalDocument(relativePath) &&
+      relativePath !== "specs/typescript-migration-inventory.json" &&
       relativePath !== "test/unit/foundry-entry-closure-migration.test.mts" &&
-      relativePath !== "test/unit/surface-audit-typescript.test.mts" &&
+      relativePath !== "test/unit/foundry-cli-spine.test.mts" &&
       /(?:^package\.json$|\.(?:[cm]?[jt]s|json|md|ya?ml|sh))$/u.test(relativePath),
   );
   const findings = files.flatMap((relativePath) => {

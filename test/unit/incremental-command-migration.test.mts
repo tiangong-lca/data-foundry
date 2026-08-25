@@ -37,7 +37,7 @@ test("incremental command exists only as native TypeScript", () => {
 });
 
 test("incremental consumers and metadata target the typed module", () => {
-  for (const consumer of ["scripts/foundry.mjs", "scripts/lib/foundry-command-metadata.ts"]) {
+  for (const consumer of ["scripts/foundry.ts", "scripts/lib/foundry-command-metadata.ts"]) {
     const source = readRepoFile(consumer);
     assert.match(source, /incremental-change-set\.ts/u, consumer);
     assert.doesNotMatch(source, /incremental-change-set\.mjs/u, consumer);
@@ -49,12 +49,12 @@ test("incremental consumers and metadata target the typed module", () => {
 test("incremental help report retains exact bytes", () => {
   const output = execFileSync(
     process.execPath,
-    ["scripts/foundry.mjs", "dataset-incremental-change-set-compose", "--help"],
+    ["scripts/foundry.ts", "dataset-incremental-change-set-compose", "--help"],
     { cwd: repoRoot, encoding: "utf8" },
   );
-  assert.equal(Buffer.byteLength(output, "utf8"), 3556);
+  assert.equal(Buffer.byteLength(output, "utf8"), 3555);
   assert.equal(
     createHash("sha256").update(output).digest("hex"),
-    "81de80be2277943b3a9ae67a25163457d5da5b6ad152ce0d8d63d5773b8da1f6",
+    "783e6215a103d7e4c489ebbc54a8bb5384ffbeac1da2a6981da2ce14435045a8",
   );
 });

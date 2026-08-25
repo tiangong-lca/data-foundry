@@ -16,7 +16,7 @@ whenToUpdate:
   - when a countable-product target-quality exemplar is written and verified
 checkPaths:
   - specs/data-foundry-service.md
-  - scripts/foundry.mjs
+  - scripts/foundry.ts
   - ../tiangong-lca-cli/src/**
   - ../tiangong-lca-data/tiangong_lca_data/external_docs/pef_method.pdf
   - ../tiangong-lca-data/tiangong_lca_data/external_docs/pefcr_guidance_v6.3-2.pdf

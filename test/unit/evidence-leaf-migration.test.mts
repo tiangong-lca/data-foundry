@@ -28,7 +28,7 @@ test("four evidence leaves are native TypeScript with updated Foundry consumers"
     assert.equal(fs.existsSync(typedPath), true, `${stem}.ts must exist`);
     assert.equal(fs.existsSync(typedPath.replace(/\.ts$/u, ".mjs")), false);
   }
-  const foundrySource = fs.readFileSync(path.join(repoRoot, "scripts/foundry.mjs"), "utf8");
+  const foundrySource = fs.readFileSync(path.join(repoRoot, "scripts/foundry.ts"), "utf8");
   for (const specifier of [
     "./lib/decision-task-utils.ts",
     "./lib/identity-reference-rewrite-utils.ts",

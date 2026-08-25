@@ -44,7 +44,7 @@ test("import ledger report separates verified rows from human-review resume scop
       final_rows_file: "tmp/blocked/processes.jsonl",
       finalize_report: "tmp/blocked/dataset-post-authoring-finalize-report.json",
       rerun_command:
-        "node scripts/foundry.mjs dataset-post-authoring-finalize --rows-file tmp/blocked/processes.jsonl",
+        "node scripts/foundry.ts dataset-post-authoring-finalize --rows-file tmp/blocked/processes.jsonl",
       ledger_key: "blocked:scope:process:blocked-processes.jsonl",
     },
   ]);

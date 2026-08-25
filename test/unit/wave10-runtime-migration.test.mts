@@ -18,7 +18,7 @@ test("Foundry runtime utilities exist only as native TypeScript", () => {
 
 test("every static Foundry runtime consumer targets the typed module explicitly", () => {
   const expectedImports = [
-    ["scripts/foundry.mjs", "./lib/foundry-runtime-utils.ts"],
+    ["scripts/foundry.ts", "./lib/foundry-runtime-utils.ts"],
     ["scripts/with-lca-account.ts", "./lib/foundry-runtime-utils.ts"],
     ["scripts/commands/bafu-auto-authoring.ts", "../lib/foundry-runtime-utils.ts"],
     ["scripts/commands/bafu-batch-import-run.ts", "../lib/foundry-runtime-utils.ts"],

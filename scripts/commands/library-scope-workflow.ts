@@ -882,7 +882,7 @@ export function createLibraryScopeWorkflowCommands({
         "dataset-library-index-build",
         "Build root TIDAS unique entity index and process-scope projection for a process-bundled source library.",
         [
-          "node scripts/foundry.mjs dataset-library-index-build --source-dir <BAFU-root> --process-bundles-dir <BAFU-root>/process-bundles --out-dir <run-dir>/library-index",
+          "node scripts/foundry.ts dataset-library-index-build --source-dir <BAFU-root> --process-bundles-dir <BAFU-root>/process-bundles --out-dir <run-dir>/library-index",
         ],
       );
     }
@@ -977,7 +977,7 @@ export function createLibraryScopeWorkflowCommands({
         "dataset-library-authoring-plan",
         "Create deduplicated AI authoring templates for library-level identity, classification, and canonical support decisions.",
         [
-          "node scripts/foundry.mjs dataset-library-authoring-plan --library-index <run-dir>/library-index --out-dir <run-dir>/authoring-plan",
+          "node scripts/foundry.ts dataset-library-authoring-plan --library-index <run-dir>/library-index --out-dir <run-dir>/authoring-plan",
         ],
       );
     }
@@ -1310,7 +1310,7 @@ export function createLibraryScopeWorkflowCommands({
       message,
       required_human_action: requiredHumanAction,
       rerun_command:
-        "node scripts/foundry.mjs dataset-library-decisions-apply --library-index <library-index> --decisions-dir <decisions-dir> --out-dir <library-resolution>",
+        "node scripts/foundry.ts dataset-library-decisions-apply --library-index <library-index> --decisions-dir <decisions-dir> --out-dir <library-resolution>",
     };
   }
 
@@ -2025,7 +2025,7 @@ export function createLibraryScopeWorkflowCommands({
         "dataset-library-identity-decisions-from-preflight",
         "Aggregate elementary-flow identity preflight reports into library-level reuse decisions and manual-review ledgers.",
         [
-          "node scripts/foundry.mjs dataset-library-identity-decisions-from-preflight --library-index <run-dir>/library-index --identity-preflight-index <identity-preflight-requests.jsonl> --out-dir <run-dir>/decisions",
+          "node scripts/foundry.ts dataset-library-identity-decisions-from-preflight --library-index <run-dir>/library-index --identity-preflight-index <identity-preflight-requests.jsonl> --out-dir <run-dir>/decisions",
         ],
       );
     }
@@ -2335,7 +2335,7 @@ export function createLibraryScopeWorkflowCommands({
         "dataset-library-decisions-apply",
         "Apply library-level decisions to process scopes and defer only scopes with unresolved closure.",
         [
-          "node scripts/foundry.mjs dataset-library-decisions-apply --library-index <run-dir>/library-index --decisions-dir <run-dir>/decisions --out-dir <run-dir>/library-resolution",
+          "node scripts/foundry.ts dataset-library-decisions-apply --library-index <run-dir>/library-index --decisions-dir <run-dir>/decisions --out-dir <run-dir>/library-resolution",
         ],
       );
     }
@@ -2626,8 +2626,8 @@ export function createLibraryScopeWorkflowCommands({
         "dataset-process-scope-run",
         "Run only ready process scopes through a scope-locked dry-run or commit handoff queue.",
         [
-          "node scripts/foundry.mjs dataset-process-scope-run --process-bundles-dir <.../process-bundles> --library-resolution <.../library-resolution.json> --scope-file <ready-scopes.jsonl> --parallel 5 --dry-run",
-          "node scripts/foundry.mjs dataset-process-scope-run --process-bundles-dir <.../process-bundles> --library-resolution <.../library-resolution.json> --scope-file <ready-scopes.jsonl> --parallel 5 --commit",
+          "node scripts/foundry.ts dataset-process-scope-run --process-bundles-dir <.../process-bundles> --library-resolution <.../library-resolution.json> --scope-file <ready-scopes.jsonl> --parallel 5 --dry-run",
+          "node scripts/foundry.ts dataset-process-scope-run --process-bundles-dir <.../process-bundles> --library-resolution <.../library-resolution.json> --scope-file <ready-scopes.jsonl> --parallel 5 --commit",
         ],
       );
     }

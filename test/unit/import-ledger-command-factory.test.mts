@@ -44,7 +44,7 @@ test("import-ledger command factory exists only as zero-any native TypeScript", 
 
 test("all active import-ledger owner consumers target the typed command factory", () => {
   for (const consumer of [
-    "scripts/foundry.mjs",
+    "scripts/foundry.ts",
     "scripts/lib/foundry-command-metadata.ts",
     "test/unit/import-ledger-command-factory.test.mts",
   ]) {

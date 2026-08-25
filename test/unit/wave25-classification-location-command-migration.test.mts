@@ -32,7 +32,7 @@ test("classification and location decision factories exist only as native TypeSc
 
 test("decision dispatcher and metadata target both typed factories", () => {
   for (const consumer of [
-    "scripts/lib/foundry-cli.mjs",
+    "scripts/lib/foundry-cli.ts",
     "scripts/lib/foundry-command-metadata.ts",
   ]) {
     const source = readRepoFile(consumer);
@@ -85,7 +85,7 @@ test("classification and location help reports retain exact serialized bytes", a
           status: "help",
           command: "dataset-classification-decision-task-build",
           usage: [
-            "node scripts/foundry.mjs dataset-classification-decision-task-build --classification-queue <classification-authoring-queue.jsonl> --rows-file <current-rows.jsonl> --schema-file <schema.json> --yaml-file <methodology.yaml> --ruleset-file <runtime-ruleset.json> --classification-schema <tidas_*_category.json> --location-schema <tidas_locations_category.json> --out-dir <task-dir> [--shared-context-cache-dir <cache-dir>]",
+            "node scripts/foundry.ts dataset-classification-decision-task-build --classification-queue <classification-authoring-queue.jsonl> --rows-file <current-rows.jsonl> --schema-file <schema.json> --yaml-file <methodology.yaml> --ruleset-file <runtime-ruleset.json> --classification-schema <tidas_*_category.json> --location-schema <tidas_locations_category.json> --out-dir <task-dir> [--shared-context-cache-dir <cache-dir>]",
           ],
           purpose:
             "Build an AI-facing classification decision task from Foundry classification queue rows. AI fills TIDAS category codes; deterministic apply is handled by dataset-classification-decisions-apply.",
@@ -95,7 +95,7 @@ test("classification and location help reports retain exact serialized bytes", a
           status: "help",
           command: "dataset-library-classification-decisions-project",
           usage: [
-            "node scripts/foundry.mjs dataset-library-classification-decisions-project --classification-queue <classification-authoring-queue.jsonl> --library-decisions <run-dir>/decisions/classification-decisions.jsonl --decision-task <classification-decision-task.json> --out-dir <projection-dir>",
+            "node scripts/foundry.ts dataset-library-classification-decisions-project --classification-queue <classification-authoring-queue.jsonl> --library-decisions <run-dir>/decisions/classification-decisions.jsonl --decision-task <classification-decision-task.json> --out-dir <projection-dir>",
           ],
           purpose:
             "Project library-level semantic classification decisions into a scope-local decision file bound to an exact classification decision task before deterministic apply.",
@@ -106,7 +106,7 @@ test("classification and location help reports retain exact serialized bytes", a
           command: "dataset-classification-decisions-apply",
           wraps: "tiangong-lca dataset classification apply",
           usage: [
-            "node scripts/foundry.mjs dataset-classification-decisions-apply --classification-queue <classification-authoring-queue.jsonl> --decisions <classification-decisions.jsonl> --decision-task <classification-decision-task.json> --out-dir <apply-dir>",
+            "node scripts/foundry.ts dataset-classification-decisions-apply --classification-queue <classification-authoring-queue.jsonl> --decisions <classification-decisions.jsonl> --decision-task <classification-decision-task.json> --out-dir <apply-dir>",
           ],
           purpose:
             "Validate AI-authored classification decisions against the Foundry queue and AI context task, then call the CLI classification apply command for each required schema type and row file.",
@@ -116,7 +116,7 @@ test("classification and location help reports retain exact serialized bytes", a
           status: "help",
           command: "dataset-location-decision-task-build",
           usage: [
-            "node scripts/foundry.mjs dataset-location-decision-task-build --location-queue <location-authoring-queue.jsonl> --rows-file <current-rows.jsonl> --schema-file <schema.json> --yaml-file <methodology.yaml> --ruleset-file <runtime-ruleset.json> --classification-schema <tidas_*_category.json> --location-schema <tidas_locations_category.json> --out-dir <task-dir> [--shared-context-cache-dir <cache-dir>]",
+            "node scripts/foundry.ts dataset-location-decision-task-build --location-queue <location-authoring-queue.jsonl> --rows-file <current-rows.jsonl> --schema-file <schema.json> --yaml-file <methodology.yaml> --ruleset-file <runtime-ruleset.json> --classification-schema <tidas_*_category.json> --location-schema <tidas_locations_category.json> --out-dir <task-dir> [--shared-context-cache-dir <cache-dir>]",
           ],
           purpose:
             "Build an AI-facing location coding task from Foundry location queue rows. AI fills TIDAS location codes; deterministic apply is handled by dataset-location-decisions-apply.",
@@ -126,7 +126,7 @@ test("classification and location help reports retain exact serialized bytes", a
           status: "help",
           command: "dataset-location-decisions-suggest",
           usage: [
-            "node scripts/foundry.mjs dataset-location-decisions-suggest --location-queue <location-authoring-queue.jsonl> --decision-task <location-decision-task.json> --location-schema <tidas_locations_category.json> --out-dir <decisions-dir>",
+            "node scripts/foundry.ts dataset-location-decisions-suggest --location-queue <location-authoring-queue.jsonl> --decision-task <location-decision-task.json> --location-schema <tidas_locations_category.json> --out-dir <decisions-dir>",
           ],
           purpose:
             "Generate completed location decisions only for queue rows that already contain one provable TIDAS location code candidate, binding each decision to the exact location decision task context bundle.",
@@ -137,7 +137,7 @@ test("classification and location help reports retain exact serialized bytes", a
           command: "dataset-location-decisions-apply",
           wraps: "tiangong-lca dataset classification apply --type location",
           usage: [
-            "node scripts/foundry.mjs dataset-location-decisions-apply --location-queue <location-authoring-queue.jsonl> --decisions <location-decisions.jsonl> --decision-task <location-decision-task.json> --out-dir <apply-dir>",
+            "node scripts/foundry.ts dataset-location-decisions-apply --location-queue <location-authoring-queue.jsonl> --decisions <location-decisions.jsonl> --decision-task <location-decision-task.json> --out-dir <apply-dir>",
           ],
           purpose:
             "Validate AI-authored location decisions against the Foundry queue and AI context task, then call the CLI location classification apply command for each required row file.",

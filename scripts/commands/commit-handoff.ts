@@ -304,8 +304,8 @@ export function createCommitHandoffCommands({
         status: "help",
         command: "dataset-commit-handoff-plan",
         usage: [
-          "node scripts/foundry.mjs dataset-commit-handoff-plan --finalize-report <dataset-post-authoring-finalize-report.json> --out-dir <handoff-dir>",
-          "node scripts/foundry.mjs dataset-commit-handoff-plan --finalize-report <dataset-post-authoring-finalize-report.json> --state-code <expected-state-code> --out-dir <handoff-dir>",
+          "node scripts/foundry.ts dataset-commit-handoff-plan --finalize-report <dataset-post-authoring-finalize-report.json> --out-dir <handoff-dir>",
+          "node scripts/foundry.ts dataset-commit-handoff-plan --finalize-report <dataset-post-authoring-finalize-report.json> --state-code <expected-state-code> --out-dir <handoff-dir>",
         ],
         purpose:
           "Build a read-only explicit commit handoff plan from a ready post-authoring finalize report. It never writes the database.",
