@@ -215,6 +215,17 @@ test("root Oxlint policy wins over nested configuration and nested configs stay 
   }
 });
 
+test("suppression inventory cannot inherit a Git hook repository or index", () => {
+  const auditSource = readRepoFile("scripts/check-lint-suppressions.ts");
+  assert.match(auditSource, /repositoryScopedGitEnvironment/u);
+  for (const key of ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY"]) {
+    assert.match(auditSource, new RegExp(`"${key}"`, "u"), key);
+  }
+  const fixtureSource = readRepoFile("test/unit/lint-suppression-audit.test.mts");
+  assert.match(fixtureSource, /isolatedGitOptions/u);
+  assert.match(fixtureSource, /process\.env\.GIT_DIR = parentGitDirectory/u);
+});
+
 test("completed migration ledger is removed in favor of the permanent ratchet", () => {
   assert.equal(
     fs.existsSync(path.join(repoRoot, "specs", "typescript-migration-inventory.json")),

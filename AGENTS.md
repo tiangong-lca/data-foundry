@@ -226,7 +226,7 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
+lastReviewedCommit: 6d1f1dd4019f26024d4fd282f1b5ebba1e9271ca
 lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry/root parity, isolated Golden environments, suppression-resistant complete TS coverage, erasable syntax, clean builds and TS-aware cutover audit preserve exact behavior and authority boundaries."
 ---
 
@@ -258,7 +258,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - pnpm `11.23.0` is the only package manager for this Node project. The repository has one root `pnpm-workspace.yaml` and one root `pnpm-lock.yaml`; do not add npm, Yarn, a nested lockfile, or a package-manager fallback.
 - Node.js 24 is the runtime line. TypeScript `7.0.2` is the only compiler allowed in the direct or recursive dependency graph: do not add TypeScript 5/6 aliases, `@typescript-eslint`, `typescript-eslint`, or a formatter plugin that loads the TypeScript compiler API.
 - Oxlint owns linting and Prettier owns formatting. Lint and check commands must be read-only; formatting is an explicit write command.
-- `typescript/no-explicit-any` is a repository-wide error with no target-specific override. Root lint disables nested Oxlint configuration, bans TypeScript suppression comments, and runs a comment-aware audit that rejects native disable directives across every Git-visible `.ts`/`.mts`/`.cts` file; the zero-ratchet verifies intentional first-party Oxlint/typecheck coverage. New code must use semantic interfaces or narrow `unknown`, never an explicit-any exception or TS6 compiler API bridge.
+- `typescript/no-explicit-any` is a repository-wide error with no target-specific override. Root lint disables nested Oxlint configuration, bans TypeScript suppression comments, and runs a comment-aware audit that rejects native disable directives across every Git-visible `.ts`/`.mts`/`.cts` file. The audit and its temporary Git fixtures clear inherited repository-local `GIT_*` bindings before enumerating another root, so pre-push hooks cannot redirect them into the parent index. New code must use semantic interfaces or narrow `unknown`, never an explicit-any exception or TS6 compiler API bridge.
 - Foundry is a non-JSX Node control plane. Tracked `.jsx` and `.tsx` files are forbidden; adding a UI surface requires an explicit architecture and toolchain decision rather than bypassing the `.ts` graph.
 - TypeScript must keep `erasableSyntaxOnly`. Builds remove the exact repository `dist` tree through the guarded Node-native cleaner before `tsc`; `noEmitOnError` ensures TypeScript diagnostics emit no replacement JavaScript. This is a clean/type-error guarantee, not a claim that arbitrary filesystem I/O failures are atomic.
 - Source and emitted execution share `foundry-runtime-paths.ts`: resolve the trusted package root independently of CWD, select the active `.ts` or `.js` entry, and use that entry for nested Foundry argv. Golden comparison gives both sides one identical allowlisted child environment, isolated HOME/temp/config state, and disabled filesystem env loading; it never forwards ambient credentials or `NODE_OPTIONS`.

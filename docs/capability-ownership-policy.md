@@ -86,7 +86,7 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 718077a8f8386528e2aba5bf81bf39035bff0230
+lastReviewedCommit: 6d1f1dd4019f26024d4fd282f1b5ebba1e9271ca
 lastReviewedNote: "Reviewed for Issue #67 independent runtime/toolchain hardening: emitted entry/root parity, isolated Golden environments, suppression-resistant complete TS coverage, erasable syntax, clean builds and TS-aware cutover audit remain Foundry-owned delivery tooling and move no sibling capability."
 ---
 
@@ -113,7 +113,7 @@ Foundry owns:
 - offline candidate-topology convergence composition, including fresh-census binding, owner/public/foreign target classification, process-local occurrence mapping, approved multilingual preservation, phased F/P/D artifacts, and zero-inbound delete candidates, without remote dispatch or delete authority;
 - acceptance checks and Stop-hook feedback loops;
 - local test structure for Foundry-owned metadata, command contracts, scenario orchestration, and shared fixtures;
-- repository-wide TypeScript lint/typecheck inventory, root-only Oxlint configuration, native-disable suppression audit, erasable-syntax policy, safe stale-output build cleanup, trusted source/emitted entry discovery, and credential-free Golden child isolation;
+- repository-wide TypeScript lint/typecheck inventory, root-only Oxlint configuration, Git-hook-isolated native-disable audit, erasable-syntax policy, safe stale-output build cleanup, trusted source/emitted entry discovery, and credential-free Golden child isolation;
 - thin adapters that select and call stable owner entrypoints, verify their machine contracts, and map reports into Foundry gates without reimplementing domain logic.
 - account-profile and Codex-thread intent checks plus a restricted executable/argv process boundary; live session resolution and identity receipt construction remain CLI-owned.
 
