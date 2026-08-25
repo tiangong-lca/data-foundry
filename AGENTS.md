@@ -85,8 +85,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 2b2d7e6f9890fbfc9de583a1f27ad20842657716
-lastReviewedNote: "Reviewed for Issue #67 Wave 22: decision full-context, the closed authoring SCC, and identity preflight are native zero-escape TS7 with receipt, hash, order, blocker, alias, and native-error contracts preserved."
+lastReviewedCommit: f9d2a1e94a04e5b0cf3153100bfd8ddd031b2b93
+lastReviewedNote: "Reviewed across Issue #67 Wave 22 and 22b: decision full-context, the closed authoring SCC, identity preflight, and five command factories are native zero-escape TS7; receipt/hash/order/blocker behavior and injected-stub command/profile contracts remain unchanged without credentials or owner-runtime execution."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

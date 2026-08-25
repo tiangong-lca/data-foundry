@@ -129,8 +129,8 @@ checkPaths:
   - test/unit/wave22-identity-preflight-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 2b2d7e6f9890fbfc9de583a1f27ad20842657716
-lastReviewedNote: "Reviewed for Issue #67 Wave 22: typed decision proof, atomic authoring SCC, and identity preflight preserve proof/hash/receipt binding, order, aliases, blockers, and native failures."
+lastReviewedCommit: a2b66448599df0106ee8e03da94e6f6eeb5a878e
+lastReviewedNote: "Reviewed across Issue #67 Wave 22 and 22b: typed decision proof, atomic authoring SCC, identity preflight, and command factories preserve proof/hash/receipt binding, order, gates, owner boundaries, and native failures; command characterization uses only injected local stubs."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

@@ -78,8 +78,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 2b2d7e6f9890fbfc9de583a1f27ad20842657716
-lastReviewedNote: "Reviewed for Issue #67 Wave 22: typed decision proof, authoring SCC, and identity preflight remain Foundry-local evidence projection and do not alter CLI operations, profiles, search ownership, or database authority."
+lastReviewedCommit: a2b66448599df0106ee8e03da94e6f6eeb5a878e
+lastReviewedNote: "Reviewed across Issue #67 Wave 22 and 22b: typed decision/authoring/preflight boundaries and five command factories remain thin Foundry-local adapters; proof, report, and profile semantics do not move tidas, CLI, search, or database authority."
 ---
 
 # Architecture

@@ -45,7 +45,7 @@ const nodeTest = (path: string, assertion: string): CommandKeyTest => ({
 
 const coreOwner = "scripts/commands/core.mjs";
 const taskOwner = "scripts/commands/tasks.mjs";
-const tidasOwner = "scripts/commands/tidas-workflow.mjs";
+const tidasOwner = "scripts/commands/tidas-workflow.ts";
 const importOwner = (moduleName: string): string => `scripts/lib/import-curation/${moduleName}.mjs`;
 
 function workflowEntryForCategory(category: string): CommandWorkflowEntry {
@@ -953,7 +953,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-uslci-batch-import-run": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/uslci-batch-import-run.mjs",
+    ownerModule: "scripts/commands/uslci-batch-import-run.ts",
     ownerExport: "createUslciBatchImportRunCommands().runDatasetUslciBatchImportRun",
     inputs: [
       "ready-scopes.jsonl (library-resolution-v8)",
@@ -982,7 +982,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-worldsteel-batch-import-run": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/worldsteel-batch-import-run.mjs",
+    ownerModule: "scripts/commands/worldsteel-batch-import-run.ts",
     ownerExport: "createWorldsteelBatchImportRunCommands().runDatasetWorldsteelBatchImportRun",
     inputs: [
       "ready-scopes.jsonl (worldsteel library-resolution)",
@@ -1036,7 +1036,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-identity-reference-rewrites-apply": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/identity-reference-rewrites.mjs",
+    ownerModule: "scripts/commands/identity-reference-rewrites.ts",
     ownerExport:
       "createIdentityReferenceRewriteCommands().runDatasetIdentityReferenceRewritesApply",
     inputs: ["process rows file", "identity-preflight index or identity decision rewrites"],
@@ -1161,7 +1161,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-import-ledger-report": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/import-ledger.mjs",
+    ownerModule: "scripts/commands/import-ledger.ts",
     ownerExport: "createImportLedgerCommands().runDatasetImportLedgerReport",
     inputs: ["task import ledger directory with ok/blocked/retry JSONL files"],
     outputs: [

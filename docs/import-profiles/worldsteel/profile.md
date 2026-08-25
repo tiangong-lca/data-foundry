@@ -43,7 +43,7 @@ Profile for the worldsteel EF3.1 native ILCD 1.1 package (`inputs/CUP2025-2_2022
 
 ## Runner
 
-`scripts/commands/worldsteel-batch-import-run.mjs` (`dataset-worldsteel-batch-import-run`) wraps the BAFU per-scope engine with: `enableBafuAutofill=false`, `enableFamilySignatures=false`, `commitFlowSupportInline=true`, `mintUnmatchedFpUgSupport=false`, `applyResolutionRewrites=true`, and the reused worldsteel `libraryContact`.
+`scripts/commands/worldsteel-batch-import-run.ts` (`dataset-worldsteel-batch-import-run`) wraps the BAFU per-scope engine with: `enableBafuAutofill=false`, `enableFamilySignatures=false`, `commitFlowSupportInline=true`, `mintUnmatchedFpUgSupport=false`, `applyResolutionRewrites=true`, and the reused worldsteel `libraryContact`.
 
 ## Open Decisions
 
