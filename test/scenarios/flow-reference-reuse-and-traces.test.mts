@@ -179,9 +179,9 @@ test("same-reference identity rewrites preserve curated process exchange descrip
   const processId = "aaaaaaaa-bbbb-4ccc-8ddd-000000000046";
   const rowsFile = path.join(root, "processes.jsonl");
   const processRow = processRowWithFlowRef(processId, flowId);
-  processRow.processDataSet.exchanges.exchange[0].referenceToFlowDataSet[
-    "common:shortDescription"
-  ] = {
+  const sourceReference = processRow.processDataSet.exchanges.exchange[0]
+    .referenceToFlowDataSet as Record<string, unknown>;
+  sourceReference["common:shortDescription"] = {
     "@xml:lang": "en",
     "#text": "Electricity, lignite, at power plant",
   };
@@ -367,7 +367,7 @@ test("identity decision apply closes flow identity curation and counts as full-c
     );
     assert.equal(identityBundle.sha256, identityTask.json.shared_context_bundle.sha256);
     assert.match(
-      identityBundle.files.find((file) => file.kind === "schema").text,
+      identityBundle.files.find((file) => file.kind === "schema")!.text,
       /process schema/u,
     );
     const identityTemplate = readJsonLines(path.join(repoRoot, identityTask.json.files.template));

@@ -36,7 +36,7 @@ test("identity decision task deduplicates repeated targets and keeps source evid
   const firstProcessId = "aaaaaaaa-bbbb-4ccc-8ddd-000000000062";
   const secondProcessId = "aaaaaaaa-bbbb-4ccc-8ddd-000000000063";
 
-  function writePackage(processId, label) {
+  function writePackage(processId: string, label: string) {
     const authoringPackage = path.join(root, `${label}.authoring-package.json`);
     writeJson(authoringPackage, {
       schema_version: 2,
@@ -266,7 +266,7 @@ test("curation gate turns flow identity manual review into an AI action item", (
     assert.equal(actionCodes.has("elementary_flow_requires_existing_database_match"), true);
     const identityAction = authoringPackage.action_items.find(
       (item) => item.code === "elementary_flow_identity_manual_review",
-    );
+    )!;
     assert.equal(identityAction.common_other_deferral_allowed, false);
     assert.equal(identityAction.evidence.candidate_count, 1);
   } finally {
@@ -593,9 +593,9 @@ test("curation gate authoring package carries full contract text and queue depen
     const contextByKind = new Map(
       authoringPackage.contract_context_files.map((file) => [file.kind, file.text]),
     );
-    assert.match(contextByKind.get("schema"), /process schema/u);
-    assert.match(contextByKind.get("methodology_yaml"), /required_multilang_english/u);
-    assert.match(contextByKind.get("ruleset"), /classification-decision/u);
+    assert.match(contextByKind.get("schema")!, /process schema/u);
+    assert.match(contextByKind.get("methodology_yaml")!, /required_multilang_english/u);
+    assert.match(contextByKind.get("ruleset")!, /classification-decision/u);
     assert.match(
       contextTextByPathSuffix(authoringPackage, "tidas_processes_category.json"),
       /Manufacturing/u,
@@ -650,8 +650,9 @@ test("curation gate authoring package carries full contract text and queue depen
       (row) => row.dataset_type === "flow",
     );
     const reread = readIdentityPreflightIndexRow(repoRoot, identityPreflightIndex, flowIndexRow);
-    assert.equal(reread.result.candidates[0].id, "ffffffff-1111-4222-8333-444444444444");
-    assert.notEqual(reread.result.candidates[0].id, "tampered-unbound-candidate");
+    const rereadResult = reread!.result as { candidates: Array<{ id: string }> };
+    assert.equal(rereadResult.candidates[0].id, "ffffffff-1111-4222-8333-444444444444");
+    assert.notEqual(rereadResult.candidates[0].id, "tampered-unbound-candidate");
   } finally {
     fs.rmSync(packageContextFixtureRoot, { recursive: true, force: true });
   }

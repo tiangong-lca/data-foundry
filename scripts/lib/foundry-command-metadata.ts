@@ -360,7 +360,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["CLI curation queue directory", "Foundry wrapper JSON report"],
     keyTests: [
       nodeTest(
-        "test/scenarios/identity-curation-context.test.mjs",
+        "test/scenarios/identity-curation-context.test.mts",
         "curation queue build is used before full-context authoring",
       ),
     ],
@@ -381,7 +381,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     keyTests: [
       goldenDiff,
       nodeTest(
-        "test/scenarios/identity-curation-context.test.mjs",
+        "test/scenarios/identity-curation-context.test.mts",
         "curation gate authoring package carries full contract text and queue dependency rows",
       ),
       importCurationEntryContract,
@@ -450,7 +450,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/scenarios/identity-curation-context.test.mjs",
+        "test/scenarios/identity-curation-context.test.mts",
         "identity decision task deduplicates repeated targets and keeps source evidence",
       ),
     ],
@@ -660,7 +660,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     outputs: ["patched rows file", "dataset-patch-apply-report.json", "patch-evidence.jsonl"],
     keyTests: [
       nodeTest(
-        "test/scenarios/flow-reference-reuse-and-traces.test.mjs",
+        "test/scenarios/flow-reference-reuse-and-traces.test.mts",
         "identity decision apply closes flow identity curation and counts as full-context evidence",
       ),
       nodeTest(
@@ -782,7 +782,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "dataset-identity-preflight-run executes request indexes and preserves identity blockers as evidence",
       ),
       nodeTest(
-        "test/scenarios/identity-preflight-run-and-merge.test.mjs",
+        "test/scenarios/identity-preflight-run-and-merge.test.mts",
         "identity preflight batch runner records timed-out CLI rows without hanging",
       ),
     ],
@@ -798,7 +798,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/scenarios/identity-preflight-run-and-merge.test.mjs",
+        "test/scenarios/identity-preflight-run-and-merge.test.mts",
         "identity preflight index merge preserves dependency rows while refreshing current scope",
       ),
     ],
@@ -1057,7 +1057,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/scenarios/flow-identity-decisions.test.mjs",
+        "test/scenarios/flow-identity-decisions.test.mts",
         "identity duplicate flow rewrites require high-confidence preflight evidence",
       ),
     ],
@@ -1079,7 +1079,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "dataset-identity-decisions-apply filters mixed decisions by requested type",
       ),
       nodeTest(
-        "test/scenarios/flow-identity-decisions.test.mjs",
+        "test/scenarios/flow-identity-decisions.test.mts",
         "AI identity decisions apply split flow rows into writes and reference reuse",
       ),
     ],

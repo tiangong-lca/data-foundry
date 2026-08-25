@@ -168,8 +168,8 @@ test("identity preflight index merge preserves dependency rows while refreshing 
 
     const mergedRows = readJsonLines(path.join(repoRoot, merge.json.files.merged_index));
     assert.equal(mergedRows.length, 2);
-    const processRow = mergedRows.find((row) => row.dataset_type === "process");
-    const flowRow = mergedRows.find((row) => row.dataset_type === "flow");
+    const processRow = mergedRows.find((row) => row.dataset_type === "process")!;
+    const flowRow = mergedRows.find((row) => row.dataset_type === "flow")!;
     assert.equal(processRow.target_sha256, "fresh-process-sha");
     assert.equal(processRow.request_file, "fresh/process.json");
     assert.equal(processRow.merge_source, "update");

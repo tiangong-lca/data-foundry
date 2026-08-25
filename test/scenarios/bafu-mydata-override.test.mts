@@ -25,8 +25,9 @@ test("normalizeProfile surfaces the account-local override flag per profile", ()
   );
   assert.equal(bafu.allowAccountLocalSupportAndElementary, true);
   assert.ok(bafu.accountLocalSupportOverride, "raw override object preserved for audit");
+  const accountLocalOverride = bafu.accountLocalSupportOverride as { report_policy: string };
   assert.match(
-    bafu.accountLocalSupportOverride.report_policy,
+    accountLocalOverride.report_policy,
     /must not emit an unconditional reference-only or no-My-Data policy/u,
   );
 

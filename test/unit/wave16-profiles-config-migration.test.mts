@@ -22,7 +22,7 @@ test("every static profiles config consumer targets the typed module", () => {
     "scripts/lib/import-curation/profiles.ts",
     "scripts/lib/import-curation/internal/curation-gate-workflow.ts",
     "scripts/lib/import-curation/internal/mutation-manifest-workflow.ts",
-    "test/scenarios/bafu-mydata-override.test.mjs",
+    "test/scenarios/bafu-mydata-override.test.mts",
     "test/unit/content-policy-profile-waiver.test.mts",
     "test/unit/profiles-config-contract.test.mts",
   ];

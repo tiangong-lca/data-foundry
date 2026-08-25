@@ -198,7 +198,7 @@ checkPaths:
   - test/unit/wave25-classification-location-command-migration.test.mts
   - test/commands/classification-decisions.test.mjs
   - test/commands/location-decisions.test.mjs
-  - test/scenarios/flow-identity-decisions.test.mjs
+  - test/scenarios/flow-identity-decisions.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md

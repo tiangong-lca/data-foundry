@@ -144,7 +144,7 @@ test("identity duplicate flow decisions become reference reuse rows before mutat
       manifest.json.items.map((item) => item.role),
       ["write_candidate", "reference_reuse"],
     );
-    const referenceItem = manifest.json.items.find((item) => item.role === "reference_reuse");
+    const referenceItem = manifest.json.items.find((item) => item.role === "reference_reuse")!;
     assert.equal(referenceItem.entity_id, duplicateFlowId);
     assert.equal(referenceItem.identity_reference_rewrite_count, 1);
     assert.equal(referenceItem.canonical_references[0].ref_object_id, existingFlowId);
