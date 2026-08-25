@@ -1,5 +1,90 @@
 import path from "node:path";
 
+type JsonRecord = Record<string, unknown>;
+
+type CountRecord = Record<string, unknown> & {
+  blockers?: unknown;
+  root_payload_mismatches?: unknown;
+  root_readback_checks?: unknown;
+  unresolved_trace_entries?: unknown;
+  source_exchange_completeness_entries?: unknown;
+  source_reference_rewrites?: unknown;
+  ai_patch_evidence_entries?: unknown;
+  ai_classification_decision_entries?: unknown;
+  ai_location_decision_entries?: unknown;
+  ai_identity_decision_entries?: unknown;
+  source_contact_rewrite_semantic_evidence_entries?: unknown;
+  write_candidates?: unknown;
+};
+
+type FileRecord = Record<string, unknown> & {
+  final_rows?: unknown;
+  rows_file?: unknown;
+  trace_queues?: Record<string, unknown>;
+};
+
+type CompletionArtifactValue = JsonRecord & {
+  status?: unknown;
+  dataset_type?: unknown;
+  final_rows_file?: unknown;
+  finalize_report?: unknown;
+  mutation_manifest?: unknown;
+  profile?: unknown;
+  target_user_id?: unknown;
+  expected_state_code?: unknown;
+  commit_report?: unknown;
+  post_write_verify_report?: unknown;
+  rows_file?: unknown;
+  counts?: CountRecord;
+  files?: FileRecord;
+};
+
+type JsonArtifact = {
+  path: string;
+  value: CompletionArtifactValue;
+};
+
+type FullContextCheck = {
+  required: boolean;
+  blockers: JsonRecord[];
+};
+
+export type ImportCompletionOptions = Record<string, unknown> & {
+  help?: unknown;
+  closeoutReport?: unknown;
+  closeoutReports?: unknown;
+  report?: unknown;
+  taskDir?: unknown;
+  workspaceDir?: unknown;
+  requireType?: unknown;
+  requiredType?: unknown;
+  requiredTypes?: unknown;
+  expectedCloseouts?: unknown;
+  expectedCloseoutCount?: unknown;
+  outDir?: unknown;
+  taskId?: unknown;
+  id?: unknown;
+};
+
+export type ImportCompletionFactoryDependencies = {
+  asText: (value: unknown) => string;
+  countJsonLinesFile: (filePath: string) => number;
+  countRowsFile: (filePath: string) => number;
+  fileExists: (filePath: string) => boolean;
+  findFilesByName: (startDir: string, name: string) => string[];
+  fullContextProofCheck: (input: JsonRecord) => FullContextCheck;
+  normalizedList: (value: unknown) => string[];
+  nowIso: () => string;
+  readJson: (filePath: string) => CompletionArtifactValue;
+  readJsonArtifactOption: (value: unknown) => JsonArtifact | null;
+  repoRelativeMaybe: (filePath: string | null) => string | null;
+  repoRelativePath: (filePath: string) => string;
+  resolveRepoPath: (value: unknown) => string | null;
+  sameResolvedPath: (left: string, right: string) => boolean;
+  unique: <T>(values: T[]) => T[];
+  writeJson: (filePath: string, value: unknown) => unknown;
+};
+
 export function createImportCompletionCommands({
   asText,
   countJsonLinesFile,
@@ -17,8 +102,14 @@ export function createImportCompletionCommands({
   sameResolvedPath,
   unique,
   writeJson,
-}) {
-  function closeoutCompletionSummary({ artifact, blockers }) {
+}: ImportCompletionFactoryDependencies) {
+  function closeoutCompletionSummary({
+    artifact,
+    blockers,
+  }: {
+    artifact: JsonArtifact;
+    blockers: JsonRecord[];
+  }) {
     const closeout = artifact.value;
     const closeoutPath = artifact.path;
     const datasetType = asText(closeout.dataset_type).toLowerCase();
@@ -166,7 +257,7 @@ export function createImportCompletionCommands({
     for (const [traceKind, expectedTraceCount] of [
       ["unresolved_traces", unresolvedTraceCount],
       ["source_exchange_completeness_traces", sourceExchangeCompletenessCount],
-    ]) {
+    ] as const) {
       const traceFile = resolveRepoPath(traceQueues?.[traceKind]);
       if (expectedTraceCount > 0 && (!traceFile || !fileExists(traceFile))) {
         blockers.push({
@@ -178,7 +269,7 @@ export function createImportCompletionCommands({
         });
         continue;
       }
-      if (expectedTraceCount > 0) {
+      if (expectedTraceCount > 0 && traceFile) {
         const actualTraceCount = countJsonLinesFile(traceFile);
         if (actualTraceCount < expectedTraceCount) {
           blockers.push({
@@ -243,7 +334,7 @@ export function createImportCompletionCommands({
     };
   }
 
-  function runDatasetImportCompletionReport(options) {
+  function runDatasetImportCompletionReport(options: ImportCompletionOptions): JsonRecord {
     if (options.help) {
       return {
         schema_version: 1,
@@ -268,7 +359,11 @@ export function createImportCompletionCommands({
     const discoveredCloseouts = taskDir
       ? findFilesByName(taskDir, "dataset-post-write-closeout-report.json")
       : [];
-    const closeoutPaths = unique([...explicitCloseouts, ...discoveredCloseouts].filter(Boolean));
+    const closeoutPaths = unique(
+      [...explicitCloseouts, ...discoveredCloseouts].filter((value): value is string =>
+        Boolean(value),
+      ),
+    );
     const requiredTypes = unique(
       [
         ...normalizedList(options.requireType),
@@ -288,7 +383,7 @@ export function createImportCompletionCommands({
           ? path.join(taskDir, "import-completion")
           : ".foundry/workspaces/import-completion"),
     );
-    const blockers = [];
+    const blockers: JsonRecord[] = [];
 
     if (!taskDir && explicitCloseouts.length === 0) {
       blockers.push({
@@ -309,7 +404,7 @@ export function createImportCompletionCommands({
       });
     }
 
-    const closeoutArtifacts = [];
+    const closeoutArtifacts: JsonArtifact[] = [];
     for (const closeoutPath of closeoutPaths) {
       if (!fileExists(closeoutPath)) {
         blockers.push({
@@ -329,13 +424,13 @@ export function createImportCompletionCommands({
       closeoutCompletionSummary({ artifact, blockers }),
     );
     const datasetTypes = unique(closeouts.map((closeout) => closeout.dataset_type));
-    const closeoutsByScope = new Map();
+    const closeoutsByScope = new Map<string, typeof closeouts>();
     for (const closeout of closeouts) {
       const scopeKey = `${closeout.dataset_type || "unknown"}::${closeout.final_rows_file || "missing"}`;
       if (!closeoutsByScope.has(scopeKey)) {
         closeoutsByScope.set(scopeKey, []);
       }
-      closeoutsByScope.get(scopeKey).push(closeout);
+      closeoutsByScope.get(scopeKey)!.push(closeout);
     }
     for (const [scopeKey, scopeCloseouts] of closeoutsByScope.entries()) {
       if (scopeCloseouts.length > 1) {
@@ -358,7 +453,7 @@ export function createImportCompletionCommands({
       }
     }
 
-    const reportPath = path.join(outDir, "dataset-import-completion-report.json");
+    const reportPath = path.join(outDir!, "dataset-import-completion-report.json");
     const report = {
       schema_version: 1,
       generated_at_utc: nowIso(),

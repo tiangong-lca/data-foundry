@@ -44,9 +44,11 @@ const nodeTest = (path: string, assertion: string): CommandKeyTest => ({
 });
 
 const coreOwner = "scripts/commands/core.mjs";
-const taskOwner = "scripts/commands/tasks.mjs";
+const taskOwner = "scripts/commands/tasks.ts";
 const tidasOwner = "scripts/commands/tidas-workflow.ts";
-const importOwner = (moduleName: string): string => `scripts/lib/import-curation/${moduleName}.mjs`;
+const typedImportOwners = new Set(["authoring-packages", "patch-collect"]);
+const importOwner = (moduleName: string): string =>
+  `scripts/lib/import-curation/${moduleName}.${typedImportOwners.has(moduleName) ? "ts" : "mjs"}`;
 
 function workflowEntryForCategory(category: string): CommandWorkflowEntry {
   switch (category) {
@@ -1148,7 +1150,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-import-completion-report": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/import-completion.mjs",
+    ownerModule: "scripts/commands/import-completion.ts",
     ownerExport: "createImportCompletionCommands().runDatasetImportCompletionReport",
     inputs: ["task manifest", "post-write closeout reports", "mutation manifests"],
     outputs: ["dataset-import-completion-report.json"],

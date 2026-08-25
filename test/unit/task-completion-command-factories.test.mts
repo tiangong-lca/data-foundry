@@ -4,8 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createImportCompletionCommands } from "../../scripts/commands/import-completion.mjs";
-import { createTaskCommands } from "../../scripts/commands/tasks.mjs";
+import { createImportCompletionCommands } from "../../scripts/commands/import-completion.ts";
+import { createTaskCommands } from "../../scripts/commands/tasks.ts";
 
 type JsonObject = Record<string, unknown>;
 
@@ -394,8 +394,11 @@ test("task and completion consumers target the typed command factories", () => {
       "test/unit/task-completion-command-factories.test.mts",
     ]) {
       const source = readRepoFile(consumer);
-      assert.match(source, new RegExp(`${moduleName.replace("-", "\\-")}\\.ts`, "u"));
-      assert.doesNotMatch(source, new RegExp(`${moduleName.replace("-", "\\-")}\\.mjs`, "u"));
+      assert.match(source, new RegExp(`(?:commands/|scripts/commands/)${moduleName}\\.ts`, "u"));
+      assert.doesNotMatch(
+        source,
+        new RegExp(`(?:commands/|scripts/commands/)${moduleName}\\.mjs`, "u"),
+      );
     }
     assert.match(readRepoFile(`scripts/commands/${moduleName}.ts`), new RegExp(ownerExport, "u"));
   }

@@ -1,7 +1,65 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const taskQueues = {
+type JsonRecord = Record<string, unknown>;
+type TaskQueue = "inbox" | "active" | "done";
+
+type TaskFile = {
+  queue: TaskQueue;
+  path: string;
+};
+
+type TaskDocument = {
+  body: string;
+  frontmatter: string;
+  meta: Record<string, unknown>;
+};
+
+type CompletionReport = JsonRecord & {
+  status?: unknown;
+  task_id?: unknown;
+  closeouts?: unknown;
+  blockers?: unknown;
+};
+
+type JsonArtifact = {
+  path: string;
+  value: CompletionReport;
+};
+
+export type TaskCommandOptions = Record<string, unknown> & {
+  help?: unknown;
+  task?: unknown;
+  taskId?: unknown;
+  id?: unknown;
+  taskFile?: unknown;
+  completionReport?: unknown;
+  importCompletionReport?: unknown;
+  report?: unknown;
+  dryRun?: unknown;
+};
+
+export type TaskCommandFactoryDependencies = {
+  asText: (value: unknown) => string;
+  booleanOption: (value: unknown) => boolean;
+  completionFullContextBlockers: (input: {
+    task: TaskDocument;
+    completionReport: CompletionReport;
+  }) => JsonRecord[];
+  directoryExists: (filePath: string) => boolean;
+  ensureArray: <T>(value: T | T[] | null | undefined) => T[];
+  fileExists: (filePath: string) => boolean;
+  nowIso: () => string;
+  readJsonArtifactOption: (value: unknown) => JsonArtifact | null;
+  replaceFrontmatterField: (frontmatter: string, key: string, value: string) => string;
+  repoRelativePath: (filePath: string) => string;
+  repoRoot: string;
+  resolveRepoPath: (value: unknown) => string | null;
+  taskMetaFromFile: (filePath: string) => TaskDocument;
+  writeText: (filePath: string, text: string) => unknown;
+};
+
+const taskQueues: Record<TaskQueue, string> = {
   inbox: "tasks/inbox",
   active: "tasks/active",
   done: "tasks/done",
@@ -22,21 +80,23 @@ export function createTaskCommands({
   resolveRepoPath,
   taskMetaFromFile,
   writeText,
-}) {
-  function listTaskFiles(queue = null) {
+}: TaskCommandFactoryDependencies) {
+  function listTaskFiles(queue: TaskQueue | null = null): TaskFile[] {
     const queueEntries = queue ? [[queue, taskQueues[queue]]] : Object.entries(taskQueues);
-    const files = [];
+    const files: TaskFile[] = [];
     for (const [queueName, dir] of queueEntries) {
       const absDir = path.join(repoRoot, dir);
       if (!directoryExists(absDir)) continue;
       for (const name of fs.readdirSync(absDir).sort()) {
-        if (name.endsWith(".md")) files.push({ queue: queueName, path: path.join(absDir, name) });
+        if (name.endsWith(".md")) {
+          files.push({ queue: queueName as TaskQueue, path: path.join(absDir, name) });
+        }
       }
     }
     return files;
   }
 
-  function taskSummary(file) {
+  function taskSummary(file: TaskFile) {
     const { body, meta } = taskMetaFromFile(file.path);
     return {
       queue: file.queue,
@@ -46,11 +106,17 @@ export function createTaskCommands({
     };
   }
 
-  function findActiveTask(value) {
+  function findActiveTask(value: unknown):
+    | string
+    | null
+    | {
+        ambiguous_or_missing: true;
+        candidates: Array<{ path: string; id: string; name: string }>;
+      } {
     const token = asText(value);
     if (!token) return null;
     const directPath = resolveRepoPath(token);
-    const activeRoot = resolveRepoPath(taskQueues.active);
+    const activeRoot = resolveRepoPath(taskQueues.active)!;
     if (directPath && fileExists(directPath)) {
       const relativeToActive = path.relative(activeRoot, directPath);
       if (!relativeToActive.startsWith("..") && !path.isAbsolute(relativeToActive)) {
@@ -73,7 +139,7 @@ export function createTaskCommands({
     return candidates[0].path;
   }
 
-  function runTaskComplete(options) {
+  function runTaskComplete(options: TaskCommandOptions): JsonRecord {
     if (options.help) {
       return {
         schema_version: 1,
@@ -92,10 +158,10 @@ export function createTaskCommands({
     const completionArtifact = readJsonArtifactOption(
       options.completionReport || options.importCompletionReport || options.report,
     );
-    const blockers = [];
+    const blockers: JsonRecord[] = [];
     const taskMatch = findActiveTask(taskSelector);
     let taskPath = typeof taskMatch === "string" ? taskMatch : null;
-    let task = null;
+    let task: TaskDocument | null = null;
 
     if (!taskSelector) {
       blockers.push({
@@ -108,11 +174,12 @@ export function createTaskCommands({
         message:
           "task-complete requires exactly one matching task under tasks/active; inbox/done/template tasks cannot be completed.",
         task: asText(taskSelector),
-        candidates:
-          taskMatch?.candidates?.map((candidate) => ({
+        candidates: (typeof taskMatch === "object" && taskMatch ? taskMatch.candidates : []).map(
+          (candidate) => ({
             id: candidate.id,
             path: repoRelativePath(candidate.path),
-          })) ?? [],
+          }),
+        ),
       });
     } else {
       task = taskMetaFromFile(taskPath);
@@ -159,7 +226,7 @@ export function createTaskCommands({
       blockers.push({
         code: "task_id_missing",
         message: "Active task frontmatter must contain id before completion.",
-        task_file: repoRelativePath(taskPath),
+        task_file: repoRelativePath(taskPath!),
       });
     }
     if (task && completionArtifact && (!reportTaskId || reportTaskId !== taskId)) {
@@ -184,7 +251,7 @@ export function createTaskCommands({
     }
 
     const destinationPath = taskPath
-      ? path.join(resolveRepoPath(taskQueues.done), path.basename(taskPath))
+      ? path.join(resolveRepoPath(taskQueues.done)!, path.basename(taskPath))
       : null;
     if (destinationPath && fileExists(destinationPath)) {
       blockers.push({
@@ -219,16 +286,16 @@ export function createTaskCommands({
 
     const frontmatter = replaceFrontmatterField(
       replaceFrontmatterField(
-        replaceFrontmatterField(task.frontmatter, "state", "Done"),
+        replaceFrontmatterField(task!.frontmatter, "state", "Done"),
         "completion_report",
-        repoRelativePath(completionArtifact.path),
+        repoRelativePath(completionArtifact!.path),
       ),
       "completed_at",
       report.generated_at_utc,
     );
-    const updatedText = `---\n${frontmatter}\n---\n${task.body}`;
-    writeText(destinationPath, updatedText);
-    fs.unlinkSync(taskPath);
+    const updatedText = `---\n${frontmatter}\n---\n${task!.body}`;
+    writeText(destinationPath!, updatedText);
+    fs.unlinkSync(taskPath!);
     return report;
   }
 
@@ -237,8 +304,8 @@ export function createTaskCommands({
   }
 
   function tasksCheck() {
-    const errors = [];
-    const ids = new Set();
+    const errors: string[] = [];
+    const ids = new Set<unknown>();
     for (const task of tasksList()) {
       for (const key of ["id", "title", "state", "kind"]) {
         if (!task.meta[key]) errors.push(`${task.path}: missing ${key}`);
