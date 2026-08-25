@@ -5,8 +5,6 @@ import path from "node:path";
 import test from "node:test";
 import * as bafuFamilySignatures from "../../scripts/lib/bafu-family-signatures.ts";
 
-type JsonObject = Record<string, any>;
-
 const {
   bafuFamilyEntryFromProcess,
   bafuFamilyPlanFields,
@@ -18,7 +16,7 @@ const {
   normalizeBafuFamilyName,
   summarizeBafuFamilyScopes,
   summarizeBafuFamilySignatures,
-} = bafuFamilySignatures as Record<string, (...args: any[]) => any>;
+} = bafuFamilySignatures;
 
 function processRow({
   id,
@@ -36,7 +34,7 @@ function processRow({
   resultingAmount?: unknown;
   inputFlowName?: string;
   version?: string;
-}): JsonObject {
+}) {
   return {
     processDataSet: {
       processInformation: {
@@ -77,7 +75,7 @@ function processRow({
   };
 }
 
-function writeProcess(processesDir: string, row: JsonObject): string {
+function writeProcess(processesDir: string, row: ReturnType<typeof processRow>): string {
   const id = row.processDataSet.processInformation.dataSetInformation["common:UUID"];
   const filePath = path.join(processesDir, `${id}.json`);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -223,14 +221,10 @@ test("BAFU family index preserves scope order, master selection, summaries, and 
       {},
     ];
     const index = buildBafuFamilySignatureIndex({ scopes, processesDir });
-    const byId = new Map<string, JsonObject>(
-      index.entries.map(
-        (entry: JsonObject) => [String(entry.process_id), entry] as [string, JsonObject],
-      ),
-    );
+    const byId = new Map(index.entries.map((entry) => [entry.process_id, entry]));
 
     assert.deepEqual(
-      index.entries.map((entry: JsonObject) => entry.process_id),
+      index.entries.map((entry) => entry.process_id),
       [
         "same-amount-first",
         "same-amount-second",
@@ -240,7 +234,7 @@ test("BAFU family index preserves scope order, master selection, summaries, and 
       ],
     );
     assert.deepEqual(
-      index.entries.map((entry: JsonObject) => entry.optimization_role),
+      index.entries.map((entry) => entry.optimization_role),
       [
         "same_amount_master",
         "same_amount_variant",
@@ -252,7 +246,7 @@ test("BAFU family index preserves scope order, master selection, summaries, and 
     assert.equal(byId.get("same-amount-second")?.master_process_id, "same-amount-first");
     assert.equal(byId.get("same-skeleton-second")?.master_process_id, "same-skeleton-first");
     assert.deepEqual(
-      index.entries.map((entry: JsonObject) => bafuFamilySelectionRank(entry)),
+      index.entries.map((entry) => bafuFamilySelectionRank(entry)),
       [0, 3, 1, 4, 2],
     );
     assert.deepEqual(index.missing, [
@@ -294,6 +288,7 @@ test("BAFU family index preserves scope order, master selection, summaries, and 
     const compact = compactBafuFamilySignature(byId.get("standard"), (value: string) =>
       path.relative(root, value).replaceAll("\\", "/"),
     );
+    assert.ok(compact);
     assert.equal(compact.source_file, "processes/standard.json");
     assert.deepEqual(bafuFamilyPlanFields(byId.get("standard")), {
       bafu_family_optimization_kind: "standard",

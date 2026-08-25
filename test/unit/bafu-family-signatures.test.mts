@@ -143,13 +143,13 @@ test("BAFU family signatures classify same amount vectors, same skeleton variant
     });
     const byId = new Map(index.entries.map((entry) => [entry.process_id, entry]));
 
-    assert.equal(byId.get(ids[0]).optimization_role, "same_amount_master");
-    assert.equal(byId.get(ids[1]).optimization_role, "same_amount_variant");
-    assert.equal(byId.get(ids[2]).optimization_role, "same_skeleton_master");
-    assert.equal(byId.get(ids[3]).optimization_role, "same_skeleton_variant");
-    assert.equal(byId.get(ids[4]).optimization_role, "standard");
-    assert.equal(byId.get(ids[1]).master_process_id, ids[0]);
-    assert.equal(byId.get(ids[3]).master_process_id, ids[2]);
+    assert.equal(byId.get(ids[0])!.optimization_role, "same_amount_master");
+    assert.equal(byId.get(ids[1])!.optimization_role, "same_amount_variant");
+    assert.equal(byId.get(ids[2])!.optimization_role, "same_skeleton_master");
+    assert.equal(byId.get(ids[3])!.optimization_role, "same_skeleton_variant");
+    assert.equal(byId.get(ids[4])!.optimization_role, "standard");
+    assert.equal(byId.get(ids[1])!.master_process_id, ids[0]);
+    assert.equal(byId.get(ids[3])!.master_process_id, ids[2]);
     assert.equal(index.summary.same_amount_vector_scopes, 2);
     assert.equal(index.summary.same_skeleton_scopes, 4);
     assert.equal(index.summary.same_skeleton_only_scopes, 2);
@@ -159,7 +159,7 @@ test("BAFU family signatures classify same amount vectors, same skeleton variant
       [0, 1, 2, 3, 4],
     );
     assert.equal(
-      compactBafuFamilySignature(byId.get(ids[1]))?.source_file.endsWith(`${ids[1]}.json`),
+      compactBafuFamilySignature(byId.get(ids[1]))?.source_file?.endsWith(`${ids[1]}.json`),
       true,
     );
   } finally {
