@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import type { SpawnSyncOptions } from "node:child_process";
+import { spawnSync, type SpawnSyncOptions } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -215,6 +215,31 @@ test("account wrapper package and surface metadata point only at the typed entry
   assert.doesNotMatch(wrapperSource, /base64/iu);
   assert.doesNotMatch(wrapperSource, /shell:\s*true/u);
   assert.doesNotMatch(wrapperSource, /--no-auth-check/u);
+});
+
+test("account wrapper executes when invoked through a symlinked entrypoint", (context) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-account-symlink-"));
+  const wrapperPath = path.join(repositoryRoot, "scripts", "with-lca-account.ts");
+  const symlinkPath = path.join(root, "with-lca-account.ts");
+  try {
+    try {
+      fs.symlinkSync(wrapperPath, symlinkPath, "file");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EPERM") {
+        context.skip("The current platform does not permit file symlinks.");
+        return;
+      }
+      throw error;
+    }
+    const result = spawnSync(process.execPath, [symlinkPath, "--help"], {
+      cwd: root,
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /fresh, intent-bound CLI 0\.1\.1 identity receipt/u);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("account wrapper rejects legacy bypass and missing project or user intent before spawning", () => {
