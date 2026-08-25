@@ -5,7 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createSupportCacheCommands } from "../../scripts/commands/support-cache.mjs";
+import { createSupportCacheCommands } from "../../scripts/commands/support-cache.ts";
 
 type JsonObject = Record<string, unknown>;
 

@@ -3,6 +3,89 @@ import path from "node:path";
 import process from "node:process";
 import { defaultCanonicalFlowPropertyMappings } from "../lib/canonical-support-mappings.ts";
 
+type JsonRecord = Record<string, unknown>;
+
+type SupportDatabaseRow = JsonRecord & {
+  id?: unknown;
+  version?: unknown;
+  state_code?: unknown;
+  json?: unknown;
+};
+
+type SupportSummaryRow = JsonRecord & {
+  id?: unknown;
+  version?: unknown;
+  short_description?: unknown;
+  name?: unknown;
+  reference_unit_group?: unknown;
+};
+
+type SupportMapping = JsonRecord & {
+  canonical_flow_property_id?: unknown;
+  source_units?: unknown;
+  reason?: unknown;
+};
+
+type SupportTemplateRow = JsonRecord & {
+  support_type?: unknown;
+  dataset_type?: unknown;
+  type?: unknown;
+  source_units?: unknown;
+  source_name?: unknown;
+  source_reference_unit_group?: unknown;
+  source_support_id?: unknown;
+  dataset_id?: unknown;
+  id?: unknown;
+  source_support_version?: unknown;
+  dataset_version?: unknown;
+  version?: unknown;
+  source_entity_key?: unknown;
+};
+
+type SupportCache = JsonRecord & {
+  flow_properties?: unknown;
+  unit_groups?: unknown;
+  flow_property_mappings?: unknown;
+};
+
+type CanonicalSupportIndex = {
+  flowPropertyById: Map<string, SupportSummaryRow>;
+  flowPropertyMappingByUnit: Map<string, SupportMapping & { canonicalId: string }>;
+  unitGroupById: Map<string, SupportSummaryRow>;
+};
+
+type CanonicalSupportMapResult =
+  | { mapped: JsonRecord; blocked?: never; unit: string }
+  | { mapped?: never; blocked: SupportTemplateRow & JsonRecord; unit: string };
+
+export type SupportCacheOptions = Record<string, unknown> & {
+  help?: unknown;
+  stateCode?: unknown;
+  out?: unknown;
+  output?: unknown;
+  cacheFile?: unknown;
+  authoringPlan?: unknown;
+  authoringPlanDir?: unknown;
+  template?: unknown;
+  supportTemplate?: unknown;
+  canonicalSupportTemplate?: unknown;
+  canonicalSupportCache?: unknown;
+  cache?: unknown;
+  outDir?: unknown;
+};
+
+export type SupportCacheFactoryDependencies = {
+  asText: (value: unknown) => string;
+  ensureArray: <T>(value: T | T[] | null | undefined) => T[];
+  fileExists: (filePath: string) => boolean;
+  nowIso: () => string;
+  readJson: (filePath: string) => SupportCache;
+  repoRelativePath: (filePath: string) => string;
+  resolveRepoPath: (value: unknown) => string | null;
+  supportText: (value: unknown) => string;
+  writeJson: (filePath: string, value: unknown) => unknown;
+};
+
 const defaultCanonicalSupportCacheFile = "specs/canonical-support/flow-properties-unit-groups.json";
 const defaultMappingsFileName = "canonical-support-mappings.jsonl";
 const defaultBlockedFileName = "canonical-support-blocked.manual-review.jsonl";
@@ -18,13 +101,19 @@ export function createSupportCacheCommands({
   resolveRepoPath,
   supportText,
   writeJson,
-}) {
-  function readJsonLines(filePath) {
-    const text = fs.readFileSync(filePath, "utf8").trim();
-    return text ? text.split(/\r?\n/u).map((line) => JSON.parse(line)) : [];
+}: SupportCacheFactoryDependencies) {
+  function record(value: unknown): JsonRecord {
+    return typeof value === "object" && value !== null && !Array.isArray(value)
+      ? (value as JsonRecord)
+      : {};
   }
 
-  function writeJsonLines(filePath, rows) {
+  function readJsonLines(filePath: string): SupportTemplateRow[] {
+    const text = fs.readFileSync(filePath, "utf8").trim();
+    return text ? text.split(/\r?\n/u).map((line) => JSON.parse(line) as SupportTemplateRow) : [];
+  }
+
+  function writeJsonLines(filePath: string, rows: JsonRecord[]): void {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(
       filePath,
@@ -32,7 +121,7 @@ export function createSupportCacheCommands({
     );
   }
 
-  function deriveSupabaseProjectBaseUrl(apiBaseUrl) {
+  function deriveSupabaseProjectBaseUrl(apiBaseUrl: unknown): string {
     const normalized = asText(apiBaseUrl).replace(/\/+$/u, "");
     if (normalized.endsWith("/functions/v1")) return normalized.replace(/\/functions\/v1$/u, "");
     if (normalized.endsWith("/rest/v1")) return normalized.replace(/\/rest\/v1$/u, "");
@@ -40,7 +129,7 @@ export function createSupportCacheCommands({
     throw new Error("Cannot derive Supabase project URL from TIANGONG_LCA_API_BASE_URL.");
   }
 
-  function decodeUserApiKey(userApiKey) {
+  function decodeUserApiKey(userApiKey: unknown): { email: string; password: string } {
     try {
       const decoded = JSON.parse(Buffer.from(asText(userApiKey), "base64").toString("utf8"));
       const email = asText(decoded.email);
@@ -52,14 +141,17 @@ export function createSupportCacheCommands({
     }
   }
 
-  async function supabaseJsonRequest(url, init) {
+  async function supabaseJsonRequest(
+    url: string | URL,
+    init?: RequestInit,
+  ): Promise<{ response: Response; payload: unknown }> {
     const response = await fetch(url, init);
     const text = await response.text();
-    let payload = null;
+    let payload: unknown = null;
     if (text) {
       try {
         payload = JSON.parse(text);
-      } catch (error) {
+      } catch {
         throw new Error(
           `Supabase request returned non-JSON ${response.status} ${response.statusText}: ${text.slice(
             0,
@@ -74,7 +166,15 @@ export function createSupportCacheCommands({
     return { response, payload };
   }
 
-  async function signInSupabaseUser({ projectUrl, publishableKey, credentials }) {
+  async function signInSupabaseUser({
+    projectUrl,
+    publishableKey,
+    credentials,
+  }: {
+    projectUrl: string;
+    publishableKey: string;
+    credentials: { email: string; password: string };
+  }): Promise<{ accessToken: string; userId: string; email: string }> {
     const { payload } = await supabaseJsonRequest(
       `${projectUrl}/auth/v1/token?grant_type=password`,
       {
@@ -89,15 +189,24 @@ export function createSupportCacheCommands({
         }),
       },
     );
-    const accessToken = asText(payload?.access_token);
-    const userId = asText(payload?.user?.id);
+    const payloadRecord = record(payload);
+    const accessToken = asText(payloadRecord.access_token);
+    const userId = asText(record(payloadRecord.user).id);
     if (!accessToken || !userId) {
       throw new Error("Supabase auth did not return access_token and user.id.");
     }
     return { accessToken, userId, email: credentials.email };
   }
 
-  function supabaseRestHeaders({ publishableKey, accessToken, prefer = null }) {
+  function supabaseRestHeaders({
+    publishableKey,
+    accessToken,
+    prefer = null,
+  }: {
+    publishableKey: string;
+    accessToken: string;
+    prefer?: string | null;
+  }): Record<string, string> {
     return {
       apikey: publishableKey,
       authorization: `Bearer ${accessToken}`,
@@ -111,8 +220,14 @@ export function createSupportCacheCommands({
     accessToken,
     table,
     stateCode,
-  }) {
-    const rows = [];
+  }: {
+    projectUrl: string;
+    publishableKey: string;
+    accessToken: string;
+    table: string;
+    stateCode: number;
+  }): Promise<SupportDatabaseRow[]> {
+    const rows: SupportDatabaseRow[] = [];
     const pageSize = 1000;
     for (let offset = 0; ; offset += pageSize) {
       const url = new URL(`${projectUrl}/rest/v1/${table}`);
@@ -127,17 +242,19 @@ export function createSupportCacheCommands({
       if (!Array.isArray(payload)) {
         throw new Error(`List rows failed for ${table}: response is not an array.`);
       }
-      rows.push(...payload);
+      rows.push(...(payload as SupportDatabaseRow[]));
       if (payload.length < pageSize) break;
     }
     return rows;
   }
 
-  function summarizeFlowPropertySupportRow(row) {
-    const root = row?.json?.flowPropertyDataSet ?? {};
-    const info = root.flowPropertiesInformation ?? {};
-    const data = info.dataSetInformation ?? {};
-    const referenceUnitGroup = info.quantitativeReference?.referenceToReferenceUnitGroup ?? {};
+  function summarizeFlowPropertySupportRow(row: SupportDatabaseRow): JsonRecord {
+    const root = record(record(row.json).flowPropertyDataSet);
+    const info = record(root.flowPropertiesInformation);
+    const data = record(info.dataSetInformation);
+    const referenceUnitGroup = record(
+      record(info.quantitativeReference).referenceToReferenceUnitGroup,
+    );
     return {
       id: asText(row?.id),
       version: asText(row?.version),
@@ -145,7 +262,7 @@ export function createSupportCacheCommands({
       name: supportText(data["common:name"] ?? data["common:shortName"]),
       short_description: supportText(data["common:shortName"] ?? data["common:name"]),
       classification: supportText(
-        data.classificationInformation?.["common:classification"]?.["common:class"],
+        record(record(data.classificationInformation)["common:classification"])["common:class"],
       ),
       reference_unit_group: {
         id: asText(referenceUnitGroup["@refObjectId"]),
@@ -155,14 +272,16 @@ export function createSupportCacheCommands({
     };
   }
 
-  function summarizeUnitGroupSupportRow(row) {
-    const root = row?.json?.unitGroupDataSet ?? {};
-    const info = root.unitGroupInformation ?? {};
-    const data = info.dataSetInformation ?? {};
-    const units = ensureArray(root.units?.unit).map((unit) => ({
-      internal_id: asText(unit?.["@dataSetInternalID"]),
-      name: supportText(unit?.name ?? unit?.["common:name"]),
-      mean_value: asText(unit?.meanValue),
+  function summarizeUnitGroupSupportRow(row: SupportDatabaseRow): JsonRecord {
+    const root = record(record(row.json).unitGroupDataSet);
+    const info = record(root.unitGroupInformation);
+    const data = record(info.dataSetInformation);
+    const units = ensureArray<JsonRecord>(
+      record(root.units).unit as JsonRecord | JsonRecord[] | null | undefined,
+    ).map((unit) => ({
+      internal_id: asText(unit["@dataSetInternalID"]),
+      name: supportText(unit.name ?? unit["common:name"]),
+      mean_value: asText(unit.meanValue),
     }));
     return {
       id: asText(row?.id),
@@ -171,14 +290,14 @@ export function createSupportCacheCommands({
       name: supportText(data["common:name"] ?? data["common:shortName"]),
       short_description: supportText(data["common:shortName"] ?? data["common:name"]),
       classification: supportText(
-        data.classificationInformation?.["common:classification"]?.["common:class"],
+        record(record(data.classificationInformation)["common:classification"])["common:class"],
       ),
-      reference_unit: info.quantitativeReference?.referenceToReferenceUnit ?? null,
+      reference_unit: record(info.quantitativeReference).referenceToReferenceUnit ?? null,
       units,
     };
   }
 
-  function normalizeSupportUnit(value) {
+  function normalizeSupportUnit(value: unknown): string {
     return asText(value)
       .trim()
       .toLowerCase()
@@ -190,16 +309,17 @@ export function createSupportCacheCommands({
       .replace(/\bpkm\b/gu, "personkm");
   }
 
-  function supportUnitCandidates(row) {
-    const candidates = [];
-    for (const unit of ensureArray(row?.source_units)) {
-      candidates.push(unit?.name, unit?.short_description, unit);
+  function supportUnitCandidates(row: SupportTemplateRow): string[] {
+    const candidates: unknown[] = [];
+    for (const unitValue of ensureArray(row.source_units)) {
+      const unit = record(unitValue);
+      candidates.push(unit.name, unit.short_description, unitValue);
     }
-    candidates.push(row?.source_name, row?.source_reference_unit_group?.short_description);
+    candidates.push(row.source_name, record(row.source_reference_unit_group).short_description);
     return [...new Set(candidates.map(extractSupportUnit).filter(Boolean))];
   }
 
-  function extractSupportUnit(value) {
+  function extractSupportUnit(value: unknown): string {
     const normalized = normalizeSupportUnit(value);
     if (!normalized) return "";
     const stripped = normalized
@@ -216,22 +336,28 @@ export function createSupportCacheCommands({
     return stripped;
   }
 
-  function buildCanonicalSupportIndex(cache) {
-    const flowPropertyById = new Map();
-    const unitGroupById = new Map();
-    const flowPropertyMappingByUnit = new Map();
-    for (const row of ensureArray(cache?.flow_properties)) {
+  function buildCanonicalSupportIndex(cache: SupportCache): CanonicalSupportIndex {
+    const flowPropertyById = new Map<string, SupportSummaryRow>();
+    const unitGroupById = new Map<string, SupportSummaryRow>();
+    const flowPropertyMappingByUnit = new Map<string, SupportMapping & { canonicalId: string }>();
+    for (const row of ensureArray<SupportSummaryRow>(
+      cache.flow_properties as SupportSummaryRow | SupportSummaryRow[] | null | undefined,
+    )) {
       const id = asText(row?.id);
       if (id) flowPropertyById.set(id, row);
     }
-    for (const row of ensureArray(cache?.unit_groups)) {
+    for (const row of ensureArray<SupportSummaryRow>(
+      cache.unit_groups as SupportSummaryRow | SupportSummaryRow[] | null | undefined,
+    )) {
       const id = asText(row?.id);
       if (id) unitGroupById.set(id, row);
     }
-    for (const mapping of ensureArray(cache?.flow_property_mappings)) {
+    for (const mapping of ensureArray<SupportMapping>(
+      cache.flow_property_mappings as SupportMapping | SupportMapping[] | null | undefined,
+    )) {
       const canonicalId = asText(mapping?.canonical_flow_property_id);
       if (!canonicalId) continue;
-      for (const unit of ensureArray(mapping?.source_units)) {
+      for (const unit of ensureArray(mapping.source_units)) {
         const key = normalizeSupportUnit(unit);
         if (key) flowPropertyMappingByUnit.set(key, { ...mapping, canonicalId });
       }
@@ -239,12 +365,15 @@ export function createSupportCacheCommands({
     return { flowPropertyById, flowPropertyMappingByUnit, unitGroupById };
   }
 
-  function supportShortDescription(row) {
+  function supportShortDescription(row: SupportSummaryRow): string {
     return supportText(row?.short_description ?? row?.name ?? row?.id);
   }
 
-  function canonicalReferenceUnitGroup(flowProperty, index) {
-    const reference = flowProperty?.reference_unit_group ?? {};
+  function canonicalReferenceUnitGroup(
+    flowProperty: SupportSummaryRow,
+    index: CanonicalSupportIndex,
+  ): SupportSummaryRow | null {
+    const reference = record(flowProperty.reference_unit_group);
     const id = asText(reference.id ?? reference.ref_object_id ?? reference["@refObjectId"]);
     if (!id) return null;
     return (
@@ -258,7 +387,19 @@ export function createSupportCacheCommands({
     );
   }
 
-  function supportMappingEvidence({ row, unit, canonical, supportType, mapping }) {
+  function supportMappingEvidence({
+    row,
+    unit,
+    canonical,
+    supportType,
+    mapping,
+  }: {
+    row: SupportTemplateRow;
+    unit: string;
+    canonical: SupportSummaryRow;
+    supportType: string;
+    mapping: SupportMapping;
+  }): string {
     const sourceName = supportText(row?.source_name) || row?.source_support_id;
     const canonicalDescription = supportShortDescription(canonical);
     return [
@@ -274,7 +415,10 @@ export function createSupportCacheCommands({
       .join(" ");
   }
 
-  function mapSupportRow(row, index) {
+  function mapSupportRow(
+    row: SupportTemplateRow,
+    index: CanonicalSupportIndex,
+  ): CanonicalSupportMapResult {
     const supportType = asText(row?.support_type || row?.dataset_type || row?.type);
     const units = supportUnitCandidates(row);
     for (const unit of units) {
@@ -325,7 +469,7 @@ export function createSupportCacheCommands({
     };
   }
 
-  async function runDatasetSupportCacheRefresh(options) {
+  async function runDatasetSupportCacheRefresh(options: SupportCacheOptions): Promise<JsonRecord> {
     if (options.help) {
       return {
         schema_version: 1,
@@ -354,7 +498,7 @@ export function createSupportCacheCommands({
     const stateCode = Number(options.stateCode ?? 100);
     const outPath = resolveRepoPath(
       options.out || options.output || options.cacheFile || defaultCanonicalSupportCacheFile,
-    );
+    )!;
     const existing = fileExists(outPath) ? readJson(outPath) : {};
     const [flowPropertyRows, unitGroupRows] = await Promise.all([
       fetchSupportCacheRows({
@@ -372,6 +516,11 @@ export function createSupportCacheCommands({
         stateCode,
       }),
     ]);
+    const existingMappings = ensureArray<JsonRecord>(
+      existing.flow_property_mappings as JsonRecord | JsonRecord[] | null | undefined,
+    );
+    const flowPropertyMappings: JsonRecord[] =
+      existingMappings.length > 0 ? existingMappings : defaultCanonicalFlowPropertyMappings();
     const cache = {
       schema_version: 1,
       generated_at_utc: nowIso(),
@@ -382,10 +531,7 @@ export function createSupportCacheCommands({
       },
       flow_properties: flowPropertyRows.map(summarizeFlowPropertySupportRow),
       unit_groups: unitGroupRows.map(summarizeUnitGroupSupportRow),
-      flow_property_mappings:
-        ensureArray(existing.flow_property_mappings).length > 0
-          ? existing.flow_property_mappings
-          : defaultCanonicalFlowPropertyMappings(),
+      flow_property_mappings: flowPropertyMappings,
     };
     writeJson(outPath, cache);
     return {
@@ -405,7 +551,7 @@ export function createSupportCacheCommands({
     };
   }
 
-  function runDatasetCanonicalSupportMappingsAutofill(options) {
+  function runDatasetCanonicalSupportMappingsAutofill(options: SupportCacheOptions): JsonRecord {
     if (options.help) {
       return {
         schema_version: 1,
@@ -443,17 +589,17 @@ export function createSupportCacheCommands({
         "--canonical-support-cache must point to a readable canonical support cache.",
       );
     }
-    const outDir = resolveRepoPath(options.outDir || options.out || path.dirname(templatePath));
+    const outDir = resolveRepoPath(options.outDir || options.out || path.dirname(templatePath))!;
     const mappingsPath = path.join(outDir, defaultMappingsFileName);
     const blockedPath = path.join(outDir, defaultBlockedFileName);
     const reportPath = path.join(outDir, defaultAutofillReportFileName);
     const templateRows = readJsonLines(templatePath);
     const cache = readJson(cachePath);
     const index = buildCanonicalSupportIndex(cache);
-    const mappedRows = [];
-    const blockedRows = [];
-    const mappedUnits = new Set();
-    const blockedUnits = new Set();
+    const mappedRows: JsonRecord[] = [];
+    const blockedRows: Array<SupportTemplateRow & JsonRecord> = [];
+    const mappedUnits = new Set<string>();
+    const blockedUnits = new Set<string>();
 
     for (const row of templateRows) {
       const result = mapSupportRow(row, index);

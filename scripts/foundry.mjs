@@ -21,7 +21,7 @@ import { createIncrementalChangeSetCommands } from "./commands/incremental-chang
 import { createLibraryScopeWorkflowCommands } from "./commands/library-scope-workflow.mjs";
 import { createPostAuthoringFinalizeCommands } from "./commands/post-authoring-finalize.mjs";
 import { createPostWriteCloseoutCommands } from "./commands/post-write-closeout.mjs";
-import { createSupportCacheCommands } from "./commands/support-cache.mjs";
+import { createSupportCacheCommands } from "./commands/support-cache.ts";
 import { createTaskCommands } from "./commands/tasks.ts";
 import { createTidasWorkflowCommands } from "./commands/tidas-workflow.ts";
 import { createTopologyConvergenceCommands } from "./commands/topology-convergence.mjs";

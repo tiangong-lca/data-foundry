@@ -663,7 +663,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-support-cache-refresh": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/support-cache.mjs",
+    ownerModule: "scripts/commands/support-cache.ts",
     ownerExport: "createSupportCacheCommands().runDatasetSupportCacheRefresh",
     inputs: ["CLI support lookup command", "canonical support mapping policy"],
     outputs: [
@@ -674,7 +674,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-canonical-support-mappings-autofill": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/support-cache.mjs",
+    ownerModule: "scripts/commands/support-cache.ts",
     ownerExport: "createSupportCacheCommands().runDatasetCanonicalSupportMappingsAutofill",
     inputs: [
       "canonical-support-mappings.template.jsonl",
