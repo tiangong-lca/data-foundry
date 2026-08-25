@@ -1,7 +1,7 @@
 import path from "node:path";
 import { normalizeTidasLanguageCode } from "../../tidas-language-utils.ts";
-import { fullContextAiCompletionRequirement } from "./context-inputs.mjs";
-import { dataSetInformation, datasetRoot } from "./dataset-payload.mjs";
+import { fullContextAiCompletionRequirement } from "./context-inputs.ts";
+import { dataSetInformation, datasetRoot } from "./dataset-payload.ts";
 import { sha256Text } from "./hash-utils.ts";
 import { annualSupplyMissingDataSentinelText } from "./prewrite-cleanup.mjs";
 import {
@@ -13,7 +13,7 @@ import {
   repoRelativePath,
   resolveRepoPath,
 } from "./runtime-io.ts";
-import { collectCommonOtherTraceEntries } from "./trace-summary.mjs";
+import { collectCommonOtherTraceEntries } from "./trace-summary.ts";
 import { hasNonEmptyTraceEvidence } from "./workflow-authoring-tasks.mjs";
 import { hasStructuredTraceEvidence } from "./workflow-patch-evidence.mjs";
 import { isAnnualSupplyTarget } from "./workflow-queue-context.mjs";

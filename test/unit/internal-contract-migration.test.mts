@@ -3,10 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-import * as artifactInputs from "../../scripts/lib/import-curation/internal/artifact-inputs.mjs";
-import * as contextInputs from "../../scripts/lib/import-curation/internal/context-inputs.mjs";
-import * as datasetPayload from "../../scripts/lib/import-curation/internal/dataset-payload.mjs";
-import * as traceSummary from "../../scripts/lib/import-curation/internal/trace-summary.mjs";
+import * as artifactInputs from "../../scripts/lib/import-curation/internal/artifact-inputs.ts";
+import * as contextInputs from "../../scripts/lib/import-curation/internal/context-inputs.ts";
+import * as datasetPayload from "../../scripts/lib/import-curation/internal/dataset-payload.ts";
+import * as traceSummary from "../../scripts/lib/import-curation/internal/trace-summary.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 

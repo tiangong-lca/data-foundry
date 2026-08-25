@@ -3,7 +3,7 @@ export {
   qaFindingCode,
   qaFindingCurationAction,
   readQaFindings,
-} from "./artifact-inputs.mjs";
+} from "./artifact-inputs.ts";
 export {
   collectBundledSchemaContextFiles,
   collectContextDirFiles,
@@ -12,8 +12,8 @@ export {
   fullContextAiCompletionRequirement,
   fullContextGateItems,
   readContextFiles,
-} from "./context-inputs.mjs";
-export { datasetIdentity, identityKey, mapRowsByIdentity } from "./dataset-payload.mjs";
+} from "./context-inputs.ts";
+export { datasetIdentity, identityKey, mapRowsByIdentity } from "./dataset-payload.ts";
 export { datasetTypeFromOptions, datasetTypePlural } from "./dataset-types.ts";
 export { sha256Text } from "./hash-utils.ts";
 export { profileFor } from "./profiles-config.mjs";

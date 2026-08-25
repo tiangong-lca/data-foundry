@@ -12,7 +12,7 @@ import {
   identityKey,
   mapRowsByIdentity,
   unwrapDatasetPayload,
-} from "../../scripts/lib/import-curation/internal/dataset-payload.mjs";
+} from "../../scripts/lib/import-curation/internal/dataset-payload.ts";
 
 const detectType = detectDatasetType as unknown as (
   value: unknown,

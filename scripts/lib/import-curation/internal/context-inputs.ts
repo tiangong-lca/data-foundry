@@ -13,32 +13,53 @@ import {
   resolveRepoPath,
 } from "./runtime-io.ts";
 
+type JsonRecord = Record<string, any>;
+
+export type ContextFile = {
+  kind: string;
+  path: string | null;
+  text: string;
+};
+
+export type FullContextAiCompletion = {
+  required: boolean;
+  datasetTypes: string[];
+  requiredContextKinds: string[];
+  requiredContextFilePatterns: string[];
+  proof: string;
+};
+
 export const tidasSchemaSearchRoots = ["@tiangong-lca/cli@0.1.1/assets/tidas-schemas"];
 
-export function tidasSchemaPath(repoRoot, schemaFile) {
+export function tidasSchemaPath(repoRoot: string, schemaFile: string): string | null {
   void repoRoot;
   const candidate = path.join(resolveInstalledTiangongLcaCliPackage().schemaDir, schemaFile);
   return fileExists(candidate) ? candidate : null;
 }
 
-export function loadTidasSchema(repoRoot, schemaFile) {
+export function loadTidasSchema(repoRoot: string, schemaFile: string): any {
   const schemaPath = tidasSchemaPath(repoRoot, schemaFile);
   return schemaPath ? readJson(schemaPath) : null;
 }
 
-export function collectExplicitContextFiles(options) {
-  return [
-    ["contract_context", options.contractContext ?? options.contextFile],
-    ["schema", options.schemaFile],
-    ["methodology_yaml", options.yamlFile],
-    ["ruleset", options.rulesetFile],
-    ["contract", options.contractFile],
-  ].filter(([, filePath]) => Boolean(filePath));
+export function collectExplicitContextFiles(options: JsonRecord): Array<[string, any]> {
+  return (
+    [
+      ["contract_context", options.contractContext ?? options.contextFile],
+      ["schema", options.schemaFile],
+      ["methodology_yaml", options.yamlFile],
+      ["ruleset", options.rulesetFile],
+      ["contract", options.contractFile],
+    ] as Array<[string, any]>
+  ).filter(([, filePath]) => Boolean(filePath));
 }
 
-export function collectContextDirFiles(repoRoot, contextDir) {
+export function collectContextDirFiles(
+  repoRoot: string,
+  contextDir: string | null | undefined,
+): Array<[string, string]> {
   const resolvedDir = resolveRepoPath(repoRoot, contextDir);
-  if (!directoryExists(resolvedDir)) return [];
+  if (!resolvedDir || !directoryExists(resolvedDir)) return [];
   return fs
     .readdirSync(resolvedDir, { withFileTypes: true })
     .filter((entry) => entry.isFile())
@@ -48,13 +69,13 @@ export function collectContextDirFiles(repoRoot, contextDir) {
     .map((name) => ["context_dir_file", path.join(resolvedDir, name)]);
 }
 
-export function firstTidasSchemaDir(repoRoot) {
+export function firstTidasSchemaDir(repoRoot: string): string | null {
   void repoRoot;
   const schemaDir = resolveInstalledTiangongLcaCliPackage().schemaDir;
   return directoryExists(schemaDir) ? schemaDir : null;
 }
 
-export function bundledCategorySchemaFileNames(repoRoot) {
+export function bundledCategorySchemaFileNames(repoRoot: string): string[] {
   const schemaDir = firstTidasSchemaDir(repoRoot);
   if (!schemaDir) return [];
   return fs
@@ -63,10 +84,10 @@ export function bundledCategorySchemaFileNames(repoRoot) {
     .sort();
 }
 
-export function collectBundledSchemaContextFiles(repoRoot) {
+export function collectBundledSchemaContextFiles(repoRoot: string): Array<[string, string]> {
   const schemaDir = firstTidasSchemaDir(repoRoot);
   if (!schemaDir) return [];
-  const entries = [];
+  const entries: Array<[string, string]> = [];
   for (const name of bundledCategorySchemaFileNames(repoRoot)) {
     if (name === "tidas_locations_category.json") continue;
     entries.push(["classification_schema", path.join(schemaDir, name)]);
@@ -75,10 +96,13 @@ export function collectBundledSchemaContextFiles(repoRoot) {
   return entries;
 }
 
-export function readContextFiles(repoRoot, entries) {
-  const files = [];
-  const missing = [];
-  const seen = new Set();
+export function readContextFiles(
+  repoRoot: string,
+  entries: Array<[string, string | null | undefined]>,
+): { files: ContextFile[]; missing: Array<{ kind: string; path: string }> } {
+  const files: ContextFile[] = [];
+  const missing: Array<{ kind: string; path: string }> = [];
+  const seen = new Set<string>();
   for (const [kind, filePath] of entries) {
     const resolved = resolveRepoPath(repoRoot, filePath);
     if (!resolved || seen.has(resolved)) continue;
@@ -86,7 +110,7 @@ export function readContextFiles(repoRoot, entries) {
     if (!fileExists(resolved)) {
       missing.push({
         kind,
-        path: path.isAbsolute(filePath) ? filePath : filePath,
+        path: filePath!,
       });
       continue;
     }
@@ -99,7 +123,7 @@ export function readContextFiles(repoRoot, entries) {
   return { files, missing };
 }
 
-export function normalizeFullContextAiCompletion(value) {
+export function normalizeFullContextAiCompletion(value: any): FullContextAiCompletion {
   const config = value && typeof value === "object" ? value : {};
   return {
     required: Boolean(config.required ?? config.require ?? false),
@@ -120,7 +144,11 @@ export function normalizeFullContextAiCompletion(value) {
   };
 }
 
-export function fullContextAiCompletionRequirement(profile, datasetType, repoRoot) {
+export function fullContextAiCompletionRequirement(
+  profile: any,
+  datasetType: string,
+  repoRoot: string,
+): FullContextAiCompletion | null {
   const requirement = profile?.fullContextAiCompletion ?? normalizeFullContextAiCompletion(null);
   if (!requirement.required) return null;
   if (requirement.datasetTypes.length > 0 && !requirement.datasetTypes.includes(datasetType)) {
@@ -159,7 +187,9 @@ export function fullContextAiCompletionRequirement(profile, datasetType, repoRoo
   };
 }
 
-export function contextFileDetails(files) {
+export function contextFileDetails(
+  files: any,
+): Array<{ kind: string; path: string | null; sha256: string; bytes: number }> {
   return ensureArray(files).map((file) => ({
     kind: asText(file?.kind) || "context",
     path: asText(file?.path) || null,
@@ -168,7 +198,7 @@ export function contextFileDetails(files) {
   }));
 }
 
-export function contextHasFilePattern(files, pattern) {
+export function contextHasFilePattern(files: any, pattern: unknown): boolean {
   const needle = String(pattern).toLowerCase();
   return ensureArray(files).some((file) =>
     String(file?.path ?? "")
@@ -177,10 +207,19 @@ export function contextHasFilePattern(files, pattern) {
   );
 }
 
-export function fullContextGateItems({ contractContext, requirement }) {
+export function fullContextGateItems({
+  contractContext,
+  requirement,
+}: {
+  contractContext: { files: any[] };
+  requirement: Pick<
+    FullContextAiCompletion,
+    "requiredContextKinds" | "requiredContextFilePatterns"
+  > | null;
+}): JsonRecord[] {
   if (!requirement) return [];
   const kinds = new Set(contractContext.files.map((file) => asText(file.kind)).filter(Boolean));
-  const items = [];
+  const items: JsonRecord[] = [];
   for (const kind of requirement.requiredContextKinds) {
     if (!kinds.has(kind)) {
       items.push({

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { loadTidasSchema } from "./context-inputs.mjs";
+import { loadTidasSchema } from "./context-inputs.ts";
 import { asText, ensureArray, resolveRepoPath } from "./runtime-io.ts";
 import {
   evidenceEntries,

@@ -20,7 +20,7 @@ import {
   readContextFiles,
   tidasSchemaPath,
   tidasSchemaSearchRoots,
-} from "../../scripts/lib/import-curation/internal/context-inputs.mjs";
+} from "../../scripts/lib/import-curation/internal/context-inputs.ts";
 
 function withFixture<T>(callback: (root: string) => T): T {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-context-inputs-"));

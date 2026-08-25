@@ -11,7 +11,7 @@ import {
 import {
   firstTidasSchemaDir,
   tidasSchemaPath,
-} from "../../scripts/lib/import-curation/internal/context-inputs.mjs";
+} from "../../scripts/lib/import-curation/internal/context-inputs.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const fixtureRoot = path.join(repoRoot, "tmp", "library-scope-workflow-test");

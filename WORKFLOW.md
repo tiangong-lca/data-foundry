@@ -33,6 +33,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/hash-utils.ts
   - scripts/lib/import-curation/internal/dataset-types.ts
   - scripts/lib/import-curation/internal/runtime-io.ts
+  - scripts/lib/import-curation/internal/artifact-inputs.ts
+  - scripts/lib/import-curation/internal/context-inputs.ts
+  - scripts/lib/import-curation/internal/dataset-payload.ts
+  - scripts/lib/import-curation/internal/trace-summary.ts
   - test/unit/foundry-cli-spine.test.mts
   - test/unit/foundry-command-metadata.test.mts
   - test/unit/surface-audit-typescript.test.mts
@@ -40,6 +44,10 @@ checkPaths:
   - test/unit/hash-utils.test.mts
   - test/unit/tidas-language-utils.test.mjs
   - test/unit/runtime-io.test.mts
+  - test/unit/artifact-inputs.test.mts
+  - test/unit/context-inputs.test.mts
+  - test/unit/dataset-payload.test.mts
+  - test/unit/trace-summary.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
 lastReviewedCommit: 73fd7d051e7a4ee3695252d155f908e9dee6d5db

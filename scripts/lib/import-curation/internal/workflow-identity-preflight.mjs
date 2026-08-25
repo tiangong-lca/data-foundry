@@ -1,11 +1,11 @@
 import path from "node:path";
 import { validateIdentityPreflightEvidence } from "../../identity-preflight-proof.ts";
-import { readJsonLinesIfExists, resolveArtifactPath } from "./artifact-inputs.mjs";
+import { readJsonLinesIfExists, resolveArtifactPath } from "./artifact-inputs.ts";
 import {
   dataSetInformation,
   datasetRoot,
   identityFreshnessIdentityKey,
-} from "./dataset-payload.mjs";
+} from "./dataset-payload.ts";
 import { sha256Json } from "./hash-utils.ts";
 import {
   asText,

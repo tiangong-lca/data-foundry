@@ -1,17 +1,34 @@
 import path from "node:path";
 import { asText, ensureArray, fileExists, readJsonOrJsonl, resolveRepoPath } from "./runtime-io.ts";
 
-export function idFromArtifactFile(fileName) {
+type JsonRecord = Record<string, any>;
+
+export type QaFinding = JsonRecord;
+
+export type QaCurationAction = {
+  source: string;
+  code: string;
+  path: string | null;
+  message: unknown;
+  evidence: unknown;
+  instruction: string | null;
+  action_kind: "ai_authoring";
+  required_owner: "foundry_ai_authoring";
+  ai_required: true;
+};
+
+export function idFromArtifactFile(fileName: unknown): string {
   const base = path.basename(String(fileName ?? ""));
   const withoutExt = base.replace(/\.json$/u, "").replace(/\.jsonl$/u, "");
   return withoutExt.split("__")[0] || "";
 }
 
-export function entityIdFromFinding(finding, datasetType) {
+export function entityIdFromFinding(finding: unknown, datasetType: string): string {
   if (!finding || typeof finding !== "object") return "";
+  const findingRecord = finding as JsonRecord;
   const directKeys = [`${datasetType}_id`, "entity_id", "dataset_id", "row_id", "id"];
   for (const key of directKeys) {
-    const value = asText(finding[key]);
+    const value = asText(findingRecord[key]);
     if (value) return value;
   }
   const fileKeys = [
@@ -23,22 +40,27 @@ export function entityIdFromFinding(finding, datasetType) {
     "file",
   ];
   for (const key of fileKeys) {
-    const value = idFromArtifactFile(finding[key]);
+    const value = idFromArtifactFile(findingRecord[key]);
     if (value) return value;
   }
   return "";
 }
 
-export function readJsonLinesIfExists(filePath) {
+export function readJsonLinesIfExists(filePath: string | null | undefined): unknown[] {
   if (!filePath || !fileExists(filePath)) return [];
   const parsed = readJsonOrJsonl(filePath);
   if (Array.isArray(parsed)) return parsed;
-  if (Array.isArray(parsed?.findings)) return parsed.findings;
-  if (Array.isArray(parsed?.rows)) return parsed.rows;
+  const record = parsed as JsonRecord;
+  if (Array.isArray(record?.findings)) return record.findings;
+  if (Array.isArray(record?.rows)) return record.rows;
   return [];
 }
 
-export function resolveArtifactPath(repoRoot, filePath, baseDir) {
+export function resolveArtifactPath(
+  repoRoot: string,
+  filePath: string | null | undefined,
+  baseDir: string,
+): string | null {
   if (!filePath) return null;
   if (path.isAbsolute(filePath)) return filePath;
   const fromBase = path.resolve(baseDir, filePath);
@@ -46,13 +68,13 @@ export function resolveArtifactPath(repoRoot, filePath, baseDir) {
   return resolveRepoPath(repoRoot, filePath);
 }
 
-export function qaFindingCode(finding) {
+export function qaFindingCode(finding: QaFinding | null | undefined): string {
   return (
     asText(finding?.code ?? finding?.rule_code ?? finding?.rule_id ?? finding?.id) || "qa_finding"
   );
 }
 
-export const qaFindingPathDefaults = {
+export const qaFindingPathDefaults: Record<string, Record<string, string>> = {
   process: {
     process_missing_source_base_name:
       "processDataSet.processInformation.dataSetInformation.name.baseName",
@@ -81,7 +103,10 @@ export const qaFindingPathDefaults = {
   },
 };
 
-export function qaFindingPath(finding, datasetType) {
+export function qaFindingPath(
+  finding: QaFinding | null | undefined,
+  datasetType: string,
+): string | null {
   return (
     asText(finding?.path ?? finding?.field_path ?? finding?.fieldPath) ||
     qaFindingPathDefaults[datasetType]?.[qaFindingCode(finding)] ||
@@ -89,7 +114,10 @@ export function qaFindingPath(finding, datasetType) {
   );
 }
 
-export function qaFindingInstruction(finding, datasetType) {
+export function qaFindingInstruction(
+  finding: QaFinding | null | undefined,
+  datasetType: string,
+): string | null {
   const code = qaFindingCode(finding);
   if (datasetType === "process" && code === "process_missing_functional_unit") {
     return "Use the source row, reference exchange, source unit, process name, SDK schema, and methodology YAML quantitativeReference rules to write source-language functionalUnitOrOther. Do not invent a value when source evidence is absent.";
@@ -106,7 +134,7 @@ export function qaFindingInstruction(finding, datasetType) {
   return asText(finding?.instruction) || null;
 }
 
-export function qaFindingCurationAction(finding, datasetType) {
+export function qaFindingCurationAction(finding: QaFinding, datasetType: string): QaCurationAction {
   return {
     source: `${datasetType}_qa`,
     code: qaFindingCode(finding),
@@ -120,14 +148,19 @@ export function qaFindingCurationAction(finding, datasetType) {
   };
 }
 
-export function readQaFindings(repoRoot, qaReport, qaReportPath, datasetType) {
+export function readQaFindings(
+  repoRoot: string,
+  qaReport: JsonRecord,
+  qaReportPath: string,
+  datasetType: string,
+): QaFinding[] {
   const qaReportDir = path.dirname(qaReportPath);
   const fileRefs = [
     qaReport?.files?.rule_findings,
     qaReport?.files?.findings,
     qaReport?.files?.llm_findings,
   ].filter(Boolean);
-  const findings = [];
+  const findings: unknown[] = [];
   for (const fileRef of fileRefs) {
     const resolved = resolveArtifactPath(repoRoot, fileRef, qaReportDir);
     findings.push(...readJsonLinesIfExists(resolved));
@@ -135,20 +168,21 @@ export function readQaFindings(repoRoot, qaReport, qaReportPath, datasetType) {
   findings.push(...ensureArray(qaReport?.ruleset_gate?.blockers));
   findings.push(...ensureArray(qaReport?.blockers));
   findings.push(...ensureArray(qaReport?.findings));
-  const deduped = [];
-  const seen = new Set();
+  const deduped: QaFinding[] = [];
+  const seen = new Set<string>();
   for (const finding of findings) {
     if (!finding || typeof finding !== "object") continue;
+    const findingRecord = finding as QaFinding;
     const key = JSON.stringify([
-      entityIdFromFinding(finding, datasetType),
-      qaFindingCode(finding),
-      finding.path ?? null,
-      finding.message ?? null,
-      finding.evidence ?? null,
+      entityIdFromFinding(findingRecord, datasetType),
+      qaFindingCode(findingRecord),
+      findingRecord.path ?? null,
+      findingRecord.message ?? null,
+      findingRecord.evidence ?? null,
     ]);
     if (seen.has(key)) continue;
     seen.add(key);
-    deduped.push(finding);
+    deduped.push(findingRecord);
   }
   return deduped;
 }

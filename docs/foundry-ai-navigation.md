@@ -27,6 +27,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/hash-utils.ts
   - scripts/lib/import-curation/internal/dataset-types.ts
   - scripts/lib/import-curation/internal/runtime-io.ts
+  - scripts/lib/import-curation/internal/artifact-inputs.ts
+  - scripts/lib/import-curation/internal/context-inputs.ts
+  - scripts/lib/import-curation/internal/dataset-payload.ts
+  - scripts/lib/import-curation/internal/trace-summary.ts
   - scripts/commands/incremental-change-set.mjs
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
@@ -84,6 +88,8 @@ The typed low-level data leaves are `scripts/lib/bundle-row-types.ts`, `scripts/
 
 The high-fan-in typed I/O leaf is `scripts/lib/import-curation/internal/runtime-io.ts`. It owns generic coercion, JSON/JSONL/text reading and synchronous writing, filesystem probes, repository/artifact path normalization, row-envelope loading, option lists, unique values, and safe filename fragments. Its current writer contract is direct synchronous overwrite rather than transactional rename: JSONL closes its descriptor on success and error, while a serialization failure after earlier rows leaves the completed prefix visible. Do not change those semantics implicitly during consumer migrations.
 
+The typed contracts immediately above runtime I/O are `artifact-inputs.ts`, `dataset-payload.ts`, `trace-summary.ts`, and `context-inputs.ts`. They own QA/artifact file fallback and dedupe, TIDAS payload/root/type/id/version extraction, ordered `common:other` trace aggregation and compact hashing, and exact installed-CLI schema/methodology/classification/location context resolution. Missing files, duplicate resolved paths, context-byte drift, invalid JSON, trace serialization errors, and fallback identities remain explicit evidence rather than silently repaired input.
+
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 
 The typed handoff primitive is `scripts/lib/foundry-command-spec.ts`. Navigate there for exact-key parsing, canonical command hashing, critical-flag uniqueness, final-row artifact facts, or pre-spawn drift checks. Callers must never reconstruct argv from `display`.
@@ -122,8 +128,8 @@ semantic import-curation modules
   -> internal/workflow-*.mjs
   -> internal/full-context-proof.mjs
   -> internal/profiles-config.mjs
-  -> internal/trace-summary.mjs
-  -> internal/dataset-payload.mjs
+  -> internal/trace-summary.ts
+  -> internal/dataset-payload.ts
   -> internal/dataset-types.ts
   -> internal/runtime-io.ts
 ```
@@ -132,9 +138,9 @@ Layer rules:
 
 - `runtime-io.ts`: generic time, array, text, JSON/JSONL, filesystem, and path helpers.
 - `dataset-types.ts`: supported dataset type sets, plural names, and fallback profile constants.
-- `dataset-payload.mjs`: TIDAS row payload unwrap, dataset root/type detection, dataset identity, and identity map keys.
+- `dataset-payload.ts`: TIDAS row payload unwrap, dataset root/type detection, dataset identity, and identity map keys.
 - `profiles-config.mjs`: import profile loading, normalization, listing, and lookup.
-- `trace-summary.mjs`: Foundry trace entry collection and compact trace summaries.
+- `trace-summary.ts`: Foundry trace entry collection and compact trace summaries.
 - `prewrite-cleanup.mjs`: deterministic write-preparation transforms such as annual-supply sentinel completion, import trace externalization, Foundry trace namespace repair, local locator redaction, and timestamp normalization.
 - `full-context-proof.mjs`: full-context package/task proof loading and blocker construction.
 - `authoring-task-workflow.mjs`: AI authoring package to task manifest/template preparation helpers.

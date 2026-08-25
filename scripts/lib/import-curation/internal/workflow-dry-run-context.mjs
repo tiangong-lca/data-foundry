@@ -1,4 +1,4 @@
-import { curationEntityId, datasetIdentity, identityKey } from "./dataset-payload.mjs";
+import { curationEntityId, datasetIdentity, identityKey } from "./dataset-payload.ts";
 import { asText, ensureArray, resolveRepoPath } from "./runtime-io.ts";
 import { readJsonLines, readRowsIfExists } from "./workflow-patch-collect.mjs";
 

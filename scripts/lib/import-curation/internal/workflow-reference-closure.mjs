@@ -1,5 +1,5 @@
-import { fullContextAiCompletionRequirement } from "./context-inputs.mjs";
-import { datasetIdentity, identityKey } from "./dataset-payload.mjs";
+import { fullContextAiCompletionRequirement } from "./context-inputs.ts";
+import { datasetIdentity, identityKey } from "./dataset-payload.ts";
 import {
   datasetTypePlural,
   referenceOnlySupportDatasetTypes,
@@ -22,7 +22,7 @@ import {
   repoRelativePath,
   resolveRepoPath,
 } from "./runtime-io.ts";
-import { foundryTraceSummary } from "./trace-summary.mjs";
+import { foundryTraceSummary } from "./trace-summary.ts";
 import {
   buildClassificationDecisionFullContextBlockers,
   buildIdentityDecisionFullContextBlockers,

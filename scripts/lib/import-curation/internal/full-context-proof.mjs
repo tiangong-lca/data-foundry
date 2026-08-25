@@ -1,9 +1,9 @@
-import { contextFileDetails } from "./context-inputs.mjs";
+import { contextFileDetails } from "./context-inputs.ts";
 import {
   datasetIdentity,
   detectDatasetType,
   identityFreshnessIdentityKey,
-} from "./dataset-payload.mjs";
+} from "./dataset-payload.ts";
 import { sha256Json, sha256Text } from "./hash-utils.ts";
 import {
   asText,

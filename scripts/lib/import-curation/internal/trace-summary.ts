@@ -1,9 +1,32 @@
 import { sha256Text } from "./hash-utils.ts";
 import { asText, ensureArray } from "./runtime-io.ts";
 
-export function traceSummaryCount(value) {
+export type CollectedTraceEntry = {
+  path: string;
+  entry: any;
+};
+
+export type CompactFoundryTraceEntry = {
+  dataset_type: string;
+  entity_id: unknown;
+  version: unknown;
+  row_index: number;
+  trace_kind: string;
+  path: string | null;
+  status: string | null;
+  action_item_code: string | null;
+  reference_id: string | null;
+  reference_version: string | null;
+  blocked_path: string | null;
+  reason: string | null;
+  next_action: string | null;
+  evidence: any;
+  trace_sha256: string;
+};
+
+export function traceSummaryCount(value: unknown): number {
   let count = 0;
-  const visit = (node) => {
+  const visit = (node: any): void => {
     if (!node || typeof node !== "object") return;
     if (Array.isArray(node)) {
       for (const item of node) visit(item);
@@ -19,9 +42,13 @@ export function traceSummaryCount(value) {
   return count;
 }
 
-export function collectCommonOtherTraceEntries(value, traceKey, basePath = "$") {
-  const entries = [];
-  const visit = (node, currentPath) => {
+export function collectCommonOtherTraceEntries(
+  value: unknown,
+  traceKey: string,
+  basePath = "$",
+): CollectedTraceEntry[] {
+  const entries: CollectedTraceEntry[] = [];
+  const visit = (node: any, currentPath: string): void => {
     if (!node || typeof node !== "object") return;
     if (Array.isArray(node)) {
       node.forEach((item, index) => visit(item, `${currentPath}[${index}]`));
@@ -49,7 +76,19 @@ export function collectCommonOtherTraceEntries(value, traceKey, basePath = "$") 
 }
 
 // part-08.mjs
-export function compactFoundryTraceEntry({ datasetType, identity, rowIndex, traceKind, trace }) {
+export function compactFoundryTraceEntry({
+  datasetType,
+  identity,
+  rowIndex,
+  traceKind,
+  trace,
+}: {
+  datasetType: string;
+  identity: { id: unknown; version: unknown };
+  rowIndex: number;
+  traceKind: string;
+  trace: CollectedTraceEntry | { path?: string | null; entry?: any };
+}): CompactFoundryTraceEntry {
   const entry =
     trace?.entry && typeof trace.entry === "object" && !Array.isArray(trace.entry)
       ? trace.entry
@@ -87,7 +126,25 @@ export function compactFoundryTraceEntry({ datasetType, identity, rowIndex, trac
   };
 }
 
-export function foundryTraceSummary({ datasetType, identity, row, rowIndex }) {
+export function foundryTraceSummary({
+  datasetType,
+  identity,
+  row,
+  rowIndex,
+}: {
+  datasetType: string;
+  identity: { id: unknown; version: unknown };
+  row: unknown;
+  rowIndex: number;
+}): {
+  import_trace_summary_count: number;
+  unresolved_trace_count: number;
+  unresolved_exchange_trace_count: number;
+  source_exchange_completeness_count: number;
+  unresolved_traces: CompactFoundryTraceEntry[];
+  unresolved_exchange_traces: CompactFoundryTraceEntry[];
+  source_exchange_completeness: CompactFoundryTraceEntry[];
+} {
   const unresolved = collectCommonOtherTraceEntries(row, "tiangongfoundry:unresolvedTrace").map(
     (trace) =>
       compactFoundryTraceEntry({

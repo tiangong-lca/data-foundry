@@ -1,6 +1,6 @@
 import path from "node:path";
-import { resolveArtifactPath } from "./artifact-inputs.mjs";
-import { identityKey } from "./dataset-payload.mjs";
+import { resolveArtifactPath } from "./artifact-inputs.ts";
+import { identityKey } from "./dataset-payload.ts";
 import { annualSupplyMissingDataSentinelText } from "./prewrite-cleanup.mjs";
 import {
   asText,

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { datasetIdentity, identityKey } from "./dataset-payload.mjs";
+import { datasetIdentity, identityKey } from "./dataset-payload.ts";
 import {
   normalizeClassificationDecisionRows,
   payloadSha256ByIdentityForRows,

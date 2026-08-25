@@ -1,6 +1,15 @@
 import { asText } from "./runtime-io.ts";
 
-export function unwrapDatasetPayload(row, datasetType) {
+type JsonRecord = Record<string, any>;
+
+export type DatasetIdentity = {
+  id: string;
+  version: string;
+  payload: any;
+  dataset_type: string | null;
+};
+
+export function unwrapDatasetPayload(row: any, datasetType: string): any {
   if (row && typeof row === "object" && !Array.isArray(row)) {
     const typedKey = datasetType === "lifecyclemodel" ? "lifecyclemodel" : datasetType;
     for (const key of [typedKey, "json_ordered", "jsonOrdered", "json", "payload"]) {
@@ -12,10 +21,10 @@ export function unwrapDatasetPayload(row, datasetType) {
   return row;
 }
 
-export function datasetRoot(payload, datasetType) {
+export function datasetRoot(payload: any, datasetType: string | null): JsonRecord {
   const effectiveDatasetType =
     datasetType === "support" ? detectSupportDatasetType(payload) || datasetType : datasetType;
-  const rootKeys = {
+  const rootKeys: Record<string, string[]> = {
     contact: ["contactDataSet"],
     process: ["processDataSet"],
     flow: ["flowDataSet"],
@@ -24,13 +33,13 @@ export function datasetRoot(payload, datasetType) {
     source: ["sourceDataSet"],
     unitgroup: ["unitGroupDataSet"],
   };
-  for (const key of rootKeys[effectiveDatasetType] ?? []) {
+  for (const key of rootKeys[effectiveDatasetType as string] ?? []) {
     if (payload?.[key] && typeof payload[key] === "object") return payload[key];
   }
   return {};
 }
 
-export function detectSupportDatasetType(value) {
+export function detectSupportDatasetType(value: any): string | null {
   const payload =
     value && typeof value === "object" && !Array.isArray(value)
       ? unwrapDatasetPayload(value, "support")
@@ -49,7 +58,7 @@ export function detectSupportDatasetType(value) {
   return null;
 }
 
-export function detectDatasetType(value, fallback = null) {
+export function detectDatasetType(value: any, fallback: string | null = null): string | null {
   const payload =
     value && typeof value === "object" && !Array.isArray(value)
       ? unwrapDatasetPayload(value, fallback || "support")
@@ -73,7 +82,7 @@ export function detectDatasetType(value, fallback = null) {
   return fallback;
 }
 
-export function dataSetInformation(root, datasetType) {
+export function dataSetInformation(root: any, datasetType: string | null): JsonRecord {
   const candidates = [
     root?.contactInformation?.dataSetInformation,
     root?.processInformation?.dataSetInformation,
@@ -89,7 +98,7 @@ export function dataSetInformation(root, datasetType) {
   return candidates.find((candidate) => candidate && typeof candidate === "object") ?? {};
 }
 
-export function datasetIdentity(row, index, datasetType) {
+export function datasetIdentity(row: any, index: number, datasetType: string): DatasetIdentity {
   const payload = unwrapDatasetPayload(row, datasetType);
   const effectiveDatasetType =
     datasetType === "support"
@@ -104,21 +113,30 @@ export function datasetIdentity(row, index, datasetType) {
   return { id, version, payload, dataset_type: effectiveDatasetType };
 }
 
-export function curationEntityId(entity) {
+export function curationEntityId(entity: any): string {
   return asText(entity?.entity_id ?? entity?.process_id ?? entity?.id);
 }
 
-export function identityKey(identity) {
+export function identityKey(identity: { id: unknown; version: unknown }): string {
   return `${identity.id}@@${identity.version}`;
 }
 
-export function identityFreshnessIdentityKey({ datasetType, identity }) {
+export function identityFreshnessIdentityKey({
+  datasetType,
+  identity,
+}: {
+  datasetType: string;
+  identity: { id?: unknown; version?: unknown };
+}): string | null {
   const id = asText(identity?.id);
   const version = asText(identity?.version) || "00.00.001";
   return id ? `${datasetType}:${id}@@${version}` : null;
 }
 
-export function mapRowsByIdentity(rows, datasetType) {
+export function mapRowsByIdentity(
+  rows: any[],
+  datasetType: string,
+): Map<string, { row: any; identity: DatasetIdentity; index: number }> {
   return new Map(
     rows.map((row, index) => {
       const identity = datasetIdentity(row, index, datasetType);

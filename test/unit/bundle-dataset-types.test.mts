@@ -8,7 +8,7 @@ import {
   datasetRoot,
   detectDatasetType,
   detectSupportDatasetType,
-} from "../../scripts/lib/import-curation/internal/dataset-payload.mjs";
+} from "../../scripts/lib/import-curation/internal/dataset-payload.ts";
 import {
   datasetTypeFromOptions,
   datasetTypePlural,

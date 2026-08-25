@@ -1,4 +1,4 @@
-import { normalizeFullContextAiCompletion } from "./context-inputs.mjs";
+import { normalizeFullContextAiCompletion } from "./context-inputs.ts";
 import { datasetTypeFromOptions, defaultProfilesFile, fallbackProfiles } from "./dataset-types.ts";
 import { ensureArray, optionList, readJsonIfExists, resolveRepoPath } from "./runtime-io.ts";
 

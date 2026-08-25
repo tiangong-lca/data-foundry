@@ -1,4 +1,4 @@
-import { datasetIdentity, datasetRoot, unwrapDatasetPayload } from "./dataset-payload.mjs";
+import { datasetIdentity, datasetRoot, unwrapDatasetPayload } from "./dataset-payload.ts";
 import { sha256Json, sha256Text } from "./hash-utils.ts";
 import { asText, ensureArray } from "./runtime-io.ts";
 
