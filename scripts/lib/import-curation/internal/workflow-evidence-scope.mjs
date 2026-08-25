@@ -13,7 +13,7 @@ import {
   patchApplyOutputChainsThroughIdentityRewriteAndUnresolvedExchangeExternalization,
   patchApplyOutputChainsThroughUnresolvedExchangeExternalization,
   rowsFileReachableThroughTransformChain,
-} from "./workflow-row-transform-context.mjs";
+} from "./workflow-row-transform-context.ts";
 
 export function evidenceScopeBlocker({
   code,

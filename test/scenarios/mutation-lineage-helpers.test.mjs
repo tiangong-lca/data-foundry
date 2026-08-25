@@ -10,7 +10,7 @@ import {
   readRowsFileTransformContext,
   rowsFileReachableThroughTransformChain,
   sameRowsArtifact,
-} from "../../scripts/lib/import-curation/internal/workflow-row-transform-context.mjs";
+} from "../../scripts/lib/import-curation/internal/workflow-row-transform-context.ts";
 import { fixtureRoot } from "../fixtures/fixture-roots.ts";
 import {
   assert,

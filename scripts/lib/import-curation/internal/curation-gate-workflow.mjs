@@ -65,5 +65,5 @@ export {
   readSourceContactRewriteContext,
   readUnresolvedExchangeExternalizationContext,
   unresolvedExchangeExternalizationRowsForIdentity,
-} from "./workflow-row-transform-context.mjs";
+} from "./workflow-row-transform-context.ts";
 export { collectProfileSemanticActionItems } from "./workflow-semantic-actions.mjs";

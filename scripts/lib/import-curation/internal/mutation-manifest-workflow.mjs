@@ -62,7 +62,7 @@ export {
   readCleanupTransformContext,
   readSourceContactRewriteContext,
   readUnresolvedExchangeExternalizationContext,
-} from "./workflow-row-transform-context.mjs";
+} from "./workflow-row-transform-context.ts";
 export {
   publicCanonicalSourceReferenceKeys,
   readSourceReferenceRewriteContext,

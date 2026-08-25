@@ -40,7 +40,7 @@ import {
 import {
   deterministicRowsFileTransformEntries,
   rowsFileReachableThroughTransformChain,
-} from "./workflow-row-transform-context.mjs";
+} from "./workflow-row-transform-context.ts";
 import { allowedPatchResolutionModes, jsonPointerToken } from "./workflow-semantic-actions.mjs";
 
 // part-11.mjs

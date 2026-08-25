@@ -33,7 +33,7 @@ import {
   decisionApplyOutputRowsReachableThroughDeterministicTransforms,
   rowsFileChainsThroughUnresolvedExchangeExternalization,
   sameRowsArtifact,
-} from "./workflow-row-transform-context.mjs";
+} from "./workflow-row-transform-context.ts";
 
 // part-10.mjs
 export function decisionApplyOutputRowsChainThroughUnresolvedExchangeExternalization(

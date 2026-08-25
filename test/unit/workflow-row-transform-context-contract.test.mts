@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import * as transforms from "../../scripts/lib/import-curation/internal/workflow-row-transform-context.mjs";
+import * as transforms from "../../scripts/lib/import-curation/internal/workflow-row-transform-context.ts";
 import { sha256Json } from "../../scripts/lib/import-curation/internal/hash-utils.ts";
 
 type JsonRecord = Record<string, unknown>;
@@ -63,6 +63,7 @@ test("unresolved externalization context preserves aliases, trace order/counts, 
       },
     };
     const context = transforms.readUnresolvedExchangeExternalizationContext(root, artifact);
+    assert.ok(context);
     assert.equal(context.status, "completed");
     assert.equal(context.inputRowsFile, path.join(root, "rows", "input.jsonl"));
     assert.equal(context.outputRowsFile, path.join(root, "rows", "output.jsonl"));
@@ -95,7 +96,7 @@ test("unresolved externalization context preserves aliases, trace order/counts, 
           id: "process-id",
           version: "01.00.000",
         })
-        .map((row: JsonRecord) => row.marker),
+        .map((row) => (row as JsonRecord).marker),
       ["first", "second"],
     );
     assert.deepEqual(
@@ -158,6 +159,7 @@ test("canonical and generic row-transform contexts preserve blocker modes, alias
       },
     };
     const canonical = transforms.readCanonicalSupportRewriteContext(root, canonicalArtifact);
+    assert.ok(canonical);
     assert.equal(canonical.status, "blocked");
     assert.deepEqual(canonical.blockers, [{ code: "first" }, { code: "second" }]);
     assert.deepEqual(canonical.deferredBlockers, []);
@@ -178,11 +180,13 @@ test("canonical and generic row-transform contexts preserve blocker modes, alias
       ...canonicalArtifact,
       value: { ...canonicalArtifact.value, blockers: explicitBlockers },
     });
+    assert.ok(explicit);
     assert.equal(explicit.blockers, explicitBlockers);
     const deferred = transforms.readCanonicalSupportRewriteContext(root, {
       ...canonicalArtifact,
       value: { ...canonicalArtifact.value, status: "completed_with_deferred_rows" },
     });
+    assert.ok(deferred);
     assert.deepEqual(deferred.deferredBlockers, [{ code: "first" }, { code: "second" }]);
 
     const proof = { dataset_id: "flow-id", trace_hash: "trace" };
@@ -196,16 +200,15 @@ test("canonical and generic row-transform contexts preserve blocker modes, alias
       },
     };
     const generic = transforms.readRowsFileTransformContext(root, genericArtifact, "custom");
+    assert.ok(generic);
     assert.equal(generic.kind, "custom");
     assert.deepEqual(generic.sourceExchangeCompletenessProofs, [proof]);
-    assert.equal(
-      transforms.readSourceContactRewriteContext(root, genericArtifact).kind,
-      "source_contact_rewrite",
-    );
-    assert.equal(
-      transforms.readCleanupTransformContext(root, genericArtifact).kind,
-      "curation_cleanup",
-    );
+    const sourceContact = transforms.readSourceContactRewriteContext(root, genericArtifact);
+    const cleanup = transforms.readCleanupTransformContext(root, genericArtifact);
+    assert.ok(sourceContact);
+    assert.ok(cleanup);
+    assert.equal(sourceContact.kind, "source_contact_rewrite");
+    assert.equal(cleanup.kind, "curation_cleanup");
     assert.equal(transforms.readRowsFileTransformContext(root, null, "none"), null);
   });
 });
