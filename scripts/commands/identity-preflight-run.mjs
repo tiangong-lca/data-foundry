@@ -8,6 +8,7 @@ import {
   validateBoundExecutionManifest,
   validateIdentityPreflightExecution,
 } from "../lib/identity-preflight-proof.ts";
+import { createFileArtifactFact, createFoundryCommandSpec } from "../lib/foundry-command-spec.ts";
 import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
 // Run-level identity-preflight RESULT cache (env-gated; off unless
@@ -330,12 +331,22 @@ export function createIdentityPreflightRunCommands({
         executable: cli.command,
         cli_package: cli.package,
         cli_args: cliArgs,
-        command_spec: {
-          schema: "tiangong-foundry.command-spec.v1",
-          executable: cli.command,
-          argv: [...cli.args, ...cliArgs],
-          argv_sha256: jsonSha256([cli.command, ...cli.args, ...cliArgs]),
-        },
+        command_spec:
+          requestFile && fileExists(requestFile)
+            ? createFoundryCommandSpec({
+                executable: cli.command,
+                argv: [...cli.args, ...cliArgs],
+                binding: {
+                  artifacts: [
+                    createFileArtifactFact({
+                      role: "identity_preflight_request",
+                      path: repoRelativePath(requestFile),
+                      filePath: requestFile,
+                    }),
+                  ],
+                },
+              })
+            : null,
         stdout_log: repoRelativePath(stdoutLog),
         stderr_log: repoRelativePath(stderrLog),
       };

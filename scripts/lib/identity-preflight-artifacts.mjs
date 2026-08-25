@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createFileArtifactFact, createFoundryCommandSpec } from "./foundry-command-spec.ts";
 
 export function createIdentityPreflightArtifactUtils({
   asText,
@@ -640,12 +641,19 @@ export function createIdentityPreflightArtifactUtils({
           expected_candidates_file: repoRelativePath(expectedCandidatesFile),
           expected_candidate_sources_file: repoRelativePath(expectedCandidateSourcesFile),
           command,
-          command_spec: {
-            schema: "tiangong-foundry.command-spec.v1",
+          command_spec: createFoundryCommandSpec({
             executable: commandTokens[0],
             argv: commandTokens.slice(1),
-            argv_sha256: jsonSha256(commandTokens),
-          },
+            binding: {
+              artifacts: [
+                createFileArtifactFact({
+                  role: "identity_preflight_request",
+                  path: repoRelativePath(requestPath),
+                  filePath: requestPath,
+                }),
+              ],
+            },
+          }),
           remote_search: {
             data_source: remoteSearch.data_source,
             limit: remoteSearch.limit,

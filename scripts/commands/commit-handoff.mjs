@@ -1,5 +1,6 @@
 import path from "node:path";
 import process from "node:process";
+import { createFileArtifactFact, createFoundryCommandSpec } from "../lib/foundry-command-spec.ts";
 
 function commitCommandForDatasetType(
   datasetType,
@@ -354,6 +355,14 @@ export function createCommitHandoffCommands({
     if (stateCode) {
       verifyArgs.push("--state-code", stateCode);
     }
+    const finalRowsArtifact =
+      finalRowsFile && fileExists(finalRowsFile)
+        ? createFileArtifactFact({
+            role: "final_rows",
+            path: repoRelativePath(finalRowsFile),
+            filePath: finalRowsFile,
+          })
+        : null;
 
     const traceFiles = {
       unresolved_traces:
@@ -400,6 +409,13 @@ export function createCommitHandoffCommands({
       finalize_report: repoRelativePath(finalizeArtifact.path),
       mutation_manifest: mutationArtifact ? repoRelativePath(mutationArtifact.path) : null,
       final_rows_file: finalRowsFile ? repoRelativePath(finalRowsFile) : null,
+      final_rows_artifact: finalRowsArtifact
+        ? {
+            path: finalRowsArtifact.path,
+            bytes: finalRowsArtifact.bytes,
+            sha256: finalRowsArtifact.sha256,
+          }
+        : null,
       target_user_id: targetUserId || null,
       expected_state_code: stateCode || null,
       expected_state_code_source: stateCodeSource,
@@ -444,8 +460,22 @@ export function createCommitHandoffCommands({
       },
       blockers,
       commands: {
-        commit: readyForExplicitCommit ? commitArgs.map(shellQuote).join(" ") : null,
-        post_write_verify: readyForExplicitCommit ? verifyArgs.map(shellQuote).join(" ") : null,
+        commit:
+          readyForExplicitCommit && finalRowsArtifact
+            ? createFoundryCommandSpec({
+                executable: commitArgs[0],
+                argv: commitArgs.slice(1),
+                binding: { artifacts: [finalRowsArtifact] },
+              })
+            : null,
+        post_write_verify:
+          readyForExplicitCommit && finalRowsArtifact
+            ? createFoundryCommandSpec({
+                executable: verifyArgs[0],
+                argv: verifyArgs.slice(1),
+                binding: { artifacts: [finalRowsArtifact] },
+              })
+            : null,
       },
       files: {
         trace_queues: traceFiles,

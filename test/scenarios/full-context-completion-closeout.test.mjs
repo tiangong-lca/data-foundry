@@ -817,17 +817,15 @@ test("process commit handoff defaults draft state code and records account guard
       "target_user_id_cli_argument",
     );
     assert.doesNotThrow(() =>
-      assertFoundryCommandSpecArtifactsCurrent(
-        handoff.json.commands.commit,
-        (artifactPath) => path.join(repoRoot, artifactPath),
+      assertFoundryCommandSpecArtifactsCurrent(handoff.json.commands.commit, (artifactPath) =>
+        path.join(repoRoot, artifactPath),
       ),
     );
     fs.appendFileSync(rowsFile, '{"same_path":"drift"}\n');
     assert.throws(
       () =>
-        assertFoundryCommandSpecArtifactsCurrent(
-          handoff.json.commands.commit,
-          (artifactPath) => path.join(repoRoot, artifactPath),
+        assertFoundryCommandSpecArtifactsCurrent(handoff.json.commands.commit, (artifactPath) =>
+          path.join(repoRoot, artifactPath),
         ),
       /artifact.*drift|bytes|sha-?256/iu,
     );

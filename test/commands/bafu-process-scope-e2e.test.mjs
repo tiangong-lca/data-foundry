@@ -424,10 +424,32 @@ test("BAFU process scope helper resumes ready handoff without executing remote c
     },
     commit_handoff: {
       status: "ready_for_explicit_commit",
-      command:
-        "node node_modules/@tiangong-lca/cli/bin/tiangong-lca.js process save-draft --input rows.jsonl",
-      post_write_verify_command:
-        "node node_modules/@tiangong-lca/cli/bin/tiangong-lca.js dataset verify-remote --input rows.jsonl",
+      command: createFoundryCommandSpec({
+        executable: process.execPath,
+        argv: ["cli.js", "process", "save-draft", "--input", rel(rowsFile)],
+        binding: {
+          artifacts: [
+            createFileArtifactFact({
+              role: "final_rows",
+              path: rel(rowsFile),
+              filePath: rowsFile,
+            }),
+          ],
+        },
+      }),
+      post_write_verify_command: createFoundryCommandSpec({
+        executable: process.execPath,
+        argv: ["cli.js", "dataset", "verify-remote", "--input", rel(rowsFile)],
+        binding: {
+          artifacts: [
+            createFileArtifactFact({
+              role: "final_rows",
+              path: rel(rowsFile),
+              filePath: rowsFile,
+            }),
+          ],
+        },
+      }),
       blockers: [],
     },
     blockers: [],
@@ -439,7 +461,7 @@ test("BAFU process scope helper resumes ready handoff without executing remote c
     assert.equal(result.code, 0);
     assert.equal(result.json.status, "ready_for_explicit_commit");
     assert.equal(result.json.policy.remote_commit_executed, false);
-    assert.match(result.json.commands.commit_handoff, /process save-draft/u);
+    assert.match(result.json.commands.commit_handoff.display, /process save-draft/u);
     const ledger = readJsonLines(path.join(repoRoot, result.json.files.run_ledger));
     assert.equal(ledger.at(-1).state, "ready_for_explicit_commit");
   } finally {

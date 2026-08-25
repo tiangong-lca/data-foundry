@@ -2064,15 +2064,7 @@ test("supportIdentityKeysFromHandoffPlan extracts minted FP/UG keys only under t
     commands: {
       commit: createFoundryCommandSpec({
         executable: "tiangong-lca",
-        argv: [
-          "dataset",
-          "save-draft",
-          "--type",
-          "auto",
-          "--input",
-          supportRowsFile,
-          "--commit",
-        ],
+        argv: ["dataset", "save-draft", "--type", "auto", "--input", supportRowsFile, "--commit"],
         binding: {
           artifacts: [
             createFileArtifactFact({

@@ -867,7 +867,8 @@ test("dataset-identity-preflight-requests-build creates a fresh exact-row reques
   assert.equal(indexRows[0].command_spec.schema, "tiangong-foundry.command-spec.v1");
   assert.equal(typeof indexRows[0].command_spec.executable, "string");
   assert.equal(Array.isArray(indexRows[0].command_spec.argv), true);
-  assert.match(indexRows[0].command_spec.argv_sha256, /^[a-f0-9]{64}$/u);
+  assert.match(indexRows[0].command_spec.sha256, /^[a-f0-9]{64}$/u);
+  assert.equal(indexRows[0].command_spec.binding.artifacts[0].role, "identity_preflight_request");
   assert.equal(indexRows[0].remote_search.edge_request.endpoint, "flow_hybrid_search");
   assert.deepEqual(indexRows[0].remote_search.edge_request.body.filter, {
     flowType: "Elementary flow",
