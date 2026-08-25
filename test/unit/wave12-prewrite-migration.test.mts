@@ -24,7 +24,7 @@ test("prewrite cleanup exists only as native TypeScript", () => {
 
 test("every static prewrite cleanup consumer targets the typed module", () => {
   const consumers = [
-    "scripts/lib/import-curation/curation-cleanup.mjs",
+    "scripts/lib/import-curation/curation-cleanup.ts",
     "scripts/lib/import-curation/internal/workflow-authoring-tasks.ts",
     "scripts/lib/import-curation/internal/workflow-patch-collect.ts",
     "scripts/lib/import-curation/internal/workflow-queue-context.ts",

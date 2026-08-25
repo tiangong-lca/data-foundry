@@ -633,7 +633,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-curation-cleanup": metadata({
     category: "workflow-internal",
-    ownerModule: importOwner("curation-cleanup"),
+    ownerModule: typedImportOwner("curation-cleanup"),
     ownerExport: "runDatasetCurationCleanup",
     inputs: ["curated rows file", "profile cleanup policy"],
     outputs: ["dataset-curation-cleanup-report.json", "cleaned rows file"],

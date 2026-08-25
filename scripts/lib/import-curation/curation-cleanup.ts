@@ -21,7 +21,35 @@ import {
   writeText,
 } from "./internal/runtime-io.ts";
 
-export function runDatasetCurationCleanup({ repoRoot, options = {} } = {}) {
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface CurationCleanupOptions extends JsonRecord {
+  help?: unknown;
+  type?: unknown;
+  datasetType?: unknown;
+  kind?: unknown;
+  rowsFile?: string | null;
+  input?: string | null;
+  outDir?: string | null;
+  out?: string | null;
+  outFile?: string | null;
+  sourceRowsFile?: string | null;
+  sourceRows?: string | null;
+  originalSourceRowsFile?: string | null;
+  originalRowsFile?: string | null;
+}
+
+interface CurationCleanupArgs {
+  repoRoot?: string;
+  options?: CurationCleanupOptions;
+}
+
+export function runDatasetCurationCleanup({
+  repoRoot,
+  options = {},
+}: CurationCleanupArgs = {}): JsonRecord {
   const datasetType = datasetTypeFromOptions(options);
   if (options.help) {
     return {
@@ -37,16 +65,17 @@ export function runDatasetCurationCleanup({ repoRoot, options = {} } = {}) {
       blockers: [],
     };
   }
-  const rowsFile = resolveRepoPath(repoRoot, options.rowsFile || options.input);
+  const root = repoRoot!;
+  const rowsFile = resolveRepoPath(root, options.rowsFile || options.input);
   const defaultOut = `.foundry/workspaces/${datasetType}-dataset-curation-cleanup`;
-  const outDir = resolveRepoPath(repoRoot, options.outDir || defaultOut);
+  const outDir = resolveRepoPath(root, options.outDir || defaultOut)!;
   const defaultOutFile = path.join(outDir, `${datasetTypePlural[datasetType]}.cleaned.jsonl`);
-  const outFile = resolveRepoPath(repoRoot, options.out || options.outFile) || defaultOutFile;
+  const outFile = resolveRepoPath(root, options.out || options.outFile) || defaultOutFile;
   if (!rowsFile || !fileExists(rowsFile)) {
     throw new Error("--rows-file is required and must point to a JSON/JSONL dataset row file.");
   }
   const sourceRowsFile = resolveRepoPath(
-    repoRoot,
+    root,
     options.sourceRowsFile ||
       options.sourceRows ||
       options.originalSourceRowsFile ||
@@ -66,18 +95,18 @@ export function runDatasetCurationCleanup({ repoRoot, options = {} } = {}) {
   let redactedFoundryTraceEvidenceLocators = 0;
   let annualSupplyMissingDataSentinels = 0;
   let sourceExchangeCompletenessProofs = 0;
-  const sourceExchangeProofRows = [];
+  const sourceExchangeProofRows: JsonRecord[] = [];
   const cleanedRows = rows.map((row, rowIndex) => {
     const cleaned = JSON.parse(JSON.stringify(row));
-    if (applyAnnualSupplyMissingDataSentinel(cleaned, datasetType, rowIndex)) {
+    if (applyAnnualSupplyMissingDataSentinel(cleaned, datasetType)) {
       annualSupplyMissingDataSentinels += 1;
     }
     if (
       applyDeterministicSourceExchangeCompletenessProofs(cleaned, datasetType, {
         rowIndex,
         sourceRowsByKey,
-        sourceRowsFile: sourceRowsFile ? repoRelativePath(repoRoot, sourceRowsFile) : null,
-        rowsFile: repoRelativePath(repoRoot, rowsFile),
+        sourceRowsFile: sourceRowsFile ? repoRelativePath(root, sourceRowsFile) : null,
+        rowsFile: repoRelativePath(root, rowsFile),
         proofRows: sourceExchangeProofRows,
       })
     ) {
@@ -93,15 +122,15 @@ export function runDatasetCurationCleanup({ repoRoot, options = {} } = {}) {
   });
   writeText(outFile, jsonLines(cleanedRows));
 
-  const report = {
+  const report: JsonRecord = {
     schema_version: 2,
     generated_at_utc: nowIso(),
     command: "dataset-curation-cleanup",
     status: "completed",
     dataset_type: datasetType,
     remote_write_mode: "read-only",
-    rows_file: repoRelativePath(repoRoot, rowsFile),
-    cleaned_rows_file: repoRelativePath(repoRoot, outFile),
+    rows_file: repoRelativePath(root, rowsFile),
+    cleaned_rows_file: repoRelativePath(root, outFile),
     counts: {
       rows: cleanedRows.length,
       blockers: 0,
@@ -114,9 +143,7 @@ export function runDatasetCurationCleanup({ repoRoot, options = {} } = {}) {
       source_exchange_completeness_proofs: sourceExchangeCompletenessProofs,
     },
     source_rows_file:
-      sourceRowsFile && fileExists(sourceRowsFile)
-        ? repoRelativePath(repoRoot, sourceRowsFile)
-        : null,
+      sourceRowsFile && fileExists(sourceRowsFile) ? repoRelativePath(root, sourceRowsFile) : null,
     source_exchange_completeness_proofs: sourceExchangeProofRows,
     blockers: [],
     policy: {
@@ -139,8 +166,8 @@ export function runDatasetCurationCleanup({ repoRoot, options = {} } = {}) {
   const reportFileName = "dataset-curation-cleanup-report.json";
   const reportPath = path.join(outDir, reportFileName);
   report.files = {
-    report: repoRelativePath(repoRoot, reportPath),
-    cleaned_rows: repoRelativePath(repoRoot, outFile),
+    report: repoRelativePath(root, reportPath),
+    cleaned_rows: repoRelativePath(root, outFile),
   };
   writeJson(reportPath, report);
   return {
