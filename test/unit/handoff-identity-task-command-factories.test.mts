@@ -6,8 +6,8 @@ import path from "node:path";
 import process from "node:process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createCommitHandoffCommands } from "../../scripts/commands/commit-handoff.mjs";
-import { createIdentityDecisionTaskCommands } from "../../scripts/commands/identity-decision-task.mjs";
+import { createCommitHandoffCommands } from "../../scripts/commands/commit-handoff.ts";
+import { createIdentityDecisionTaskCommands } from "../../scripts/commands/identity-decision-task.ts";
 
 type JsonObject = Record<string, unknown>;
 
@@ -317,8 +317,8 @@ function identityTaskHarness(root: string) {
       return input.queueRows.length ? input.readyStatus : input.emptyStatus;
     },
     decisionTaskContextFileSummary: summary,
-    dedupeDecisionTaskContextFiles(files: unknown[]) {
-      const byKey = new Map<string, unknown>();
+    dedupeDecisionTaskContextFiles(files) {
+      const byKey = new Map<string, (typeof files)[number]>();
       for (const file of files) byKey.set(JSON.stringify(summary(file)), file);
       return [...byKey.values()];
     },
@@ -344,7 +344,7 @@ function identityTaskHarness(root: string) {
     },
     repoRoot: root,
     resolveRepoPath,
-    selectDecisionTaskQueueRows(rows: unknown[]) {
+    selectDecisionTaskQueueRows(rows) {
       return {
         selected: rows.map((row, index) => ({ row, index })),
         selection: { source_queue_rows: rows.length, selected_queue_rows: rows.length },

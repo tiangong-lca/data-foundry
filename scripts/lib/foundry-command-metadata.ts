@@ -433,7 +433,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-identity-decision-task-build": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/identity-decision-task.mjs",
+    ownerModule: "scripts/commands/identity-decision-task.ts",
     ownerExport: "createIdentityDecisionTaskCommands().runDatasetIdentityDecisionTaskBuild",
     inputs: ["curation gate report", "identity-preflight context"],
     outputs: [
@@ -1112,7 +1112,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-commit-handoff-plan": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/commit-handoff.mjs",
+    ownerModule: "scripts/commands/commit-handoff.ts",
     ownerExport: "createCommitHandoffCommands().runDatasetCommitHandoffPlan",
     inputs: ["mutation manifest", "finalize report", "location audit evidence"],
     outputs: [

@@ -8,10 +8,10 @@ import { createBafuLeafClassificationTaskCommands } from "./commands/bafu-leaf-c
 import { createBafuProcessScopeE2eCommands } from "./commands/bafu-process-scope-e2e.mjs";
 import { createBundleSampleRowsCommands } from "./commands/bundle-sample-rows.mjs";
 import { createCliWrapperCommands } from "./commands/cli-wrappers.mjs";
-import { createCommitHandoffCommands } from "./commands/commit-handoff.mjs";
+import { createCommitHandoffCommands } from "./commands/commit-handoff.ts";
 import { createCoreCommands } from "./commands/core.mjs";
 import { createExecutionCapsuleCommands } from "./commands/execution-capsule.mjs";
-import { createIdentityDecisionTaskCommands } from "./commands/identity-decision-task.mjs";
+import { createIdentityDecisionTaskCommands } from "./commands/identity-decision-task.ts";
 import { createIdentityDecisionCommands } from "./commands/identity-decisions.mjs";
 import { createIdentityPreflightRunCommands } from "./commands/identity-preflight-run.mjs";
 import { createIdentityReferenceRewriteCommands } from "./commands/identity-reference-rewrites.ts";

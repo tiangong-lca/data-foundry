@@ -2,24 +2,116 @@ import path from "node:path";
 import process from "node:process";
 import { createFileArtifactFact, createFoundryCommandSpec } from "../lib/foundry-command-spec.ts";
 
+type JsonRecord = Record<string, unknown>;
+
+type CountRecord = Record<string, unknown> & {
+  location_audit_blockers?: unknown;
+  write_candidates?: unknown;
+  unresolved_trace_entries?: unknown;
+  source_exchange_completeness_entries?: unknown;
+  source_reference_rewrites?: unknown;
+};
+
+type FileRecord = Record<string, unknown> & {
+  final_rows?: unknown;
+  mutation_manifest?: unknown;
+  unresolved_traces?: unknown;
+  source_exchange_completeness_traces?: unknown;
+  source_reference_rewrites?: unknown;
+};
+
+type HandoffArtifactValue = JsonRecord & {
+  status?: unknown;
+  dataset_type?: unknown;
+  profile?: unknown;
+  target_user_id?: unknown;
+  final_rows_file?: unknown;
+  counts?: CountRecord;
+  files?: FileRecord;
+};
+
+type JsonArtifact = {
+  path: string;
+  value: HandoffArtifactValue;
+};
+
+type FullContextCheck = {
+  required: boolean;
+  blockers: JsonRecord[];
+};
+
+type CliCommand = {
+  command: string;
+  args: string[];
+};
+
+type CommitCommandDependencies = {
+  appendOption?: (args: string[], option: string, value: unknown) => unknown;
+  resolveTiangongLcaCliBin?: () => string;
+  resolveTiangongLcaCliCommand?: () => CliCommand;
+  targetUserId?: string | null;
+  allowAccountLocalSupportAndElementary?: boolean;
+};
+
+export type CommitHandoffOptions = Record<string, unknown> & {
+  help?: unknown;
+  finalizeReport?: unknown;
+  report?: unknown;
+  input?: unknown;
+  type?: unknown;
+  outDir?: unknown;
+  rowsFile?: unknown;
+  finalRowsFile?: unknown;
+  mutationManifest?: unknown;
+  targetUserId?: unknown;
+  accountMode?: unknown;
+  stateCode?: unknown;
+  expectedStateCode?: unknown;
+  rootPolicy?: unknown;
+  remoteRootPolicy?: unknown;
+};
+
+export type CommitHandoffFactoryDependencies = {
+  appendOption: (args: string[], option: string, value: unknown) => unknown;
+  asText: (value: unknown) => string;
+  countJsonLinesFile: (filePath: string) => number;
+  fileExists: (filePath: string) => boolean;
+  fullContextProofCheck: (input: JsonRecord) => FullContextCheck;
+  nowIso: () => string;
+  profileFor?: (
+    repoRoot: string,
+    profileId: string,
+    overrides: JsonRecord,
+  ) => { allowAccountLocalSupportAndElementary?: unknown } | null;
+  readJsonArtifactOption: (value: unknown) => JsonArtifact | null;
+  repoRelativePath: (filePath: string) => string;
+  repoRoot: string;
+  resolveRepoPath: (value: unknown) => string | null;
+  resolveTiangongLcaCliCommand?: () => CliCommand;
+  resolveTiangongLcaCliBin: () => string;
+  shellQuote: (value: unknown) => string;
+  validateTraceQueueCoverageForRows: (input: JsonRecord) => unknown;
+  writeJson: (filePath: string, value: unknown) => unknown;
+};
+
 function commitCommandForDatasetType(
-  datasetType,
-  rowsFile,
-  outDir,
+  datasetType: string,
+  rowsFile: string,
+  outDir: string,
   {
     appendOption,
     resolveTiangongLcaCliBin,
     resolveTiangongLcaCliCommand,
     targetUserId = null,
     allowAccountLocalSupportAndElementary = false,
-  } = {},
-) {
+  }: CommitCommandDependencies = {},
+): string[] {
   const cliPrefix = () => {
     if (resolveTiangongLcaCliCommand) {
       const cli = resolveTiangongLcaCliCommand();
       return [cli.command, ...cli.args];
     }
-    return [resolveTiangongLcaCliBin()];
+    return [resolveTiangongLcaCliBin!()];
   };
   if (["unitgroup", "flowproperty"].includes(datasetType)) {
     if (!allowAccountLocalSupportAndElementary) {
@@ -92,7 +184,7 @@ function commitCommandForDatasetType(
       "--commit",
       "--json",
     ];
-    appendOption(args, "--target-user-id", targetUserId);
+    appendOption!(args, "--target-user-id", targetUserId);
     return args;
   }
   if (datasetType === "lifecyclemodel") {
@@ -119,7 +211,7 @@ function commitCommandForDatasetType(
     "--commit",
     "--json",
   ];
-  appendOption(args, "--target-user-id", targetUserId);
+  appendOption!(args, "--target-user-id", targetUserId);
   return args;
 }
 
@@ -137,17 +229,23 @@ export function createCommitHandoffCommands({
   resolveRepoPath,
   resolveTiangongLcaCliCommand,
   resolveTiangongLcaCliBin,
-  shellQuote,
+  shellQuote: _shellQuote,
   validateTraceQueueCoverageForRows,
   writeJson,
-}) {
+}: CommitHandoffFactoryDependencies) {
   function validateTraceQueuesForCommitHandoff({
     datasetType,
     finalRowsFile,
     traceFiles,
     counts,
     blockers,
-  }) {
+  }: {
+    datasetType: string;
+    finalRowsFile: string | null;
+    traceFiles: Record<string, unknown>;
+    counts: CountRecord;
+    blockers: JsonRecord[];
+  }): void {
     for (const [key, expectedCount] of [
       ["unresolved_traces", Number(counts.unresolved_trace_entries ?? 0) || 0],
       [
@@ -155,7 +253,7 @@ export function createCommitHandoffCommands({
         Number(counts.source_exchange_completeness_entries ?? 0) || 0,
       ],
       ["source_reference_rewrites", Number(counts.source_reference_rewrites ?? 0) || 0],
-    ]) {
+    ] as const) {
       const queuePath = traceFiles?.[key];
       const resolved = resolveRepoPath(queuePath);
       if (!resolved) {
@@ -199,7 +297,7 @@ export function createCommitHandoffCommands({
     }
   }
 
-  function runDatasetCommitHandoffPlan(options) {
+  function runDatasetCommitHandoffPlan(options: CommitHandoffOptions): JsonRecord {
     if (options.help) {
       return {
         schema_version: 1,
@@ -236,7 +334,7 @@ export function createCommitHandoffCommands({
     }
 
     const finalizeDir = path.dirname(finalizeArtifact.path);
-    const outDir = resolveRepoPath(options.outDir || path.join(finalizeDir, "commit-handoff"));
+    const outDir = resolveRepoPath(options.outDir || path.join(finalizeDir, "commit-handoff"))!;
     const finalRowsFile = resolveRepoPath(
       options.rowsFile ||
         options.finalRowsFile ||
@@ -260,7 +358,7 @@ export function createCommitHandoffCommands({
     const stateCode = explicitStateCode || "0";
     const stateCodeSource = explicitStateCode ? "explicit_option" : "default_draft_write_state";
     const commitSupportsTargetUserId = ["flow", "process"].includes(datasetType);
-    const blockers = [];
+    const blockers: JsonRecord[] = [];
 
     if (finalizeReport.status !== "ready_for_remote_write") {
       blockers.push({
@@ -350,7 +448,7 @@ export function createCommitHandoffCommands({
           return [cli.command, ...cli.args];
         })()
       : [resolveTiangongLcaCliBin()];
-    const verifyArgs = finalRowsFile
+    const verifyArgs: string[] = finalRowsFile
       ? [
           ...cliPrefix,
           "dataset",
