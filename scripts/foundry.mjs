@@ -10,7 +10,7 @@ import { createBundleSampleRowsCommands } from "./commands/bundle-sample-rows.mj
 import { createCliWrapperCommands } from "./commands/cli-wrappers.ts";
 import { createCommitHandoffCommands } from "./commands/commit-handoff.ts";
 import { createCoreCommands } from "./commands/core.mjs";
-import { createExecutionCapsuleCommands } from "./commands/execution-capsule.mjs";
+import { createExecutionCapsuleCommands } from "./commands/execution-capsule.ts";
 import { createIdentityDecisionTaskCommands } from "./commands/identity-decision-task.ts";
 import { createIdentityDecisionCommands } from "./commands/identity-decisions.mjs";
 import { createIdentityPreflightRunCommands } from "./commands/identity-preflight-run.mjs";

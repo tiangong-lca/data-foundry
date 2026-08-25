@@ -261,7 +261,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "execution-capsule-admit": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/execution-capsule.mjs",
+    ownerModule: "scripts/commands/execution-capsule.ts",
     ownerExport: "createExecutionCapsuleCommands().runExecutionCapsuleAdmit",
     inputs: [
       "foundry-execution-capsule-stage.v1 manifest",

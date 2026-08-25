@@ -14,7 +14,7 @@ whenToUpdate:
 checkPaths:
   - docs/execution-capsule-contract.md
   - specs/schemas/execution-capsule-stage.schema.json
-  - scripts/commands/execution-capsule.mjs
+  - scripts/commands/execution-capsule.ts
   - test/commands/execution-capsule.test.mjs
   - test/unit/execution-capsule-attempt-state.test.mjs
 lastReviewedAt: 2026-07-23

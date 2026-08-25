@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   createExecutionCapsuleCommands,
   modelExecutionAttemptDisposition,
-} from "../../scripts/commands/execution-capsule.mjs";
+} from "../../scripts/commands/execution-capsule.ts";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
@@ -89,7 +89,7 @@ test("attempt disposition matrix consumes dispatch exactly once and only exact r
 });
 
 test("execution capsule source remains offline, exclusive, hash-bound, and zero-authority", () => {
-  const source = readRepoFile("scripts/commands/execution-capsule.mjs");
+  const source = readRepoFile("scripts/commands/execution-capsule.ts");
   for (const forbidden of [
     "node:child_process",
     "node:http",
@@ -126,7 +126,12 @@ test("execution capsule consumers and contract target the typed command owner", 
     "docs/execution-capsule-contract.md",
   ]) {
     const source = readRepoFile(consumer);
-    assert.match(source, /(?:commands\/|scripts\/commands\/)execution-capsule\.ts/u);
+    assert.match(
+      source,
+      consumer === "test/commands/execution-capsule.test.mjs"
+        ? /["']execution-capsule\.ts["']/u
+        : /(?:commands\/|scripts\/commands\/)execution-capsule\.ts/u,
+    );
     assert.doesNotMatch(source, /(?:commands\/|scripts\/commands\/)execution-capsule\.mjs/u);
   }
 });

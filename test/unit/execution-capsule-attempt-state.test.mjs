@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { modelExecutionAttemptDisposition } from "../../scripts/commands/execution-capsule.mjs";
+import { modelExecutionAttemptDisposition } from "../../scripts/commands/execution-capsule.ts";
 
 test("attempt model keeps pre-dispatch failures unconsumed", () => {
   assert.deepEqual(

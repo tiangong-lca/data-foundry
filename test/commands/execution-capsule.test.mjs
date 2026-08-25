@@ -210,7 +210,7 @@ function admit(fixture, predecessorManifestPath = null) {
 
 test("execution capsule command has no network, database, or subprocess dispatch surface", () => {
   const source = fs.readFileSync(
-    path.join(repoRoot, "scripts", "commands", "execution-capsule.mjs"),
+    path.join(repoRoot, "scripts", "commands", "execution-capsule.ts"),
     "utf8",
   );
   for (const forbidden of [
