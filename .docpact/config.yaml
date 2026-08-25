@@ -61,14 +61,14 @@ ownership:
           - package.json
           - pnpm-lock.yaml
           - pnpm-workspace.yaml
-          - prettier.config.cjs
+          - prettier.config.ts
           - scripts/**
           - specs/automated-lca-capability-registry.json
           - specs/canonical-support/**
           - specs/capability-ownership-rules.json
           - specs/data-foundry-service.md
           - specs/schemas/**
-          - specs/typescript-migration-inventory.json
+          - test/unit/zero-javascript-ratchet.test.mts
           - specs/workspace-capability-adapters.md
           - tsconfig*.json
       ownerRepo: data-foundry
@@ -110,7 +110,7 @@ coverage:
     - package.json
     - pnpm-lock.yaml
     - pnpm-workspace.yaml
-    - prettier.config.cjs
+    - prettier.config.ts
     - scripts/**
     - test/**
     - specs/**
@@ -151,14 +151,14 @@ routing:
         - package.json
         - pnpm-lock.yaml
         - pnpm-workspace.yaml
-        - prettier.config.cjs
+        - prettier.config.ts
         - scripts/**
         - specs/automated-lca-capability-registry.json
         - specs/canonical-support/**
         - specs/capability-ownership-rules.json
         - specs/data-foundry-service.md
         - specs/schemas/**
-        - specs/typescript-migration-inventory.json
+        - test/unit/zero-javascript-ratchet.test.mts
         - specs/workspace-capability-adapters.md
         - tsconfig*.json
     import-profile:
@@ -274,7 +274,7 @@ rules:
         kind: dependency-lock
       - path: pnpm-workspace.yaml
         kind: package-workspace-contract
-      - path: prettier.config.cjs
+      - path: prettier.config.ts
         kind: formatter-contract
       - path: scripts/**
         kind: local-runtime
@@ -288,8 +288,8 @@ rules:
         kind: service-contract
       - path: specs/schemas/**
         kind: artifact-schema-contract
-      - path: specs/typescript-migration-inventory.json
-        kind: typed-migration-ledger
+      - path: test/unit/zero-javascript-ratchet.test.mts
+        kind: zero-javascript-ratchet
       - path: specs/workspace-capability-adapters.md
         kind: adapter-contract
       - path: tsconfig*.json
@@ -360,13 +360,13 @@ rules:
         kind: incremental-change-set-contract
       - path: specs/schemas/incremental-change-set.schema.json
         kind: incremental-change-set-schema
-      - path: scripts/commands/incremental-change-set.mjs
+      - path: scripts/commands/incremental-change-set.ts
         kind: incremental-change-set-command
-      - path: test/unit/incremental-change-set.test.mjs
+      - path: test/unit/incremental-change-set.test.mts
         kind: incremental-change-set-unit-test
-      - path: test/commands/incremental-change-set.test.mjs
+      - path: test/commands/incremental-change-set.test.mts
         kind: incremental-change-set-command-test
-      - path: test/scenarios/incremental-change-set-handoff.test.mjs
+      - path: test/scenarios/incremental-change-set-handoff.test.mts
         kind: incremental-change-set-scenario-test
     requiredDocs:
       - path: docs/incremental-change-set-contract.md
@@ -384,15 +384,15 @@ rules:
         kind: topology-convergence-contract
       - path: specs/schemas/topology-convergence.schema.json
         kind: topology-convergence-schema
-      - path: scripts/commands/topology-convergence.mjs
+      - path: scripts/commands/topology-convergence.ts
         kind: topology-convergence-command
-      - path: test/fixtures/topology-convergence-fixtures.mjs
+      - path: test/fixtures/topology-convergence-fixtures.ts
         kind: topology-convergence-fixture
-      - path: test/unit/topology-convergence.test.mjs
+      - path: test/unit/topology-convergence.test.mts
         kind: topology-convergence-unit-test
-      - path: test/commands/topology-convergence.test.mjs
+      - path: test/commands/topology-convergence.test.mts
         kind: topology-convergence-command-test
-      - path: test/scenarios/topology-convergence-handoff.test.mjs
+      - path: test/scenarios/topology-convergence-handoff.test.mts
         kind: topology-convergence-scenario-test
     requiredDocs:
       - path: docs/topology-convergence-contract.md

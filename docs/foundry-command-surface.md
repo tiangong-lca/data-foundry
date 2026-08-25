@@ -97,7 +97,7 @@ Foundry CLI-spine and command governance has three checked contracts:
 
 The metadata module must cover every command returned by `node scripts/foundry.ts help`. It records each command category, owner module, owner export, input artifacts, output artifacts, workflow entry audit state, and key behavior checks.
 
-Issue #63 does not change the public command categories or behavior. It introduces the Node.js 24 / pnpm 11.23 / TypeScript 7.0.2 typed spine underneath the same surface. The argument parser and command registry are native TypeScript leaves; `test/unit/foundry-cli-spine.test.mts` fixes their scalar/argv parsing, exact help JSON, exit mapping, and static consumer contract. Later migration work must preserve the registered command name, help, stdout, exit code, stage contract, input/output artifacts, and remote-write mode before removing a JavaScript implementation from `specs/typescript-migration-inventory.json`. Use focused characterization and real cases; do not treat an extension rename as command migration.
+Issue #63 preserved the public command categories and behavior while establishing the Node.js 24 / pnpm 11.23 / TypeScript 7.0.2 spine. The argument parser and command registry are native TypeScript leaves; `test/unit/foundry-cli-spine.test.mts` fixes scalar/argv parsing, exact help JSON, exit mapping, and static consumers. The migration is complete, and `test/unit/zero-javascript-ratchet.test.mts` prevents JavaScript owners or compatibility globs from returning. Later work must still preserve command names, help, stdout, exit codes, stage contracts, artifacts, and remote-write modes through focused characterization and real cases.
 
 Wave 25 moves the existing identity, classification, and location owner factories to `.ts` without changing their command metadata or dispatcher topology. The migration tests fix owner/export identity and exact help bytes, while the existing command/scenario fixtures remain the behavior authority for aliases, defaults, queue/path order, blockers, deterministic CLI apply stages, local artifacts, and fail-closed errors.
 
@@ -149,7 +149,7 @@ scripts/foundry.ts
   -> owner module in scripts/commands or scripts/lib/import-curation
 ```
 
-Public command owner paths must be at most two jumps from `scripts/foundry.ts`. For semantic import-curation commands, prefer owner modules such as `profiles.mjs`, `curation-gate.ts`, `authoring-packages.ts`, `patch-collect.ts`, `curation-cleanup.ts`, `trace-summary.mjs`, and `mutation-manifest.ts` over mechanical part names. Reusable import-curation logic should be exposed through focused workflow facets under `scripts/lib/import-curation/internal/*-workflow.{ts,mjs}` while migration remains incomplete.
+Public command owner paths must be at most two jumps from `scripts/foundry.ts`. For semantic import-curation commands, prefer owner modules such as `profiles.ts`, `curation-gate.ts`, `authoring-packages.ts`, `patch-collect.ts`, `curation-cleanup.ts`, `trace-summary.ts`, and `mutation-manifest.ts` over mechanical part names. Reusable import-curation logic is exposed through focused TypeScript workflow facets under `scripts/lib/import-curation/internal/*-workflow.ts`.
 
 ## Maintenance Rule
 

@@ -37,10 +37,10 @@
     "skills:source-evidence:use:sci": "pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search --full-depth",
     "skills:source-evidence:use:document": "pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth",
     "skills:use": "pnpm dlx skills@latest use",
-    "test": "node --test \"test/**/*.test.mjs\" \"test/**/*.test.mts\"",
-    "test:unit": "node --test \"test/unit/*.test.mjs\" \"test/unit/*.test.mts\"",
+    "test": "node --test \"test/**/*.test.mts\"",
+    "test:unit": "node --test \"test/unit/*.test.mts\"",
     "test:commands": "node --test \"test/commands/*.test.mts\"",
-    "test:scenarios": "node --test \"test/scenarios/*.test.mjs\" \"test/scenarios/*.test.mts\"",
+    "test:scenarios": "node --test \"test/scenarios/*.test.mts\"",
     "test:toolchain": "node --test test/unit/toolchain-contract.test.mts",
     "golden:diff": "node scripts/foundry-golden-diff.ts",
     "ncu": "pnpm exec ncu",
@@ -69,8 +69,8 @@
     "typescript": "7.0.2"
   },
   "lint-staged": {
-    "*.{js,mjs,cjs,ts,mts,cts}": "oxlint --type-aware --format=stylish --deny-warnings",
-    "*.{js,mjs,cjs,ts,mts,cts,json,md,yml,yaml}": [
+    "*.{ts,mts,cts}": "oxlint --type-aware --format=stylish --deny-warnings",
+    "*.{ts,mts,cts,json,md,yml,yaml}": [
       "prettier --write"
     ]
   },

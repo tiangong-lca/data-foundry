@@ -59,6 +59,8 @@ test("TypeScript and pnpm surfaces contain no JavaScript compatibility graph", (
       configPath,
     );
   }
+  const typecheckConfig = JSON.parse(readRepoFile("tsconfig.json")) as { include?: string[] };
+  assert.ok(typecheckConfig.include?.includes("prettier.config.ts"));
 
   const packageJson = JSON.parse(readRepoFile("package.json")) as {
     scripts?: Record<string, string>;

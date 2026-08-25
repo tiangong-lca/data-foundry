@@ -165,7 +165,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     category: "public",
     ownerModule: coreOwner,
     ownerExport: "createCoreCommands().surfaceAuditCheck",
-    inputs: ["command registry", "command metadata", "docs/**/*.md", "scripts/**/*.{mjs,ts}"],
+    inputs: ["command registry", "command metadata", "docs/**/*.md", "scripts/**/*.{ts,mts,cts}"],
     outputs: ["surface audit JSON status report"],
     keyTests: [coreCommandContract, commandSmoke("surface-audit"), commandSmoke("doctor")],
   }),

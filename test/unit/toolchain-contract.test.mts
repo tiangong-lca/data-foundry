@@ -1,7 +1,6 @@
 // This typed contract is the first file in the monotonic Foundry TypeScript migration.
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
@@ -16,14 +15,6 @@ type PackageJson = {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
 };
-type MigrationInventory = {
-  baseline_commit: string;
-  baseline_count: number;
-  baseline_path_list_sha256: string;
-  baseline_paths: string[];
-  remaining_count: number;
-  canonical_path_list_sha256: string;
-};
 type PnpmDependencyNode = {
   version?: string;
   dependencies?: Record<string, PnpmDependencyNode>;
@@ -32,13 +23,10 @@ type PnpmDependencyNode = {
 };
 
 const packageJson = readJson<PackageJson>("package.json");
-const inventory = readJson<MigrationInventory>("specs/typescript-migration-inventory.json");
 const packageManager = "pnpm@11.23.0";
 const packageManagerVersion = "11.23.0";
 const typescriptVersion = "7.0.2";
 const nodeVersion = "24.19.0";
-const baselineCommit = "c996633832ea23bf7883c7b219f524bf28e6ce7e";
-const baselinePathListSha256 = "ac424319452a956dacee79a5a8ce83f2b2cf090a10b6cd1dc8c224d7aaacd904";
 const contractPath = "test/unit/toolchain-contract.test.mts";
 const extensionlessPackageCommandFiles = new Set([
   ".env.example",
@@ -169,48 +157,12 @@ test("active tracked surfaces expose no legacy package-management commands", () 
   assert.deepEqual(findings, []);
 });
 
-test("the exact tracked JavaScript migration inventory cannot grow or drift silently", () => {
-  const paths = trackedFiles()
-    .filter((file) => /\.(?:cjs|mjs)$/u.test(file))
-    .sort();
-  const canonical = paths.map((file) => `${file}\n`).join("");
-  const digest = createHash("sha256").update(canonical).digest("hex");
-  const baselinePaths = [...inventory.baseline_paths].sort();
-  const baselineSet = new Set(baselinePaths);
-  const committedBaselinePaths = execFileSync(
-    "git",
-    ["ls-tree", "-r", "--name-only", baselineCommit],
-    commandOptions(),
-  )
-    .split(/\r?\n/u)
-    .filter((file) => /\.(?:cjs|mjs)$/u.test(file))
-    .sort();
-  const committedBaselineCanonical = committedBaselinePaths.map((file) => `${file}\n`).join("");
-
-  assert.equal(inventory.baseline_commit, baselineCommit);
-  assert.equal(inventory.baseline_path_list_sha256, baselinePathListSha256);
-  assert.equal(
-    createHash("sha256").update(committedBaselineCanonical).digest("hex"),
-    baselinePathListSha256,
-  );
-  assert.deepEqual(baselinePaths, committedBaselinePaths);
-  assert.equal(new Set(baselinePaths).size, baselinePaths.length);
-  assert.equal(baselinePaths.length, inventory.baseline_count);
-  assert.ok(inventory.remaining_count <= inventory.baseline_count);
-  assert.equal(paths.length, inventory.remaining_count);
-  assert.equal(digest, inventory.canonical_path_list_sha256);
+test("tracked first-party JavaScript remains permanently at zero", () => {
   assert.deepEqual(
-    paths.filter((file) => !baselineSet.has(file)),
-    [],
-    "new tracked JavaScript is forbidden; migrate new modules and tests directly to TypeScript",
-  );
-  assert.deepEqual(
-    paths.filter(
-      (file) =>
-        !file.startsWith("scripts/") && !file.startsWith("test/") && file !== "prettier.config.cjs",
-    ),
+    trackedFiles().filter((file) => /\.(?:cjs|js|mjs)$/u.test(file)),
     [],
   );
+  assert.equal(existsSync(path.join(repoRoot, "prettier.config.ts")), true);
 });
 
 test("Foundry pins the published CLI runtime and high-risk audit closure", () => {
@@ -270,8 +222,7 @@ function trackedFiles(): string[] {
 function isActivePackageCommandSurface(file: string): boolean {
   if (file === contractPath || hasHistoricalFrontmatter(file)) return false;
   return (
-    extensionlessPackageCommandFiles.has(file) ||
-    /\.(?:c?js|mjs|cts|mts|ts|json|md|ya?ml|sh)$/u.test(file)
+    extensionlessPackageCommandFiles.has(file) || /\.(?:cts|mts|ts|json|md|ya?ml|sh)$/u.test(file)
   );
 }
 

@@ -71,10 +71,10 @@
       "notes": "Routes deterministic import/conversion/schema validation to unified Rust tidas and keeps CLI context, QA/curation, remote operations, and Foundry-owned gates explicit."
     },
     {
-      "id": "typescript-migration-inventory",
+      "id": "zero-javascript-ratchet",
       "status": "active",
-      "classification": "toolchain-migration-ledger",
-      "current_path": "specs/typescript-migration-inventory.json",
+      "classification": "toolchain-permanent-ratchet",
+      "current_path": "test/unit/zero-javascript-ratchet.test.mts",
       "previous_paths": [],
       "owner": "tiangong-lca-data-foundry",
       "referenced_by": [
@@ -84,9 +84,9 @@
         "docs/foundry-ai-navigation.md",
         "test/README.md"
       ],
-      "sensitivity": "non-sensitive tracked source/test path inventory; no runtime payloads or credentials",
+      "sensitivity": "non-sensitive tracked source/test extension contract; no runtime payloads or credentials",
       "tracked": true,
-      "notes": "Records the Issue #63 JavaScript baseline and the staged TypeScript 7 migration boundary; update it in the same change that moves a module across the typed spine."
+      "notes": "Permanently rejects tracked first-party JavaScript and compatibility compiler/test/lint globs after completion of the Issue #63 TypeScript 7 migration."
     },
     {
       "id": "foundry-command-spec",

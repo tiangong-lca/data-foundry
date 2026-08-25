@@ -19,7 +19,7 @@ checkPaths:
   - package.json
   - pnpm-lock.yaml
   - pnpm-workspace.yaml
-  - prettier.config.cjs
+  - prettier.config.ts
   - tsconfig*.json
   - scripts/foundry.ts
   - scripts/lib/import-curation.ts
@@ -137,7 +137,7 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - docs/topology-convergence-contract.md
   - specs/import-profiles.json
-  - specs/typescript-migration-inventory.json
+  - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-25
 lastReviewedCommit: 3a5bd04827ebdcd028f9c08b86641e7a7d3a94e9
 lastReviewedNote: "Reviewed for Issue #67 test integration: native TS7 entry/runtime plus complete command, fixture, unit and scenario surfaces preserve profiles, exact help/artifacts, bytes/order/hashes/errors and authority boundaries."
@@ -157,7 +157,7 @@ Remote verification is visibility-bound. A `missing_dataset` reference that is f
 
 Foundry is a pnpm-only Node.js 24 project. The reproducible toolchain is `pnpm@11.23.0`, TypeScript `7.0.2` as the only compiler anywhere in the dependency graph, Oxlint for linting, and Prettier for formatting. The repository keeps one root `pnpm-workspace.yaml` and `pnpm-lock.yaml`; npm/Yarn lockfiles, TypeScript 5/6 aliases, `@typescript-eslint`, and TypeScript-compiler-backed formatting plugins are outside the supported graph.
 
-Issue #63 starts the typed spine without pretending that the existing JavaScript estate is already migrated. At the baseline commit, 160 tracked JavaScript artifacts comprise 95 runtime `.mjs` files (59,692 lines), 64 `.mjs` tests (30,273 lines), and one Prettier `.cjs` config. `specs/typescript-migration-inventory.json` records that boundary. Entrypoints, command metadata/registry, runtime I/O, and artifact/receipt contracts migrate first; command families and tests follow under characterization and real-case TDD. A module leaves the inventory only when its typed replacement and behavior evidence pass.
+Issue #63 began with a historical baseline of 160 tracked JavaScript artifacts: 95 runtime `.mjs` files, 64 `.mjs` tests, and one Prettier `.cjs` config. That monotonic migration is complete. `test/unit/zero-javascript-ratchet.test.mts` now permanently enforces zero tracked first-party JavaScript, native TypeScript configuration, and TS-only compiler/test/lint globs; characterization and real-case TDD remain mandatory for later changes.
 
 The first completed CLI-spine slice migrates `scripts/lib/foundry-args.ts` and `scripts/lib/foundry-command-registry.ts`. Its focused test fixes parser coercion, exact help JSON and command order, exit-code families, and all static consumer imports before later entrypoint and dispatcher slices proceed.
 

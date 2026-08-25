@@ -55,12 +55,6 @@ const expectedFixtureRootConsumers = [
 
 const targetUserId = "00000000-0000-4000-8000-000000000001";
 
-type MigrationInventory = {
-  remaining_count: number;
-  canonical_path_list_sha256: string;
-  baseline_paths: string[];
-};
-
 function expectedRootValues(runId: string | number): Record<string, string> {
   return Object.fromEntries(
     Object.entries(fixtureRootBasenames).map(([name, basename]) => [
@@ -292,19 +286,4 @@ test("every direct fixture helper consumer targets the typed module", () => {
   const focusedTestSource = fs.readFileSync(import.meta.filename, "utf8");
   assert.match(focusedTestSource, /from\s+["'][^"']*finalize-fixtures\.ts["']/u);
   assert.doesNotMatch(focusedTestSource, /from\s+["'][^"']*finalize-fixtures\.mjs["']/u);
-});
-
-test("fixture migration ledger retains the two-file reduction as later waves continue", () => {
-  const inventory = JSON.parse(
-    fs.readFileSync(path.join(repoRoot, "specs", "typescript-migration-inventory.json"), "utf8"),
-  ) as MigrationInventory;
-  assert.ok(inventory.remaining_count <= 128);
-  assert.match(inventory.canonical_path_list_sha256, /^[a-f0-9]{64}$/u);
-  for (const legacyPath of [
-    "test/fixtures/fixture-roots.ts",
-    "test/fixtures/finalize-fixtures.ts",
-  ]) {
-    assert.equal(inventory.baseline_paths.includes(legacyPath), true);
-    assert.equal(fs.existsSync(path.join(repoRoot, legacyPath)), false);
-  }
 });

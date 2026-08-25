@@ -241,7 +241,7 @@ function auditOrphanDocs(repoRoot: string): SurfaceAuditCheck {
 function importedModulePaths(repoRoot: string): Set<string> {
   const imported = new Set<string>();
   const sourceFiles = [
-    ...walkFiles(repoRoot, "scripts", (file) => /\.(?:[cm]?[jt]s)$/u.test(file)),
+    ...walkFiles(repoRoot, "scripts", (file) => /\.(?:cts|mts|ts)$/u.test(file)),
   ];
   for (const file of sourceFiles) {
     const text = readTextIfExists(repoRoot, file);
@@ -249,11 +249,9 @@ function importedModulePaths(repoRoot: string): Set<string> {
       const specifier = match[1];
       if (!specifier.startsWith(".")) continue;
       const base = portablePath(path.normalize(path.join(path.dirname(file), specifier)));
-      const candidates = /\.(?:[cm]?[jt]s)$/u.test(base)
+      const candidates = /\.(?:cts|mts|ts)$/u.test(base)
         ? [base]
-        : base.endsWith(".js")
-          ? [base, base.replace(/\.js$/u, ".ts")]
-          : [base, ...[".ts", ".mts", ".mjs", ".cts", ".cjs"].map((suffix) => `${base}${suffix}`)];
+        : [base, ...[".ts", ".mts", ".cts"].map((suffix) => `${base}${suffix}`)];
       const resolved = candidates.find((candidate) =>
         fs.existsSync(path.join(repoRoot, candidate)),
       );
@@ -266,7 +264,7 @@ function importedModulePaths(repoRoot: string): Set<string> {
 function auditInboundModules(repoRoot: string): SurfaceAuditCheck {
   const errors: SurfaceAuditFinding[] = [];
   const warnings: SurfaceAuditFinding[] = [];
-  const modules = walkFiles(repoRoot, "scripts", (file) => /\.(?:mjs|mts|ts)$/u.test(file)).sort();
+  const modules = walkFiles(repoRoot, "scripts", (file) => /\.(?:cts|mts|ts)$/u.test(file)).sort();
   const imported = importedModulePaths(repoRoot);
   const metadataOwnerModules = new Set(
     Object.values(commandMetadata).map((entry) => entry.ownerModule),

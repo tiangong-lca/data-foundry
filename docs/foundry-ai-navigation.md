@@ -158,7 +158,7 @@ The incremental lane is owned by `scripts/commands/incremental-change-set.ts`, w
 
 ## TypeScript Migration Navigation
 
-Do not navigate the migration by extension alone. `specs/typescript-migration-inventory.json` records the Issue #63 baseline of 160 tracked JavaScript artifacts. The typed dependency spine is:
+The Issue #63 migration is complete; do not navigate behavior by extension alone. `test/unit/zero-javascript-ratchet.test.mts` prevents tracked JavaScript from returning, while semantic ownership still follows the typed dependency spine:
 
 ```text
 entrypoint + argument contract
@@ -168,7 +168,7 @@ entrypoint + argument contract
   -> command and scenario fixtures
 ```
 
-Migrate downward in that order, starting each slice with a failing characterization or realistic case. Keep the existing `.mjs` implementation until the TypeScript replacement preserves help, stdout, exit, stage, artifact, and safety contracts. Update the inventory in the same change; a typed wrapper around an untyped business module does not complete that module.
+Change downward in that order, starting each slice with a failing characterization or realistic case. Preserve help, stdout, exit, stage, artifact, and safety contracts directly in TypeScript; compatibility wrappers and parallel JavaScript owners are forbidden.
 
 The first characterized CLI-spine leaves are `scripts/lib/foundry-args.ts` and `scripts/lib/foundry-command-registry.ts`. Navigate to the former for positional, kebab-to-camel, repeated-option, inline-value, flag, and scalar coercion behavior. Navigate to the latter for the exact public/dataset command order, help JSON ownership note, and exit-code mapping. `test/unit/foundry-cli-spine.test.mts` pins those behaviors and verifies every static consumer imports the native TypeScript modules.
 
@@ -192,7 +192,7 @@ The typed canonical/materialization leaves are `canonical-support-rewrites.ts` a
 
 The typed runtime leaf is `foundry-runtime-utils.ts`. Navigate there for the pinned installed CLI manifest/bin/schema contract, `TIANGONG_LCA_CLI_BIN` precedence and command rendering, generic text/JSON/JSONL/path/count/search helpers, task frontmatter and scalar fields, explicit env-file loading, list/option/hash/UUID helpers, stage blocker aggregation and CLI JSON subprocess envelopes. `foundry-runtime-utils-contract.test.mts` covers all returned helpers without invoking `loadRuntimeEnv()`; `wave10-runtime-migration.test.mts` pins the zero-any source and every static consumer.
 
-The typed location leaf is `location-quality-utils.ts`. Navigate there for classification and location authoring command strings, installed location-code map loading, schema/fallback location target keys, recursive target paths and `location_code_requires_authoring` evidence. It returns four helpers through `foundry.mjs`; command/scenario tests cover their bundle, location-decision, curation and finalize consumers while `location-quality-utils-contract.test.mts` pins exact order and envelopes.
+The typed location leaf is `location-quality-utils.ts`. Navigate there for classification and location authoring command strings, installed location-code map loading, schema/fallback location target keys, recursive target paths and `location_code_requires_authoring` evidence. It returns four helpers through `foundry.ts`; command/scenario tests cover their bundle, location-decision, curation and finalize consumers while `location-quality-utils-contract.test.mts` pins exact order and envelopes.
 
 The typed deterministic prewrite leaf is `import-curation/internal/prewrite-cleanup.ts`. Navigate there for UTC metadata normalization, annual-supply missing-data sentinel completion, source-row identity indexing, output-only exchange completeness proof, `tidasimport:sourceTrace` hash externalization, Foundry trace namespace repair and local locator redaction. Its proof hashes intentionally preserve exchange array and object insertion order while excluding only `referenceToFlowDataSet`.
 
@@ -228,7 +228,7 @@ The typed high-level orchestration path is `library-scope-workflow.ts` for profi
 
 The typed runtime command owners are `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts`. Navigate to the wrapper for direct executable/argv delegation and process diagnostics, to the capsule for offline immutable admission and attempt-state evidence, and to closeout for already-produced commit/readback aggregation. Root uniqueness and accepted-difference decisions remain in `post-write-root-proof.ts` and `remote-verification-accepted-diff.ts`.
 
-The typed final command owners are `scripts/commands/core.ts`, `identity-preflight-run.ts`, and `post-authoring-finalize.ts`. Navigate to core for local bootstrap, environment/workflow/storage/surface diagnostics and route artifacts; to identity preflight for receipt-bound CLI argv, request/target/binding hashes, positive-only cache and stdout/disk execution evidence; and to finalize for ordered rewrite, cleanup, validation, curation, dry-run, mutation-manifest and handoff aggregation. The current finalize utility import is the base checkpoint's `.mjs` owner and must resolve to `post-authoring-finalize-utils.ts` when this lane is integrated after the adapter lane.
+The typed final command owners are `scripts/commands/core.ts`, `identity-preflight-run.ts`, and `post-authoring-finalize.ts`. Navigate to core for local bootstrap, environment/workflow/storage/surface diagnostics and route artifacts; to identity preflight for receipt-bound CLI argv, request/target/binding hashes, positive-only cache and stdout/disk execution evidence; and to finalize for ordered rewrite, cleanup, validation, curation, dry-run, mutation-manifest and handoff aggregation. Finalize utilities live at `post-authoring-finalize-utils.ts`.
 
 The typed import-curation entry chain is `scripts/lib/import-curation.ts` → `import-curation/index.ts` → semantic owners. `profiles.ts` and `trace-summary.ts` are pure typed leaf barrels. Navigate through the public/index barrels to discover the complete namespace, but edit behavior only in the semantic owner named by command metadata.
 
@@ -260,7 +260,7 @@ Use these semantic modules as the import-curation navigation surface:
 
 Command runners live in the semantic modules above. The remaining reusable workflow logic is exposed through focused internal workflow facets such as `authoring-task-workflow.ts`, `authoring-patch-workflow.ts`, `curation-gate-workflow.ts`, and `mutation-manifest-workflow.ts`. New command behavior should start in the semantic owner module, with reusable helpers placed in focused internal modules.
 
-Complex workflow commands should also publish an AI-readable `stage_pipeline` contract in their help/report payload. The shared helper is `scripts/lib/stage-contract.mjs`; it standardizes `remote_write_mode`, `stage_pipeline[].stage`, canonical `phase`, `purpose`, `inputs`, `outputs`, `blockers`, `artifacts`, `side_effects`, and a stable `report_contract` requiring `status`, `counts`, `files`, `blockers`, and read-only `remote_write_mode`. Complex commands should expose the canonical phases `prepare`, `rewrite_cleanup`, `gate_validate`, and `report`. `test/unit/foundry-stage-contract.test.mts` currently enforces this contract for:
+Complex workflow commands should also publish an AI-readable `stage_pipeline` contract in their help/report payload. The shared helper is `scripts/lib/stage-contract.ts`; it standardizes `remote_write_mode`, `stage_pipeline[].stage`, canonical `phase`, `purpose`, `inputs`, `outputs`, `blockers`, `artifacts`, `side_effects`, and a stable `report_contract` requiring `status`, `counts`, `files`, `blockers`, and read-only `remote_write_mode`. Complex commands should expose the canonical phases `prepare`, `rewrite_cleanup`, `gate_validate`, and `report`. `test/unit/foundry-stage-contract.test.mts` currently enforces this contract for:
 
 - `dataset-bundle-sample-rows`
 - `dataset-post-authoring-finalize`
@@ -274,8 +274,8 @@ The current internal dependency direction is:
 
 ```text
 semantic import-curation modules
-  -> internal/*-workflow.mjs
-  -> internal/workflow-*.{ts,mjs}
+  -> internal/*-workflow.ts
+  -> internal/workflow-*.ts
      -> characterized authoring SCC: authoring-tasks.ts <-> semantic-actions.ts <-> patch-evidence.ts
   -> internal/full-context-proof.ts
   -> internal/profiles-config.ts
