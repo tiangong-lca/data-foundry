@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { createImportLedgerUtils as createImportLedgerUtilsSource } from "../../scripts/lib/import-ledger.mjs";
+import { createImportLedgerUtils as createImportLedgerUtilsSource } from "../../scripts/lib/import-ledger.ts";
 
 type JsonObject = Record<string, any>;
 

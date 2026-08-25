@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
-import { createImportLedgerUtils } from "../../scripts/lib/import-ledger.mjs";
+import { createImportLedgerUtils } from "../../scripts/lib/import-ledger.ts";
 import {
   readJsonLines,
   rel,

@@ -23,27 +23,27 @@ const BLOCKER_BUCKETS = [
   "other",
 ];
 
-function sha256(value) {
+function sha256(value: any): string {
   return createHash("sha256")
     .update(String(value ?? ""))
     .digest("hex");
 }
 
-function ensureDir(dir) {
+function ensureDir(dir: string): void {
   fs.mkdirSync(dir, { recursive: true });
 }
 
-function jsonLine(row) {
+function jsonLine(row: any): string {
   return `${JSON.stringify(row)}\n`;
 }
 
-function readJsonLinesIfExists(filePath) {
+function readJsonLinesIfExists(filePath: any): any[] {
   if (!filePath || !fs.existsSync(filePath)) return [];
   const text = fs.readFileSync(filePath, "utf8").trim();
   return text ? text.split(/\r?\n/u).map((line) => JSON.parse(line)) : [];
 }
 
-function writeJsonLinesFile(filePath, rows) {
+function writeJsonLinesFile(filePath: string, rows: any[]): void {
   ensureDir(path.dirname(filePath));
   fs.writeFileSync(
     filePath,
@@ -51,7 +51,7 @@ function writeJsonLinesFile(filePath, rows) {
   );
 }
 
-function appendJsonLinesDedup(filePath, rows) {
+function appendJsonLinesDedup(filePath: string, rows: any[]) {
   ensureDir(path.dirname(filePath));
   const seen = new Set(
     readJsonLinesIfExists(filePath)
@@ -75,31 +75,34 @@ function appendJsonLinesDedup(filePath, rows) {
   };
 }
 
-function supportPluralForType(datasetType) {
-  return bundleRowTypes[datasetType]?.plural ?? `${datasetType || "unknown"}s`;
+function supportPluralForType(datasetType: string): string {
+  return (
+    (bundleRowTypes as Record<string, { plural: string }>)[datasetType]?.plural ??
+    `${datasetType || "unknown"}s`
+  );
 }
 
-function rowPayload(row) {
+function rowPayload(row: any): any {
   return row?.payload && typeof row.payload === "object" && !Array.isArray(row.payload)
     ? row.payload
     : row;
 }
 
-function inferRowDatasetType(payload, fallbackType) {
+function inferRowDatasetType(payload: any, fallbackType: any): string {
   for (const [datasetType, config] of Object.entries(bundleRowTypes)) {
     if (payload?.[config.rootKey]) return datasetType;
   }
   return fallbackType === "support" ? "support" : fallbackType || "unknown";
 }
 
-function rowsFromValue(value) {
+function rowsFromValue(value: any): any[] {
   if (Array.isArray(value)) return value;
   if (Array.isArray(value?.rows)) return value.rows;
   if (Array.isArray(value?.items)) return value.items;
   return value && typeof value === "object" ? [value] : [];
 }
 
-function blockerBucket(blocker) {
+function blockerBucket(blocker: any): string {
   const text = [
     blocker?.code,
     blocker?.stage,
@@ -142,7 +145,7 @@ function blockerBucket(blocker) {
   return "other";
 }
 
-function humanActionForBlocker(blocker) {
+function humanActionForBlocker(blocker: any): string {
   const bucket = blockerBucket(blocker);
   const code = String(blocker?.code ?? "").toLowerCase();
   if (bucket === "classification") {
@@ -181,20 +184,20 @@ export function createImportLedgerUtils({
   repoRelativePath,
   resolveRepoPath,
   writeJson,
-}) {
-  function relativeInput(value) {
+}: any) {
+  function relativeInput(value: any): any {
     const resolved = resolveRepoPath(value);
     return resolved ? repoRelativePath(resolved) : null;
   }
 
-  function readRowsFileMaybe(filePath) {
+  function readRowsFileMaybe(filePath: any): any[] {
     const resolved = resolveRepoPath(filePath);
     if (!resolved || !fileExists(resolved)) return [];
     if (resolved.toLowerCase().endsWith(".jsonl")) return readJsonLines(resolved);
     return rowsFromValue(readJson(resolved));
   }
 
-  function rowIdentity(row, fallbackType) {
+  function rowIdentity(row: any, fallbackType: any) {
     const payload = rowPayload(row);
     const datasetType = inferRowDatasetType(payload, fallbackType);
     const identity =
@@ -209,7 +212,7 @@ export function createImportLedgerUtils({
     };
   }
 
-  function updateManifest({ ledgerDir, eventKind, files = {}, reportPath = null }) {
+  function updateManifest({ ledgerDir, eventKind, files = {}, reportPath = null }: any): string {
     ensureDir(ledgerDir);
     const manifestPath = path.join(ledgerDir, LEDGER_FILES.manifest);
     const previous = fs.existsSync(manifestPath) ? readJson(manifestPath) : {};
@@ -241,7 +244,7 @@ export function createImportLedgerUtils({
     return manifestPath;
   }
 
-  function writeCloseoutImportLedger({ report, reportPath, ledgerDir }) {
+  function writeCloseoutImportLedger({ report, reportPath, ledgerDir }: any) {
     if (!ledgerDir || !report) {
       return {
         status: "skipped",
@@ -265,7 +268,7 @@ export function createImportLedgerUtils({
         rowIdentity(row, report.dataset_type),
       );
       const scopeKey = `${report.dataset_type ?? "unknown"}:${relativeInput(report.final_rows_file) ?? repoRelativePath(reportPath)}`;
-      const summaryRow = {
+      const summaryRow: any = {
         schema_version: 1,
         ledger_kind: "blocked",
         status: "blocked_human_review",
@@ -279,7 +282,7 @@ export function createImportLedgerUtils({
           ...new Set(rowIdentities.map((identity) => identity.version).filter(Boolean)),
         ],
         scope_key: scopeKey,
-        blocker_codes: [...new Set(blockers.map((blocker) => blocker?.code).filter(Boolean))],
+        blocker_codes: [...new Set(blockers.map((blocker: any) => blocker?.code).filter(Boolean))],
         blocker_count: blockers.length,
         required_human_action:
           "Repair the commit/readback/account guard blocker for this exact final rows scope, then rerun post-write verification and closeout.",
@@ -292,9 +295,9 @@ export function createImportLedgerUtils({
       summaryRow.ledger_key = `blocked:closeout:${summaryRow.scope_key}:${sha256(
         JSON.stringify(summaryRow.blocker_codes),
       )}:${repoRelativePath(reportPath)}`;
-      const dependencyRows = blockers.map((blocker, index) => {
+      const dependencyRows = blockers.map((blocker: any, index: number) => {
         const bucket = blockerBucket(blocker) === "other" ? "remote-write" : blockerBucket(blocker);
-        const row = {
+        const row: any = {
           schema_version: 1,
           ledger_kind: "blocked",
           status: "blocked_human_review",
@@ -323,11 +326,11 @@ export function createImportLedgerUtils({
         row.ledger_key = `blocked:closeout-dependency:${bucket}:${row.reason_code}:${summaryRow.scope_key}:${index}:${repoRelativePath(reportPath)}`;
         return row;
       });
-      const writes = [
+      const writes: any[] = [
         appendJsonLinesDedup(path.join(ledgerDir, LEDGER_FILES.blockedScopes), [summaryRow]),
       ];
       for (const bucket of BLOCKER_BUCKETS) {
-        const bucketRows = dependencyRows.filter((row) => row.blocker_bucket === bucket);
+        const bucketRows = dependencyRows.filter((row: any) => row.blocker_bucket === bucket);
         if (bucketRows.length === 0) continue;
         writes.push(
           appendJsonLinesDedup(
@@ -378,7 +381,7 @@ export function createImportLedgerUtils({
       closeout_report: repoRelativePath(reportPath),
       root_payload_mismatches: Number(report.counts?.root_payload_mismatches ?? -1),
     };
-    const ledgerRows = rows.map((row, index) => {
+    const ledgerRows = rows.map((row: any, index: number) => {
       const identity = rowIdentity(row, report.dataset_type);
       const datasetKey = `${identity.dataset_type}:${identity.dataset_id ?? "missing"}:${identity.version ?? "missing"}`;
       return {
@@ -393,11 +396,11 @@ export function createImportLedgerUtils({
         ledger_key: `ok:${datasetKey}:${identity.payload_hash}:${repoRelativePath(reportPath)}`,
       };
     });
-    const writes = [];
+    const writes: any[] = [];
     writes.push(appendJsonLinesDedup(path.join(ledgerDir, LEDGER_FILES.okScopes), ledgerRows));
     for (const [datasetType, typeRows] of Map.groupBy(
       ledgerRows,
-      (row) => row.row_dataset_type || "unknown",
+      (row: any) => row.row_dataset_type || "unknown",
     )) {
       writes.push(
         appendJsonLinesDedup(
@@ -432,7 +435,7 @@ export function createImportLedgerUtils({
     };
   }
 
-  function writeFinalizeImportLedger({ report, reportPath, ledgerDir }) {
+  function writeFinalizeImportLedger({ report, reportPath, ledgerDir }: any) {
     if (
       !ledgerDir ||
       !report ||
@@ -459,7 +462,7 @@ export function createImportLedgerUtils({
     const scopeIds = rowIdentities.map((identity) => identity.dataset_id).filter(Boolean);
     const scopeVersions = rowIdentities.map((identity) => identity.version).filter(Boolean);
     const generatedAt = nowIso();
-    const summaryRow = {
+    const summaryRow: any = {
       schema_version: 1,
       ledger_kind: "blocked",
       status: "blocked_human_review",
@@ -469,7 +472,7 @@ export function createImportLedgerUtils({
       scope_ids: [...new Set(scopeIds)],
       scope_versions: [...new Set(scopeVersions)],
       scope_key: `${report.dataset_type ?? "unknown"}:${relativeInput(report.final_rows_file || report.rows_file) ?? sha256(JSON.stringify(scopeIds))}`,
-      blocker_codes: [...new Set(blockers.map((blocker) => blocker?.code).filter(Boolean))],
+      blocker_codes: [...new Set(blockers.map((blocker: any) => blocker?.code).filter(Boolean))],
       blocker_count: blockers.length,
       required_human_action:
         "Repair the listed blocker dependencies or content fields, then rerun only this affected scope. Verified scopes in ok.* ledgers should be skipped.",
@@ -484,9 +487,9 @@ export function createImportLedgerUtils({
       JSON.stringify(summaryRow.blocker_codes),
     )}:${repoRelativePath(reportPath)}`;
 
-    const dependencyRows = blockers.map((blocker, index) => {
+    const dependencyRows = blockers.map((blocker: any, index: number) => {
       const bucket = blockerBucket(blocker);
-      const row = {
+      const row: any = {
         schema_version: 1,
         ledger_kind: "blocked",
         status: "blocked_human_review",
@@ -528,11 +531,11 @@ export function createImportLedgerUtils({
       return row;
     });
 
-    const writes = [
+    const writes: any[] = [
       appendJsonLinesDedup(path.join(ledgerDir, LEDGER_FILES.blockedScopes), [summaryRow]),
     ];
     for (const bucket of BLOCKER_BUCKETS) {
-      const bucketRows = dependencyRows.filter((row) => row.blocker_bucket === bucket);
+      const bucketRows = dependencyRows.filter((row: any) => row.blocker_bucket === bucket);
       if (bucketRows.length === 0) continue;
       writes.push(
         appendJsonLinesDedup(
@@ -542,7 +545,7 @@ export function createImportLedgerUtils({
       );
     }
     const identityRetryRows = dependencyRows.filter(
-      (row) =>
+      (row: any) =>
         row.blocker_bucket === "identity" &&
         /(timeout|429|network|rate)/iu.test(`${row.reason_code} ${row.message ?? ""}`),
     );
@@ -581,15 +584,15 @@ export function createImportLedgerUtils({
     };
   }
 
-  function latestByKey(rows, keyFn) {
-    const latest = new Map();
+  function latestByKey(rows: any[], keyFn: (row: any) => any): any[] {
+    const latest = new Map<any, any>();
     for (const row of rows) {
       latest.set(keyFn(row), row);
     }
     return [...latest.values()];
   }
 
-  function runDatasetImportLedgerReport(options) {
+  function runDatasetImportLedgerReport(options: any) {
     if (options.help) {
       return {
         schema_version: 1,
@@ -638,10 +641,11 @@ export function createImportLedgerUtils({
       .filter((row) => {
         const keys = Array.isArray(row.scope_ids)
           ? row.scope_ids.map(
-              (id) => `${row.scope_dataset_type}:${id}:${row.scope_versions?.[0] ?? "missing"}`,
+              (id: any) =>
+                `${row.scope_dataset_type}:${id}:${row.scope_versions?.[0] ?? "missing"}`,
             )
           : [];
-        return keys.length === 0 || keys.some((key) => !verifiedKeys.has(key));
+        return keys.length === 0 || keys.some((key: any) => !verifiedKeys.has(key));
       })
       .map((row) => ({
         schema_version: 1,
