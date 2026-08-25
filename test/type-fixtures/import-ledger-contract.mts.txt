@@ -1,0 +1,210 @@
+import {
+  createImportLedgerUtils,
+  type BlockedCloseoutReport,
+  type BlockedDependencyImportLedgerRow,
+  type BlockedFinalizeReport,
+  type BlockedScopeImportLedgerRow,
+  type CloseoutLedgerWriteOptions,
+  type CompletedCloseoutReport,
+  type DatasetImportLedgerReport,
+  type DatasetImportLedgerReportOptions,
+  type FinalizeLedgerWriteOptions,
+  type ImportLedgerBlocker,
+  type ImportLedgerDependencies,
+  type ImportLedgerManifest,
+  type ImportLedgerRow,
+  type ImportLedgerUtils,
+  type ImportLedgerWriteResult,
+  type JsonRecord,
+  type JsonValue,
+  type ReadyFinalizeReport,
+  type ResumePendingImportLedgerRow,
+  type ResumeSkippedImportLedgerRow,
+  type RetryImportLedgerRow,
+  type VerifiedImportLedgerRow,
+} from "__IMPORT_LEDGER_MODULE__";
+
+const jsonValue: JsonValue = {
+  nested: [null, true, 7, "text", { value: "ok" }],
+};
+const jsonRecord: JsonRecord = { value: jsonValue };
+void jsonRecord;
+
+const dependencies: ImportLedgerDependencies = {
+  asText: (value) => (value == null ? "" : String(value).trim()),
+  datasetIdentity: (_payload, _datasetType) => ({ id: "dataset-id", version: "00.00.001" }),
+  fileExists: (_filePath) => true,
+  nowIso: () => "2026-08-25T00:00:00.000Z",
+  readJson: (_filePath) => ({}),
+  readJsonLines: (_filePath) => [],
+  repoRelativePath: (filePath) => filePath,
+  resolveRepoPath: (filePath) => (typeof filePath === "string" ? filePath : null),
+  writeJson: (_filePath, _value) => undefined,
+};
+
+const utils: ImportLedgerUtils = createImportLedgerUtils(dependencies);
+
+const blocker: ImportLedgerBlocker = {
+  code: "identity_preflight_timeout",
+  stage: "identity.preflight",
+  message: "network timeout",
+  blocking_dependency: { dataset_type: "process", id: "candidate-id", version: null, path: null },
+};
+
+const completedCloseout: CompletedCloseoutReport = {
+  status: "completed",
+  dataset_type: "process",
+  final_rows_file: "rows.jsonl",
+  counts: { root_payload_mismatches: 0 },
+};
+const blockedCloseout: BlockedCloseoutReport = {
+  status: "blocked",
+  dataset_type: "process",
+  final_rows_file: "rows.jsonl",
+  blockers: [blocker],
+};
+const readyFinalize: ReadyFinalizeReport = {
+  status: "ready_for_remote_write",
+  dataset_type: "process",
+};
+const blockedFinalize: BlockedFinalizeReport = {
+  status: "blocked",
+  dataset_type: "process",
+  rows_file: "rows.jsonl",
+  blockers: [blocker],
+  files: { mutation_manifest: "mutation.json" },
+};
+
+const closeoutOptions: CloseoutLedgerWriteOptions = {
+  report: completedCloseout,
+  reportPath: "closeout.json",
+  ledgerDir: "ledger",
+};
+const finalizeOptions: FinalizeLedgerWriteOptions = {
+  report: blockedFinalize,
+  reportPath: "finalize.json",
+  ledgerDir: "ledger",
+};
+const writeResult: ImportLedgerWriteResult = utils.writeCloseoutImportLedger(closeoutOptions);
+const finalizeResult: ImportLedgerWriteResult = utils.writeFinalizeImportLedger(finalizeOptions);
+void [blockedCloseout, readyFinalize, finalizeResult, writeResult];
+
+const verifiedRow: VerifiedImportLedgerRow = {
+  schema_version: 1,
+  ledger_kind: "ok",
+  status: "verified",
+  verified_at_utc: "2026-08-25T00:00:00.000Z",
+  row_index: 0,
+  row_dataset_type: "process",
+  dataset_id: "dataset-id",
+  version: "00.00.001",
+  payload_hash: "hash",
+  dataset_key: "process:dataset-id:00.00.001",
+  scope_key: "process:rows.jsonl",
+  ledger_key: "ok:key",
+};
+const blockedScopeRow: BlockedScopeImportLedgerRow = {
+  schema_version: 1,
+  ledger_kind: "blocked",
+  status: "blocked_human_review",
+  blocked_at_utc: "2026-08-25T00:00:00.000Z",
+  scope_dataset_type: "process",
+  scope_ids: ["dataset-id"],
+  scope_versions: ["00.00.001"],
+  scope_key: "process:rows.jsonl",
+  blocker_codes: ["identity_preflight_timeout"],
+  blocker_count: 1,
+  required_human_action: "Retry identity preflight.",
+  ledger_key: "blocked:scope",
+};
+const blockedDependencyRow: BlockedDependencyImportLedgerRow = {
+  schema_version: 1,
+  ledger_kind: "blocked",
+  status: "blocked_human_review",
+  blocked_at_utc: "2026-08-25T00:00:00.000Z",
+  blocker_bucket: "identity",
+  reason_code: "identity_preflight_timeout",
+  scope_dataset_type: "process",
+  scope_ids: ["dataset-id"],
+  scope_key: "process:rows.jsonl",
+  blocking_dependency: blocker.blocking_dependency ?? {},
+  required_human_action: "Retry identity preflight.",
+  ledger_key: "blocked:dependency",
+};
+const retryRow: RetryImportLedgerRow = {
+  schema_version: 1,
+  ledger_kind: "blocked",
+  status: "blocked_human_review",
+  blocked_at_utc: "2026-08-25T00:00:00.000Z",
+  blocker_bucket: "identity",
+  reason_code: "identity_preflight_timeout",
+  scope_dataset_type: "process",
+  scope_ids: ["dataset-id"],
+  scope_key: "process:rows.jsonl",
+  blocking_dependency: {},
+  required_human_action: "Retry identity preflight.",
+  ledger_key: "retry:identity",
+};
+const resumePending: ResumePendingImportLedgerRow = {
+  schema_version: 1,
+  ledger_kind: "resume",
+  status: "pending_human_review",
+  source_ledger_key: "blocked:scope",
+  scope_key: "process:rows.jsonl",
+  scope_dataset_type: "process",
+  scope_ids: ["dataset-id"],
+  blocker_codes: ["identity_preflight_timeout"],
+};
+const resumeSkipped: ResumeSkippedImportLedgerRow = {
+  schema_version: 1,
+  ledger_kind: "resume",
+  status: "skipped_verified",
+  source_ledger_key: "ok:key",
+  dataset_key: "process:dataset-id:00.00.001",
+  row_dataset_type: "process",
+  dataset_id: "dataset-id",
+  version: "00.00.001",
+};
+const rows: ImportLedgerRow[] = [
+  verifiedRow,
+  blockedScopeRow,
+  blockedDependencyRow,
+  retryRow,
+  resumePending,
+  resumeSkipped,
+];
+void rows;
+
+const manifest: ImportLedgerManifest = {
+  schema_version: 1,
+  created_at_utc: "2026-08-25T00:00:00.000Z",
+  updated_at_utc: "2026-08-25T00:00:00.000Z",
+  ledger_dir: "ledger",
+  event_kinds: ["post_write_closeout_verified"],
+  latest_report: "closeout.json",
+  files: { ok_scopes: "ledger/ok.scopes.verified.jsonl" },
+  contract: {
+    ok_prefix: "ok.*.verified.jsonl",
+    blocked_prefix: "blocked.*.jsonl",
+    retry_prefix: "retry.*.jsonl",
+    resume_prefix: "resume.*.jsonl",
+    append_only: true,
+    dedup_key: "ledger_key",
+  },
+};
+void manifest;
+
+const reportOptions: DatasetImportLedgerReportOptions = { ledgerDir: "ledger", outDir: "out" };
+const report = utils.runDatasetImportLedgerReport(reportOptions);
+if (report.status !== "help") {
+  const narrowed: DatasetImportLedgerReport = report;
+  void narrowed.counts.resume_rows;
+}
+
+// @ts-expect-error verified rows cannot carry a blocked status
+const invalidVerified: VerifiedImportLedgerRow = { ...verifiedRow, status: "blocked_human_review" };
+// @ts-expect-error ready finalize reports cannot contain the blocked discriminator
+const invalidReady: ReadyFinalizeReport = { ...readyFinalize, status: "blocked" };
+// @ts-expect-error report paths are strings, never numeric identifiers
+utils.runDatasetImportLedgerReport({ ledgerDir: 7 });
+void [invalidReady, invalidVerified];
