@@ -9,6 +9,11 @@ import { fileURLToPath } from "node:url";
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
 
+test("import-ledger contains no explicit any escape hatch", () => {
+  const source = fs.readFileSync(path.join(repoRoot, "scripts", "lib", "import-ledger.ts"), "utf8");
+  assert.doesNotMatch(source, /\bany\b/u);
+});
+
 test("import-ledger publishes a strict compile-time dependency, report, row, and result contract", () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "import-ledger-types-"));
   try {
