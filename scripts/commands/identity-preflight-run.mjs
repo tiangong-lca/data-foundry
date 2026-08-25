@@ -750,7 +750,8 @@ export function createIdentityPreflightRunCommands({
         outputDir &&
         reportFile &&
         fileExists(reportFile) &&
-        fileExists(path.join(outputDir, "outputs"))
+        fs.existsSync(path.join(outputDir, "outputs")) &&
+        fs.statSync(path.join(outputDir, "outputs")).isDirectory()
       ) {
         try {
           const cacheableReport = JSON.parse(fs.readFileSync(reportFile, "utf8"));
@@ -831,6 +832,7 @@ export function createIdentityPreflightRunCommands({
         timeout_ms: timeoutMs,
         spawn_timeout_ms: spawnTimeoutMs,
         max_attempts: maxAttempts,
+        result_cache_dir: repoRelativeMaybe(resultCacheDir),
         retry_failed:
           retryFailedPath && fileExists(retryFailedPath) ? repoRelativePath(retryFailedPath) : null,
         cli: {

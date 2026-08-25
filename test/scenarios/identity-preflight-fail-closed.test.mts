@@ -259,6 +259,52 @@ test("create-new negative search evidence is never reused across runs", () => {
   assert.equal(fs.readFileSync(fixture.marker, "utf8").trim().split(/\r?\n/u).length, 2);
 });
 
+test("shared cache restores positive reuse but never publishes or restores create-new evidence", () => {
+  for (const mode of ["positive-reuse", "valid"]) {
+    const fixture = prepare(`shared-cache-${mode}`);
+    const cacheDir = path.join(fixture.caseRoot, "shared-cache");
+    const env = {
+      TIANGONG_LCA_CLI_BIN: fixture.fakeCli,
+      FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
+      FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+      BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE: cacheDir,
+      FAKE_MODE: mode,
+      FAKE_MARKER: fixture.marker,
+    };
+    const args = [
+      "dataset-identity-preflight-run",
+      "--index",
+      rel(fixture.indexFile),
+      ...receiptArgs(fixture),
+    ];
+    const first = runFoundry([...args, "--out-dir", rel(path.join(fixture.caseRoot, "run"))], {
+      env,
+    });
+    assert.equal(first.code, 0, JSON.stringify(first.json));
+    const bindingSha = first.json.results[0].binding_sha256;
+    const cacheEntry = path.join(cacheDir, bindingSha);
+    if (mode === "positive-reuse") {
+      assert.equal(fs.existsSync(cacheEntry), true);
+    } else {
+      assert.equal(fs.existsSync(cacheEntry), false);
+      fs.mkdirSync(cacheDir, { recursive: true });
+      fs.cpSync(path.join(fixture.outputDir, "outputs"), cacheEntry, { recursive: true });
+    }
+    fs.rmSync(fixture.outputDir, { recursive: true, force: true });
+    const second = runFoundry([...args, "--out-dir", rel(path.join(fixture.caseRoot, "run-2"))], {
+      env,
+    });
+    assert.equal(second.code, 0, JSON.stringify(second.json));
+    if (mode === "positive-reuse") {
+      assert.equal(second.json.counts.restored_from_bound_cache, 1);
+      assert.equal(fs.readFileSync(fixture.marker, "utf8").trim().split(/\r?\n/u).length, 1);
+    } else {
+      assert.equal(second.json.counts.restored_from_bound_cache, 0);
+      assert.equal(fs.readFileSync(fixture.marker, "utf8").trim().split(/\r?\n/u).length, 2);
+    }
+  }
+});
+
 test("fresh receipt rotation preserves account-bound only-pending reuse", () => {
   const fixture = prepare("rotating-receipt");
   const receiptsFile = path.join(fixture.caseRoot, "rotating-auth-receipts.json");
