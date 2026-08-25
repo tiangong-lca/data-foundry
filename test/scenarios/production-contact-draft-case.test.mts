@@ -6,6 +6,7 @@ import {
   parseProductionContactDraftCaseArgs,
   runProductionContactDraftCase,
   type ProductionContactDraftSpawn,
+  type RunProductionContactDraftCaseDeps,
 } from "../../scripts/cases/production-contact-draft.ts";
 import {
   fs,
@@ -140,6 +141,50 @@ test("production contact case parser accepts only one exact intent tuple", () =>
   }
 });
 
+test("production contact case default pinned runtime completes offline gates before env access", async () => {
+  const root = testTmpRoot("production-contact-offline-runtime");
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.mkdirSync(root, { recursive: true });
+  const outDir = path.join(root, "case-output");
+  try {
+    await assert.rejects(
+      runProductionContactDraftCase(
+        {
+          envFile: path.join(root, "missing.env"),
+          expectedProjectRef: PROJECT_REF,
+          expectedUserId: USER_ID,
+          outDir,
+        },
+        {
+          now: () => new Date("2026-08-25T12:36:00.000Z"),
+          randomUUID: () => CONTACT_ID,
+        },
+      ),
+      /env file is not readable/u,
+    );
+    const failure = readJson(path.join(outDir, "case-failure.json"));
+    assert.equal(failure.stage, "load-production-env");
+    assert.equal(failure.error_code, "CASE_ENV_INVALID");
+    assert.equal(failure.mutation_dispatch_count, 0);
+    assert.ok(
+      fs.existsSync(path.join(outDir, "offline-validate", "outputs", "validation-report.json")),
+    );
+    assert.ok(
+      fs.existsSync(
+        path.join(
+          outDir,
+          "offline-save-draft-dry-run",
+          "outputs",
+          "dataset-save-draft",
+          "summary.json",
+        ),
+      ),
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("production contact case executes one bounded owner-draft mutation and unique readback", async () => {
   const root = testTmpRoot("production-contact-case");
   fs.rmSync(root, { recursive: true, force: true });
@@ -160,6 +205,7 @@ test("production contact case executes one bounded owner-draft mutation and uniq
   let receiptCount = 0;
   let commitDispatches = 0;
   let runtimeCleanups = 0;
+  let successfulSpawn: RunProductionContactDraftCaseDeps["spawnImpl"];
 
   try {
     const manifest = await runProductionContactDraftCase(
@@ -180,7 +226,7 @@ test("production contact case executes one bounded owner-draft mutation and uniq
             runtimeCleanups += 1;
           },
         }),
-        spawnImpl: (command, args, options) => {
+        spawnImpl: (successfulSpawn = (command, args, options) => {
           spawns.push({ command, args, options });
           const cliArgs = args.slice(1);
           const input = cliArgs.includes("--input") ? option(cliArgs, "--input") : null;
@@ -377,7 +423,7 @@ test("production contact case executes one bounded owner-draft mutation and uniq
             );
           }
           throw new Error(`Unexpected fake CLI argv: ${cliArgs.join(" ")}`);
-        },
+        }),
       },
     );
 
@@ -413,6 +459,56 @@ test("production contact case executes one bounded owner-draft mutation and uniq
       sha256Text(fs.readFileSync(path.join(outDir, "contact.jsonl"), "utf8")),
       diskManifest.contact_artifact.sha256,
     );
+
+    const ambiguousOutDir = path.join(root, "ambiguous-case-output");
+    let ambiguousCommitCalls = 0;
+    await assert.rejects(
+      runProductionContactDraftCase(
+        {
+          envFile,
+          expectedProjectRef: PROJECT_REF,
+          expectedUserId: USER_ID,
+          outDir: ambiguousOutDir,
+        },
+        {
+          processEnv: { PATH: "/safe/bin", UNRELATED_AMBIENT_SECRET: "forbidden" },
+          now: () => new Date("2026-08-25T12:36:00.000Z"),
+          randomUUID: () => CONTACT_ID,
+          prepareRuntimeSnapshot: () => ({
+            entrypoint: "/trusted/private/cli.js",
+            cliPackageName: "@tiangong-lca/cli",
+            cliPackageVersion: "0.1.1",
+            cliEntrypointSha256: "a".repeat(64),
+            cliRuntimeSha256: "b".repeat(64),
+            runnerSha256: "c".repeat(64),
+            pnpmLockSha256: "d".repeat(64),
+            cleanup: () => {
+              runtimeCleanups += 1;
+            },
+          }),
+          spawnImpl: (command, args, options) => {
+            const cliArgs = args.slice(1);
+            if (
+              cliArgs[0] === "dataset" &&
+              cliArgs[1] === "save-draft" &&
+              cliArgs.includes("--commit")
+            ) {
+              ambiguousCommitCalls += 1;
+              return { status: null, signal: "SIGTERM", stdout: "", stderr: "" };
+            }
+            return successfulSpawn!(command, args, options);
+          },
+        },
+      ),
+      /CLI failed at commit-contact-draft/u,
+    );
+    assert.equal(ambiguousCommitCalls, 1);
+    assert.equal(runtimeCleanups, 2);
+    const failure = readJson(path.join(ambiguousOutDir, "case-failure.json"));
+    assert.equal(failure.stage, "commit-contact-draft");
+    assert.equal(failure.mutation_dispatch_count, 1);
+    assert.equal(failure.automatic_retry_performed, false);
+    assert.equal(fs.existsSync(path.join(ambiguousOutDir, "case-manifest.json")), false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
