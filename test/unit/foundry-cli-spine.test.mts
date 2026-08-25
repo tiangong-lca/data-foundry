@@ -296,6 +296,10 @@ test("active documentation and source contain no references to removed CLI spine
     "foundry-command-registry.mjs",
     "foundry-command-metadata.mjs",
     "surface-audit.mjs",
+    "bundle-row-types.mjs",
+    "tidas-language-utils.mjs",
+    "hash-utils.mjs",
+    "dataset-types.mjs",
   ];
   const files = [
     "AGENTS.md",
