@@ -31,6 +31,17 @@
   "plugins": ["typescript"],
   "overrides": [
     {
+      "files": [
+        "scripts/lib/import-curation/internal/artifact-inputs.ts",
+        "scripts/lib/import-curation/internal/context-inputs.ts",
+        "scripts/lib/import-curation/internal/dataset-payload.ts",
+        "scripts/lib/import-curation/internal/trace-summary.ts"
+      ],
+      "rules": {
+        "typescript/no-explicit-any": "error"
+      }
+    },
+    {
       "files": ["test/**/*.{js,mjs,cjs,ts,mts,cts}"],
       "rules": {
         "typescript/no-floating-promises": "off",
