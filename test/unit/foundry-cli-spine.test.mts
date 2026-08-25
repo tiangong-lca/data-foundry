@@ -313,6 +313,8 @@ test("active documentation and source contain no references to removed CLI spine
     "identity-reference-rewrite-utils.mjs",
     "identity-preflight-artifacts.mjs",
     "./lib/full-context-proof.mjs",
+    "bafu-family-signatures.mjs",
+    "lib/import-ledger.mjs",
   ];
   const files = [
     "AGENTS.md",
