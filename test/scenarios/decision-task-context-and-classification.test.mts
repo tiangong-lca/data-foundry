@@ -273,7 +273,7 @@ test("authoring plan propagates shared context cache to decision chunks", () => 
     const classificationPhase = plan.json.phases.find(
       (phase) => phase.phase === "classification_decisions",
     )!;
-    assert.match(classificationPhase.commands.build_task!, /--shared-context-cache-dir/u);
+    assert.match(classificationPhase.commands.build_task, /--shared-context-cache-dir/u);
     const chunkCommands = classificationPhase.chunk_plan.commands;
     assert.equal(chunkCommands.length, 2);
     assert.equal(
@@ -285,9 +285,9 @@ test("authoring plan propagates shared context cache to decision chunks", () => 
       true,
     );
     const patchPhase = plan.json.phases.find((phase) => phase.phase === "field_patches")!;
-    assert.match(patchPhase.commands.build_task!, /--shared-context-cache-dir/u);
+    assert.match(patchPhase.commands.build_task, /--shared-context-cache-dir/u);
     assert.match(
-      patchPhase.commands.build_task!.replaceAll("\\", "/"),
+      patchPhase.commands.build_task.replaceAll("\\", "/"),
       new RegExp(expectedCacheDir, "u"),
     );
   } finally {
