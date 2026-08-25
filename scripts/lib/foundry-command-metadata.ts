@@ -287,7 +287,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-incremental-change-set-compose": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/incremental-change-set.mjs",
+    ownerModule: "scripts/commands/incremental-change-set.ts",
     ownerExport: "createIncrementalChangeSetCommands().runDatasetIncrementalChangeSetCompose",
     inputs: [
       "SHA-bound incremental change-set request",

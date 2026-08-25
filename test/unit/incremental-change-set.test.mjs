@@ -11,7 +11,7 @@ import {
   sha256Json,
   stableJson,
   valueSha256,
-} from "../../scripts/commands/incremental-change-set.mjs";
+} from "../../scripts/commands/incremental-change-set.ts";
 import {
   fixtureBoundRule,
   fixtureSha256Json,

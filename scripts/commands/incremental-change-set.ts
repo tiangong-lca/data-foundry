@@ -2,14 +2,246 @@ import Ajv2020 from "ajv/dist/2020.js";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import type { ErrorObject, ValidateFunction } from "ajv";
 import { readOnlyStageContract } from "../lib/stage-contract.ts";
+
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
+interface JsonObject {
+  [key: string]: JsonValue | undefined;
+}
+
+interface Entity extends JsonObject {
+  table: string;
+  id: string;
+  version: string;
+}
+
+interface EvidenceRule extends JsonObject {
+  entity_key: string;
+  pointer: string;
+  old_value_sha256: string;
+  candidate_value_sha256: string;
+  current_value_sha256: string;
+  evidence_sha256: string;
+  transform_id?: string;
+  mode?: string;
+  element_identity_pointer?: string;
+}
+
+interface TablePolicy extends JsonObject {
+  allow_insert: boolean;
+  allow_update: boolean;
+  semantic_noise_rules: EvidenceRule[];
+  conflict_rules: EvidenceRule[];
+  array_merge_rules: EvidenceRule[];
+}
+
+interface PreservationPolicy extends JsonObject {
+  schema_version: string;
+  semantic_domain?: string;
+  type_rank: string[];
+  table_policies: Record<string, TablePolicy>;
+}
+
+interface RequestScope extends JsonObject {
+  allowed_tables: string[];
+  allowed_target_keys: string[];
+  allowed_update_pointer_prefixes: Record<string, string[]>;
+  allow_account_local_support?: boolean;
+}
+
+interface IncrementalRequest extends JsonObject {
+  schema_version: string;
+  target_mode: string;
+  production_authority: boolean;
+  change_set_id: string;
+  producer_id: string;
+  project_ref: string;
+  owner: { user_id: string; email: string } & JsonObject;
+  scope: RequestScope;
+  consumer: {
+    schema_version: string;
+    cli_version: string;
+    toolchain_fingerprint_sha256: string;
+  } & JsonObject;
+  input_artifacts: {
+    comparisons: ArtifactReference;
+    owner_snapshot: ArtifactReference;
+    owner_snapshot_receipt: ArtifactReference;
+    preservation_policy: ArtifactReference;
+    terminal_exclusions?: ArtifactReference;
+  } & JsonObject;
+}
+
+interface ComparisonRow extends JsonObject {
+  __line: number;
+  __raw_sha256: string;
+  schema_version: string;
+  conversion_id: string;
+  entity: Entity;
+  dependency_conversion_ids: string[];
+  old_payload: JsonValue;
+  new_payload: JsonValue;
+  old_payload_sha256: string | null;
+  new_payload_sha256: string | null;
+}
+
+interface ComposeOptions extends JsonObject {
+  help?: boolean;
+  request?: string;
+  outDir?: string;
+}
+
+interface OwnerRow extends JsonObject {
+  schema_version: string;
+  role: string;
+  project_ref: string;
+  owner: { user_id: string; email: string } & JsonObject;
+  state_code: number;
+  payload_sha256: string | null;
+  json_ordered: JsonValue;
+  entity: Entity;
+}
+
+interface MergeConflict extends JsonObject {
+  pointer: string;
+  reason: string;
+}
+
+interface MergeResult {
+  value: JsonValue | typeof MISSING;
+  conflicts: MergeConflict[];
+  preserved_paths: string[];
+  applied_paths: string[];
+  noise_paths: string[];
+  noise_evidence_sha256: string[];
+  preserve_owner_evidence_sha256: string[];
+  take_candidate_evidence_sha256: string[];
+  stable_array_evidence_sha256: string[];
+  forbidden_paths?: string[];
+}
+
+interface HashPair extends JsonObject {
+  payload_sha256: string | null;
+  semantic_sha256: string | null;
+}
+
+interface ExecutionContract extends JsonObject {
+  actions: JsonObject[];
+}
+
+interface InputFacts {
+  request: ArtifactFacts;
+  comparisons: ArtifactFacts;
+  owner_snapshot: ArtifactFacts;
+  owner_snapshot_receipt: ArtifactFacts;
+  policy: ArtifactFacts;
+  terminal_exclusions: ArtifactFacts | null;
+}
+
+interface ConversionResult {
+  input_sequence: number;
+  source_line: number;
+  source_raw_sha256: string;
+  conversion_id: string;
+  requested_conversion_id: string;
+  entity: Entity;
+  key: string;
+  dependencies: string[];
+  old_payload: JsonValue;
+  candidate_payload: JsonValue;
+  current_payload: JsonValue;
+  desired_payload: JsonValue | null;
+  hashes: Record<string, HashPair>;
+  merge: MergeResult;
+  evidence: JsonObject;
+  terminal_success: TerminalSuccessBinding | null;
+  disposition: string;
+  reason_codes: string[];
+  expected_operation: string | null;
+  before_sha256: string | null;
+  desired_sha256: string | null;
+  action_id: string | null;
+  dependency_action_ids: string[];
+  dependency_dispositions: JsonObject[];
+  duration_ms: number;
+}
+
+interface ArtifactReference extends JsonObject {
+  path: string;
+  sha256: string;
+  bytes: number;
+  rows?: number;
+  schema_version?: string;
+}
+
+interface TerminalExclusion extends JsonObject {
+  action_id: string;
+  desired_sha256: string;
+  success_receipt: ArtifactReference;
+}
+
+interface TerminalSuccessBinding extends JsonObject {
+  action_id: string;
+  desired_sha256: string;
+  receipt_path: string;
+  receipt_schema_version: string;
+  receipt_status: string;
+  receipt_bytes: number;
+  receipt_sha256: string;
+}
+
+interface ArtifactFacts {
+  path: string;
+  bytes: number;
+  sha256: string;
+  rows: number | null;
+  schema_version: string | null;
+}
+
+interface JsonLineMeta<T extends JsonObject = JsonObject> {
+  value: T;
+  line: number;
+  raw_sha256: string;
+}
+
+interface SchemaRuntime {
+  validators: Record<string, ValidateFunction>;
+}
+
+interface OwnerSnapshotReceipt extends JsonObject {
+  schema_version: string;
+  project_ref: string;
+  owner: { user_id: string; email: string; state_code: number } & JsonObject;
+  snapshot: { sha256: string; bytes: number; rows: number } & JsonObject;
+  scope_binding: {
+    allowed_target_keys: string[];
+    allowed_target_keys_sha256: string;
+    canonical_scope_sha256: string;
+  } & JsonObject;
+  target_ledger: JsonValue[];
+  captured_at_utc: string;
+}
+
+interface ConversionEvent extends JsonObject {
+  previous_event_sha256: string | null;
+  event_sha256: string;
+  evidence: JsonObject;
+  outcome: { terminal_success: TerminalSuccessBinding | null } & JsonObject;
+  decision_binding_sha256: string;
+}
+
+interface AjvRuntime {
+  addSchema: (schema: object) => unknown;
+  compile: (schema: object) => ValidateFunction;
+}
 
 const REQUEST_SCHEMA = "foundry-incremental-change-set-request.v1";
 const COMPARISON_SCHEMA = "foundry-incremental-change-set-comparison-row.v1";
 const OWNER_ROW_SCHEMA = "foundry-incremental-change-set-owner-row.v1";
 const OWNER_SNAPSHOT_RECEIPT_SCHEMA = "foundry-incremental-change-set-owner-snapshot-receipt.v1";
 const POLICY_SCHEMA = "foundry-incremental-change-set-preservation-policy.v1";
-const TERMINAL_EXCLUSION_SCHEMA = "foundry-incremental-change-set-terminal-exclusion.v1";
 const TERMINAL_SUCCESS_RECEIPT_SCHEMA =
   "foundry-incremental-change-set-terminal-success-receipt.v1";
 const EVENT_SCHEMA = "foundry-incremental-change-set-conversion-event.v1";
@@ -39,7 +271,7 @@ const TRUST_BOUNDARY_REASONS = new Set([
 ]);
 const MISSING = Symbol("missing");
 
-const TABLE_IDENTITIES = {
+const TABLE_IDENTITIES: Record<string, readonly [string, string]> = {
   contacts: ["contactDataSet", "contactInformation"],
   sources: ["sourceDataSet", "sourceInformation"],
   unitgroups: ["unitGroupDataSet", "unitGroupInformation"],
@@ -48,11 +280,11 @@ const TABLE_IDENTITIES = {
   processes: ["processDataSet", "processInformation"],
 };
 
-function compareText(left, right) {
+function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-export function stableValue(value) {
+export function stableValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stableValue);
   if (value && typeof value === "object") {
     return Object.fromEntries(
@@ -64,44 +296,44 @@ export function stableValue(value) {
   return value;
 }
 
-export function stableJson(value) {
+export function stableJson(value: unknown): string {
   return JSON.stringify(stableValue(value));
 }
 
-function sha256Bytes(value) {
+function sha256Bytes(value: crypto.BinaryLike): string {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
-export function sha256Json(value) {
+export function sha256Json(value: unknown): string {
   return sha256Bytes(stableJson(value));
 }
 
-function semanticSha256(domain, value) {
+function semanticSha256(domain: string, value: unknown): string {
   return sha256Bytes(`${domain}\0${stableJson(value)}`);
 }
 
-function isObject(value) {
+function isObject(value: unknown): value is JsonObject {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
-function clone(value) {
-  return value === MISSING ? MISSING : structuredClone(value);
+function clone<T>(value: T): T {
+  return (value === MISSING ? MISSING : structuredClone(value)) as T;
 }
 
-function exact(left, right) {
+function exact(left: unknown, right: unknown): boolean {
   if (left === MISSING || right === MISSING) return left === right;
   return stableJson(left) === stableJson(right);
 }
 
-function asToken(value) {
+function asToken(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function entityKey(entity) {
+function entityKey(entity: Entity): string {
   return `${entity.table}/${entity.id}@${entity.version}`;
 }
 
-function normalizedEntity(value) {
+function normalizedEntity(value: Entity | JsonObject | undefined): Entity {
   return {
     table: asToken(value?.table),
     id: asToken(value?.id),
@@ -109,27 +341,27 @@ function normalizedEntity(value) {
   };
 }
 
-function pointerSegment(value) {
+function pointerSegment(value: unknown): string {
   return String(value).replaceAll("~", "~0").replaceAll("/", "~1");
 }
 
-function childPointer(pointer, key) {
+function childPointer(pointer: string, key: unknown): string {
   return `${pointer}/${pointerSegment(key)}`;
 }
 
-function pointerMatches(prefix, pointer) {
+function pointerMatches(prefix: string, pointer: string): boolean {
   return (
     prefix !== "" && prefix !== "/" && (pointer === prefix || pointer.startsWith(`${prefix}/`))
   );
 }
 
-function matchingPrefix(prefixes, pointer) {
+function matchingPrefix(prefixes: Iterable<string>, pointer: string): string | undefined {
   return [...prefixes]
     .filter((prefix) => pointerMatches(prefix, pointer))
     .sort((left, right) => right.length - left.length)[0];
 }
 
-function policyForTable(policy, table) {
+function policyForTable(policy: PreservationPolicy, table: string): TablePolicy {
   const value = policy?.table_policies?.[table];
   return isObject(value)
     ? value
@@ -142,11 +374,11 @@ function policyForTable(policy, table) {
       };
 }
 
-function presentValue(value) {
+function presentValue(value: unknown): boolean {
   return value !== MISSING && value !== undefined;
 }
 
-export function valueSha256(value) {
+export function valueSha256(value: unknown): string {
   return sha256Json(
     presentValue(value)
       ? { schema_version: "foundry-bound-value.v1", presence: "present", value }
@@ -154,7 +386,14 @@ export function valueSha256(value) {
   );
 }
 
-function ruleMatchesValues(rule, entityKeyValue, pointer, oldValue, candidateValue, currentValue) {
+function ruleMatchesValues(
+  rule: EvidenceRule,
+  entityKeyValue: string,
+  pointer: string,
+  oldValue: unknown,
+  candidateValue: unknown,
+  currentValue: unknown,
+): boolean {
   return (
     rule.entity_key === entityKeyValue &&
     rule.pointer === pointer &&
@@ -164,13 +403,20 @@ function ruleMatchesValues(rule, entityKeyValue, pointer, oldValue, candidateVal
   );
 }
 
-function boundRule(rules, entityKeyValue, pointer, oldValue, candidateValue, currentValue) {
+function boundRule(
+  rules: EvidenceRule[] | undefined,
+  entityKeyValue: string,
+  pointer: string,
+  oldValue: unknown,
+  candidateValue: unknown,
+  currentValue: unknown,
+): EvidenceRule | undefined {
   return (rules ?? []).find((rule) =>
     ruleMatchesValues(rule, entityKeyValue, pointer, oldValue, candidateValue, currentValue),
   );
 }
 
-function canonicalDecimal(value) {
+function canonicalDecimal(value: unknown): string | null {
   if (typeof value !== "string" && typeof value !== "number") return null;
   if (typeof value === "number" && !Number.isFinite(value)) return null;
   const token = String(value).trim();
@@ -197,13 +443,13 @@ function canonicalDecimal(value) {
 }
 
 function noiseRuleFor(
-  tablePolicy,
-  entityKeyValue,
-  pointer,
-  oldValue,
-  candidateValue,
-  currentValue,
-) {
+  tablePolicy: TablePolicy,
+  entityKeyValue: string,
+  pointer: string,
+  oldValue: unknown,
+  candidateValue: unknown,
+  currentValue: unknown,
+): EvidenceRule | null {
   const rule = boundRule(
     tablePolicy.semantic_noise_rules,
     entityKeyValue,
@@ -217,7 +463,13 @@ function noiseRuleFor(
   return values.every((value) => value != null && value === values[0]) ? rule : null;
 }
 
-function matchingNoiseRules(tablePolicy, entityKeyValue, oldValue, candidateValue, currentValue) {
+function matchingNoiseRules(
+  tablePolicy: TablePolicy,
+  entityKeyValue: string,
+  oldValue: unknown,
+  candidateValue: unknown,
+  currentValue: unknown,
+): EvidenceRule[] {
   return (tablePolicy.semantic_noise_rules ?? [])
     .filter(
       (rule) =>
@@ -233,26 +485,28 @@ function matchingNoiseRules(tablePolicy, entityKeyValue, oldValue, candidateValu
     .sort((left, right) => compareText(left.pointer, right.pointer));
 }
 
-function normalizedDecimalMarker(value) {
+function normalizedDecimalMarker(value: unknown): JsonObject {
   return {
     schema_version: "foundry-normalized-decimal.v1",
     canonical_decimal: canonicalDecimal(value),
   };
 }
 
-function replacePointer(value, pointer, replacement) {
+function replacePointer<T>(value: T, pointer: string, replacement: unknown): T {
   const output = clone(value);
   const segments = pointer
     .slice(1)
     .split("/")
     .map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));
-  let current = output;
-  for (const segment of segments.slice(0, -1)) current = current[segment];
-  current[segments.at(-1)] = replacement;
+  let current = output as unknown as Record<string, unknown>;
+  for (const segment of segments.slice(0, -1)) {
+    current = current[segment] as Record<string, unknown>;
+  }
+  current[segments.at(-1)!] = replacement;
   return output;
 }
 
-function normalizedSemanticProjection(payload, rules) {
+function normalizedSemanticProjection(payload: JsonValue, rules: EvidenceRule[]): JsonValue {
   if (payload == null) return null;
   return rules.reduce(
     (projection, rule) =>
@@ -272,6 +526,13 @@ export function conversionHashSets({
   tablePolicy,
   entityKey: entityKeyValue,
   domain,
+}: {
+  oldValue: JsonValue;
+  candidateValue: JsonValue;
+  currentValue: JsonValue;
+  tablePolicy: TablePolicy;
+  entityKey: string;
+  domain: string;
 }) {
   const noiseRules = matchingNoiseRules(
     tablePolicy,
@@ -280,7 +541,7 @@ export function conversionHashSets({
     candidateValue,
     currentValue,
   );
-  const hashSet = (payload) => {
+  const hashSet = (payload: JsonValue): HashPair => {
     if (payload == null) return { payload_sha256: null, semantic_sha256: null };
     return {
       payload_sha256: sha256Json(payload),
@@ -297,19 +558,24 @@ export function conversionHashSets({
   };
 }
 
-function pointerValue(value, pointer) {
+function pointerValue(value: unknown, pointer: string): unknown {
   if (!pointer || pointer === "/") return value;
   let current = value;
   for (const encoded of pointer.slice(1).split("/")) {
     const segment = encoded.replaceAll("~1", "/").replaceAll("~0", "~");
     if (!isObject(current) && !Array.isArray(current)) return MISSING;
     if (!Object.hasOwn(current, segment)) return MISSING;
-    current = current[segment];
+    current = (current as Record<string, unknown>)[segment];
   }
   return current;
 }
 
-function stableArrayIdentity(rule, oldArray, candidateArray, currentArray) {
+function stableArrayIdentity(
+  rule: EvidenceRule | undefined,
+  oldArray: unknown,
+  candidateArray: unknown,
+  currentArray: unknown,
+): boolean {
   if (
     rule?.mode !== "stable_identity_by_index_v1" ||
     !Array.isArray(oldArray) ||
@@ -320,10 +586,10 @@ function stableArrayIdentity(rule, oldArray, candidateArray, currentArray) {
   ) {
     return false;
   }
-  const seen = new Set();
+  const seen = new Set<string>();
   for (let index = 0; index < oldArray.length; index += 1) {
     const identities = [oldArray[index], candidateArray[index], currentArray[index]].map((entry) =>
-      pointerValue(entry, rule.element_identity_pointer),
+      pointerValue(entry, rule.element_identity_pointer ?? ""),
     );
     if (
       identities.some((identity) => !presentValue(identity)) ||
@@ -338,7 +604,7 @@ function stableArrayIdentity(rule, oldArray, candidateArray, currentArray) {
   return true;
 }
 
-function valueAt(value, key) {
+function valueAt(value: unknown, key: string): unknown {
   return isObject(value) && Object.hasOwn(value, key) ? value[key] : MISSING;
 }
 
@@ -348,10 +614,16 @@ export function mergeThreeWay({
   currentValue,
   tablePolicy,
   entityKey: entityKeyValue = "",
-}) {
-  const conflicts = [];
-  const preservedPaths = [];
-  const appliedPaths = [];
+}: {
+  oldValue: JsonValue;
+  candidateValue: JsonValue;
+  currentValue: JsonValue;
+  tablePolicy: TablePolicy;
+  entityKey?: string;
+}): MergeResult {
+  const conflicts: MergeConflict[] = [];
+  const preservedPaths: string[] = [];
+  const appliedPaths: string[] = [];
   const normalizationRules = matchingNoiseRules(
     tablePolicy,
     entityKeyValue,
@@ -361,11 +633,17 @@ export function mergeThreeWay({
   );
   const noisePaths = normalizationRules.map((rule) => rule.pointer);
   const noiseEvidence = normalizationRules.map((rule) => rule.evidence_sha256);
-  const preserveOwnerEvidence = [];
-  const takeCandidateEvidence = [];
-  const stableArrayEvidence = [];
+  const preserveOwnerEvidence: string[] = [];
+  const takeCandidateEvidence: string[] = [];
+  const stableArrayEvidence: string[] = [];
 
-  function merge(oldChild, candidateChild, currentChild, pointer, arrayAuthority = null) {
+  function merge(
+    oldChild: unknown,
+    candidateChild: unknown,
+    currentChild: unknown,
+    pointer: string,
+    arrayAuthority: EvidenceRule | null = null,
+  ): unknown {
     const noiseRule = noiseRuleFor(
       tablePolicy,
       entityKeyValue,
@@ -397,12 +675,15 @@ export function mergeThreeWay({
         conflicts.push({ pointer: pointer || "", reason: "array_identity_unstable" });
         return clone(currentChild);
       }
-      stableArrayEvidence.push(arrayRule.evidence_sha256);
-      return oldChild.map((entry, index) =>
+      stableArrayEvidence.push(arrayRule!.evidence_sha256);
+      const oldArray = oldChild as unknown[];
+      const candidateArray = candidateChild as unknown[];
+      const currentArray = currentChild as unknown[];
+      return oldArray.map((entry, index) =>
         merge(
           entry,
-          candidateChild[index],
-          currentChild[index],
+          candidateArray[index],
+          currentArray[index],
           childPointer(pointer, index),
           arrayRule,
         ),
@@ -413,12 +694,15 @@ export function mergeThreeWay({
       isObject(candidateChild === MISSING ? {} : candidateChild) &&
       isObject(currentChild === MISSING ? {} : currentChild)
     ) {
+      const oldObject = isObject(oldChild) ? oldChild : {};
+      const candidateObject = isObject(candidateChild) ? candidateChild : {};
+      const currentObject = isObject(currentChild) ? currentChild : {};
       const keys = new Set([
-        ...Object.keys(oldChild === MISSING ? {} : oldChild),
-        ...Object.keys(candidateChild === MISSING ? {} : candidateChild),
-        ...Object.keys(currentChild === MISSING ? {} : currentChild),
+        ...Object.keys(oldObject),
+        ...Object.keys(candidateObject),
+        ...Object.keys(currentObject),
       ]);
-      const output = {};
+      const output: JsonObject = {};
       for (const key of [...keys].sort(compareText)) {
         const merged = merge(
           valueAt(oldChild, key),
@@ -427,7 +711,7 @@ export function mergeThreeWay({
           childPointer(pointer, key),
           arrayAuthority,
         );
-        if (merged !== MISSING) output[key] = merged;
+        if (merged !== MISSING) output[key] = merged as JsonValue;
       }
       return output;
     }
@@ -481,7 +765,7 @@ export function mergeThreeWay({
   }
 
   return {
-    value: merge(oldValue, candidateValue, currentValue, ""),
+    value: merge(oldValue, candidateValue, currentValue, "") as JsonValue,
     conflicts,
     preserved_paths: [...new Set(preservedPaths)].sort(compareText),
     applied_paths: [...new Set(appliedPaths)].sort(compareText),
@@ -493,7 +777,12 @@ export function mergeThreeWay({
   };
 }
 
-function diffPointers(left, right, pointer = "", output = []) {
+function diffPointers(
+  left: unknown,
+  right: unknown,
+  pointer = "",
+  output: string[] = [],
+): string[] {
   if (exact(left, right)) return output;
   if (isObject(left) && isObject(right)) {
     const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
@@ -506,7 +795,7 @@ function diffPointers(left, right, pointer = "", output = []) {
   return output;
 }
 
-function evidenceForMerge(policySha256, merge) {
+function evidenceForMerge(policySha256: string, merge: MergeResult): JsonObject {
   return {
     policy_sha256: policySha256,
     noise_evidence_sha256: [...new Set(merge.noise_evidence_sha256 ?? [])].sort(compareText),
@@ -522,24 +811,34 @@ function evidenceForMerge(policySha256, merge) {
   };
 }
 
-function extractIdentity(payload, table) {
+function extractIdentity(payload: JsonValue, table: string): { id: string; version: string } {
   const [rootKey, informationKey] = TABLE_IDENTITIES[table] ?? [];
-  const root = payload?.[rootKey] ?? payload;
-  const information = root?.[informationKey] ?? {};
-  const dataSetInformation = information?.dataSetInformation ?? {};
-  const publication = root?.administrativeInformation?.publicationAndOwnership ?? {};
+  const payloadRecord = isObject(payload) ? payload : {};
+  const rootValue = rootKey ? payloadRecord[rootKey] : undefined;
+  const root = isObject(rootValue) ? rootValue : payloadRecord;
+  const informationValue = informationKey ? root[informationKey] : undefined;
+  const information = isObject(informationValue) ? informationValue : {};
+  const dataSetInformation = isObject(information.dataSetInformation)
+    ? information.dataSetInformation
+    : {};
+  const administrative = isObject(root.administrativeInformation)
+    ? root.administrativeInformation
+    : {};
+  const publication = isObject(administrative.publicationAndOwnership)
+    ? administrative.publicationAndOwnership
+    : {};
   return {
     id: asToken(dataSetInformation["common:UUID"] ?? dataSetInformation.UUID),
     version: asToken(publication["common:dataSetVersion"] ?? publication.dataSetVersion),
   };
 }
 
-function pathInside(root, candidate) {
+function pathInside(root: string, candidate: string): boolean {
   const relative = path.relative(root, candidate);
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
-function resolveLexicalInside(repoRoot, value, label) {
+function resolveLexicalInside(repoRoot: string, value: unknown, label: string): string {
   const token = asToken(value);
   if (!token) throw new Error(`${label} is required.`);
   const resolved = path.resolve(repoRoot, token);
@@ -547,7 +846,7 @@ function resolveLexicalInside(repoRoot, value, label) {
   return resolved;
 }
 
-function resolveInputInside(repoRoot, value, label) {
+function resolveInputInside(repoRoot: string, value: unknown, label: string): string {
   const resolved = resolveLexicalInside(repoRoot, value, label);
   if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
     throw new Error(`${label} file not found.`);
@@ -560,7 +859,7 @@ function resolveInputInside(repoRoot, value, label) {
   return realPath;
 }
 
-function resolveFreshOutputInside(repoRoot, value, label) {
+function resolveFreshOutputInside(repoRoot: string, value: unknown, label: string): string {
   const resolved = resolveLexicalInside(repoRoot, value, label);
   if (fs.existsSync(resolved)) throw new Error(`${label} must not already exist.`);
   const realRepoRoot = fs.realpathSync(repoRoot);
@@ -571,14 +870,17 @@ function resolveFreshOutputInside(repoRoot, value, label) {
   return path.join(parent, path.basename(resolved));
 }
 
-function readJson(filePath) {
+function readJson(filePath: string): JsonObject {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
-function createSchemaValidators(repoRoot) {
+function createSchemaValidators(repoRoot: string): SchemaRuntime {
   const schemaPath = path.join(repoRoot, "specs", "schemas", "incremental-change-set.schema.json");
   const schema = readJson(schemaPath);
-  const ajv = new Ajv2020({ allErrors: true, strict: true });
+  const Ajv2020Constructor = Ajv2020 as unknown as new (
+    options: Record<string, unknown>,
+  ) => AjvRuntime;
+  const ajv = new Ajv2020Constructor({ allErrors: true, strict: true });
   ajv.addSchema(schema);
   const names = [
     "request",
@@ -597,26 +899,32 @@ function createSchemaValidators(repoRoot) {
     "manifest",
   ];
   return {
-    ajv,
     validators: Object.fromEntries(
       names.map((name) => [name, ajv.compile({ $ref: `${schema.$id}#/$defs/${name}` })]),
     ),
   };
 }
 
-function assertSchema(schemaRuntime, name, value, label) {
+function assertSchema(
+  schemaRuntime: SchemaRuntime,
+  name: string,
+  value: unknown,
+  label: string,
+): void {
   const validate = schemaRuntime.validators[name];
   if (!validate(value)) {
     const errors = (validate.errors ?? [])
-      .map((error) => `${error.instancePath || "/"} ${error.message ?? error.keyword}`)
+      .map((error: ErrorObject) => `${error.instancePath || "/"} ${error.message ?? error.keyword}`)
       .join("; ");
     throw new Error(`${label} does not match ${name}: ${errors}`);
   }
 }
 
-export function readJsonLinesWithMeta(filePath) {
+export function readJsonLinesWithMeta<T extends JsonObject = JsonObject>(
+  filePath: string,
+): JsonLineMeta<T>[] {
   const buffer = fs.readFileSync(filePath);
-  const rows = [];
+  const rows: JsonLineMeta<T>[] = [];
   let line = 1;
   let start = 0;
   while (start <= buffer.length) {
@@ -625,7 +933,7 @@ export function readJsonLinesWithMeta(filePath) {
     if (end > start && buffer[end - 1] === 0x0d) end -= 1;
     const raw = buffer.toString("utf8", start, end);
     if (raw.trim()) {
-      rows.push({ value: JSON.parse(raw), line, raw_sha256: sha256Bytes(raw) });
+      rows.push({ value: JSON.parse(raw) as T, line, raw_sha256: sha256Bytes(raw) });
     }
     if (newline === -1) break;
     start = newline + 1;
@@ -634,7 +942,11 @@ export function readJsonLinesWithMeta(filePath) {
   return rows;
 }
 
-function artifactFacts(filePath, rows = null, schemaVersion = null) {
+function artifactFacts(
+  filePath: string,
+  rows: number | null = null,
+  schemaVersion: string | null = null,
+): ArtifactFacts {
   const buffer = fs.readFileSync(filePath);
   return {
     path: path.basename(filePath),
@@ -645,23 +957,34 @@ function artifactFacts(filePath, rows = null, schemaVersion = null) {
   };
 }
 
-function verifyArtifactRef(repoRoot, reference, label, jsonLines) {
+function verifyArtifactRef(
+  repoRoot: string,
+  reference: unknown,
+  label: string,
+  jsonLines: boolean,
+): { filePath: string; facts: ArtifactFacts } {
   if (!isObject(reference)) throw new Error(`${label} artifact reference is required.`);
-  const filePath = resolveInputInside(repoRoot, reference.path, `${label}.path`);
+  const typedReference = reference as unknown as ArtifactReference;
+  const filePath = resolveInputInside(repoRoot, typedReference.path, `${label}.path`);
   const facts = artifactFacts(filePath, jsonLines ? readJsonLinesWithMeta(filePath).length : null);
-  if (!SHA256_PATTERN.test(reference.sha256) || reference.sha256 !== facts.sha256) {
+  if (!SHA256_PATTERN.test(typedReference.sha256) || typedReference.sha256 !== facts.sha256) {
     throw new Error(`${label} SHA-256 mismatch.`);
   }
-  if (!Number.isInteger(reference.bytes) || reference.bytes !== facts.bytes) {
+  if (!Number.isInteger(typedReference.bytes) || typedReference.bytes !== facts.bytes) {
     throw new Error(`${label} byte count mismatch.`);
   }
-  if (jsonLines && (!Number.isInteger(reference.rows) || reference.rows !== facts.rows)) {
+  if (jsonLines && (!Number.isInteger(typedReference.rows) || typedReference.rows !== facts.rows)) {
     throw new Error(`${label} row count mismatch.`);
   }
   return { filePath, facts };
 }
 
-function verifyTerminalSuccessReceipt(repoRoot, exclusion, line, schemaRuntime) {
+function verifyTerminalSuccessReceipt(
+  repoRoot: string,
+  exclusion: TerminalExclusion,
+  line: number,
+  schemaRuntime: SchemaRuntime,
+): TerminalSuccessBinding {
   const reference = exclusion.success_receipt;
   const label = `terminal exclusion line ${line} success receipt`;
   const filePath = resolveInputInside(repoRoot, reference.path, `${label}.path`);
@@ -695,12 +1018,12 @@ function verifyTerminalSuccessReceipt(repoRoot, exclusion, line, schemaRuntime) 
   };
 }
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
   fs.chmodSync(filePath, 0o600);
 }
 
-function writeJsonLines(filePath, rows) {
+function writeJsonLines(filePath: string, rows: readonly unknown[]): void {
   fs.writeFileSync(
     filePath,
     rows.map((row) => JSON.stringify(row)).join("\n") + (rows.length ? "\n" : ""),
@@ -718,7 +1041,16 @@ function preliminaryResult({
   policySha256,
   duplicateConversions,
   duplicateTargets,
-}) {
+}: {
+  comparison: ComparisonRow;
+  inputSequence: number;
+  ownerRows: Map<string, OwnerRow[]>;
+  policy: PreservationPolicy;
+  request: IncrementalRequest;
+  policySha256: string;
+  duplicateConversions: Set<string>;
+  duplicateTargets: Set<string>;
+}): ConversionResult {
   const started = performance.now();
   const entity = normalizedEntity(comparison.entity);
   const key = entityKey(entity);
@@ -742,7 +1074,7 @@ function preliminaryResult({
     entityKey: key,
     domain,
   });
-  const result = {
+  const result: ConversionResult = {
     input_sequence: inputSequence,
     source_line: comparison.__line,
     source_raw_sha256: comparison.__raw_sha256,
@@ -757,6 +1089,7 @@ function preliminaryResult({
     desired_payload: null,
     hashes,
     merge: {
+      value: currentPayload,
       conflicts: [],
       preserved_paths: [],
       applied_paths: [],
@@ -784,7 +1117,7 @@ function preliminaryResult({
     dependency_dispositions: [],
     duration_ms: 0,
   };
-  const hold = (reason) => {
+  const hold = (reason: string): ConversionResult => {
     result.reason_codes.push(reason);
     result.duration_ms = Math.max(0, performance.now() - started);
     return result;
@@ -802,7 +1135,7 @@ function preliminaryResult({
   for (const [label, payload] of [
     ["old", oldPayload],
     ["candidate", candidatePayload],
-  ]) {
+  ] as const) {
     const expectedHash = comparison[`${label}_payload_sha256`];
     if (expectedHash !== hashes[label].payload_sha256) {
       return hold("HOLD_PAYLOAD_HASH_MISMATCH");
@@ -846,7 +1179,7 @@ function preliminaryResult({
       return hold("HOLD_DELETE_FORBIDDEN");
     }
   } else if (oldPayload == null && currentPayload == null) {
-    if (tablePolicy.allow_insert !== true) return hold("HOLD_INSERT_NOT_ALLOWED");
+    if (!tablePolicy.allow_insert) return hold("HOLD_INSERT_NOT_ALLOWED");
     result.desired_payload = clone(candidatePayload);
     result.disposition = "INSERT";
     result.reason_codes = ["INSERT_NEW_ENTITY"];
@@ -886,7 +1219,7 @@ function preliminaryResult({
       result.duration_ms = Math.max(0, performance.now() - started);
       return result;
     }
-    result.desired_payload = merged.value;
+    result.desired_payload = merged.value as JsonValue;
     if (exact(result.desired_payload, currentPayload)) {
       result.disposition = "NOOP";
       result.reason_codes = [
@@ -898,7 +1231,7 @@ function preliminaryResult({
       const forbidden = changedPointers.filter(
         (pointer) => matchingPrefix(allowedPrefixes, pointer) == null,
       );
-      if (tablePolicy.allow_update !== true || forbidden.length) {
+      if (!tablePolicy.allow_update || forbidden.length) {
         result.reason_codes = ["HOLD_UPDATE_SCOPE_FORBIDDEN"];
         result.merge.forbidden_paths = forbidden;
         result.duration_ms = Math.max(0, performance.now() - started);
@@ -941,9 +1274,9 @@ function preliminaryResult({
   return result;
 }
 
-function duplicateValues(values) {
-  const seen = new Set();
-  const duplicates = new Set();
+function duplicateValues(values: Iterable<string>): Set<string> {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
   for (const value of values) {
     if (seen.has(value)) duplicates.add(value);
     seen.add(value);
@@ -951,20 +1284,22 @@ function duplicateValues(values) {
   return duplicates;
 }
 
-function actionComparator(policy) {
-  const ranks = new Map((policy.type_rank ?? []).map((table, index) => [table, index]));
-  return (left, right) =>
+function actionComparator(policy: PreservationPolicy) {
+  const ranks = new Map<string, number>(
+    (policy.type_rank ?? []).map((table, index) => [table, index]),
+  );
+  return (left: ConversionResult, right: ConversionResult): number =>
     (ranks.get(left.entity.table) ?? Number.MAX_SAFE_INTEGER) -
       (ranks.get(right.entity.table) ?? Number.MAX_SAFE_INTEGER) ||
     compareText(left.key, right.key) ||
     compareText(left.conversion_id, right.conversion_id);
 }
 
-function terminalPairKey(actionId, desiredSha256) {
+function terminalPairKey(actionId: string, desiredSha256: string): string {
   return `${actionId}\0${desiredSha256}`;
 }
 
-function noopSatisfiesDependency(result) {
+function noopSatisfiesDependency(result: ConversionResult | undefined): boolean {
   return (
     result?.disposition === "NOOP" &&
     (result.terminal_success != null ||
@@ -974,8 +1309,11 @@ function noopSatisfiesDependency(result) {
   );
 }
 
-function consumeTerminalExclusions(results, exclusions) {
-  const consumedConversions = new Set();
+function consumeTerminalExclusions(
+  results: ConversionResult[],
+  exclusions: TerminalSuccessBinding[],
+): Set<string> {
+  const consumedConversions = new Set<string>();
   for (const exclusion of exclusions) {
     const matches = results.filter((result) => {
       const candidatePair =
@@ -1010,9 +1348,12 @@ function consumeTerminalExclusions(results, exclusions) {
   return consumedConversions;
 }
 
-function assignDependencyDispositions(results) {
-  const byId = new Map(results.map((result) => [result.conversion_id, result]));
-  const isAction = (result) => result?.disposition === "INSERT" || result?.disposition === "UPDATE";
+function assignDependencyDispositions(results: ConversionResult[]): void {
+  const byId = new Map<string, ConversionResult>(
+    results.map((result) => [result.conversion_id, result]),
+  );
+  const isAction = (result: ConversionResult | undefined) =>
+    result?.disposition === "INSERT" || result?.disposition === "UPDATE";
   for (const result of results) {
     result.dependency_dispositions = result.dependencies.map((dependencyId) => {
       const dependency = byId.get(dependencyId);
@@ -1026,9 +1367,15 @@ function assignDependencyDispositions(results) {
   }
 }
 
-function orderAndCloseDependencies(results, policy) {
-  const byId = new Map(results.map((result) => [result.conversion_id, result]));
-  const isAction = (result) => result.disposition === "INSERT" || result.disposition === "UPDATE";
+function orderAndCloseDependencies(
+  results: ConversionResult[],
+  policy: PreservationPolicy,
+): ConversionResult[] {
+  const byId = new Map<string, ConversionResult>(
+    results.map((result) => [result.conversion_id, result]),
+  );
+  const isAction = (result: ConversionResult) =>
+    result.disposition === "INSERT" || result.disposition === "UPDATE";
 
   let changed = true;
   while (changed) {
@@ -1060,28 +1407,30 @@ function orderAndCloseDependencies(results, policy) {
   }
 
   const comparator = actionComparator(policy);
-  function topological() {
+  function topological(): { actions: ConversionResult[]; ordered: ConversionResult[] } {
     const actions = results.filter(isAction);
-    const actionIds = new Set(actions.map((result) => result.conversion_id));
-    const indegree = new Map(actions.map((result) => [result.conversion_id, 0]));
-    const dependants = new Map(actions.map((result) => [result.conversion_id, []]));
+    const actionIds = new Set<string>(actions.map((result) => result.conversion_id));
+    const indegree = new Map<string, number>(actions.map((result) => [result.conversion_id, 0]));
+    const dependants = new Map<string, string[]>(
+      actions.map((result) => [result.conversion_id, []]),
+    );
     for (const result of actions) {
       for (const dependencyId of result.dependencies.filter((id) => actionIds.has(id))) {
-        indegree.set(result.conversion_id, indegree.get(result.conversion_id) + 1);
-        dependants.get(dependencyId).push(result.conversion_id);
+        indegree.set(result.conversion_id, (indegree.get(result.conversion_id) ?? 0) + 1);
+        dependants.get(dependencyId)!.push(result.conversion_id);
       }
     }
     const ready = actions
       .filter((result) => indegree.get(result.conversion_id) === 0)
       .sort(comparator);
-    const ordered = [];
+    const ordered: ConversionResult[] = [];
     while (ready.length) {
       const next = ready.shift();
-      ordered.push(next);
-      for (const dependantId of dependants.get(next.conversion_id)) {
-        indegree.set(dependantId, indegree.get(dependantId) - 1);
+      ordered.push(next!);
+      for (const dependantId of dependants.get(next!.conversion_id) ?? []) {
+        indegree.set(dependantId, (indegree.get(dependantId) ?? 0) - 1);
         if (indegree.get(dependantId) === 0) {
-          ready.push(byId.get(dependantId));
+          ready.push(byId.get(dependantId)!);
           ready.sort(comparator);
         }
       }
@@ -1115,16 +1464,18 @@ function orderAndCloseDependencies(results, policy) {
     topology = topological();
   }
 
-  const orderedIds = new Set();
+  const orderedIds = new Set<string>();
   for (const result of topology.ordered) {
     result.dependency_action_ids = result.dependencies
       .map((dependencyId) => byId.get(dependencyId))
-      .filter((dependency) => dependency && isAction(dependency))
-      .map((dependency) => dependency.action_id);
+      .filter((dependency): dependency is ConversionResult =>
+        Boolean(dependency && isAction(dependency)),
+      )
+      .map((dependency) => dependency.action_id!);
     if (result.dependency_action_ids.some((id) => !orderedIds.has(id))) {
       throw new Error(`Internal dependency order failure for ${result.conversion_id}.`);
     }
-    orderedIds.add(result.action_id);
+    orderedIds.add(result.action_id!);
   }
 
   assignDependencyDispositions(results);
@@ -1180,7 +1531,7 @@ function commandHelp() {
   };
 }
 
-function isNonRootJsonPointer(value) {
+function isNonRootJsonPointer(value: unknown): value is string {
   return (
     typeof value === "string" &&
     value !== "" &&
@@ -1189,11 +1540,11 @@ function isNonRootJsonPointer(value) {
   );
 }
 
-function validateRequest(request) {
+function validateRequest(request: IncrementalRequest): void {
   if (
     request?.schema_version !== REQUEST_SCHEMA ||
     request?.target_mode !== "owner_draft" ||
-    request?.production_authority !== false ||
+    !Object.is(request?.production_authority, false) ||
     !asToken(request.change_set_id) ||
     !asToken(request.producer_id) ||
     !asToken(request.project_ref) ||
@@ -1246,7 +1597,7 @@ function validateRequest(request) {
   }
 }
 
-function validatePolicy(policy, request) {
+function validatePolicy(policy: PreservationPolicy, request: IncrementalRequest): void {
   if (policy?.schema_version !== POLICY_SCHEMA || !isObject(policy.table_policies)) {
     throw new Error("Incremental change-set preservation policy is invalid.");
   }
@@ -1265,16 +1616,17 @@ function validatePolicy(policy, request) {
     throw new Error("Preservation policy type_rank is invalid.");
   }
   const requestedTargets = new Set(request.scope.allowed_target_keys);
+  const ruleFields = ["semantic_noise_rules", "conflict_rules", "array_merge_rules"] as const;
   for (const [table, tablePolicy] of Object.entries(policy.table_policies)) {
     if (!SAFE_TABLES.has(table) || !isObject(tablePolicy)) {
       throw new Error(`Invalid preservation policy table: ${table}`);
     }
-    for (const field of ["semantic_noise_rules", "conflict_rules", "array_merge_rules"]) {
+    for (const field of ruleFields) {
       if (!Array.isArray(tablePolicy[field]))
         throw new Error(`${table}.${field} must be an array.`);
     }
-    for (const field of ["semantic_noise_rules", "conflict_rules", "array_merge_rules"]) {
-      const identities = new Set();
+    for (const field of ruleFields) {
+      const identities = new Set<string>();
       for (const rule of tablePolicy[field]) {
         if (
           !requestedTargets.has(rule.entity_key) ||
@@ -1297,7 +1649,7 @@ function validatePolicy(policy, request) {
   }
 }
 
-function canonicalRequestScope(scope) {
+function canonicalRequestScope(scope: RequestScope): JsonObject {
   return {
     allowed_tables: [...scope.allowed_tables].sort(compareText),
     allowed_target_keys: [...scope.allowed_target_keys].sort(compareText),
@@ -1310,7 +1662,12 @@ function canonicalRequestScope(scope) {
   };
 }
 
-function validateOwnerSnapshotReceipt(receipt, request, ownerFacts, ownerSnapshotLines) {
+function validateOwnerSnapshotReceipt(
+  receipt: OwnerSnapshotReceipt,
+  request: IncrementalRequest,
+  ownerFacts: ArtifactFacts,
+  ownerSnapshotLines: Map<string, Array<{ raw_sha256: string }>>,
+): void {
   const canonicalTargetKeys = [...request.scope.allowed_target_keys].sort(compareText);
   const expectedLedger = canonicalTargetKeys.map((key) => {
     const lines = ownerSnapshotLines.get(key) ?? [];
@@ -1345,7 +1702,7 @@ function validateOwnerSnapshotReceipt(receipt, request, ownerFacts, ownerSnapsho
   }
 }
 
-function decisionForResult(result) {
+function decisionForResult(result: ConversionResult): JsonObject {
   return {
     conversion_id: result.conversion_id,
     entity: result.entity,
@@ -1376,7 +1733,18 @@ function validateCompositionAlgebra({
   dependencyClosure,
   events,
   terminalExclusions,
-}) {
+}: {
+  schemaRuntime: SchemaRuntime;
+  results: ConversionResult[];
+  orderedActions: ConversionResult[];
+  noWrites: JsonObject[];
+  holds: JsonObject[];
+  delta: JsonValue[];
+  contract: ExecutionContract | null;
+  dependencyClosure: JsonObject;
+  events: ConversionEvent[];
+  terminalExclusions: TerminalSuccessBinding[];
+}): { terminal_replay_zero: boolean } {
   noWrites.forEach((row, index) =>
     assertSchema(schemaRuntime, "noWriteRow", row, `no-write[${index}]`),
   );
@@ -1395,18 +1763,21 @@ function validateCompositionAlgebra({
   ) {
     throw new Error("Incremental change-set disposition algebra failed.");
   }
-  const terminalPairs = new Set(
+  const terminalPairs = new Set<string>(
     terminalExclusions.map((entry) => terminalPairKey(entry.action_id, entry.desired_sha256)),
   );
-  const consumedTerminalPairs = new Set(
+  const consumedTerminalPairs = new Set<string>(
     results
       .filter((result) => result.terminal_success != null)
       .map((result) =>
-        terminalPairKey(result.terminal_success.action_id, result.terminal_success.desired_sha256),
+        terminalPairKey(
+          result.terminal_success!.action_id,
+          result.terminal_success!.desired_sha256,
+        ),
       ),
   );
   const replayedTerminalActions = orderedActions.filter((result) =>
-    terminalPairs.has(terminalPairKey(result.action_id, result.desired_sha256)),
+    terminalPairs.has(terminalPairKey(result.action_id!, result.desired_sha256!)),
   );
   const terminalReplayZero =
     terminalPairs.size === terminalExclusions.length &&
@@ -1416,7 +1787,7 @@ function validateCompositionAlgebra({
   if (!terminalReplayZero) {
     throw new Error("Terminal exclusion consumption/replay algebra failed.");
   }
-  const earlierActionIds = new Set();
+  const earlierActionIds = new Set<string>();
   for (const [index, result] of orderedActions.entries()) {
     if (
       !["INSERT", "UPDATE"].includes(result.disposition) ||
@@ -1474,12 +1845,19 @@ function validateCompositionAlgebra({
 function materializeArtifacts({
   outDir,
   request,
-  policy,
   results,
   orderedActions,
   inputFacts,
   schemaRuntime,
   terminalExclusions,
+}: {
+  outDir: string;
+  request: IncrementalRequest;
+  results: ConversionResult[];
+  orderedActions: ConversionResult[];
+  inputFacts: InputFacts;
+  schemaRuntime: SchemaRuntime;
+  terminalExclusions: TerminalSuccessBinding[];
 }) {
   const paths = {
     request: path.join(outDir, "incremental-change-set-request.snapshot.json"),
@@ -1514,8 +1892,8 @@ function materializeArtifacts({
       conflicts: result.merge.conflicts,
       forbidden_paths: result.merge.forbidden_paths ?? [],
     }));
-  const delta = orderedActions.map((result) => result.desired_payload);
-  const contract = orderedActions.length
+  const delta: JsonValue[] = orderedActions.map((result) => result.desired_payload!);
+  const contract: ExecutionContract | null = orderedActions.length
     ? {
         schema_version: CLI_CONTRACT_SCHEMA,
         execution_id: request.change_set_id,
@@ -1544,13 +1922,13 @@ function materializeArtifacts({
       ...dependency,
     })),
   );
-  const dependencyClosure = {
+  const dependencyClosure: JsonObject = {
     schema_version: DEPENDENCY_SCHEMA,
     ordered_conversion_ids: orderedActions.map((result) => result.conversion_id),
     edges: dependencyRows,
   };
 
-  const outputRows = new Map();
+  const outputRows = new Map<string, JsonObject>();
   orderedActions.forEach((result, index) =>
     outputRows.set(result.conversion_id, {
       artifact: path.basename(paths.delta),
@@ -1573,8 +1951,8 @@ function materializeArtifacts({
     }),
   );
 
-  let previousEventSha256 = null;
-  const events = results
+  let previousEventSha256: string | null = null;
+  const events: ConversionEvent[] = results
     .sort((left, right) => left.input_sequence - right.input_sequence)
     .map((result, index) => {
       const decision = decisionForResult(result);
@@ -1623,10 +2001,10 @@ function materializeArtifacts({
         output: outputRows.get(result.conversion_id),
         decision_binding_sha256: sha256Json(decision),
         previous_event_sha256: previousEventSha256,
-      };
+      } as Omit<ConversionEvent, "event_sha256"> & { event_sha256?: string };
       event.event_sha256 = sha256Json(event);
       previousEventSha256 = event.event_sha256;
-      return event;
+      return event as ConversionEvent;
     });
   const counts = {
     universe: results.length,
@@ -1794,13 +2172,13 @@ function materializeArtifacts({
   return { report, manifest: manifestFacts, paths };
 }
 
-export function createIncrementalChangeSetCommands({ repoRoot }) {
-  async function runDatasetIncrementalChangeSetCompose(options = {}) {
+export function createIncrementalChangeSetCommands({ repoRoot }: { repoRoot: string }) {
+  async function runDatasetIncrementalChangeSetCompose(options: ComposeOptions = {}) {
     if (options.help) return commandHelp();
     const schemaRuntime = createSchemaValidators(repoRoot);
     const requestPath = resolveInputInside(repoRoot, options.request, "--request");
     const outDir = resolveFreshOutputInside(repoRoot, options.outDir, "--out-dir");
-    const request = readJson(requestPath);
+    const request = readJson(requestPath) as unknown as IncrementalRequest;
     assertSchema(schemaRuntime, "request", request, "incremental change-set request");
     validateRequest(request);
     const comparisonsRef = verifyArtifactRef(
@@ -1835,20 +2213,22 @@ export function createIncrementalChangeSetCommands({ repoRoot }) {
           true,
         )
       : null;
-    const policy = readJson(policyRef.filePath);
+    const policy = readJson(policyRef.filePath) as unknown as PreservationPolicy;
     assertSchema(schemaRuntime, "preservationPolicy", policy, "preservation policy");
     validatePolicy(policy, request);
-    const ownerReceipt = readJson(ownerReceiptRef.filePath);
+    const ownerReceipt = readJson(ownerReceiptRef.filePath) as unknown as OwnerSnapshotReceipt;
     assertSchema(schemaRuntime, "ownerSnapshotReceipt", ownerReceipt, "owner snapshot receipt");
-    const comparisonRows = readJsonLinesWithMeta(comparisonsRef.filePath).map(
+    const comparisonRows = readJsonLinesWithMeta<ComparisonRow>(comparisonsRef.filePath).map(
       ({ value, line, raw_sha256: rawSha256 }) => {
         assertSchema(schemaRuntime, "comparisonRow", value, `comparison line ${line}`);
         return { ...value, __line: line, __raw_sha256: rawSha256 };
       },
     );
-    const ownerRows = new Map();
-    const ownerSnapshotLines = new Map();
-    for (const { value, line, raw_sha256: rawSha256 } of readJsonLinesWithMeta(ownerRef.filePath)) {
+    const ownerRows = new Map<string, OwnerRow[]>();
+    const ownerSnapshotLines = new Map<string, Array<{ line: number; raw_sha256: string }>>();
+    for (const { value, line, raw_sha256: rawSha256 } of readJsonLinesWithMeta<OwnerRow>(
+      ownerRef.filePath,
+    )) {
       assertSchema(schemaRuntime, "ownerRow", value, `owner snapshot line ${line}`);
       if (
         value.project_ref !== request.project_ref ||
@@ -1894,11 +2274,13 @@ export function createIncrementalChangeSetCommands({ repoRoot }) {
         duplicateTargets,
       }),
     );
-    const terminalPairs = new Set();
-    const terminalActionIds = new Set();
-    const terminalExclusions = [];
+    const terminalPairs = new Set<string>();
+    const terminalActionIds = new Set<string>();
+    const terminalExclusions: TerminalSuccessBinding[] = [];
     if (terminalRef) {
-      for (const { value, line } of readJsonLinesWithMeta(terminalRef.filePath)) {
+      for (const { value, line } of readJsonLinesWithMeta<TerminalExclusion>(
+        terminalRef.filePath,
+      )) {
         assertSchema(schemaRuntime, "terminalExclusion", value, `terminal exclusion line ${line}`);
         if (!value.action_id.endsWith(`@${value.desired_sha256}`)) {
           throw new Error(
@@ -1942,7 +2324,6 @@ export function createIncrementalChangeSetCommands({ repoRoot }) {
     const materialized = materializeArtifacts({
       outDir,
       request,
-      policy,
       results,
       orderedActions,
       inputFacts,

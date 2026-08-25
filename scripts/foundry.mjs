@@ -17,7 +17,7 @@ import { createIdentityPreflightRunCommands } from "./commands/identity-prefligh
 import { createIdentityReferenceRewriteCommands } from "./commands/identity-reference-rewrites.ts";
 import { createImportCompletionCommands } from "./commands/import-completion.ts";
 import { createImportLedgerCommands } from "./commands/import-ledger.ts";
-import { createIncrementalChangeSetCommands } from "./commands/incremental-change-set.mjs";
+import { createIncrementalChangeSetCommands } from "./commands/incremental-change-set.ts";
 import { createLibraryScopeWorkflowCommands } from "./commands/library-scope-workflow.mjs";
 import { createPostAuthoringFinalizeCommands } from "./commands/post-authoring-finalize.mjs";
 import { createPostWriteCloseoutCommands } from "./commands/post-write-closeout.mjs";
