@@ -43,6 +43,8 @@ checkPaths:
   - scripts/lib/identity-reference-rewrite-utils.ts
   - scripts/lib/full-context-proof.ts
   - scripts/lib/identity-preflight-artifacts.ts
+  - scripts/lib/bafu-family-signatures.ts
+  - scripts/lib/import-ledger.ts
   - docs/architecture.md
   - docs/runtime-skill-management.md
   - docs/foundry-task-contracts.md
@@ -51,8 +53,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 0583d551f971ad8288875388e0b69a1c6c3ca7b8
-lastReviewedNote: "Reviewed for Issue #67 Wave 7: evidence/decision factories are native TS7 with fail-closed identity/full-context/preflight contracts unchanged."
+lastReviewedCommit: 3a8be52f3dfe862fab6c1e0a9aaab5e40f1822b9
+lastReviewedNote: "Reviewed for Issue #67 Wave 8: BAFU family signatures and import-ledger factories are native TS7 with hash, ordering, JSONL, blocker, and resume contracts unchanged."
 ---
 
 # TianGong LCA Data Foundry
@@ -84,6 +86,8 @@ The next internal-contract slice migrates artifact/QA inputs, dataset payload id
 The standalone-leaf slice migrates canonical FlowProperty mappings, profile-aware source semantics, trace queue coverage, and reusable TIDAS row helpers. Characterization preserves all scale factors and pending defaults, BAFU/USLCI/worldsteel source identities, canonical reference rewrites, trace evidence keys/blockers, multilingual/root/id/version helpers, and invalid-input behavior.
 
 The evidence/decision slice migrates decision-task context and stable hashes, identity reference rewrites, full-context completion proof, and identity-preflight request artifacts. Characterization preserves exact paths/bytes/SHA/ordering, missing or ambiguous evidence blockers, artifact-bound CommandSpecs, source-index first binding, and positive-only cache/execution reuse boundaries.
+
+The family/ledger slice migrates BAFU family signatures and the append-only import ledger. Characterization preserves normalized family names, ordered exchange skeleton/template/amount hashes, scope-order master selection and summaries, verified/blocked/retry row schemas, payload identity hashes, duplicate suppression, human-review ordering, resume/skipped artifacts, relative paths, and native parse/filesystem errors.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

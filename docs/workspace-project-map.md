@@ -22,8 +22,8 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 964236b98b8b4966dd47f6416e02fe04bfcf599f
-lastReviewedNote: "Reviewed for Issue #67 Wave 2: native TS parser, registry, metadata, and surface audit remain Foundry-local delivery tooling; no cross-repository owner or normal execution surface changes."
+lastReviewedCommit: 3a8be52f3dfe862fab6c1e0a9aaab5e40f1822b9
+lastReviewedNote: "Reviewed for Issue #67 Wave 8: native TS BAFU family signatures and import-ledger persistence remain Foundry-local control-plane helpers; no cross-repository owner or normal execution surface changes."
 ---
 
 # Workspace Project Map

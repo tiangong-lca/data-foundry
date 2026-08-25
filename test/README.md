@@ -42,13 +42,18 @@ checkPaths:
   - scripts/lib/identity-reference-rewrite-utils.ts
   - scripts/lib/full-context-proof.ts
   - scripts/lib/identity-preflight-artifacts.ts
+  - scripts/lib/bafu-family-signatures.ts
+  - scripts/lib/import-ledger.ts
+  - test/unit/bafu-family-signatures-contract.test.mts
+  - test/unit/import-ledger-contract.test.mts
+  - test/unit/wave8-large-leaf-migration.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 0583d551f971ad8288875388e0b69a1c6c3ca7b8
-lastReviewedNote: "Reviewed for Issue #67 Wave 7: tests cover decision selection/SHA/dedupe, missing-index fail-close, exact reuse rows, full-context blockers, preflight request bytes/CommandSpecs, first binding, and identity scenarios."
+lastReviewedCommit: 3a8be52f3dfe862fab6c1e0a9aaab5e40f1822b9
+lastReviewedNote: "Reviewed for Issue #67 Wave 8: tests cover BAFU name/hash/skeleton/rank/missing behavior plus import-ledger JSONL identity, closeout, blocker, retry, resume, dedupe, path, and error contracts."
 ---
 
 # Test Layout
@@ -85,6 +90,8 @@ Every behavior or migration slice starts with a failing focused test or a realis
 `unit/canonical-support-mappings.test.mts`, `unit/source-semantics-contract.test.mts`, `unit/trace-coverage.test.mts`, and `unit/tidas-row-utils.test.mts` characterize standalone leaves: mapping completeness/scales/pending support, source kinds/profile fallbacks/canonical rewrites, trace count/missing/stale/duplicate/evidence blockers, and TIDAS root/id/version/multilingual/cleanup/JSONL helpers with invalid inputs.
 
 `unit/evidence-decision-leaves.test.mts` characterizes decision selection/context SHA/dedupe, missing-index fail-close and exact identity reuse rows, required full-context missing-manifest blockers, preflight request bytes/CommandSpec artifact facts, queue attachment, and source-index first binding/missing context. Existing identity scenarios retain positive-only cache and end-to-end lineage coverage.
+
+`unit/bafu-family-signatures-contract.test.mts` and `unit/import-ledger-contract.test.mts` characterize the Wave 8 leaves independently: exact normalized family and ordered exchange hashes, scope-order grouping/rank/summary/missing envelopes, then append-only verified/blocked/dependency/retry bytes, root-based row identity, payload hashes, human actions, duplicate suppression, latest-row resume ordering, artifact paths, and native errors. `unit/wave8-large-leaf-migration.test.mts` pins both native `.ts` files, their consumers, and named exports.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

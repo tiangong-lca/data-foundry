@@ -55,12 +55,14 @@ checkPaths:
   - scripts/lib/identity-reference-rewrite-utils.ts
   - scripts/lib/full-context-proof.ts
   - scripts/lib/identity-preflight-artifacts.ts
+  - scripts/lib/bafu-family-signatures.ts
+  - scripts/lib/import-ledger.ts
   - specs/typescript-migration-inventory.json
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 0583d551f971ad8288875388e0b69a1c6c3ca7b8
-lastReviewedNote: "Reviewed for Issue #67 Wave 7: typed decision, identity rewrite, full-context, and preflight artifact factories preserve fail-closed evidence, exact hashes/paths/argv, positive-only bindings, and consumers."
+lastReviewedCommit: 3a8be52f3dfe862fab6c1e0a9aaab5e40f1822b9
+lastReviewedNote: "Reviewed for Issue #67 Wave 8: typed BAFU family signatures and import ledgers preserve exact hashes, scope ranking, append-only JSONL, blocker ordering, resume artifacts, errors, and consumers."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -94,7 +96,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - The owner CLI is installed as the exact project dependency `@tiangong-lca/cli@0.1.1` and invoked with `pnpm exec tiangong-lca`; Foundry runtime adapters and the account wrapper resolve the same installed package manifest and bin directly. Do not use `dlx` or `@latest` for the owner CLI. The external `skills@latest` package remains intentionally floating and its resolved upstream ref must still be recorded in task evidence.
 - The pre-migration inventory at commit `c996633832ea23bf7883c7b219f524bf28e6ce7e` contains 160 tracked JavaScript artifacts: 95 runtime `.mjs` files (59,692 lines), 64 `.mjs` tests (30,273 lines), and one Prettier `.cjs` config, with no TypeScript source. `specs/typescript-migration-inventory.json` is the checked migration ledger; update it when a file crosses the boundary rather than claiming the repository is fully typed.
 - Issue #63 establishes the pnpm/TS7 toolchain and the typed spine. Migrate entrypoints, command registry/metadata, argument and runtime I/O contracts, artifact/receipt primitives, then command families and tests. Existing `.mjs` modules remain executable until their typed replacements have equivalent characterization and case coverage; the final migration gate is zero untyped business-runtime modules, not a bulk extension rename.
-- The characterized TypeScript leaves include the CLI/data spine plus decision-task, identity-rewrite, full-context-proof, and identity-preflight artifact factories. Focused tests pin context and queue hashes, fail-closed missing evidence, exact reference reuse, artifact-bound CommandSpecs, source-index first binding, positive-only execution evidence, and every static consumer.
+- The characterized TypeScript leaves include the CLI/data/evidence spine plus BAFU family-signature and import-ledger modules. Focused tests pin normalized family names, ordered exchange hashes, scope-order master selection, append-only verified/blocked/retry JSONL, row identity and payload hashes, human-review/resume ordering, artifact paths, native errors, dedupe, and every static consumer.
 - Toolchain and migration tests must pass from a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. They must not depend on the superproject checkout, another worktree's `node_modules`, absolute developer paths, ignored `.foundry` state, or credentials.
 - The Golden gate must compare against a non-`HEAD` merge-base with full Git history and a Node-native comparator. Cross-platform fixtures use executable-plus-argv dispatch; a `.js`/`.mjs`/`.cjs` test script must run through `process.execPath`, not OS executable-bit behavior. `.gitattributes` keeps repository text at LF on every runner; only Windows launcher files may opt into CRLF.
 - Foundry artifact-to-scope matching and transitional command parsers must accept both path separators. Durable JSON/JSONL writers flush the writable descriptor they opened; POSIX permission-bit assertions are not imposed on Windows filesystems.

@@ -45,6 +45,8 @@ checkPaths:
   - scripts/lib/identity-reference-rewrite-utils.ts
   - scripts/lib/full-context-proof.ts
   - scripts/lib/identity-preflight-artifacts.ts
+  - scripts/lib/bafu-family-signatures.ts
+  - scripts/lib/import-ledger.ts
   - test/unit/foundry-cli-spine.test.mts
   - test/unit/foundry-command-metadata.test.mts
   - test/unit/surface-audit-typescript.test.mts
@@ -62,10 +64,13 @@ checkPaths:
   - test/unit/tidas-row-utils.test.mts
   - test/unit/evidence-decision-leaves.test.mts
   - test/unit/evidence-leaf-migration.test.mts
+  - test/unit/bafu-family-signatures-contract.test.mts
+  - test/unit/import-ledger-contract.test.mts
+  - test/unit/wave8-large-leaf-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 0583d551f971ad8288875388e0b69a1c6c3ca7b8
-lastReviewedNote: "Reviewed for Issue #67 Wave 7: typed evidence factories preserve decision SHA scopes, identity rewrite blockers, full-context lineage, preflight CommandSpecs, and characterization-first order."
+lastReviewedCommit: 3a8be52f3dfe862fab6c1e0a9aaab5e40f1822b9
+lastReviewedNote: "Reviewed for Issue #67 Wave 8: typed family/ledger helpers preserve BAFU hash/rank summaries plus append-only verified, blocked, retry, and resume contracts under characterization-first order."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
