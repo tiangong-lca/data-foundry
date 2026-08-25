@@ -49,6 +49,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
+  - scripts/lib/import-curation/internal/profiles-config.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -73,8 +74,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 23333b0d57b8b2463f7f1542ec4dab464d026b95
-lastReviewedNote: "Reviewed for Issue #67 Wave 15: classification decision apply context is native zero-any TS7 with report aliases, proof/path order, payload hashes and native failures preserved."
+lastReviewedCommit: 1d094b7e0d9a05b1660052f704e8f7f3ca4f8e6e
+lastReviewedNote: "Reviewed for Issue #67 Wave 16: profile config is native zero-any TS7 with alias precedence, profile/list order, fallbacks, waivers and native errors preserved."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -117,6 +118,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - `workflow-queue-context.ts` is the typed queue-attachment boundary. It preserves manifest task order, exact-identity then id-only fallback, last-row JSONL identity binding, dependency/support traversal order, portable artifact paths and native filesystem/parse/invalid-dependency failures. It only assembles local authoring evidence and cannot grant remote-write authority.
 - `import-curation/internal/full-context-proof.ts` is the typed proof-reading boundary used by decision, patch, row-transform and reference-closure contexts. It preserves raw-file SHA binding, embedded-then-shared context order, required-kind/file blocker order, classification schema selection, payload identity last-write behavior, caught proof parse envelopes and native row parse failures. Missing, invalid or hash-drifted proof remains blocking.
 - `import-curation/internal/workflow-decision-apply-context.ts` is the typed classification-apply evidence adapter. It preserves snake/camel report aliases, decision and task encounter order, flow-before-process fallback selection, resolved input/output path order, per-identity payload last-write hashes, exact applied-count coercion and native JSON/path failures. It reads evidence only and cannot apply a decision or authorize a write.
+- `import-curation/internal/profiles-config.ts` is the typed profile selection boundary. It preserves camel-before-snake normalization where established, snake-first account-local override selection, configured profile key order, requested/default/generic fallback, base-before-extra docs and waivers, dataset-type validation only when adding waivers, raw override evidence and native malformed-config/argument errors. Migration must not change a profile default or waiver scope.
 - Toolchain and migration tests must pass from a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. They must not depend on the superproject checkout, another worktree's `node_modules`, absolute developer paths, ignored `.foundry` state, or credentials.
 - The Golden gate must compare against a non-`HEAD` merge-base with full Git history and a Node-native comparator. Cross-platform fixtures use executable-plus-argv dispatch; a `.js`/`.mjs`/`.cjs` test script must run through `process.execPath`, not OS executable-bit behavior. `.gitattributes` keeps repository text at LF on every runner; only Windows launcher files may opt into CRLF.
 - Foundry artifact-to-scope matching and transitional command parsers must accept both path separators. Durable JSON/JSONL writers flush the writable descriptor they opened; POSIX permission-bit assertions are not imposed on Windows filesystems.

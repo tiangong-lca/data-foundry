@@ -18,8 +18,8 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - package.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: db0d3129414884234cb24452ba71168c02e64d60
-lastReviewedNote: "Reviewed for Issue #65: the Stop hook still invokes the pnpm-only acceptance surface after the receipt, CommandSpec, case-TDD, and typed-surface changes."
+lastReviewedCommit: 1d094b7e0d9a05b1660052f704e8f7f3ca4f8e6e
+lastReviewedNote: "Reviewed for Issue #67 Wave 16 freshness: profile-config typing and the continuing TS7 inventory cutover do not change Stop-hook registration, pnpm acceptance invocation, output, artifacts, or recursion guard."
 ---
 
 # Codex Stop Hook

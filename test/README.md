@@ -36,6 +36,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
+  - scripts/lib/import-curation/internal/profiles-config.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -75,13 +76,15 @@ checkPaths:
   - test/unit/wave14-full-context-proof-migration.test.mts
   - test/unit/workflow-decision-apply-context-contract.test.mts
   - test/unit/wave15-decision-apply-context-migration.test.mts
+  - test/unit/profiles-config-contract.test.mts
+  - test/unit/wave16-profiles-config-migration.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 23333b0d57b8b2463f7f1542ec4dab464d026b95
-lastReviewedNote: "Reviewed for Issue #67 Wave 15: tests cover decision report aliases/order, task proof, fallback types, paths, payload last-write hashes, counts and native errors."
+lastReviewedCommit: 1d094b7e0d9a05b1660052f704e8f7f3ca4f8e6e
+lastReviewedNote: "Reviewed for Issue #67 Wave 16: tests cover profile aliases, order, defaults, raw overrides, docs/waivers, fallback identity, listing and native errors."
 ---
 
 # Test Layout
@@ -136,6 +139,8 @@ Every behavior or migration slice starts with a failing focused test or a realis
 `unit/full-context-proof-contract.test.mts` characterizes context alias/pattern detection, UTF-8 text presence, exact package/task bytes and hashes, embedded/shared context order, manifest and apply-report aliases, required-context blocker order, classification/location schema-pattern selection, decision-row envelope precedence, payload identity encounter order/last-write behavior, caught proof parse envelopes and native row parse errors. `unit/wave14-full-context-proof-migration.test.mts` pins the zero-any native module, twenty runtime exports and all six static consumers.
 
 `unit/workflow-decision-apply-context-contract.test.mts` characterizes null/empty reports, snake/camel decision and task aliases, decision/task/path encounter order, flow-before-process fallback inference, decision-task proof binding, input/output identity payload hashes, duplicate last-write behavior, count coercion and native JSON/path errors. `unit/wave15-decision-apply-context-migration.test.mts` pins the zero-any native module, sole runtime export and all three static consumers.
+
+`unit/profiles-config-contract.test.mts` characterizes camel/snake precedence, scalar profile envelopes, full-context normalization, raw account-local overrides, exact config/fallback identity, requested/default/generic selection, docs and waiver addition order, conditional dataset-type errors, profile key/list order and native JSON/argument failures. `unit/wave16-profiles-config-migration.test.mts` pins the zero-any native module, four runtime exports and all five pre-existing static consumers.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

@@ -19,8 +19,8 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - scripts/commands/core.mjs
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 53872009a1a0d0871cb66761c7bf0ab4b3388b28
-lastReviewedNote: "Reviewed for Issue #65: the pnpm acceptance loop remains unchanged while receipt, CommandSpec, production-case, cache, and typed-surface evidence are enforced by the canonical prepush gate."
+lastReviewedCommit: 1d094b7e0d9a05b1660052f704e8f7f3ca4f8e6e
+lastReviewedNote: "Reviewed for Issue #67 Wave 16 freshness: the pnpm acceptance loop and ignored report policy remain unchanged while the typed migration inventory decreases monotonically."
 related:
   - docs/file-organization.md
   - docs/codex-stop-hook.md

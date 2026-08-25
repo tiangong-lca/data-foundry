@@ -25,9 +25,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
+  - scripts/lib/import-curation/internal/profiles-config.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 23333b0d57b8b2463f7f1542ec4dab464d026b95
-lastReviewedNote: "Reviewed for Issue #67 Wave 15: typed decision apply context preserves bound proof and payload hashes plus native malformed-input failures without broadening write authority."
+lastReviewedCommit: 1d094b7e0d9a05b1660052f704e8f7f3ca4f8e6e
+lastReviewedNote: "Reviewed for Issue #67 Wave 16: typed profile config preserves existing waiver scopes and account-local override evidence without broadening write authority."
 ---
 
 # Safety Policy

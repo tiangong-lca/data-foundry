@@ -26,9 +26,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
+  - scripts/lib/import-curation/internal/profiles-config.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 23333b0d57b8b2463f7f1542ec4dab464d026b95
-lastReviewedNote: "Reviewed for Issue #67 Wave 15: typed decision apply context remains Foundry-owned local evidence aggregation and adds no sibling decision, CLI or database behavior."
+lastReviewedCommit: 1d094b7e0d9a05b1660052f704e8f7f3ca4f8e6e
+lastReviewedNote: "Reviewed for Issue #67 Wave 16: typed profile config remains Foundry-owned policy selection and adds no sibling schema, CLI or database behavior."
 ---
 
 # Capability Ownership Policy

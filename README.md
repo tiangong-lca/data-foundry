@@ -37,6 +37,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
+  - scripts/lib/import-curation/internal/profiles-config.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -65,8 +66,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 23333b0d57b8b2463f7f1542ec4dab464d026b95
-lastReviewedNote: "Reviewed for Issue #67 Wave 15: decision apply context is native zero-any TS7 with decisions, task proofs, path order, payload hashes, aliases and errors unchanged."
+lastReviewedCommit: 1d094b7e0d9a05b1660052f704e8f7f3ca4f8e6e
+lastReviewedNote: "Reviewed for Issue #67 Wave 16: profile loading, normalization, lookup and listing are native zero-any TS7 with order, defaults, waivers and errors unchanged."
 ---
 
 # TianGong LCA Data Foundry
@@ -116,6 +117,8 @@ The queue-context wave migrates `import-curation/internal/workflow-queue-context
 The internal full-context wave migrates `import-curation/internal/full-context-proof.ts`, a six-consumer evidence boundary. Characterization pins context aliases and UTF-8 presence, exact authoring-package/decision-task bytes and hashes, embedded-before-shared file order, manifest/task alias fallbacks, required-kind/file blocker order, classification schema-pattern selection, payload identity encounter order and last-write hashes, caught proof parse envelopes, and native row JSON errors. It remains zero-any and fail-closed; inventory moves from 124 to 123.
 
 The decision-apply context wave migrates `import-curation/internal/workflow-decision-apply-context.ts`, the evidence adapter shared by curation, mutation and full-context gates. Characterization pins missing/empty envelopes, snake/camel decision and task aliases, decision/task/path order, flow-before-process fallback selection, exact input/output payload hashes with duplicate last-write behavior, applied-count coercion, and native JSON/path errors. It remains zero-any and read-only; inventory moves from 123 to 122.
+
+The profile-config wave migrates `import-curation/internal/profiles-config.ts`, the shared profile loading/lookup/listing boundary. Characterization pins camel/snake precedence, normalized full-context fields, raw account-local overrides, configured key order, requested/default/generic fallback, base-before-extra docs and waivers, conditional dataset-type validation, fallback object identity, profile-list output, and native JSON/argument errors. Existing generic/BAFU/USLCI/worldsteel defaults remain unchanged; inventory moves from 122 to 121.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 
