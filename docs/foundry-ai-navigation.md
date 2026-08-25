@@ -34,6 +34,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
   - scripts/lib/import-curation/internal/profiles-config.ts
+  - scripts/lib/import-curation/internal/workflow-patch-collect.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -56,8 +57,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1d094b7e0d9a05b1660052f704e8f7f3ca4f8e6e
-lastReviewedNote: "Reviewed for Issue #67 Wave 16: navigation records typed profile normalization, file fallback, lookup/list ordering, waiver additions and consumers."
+lastReviewedCommit: 247e1007a38aff7311ded1d9b8a70898c300b4da
+lastReviewedNote: "Reviewed for Issue #67 Wave 17: navigation records typed patch admission, local JSON/artifact readers, report aliases, source rewrite normalization and consumers."
 ---
 
 # Foundry AI Navigation
@@ -134,6 +135,8 @@ The typed internal proof leaf is `import-curation/internal/full-context-proof.ts
 The typed decision apply leaf is `import-curation/internal/workflow-decision-apply-context.ts`. Navigate there for classification apply report aliases, normalized decision rows, decision-task proof binding, input/output row path lists, fallback dataset type selection, identity payload hashes and applied counts. Curation and mutation workflow facets re-export it; decision full-context logic consumes it directly.
 
 The typed profile leaf is `import-curation/internal/profiles-config.ts`. Navigate there for profile field alias precedence, full-context policy normalization, account-local override projection, config-file fallback, requested/default/generic lookup, operator-added docs/QA waivers and ordered profile listing. The public profiles facade plus curation and mutation facets consume it; profile defaults remain declarative in `specs/import-profiles.json`.
+
+The typed patch collect leaf is `import-curation/internal/workflow-patch-collect.ts`. Navigate there for patch-set admission blockers, action-item closure, resolution/context/evidence validation, JSON/JSONL and optional artifact readers, identity-apply report option aliases, default source-rewrite discovery and normalized source-rewrite evidence. Its nine workflow consumers span authoring, curation, mutation, dry-run, identity, evidence, reference closure and row transforms.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 

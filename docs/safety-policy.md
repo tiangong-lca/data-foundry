@@ -26,9 +26,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
   - scripts/lib/import-curation/internal/profiles-config.ts
+  - scripts/lib/import-curation/internal/workflow-patch-collect.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1d094b7e0d9a05b1660052f704e8f7f3ca4f8e6e
-lastReviewedNote: "Reviewed for Issue #67 Wave 16: typed profile config preserves existing waiver scopes and account-local override evidence without broadening write authority."
+lastReviewedCommit: 247e1007a38aff7311ded1d9b8a70898c300b4da
+lastReviewedNote: "Reviewed for Issue #67 Wave 17: typed patch collect preserves annual-supply, closure, resolution, trace and full-context blockers without broadening write authority."
 ---
 
 # Safety Policy

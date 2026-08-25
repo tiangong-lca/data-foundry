@@ -40,6 +40,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
   - scripts/lib/import-curation/internal/profiles-config.ts
+  - scripts/lib/import-curation/internal/workflow-patch-collect.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -67,8 +68,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1d094b7e0d9a05b1660052f704e8f7f3ca4f8e6e
-lastReviewedNote: "Reviewed for Issue #67 Wave 16: typed profile config remains Foundry-local policy selection and does not alter profile defaults, owner schema, CLI or database authority."
+lastReviewedCommit: 247e1007a38aff7311ded1d9b8a70898c300b4da
+lastReviewedNote: "Reviewed for Issue #67 Wave 17: typed patch collect remains Foundry-local evidence admission and does not alter patch semantics, profile defaults, CLI or database authority."
 ---
 
 # Architecture
@@ -135,6 +136,8 @@ The typed internal full-context-proof boundary reads content-addressed authoring
 The typed decision-apply-context boundary projects an existing classification apply report into local evidence: normalized decisions, bound decision-task proof, resolved input/output row paths, content hashes and applied count. It preserves report order and aliases and performs no decision application, schema mutation or remote operation.
 
 The typed profiles-config boundary reads and normalizes the repository's declarative import profiles, then projects profile lookup and listing views. It preserves configuration order, fallbacks, waiver scopes and account-local override evidence; it does not own schema rules or permit a profile to bypass downstream gates beyond its already-declared policy.
+
+The typed workflow-patch-collect boundary validates AI patch-set structure, targets, action closure, resolution/evidence contracts and specialized trace/classification/location decisions, then exposes local artifact readers used by downstream context modules. It neither applies patches nor writes remotely; deterministic blocker order and native malformed-artifact failures remain part of admission evidence.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

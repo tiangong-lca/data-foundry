@@ -25,9 +25,10 @@ checkPaths:
   - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
   - scripts/lib/import-curation/internal/profiles-config.ts
+  - scripts/lib/import-curation/internal/workflow-patch-collect.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1d094b7e0d9a05b1660052f704e8f7f3ca4f8e6e
-lastReviewedNote: "Reviewed for Issue #67 Wave 16: zero-any profile config remains Foundry-local policy projection; no cross-repository owner, default or execution surface changes."
+lastReviewedCommit: 247e1007a38aff7311ded1d9b8a70898c300b4da
+lastReviewedNote: "Reviewed for Issue #67 Wave 17: zero-any patch collect remains Foundry-local admission; no cross-repository owner, profile or execution surface changes."
 ---
 
 # Workspace Project Map

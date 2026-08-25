@@ -40,6 +40,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
   - scripts/lib/import-curation/internal/profiles-config.ts
+  - scripts/lib/import-curation/internal/workflow-patch-collect.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -98,10 +99,12 @@ checkPaths:
   - test/unit/wave15-decision-apply-context-migration.test.mts
   - test/unit/profiles-config-contract.test.mts
   - test/unit/wave16-profiles-config-migration.test.mts
+  - test/unit/workflow-patch-collect-contract.test.mts
+  - test/unit/wave17-patch-collect-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 1d094b7e0d9a05b1660052f704e8f7f3ca4f8e6e
-lastReviewedNote: "Reviewed for Issue #67 Wave 16: typed profile config preserves alias precedence, configured order, defaults, waiver scope and malformed-input failures."
+lastReviewedCommit: 247e1007a38aff7311ded1d9b8a70898c300b4da
+lastReviewedNote: "Reviewed for Issue #67 Wave 17: typed patch collect preserves blocker/operation/artifact order, action closure, full-context evidence and native failures."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -151,6 +154,8 @@ Full-context package and decision-task proof must remain bound to exact file byt
 Classification decision apply context must preserve the apply report's decision/task order, exact resolved input/output paths and content hashes. A missing decision file stays empty, while malformed readable JSON or an invalid path type retains its native failure; evidence aggregation never executes decisions.
 
 Profile normalization and lookup must preserve configured profile order, alias precedence, requested/default/generic fallback and base-before-operator additions. A TypeScript migration cannot invent a waiver, broaden an account-local override or change the generic/BAFU/USLCI/worldsteel defaults.
+
+Patch collection remains an admission gate: every non-test operation needs a valid pointer, allowed resolution, evidence and required action closure. Annual-supply deferral, unresolved templates, incomplete full-context proof, trace mismatches and malformed readable artifacts must remain fail-closed before patch apply or mutation planning.
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 
