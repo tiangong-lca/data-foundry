@@ -20,21 +20,12 @@ const zeroAnyPaths = [
   "test/unit/evidence-decision-leaves.test.mts",
 ] as const;
 
-type TestRecord = Record<string, unknown>;
+type JsonRecord = Record<string, unknown>;
 
-interface TestDatasetPayload extends TestRecord {
-  flowDataSet?: {
-    flowInformation?: { dataSetInformation?: TestRecord };
-    administrativeInformation?: {
-      publicationAndOwnership?: TestRecord;
-    };
-  };
-  processDataSet?: {
-    processInformation?: { dataSetInformation?: TestRecord };
-    administrativeInformation?: {
-      publicationAndOwnership?: TestRecord;
-    };
-  };
+function record(value: unknown): JsonRecord | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as JsonRecord)
+    : undefined;
 }
 
 test("evidence-decision family contains no explicit any or TypeScript suppression", () => {
@@ -50,7 +41,6 @@ test("evidence-decision family contains no explicit any or TypeScript suppressio
     assert.doesNotMatch(source, /@ts-(?:ignore|nocheck|expect-error)/u, relativePath);
   }
 });
-
 function withFixture<T>(callback: (root: string) => T): T {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-evidence-leaves-"));
   try {
@@ -93,13 +83,13 @@ function writeJson(filePath: string, value: unknown): void {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function readJsonLines(filePath: string): TestRecord[] {
+function readJsonLines(filePath: string): JsonRecord[] {
   const text = fs.readFileSync(filePath, "utf8").trim();
   return text
     ? text
         .split(/\r?\n/u)
         .filter(Boolean)
-        .map((line) => JSON.parse(line) as TestRecord)
+        .map((line) => JSON.parse(line) as JsonRecord)
     : [];
 }
 
@@ -215,44 +205,46 @@ function rewriteUtils(root: string) {
   return createIdentityReferenceRewriteUtils({
     asText,
     cloneJson: <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T,
-    countRowsFile: (filePath: string) => readJsonLines(filePath).length,
-    datasetIdentity: (row: TestDatasetPayload, type: string) => {
+    countRowsFile: (filePath: string | null | undefined) =>
+      filePath ? readJsonLines(filePath).length : 0,
+    datasetIdentity: (row: unknown, type: string) => {
+      const rowRecord = record(row);
+      const rootPayload = record(
+        type === "flow" ? rowRecord?.flowDataSet : rowRecord?.processDataSet,
+      );
+      const flowInformation = record(rootPayload?.flowInformation);
+      const processInformation = record(rootPayload?.processInformation);
       const info =
-        (type === "flow"
-          ? row.flowDataSet?.flowInformation?.dataSetInformation
-          : row.processDataSet?.processInformation?.dataSetInformation) ?? {};
-      const publicationAndOwnership =
-        type === "flow"
-          ? row.flowDataSet?.administrativeInformation?.publicationAndOwnership
-          : row.processDataSet?.administrativeInformation?.publicationAndOwnership;
+        record(flowInformation?.dataSetInformation) ??
+        record(processInformation?.dataSetInformation) ??
+        {};
+      const administrativeInformation = record(rootPayload?.administrativeInformation);
+      const publicationAndOwnership = record(administrativeInformation?.publicationAndOwnership);
       return {
         id: asText(info["common:UUID"]),
         version: asText(publicationAndOwnership?.["common:dataSetVersion"]) || "00.00.001",
       };
     },
-    datasetRowsFileStem: (type: string) => `${type}s`,
+    datasetRowsFileStem: (type: unknown) => `${String(type)}s`,
     ensureArray,
-    fileExists: (filePath: string) => Boolean(filePath && fs.existsSync(filePath)),
+    fileExists: (filePath: string | null | undefined) =>
+      Boolean(filePath && fs.existsSync(filePath)),
     foundryTraceNamespace: "https://example.test/foundry",
     identityPreflightCommands: {
-      identityPreflightRunReportFile: (row: TestRecord) => resolve(row.report_file),
+      identityPreflightRunReportFile: (row: JsonRecord) => resolve(row.report_file),
     },
     languageForText: () => "en",
     multiLang: (text: unknown, language = "en") => ({ "@xml:lang": language, "#text": text }),
     normalizedList,
     nowIso: () => "2026-08-25T00:00:00.000Z",
-    pathExpression: (parts: unknown[]) => parts.join("."),
+    pathExpression: (parts: Array<string | number>) => parts.join("."),
     preferredSourceLanguageText: (values: unknown) => asText(ensureArray(values)[0]),
-    readJson: (filePath: string) => JSON.parse(fs.readFileSync(filePath, "utf8")),
+    readJson: (filePath: string) => JSON.parse(fs.readFileSync(filePath, "utf8")) as JsonRecord,
     readJsonLines,
-    readRowsFile: readJsonLines,
-    repoRelativeMaybe: (filePath: unknown) =>
-      filePath
-        ? path
-            .relative(root, filePath as string)
-            .split(path.sep)
-            .join(path.posix.sep)
-        : null,
+    readRowsFile: (filePath: string | null | undefined) =>
+      filePath ? readJsonLines(filePath) : [],
+    repoRelativeMaybe: (filePath: string | null | undefined) =>
+      filePath ? path.relative(root, filePath).split(path.sep).join(path.posix.sep) : null,
     repoRelativePath: (filePath: string) =>
       path.relative(root, filePath).split(path.sep).join(path.posix.sep),
     resolveRepoPath: resolve,
@@ -294,7 +286,7 @@ test("identity rewrite is fail-closed without evidence and emits exact reference
     });
     assert.equal(missing.status, "blocked");
     assert.deepEqual(
-      missing.blockers.map((blocker: TestRecord) => blocker.code),
+      missing.blockers.map((blocker) => blocker.code),
       ["identity_preflight_index_required"],
     );
     const allowed = utils.applyIdentityReferenceRewrites({
@@ -330,7 +322,10 @@ test("identity rewrite is fail-closed without evidence and emits exact reference
     assert.equal(report.counts.output_rows, 0);
     assert.equal(report.counts.reference_rows, 1);
     assert.equal(report.counts.flow_reference_rewrites, 1);
-    assert.equal(report.rewrite_rows[0].canonical.ref_object_id, "canonical-flow");
+    const rewriteRow = report.rewrite_rows[0];
+    assert.ok(rewriteRow);
+    assert.equal(record(rewriteRow.canonical)?.ref_object_id, "canonical-flow");
+    assert.ok(report.reference_rows_file);
     assert.deepEqual(readJsonLines(path.join(root, report.reference_rows_file)), [flow]);
     assert.equal(utils.referenceShortDescription(" text "), "");
     assert.equal(utils.referenceShortDescription({ shortDescription: " text " }), "text");
@@ -344,10 +339,13 @@ test("identity rewrite is fail-closed without evidence and emits exact reference
 function fullContextUtils(root: string) {
   return createFullContextProofUtils({
     asText,
-    classificationDecisionUsedContextKinds: (row: TestRecord) =>
-      normalizedList(row.used_context_kinds),
-    decisionCompletionStatus: (row: TestRecord) => asText(row.decision_status ?? row.status),
-    decisionContextBundleSha256: (row: TestRecord) => asText(row.context_bundle_sha256),
+    classificationDecisionUsedContextKinds: (row: unknown) =>
+      normalizedList(record(row)?.used_context_kinds),
+    decisionCompletionStatus: (row: unknown) => {
+      const rowRecord = record(row);
+      return asText(rowRecord?.decision_status ?? rowRecord?.status);
+    },
+    decisionContextBundleSha256: (row: unknown) => asText(record(row)?.context_bundle_sha256),
     ensureArray,
     fileExists: (filePath: string) => Boolean(filePath && fs.existsSync(filePath)),
     listImportProfiles: () => ({
@@ -408,7 +406,7 @@ test("full-context proof remains profile-aware and fail-closed for missing mutat
     });
     assert.equal(missing.required, true);
     assert.deepEqual(
-      missing.blockers.map((blocker: TestRecord) => blocker.code),
+      missing.blockers.map((blocker) => blocker.code),
       [
         "verify_full_context_scope_missing",
         "verify_full_context_semantic_evidence_missing",
@@ -421,7 +419,7 @@ test("full-context proof remains profile-aware and fail-closed for missing mutat
           task: { meta: { profile: "strict", dataset_type: "flow" } },
           completionReport: { closeouts: [], counts: {} },
         })
-        .map((blocker: TestRecord) => blocker.code),
+        .map((blocker) => blocker.code),
       ["completion_full_context_closeout_missing"],
     );
   });
@@ -442,8 +440,8 @@ function preflightUtils(root: string) {
     datasetIdentity: (payload, type) => {
       const info =
         type === "flow"
-          ? payload?.flowDataSet?.flowInformation?.dataSetInformation
-          : payload?.processDataSet?.processInformation?.dataSetInformation;
+          ? payload.flowDataSet?.flowInformation?.dataSetInformation
+          : payload.processDataSet?.processInformation?.dataSetInformation;
       return { id: asText(info?.["common:UUID"]), version: "01.00.000" };
     },
     ensureArray,
@@ -531,7 +529,7 @@ test("preflight artifacts bind exact request bytes, CommandSpec facts, and attac
     assert.ok(row.remote_search.query);
     assert.equal(row.remote_search.edge_request.endpoint, "flow_hybrid_search");
 
-    const queue: TestRecord[] = [
+    const queue: JsonRecord[] = [
       { dataset_type: "flow", dataset_id: "flow-id", dataset_version: "01.00.000" },
     ];
     utils.attachIdentityPreflightRows(queue, artifacts);
@@ -591,7 +589,7 @@ test("preflight source-index loading is first-binding and fail-closed for missin
     assert.equal(loaded.rowCount, 3);
     assert.equal(loaded.sourceFilesByIdentity.get("flow:flow-id:01.00.000"), firstSource);
     assert.deepEqual(
-      loaded.blockers.map((blocker: TestRecord) => blocker.code),
+      loaded.blockers.map((blocker) => blocker.code),
       ["identity_preflight_source_context_file_missing", "identity_preflight_source_index_missing"],
     );
   });

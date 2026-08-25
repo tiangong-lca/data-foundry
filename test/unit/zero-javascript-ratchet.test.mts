@@ -101,3 +101,16 @@ test("completed migration ledger is removed in favor of the permanent ratchet", 
     );
   }
 });
+
+test("focused explicit-any contracts use the installed Oxlint AST rule", () => {
+  for (const relativePath of [
+    "test/unit/source-row-explicit-any-contract.test.mts",
+    "test/unit/identity-rewrite-explicit-any-contract.test.mts",
+  ]) {
+    const source = readRepoFile(relativePath);
+    assert.match(source, /typescript\/no-explicit-any/u, relativePath);
+    assert.match(source, /"node_modules", "oxlint", "bin", "oxlint"/u, relativePath);
+    assert.match(source, /process\.execPath/u, relativePath);
+    assert.doesNotMatch(source, /from\s+["']typescript["']/u, relativePath);
+  }
+});

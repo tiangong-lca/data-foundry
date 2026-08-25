@@ -83,7 +83,7 @@ checkPaths:
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-26
 lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
-lastReviewedNote: "Reviewed for Issue #67 evidence-decision typing: concrete local artifact types change no capability owner, Edge search, remote operation, transport/readback, schema, profile or sibling boundary."
+lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: local decision/preflight and source/row/reference type narrowing changes no capability owner, Edge search, remote operation, transport/readback, schema, profile, Worldsteel/Date.parse or sibling boundary."
 ---
 
 # Capability Ownership Policy

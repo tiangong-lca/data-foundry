@@ -24,6 +24,8 @@ checkPaths:
   - specs/capability-ownership-rules.json
   - specs/automated-lca-capability-registry.json
   - test/unit/zero-javascript-ratchet.test.mts
+  - test/unit/source-row-explicit-any-contract.test.mts
+  - test/unit/identity-rewrite-explicit-any-contract.test.mts
   - scripts/foundry-golden-diff.ts
   - scripts/check-tidas-cutover.ts
   - scripts/lib/tidas-adapter.ts
@@ -138,7 +140,7 @@ checkPaths:
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-26
 lastReviewedCommit: 1af101259d8613ea971f651ed0e585b40a66d903
-lastReviewedNote: "Reviewed for Issue #67 evidence-decision typing: zero-any decision/preflight contracts remain Foundry-local evidence and move no CLI, schema, Edge search or database authority."
+lastReviewedNote: "Reviewed for Issue #67 explicit-any hardening: concrete decision/preflight and source/row/reference types remain Foundry-local evidence and move no CLI, schema, Edge search, filesystem-error or database authority."
 ---
 
 # Architecture
@@ -185,6 +187,8 @@ entrypoint + args
 This boundary avoids a misleading bulk rename. Each module remains in the inventory until a TypeScript replacement preserves its command, artifact, stdout, exit, and safety behavior under focused tests. Completion means no untyped business-runtime modules remain and the full case-driven suite is green.
 
 The native TypeScript leaf set now also covers decision context, identity reference rewrite, full-context proof, and preflight artifact factories. Focused characterization preserves queue/context SHA scopes, exact reference rows/reports, fail-closed missing evidence, transform relevance, request/report artifact facts, CommandSpec argv, first-bound source indexes, positive-only execution reuse, and every static consumer. `decision-task-utils.ts` and `identity-preflight-artifacts.ts` now model their dependency injection, queue/context/proof, dataset request and source-index shapes directly; external JSON stays `unknown` until its local boundary, and an Oxlint AST contract keeps this family free of explicit `any` without moving search or execution authority.
+
+The source-semantics, reusable TIDAS-row, and identity-reference-rewrite leaves now expose concrete local dependency and evidence shapes with `unknown` narrowed at dynamic JSON boundaries instead of explicit `any`. Worktree-local Oxlint AST contracts guard those exact production/test targets without introducing a compiler-API dependency; the change remains type-only and does not move source policy, reference decisions, filesystem errors, CLI dispatch, or remote-write authority.
 
 The typed BAFU family and import-ledger leaves preserve two local control-plane boundaries: deterministic family grouping/ranking over ordered signature hashes, and append-only resume evidence over verified, blocked, dependency, retry, and skipped JSONL rows. They do not change database writes, command ownership, public help, profile defaults, or the owner CLI boundary.
 

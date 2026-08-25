@@ -1,14 +1,84 @@
 export type SourceSemanticDependencies = {
-  asText: (value: any) => string;
-  bundleClassificationPath: (payload: any, type: string) => string;
+  asText: (value: unknown) => string;
+  bundleClassificationPath: (payload: unknown, type: string) => string;
   cloneJson: <T>(value: T) => T;
-  datasetIdentity: (payload: any, type: string) => { id: any; version: any };
+  datasetIdentity: (payload: unknown, type: string) => DatasetIdentity;
   deterministicUuid: (seed: string) => string;
-  languageForText: (text: any, fallback?: any) => string;
-  multiLang: (text: any, language?: any) => any;
-  pathExpression: (parts: any[]) => string;
-  repoRelativeMaybe: (value: any) => any;
-  textValue: (value: any) => string;
+  languageForText: (text: unknown, fallback?: unknown) => string;
+  multiLang: (text: unknown, language?: unknown) => UnknownRecord;
+  pathExpression: (parts: PathSegment[]) => string;
+  repoRelativeMaybe: (value: unknown) => unknown;
+  textValue: (value: unknown) => string;
+};
+
+type UnknownRecord = Record<string, unknown>;
+type PathSegment = string | number;
+type DatasetIdentity = { id: string | null; version: string | null };
+type MutableStats = Record<string, number>;
+
+type SourceMetadata = {
+  shortName: string;
+  citation: string;
+  description?: string;
+  doi?: string;
+  title?: string;
+  year?: string;
+  authors?: string;
+  container?: string | null;
+  details?: string | null;
+};
+
+type SourceSummary = {
+  dataset_id?: unknown;
+  dataset_version?: unknown;
+  short_name?: unknown;
+  source_citation?: unknown;
+  source_description?: unknown;
+  classification_path?: unknown;
+  kind?: unknown;
+  fallback_database_source?: unknown;
+};
+
+type SourceLookup = {
+  get: (id: string) => SourceSummary | undefined;
+};
+
+type SourceReference = UnknownRecord & {
+  "@type": string;
+  "@refObjectId": string;
+  "@version": string;
+  "@uri": string;
+  "common:shortDescription": UnknownRecord;
+};
+
+type SourceReferenceSnapshot = {
+  ref_object_id: string | null;
+  version: string | null;
+  uri: string | null;
+  short_description: string | null;
+};
+
+type SourceAdministrativeInformation = UnknownRecord & {
+  dataEntryBy: UnknownRecord;
+  publicationAndOwnership: UnknownRecord;
+};
+
+type SourceReferenceRow = {
+  path: string;
+  relation: string;
+  ref_object_id: string;
+  version: string | null;
+  short_description: string | null;
+};
+
+type ProcessSourceReferenceRow = SourceReferenceRow & {
+  dataset_type: "process";
+  dataset_id: string | null;
+  dataset_version: string | null;
+  source_file: unknown;
+  referenced_source_kind: unknown;
+  referenced_source_classification: unknown;
+  referenced_source_citation: unknown;
 };
 
 export function createSourceSemanticUtils({
@@ -23,14 +93,17 @@ export function createSourceSemanticUtils({
   repoRelativeMaybe,
   textValue,
 }: SourceSemanticDependencies) {
-  function sourceDataSetInformation(payload: any) {
-    return payload?.sourceDataSet?.sourceInformation?.dataSetInformation &&
-      typeof payload.sourceDataSet.sourceInformation.dataSetInformation === "object"
-      ? payload.sourceDataSet.sourceInformation.dataSetInformation
+  function sourceDataSetInformation(payload: unknown): UnknownRecord {
+    const payloadRecord = payload as UnknownRecord | null | undefined;
+    const sourceDataSet = payloadRecord?.sourceDataSet as UnknownRecord | undefined;
+    const sourceInformation = sourceDataSet?.sourceInformation as UnknownRecord | undefined;
+    const dataSetInformation = sourceInformation?.dataSetInformation;
+    return dataSetInformation && typeof dataSetInformation === "object"
+      ? (dataSetInformation as UnknownRecord)
       : {};
   }
 
-  function sourceShortName(payload: any) {
+  function sourceShortName(payload: unknown) {
     const dataSetInformation = sourceDataSetInformation(payload);
     return (
       textValue(dataSetInformation["common:shortName"]) ||
@@ -39,30 +112,30 @@ export function createSourceSemanticUtils({
     );
   }
 
-  function sourceCitationText(payload: any) {
+  function sourceCitationText(payload: unknown) {
     const dataSetInformation = sourceDataSetInformation(payload);
     return textValue(dataSetInformation.sourceCitation);
   }
 
-  function sourceDescriptionText(payload: any) {
+  function sourceDescriptionText(payload: unknown) {
     const dataSetInformation = sourceDataSetInformation(payload);
     return textValue(dataSetInformation.sourceDescriptionOrComment);
   }
 
-  function isBareSourceDescriptionText(value: any) {
+  function isBareSourceDescriptionText(value: unknown) {
     const text = asText(value).trim();
     return text === "" || /^(Report|Publication|Source)$/iu.test(text);
   }
 
-  function isGenericEcoSpoldCompatibilitySourceText(value: any) {
+  function isGenericEcoSpoldCompatibilitySourceText(value: unknown) {
     return /^Created for EcoSpold 1 compatibility$/iu.test(asText(value));
   }
 
-  function isPlaceholderSourceIdentityText(value: any) {
+  function isPlaceholderSourceIdentityText(value: unknown) {
     return /^(Not specified|Not declared|Unspecified)$/iu.test(asText(value));
   }
 
-  function sourceMetadataFromDescription(description: any) {
+  function sourceMetadataFromDescription(description: unknown): SourceMetadata | null {
     const text = asText(description).replace(/\\n/gu, "\n");
     if (!text) return null;
     const originalTitle = text.match(/^Original title:\s*(.+)$/imu)?.[1]?.trim();
@@ -85,13 +158,13 @@ export function createSourceSemanticUtils({
     };
   }
 
-  function normalizeDoi(value: any) {
+  function normalizeDoi(value: unknown) {
     const text = asText(value);
     const doi = text.match(/\b10\.\d{4,9}\/[-._;()/:A-Z0-9]+/iu)?.[0];
     return doi ? doi.replace(/[),.;\s]+$/u, "") : "";
   }
 
-  function cleanOriginalSourceText(value: any) {
+  function cleanOriginalSourceText(value: unknown) {
     return asText(value)
       .replace(/\s+/gu, " ")
       .replace(/\s*UUID:\s*[0-9a-f-]{36}\b.*$/iu, "")
@@ -99,14 +172,18 @@ export function createSourceSemanticUtils({
       .trim();
   }
 
-  function processSourceContextTexts(payload: any) {
-    const process = payload?.processDataSet ?? payload;
-    const dataSetInformation = process?.processInformation?.dataSetInformation ?? {};
-    const treatment =
-      process?.modellingAndValidation?.dataSourcesTreatmentAndRepresentativeness ?? {};
+  function processSourceContextTexts(payload: unknown) {
+    const payloadRecord = payload as UnknownRecord | null | undefined;
+    const process = (payloadRecord?.processDataSet ?? payload) as UnknownRecord | null | undefined;
+    const processInformation = process?.processInformation as UnknownRecord | undefined;
+    const dataSetInformation = (processInformation?.dataSetInformation ?? {}) as UnknownRecord;
+    const modellingAndValidation = process?.modellingAndValidation as UnknownRecord | undefined;
+    const treatment = (modellingAndValidation?.dataSourcesTreatmentAndRepresentativeness ??
+      {}) as UnknownRecord;
+    const technology = processInformation?.technology as UnknownRecord | undefined;
     return [
       textValue(dataSetInformation["common:generalComment"]),
-      textValue(process?.processInformation?.technology?.technologyDescriptionAndIncludedProcesses),
+      textValue(technology?.technologyDescriptionAndIncludedProcesses),
       textValue(treatment.dataCutOffAndCompletenessPrinciples),
       textValue(treatment.useAdviceForDataSet),
     ]
@@ -114,7 +191,7 @@ export function createSourceSemanticUtils({
       .filter((text) => text && !/^(Unspecified|Not specified|Not declared)$/iu.test(text));
   }
 
-  function authorLastName(value: any) {
+  function authorLastName(value: unknown) {
     const firstAuthor = asText(value)
       .split(/\s*(?:,| and )\s*/u)
       .find(Boolean);
@@ -131,7 +208,7 @@ export function createSourceSemanticUtils({
     return last;
   }
 
-  function originalSourceMetadataFromText(value: any) {
+  function originalSourceMetadataFromText(value: unknown): SourceMetadata | null {
     const text = cleanOriginalSourceText(value);
     if (!text) return null;
     const markerMatch = text.match(/Original source:\s*(.+)$/isu);
@@ -166,7 +243,7 @@ export function createSourceSemanticUtils({
     };
   }
 
-  function processOriginalSourceMetadata(payload: any) {
+  function processOriginalSourceMetadata(payload: unknown) {
     for (const text of processSourceContextTexts(payload)) {
       const metadata = originalSourceMetadataFromText(text);
       if (metadata) return metadata;
@@ -174,7 +251,10 @@ export function createSourceSemanticUtils({
     return null;
   }
 
-  function sourceSummaryMatchesOriginalMetadata(source: any, metadata: any) {
+  function sourceSummaryMatchesOriginalMetadata(
+    source: SourceSummary | null | undefined,
+    metadata: SourceMetadata | null | undefined,
+  ) {
     if (!source?.dataset_id || !metadata) return false;
     const haystack = [
       source.short_name,
@@ -191,7 +271,14 @@ export function createSourceSemanticUtils({
     return Boolean(title && haystack.includes(title));
   }
 
-  function repairTrueSourceIdentity(payload: any, { sourceFile, stats, repairRows }: any) {
+  function repairTrueSourceIdentity(
+    payload: unknown,
+    {
+      sourceFile,
+      stats,
+      repairRows,
+    }: { sourceFile: unknown; stats: MutableStats; repairRows: UnknownRecord[] },
+  ) {
     if (sourceSemanticKind(payload) !== "true_source") return;
     const dataSetInformation = sourceDataSetInformation(payload);
     if (!dataSetInformation || typeof dataSetInformation !== "object") return;
@@ -223,7 +310,14 @@ export function createSourceSemanticUtils({
     });
   }
 
-  function repairTrueSourceDescription(payload: any, { sourceFile, stats, repairRows }: any) {
+  function repairTrueSourceDescription(
+    payload: unknown,
+    {
+      sourceFile,
+      stats,
+      repairRows,
+    }: { sourceFile: unknown; stats: MutableStats; repairRows: UnknownRecord[] },
+  ) {
     if (sourceSemanticKind(payload) !== "true_source") return;
     const dataSetInformation = sourceDataSetInformation(payload);
     if (!dataSetInformation || typeof dataSetInformation !== "object") return;
@@ -249,7 +343,7 @@ export function createSourceSemanticUtils({
     });
   }
 
-  function sourceSemanticKind(payload: any) {
+  function sourceSemanticKind(payload: unknown) {
     // A reference to a known public canonical support source — the ILCD format spec
     // (a97a0155) or the ILCD Data Network compliance system (d92a1a12) — IS that canonical
     // dataset by identity, regardless of how a converted package classifies or names it.
@@ -294,7 +388,14 @@ export function createSourceSemanticUtils({
     return "unresolved_source_semantics";
   }
 
-  function repairTrueSourceClassification(payload: any, { sourceFile, stats, repairRows }: any) {
+  function repairTrueSourceClassification(
+    payload: unknown,
+    {
+      sourceFile,
+      stats,
+      repairRows,
+    }: { sourceFile: unknown; stats: MutableStats; repairRows: UnknownRecord[] },
+  ) {
     if (sourceSemanticKind(payload) !== "true_source") return;
     const currentClassification = bundleClassificationPath(payload, "source");
     if (currentClassification && !/^Other source types$/iu.test(currentClassification)) {
@@ -302,16 +403,18 @@ export function createSourceSemanticUtils({
     }
     const dataSetInformation = sourceDataSetInformation(payload);
     if (!dataSetInformation || typeof dataSetInformation !== "object") return;
-    dataSetInformation.classificationInformation ??= {};
-    dataSetInformation.classificationInformation["common:classification"] ??= {};
-    dataSetInformation.classificationInformation["common:classification"]["common:class"] = {
+    const classificationInformation = (dataSetInformation.classificationInformation ??=
+      {}) as UnknownRecord;
+    const classification = (classificationInformation["common:classification"] ??=
+      {}) as UnknownRecord;
+    classification["common:class"] = {
       "@level": "0",
       "@classId": "5",
       "#text": "Publications and communications",
     };
     const identity = datasetIdentity(payload, "source");
     const alreadyReported = repairRows.some(
-      (row: any) =>
+      (row) =>
         row.dataset_id === identity.id &&
         row.dataset_version === identity.version &&
         row.relation === "true_source_publication_classification",
@@ -330,7 +433,7 @@ export function createSourceSemanticUtils({
     });
   }
 
-  function sourceSemanticSummary(payload: any, sourceFile: any) {
+  function sourceSemanticSummary(payload: unknown, sourceFile: unknown) {
     const identity = datasetIdentity(payload, "source");
     const kind = sourceSemanticKind(payload);
     return {
@@ -353,7 +456,7 @@ export function createSourceSemanticUtils({
     return "7d6cb661-93f8-5c42-b23f-c3b73f8a6f97";
   }
 
-  function processContextSourceId(metadata: any) {
+  function processContextSourceId(metadata: SourceMetadata) {
     const identityText =
       normalizeDoi(metadata?.doi) || asText(metadata?.citation) || asText(metadata?.shortName);
     if (typeof deterministicUuid === "function") {
@@ -369,17 +472,24 @@ export function createSourceSemanticUtils({
     version = "00.00.001",
     language = "en",
     timestamp = null,
-  }: any = {}) {
+  }: {
+    metadata?: SourceMetadata | null;
+    contactReference?: unknown;
+    id?: unknown;
+    version?: string;
+    language?: unknown;
+    timestamp?: unknown;
+  } = {}) {
     if (!metadata?.shortName || !metadata?.citation) return null;
     const sourceId = asText(id) || processContextSourceId(metadata);
-    const dataEntryBy: any = {
+    const dataEntryBy: UnknownRecord = {
       "common:referenceToDataSetFormat":
         canonicalSourceReferenceForRelation("dataset_format_source"),
     };
     if (timestamp) {
       dataEntryBy["common:timeStamp"] = timestamp;
     }
-    const publicationAndOwnership: any = {
+    const publicationAndOwnership: UnknownRecord = {
       "common:dataSetVersion": version,
       "common:permanentDataSetURI": `https://www.bafu.admin.ch/bafu-2025-v2/sources/${sourceId}`,
     };
@@ -428,7 +538,13 @@ export function createSourceSemanticUtils({
   // belong to the package being imported — a USLCI process must cite the USLCI
   // database, never BAFU's. The BAFU branch is kept byte-identical to the
   // original so already-imported BAFU rows are unaffected.
-  function databaseFallbackSourceConfig(profile: any) {
+  function databaseFallbackSourceConfig(profile: unknown): {
+    id: string;
+    shortName: string;
+    citation: string;
+    description: string;
+    permanentDataSetUri: (sourceId: string) => string;
+  } {
     const key = asText(profile).toLowerCase();
     if (key === "uslci") {
       return {
@@ -440,7 +556,7 @@ export function createSourceSemanticUtils({
           "U.S. Life Cycle Inventory Database (USLCI), National Renewable Energy Laboratory (NREL), U.S. Federal LCA Commons, 2025.",
         description:
           "Database-level fallback source used when the converted USLCI package has no more specific report, publication, or data-source evidence for the process scope.",
-        permanentDataSetUri: (sourceId: any) => `https://www.lcacommons.gov/uslci/${sourceId}`,
+        permanentDataSetUri: (sourceId: string) => `https://www.lcacommons.gov/uslci/${sourceId}`,
       };
     }
     if (key === "worldsteel") {
@@ -458,7 +574,7 @@ export function createSourceSemanticUtils({
           "worldsteel Life Cycle Inventory (LCI) database, World Steel Association (worldsteel), 2022.",
         description:
           "Database-level fallback source used when the converted worldsteel package has no more specific report, publication, or data-source evidence for the process scope.",
-        permanentDataSetUri: (sourceId: any) => `https://worldsteel.org/lci/${sourceId}`,
+        permanentDataSetUri: (sourceId: string) => `https://worldsteel.org/lci/${sourceId}`,
       };
     }
     // Default (BAFU and any unspecified profile): preserve the original behavior.
@@ -469,7 +585,8 @@ export function createSourceSemanticUtils({
         "BAFU 2025 Version 2 LCA database, Federal Office for the Environment (FOEN), 2025.",
       description:
         "Database-level fallback source used when the converted BAFU package has no more specific report, publication, or data-source evidence for the process scope.",
-      permanentDataSetUri: (sourceId: any) => `https://www.bafu.admin.ch/bafu-2025-v2/${sourceId}`,
+      permanentDataSetUri: (sourceId: string) =>
+        `https://www.bafu.admin.ch/bafu-2025-v2/${sourceId}`,
     };
   }
 
@@ -480,7 +597,14 @@ export function createSourceSemanticUtils({
     version = "00.00.001",
     language = "en",
     timestamp = null,
-  }: any = {}) {
+  }: {
+    profile?: unknown;
+    contactReference?: unknown;
+    id?: unknown;
+    version?: string;
+    language?: unknown;
+    timestamp?: unknown;
+  } = {}) {
     const config = databaseFallbackSourceConfig(profile);
     const sourceId = asText(id) || config.id;
     const shortName = config.shortName;
@@ -490,22 +614,22 @@ export function createSourceSemanticUtils({
     // ILCD expects the format reference inside dataEntryBy (see
     // buildBafuProcessContextSourcePayload); at the administrativeInformation
     // root it fails schema validation as an unknown member.
-    const dataEntryBy: any = {
+    const dataEntryBy: UnknownRecord = {
       "common:referenceToDataSetFormat": dataFormatReference,
     };
     if (timestamp) {
       dataEntryBy["common:timeStamp"] = timestamp;
     }
-    const admin: any = {
+    const publicationAndOwnership: UnknownRecord = {
+      "common:dataSetVersion": version,
+      "common:permanentDataSetURI": config.permanentDataSetUri(sourceId),
+    };
+    const admin: SourceAdministrativeInformation = {
       dataEntryBy,
-      publicationAndOwnership: {
-        "common:dataSetVersion": version,
-        "common:permanentDataSetURI": config.permanentDataSetUri(sourceId),
-      },
+      publicationAndOwnership,
     };
     if (contactReference) {
-      admin.publicationAndOwnership["common:referenceToOwnershipOfDataSet"] =
-        cloneJson(contactReference);
+      publicationAndOwnership["common:referenceToOwnershipOfDataSet"] = cloneJson(contactReference);
     }
     return {
       sourceDataSet: {
@@ -539,11 +663,22 @@ export function createSourceSemanticUtils({
   // Backward-compatible alias: existing callers that explicitly want the BAFU
   // database-level fallback source. New callers should use
   // buildDatabaseFallbackSourcePayload({ profile }).
-  function buildBafuFallbackSourcePayload(options: any = {}) {
+  function buildBafuFallbackSourcePayload(
+    options: {
+      contactReference?: unknown;
+      id?: unknown;
+      version?: string;
+      language?: unknown;
+      timestamp?: unknown;
+    } = {},
+  ) {
     return buildDatabaseFallbackSourcePayload({ ...options, profile: "bafu" });
   }
 
-  function sourceReferenceFromSummary(source: any, language: any = "en") {
+  function sourceReferenceFromSummary(
+    source: SourceSummary | null | undefined,
+    language: unknown = "en",
+  ) {
     const id = asText(source?.dataset_id);
     if (!id) return null;
     const version = asText(source?.dataset_version) || "00.00.001";
@@ -557,7 +692,7 @@ export function createSourceSemanticUtils({
     };
   }
 
-  function sourceReferenceKind(pathSegments: any[]) {
+  function sourceReferenceKind(pathSegments: PathSegment[]) {
     const pathText = pathSegments.join(".");
     if (pathText.includes("referenceToDataSource")) return "process_data_source";
     if (pathText.includes("referenceToDataSetFormat")) return "dataset_format_source";
@@ -565,7 +700,7 @@ export function createSourceSemanticUtils({
     return "other_source_reference";
   }
 
-  const canonicalSourceReferences: Record<string, any> = {
+  const canonicalSourceReferences: Record<string, SourceReference> = {
     dataset_format_source: {
       "@type": "source data set",
       "@refObjectId": "a97a0155-0234-4b87-b4ce-a45da52f2a40",
@@ -582,7 +717,7 @@ export function createSourceSemanticUtils({
     },
   };
 
-  function canonicalSourceReferenceForRelation(relation: any) {
+  function canonicalSourceReferenceForRelation(relation: string) {
     const reference = canonicalSourceReferences[relation];
     return reference ? cloneJson(reference) : null;
   }
@@ -598,7 +733,7 @@ export function createSourceSemanticUtils({
     compliance_support_source: "compliance_system_source",
   };
 
-  function canonicalSourceReferenceForSourceKind(kind: any) {
+  function canonicalSourceReferenceForSourceKind(kind: unknown) {
     const relation = canonicalSourceReferenceByKind[asText(kind)];
     return relation ? canonicalSourceReferenceForRelation(relation) : null;
   }
@@ -607,7 +742,7 @@ export function createSourceSemanticUtils({
   // own UUID to its canonical support KIND, so a public canonical support source is
   // recognized by identity even when its converted classification/shortName would not
   // otherwise resolve to format_support_source / compliance_support_source.
-  function canonicalSupportSourceKindForId(refObjectId: any) {
+  function canonicalSupportSourceKindForId(refObjectId: unknown) {
     const id = asText(refObjectId);
     if (!id) return null;
     for (const [kind, relation] of Object.entries(canonicalSourceReferenceByKind)) {
@@ -618,17 +753,18 @@ export function createSourceSemanticUtils({
     return null;
   }
 
-  function sourceReferenceSnapshot(reference: any) {
+  function sourceReferenceSnapshot(reference: unknown): SourceReferenceSnapshot {
+    const referenceRecord = reference as UnknownRecord | null | undefined;
     return {
-      ref_object_id: asText(reference?.["@refObjectId"]) || null,
-      version: asText(reference?.["@version"]) || null,
-      uri: asText(reference?.["@uri"]) || null,
-      short_description: textValue(reference?.["common:shortDescription"]) || null,
+      ref_object_id: asText(referenceRecord?.["@refObjectId"]) || null,
+      version: asText(referenceRecord?.["@version"]) || null,
+      uri: asText(referenceRecord?.["@uri"]) || null,
+      short_description: textValue(referenceRecord?.["common:shortDescription"]) || null,
     };
   }
 
   function rewriteCanonicalSourceReferences(
-    value: any,
+    value: unknown,
     {
       datasetType,
       sourceFile,
@@ -637,7 +773,15 @@ export function createSourceSemanticUtils({
       pathSegments = [],
       datasetIdentityCache = null,
       sourceLookup = null,
-    }: any,
+    }: {
+      datasetType: string;
+      sourceFile: unknown;
+      stats: MutableStats;
+      rewriteRows: UnknownRecord[];
+      pathSegments?: PathSegment[];
+      datasetIdentityCache?: DatasetIdentity | null;
+      sourceLookup?: SourceLookup | null;
+    },
   ) {
     if (!value || typeof value !== "object") return;
     if (Array.isArray(value)) {
@@ -655,9 +799,10 @@ export function createSourceSemanticUtils({
       return;
     }
 
+    const valueRecord = value as UnknownRecord;
     const relation = sourceReferenceKind(pathSegments);
-    const refType = asText(value["@type"]).toLowerCase();
-    const refObjectId = asText(value["@refObjectId"]);
+    const refType = asText(valueRecord["@type"]).toLowerCase();
+    const refObjectId = asText(valueRecord["@refObjectId"]);
     // The canonical target is fixed first by the reference path-relation (format /
     // compliance slots), then — for any other slot, e.g. referenceToCompleteReviewReport
     // — by the referenced source's own semantic KIND when a sourceLookup is supplied. A
@@ -680,7 +825,7 @@ export function createSourceSemanticUtils({
       }
     }
     if (canonical && refObjectId && refType.includes("source")) {
-      const before = sourceReferenceSnapshot(value);
+      const before = sourceReferenceSnapshot(valueRecord);
       const after = sourceReferenceSnapshot(canonical);
       if (
         before.ref_object_id !== after.ref_object_id ||
@@ -690,7 +835,7 @@ export function createSourceSemanticUtils({
         const identity =
           datasetIdentityCache && datasetIdentityCache.id
             ? datasetIdentityCache
-            : datasetIdentity(value, datasetType);
+            : datasetIdentity(valueRecord, datasetType);
         stats.source_reference_rewrites += 1;
         rewriteRows.push({
           dataset_type: datasetType,
@@ -708,13 +853,13 @@ export function createSourceSemanticUtils({
               : "Compliance declaration uses the public canonical ILCD Data Network Entry-level source instead of a converted placeholder support source.",
         });
       }
-      Object.keys(value).forEach((key) => {
-        delete value[key];
+      Object.keys(valueRecord).forEach((key) => {
+        delete valueRecord[key];
       });
-      Object.assign(value, cloneJson(canonical));
+      Object.assign(valueRecord, cloneJson(canonical));
     }
 
-    for (const [key, child] of Object.entries(value)) {
+    for (const [key, child] of Object.entries(valueRecord)) {
       rewriteCanonicalSourceReferences(child, {
         datasetType,
         sourceFile,
@@ -728,7 +873,7 @@ export function createSourceSemanticUtils({
   }
 
   function rewriteTrueSourceReferenceDescriptions(
-    value: any,
+    value: unknown,
     {
       sourceLookup,
       sourceFile,
@@ -736,7 +881,14 @@ export function createSourceSemanticUtils({
       rewriteRows,
       pathSegments = [],
       datasetIdentityCache = null,
-    }: any,
+    }: {
+      sourceLookup: SourceLookup;
+      sourceFile: unknown;
+      stats: MutableStats;
+      rewriteRows: UnknownRecord[];
+      pathSegments?: PathSegment[];
+      datasetIdentityCache?: DatasetIdentity | null;
+    },
   ) {
     if (!value || typeof value !== "object") return;
     if (Array.isArray(value)) {
@@ -753,24 +905,25 @@ export function createSourceSemanticUtils({
       return;
     }
 
+    const valueRecord = value as UnknownRecord;
     const relation = sourceReferenceKind(pathSegments);
-    const refType = asText(value["@type"]).toLowerCase();
-    const refObjectId = asText(value["@refObjectId"]);
+    const refType = asText(valueRecord["@type"]).toLowerCase();
+    const refObjectId = asText(valueRecord["@refObjectId"]);
     if (relation === "process_data_source" && refObjectId && refType.includes("source")) {
       const source = sourceLookup.get(refObjectId);
       const canonicalShortName = asText(source?.short_name);
-      const currentShortName = textValue(value["common:shortDescription"]);
+      const currentShortName = textValue(valueRecord["common:shortDescription"]);
       if (
         source?.kind === "true_source" &&
         canonicalShortName &&
         currentShortName !== canonicalShortName
       ) {
-        const before = sourceReferenceSnapshot(value);
-        value["common:shortDescription"] = multiLang(
+        const before = sourceReferenceSnapshot(valueRecord);
+        valueRecord["common:shortDescription"] = multiLang(
           canonicalShortName,
           languageForText(canonicalShortName),
         );
-        const after = sourceReferenceSnapshot(value);
+        const after = sourceReferenceSnapshot(valueRecord);
         stats.true_source_reference_description_repairs += 1;
         const identity =
           datasetIdentityCache && datasetIdentityCache.id
@@ -791,7 +944,7 @@ export function createSourceSemanticUtils({
       }
     }
 
-    for (const [key, child] of Object.entries(value)) {
+    for (const [key, child] of Object.entries(valueRecord)) {
       rewriteTrueSourceReferenceDescriptions(child, {
         sourceLookup,
         sourceFile,
@@ -804,7 +957,7 @@ export function createSourceSemanticUtils({
   }
 
   function rewriteProcessDataSourceReferences(
-    value: any,
+    value: unknown,
     {
       sourceLookup,
       replacementSource = null,
@@ -817,7 +970,19 @@ export function createSourceSemanticUtils({
       pathSegments = [],
       datasetIdentityCache = null,
       language = "en",
-    }: any,
+    }: {
+      sourceLookup: SourceLookup;
+      replacementSource?: SourceSummary | null;
+      forceReplacementSource?: boolean;
+      replacementRelation?: string | null;
+      replacementReason?: string | null;
+      sourceFile: unknown;
+      stats: MutableStats;
+      rewriteRows: UnknownRecord[];
+      pathSegments?: PathSegment[];
+      datasetIdentityCache?: DatasetIdentity | null;
+      language?: unknown;
+    },
   ) {
     if (!value || typeof value !== "object") return;
     if (Array.isArray(value)) {
@@ -839,15 +1004,16 @@ export function createSourceSemanticUtils({
       return;
     }
 
+    const valueRecord = value as UnknownRecord;
     const relation = sourceReferenceKind(pathSegments);
-    const refType = asText(value["@type"]).toLowerCase();
-    const refObjectId = asText(value["@refObjectId"]);
+    const refType = asText(valueRecord["@type"]).toLowerCase();
+    const refObjectId = asText(valueRecord["@refObjectId"]);
     if (relation === "process_data_source" && refObjectId && refType.includes("source")) {
       const referencedSource = sourceLookup.get(refObjectId);
-      const currentShortName = textValue(value["common:shortDescription"]);
-      let targetSource = null;
-      let rewriteRelation = null;
-      let reason = null;
+      const currentShortName = textValue(valueRecord["common:shortDescription"]);
+      let targetSource: SourceSummary | null = null;
+      let rewriteRelation: string | null = null;
+      let reason: string | null = null;
 
       if (forceReplacementSource && replacementSource?.dataset_id) {
         targetSource = replacementSource;
@@ -874,18 +1040,18 @@ export function createSourceSemanticUtils({
       }
 
       const canonical = sourceReferenceFromSummary(targetSource, language);
-      if (canonical) {
-        const before = sourceReferenceSnapshot(value);
+      if (canonical && targetSource) {
+        const before = sourceReferenceSnapshot(valueRecord);
         const after = sourceReferenceSnapshot(canonical);
         if (
           before.ref_object_id !== after.ref_object_id ||
           before.version !== after.version ||
           before.short_description !== after.short_description
         ) {
-          Object.keys(value).forEach((key) => {
-            delete value[key];
+          Object.keys(valueRecord).forEach((key) => {
+            delete valueRecord[key];
           });
-          Object.assign(value, cloneJson(canonical));
+          Object.assign(valueRecord, cloneJson(canonical));
           const identity =
             datasetIdentityCache && datasetIdentityCache.id
               ? datasetIdentityCache
@@ -921,7 +1087,7 @@ export function createSourceSemanticUtils({
       }
     }
 
-    for (const [key, child] of Object.entries(value)) {
+    for (const [key, child] of Object.entries(valueRecord)) {
       rewriteProcessDataSourceReferences(child, {
         sourceLookup,
         replacementSource,
@@ -938,33 +1104,43 @@ export function createSourceSemanticUtils({
     }
   }
 
-  function collectSourceReferences(value: any, pathSegments: any[] = [], refs: any[] = []) {
+  function collectSourceReferences(
+    value: unknown,
+    pathSegments: PathSegment[] = [],
+    refs: SourceReferenceRow[] = [],
+  ) {
     if (!value || typeof value !== "object") return refs;
     if (Array.isArray(value)) {
       value.forEach((item, index) => collectSourceReferences(item, [...pathSegments, index], refs));
       return refs;
     }
-    const refType = asText(value["@type"]).toLowerCase();
-    const refObjectId = asText(value["@refObjectId"]);
+    const valueRecord = value as UnknownRecord;
+    const refType = asText(valueRecord["@type"]).toLowerCase();
+    const refObjectId = asText(valueRecord["@refObjectId"]);
     if (refObjectId && refType.includes("source")) {
       refs.push({
         path: pathExpression(pathSegments),
         relation: sourceReferenceKind(pathSegments),
         ref_object_id: refObjectId,
-        version: asText(value["@version"]) || null,
-        short_description: textValue(value["common:shortDescription"]) || null,
+        version: asText(valueRecord["@version"]) || null,
+        short_description: textValue(valueRecord["common:shortDescription"]) || null,
       });
     }
-    for (const [key, child] of Object.entries(value)) {
+    for (const [key, child] of Object.entries(valueRecord)) {
       collectSourceReferences(child, [...pathSegments, key], refs);
     }
     return refs;
   }
 
-  function processSourceReferenceRows(payload: any, sourceLookup: any, sourceFile: any) {
-    if (!payload?.processDataSet) return [];
+  function processSourceReferenceRows(
+    payload: unknown,
+    sourceLookup: SourceLookup,
+    sourceFile: unknown,
+  ): ProcessSourceReferenceRow[] {
+    const payloadRecord = payload as UnknownRecord | null | undefined;
+    if (!payloadRecord?.processDataSet) return [];
     const identity = datasetIdentity(payload, "process");
-    return collectSourceReferences(payload.processDataSet).map((ref) => ({
+    return collectSourceReferences(payloadRecord.processDataSet).map((ref) => ({
       dataset_type: "process",
       dataset_id: identity.id,
       dataset_version: identity.version,
@@ -977,7 +1153,9 @@ export function createSourceSemanticUtils({
     }));
   }
 
-  function sourceReferenceSemanticBlockers(processSourceReferenceRows: any[]) {
+  function sourceReferenceSemanticBlockers(
+    processSourceReferenceRows: ProcessSourceReferenceRow[],
+  ) {
     return processSourceReferenceRows
       .filter(
         (row) =>

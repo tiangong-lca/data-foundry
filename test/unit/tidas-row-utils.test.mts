@@ -5,6 +5,24 @@ import { bundleRowTypes } from "../../scripts/lib/bundle-row-types.ts";
 import { asText, ensureArray } from "../../scripts/lib/import-curation/internal/runtime-io.ts";
 import { createTidasRowUtils } from "../../scripts/lib/tidas-row-utils.ts";
 
+type FlowPayloadFixture = {
+  flowDataSet: {
+    flowInformation: {
+      dataSetInformation: {
+        typeOfDataSet: string;
+        classificationInformation: {
+          "common:classification": {
+            "common:class": Array<Record<string, string>>;
+          };
+        };
+      };
+    };
+    modellingAndValidation?: {
+      LCIMethod: { typeOfDataSet: string };
+    };
+  };
+};
+
 function createUtils(writes = new Map<string, string>()) {
   return createTidasRowUtils({
     asText,
@@ -104,7 +122,7 @@ test("contact rewrites recurse through arrays, preserve non-contacts, clone desc
     version: "02.00.000",
     shortDescription: "New owner",
   });
-  const payload: any = {
+  const payload = {
     owner: {
       "@type": "contact data set",
       "@refObjectId": "old-contact",
@@ -132,8 +150,10 @@ test("contact rewrites recurse through arrays, preserve non-contacts, clone desc
   assert.deepEqual([...stats.previous_ids], ["old-contact", "reviewer"]);
   assert.deepEqual([...stats.previous_descriptions], ["Old owner", "Reviewer text"]);
   assert.equal(payload.owner["@refObjectId"], "new-contact");
-  assert.equal(payload.nested[0].reviewer["@refObjectId"], "new-contact");
-  assert.equal(payload.nested[1].source["@refObjectId"], "source");
+  const reviewer = payload.nested[0] as { reviewer: Record<string, unknown> };
+  const source = payload.nested[1] as { source: Record<string, unknown> };
+  assert.equal(reviewer.reviewer["@refObjectId"], "new-contact");
+  assert.equal(source.source["@refObjectId"], "source");
   assert.notStrictEqual(
     payload.owner["common:shortDescription"],
     contactRef["common:shortDescription"],
@@ -164,7 +184,7 @@ test("placeholder, path, object, and text helpers preserve exact coercion and co
 
 test("classification and flow helpers preserve paths, defaults, and schema selection", () => {
   const utils = createUtils();
-  const payload: any = {
+  const payload: FlowPayloadFixture = {
     flowDataSet: {
       flowInformation: {
         dataSetInformation: {
