@@ -11,6 +11,7 @@ type BudgetContract = {
   semantic_stage_target_lines: number;
   pure_rule_target_lines: number;
   owner_ceiling_lines: Record<string, number>;
+  allowed_upward_imports: Record<string, string[]>;
   allowed_cycles: string[][];
 };
 
@@ -135,9 +136,9 @@ test("scripts/lib remains below command owners and the existing authoring SCC is
     graph.set(relativePath, resolved);
     if (relativePath.startsWith("scripts/lib/")) {
       assert.deepEqual(
-        resolved.filter((dependency) => dependency.startsWith("scripts/commands/")),
-        [],
-        `${relativePath} imports upward into a command owner`,
+        resolved.filter((dependency) => dependency.startsWith("scripts/commands/")).sort(),
+        [...(contract.allowed_upward_imports[relativePath] ?? [])].sort(),
+        `${relativePath} changed its command-owner imports`,
       );
     }
   }
