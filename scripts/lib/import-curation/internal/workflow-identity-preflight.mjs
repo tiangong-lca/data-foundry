@@ -25,7 +25,7 @@ import {
   locationCodeMapForPatch,
   processCategoryPathForCode,
 } from "./workflow-patch-evidence.mjs";
-import { identityPreflightIndexPath } from "./workflow-queue-context.mjs";
+import { identityPreflightIndexPath } from "./workflow-queue-context.ts";
 import { deterministicRowsFileTransformEntries } from "./workflow-row-transform-context.mjs";
 import {
   classificationEntriesForPayload,

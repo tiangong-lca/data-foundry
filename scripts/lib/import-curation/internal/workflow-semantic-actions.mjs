@@ -16,7 +16,7 @@ import {
 import { collectCommonOtherTraceEntries } from "./trace-summary.ts";
 import { hasNonEmptyTraceEvidence } from "./workflow-authoring-tasks.mjs";
 import { hasStructuredTraceEvidence } from "./workflow-patch-evidence.mjs";
-import { isAnnualSupplyTarget } from "./workflow-queue-context.mjs";
+import { isAnnualSupplyTarget } from "./workflow-queue-context.ts";
 
 // part-02.mjs
 export function collectTextEntries(value, pathName = "") {

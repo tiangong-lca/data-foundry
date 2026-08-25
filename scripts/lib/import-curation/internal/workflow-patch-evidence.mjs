@@ -8,7 +8,7 @@ import {
   firstNonEmptyEvidenceValue,
   hasNonEmptyTraceEvidence,
 } from "./workflow-authoring-tasks.mjs";
-import { isAnnualSupplyTarget } from "./workflow-queue-context.mjs";
+import { isAnnualSupplyTarget } from "./workflow-queue-context.ts";
 
 // part-04.mjs
 export function hasStructuredTraceEvidence(value) {

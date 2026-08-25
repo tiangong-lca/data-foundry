@@ -6,7 +6,7 @@ import test from "node:test";
 import {
   buildQueueAuthoringContext,
   readCurationQueueContext,
-} from "../../scripts/lib/import-curation/internal/workflow-queue-context.mjs";
+} from "../../scripts/lib/import-curation/internal/workflow-queue-context.ts";
 
 function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import * as queueModule from "../../scripts/lib/import-curation/internal/workflow-queue-context.mjs";
+import * as queueModule from "../../scripts/lib/import-curation/internal/workflow-queue-context.ts";
 
 type JsonObject = Record<string, any>;
 

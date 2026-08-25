@@ -13,7 +13,7 @@ import {
 } from "./runtime-io.ts";
 import { identityDecisionApplyContextHasDecision } from "./workflow-identity-decision-context.mjs";
 import { readFileArtifactIfOption, readJsonLines } from "./workflow-patch-collect.mjs";
-import { isAnnualSupplyTarget } from "./workflow-queue-context.mjs";
+import { isAnnualSupplyTarget } from "./workflow-queue-context.ts";
 
 export function patchEvidenceIdentityKey(entry) {
   const id = asText(entry?.dataset_id ?? entry?.entity_id ?? entry?.id);

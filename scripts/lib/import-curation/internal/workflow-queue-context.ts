@@ -14,24 +14,95 @@ import {
   resolveRepoPath,
 } from "./runtime-io.ts";
 
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+export interface QueueTask extends JsonRecord {
+  schema_version?: number;
+  task_id?: string;
+  entity_type?: string;
+  entity_id?: string;
+  version?: string;
+  lock_key?: string;
+  depends_on?: unknown;
+  input_rows_file?: string | null;
+  closure_file?: string | null;
+  run_plan_file?: string | null;
+}
+
+export interface CurationQueueContext {
+  queueDir: string;
+  manifestPath: string;
+  manifest: JsonRecord;
+  tasks: QueueTask[];
+  tasksById: Map<string, QueueTask>;
+}
+
+export interface AuthoringQueueContext {
+  kind: string;
+  path: string;
+  rows: JsonRecord[];
+  rowsByIdentity: Map<string, JsonRecord>;
+}
+
+interface DatasetIdentity {
+  id: string;
+  version: string;
+}
+
+interface SchemaIssue {
+  code?: unknown;
+  path?: unknown;
+  message?: unknown;
+}
+
+interface QueueDependency {
+  task_id?: unknown;
+  ref?: unknown;
+  ref_path?: unknown;
+}
+
+interface CurationQueueOptions {
+  queueDir?: string;
+  curationQueueDir?: string;
+}
+
+interface IdentityPreflightOptions {
+  identityPreflightIndex?: string;
+  identityPreflightRequests?: string;
+  identityPreflightRequestsIndex?: string;
+  identityPreflightFile?: string;
+}
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isQueueTask(value: unknown): value is QueueTask {
+  return Boolean(value) && typeof value === "object";
+}
+
 // part-00.mjs
 export const annualSupplyFieldPath =
   "processDataSet.modellingAndValidation.dataSourcesTreatmentAndRepresentativeness.annualSupplyOrProductionVolume";
 
-export function isAnnualSupplyTarget(code, itemPath) {
+export function isAnnualSupplyTarget(code: unknown, itemPath: unknown): boolean {
   return (
     asText(code).startsWith("annual_supply_or_production_volume") ||
     asText(itemPath).includes("annualSupplyOrProductionVolume")
   );
 }
 
-export function isAnnualSupplySchemaIssue(issue) {
-  return isAnnualSupplyTarget(issue?.code, issue?.path);
+export function isAnnualSupplySchemaIssue(issue: unknown): boolean {
+  const typedIssue = issue as SchemaIssue | null | undefined;
+  return isAnnualSupplyTarget(typedIssue?.code, typedIssue?.path);
 }
 
-export function schemaIssueInstruction(issue) {
-  const code = String(issue?.code ?? "");
-  const issuePath = String(issue?.path ?? "");
+export function schemaIssueInstruction(issue: unknown): string | null {
+  const typedIssue = issue as SchemaIssue | null | undefined;
+  const code = String(typedIssue?.code ?? "");
+  const issuePath = String(typedIssue?.path ?? "");
   if (isAnnualSupplyTarget(code, issuePath)) {
     return `Use source evidence or an explicitly documented profile fallback to write annualSupplyOrProductionVolume as a real annualized quantity with unit, for example '<number> <unit>/year'. If no annualized source evidence exists, Foundry deterministic cleanup must write the intentionally non-physical sentinel '${annualSupplyMissingDataSentinelText}' so database-side follow-up can bulk-locate and replace it later.`;
   }
@@ -41,15 +112,16 @@ export function schemaIssueInstruction(issue) {
   return null;
 }
 
-export function schemaIssueCurationAction(issue) {
-  const code = String(issue?.code ?? "");
-  const issuePath = String(issue?.path ?? "");
+export function schemaIssueCurationAction(issue: unknown): JsonRecord {
+  const typedIssue = issue as SchemaIssue | null | undefined;
+  const code = String(typedIssue?.code ?? "");
+  const issuePath = String(typedIssue?.path ?? "");
   const annualSupplyIssue = isAnnualSupplySchemaIssue(issue);
   const base = {
     source: "schema",
-    code: issue?.code,
-    path: issue?.path ?? null,
-    message: issue?.message ?? null,
+    code: typedIssue?.code,
+    path: typedIssue?.path ?? null,
+    message: typedIssue?.message ?? null,
     instruction: schemaIssueInstruction(issue),
     ...(annualSupplyIssue
       ? {
@@ -97,11 +169,14 @@ export function schemaIssueCurationAction(issue) {
   };
 }
 
-export function readCurationQueueContext(repoRoot, options) {
+export function readCurationQueueContext(
+  repoRoot: string,
+  options: CurationQueueOptions,
+): CurationQueueContext | null {
   const queueDirOption = options.queueDir ?? options.curationQueueDir;
   const queueDir = resolveRepoPath(repoRoot, queueDirOption);
   if (!queueDirOption) return null;
-  if (!directoryExists(queueDir)) {
+  if (!queueDir || !directoryExists(queueDir)) {
     throw new Error(
       `--queue-dir must point to an existing curation queue directory: ${queueDirOption}`,
     );
@@ -112,8 +187,8 @@ export function readCurationQueueContext(repoRoot, options) {
       `--queue-dir is missing outputs/curation-queue-manifest.json: ${queueDirOption}`,
     );
   }
-  const manifest = readJson(manifestPath);
-  const tasks = ensureArray(manifest.tasks).filter((task) => task && typeof task === "object");
+  const manifest = readJson<JsonRecord>(manifestPath);
+  const tasks = ensureArray(manifest.tasks).filter(isQueueTask);
   return {
     queueDir,
     manifestPath,
@@ -123,16 +198,28 @@ export function readCurationQueueContext(repoRoot, options) {
   };
 }
 
-export function queueFilePath(repoRoot, queueContext, fileRef) {
+export function queueFilePath(
+  repoRoot: string,
+  queueContext: CurationQueueContext,
+  fileRef: string | null | undefined,
+): string | null {
   return resolveArtifactPath(repoRoot, fileRef, queueContext.queueDir);
 }
 
-export function queueFileRelativePath(repoRoot, queueContext, fileRef) {
+export function queueFileRelativePath(
+  repoRoot: string,
+  queueContext: CurationQueueContext,
+  fileRef: string | null | undefined,
+): string | null {
   const resolved = queueFilePath(repoRoot, queueContext, fileRef);
   return resolved ? repoRelativePath(repoRoot, resolved) : null;
 }
 
-export function summarizeQueueTask(repoRoot, queueContext, task) {
+export function summarizeQueueTask(
+  repoRoot: string,
+  queueContext: CurationQueueContext,
+  task: QueueTask | null | undefined,
+): JsonRecord | null {
   if (!task) return null;
   return {
     schema_version: task.schema_version ?? 1,
@@ -148,12 +235,20 @@ export function summarizeQueueTask(repoRoot, queueContext, task) {
   };
 }
 
-export function readQueueTaskRows(repoRoot, queueContext, task) {
+export function readQueueTaskRows(
+  repoRoot: string,
+  queueContext: CurationQueueContext,
+  task: QueueTask | null | undefined,
+): unknown[] {
   const inputRowsPath = queueFilePath(repoRoot, queueContext, task?.input_rows_file);
-  return fileExists(inputRowsPath) ? readRows(inputRowsPath) : [];
+  return inputRowsPath && fileExists(inputRowsPath) ? readRows(inputRowsPath) : [];
 }
 
-export function findQueueTask(queueContext, datasetType, identity) {
+export function findQueueTask(
+  queueContext: CurationQueueContext | null,
+  datasetType: string,
+  identity: DatasetIdentity,
+): QueueTask | null {
   if (!queueContext || datasetType === "lifecyclemodel") return null;
   const exact = queueContext.tasks.find(
     (task) =>
@@ -169,7 +264,12 @@ export function findQueueTask(queueContext, datasetType, identity) {
   );
 }
 
-export function buildQueueAuthoringContext(repoRoot, queueContext, datasetType, identity) {
+export function buildQueueAuthoringContext(
+  repoRoot: string,
+  queueContext: CurationQueueContext | null,
+  datasetType: string,
+  identity: DatasetIdentity,
+): JsonRecord | null {
   if (!queueContext) return null;
   const base = {
     queue_dir: repoRelativePath(repoRoot, queueContext.queueDir),
@@ -198,8 +298,10 @@ export function buildQueueAuthoringContext(repoRoot, queueContext, datasetType, 
   }
 
   const closurePath = queueFilePath(repoRoot, queueContext, task.closure_file);
-  const closure = readJsonIfExists(closurePath);
-  const dependencyRows = ensureArray(closure?.dependencies?.local_tasks).map((dependency) => {
+  const closure = readJsonIfExists<JsonRecord>(closurePath!);
+  const dependencies = isRecord(closure?.dependencies) ? closure.dependencies : {};
+  const dependencyRows = ensureArray(dependencies.local_tasks).map((value) => {
+    const dependency = value as QueueDependency;
     const dependencyTask = queueContext.tasksById.get(String(dependency.task_id ?? ""));
     return {
       ref: dependency.ref ?? null,
@@ -230,7 +332,11 @@ export function buildQueueAuthoringContext(repoRoot, queueContext, datasetType, 
   };
 }
 
-export function readAuthoringQueueContext(repoRoot, optionValue, kind) {
+export function readAuthoringQueueContext(
+  repoRoot: string,
+  optionValue: string | null | undefined,
+  kind: string,
+): AuthoringQueueContext | null {
   const queuePath = resolveRepoPath(repoRoot, optionValue);
   if (!optionValue) {
     return null;
@@ -238,16 +344,14 @@ export function readAuthoringQueueContext(repoRoot, optionValue, kind) {
   if (!queuePath || !fileExists(queuePath)) {
     throw new Error(`--${kind}-queue must point to a readable JSONL queue file: ${optionValue}`);
   }
-  const rows = readRows(queuePath).filter(
-    (row) => row && typeof row === "object" && !Array.isArray(row),
-  );
+  const rows = readRows(queuePath).filter(isRecord);
   return {
     kind,
     path: queuePath,
     rows,
     rowsByIdentity: new Map(
       rows
-        .map((row) => {
+        .map((row): [string, JsonRecord] => {
           const id = asText(
             row.dataset_id ?? row.entity_id ?? row.process_id ?? row.flow_id ?? row.id,
           );
@@ -259,7 +363,10 @@ export function readAuthoringQueueContext(repoRoot, optionValue, kind) {
   };
 }
 
-export function authoringQueueRowsForIdentity(queueContext, identity) {
+export function authoringQueueRowsForIdentity(
+  queueContext: AuthoringQueueContext | null,
+  identity: DatasetIdentity,
+): JsonRecord[] {
   if (!queueContext) return [];
   const exact = queueContext.rowsByIdentity.get(identityKey(identity));
   if (exact) return [exact];
@@ -271,7 +378,11 @@ export function authoringQueueRowsForIdentity(queueContext, identity) {
   return idOnly;
 }
 
-export function identityPreflightIndexPath(repoRoot, options, rowsFile) {
+export function identityPreflightIndexPath(
+  repoRoot: string,
+  options: IdentityPreflightOptions,
+  rowsFile: string | null | undefined,
+): string | null {
   const explicit =
     options.identityPreflightIndex ??
     options.identityPreflightRequests ??

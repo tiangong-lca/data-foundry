@@ -28,6 +28,7 @@ test("every static workflow queue consumer targets the typed module", () => {
     "scripts/lib/import-curation/internal/workflow-patch-evidence-context.mjs",
     "scripts/lib/import-curation/internal/workflow-semantic-actions.mjs",
     "test/unit/workflow-queue-context-contract.test.mts",
+    "test/unit/workflow-queue-context-native-errors.test.mts",
   ];
   for (const consumer of consumers) {
     const source = readRepoFile(consumer);

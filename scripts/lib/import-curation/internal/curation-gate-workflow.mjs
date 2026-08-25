@@ -58,7 +58,7 @@ export {
   readAuthoringQueueContext,
   readCurationQueueContext,
   schemaIssueCurationAction,
-} from "./workflow-queue-context.mjs";
+} from "./workflow-queue-context.ts";
 export {
   readCanonicalSupportRewriteContext,
   readCleanupTransformContext,
