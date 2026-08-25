@@ -975,7 +975,28 @@ export async function runProductionContactDraftCase(
   let secrets: string[] = [];
 
   try {
-    mkdirSync(options.outDir, { recursive: false, mode: 0o700 });
+    const outParent = path.dirname(options.outDir);
+    const outParentExisted = existsSync(outParent);
+    try {
+      mkdirSync(outParent, { recursive: true, mode: 0o700 });
+      if (!lstatSync(outParent).isDirectory()) throw new Error("not a directory");
+      if (!outParentExisted && process.platform !== "win32") chmodSync(outParent, 0o700);
+    } catch {
+      return fail(
+        "Production case output parent could not be created safely.",
+        "CASE_OUTPUT_PARENT_CREATE_FAILED",
+        2,
+      );
+    }
+    try {
+      mkdirSync(options.outDir, { recursive: false, mode: 0o700 });
+    } catch {
+      return fail(
+        "Production case output directory could not be created exclusively.",
+        "CASE_OUTPUT_CREATE_FAILED",
+        2,
+      );
+    }
     if (process.platform !== "win32") chmodSync(options.outDir, 0o700);
     const cleanCwd = path.join(options.outDir, "clean-cwd");
     mkdirSync(cleanCwd, { recursive: false, mode: 0o700 });
