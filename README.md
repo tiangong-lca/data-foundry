@@ -30,8 +30,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 4df2812efef776dc5f687d358ba19509ba192aa1
-lastReviewedNote: "Reviewed for Issue #65: remote verification cannot accept foreign/RLS-hidden state-0 missing datasets, and the accepted-diff helper/test advance onto the TS7 spine."
+lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
+lastReviewedNote: "Reviewed for Issue #65: foreign/RLS-hidden state-0 differences are blocked, while authoritative typed CommandSpecs bind exact final-row bytes."
 ---
 
 # TianGong LCA Data Foundry
@@ -54,7 +54,9 @@ Every toolchain or migration change must also pass from a clean arbitrary Git wo
 
 The Golden gate checks normalized command artifacts against a non-`HEAD` merge-base (normally `origin/main`) with a Node-native recursive comparator, so committed PR changes cannot degrade into a self-comparison and Windows runners do not depend on a Unix `diff` binary. Script-backed test executables such as fake TIDAS run through `process.execPath` on every platform, and `.gitattributes` keeps repository text at LF so Prettier observes the same bytes on every checkout.
 
-Artifact paths recorded by fixtures and command parsers must accept both platform separators. Durable JSON writers fsync the same writable descriptor they opened; POSIX permission-bit assertions apply only where the operating system implements those bits.
+Artifact paths recorded by fixtures must accept both platform separators. Durable JSON writers fsync the same writable descriptor they opened; POSIX permission-bit assertions apply only where the operating system implements those bits.
+
+Remote handoff commands are machine contracts, not shell snippets. `dataset-commit-handoff-plan` emits `tiangong-foundry.command-spec.v1` objects whose `executable` and `argv` are authoritative. `display` is derived for readers and is excluded from the command hash. Both commit and post-write verify specs bind the exact final rows path, bytes, and SHA-256; batch runners verify the binding immediately before `shell=false` execution.
 
 ## Import Lanes
 

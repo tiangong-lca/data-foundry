@@ -21,10 +21,10 @@ checkPaths:
   - scripts/lib/foundry-command-metadata.mjs
   - scripts/commands/incremental-change-set.mjs
   - scripts/lib/import-curation/**
-  - test/unit/foundry-command-metadata.test.mjs
+  - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c996633832ea23bf7883c7b219f524bf28e6ce7e
-lastReviewedNote: "Reviewed for Issue #63: typed-spine navigation, migration inventory, pnpm/TS7 gates, and clean-worktree validation."
+lastReviewedCommit: 58e034847e4d4cf9c94e3cc9fe032752f4436e07
+lastReviewedNote: "Reviewed for Issue #65: typed CommandSpec navigation and metadata-test migration."
 ---
 
 # Foundry AI Navigation
@@ -50,7 +50,7 @@ The checked source of truth for command ownership is `scripts/lib/foundry-comman
 - output artifacts
 - key tests
 
-`test/unit/foundry-command-metadata.test.mjs` enforces that the metadata covers all registered commands and that public commands remain reachable within two jumps from `scripts/foundry.mjs`.
+`test/unit/foundry-command-metadata.test.mts` enforces that the metadata covers all registered commands, that public commands remain reachable within two jumps from `scripts/foundry.mjs`, and that commit handoff metadata advertises the authoritative CommandSpec and final-row artifact evidence.
 
 The incremental lane is owned by `scripts/commands/incremental-change-set.mjs`, with its authoritative artifact and activation boundary in `docs/incremental-change-set-contract.md`. It composes Foundry-owned task evidence and stops before the CLI-owned mutation boundary.
 
@@ -69,6 +69,8 @@ entrypoint + argument contract
 Migrate downward in that order, starting each slice with a failing characterization or realistic case. Keep the existing `.mjs` implementation until the TypeScript replacement preserves help, stdout, exit, stage, artifact, and safety contracts. Update the inventory in the same change; a typed wrapper around an untyped business module does not complete that module.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
+
+The typed handoff primitive is `scripts/lib/foundry-command-spec.ts`. Navigate there for exact-key parsing, canonical command hashing, critical-flag uniqueness, final-row artifact facts, or pre-spawn drift checks. Callers must never reconstruct argv from `display`.
 
 ## Import-Curation Modules
 

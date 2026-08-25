@@ -1081,8 +1081,16 @@ export const commandMetadata = {
     ownerModule: "scripts/commands/commit-handoff.mjs",
     ownerExport: "createCommitHandoffCommands().runDatasetCommitHandoffPlan",
     inputs: ["mutation manifest", "finalize report", "location audit evidence"],
-    outputs: ["commit handoff plan JSON report"],
+    outputs: [
+      "commit handoff plan JSON report",
+      "authoritative commit and post-write verify CommandSpecs with executable, argv, display, binding, and SHA-256",
+      "final rows artifact facts with exact path, bytes, and SHA-256",
+    ],
     keyTests: [
+      nodeTest(
+        "test/unit/foundry-command-spec.test.mts",
+        "CommandSpec blocks artifact byte drift before spawn and never executes display",
+      ),
       nodeTest(
         "test/scenarios/full-context-completion-closeout.test.mjs",
         "commit handoff blocks nonzero location audit blockers",

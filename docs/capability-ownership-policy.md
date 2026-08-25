@@ -24,8 +24,8 @@ checkPaths:
   - docs/safety-policy.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 4df2812efef776dc5f687d358ba19509ba192aa1
-lastReviewedNote: "Reviewed for Issue #65: Foundry may aggregate readback but cannot waive CLI/RLS visibility for foreign state-0 references."
+lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
+lastReviewedNote: "Reviewed for Issue #65: Foundry owns typed handoff/artifact binding but cannot waive CLI/RLS visibility for foreign state-0 references."
 ---
 
 # Capability Ownership Policy
@@ -69,6 +69,8 @@ The TypeScript migration does not change capability ownership. Foundry may type 
 Cross-platform Git line-ending and test-harness policy are also Foundry-owned delivery tooling. They may normalize repository text and fixture dispatch, but they do not normalize or redefine any sibling capability output.
 
 Foundry also owns portability of its local artifact paths, command-plan parsing, and durable file writes. Separator normalization and writable-descriptor fsync preserve the same Foundry contract on each OS; they do not move CLI execution or Rust validation semantics into Foundry.
+
+Foundry owns the `tiangong-foundry.command-spec.v1` handoff envelope: strict executable/argv validation, duplicate critical-flag rejection, reader-only display rendering, command hashing, and exact input artifact facts. The published CLI still owns the command's remote behavior. Foundry runners may execute only the parsed executable and argv with `shell=false`, after rechecking bound artifact bytes.
 
 Profile-gated batch commit does not change ownership: Foundry may decide that an exact scope has passed policy and handoff gates, but the actual mutation command remains an official CLI/platform command executed under an account guard. Foundry's default platform invocation is the exact installed CLI package, `pnpm exec tiangong-lca ...`; local CLI binary overrides are only explicit operator/test state, not the workflow contract.
 

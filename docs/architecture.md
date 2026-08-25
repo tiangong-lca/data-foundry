@@ -32,8 +32,8 @@ checkPaths:
   - tsconfig*.json
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 4df2812efef776dc5f687d358ba19509ba192aa1
-lastReviewedNote: "Reviewed for Issue #65: accepted remote differences exclude every foreign/RLS-hidden state-0 reference, and the helper/test are now typed."
+lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
+lastReviewedNote: "Reviewed for Issue #65: accepted differences exclude foreign/RLS-hidden state-0 rows; typed CommandSpecs make handoff inputs content-addressed."
 ---
 
 # Architecture
@@ -84,6 +84,8 @@ Build and test resolution must be worktree-local. A clean arbitrary Git worktree
 Cross-platform characterization is also explicit: the Golden harness compares normalized outputs to a non-`HEAD` merge-base, performs recursive comparison in Node rather than calling an external Unix utility, and uses full Git history in CI. Script-backed executable overrides are represented as an executable plus argv prefix and run through Node on macOS, Linux, and Windows. The root `.gitattributes` fixes text files to LF while allowing Windows launcher exceptions, preventing checkout policy from masquerading as format drift.
 
 The artifact layer treats JSON paths as portable identifiers: scope extraction normalizes separators, transitional command parsers retain native backslashes, and durable writers flush a writable descriptor before close. POSIX file-mode assertions are evidence on POSIX platforms rather than a fabricated Windows contract.
+
+The handoff execution boundary is typed and content-addressed. `scripts/lib/foundry-command-spec.ts` strictly parses `tiangong-foundry.command-spec.v1`, rejects duplicate safety-critical flags, and hashes `executable`, `argv`, and artifact bindings. `display` is derived but non-authoritative. Commit and verify bind the same `final_rows_artifact`; BAFU runners re-read its byte count and SHA-256 before spawning the published CLI without a shell.
 
 ## Foundry-Owned Layers
 

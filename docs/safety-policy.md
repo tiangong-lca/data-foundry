@@ -22,8 +22,8 @@ checkPaths:
   - specs/automated-lca-capability-registry.json
   - specs/workspace-capability-adapters.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 4df2812efef776dc5f687d358ba19509ba192aa1
-lastReviewedNote: "Reviewed for Issue #65: foreign/RLS-hidden state-0 missing datasets are never accepted as successful readback."
+lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
+lastReviewedNote: "Reviewed for Issue #65: authoritative argv handoffs bind final-row bytes, and foreign/RLS-hidden state-0 missing rows never count as successful readback."
 ---
 
 # Safety Policy
@@ -68,6 +68,7 @@ Remote database writes are blocked unless:
 - when `common:other.tiangongfoundry:unresolvedTrace` or `sourceExchangeCompleteness` entries exist, the mutation manifest exports them as JSONL follow-up queues for later database-side curation
 - mutation-manifest evidence reports point to the exact write rows: schema and remote verification `input_path` match the rows file, cleanup `cleaned_rows_file` matches the rows file, and AI patch apply output chains into cleanup input when AI patching was used
 - `dataset-commit-handoff-plan` reports `ready_for_explicit_commit` for the exact finalize report, mutation manifest, final rows file, target user id, and expected state_code
+- commit and post-write verify are authoritative `tiangong-foundry.command-spec.v1` objects; their SHA-256 binds executable, argv, and the same final-row path/bytes/SHA-256, while display is never executed and every runner rechecks artifact bytes before `shell=false` spawn
 - insert/versioned writes have explicit reasons
 - state_code=100 rows have source-review records instead of direct overwrite
 - a dry-run artifact exists

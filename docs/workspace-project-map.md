@@ -22,8 +22,8 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 4df2812efef776dc5f687d358ba19509ba192aa1
-lastReviewedNote: "Reviewed for Issue #65: CLI/RLS owns visible readback truth; Foundry cannot accept a hidden foreign draft as verified."
+lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
+lastReviewedNote: "Reviewed for Issue #65: typed handoff invocation stays Foundry-owned, while CLI/RLS owns mutation and visible readback truth for foreign drafts."
 ---
 
 # Workspace Project Map

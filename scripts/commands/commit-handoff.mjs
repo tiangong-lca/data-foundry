@@ -433,7 +433,7 @@ export function createCommitHandoffCommands({
       },
       policy: {
         commit_boundary:
-          "This plan does not write the database. The user must explicitly run the commit command, then run the post_write_verify command.",
+          "This plan does not write the database. An approved runner must execute the authoritative commit CommandSpec, then the post_write_verify CommandSpec, without a shell.",
         post_write_verify_required: true,
         compare_root_payload_required: true,
         trace_queue_policy:
