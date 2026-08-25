@@ -29,6 +29,11 @@ checkPaths:
   - scripts/commands/cli-wrappers.ts
   - scripts/commands/execution-capsule.ts
   - scripts/commands/post-write-closeout.ts
+  - scripts/commands/library-scope-workflow.ts
+  - scripts/commands/bafu-leaf-classification-tasks.ts
+  - scripts/commands/bafu-auto-authoring.ts
+  - scripts/commands/bafu-process-scope-e2e.ts
+  - scripts/commands/bafu-batch-import-run.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-cli.mjs
   - scripts/lib/foundry-command-registry.ts
@@ -90,8 +95,8 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: navigation records typed reference/mutation, runtime-command, decision, and import-curation entry owners; exact proof/order/bytes/hashes, argv/seals/closeout, decision queues/stages, complete namespaces/live identity, semantic metadata, and Node 24 source/emitted evidence remain explicit."
+lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: navigation records the typed generic-library through BAFU batch topology, wrapper delegation, exact help/argv/artifact contracts, resumable execution and fail-closed commit boundary under local evidence."
 ---
 
 # Foundry AI Navigation
@@ -188,6 +193,8 @@ The typed curation planner is split the same way. `internal/curation-gate-workfl
 The typed command factories are `scripts/commands/tasks.ts`, `import-completion.ts`, `commit-handoff.ts`, `identity-decision-task.ts`, and `support-cache.ts`. Navigate to them for filesystem task state, closeout aggregation, artifact-bound commit/verify CommandSpecs, content-addressed identity decision tasks, or canonical public-support read/autofill behavior respectively. They preserve the existing command registry and metadata names and must not absorb remote execution semantics.
 
 The typed mutation reference stack starts at `workflow-reference-closure.ts` for reference/table/partition algebra, then `workflow-source-reference-context.ts` for ordered source proof admission, then the pure `mutation-manifest-workflow.ts` aggregate and `mutation-manifest.ts` artifact runner. Navigate downward for individual proof rules; the runner only partitions and reports exact evidence and never executes a write.
+
+The typed high-level orchestration path is `library-scope-workflow.ts` for profile-agnostic library/scope preparation, then `bafu-leaf-classification-tasks.ts` and `bafu-auto-authoring.ts`, then `bafu-process-scope-e2e.ts`, with `bafu-batch-import-run.ts` owning resume, selection, interruption, bounded parallelism and explicit handoff delegation. USLCI and Worldsteel adapters import that same batch owner with frozen profile configuration. Start at command metadata and the Wave 26 migration tests, then navigate to the narrower command owner for blocker and artifact semantics.
 
 The typed runtime command owners are `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts`. Navigate to the wrapper for direct executable/argv delegation and process diagnostics, to the capsule for offline immutable admission and attempt-state evidence, and to closeout for already-produced commit/readback aggregation. Root uniqueness and accepted-difference decisions remain in `post-write-root-proof.ts` and `remote-verification-accepted-diff.ts`.
 

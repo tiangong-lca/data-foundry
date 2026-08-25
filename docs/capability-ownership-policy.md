@@ -34,6 +34,11 @@ checkPaths:
   - scripts/commands/identity-decisions.ts
   - scripts/commands/classification-decisions.ts
   - scripts/commands/location-decisions.ts
+  - scripts/commands/library-scope-workflow.ts
+  - scripts/commands/bafu-leaf-classification-tasks.ts
+  - scripts/commands/bafu-auto-authoring.ts
+  - scripts/commands/bafu-process-scope-e2e.ts
+  - scripts/commands/bafu-batch-import-run.ts
   - scripts/lib/import-curation.ts
   - scripts/lib/import-curation/index.ts
   - scripts/lib/import-curation/profiles.ts
@@ -65,8 +70,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typing reference/mutation planning, runtime commands, decision factories, and identity-preserving import-curation re-exports changes no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse semantics, or sibling boundary."
+lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: typing generic-library and BAFU orchestration changes no capability owner, remote operation, transport/readback, schema/search, profile, Worldsteel/Date.parse semantics, or sibling boundary; wrappers still delegate into the guarded CLI-owned mutation path."
 ---
 
 # Capability Ownership Policy
@@ -115,6 +120,8 @@ Foundry also owns portability of its local artifact paths, command-plan parsing,
 Foundry owns the `tiangong-foundry.command-spec.v1` handoff envelope: strict executable/argv validation, duplicate critical-flag rejection, reader-only display rendering, command hashing, and exact input artifact facts. The published CLI still owns the command's remote behavior. Foundry runners may execute only the parsed executable and argv with `shell=false`, after rechecking bound artifact bytes.
 
 Profile-gated batch commit does not change ownership: Foundry may decide that an exact scope has passed policy and handoff gates, but the actual mutation command remains an official CLI/platform command executed under an account guard. Foundry's default platform invocation is the exact installed CLI package, `pnpm exec tiangong-lca ...`; credential-scoped account execution additionally requires its CLI 0.1.1 intent-bound identity receipt. Local CLI binary overrides are only explicit operator/test state, not the workflow contract.
+
+High-level library and BAFU orchestration is Foundry-owned composition, not a transfer of sibling behavior. Foundry may order classification, authoring, scope-finalize, ledger, pause/preflight and bounded-parallel stages and may delegate an already-authorized handoff as executable plus argv. The CLI still owns mutation and readback semantics, profiles own dataset-specific policy, and USLCI/Worldsteel wrappers may configure the shared engine only within those existing boundaries.
 
 Deterministic import/conversion/schema validation follows a separate native-tool boundary. Foundry selects the Rust `tidas` executable with `--tidas-bin`, `TIDAS_BIN`, then `PATH`, and optional config with `--tidas-config` then `TIDAS_CONFIG`. It accepts compatible 0.2.x releases only after a `tidas version` handshake proves `tidas.operation-report.v1`; it does not install a Python package, inspect a Python checkout, or pin one patch release. A script-backed test override is dispatched through Node plus an argv prefix on every platform; that portability adapter does not move Rust validation behavior into Foundry. Foundry may materialize the official validation-batch manifest and map the stable Rust report/exit result into its existing validation report, but must not reproduce schema or converter rules.
 

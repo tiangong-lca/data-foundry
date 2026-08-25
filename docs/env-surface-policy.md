@@ -20,8 +20,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - scripts/lib/foundry-runtime-utils.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24 integration: curation planners add no environment reads; typing five command factories adds or removes no variable, and support-cache retains the existing API-base/publishable-key/user-key read-only refresh surface while tests use local stubs and no repository credentials."
+lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: typing five orchestration owners adds, removes, or broadens no environment variable; characterization uses local fixtures and reads neither repository `.env` nor production credentials."
 ---
 
 # Environment Surface Policy

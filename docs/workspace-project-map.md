@@ -32,6 +32,11 @@ checkPaths:
   - scripts/commands/identity-decisions.ts
   - scripts/commands/classification-decisions.ts
   - scripts/commands/location-decisions.ts
+  - scripts/commands/library-scope-workflow.ts
+  - scripts/commands/bafu-leaf-classification-tasks.ts
+  - scripts/commands/bafu-auto-authoring.ts
+  - scripts/commands/bafu-process-scope-e2e.ts
+  - scripts/commands/bafu-batch-import-run.ts
   - scripts/lib/import-curation.ts
   - scripts/lib/import-curation/index.ts
   - scripts/lib/import-curation/profiles.ts
@@ -63,13 +68,15 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation, runtime-command, decision, and import-curation entry owners remain Foundry-local navigation; deterministic decision apply remains CLI-routed and cross-repository ownership, readback, profiles, search, Worldsteel/Date.parse, and execution boundaries are unchanged."
+lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: typed library/BAFU orchestration remains Foundry-local composition; CLI-routed mutation/readback, profile ownership, search, Worldsteel/Date.parse, and cross-repository execution boundaries are unchanged."
 ---
 
 # Workspace Project Map
 
 Foundry should route reusable work to the owning repository instead of copying implementation locally.
+
+The Wave 26 library, classification, authoring, process-scope and batch modules are Foundry-local orchestrators. Their TypeScript migration changes navigation and static ownership only: shared CLI commands, profile policy, database behavior and sibling-project semantics remain with the owners listed below.
 
 | Need | Owning project | Normal surface |
 | --- | --- | --- |

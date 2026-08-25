@@ -36,6 +36,11 @@ checkPaths:
   - scripts/commands/identity-decisions.ts
   - scripts/commands/classification-decisions.ts
   - scripts/commands/location-decisions.ts
+  - scripts/commands/library-scope-workflow.ts
+  - scripts/commands/bafu-leaf-classification-tasks.ts
+  - scripts/commands/bafu-auto-authoring.ts
+  - scripts/commands/bafu-process-scope-e2e.ts
+  - scripts/commands/bafu-batch-import-run.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
@@ -104,8 +109,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation, runtime-command, decision, and import-curation entry adapters preserve exact evidence/order/bytes/hashes, argv/seals/closeout, queues/blockers, deterministic delegation, and identity-preserving navigation without moving orchestration, CLI, schema, search, profile, Worldsteel, database, or production authority."
+lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: typed library/BAFU orchestration preserves profile boundaries, dependency order, resumable bounded execution, deterministic gates/artifacts, shell-free argv and guarded commit delegation without moving CLI, schema, search, profile, Worldsteel, database, or production authority."
 ---
 
 # Architecture
@@ -192,6 +197,8 @@ The typed curation planning boundary follows those authoring layers. `curation-g
 The typed command-owner layer now includes filesystem task/completion aggregation, commit handoff and identity task preparation, and canonical support-cache refresh/autofill. These factories keep their injected/local orchestration boundaries: task/report bytes and order remain content-stable, handoff only emits artifact-bound CommandSpecs, identity tasks only snapshot and package local evidence, and support refresh performs authenticated read-only queries. No factory implements CLI mutation, database semantics, review, or publication.
 
 The typed mutation reference stack remains an offline planning boundary. Reference closure classifies local roots and externally proven dependencies without querying or mutating the database; source context admits only ordered, in-scope public-canonical proofs; mutation manifest aggregates exact evidence and writes JSON/JSONL partitions. If any item is blocked, no write-candidate payload is emitted for execution.
+
+The typed dataset-orchestration layer composes those owners without absorbing them. The generic library workflow prepares deduplicated library and scope artifacts; BAFU classification, auto-authoring and process-scope owners retain dataset-specific policy; the shared batch engine adds resumable ledgers, bounded parallelism, interruption/preflight modes and explicit handoff delegation. It owns local ordering and checkpoints, not CLI mutation, profile meaning, remote state or publication.
 
 The typed runtime-command layer also includes CLI wrappers, offline capsule admission and post-write closeout. Wrappers delegate to the installed CLI with an executable and argv array; capsule admission writes immutable local evidence with zero dispatch; closeout aggregates already-produced commit/readback proof without issuing a remote operation. Unique-root, owner/state/payload, accepted-diff and production-test rules remain in their typed proof owners rather than moving into transport code.
 

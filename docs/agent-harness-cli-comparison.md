@@ -19,8 +19,8 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - scripts/commands/core.mjs
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration freshness: the pnpm acceptance loop, Stop-hook continuation/relationship, and ignored report policy remain unchanged while runtime commands, decisions, and import-curation entries migrate to typed, locally characterized boundaries and inventory decreases monotonically."
+lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 freshness: the pnpm acceptance loop, Stop-hook continuation/relationship, and ignored report policy remain unchanged while five orchestration owners migrate under local RED/GREEN characterization and the inventory decreases 79→74."
 related:
   - docs/file-organization.md
   - docs/codex-stop-hook.md

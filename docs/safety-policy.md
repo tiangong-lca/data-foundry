@@ -29,6 +29,11 @@ checkPaths:
   - scripts/commands/cli-wrappers.ts
   - scripts/commands/execution-capsule.ts
   - scripts/commands/post-write-closeout.ts
+  - scripts/commands/library-scope-workflow.ts
+  - scripts/commands/bafu-leaf-classification-tasks.ts
+  - scripts/commands/bafu-auto-authoring.ts
+  - scripts/commands/bafu-process-scope-e2e.ts
+  - scripts/commands/bafu-batch-import-run.ts
   - scripts/lib/import-curation/internal/prewrite-cleanup.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
@@ -57,8 +62,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation and runtime-command owners preserve fail-closed foreign/reference gates, exact partitions/bytes/hashes, empty writes on blockers, shell-free argv, zero-dispatch capsule admission, unique-root readback, production accepted-diff restrictions, and native errors without broadening write authority."
+lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: typed library/BAFU orchestration preserves blocker and artifact order, read-only preflight, resume/interruption/bounded parallelism, shell-free argv, receipt/hash binding and explicit-commit-only fail-close without broadening production authority."
 ---
 
 # Safety Policy
@@ -115,6 +120,7 @@ Remote database writes are blocked unless:
 - after commit and readback, Foundry `dataset-post-write-closeout` reports `completed`; it must prove the handoff was ready, the CLI commit report was a real commit with no row failures, post-write verification used the same final rows, root readback checks have equal local/remote payload hashes, owner/state_code match the handoff, profile-required full schema/YAML/context AI proof and evidence counts remain attached, and any `common:other` trace queues remain attached
 - for a task with one or more committed scopes, Foundry `dataset-import-completion-report` reports `completed` after aggregating every closeout report required by the task; missing closeouts, duplicate closeouts for the same dataset type/final rows, non-completed closeouts, mismatched finalize/mutation scopes, missing profile-required full-context proof or evidence counts, unreadable trace queues, or missing required dataset types keep the task blocked
 - for resumable batch imports, Foundry `dataset-import-ledger-report` must be able to summarize the append-only import ledger into `resume.skipped-verified.jsonl` and `resume.plan.jsonl`, preserving ready-only execution across reruns
+- high-level library/BAFU orchestration may resume, pause, stop claiming scopes, run bounded workers, or emit read-only preflight plans, but none of those states grants write authority; only an explicit commit request may delegate an artifact-bound, receipt-checked executable-plus-argv handoff after every scope gate passes
 - Foundry task state moves from `tasks/active` to `tasks/done` only through `task-complete`, which requires a matching `dataset-import-completion-report.completed` for the same task id, at least one post-write closeout scope, and profile-required full schema/YAML/context AI completion proof before entry
 
 For `state_code=0`, ordinary account-owned working-data repair should use update-first semantics. For missing or ambiguous `state_code`, stop at dry-run and create a follow-up task.

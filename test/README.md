@@ -29,6 +29,11 @@ checkPaths:
   - scripts/commands/cli-wrappers.ts
   - scripts/commands/execution-capsule.ts
   - scripts/commands/post-write-closeout.ts
+  - scripts/commands/library-scope-workflow.ts
+  - scripts/commands/bafu-leaf-classification-tasks.ts
+  - scripts/commands/bafu-auto-authoring.ts
+  - scripts/commands/bafu-process-scope-e2e.ts
+  - scripts/commands/bafu-batch-import-run.ts
   - scripts/lib/foundry-args.ts
   - scripts/commands/identity-decisions.ts
   - scripts/commands/classification-decisions.ts
@@ -162,6 +167,11 @@ checkPaths:
   - test/unit/wave25-mutation-manifest-migration.test.mts
   - test/unit/wave25-identity-decision-command-migration.test.mts
   - test/unit/wave25-classification-location-command-migration.test.mts
+  - test/unit/wave26-library-scope-command-migration.test.mts
+  - test/unit/wave26-bafu-leaf-classification-command-migration.test.mts
+  - test/unit/wave26-bafu-auto-authoring-command-migration.test.mts
+  - test/unit/wave26-bafu-process-scope-command-migration.test.mts
+  - test/unit/wave26-bafu-batch-command-migration.test.mts
   - test/commands/classification-decisions.test.mjs
   - test/commands/location-decisions.test.mjs
   - test/scenarios/flow-identity-decisions.test.mjs
@@ -170,8 +180,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: tests cover reference/mutation fail-close, runtime process/capsule/closeout proof, decision help/queues/stages/artifacts, and native-only import-curation leaf/index/public entries with exact namespaces, live owner identity, consumers/metadata, Node 24 source/emitted loading, and native errors."
+lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: tests cover five native-only orchestration owners, exact exports/help/consumers/metadata, realistic library/scope/classification/identity blockers, resume/pause/parallel/preflight/commit delegation, artifact order, native errors, and zero type escapes."
 ---
 
 # Test Layout
@@ -254,6 +264,8 @@ Wave 25 covers three runtime command owners. `unit/cli-wrapper-command-factory.t
 Wave 25 covers the three decision command factories. `unit/wave25-identity-decision-command-migration.test.mts` and `unit/wave25-classification-location-command-migration.test.mts` pin native-only sources, exact export identity, zero explicit type escapes or suppressions, every dispatcher/metadata consumer, and exact serialized help reports. The realistic command/scenario fixtures continue to pin option aliases/defaults, queue and row path order, task-context and unclosed-item blockers, CLI argv/stage short-circuiting, identity output partitioning, report/JSONL writes, and native malformed-artifact failures.
 
 Wave 25 covers two re-export families. `unit/import-curation-leaf-barrels-migration.test.mts` pins the exact profile/trace namespaces and direct owner references. `unit/import-curation-entry-barrels-migration.test.mts` pins the complete eight-export index/public namespace, every owner reference, Foundry CLI injection keys, metadata owner routes, TS-only atomic entry migration, and a clean temporary TypeScript build loaded by Node 24. No fixture reads credentials, `.env`, production state, or ignored Foundry artifacts.
+
+Wave 26 covers five dependency-ordered orchestration families. The five `unit/wave26-*-command-migration.test.mts` contracts require one native zero-escape owner, every dispatcher/metadata/wrapper consumer and exact serialized help bytes. Existing command and scenario fixtures remain the behavior authority for generic-versus-BAFU configuration, library/scope/classification/identity blocker and artifact order, resume ledgers, pause/stop, bounded parallel selection, read-only preflight, guarded commit delegation, native errors and deterministic report/JSONL bytes. All fixtures are local and read neither `.env` nor production.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

@@ -35,6 +35,11 @@ checkPaths:
   - scripts/commands/identity-decisions.ts
   - scripts/commands/classification-decisions.ts
   - scripts/commands/location-decisions.ts
+  - scripts/commands/library-scope-workflow.ts
+  - scripts/commands/bafu-leaf-classification-tasks.ts
+  - scripts/commands/bafu-auto-authoring.ts
+  - scripts/commands/bafu-process-scope-e2e.ts
+  - scripts/commands/bafu-batch-import-run.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -179,10 +184,15 @@ checkPaths:
   - test/unit/wave25-classification-location-command-migration.test.mts
   - test/unit/import-curation-leaf-barrels-migration.test.mts
   - test/unit/import-curation-entry-barrels-migration.test.mts
+  - test/unit/wave26-library-scope-command-migration.test.mts
+  - test/unit/wave26-bafu-leaf-classification-command-migration.test.mts
+  - test/unit/wave26-bafu-auto-authoring-command-migration.test.mts
+  - test/unit/wave26-bafu-process-scope-command-migration.test.mts
+  - test/unit/wave26-bafu-batch-command-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: typed reference/mutation planning, runtime commands, decision factories, and import-curation re-exports preserve proof/order/bytes/hashes, fail-closed authority, process/capsule/closeout contracts, decision queues/stages, complete namespaces/live identity, consumer topology, and Node 24 source/emitted loading."
+lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: typed dataset orchestration preserves generic/BAFU configuration, dependency topology, resume/pause/parallel/preflight/commit delegation, blocker/artifact order, exact help/argv/receipt/hash contracts, native errors, and fail-closed authority."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -252,6 +262,8 @@ The curation planning boundary is native TypeScript as well. Its aggregate facad
 The task/completion, commit-handoff/identity-task, and support-cache command owners are native TypeScript. Preserve queue and closeout order, exact task/report/snapshot bytes, final-row artifact facts, authoritative CommandSpec argv, identity action dedupe, support-cache paging and row order, and every established blocker/native error. Credential-bearing support refresh remains a read-only operator command; ordinary tests must use local HTTP stubs and must not read `.env` or access production.
 
 The mutation reference stack is native TypeScript. Preserve reference DFS and table resolution, planned-self/public-remote/proven/unresolved/foreign closure partitions, explicit-before-default source rewrite selection, public-canonical source proof filtering, write/reference/blocked item order and report/items bytes. A blocked manifest must keep write-candidates empty; rendered plans and evidence never become mutation authority.
+
+The high-level dataset orchestration layer is native TypeScript. `library-scope-workflow.ts` stays profile-agnostic; BAFU classification, auto-authoring, process-scope and batch owners retain their established BAFU defaults, while USLCI and Worldsteel wrappers delegate into the shared typed batch engine. Preserve resume ledgers, pause/stop and bounded-parallel selection, read-only preflight, exact scope/library/identity/classification gate order, local artifact bytes, shell-free argv and receipt/hash binding. Only the existing explicit `--commit` path may reach a guarded CLI handoff.
 
 CLI wrappers, execution-capsule admission, and post-write closeout are native TypeScript. Wrappers must pass executable plus argv arrays directly, retain the existing environment/CWD/stdout/stderr/exit contract, and surface native spawn errors without executing display text. Capsule admission stays offline and unattempted until exact external dispatch evidence exists. Closeout stays read-only and requires one exact owner/state/payload readback per intended root; production-test mode accepts no traceHash normalization, and foreign or RLS-hidden missing rows never pass.
 

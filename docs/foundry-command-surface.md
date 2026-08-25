@@ -22,6 +22,11 @@ checkPaths:
   - scripts/commands/identity-decisions.ts
   - scripts/commands/classification-decisions.ts
   - scripts/commands/location-decisions.ts
+  - scripts/commands/library-scope-workflow.ts
+  - scripts/commands/bafu-leaf-classification-tasks.ts
+  - scripts/commands/bafu-auto-authoring.ts
+  - scripts/commands/bafu-process-scope-e2e.ts
+  - scripts/commands/bafu-batch-import-run.ts
   - scripts/lib/import-curation.ts
   - scripts/lib/import-curation/index.ts
   - scripts/lib/import-curation/profiles.ts
@@ -55,9 +60,14 @@ checkPaths:
   - test/unit/wave25-classification-location-command-migration.test.mts
   - test/unit/import-curation-entry-barrels-migration.test.mts
   - test/unit/import-curation-leaf-barrels-migration.test.mts
+  - test/unit/wave26-library-scope-command-migration.test.mts
+  - test/unit/wave26-bafu-leaf-classification-command-migration.test.mts
+  - test/unit/wave26-bafu-auto-authoring-command-migration.test.mts
+  - test/unit/wave26-bafu-process-scope-command-migration.test.mts
+  - test/unit/wave26-bafu-batch-command-migration.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: a2832001e1b67bdc8a1a9eb7707a99187f787a58
-lastReviewedNote: "Reviewed for Issue #67 Wave 25 integration: reference/mutation, runtime-command, decision, and import-curation entry owners move to TS7 without changing command names/categories, semantic export identity, exact help, argv/exit, reports/artifacts, profiles, Worldsteel/Date.parse semantics, or remote-write modes."
+lastReviewedCommit: 8e7f3efa4c9586ff9ceab68f2ed454f8c3af2ccf
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: five dataset-orchestration owners move to TS7 without changing command names/categories, exports, exact help/argv/exit/report artifacts, profile defaults, adapter semantics, Worldsteel/Date.parse behavior, or remote-write modes."
 ---
 
 # Foundry Command Surface
@@ -84,6 +94,8 @@ Wave 24 moves `tasks`, `import-completion`, `commit-handoff`, `identity-decision
 Wave 25 moves `cli-wrappers`, `execution-capsule`, and `post-write-closeout` to native TypeScript. The wrappers still delegate executable plus argv arrays and surface process output/errors; capsule admission remains offline and zero-authority; closeout remains read-only and accepts only exact, unique, account/state-bound readback proof under the existing ordinary/production accepted-diff policy.
 
 Wave 25 moves the import-curation leaf, index, and public barrels to TypeScript while command metadata continues to identify semantic owner modules. Metadata links the entry namespace contract as navigation evidence for profile listing, authoring, curation, cleanup, and mutation commands; the runtime command surface and handler injection remain unchanged.
+
+Wave 26 moves the generic library-scope owner and four BAFU orchestration owners to TypeScript. Registered names, metadata categories/exports, serialized help, option aliases/defaults, blocker and artifact order, exit mapping, resumable preflight/batch behavior and explicit-commit-only modes remain unchanged. The USLCI and Worldsteel wrappers now point directly at the typed batch owner but retain their existing frozen profile configuration.
 
 ## Categories
 
