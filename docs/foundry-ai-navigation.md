@@ -23,7 +23,7 @@ checkPaths:
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 58e034847e4d4cf9c94e3cc9fe032752f4436e07
+lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
 lastReviewedNote: "Reviewed for Issue #65: typed CommandSpec navigation and metadata-test migration."
 ---
 
