@@ -18,7 +18,7 @@ import {
   writeJsonLines,
   writeText,
 } from "../fixtures/foundry-core.ts";
-import { createFixture } from "../fixtures/full-context-fixtures.mjs";
+import { createFixture } from "../fixtures/full-context-fixtures.ts";
 import { assertFoundryCommandSpecArtifactsCurrent } from "../../scripts/lib/foundry-command-spec.ts";
 
 test("full-context import completion gates block missing proof and pass evidenced BAFU scopes", () => {

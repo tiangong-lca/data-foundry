@@ -34,8 +34,8 @@ const fixtureRootBasenames = {
 } as const;
 
 const expectedFixtureRootConsumers = [
-  "test/fixtures/full-context-fixtures.mjs",
-  "test/fixtures/mutation-fixtures.mjs",
+  "test/fixtures/full-context-fixtures.ts",
+  "test/fixtures/mutation-fixtures.ts",
   "test/scenarios/authoring-shared-context.test.mjs",
   "test/scenarios/curation-cleanup-quality-gates.test.mjs",
   "test/scenarios/decision-task-context-and-classification.test.mjs",

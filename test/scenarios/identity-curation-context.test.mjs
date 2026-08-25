@@ -16,12 +16,12 @@ import {
   writeJson,
   writeJsonLines,
 } from "../fixtures/foundry-core.ts";
-import { writeContextPackFiles } from "../fixtures/full-context-fixtures.mjs";
+import { writeContextPackFiles } from "../fixtures/full-context-fixtures.ts";
 import { readIdentityPreflightIndexRow } from "../../scripts/lib/import-curation/internal/workflow-identity-preflight.ts";
 import {
   writeCompletedIdentityPreflightIndex,
   writeIdentityPreflightExecutionFixture,
-} from "../fixtures/identity-fixtures.mjs";
+} from "../fixtures/identity-fixtures.ts";
 import {
   flowRow,
   flowRowWithClassification,

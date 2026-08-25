@@ -13,7 +13,7 @@ import {
   writeJson,
   writeJsonLines,
 } from "../fixtures/foundry-core.ts";
-import { writeCompletedIdentityPreflightIndex } from "../fixtures/identity-fixtures.mjs";
+import { writeCompletedIdentityPreflightIndex } from "../fixtures/identity-fixtures.ts";
 import {
   flowRow,
   flowRowWithClassification,

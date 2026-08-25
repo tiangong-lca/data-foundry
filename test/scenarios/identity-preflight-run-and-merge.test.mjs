@@ -13,7 +13,7 @@ import {
   writeJsonLines,
   writeText,
 } from "../fixtures/foundry-core.ts";
-import { testAuthIdentityReceipt } from "../fixtures/identity-fixtures.mjs";
+import { testAuthIdentityReceipt } from "../fixtures/identity-fixtures.ts";
 
 test("identity preflight batch runner records timed-out CLI rows without hanging", () => {
   fs.rmSync(identityPreflightRunFixtureRoot, { recursive: true, force: true });

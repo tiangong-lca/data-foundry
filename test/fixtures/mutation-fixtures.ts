@@ -11,7 +11,7 @@ import {
   writeJsonLines,
   writeText,
 } from "./foundry-core.ts";
-import { contextFile } from "./full-context-fixtures.mjs";
+import { contextFile } from "./full-context-fixtures.ts";
 import { processRowWithDeferredTrace } from "./row-builders.ts";
 
 export function createMutationManifestFixture() {

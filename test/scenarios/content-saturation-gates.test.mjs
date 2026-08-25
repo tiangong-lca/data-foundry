@@ -14,7 +14,7 @@ import {
   writeJson,
   writeJsonLines,
 } from "../fixtures/foundry-core.ts";
-import { writeContextPackFiles } from "../fixtures/full-context-fixtures.mjs";
+import { writeContextPackFiles } from "../fixtures/full-context-fixtures.ts";
 
 const fixtureRoot = path.join(repoRoot, "tmp", "content-saturation-gates-test");
 

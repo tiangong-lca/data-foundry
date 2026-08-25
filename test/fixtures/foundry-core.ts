@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
+import type { BinaryLike } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -104,7 +105,7 @@ export function writeJsonLines(filePath: string, rows: readonly unknown[]): void
   );
 }
 
-export function sha256Text(text: string): string {
+export function sha256Text(text: BinaryLike): string {
   return crypto.createHash("sha256").update(text).digest("hex");
 }
 

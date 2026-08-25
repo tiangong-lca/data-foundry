@@ -12,6 +12,22 @@ import {
   writeText,
 } from "./foundry-core.ts";
 
+export interface ContractContextFile {
+  kind: string;
+  path: string;
+  text: string;
+}
+
+export interface DecisionTaskFixtureOptions {
+  root: string;
+  kind: string;
+  queueFile: string;
+  contractContextFiles: ContractContextFile[];
+  dirName?: string;
+  status?: string;
+  taskKind?: string;
+}
+
 export function createFixture() {
   fs.rmSync(fixtureRoot, { recursive: true, force: true });
   fs.mkdirSync(fixtureRoot, { recursive: true });
@@ -297,7 +313,7 @@ export function createFixture() {
   };
 }
 
-export function contextFile(pathName, text) {
+export function contextFile(pathName: string, text: string): ContractContextFile {
   return {
     kind:
       pathName === "schema.json"
@@ -318,7 +334,7 @@ export function writeDecisionTaskFixture({
   dirName,
   status,
   taskKind,
-}) {
+}: DecisionTaskFixtureOptions) {
   const resolvedTaskKind =
     taskKind ??
     (kind === "location" ? "location_decision_authoring" : "classification_decision_authoring");
@@ -379,7 +395,7 @@ export function writeDecisionTaskFixture({
   };
 }
 
-export function writeContextPackFiles(root) {
+export function writeContextPackFiles(root: string) {
   const contextDir = path.join(root, "context");
   const schemaFile = path.join(contextDir, "schema.json");
   const yamlFile = path.join(contextDir, "methodology.yaml");

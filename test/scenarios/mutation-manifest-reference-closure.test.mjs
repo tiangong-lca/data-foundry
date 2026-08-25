@@ -17,7 +17,7 @@ import {
   writeJson,
   writeJsonLines,
 } from "../fixtures/foundry-core.ts";
-import { writeCompletedIdentityPreflightIndex } from "../fixtures/identity-fixtures.mjs";
+import { writeCompletedIdentityPreflightIndex } from "../fixtures/identity-fixtures.ts";
 import { processRowWithFlowRef } from "../fixtures/row-builders.ts";
 
 test("mutation manifest blocks process writes when referenced datasets are not proven", () => {

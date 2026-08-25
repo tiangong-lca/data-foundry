@@ -3,22 +3,71 @@ import {
   sha256Text,
   validateIdentityPreflightExecution,
 } from "../../scripts/lib/identity-preflight-proof.ts";
+import type { AuthIdentityReceipt } from "../../scripts/lib/identity-preflight-proof.ts";
 import { createRequire } from "node:module";
 import { fs, path, rel, writeJson, writeJsonLines } from "./foundry-core.ts";
 
 const require = createRequire(import.meta.url);
-const cliAuthInternals =
-  require("@tiangong-lca/cli/dist/src/lib/auth-identity-receipt.js").__testInternals;
+const cliAuthInternals = (
+  require("@tiangong-lca/cli/dist/src/lib/auth-identity-receipt.js") as {
+    __testInternals: {
+      requestFingerprint(projectRef: string): string;
+      responseFingerprint(input: {
+        projectRef: string;
+        userId: string;
+        displayEmail: string;
+      }): string;
+      sha256Json(value: unknown): string;
+    };
+  }
+).__testInternals;
+
+export interface AuthIdentityReceiptFixtureOptions {
+  projectRef?: string;
+  userId?: string;
+  capturedAtUtc?: string;
+}
+
+export interface IdentityPreflightExecutionFixtureOptions {
+  datasetType: string;
+  id: string;
+  version?: string;
+  requestFile: string;
+  reportFile: string;
+  executionManifestFile?: string;
+}
+
+export interface IdentityPreflightFixtureRow {
+  datasetType?: string;
+  dataset_type?: string;
+  id?: string;
+  dataset_id?: string;
+  version?: string;
+  dataset_version?: string;
+  candidates?: unknown[];
+  decision?: string;
+  target?: unknown;
+  name?: string;
+  filter?: unknown;
+  query?: string;
+  status?: string;
+  confidence?: string;
+  fields?: unknown;
+  findings?: unknown[];
+  blockers?: unknown[];
+  next_action?: string;
+  nextAction?: string;
+}
 
 export function testAuthIdentityReceipt({
   projectRef = "qgzvkongdjqiiamzbbts",
   userId = "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
   capturedAtUtc = new Date().toISOString(),
-} = {}) {
+}: AuthIdentityReceiptFixtureOptions = {}): AuthIdentityReceipt {
   const displayEmail = "te****@example.com";
   const scope = {
     schema: "tiangong-lca.auth-identity-receipt.v1",
-    status: "passed",
+    status: "passed" as const,
     operation: "current-user-read",
     remote_write_mode: "read-only",
     captured_at_utc: capturedAtUtc,
@@ -65,10 +114,10 @@ export function writeIdentityPreflightExecutionFixture({
     path.dirname(reportFile),
     "foundry-identity-preflight-execution.json",
   ),
-}) {
+}: IdentityPreflightExecutionFixtureOptions): string {
   const requestText = fs.readFileSync(requestFile, "utf8");
   const reportText = fs.readFileSync(reportFile, "utf8");
-  const request = JSON.parse(requestText);
+  const request = JSON.parse(requestText) as { target: unknown };
   const binding = createIdentityPreflightBinding({
     datasetType,
     datasetId: id,
@@ -99,12 +148,15 @@ export function writeIdentityPreflightExecutionFixture({
   return executionManifestFile;
 }
 
-export function writeCompletedIdentityPreflightIndex(root, rows) {
+export function writeCompletedIdentityPreflightIndex(
+  root: string,
+  rows: readonly IdentityPreflightFixtureRow[],
+): string {
   const requestsRoot = path.join(root, "identity-preflight-requests");
   const outputsRoot = path.join(root, "identity-preflight");
   const indexRows = rows.map((row) => {
-    const datasetType = row.datasetType || row.dataset_type;
-    const id = row.id || row.dataset_id;
+    const datasetType = (row.datasetType || row.dataset_type) as string;
+    const id = (row.id || row.dataset_id) as string;
     const version = row.version || row.dataset_version || "00.00.001";
     const plural = datasetType === "flow" ? "flows" : "processes";
     const requestFile = path.join(requestsRoot, plural, `${id}.json`);

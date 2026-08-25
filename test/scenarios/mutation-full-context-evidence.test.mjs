@@ -16,8 +16,8 @@ import {
   writeJson,
   writeJsonLines,
 } from "../fixtures/foundry-core.ts";
-import { writeDecisionTaskFixture } from "../fixtures/full-context-fixtures.mjs";
-import { createMutationManifestFixture } from "../fixtures/mutation-fixtures.mjs";
+import { writeDecisionTaskFixture } from "../fixtures/full-context-fixtures.ts";
+import { createMutationManifestFixture } from "../fixtures/mutation-fixtures.ts";
 
 test("mutation manifest requires full-context AI evidence and preserves deferred trace queues", () => {
   const fixture = createMutationManifestFixture();

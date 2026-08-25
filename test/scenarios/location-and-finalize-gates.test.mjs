@@ -19,7 +19,7 @@ import {
   writeJson,
   writeJsonLines,
 } from "../fixtures/foundry-core.ts";
-import { writeContextPackFiles } from "../fixtures/full-context-fixtures.mjs";
+import { writeContextPackFiles } from "../fixtures/full-context-fixtures.ts";
 import { processRowWithInvalidLocation } from "../fixtures/row-builders.ts";
 
 test("curation gate attaches location queue context as a concrete AI action item", () => {
