@@ -16,7 +16,7 @@ checkPaths:
   - specs/schemas/incremental-change-set.schema.json
   - scripts/commands/incremental-change-set.mjs
   - test/unit/incremental-change-set.test.mjs
-  - test/commands/incremental-change-set.test.mjs
+  - test/commands/incremental-change-set.test.mts
   - test/scenarios/incremental-change-set-handoff.test.mjs
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25

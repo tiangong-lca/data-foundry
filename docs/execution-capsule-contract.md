@@ -15,7 +15,7 @@ checkPaths:
   - docs/execution-capsule-contract.md
   - specs/schemas/execution-capsule-stage.schema.json
   - scripts/commands/execution-capsule.ts
-  - test/commands/execution-capsule.test.mjs
+  - test/commands/execution-capsule.test.mts
   - test/unit/execution-capsule-attempt-state.test.mjs
   - test/unit/execution-capsule-command-factory.test.mts
 lastReviewedAt: 2026-08-25

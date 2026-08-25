@@ -20,11 +20,20 @@ const toolchainFingerprint = crypto
   .update("generic-fixture-toolchain")
   .digest("hex");
 
-function stableValue(value) {
+type ParsedFixture = ReturnType<typeof JSON.parse>;
+type CapsuleMutationState = {
+  boundary: ParsedFixture;
+  leaves: ParsedFixture[];
+  manifest: ParsedFixture;
+  reviewer: ParsedFixture;
+  stageDir: string;
+};
+
+function stableValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stableValue);
   if (value && typeof value === "object") {
     return Object.fromEntries(
-      Object.entries(value)
+      Object.entries(value as Record<string, unknown>)
         .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
         .map(([key, child]) => [key, stableValue(child)]),
     );
@@ -32,11 +41,11 @@ function stableValue(value) {
   return value;
 }
 
-function hashBuffer(buffer) {
+function hashBuffer(buffer: Buffer): string {
   return crypto.createHash("sha256").update(buffer).digest("hex");
 }
 
-function refreshLeaf(stageDir, leaf) {
+function refreshLeaf(stageDir: string, leaf: ParsedFixture): void {
   const buffer = fs.readFileSync(path.join(stageDir, leaf.path));
   leaf.raw_hash = {
     algorithm: "sha256",
@@ -52,7 +61,7 @@ function refreshLeaf(stageDir, leaf) {
   );
 }
 
-function createFixture(name, mutate = () => {}) {
+function createFixture(name: string, mutate: (state: CapsuleMutationState) => void = () => {}) {
   const root = testTmpRoot(`execution-capsule-${name}`);
   const stageDir = path.join(root, "stage");
   const outDir = path.join(root, "admission");
@@ -71,7 +80,7 @@ function createFixture(name, mutate = () => {}) {
     consumer_inputs: { payload: "desired-payload.json" },
     network_mode: "disabled",
   };
-  const boundary = {
+  const boundary: ParsedFixture = {
     schema_version: "foundry-execution-capsule-boundary.v1",
     required: materializedBoundary,
     observed: {
@@ -80,7 +89,7 @@ function createFixture(name, mutate = () => {}) {
       database_dispatch_count: 0,
     },
   };
-  const reviewer = {
+  const reviewer: ParsedFixture = {
     schema_version: "generic-independent-review.v1",
     status: "PASS",
     reviewer_id: "independent-reviewer",
@@ -96,7 +105,7 @@ function createFixture(name, mutate = () => {}) {
   writeJson(boundaryPath, boundary);
   writeJson(reviewerPath, reviewer);
 
-  const leaves = [
+  const leaves: ParsedFixture[] = [
     {
       leaf_id: "desired-payload",
       role: "desired_payload",
@@ -164,7 +173,7 @@ function createFixture(name, mutate = () => {}) {
   ];
   for (const leaf of leaves) refreshLeaf(stageDir, leaf);
 
-  const manifest = {
+  const manifest: ParsedFixture = {
     schema_version: "foundry-execution-capsule-stage.v1",
     stage_id: `generic-${name}`,
     producer_id: "generic-producer",
@@ -194,7 +203,9 @@ function createFixture(name, mutate = () => {}) {
   return { manifestPath, outDir, root, stageDir };
 }
 
-function admit(fixture, predecessorManifestPath = null) {
+type CapsuleFixture = ReturnType<typeof createFixture>;
+
+function admit(fixture: CapsuleFixture, predecessorManifestPath: string | null = null) {
   const args = [
     "execution-capsule-admit",
     "--stage-manifest",
@@ -293,7 +304,11 @@ test("execution capsule admission rejects an unproven predecessor hash", () => {
   assert.equal(fs.existsSync(path.join(successor.outDir, "execution-capsule-seal.json")), false);
 });
 
-const mutationVectors = [
+const mutationVectors: Array<{
+  name: string;
+  expected: string;
+  mutate: (state: CapsuleMutationState) => void;
+}> = [
   {
     name: "tampered-raw-bytes",
     expected: "leaf_raw_hash:desired-payload",
@@ -309,7 +324,7 @@ const mutationVectors = [
       writeJson(path.join(stageDir, "consumer-boundary.json"), boundary);
       refreshLeaf(
         stageDir,
-        leaves.find((leaf) => leaf.leaf_id === "consumer-boundary"),
+        leaves.find((leaf: ParsedFixture) => leaf.leaf_id === "consumer-boundary"),
       );
     },
   },
@@ -326,7 +341,7 @@ const mutationVectors = [
       writeJson(path.join(stageDir, "consumer-boundary.json"), boundary);
       refreshLeaf(
         stageDir,
-        leaves.find((leaf) => leaf.leaf_id === "consumer-boundary"),
+        leaves.find((leaf: ParsedFixture) => leaf.leaf_id === "consumer-boundary"),
       );
     },
   },
@@ -338,7 +353,7 @@ const mutationVectors = [
       writeJson(path.join(stageDir, "reviewer-report.json"), reviewer);
       refreshLeaf(
         stageDir,
-        leaves.find((leaf) => leaf.leaf_id === "reviewer-report"),
+        leaves.find((leaf: ParsedFixture) => leaf.leaf_id === "reviewer-report"),
       );
     },
   },

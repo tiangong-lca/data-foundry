@@ -293,7 +293,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ],
     keyTests: [
       nodeTest(
-        "test/commands/execution-capsule.test.mjs",
+        "test/commands/execution-capsule.test.mts",
         "execution capsule admission seals exact offline evidence and rejects mutation vectors",
       ),
       nodeTest(
@@ -331,7 +331,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "three-way merge and canonical CLI hashes preserve owner changes only through explicit policy",
       ),
       nodeTest(
-        "test/commands/incremental-change-set.test.mjs",
+        "test/commands/incremental-change-set.test.mts",
         "every conversion receives one terminal event and outputs satisfy action/no-write/hold algebra",
       ),
     ],
@@ -360,7 +360,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
         "occurrence keys and language overlays prevent global flow-id replacement",
       ),
       nodeTest(
-        "test/commands/topology-convergence.test.mjs",
+        "test/commands/topology-convergence.test.mts",
         "F/P/D artifacts satisfy exact topology algebra and trust boundaries",
       ),
     ],

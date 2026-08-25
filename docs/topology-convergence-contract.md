@@ -18,7 +18,7 @@ checkPaths:
   - scripts/commands/topology-convergence.mjs
   - test/fixtures/topology-convergence-fixtures.mjs
   - test/unit/topology-convergence.test.mjs
-  - test/commands/topology-convergence.test.mjs
+  - test/commands/topology-convergence.test.mts
   - test/scenarios/topology-convergence-handoff.test.mjs
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
