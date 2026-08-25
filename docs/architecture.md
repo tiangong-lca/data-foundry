@@ -95,6 +95,7 @@ checkPaths:
   - scripts/lib/import-curation/patch-collect.ts
   - scripts/lib/import-curation/curation-gate.ts
   - scripts/lib/import-curation/curation-cleanup.ts
+  - scripts/lib/managed-output-safety.ts
   - scripts/lib/import-curation/internal/workflow-reference-closure.ts
   - scripts/lib/import-curation/internal/workflow-source-reference-context.ts
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
@@ -147,8 +148,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: fdff8fa5fc60a08ae79d39761325c2deb45f4d9e
-lastReviewedNote: "Reviewed for Issue #69: batch-wide datetime planning emits no blocked rows, and realpath/regular-marker ownership gates every stale-artifact invalidation."
+lastReviewedCommit: 9291dddf305dac9858c6287b8938d59d9aa02ead
+lastReviewedNote: "Reviewed for Issue #69: batch-wide datetime planning emits no blocked rows, and one repository-anchored managed-output owner gates stale-artifact invalidation."
 ---
 
 # Architecture
@@ -234,7 +235,7 @@ The typed decision-full-context boundary evaluates existing classification, loca
 
 The typed authoring facades expose that SCC without wrapping or duplicating it. The package runner copies immutable content-addressed authoring snapshots and writes ordered local task manifests; the patch runner classifies local task outputs and writes an ordered batch only after every blocker check passes. Both are filesystem-only Foundry adapters and neither applies patches, invokes the CLI, or grants mutation authority.
 
-The typed curation planning boundary follows those authoring layers. `curation-gate-workflow.ts` is a live-reference aggregate; `curation-gate.ts` reads local rows and evidence into ordered blockers, authoring packages and reports; `curation-cleanup.ts` deep-clones rows, runs the batch-wide strict datetime plan, and only then performs deterministic sentinel, trace, proof and redaction transforms. Its blocked report deliberately carries a null cleaned path and removes stale output only when realpath containment proves the managed root or a regular non-symlink sidecar binds the same lexical and real path. Managed-path symlink escapes, explicit outputs, and other unowned files remain prior evidence. Their byte/order contracts are local Foundry evidence only and do not execute or authorize a database mutation.
+The typed curation planning boundary follows those authoring layers. `curation-gate-workflow.ts` is a live-reference aggregate; `curation-gate.ts` reads local rows and evidence into ordered blockers, authoring packages and reports; `curation-cleanup.ts` deep-clones rows, runs the batch-wide strict datetime plan, and only then performs deterministic sentinel, trace, proof and redaction transforms. `managed-output-safety.ts` is the shared deletion boundary: the physical managed root must equal the repository-anchored `.foundry/workspaces` path and the target must be a strict descendant. Its blocked report carries a null cleaned path; shared-root, symlink-escaped, explicit/custom, replaced, and marker-claimed files remain prior evidence. Their byte/order contracts are local Foundry evidence only and do not execute or authorize a database mutation.
 
 The typed command-owner layer now includes filesystem task/completion aggregation, commit handoff and identity task preparation, and canonical support-cache refresh/autofill. These factories keep their injected/local orchestration boundaries: task/report bytes and order remain content-stable, handoff only emits artifact-bound CommandSpecs, identity tasks only snapshot and package local evidence, and support refresh performs authenticated read-only queries. No factory implements CLI mutation, database semantics, review, or publication.
 
@@ -244,7 +245,7 @@ The typed dataset-orchestration layer composes those owners without absorbing th
 
 The typed runtime-command layer also includes CLI wrappers, offline capsule admission and post-write closeout. Wrappers delegate to the installed CLI with an executable and argv array; capsule admission writes immutable local evidence with zero dispatch; closeout aggregates already-produced commit/readback proof without issuing a remote operation. Unique-root, owner/state/payload, accepted-diff and production-test rules remain in their typed proof owners rather than moving into transport code.
 
-The typed command-owner layer now also includes `core.ts`, `identity-preflight-run.ts`, and `post-authoring-finalize.ts`. Core owns local runtime/bootstrap and diagnostic projection. Identity preflight invokes only the published read-only CLI through receipt-bound executable/argv arrays and content-bound request evidence. Finalize orders existing rewrite, parent cleanup, nested source/contact support finalize, validation, curation, dry-run, mutation-manifest and handoff adapters; cleanup must return `completed` plus a concrete cleaned artifact before nested support or any later stage is constructed. A blocked attempt invalidates only realpath-contained managed roots or regular-marker-bound downstream roots, refuses lexical managed paths that resolve outside that root, retains unowned paths with an explicit blocker, and appends only blocker/import-ledger evidence. None of these owners implement schema/search semantics, direct database mutation, review, or publication.
+The typed command-owner layer now also includes `core.ts`, `identity-preflight-run.ts`, and `post-authoring-finalize.ts`. Core owns local runtime/bootstrap and diagnostic projection. Identity preflight invokes only the published read-only CLI through receipt-bound executable/argv arrays and content-bound request evidence. Finalize orders existing rewrite, parent cleanup, nested source/contact support finalize, validation, curation, dry-run, mutation-manifest and handoff adapters; cleanup must return `completed` plus a concrete cleaned artifact before nested support or any later stage is constructed. A blocked attempt invalidates only strict task descendants accepted by the shared repository-anchored managed-output boundary; path markers never expand authority, and every other stale path is retained with an explicit blocker. None of these owners implement schema/search semantics, direct database mutation, review, or publication.
 
 The typed decision command boundary now includes `identity-decisions.ts`, `classification-decisions.ts`, and `location-decisions.ts`. Identity validation partitions local rows into write candidates, reference reuse, and unresolved evidence without executing a remote mutation. Classification and location validate task-bound decisions, preserve queue grouping and schema/path order, and delegate deterministic apply through the existing CLI argv boundary only after blockers are empty. Their reports and artifacts remain Foundry-local evidence; schema vocabularies, search, mutation, and readback authority remain with their existing owners.
 

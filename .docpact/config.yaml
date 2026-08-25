@@ -11,9 +11,9 @@ layout: repo
 # Review note, 2026-08-25: Issue #67 Wave 24 B3 migrates the curation aggregate, gate runner, and cleanup runner under the existing scripts/** and test/** ownership/rule coverage. No catalog, routing, rule, profile, environment, or remote-authority semantics change.
 # Review note, 2026-08-25: Issue #67 Wave 24 migrates five existing command-owner paths to TypeScript with local characterization. Existing control-plane, test-layout, ownership, and documentation routes already cover the moved paths; no rule or authority boundary changes.
 # Review note, 2026-08-26: Issue #68 adds a narrow Worldsteel wrapper/test/document route to the profile index, current docs, and retained evidence. The monolithic specs/import-profiles.json stays under the generic import-profile trigger so unrelated profile edits do not fan out to Worldsteel; the executable truth test is the cross-file backstop for its Worldsteel subtree.
-# Review note, 2026-08-26: Issue #69 adds a narrow strict prewrite-datetime route across bundle preservation, atomic cleanup blockers, finalize short-circuiting, CLI exit behavior, and their focused contracts. It also closes the existing control-plane coverage gap for specs/prewrite-content-policy.json without changing ownership or mutation authority.
+# Review note, 2026-08-26: Issue #69 adds a narrow strict prewrite-datetime route across bundle preservation, atomic cleanup blockers, repository-anchored managed-output invalidation, finalize short-circuiting, CLI exit behavior, and their focused contracts. It also closes the existing control-plane coverage gap for specs/prewrite-content-policy.json without changing ownership or mutation authority.
 lastReviewedAt: "2026-08-26"
-lastReviewedCommit: "f8a64b9902788cde805ab7b4eb48d53ae0668793"
+lastReviewedCommit: "9291dddf305dac9858c6287b8938d59d9aa02ead"
 
 catalog:
   repos:
@@ -376,6 +376,8 @@ rules:
         kind: strict-prewrite-datetime-owner
       - path: scripts/lib/import-curation/curation-cleanup.ts
         kind: cleanup-blocker-runner
+      - path: scripts/lib/managed-output-safety.ts
+        kind: trusted-managed-output-owner
       - path: scripts/lib/bundle-sample-utils.ts
         kind: bundle-datetime-preservation
       - path: scripts/commands/post-authoring-finalize.ts
@@ -386,6 +388,8 @@ rules:
         kind: strict-datetime-unit-contract
       - path: test/unit/curation-cleanup-runner-contract.test.mts
         kind: cleanup-atomic-fail-close-contract
+      - path: test/unit/managed-output-safety.test.mts
+        kind: managed-output-safety-contract
       - path: test/unit/bundle-sample-utils-contract.test.mts
         kind: bundle-rollover-regression-contract
       - path: test/unit/foundry-cli-spine.test.mts
@@ -407,7 +411,7 @@ rules:
         mode: review_or_update
       - path: test/README.md
         mode: review_or_update
-    reason: Strict datetime parsing, upstream evidence preservation, atomic cleanup blockers, CLI failure, finalize short-circuiting, and AI/test navigation must remain synchronized.
+    reason: Strict datetime parsing, upstream evidence preservation, atomic cleanup blockers, repository-anchored stale-output invalidation, CLI failure, finalize short-circuiting, and AI/test navigation must remain synchronized.
   - id: foundry-execution-capsule-contract
     scope: repo
     repo: data-foundry
