@@ -280,6 +280,14 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
   const originalRowsText = writeJsonLines(rowsFile, [valid, invalid]);
   const staleCleanedRows = path.join(root, "cleanup", "processes.cleaned.jsonl");
   writeJsonLines(staleCleanedRows, [{ stale: "must-not-survive-a-blocked-rerun" }]);
+  fs.writeFileSync(
+    `${staleCleanedRows}.tiangong-foundry-output.json`,
+    `${JSON.stringify({
+      schema_version: 1,
+      command: "dataset-curation-cleanup",
+      output_file: path.resolve(staleCleanedRows),
+    })}\n`,
+  );
 
   const result = record(
     runDatasetCurationCleanup({
@@ -346,4 +354,20 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
   assert.equal(explicitResult.status, "blocked_invalid_datetime_metadata");
   assert.equal(explicitResult.cleaned_rows_file, null);
   assert.equal(fs.readFileSync(explicitOutput, "utf8"), explicitBytes);
+
+  const unownedOutput = path.join(root, "unowned-output", "processes.cleaned.jsonl");
+  const unownedBytes = writeJsonLines(unownedOutput, [{ retained: "unowned-default-path" }]);
+  const unownedResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: "unowned-output",
+      },
+    }),
+  );
+  assert.equal(unownedResult.status, "blocked_invalid_datetime_metadata");
+  assert.equal(unownedResult.cleaned_rows_file, null);
+  assert.equal(fs.readFileSync(unownedOutput, "utf8"), unownedBytes);
 });

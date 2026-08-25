@@ -964,6 +964,11 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
   writeJsonLines(rowsFile, [valid, invalid]);
   const explicitParentBytes = '{"retained":true}\n';
   writeText(explicitParentOutput, explicitParentBytes);
+  writeJson(path.join(root, "finalize", ".tiangong-foundry-finalize-output.json"), {
+    schema_version: 1,
+    command: "dataset-post-authoring-finalize",
+    output_directory: path.resolve(path.join(root, "finalize")),
+  });
   const supportSource = sourceRow(sourceId) as unknown as FixtureRecord;
   supportSource.sourceDataSet.sourceInformation.dataSetInformation.sourceCitation =
     "Fixture report, 2026";
@@ -1062,6 +1067,37 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
     ]) {
       assert.equal(fs.existsSync(path.join(root, "finalize", absentFile)), false, absentFile);
     }
+
+    const unownedFinalizeDir = path.join(root, "unowned-finalize");
+    const unownedSchema = path.join(unownedFinalizeDir, "schema", "stale.json");
+    const unownedCommand = path.join(unownedFinalizeDir, "commit-handoff", "stale-command.json");
+    writeJson(unownedSchema, { stale: true });
+    writeJson(unownedCommand, { stale: true });
+    const unowned = runFoundry([
+      "dataset-post-authoring-finalize",
+      "--type",
+      "process",
+      "--profile",
+      "bafu",
+      "--rows-file",
+      rel(rowsFile),
+      "--source-support-rows-file",
+      rel(sourceSupportRowsFile),
+      "--finalize-source-contact-support",
+      "--out-dir",
+      rel(unownedFinalizeDir),
+    ]);
+    assert.equal(unowned.code, 1);
+    assert.deepEqual(
+      unowned.json.blockers.map((blocker) => blocker.code),
+      [
+        "invalid_datetime_metadata",
+        "curation_cleanup_not_ready",
+        "stale_finalize_artifacts_not_invalidated",
+      ],
+    );
+    assert.equal(fs.existsSync(unownedSchema), true);
+    assert.equal(fs.existsSync(unownedCommand), true);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

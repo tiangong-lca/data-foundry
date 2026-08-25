@@ -1044,6 +1044,32 @@ export function createPostAuthoringFinalizeCommands({
       options.outDir || `.foundry/workspaces/${datasetType}-post-authoring-finalize`,
     )!;
     fs.mkdirSync(outDir, { recursive: true });
+    const finalizeOwnershipMarker = path.join(outDir, ".tiangong-foundry-finalize-output.json");
+    const managedWorkspaceRoot = path.resolve(repoRoot, ".foundry", "workspaces");
+    const managedRelative = path.relative(managedWorkspaceRoot, path.resolve(outDir));
+    const managedWorkspaceOutput =
+      !managedRelative.startsWith("..") && !path.isAbsolute(managedRelative);
+    let priorOwnershipMarker = false;
+    if (fileExists(finalizeOwnershipMarker)) {
+      try {
+        const marker = JSON.parse(fs.readFileSync(finalizeOwnershipMarker, "utf8")) as JsonRecord;
+        priorOwnershipMarker =
+          marker.schema_version === 1 &&
+          marker.command === "dataset-post-authoring-finalize" &&
+          marker.output_directory === path.resolve(outDir);
+      } catch {
+        priorOwnershipMarker = false;
+      }
+    }
+    const outputDirectoryInitiallyEmpty = fs.readdirSync(outDir).length === 0;
+    const mayInvalidateManagedArtifacts = managedWorkspaceOutput || priorOwnershipMarker;
+    if (managedWorkspaceOutput || priorOwnershipMarker || outputDirectoryInitiallyEmpty) {
+      writeJson(finalizeOwnershipMarker, {
+        schema_version: 1,
+        command: "dataset-post-authoring-finalize",
+        output_directory: path.resolve(outDir),
+      });
+    }
     const fullContextRequirement = profileFullContextRequirement(options.profile, datasetType);
     const identityPreflightRequired =
       ["flow", "process"].includes(datasetType) &&
@@ -1218,11 +1244,21 @@ export function createPostAuthoringFinalizeCommands({
       cleanup.files?.cleaned_rows || cleanup.cleaned_rows_file,
     );
     if (cleanup.status !== "completed" || !cleanedRowsFile) {
-      for (const directory of postCleanupArtifactDirectories) {
-        fs.rmSync(path.join(outDir, directory), { recursive: true, force: true });
-      }
-      for (const file of postCleanupArtifactFiles) {
-        fs.rmSync(path.join(outDir, file), { force: true });
+      const staleManagedArtifacts = [
+        ...postCleanupArtifactDirectories
+          .map((directory) => path.join(outDir, directory))
+          .filter((directory) => fs.existsSync(directory)),
+        ...postCleanupArtifactFiles
+          .map((file) => path.join(outDir, file))
+          .filter((file) => fs.existsSync(file)),
+      ];
+      if (mayInvalidateManagedArtifacts) {
+        for (const directory of postCleanupArtifactDirectories) {
+          fs.rmSync(path.join(outDir, directory), { recursive: true, force: true });
+        }
+        for (const file of postCleanupArtifactFiles) {
+          fs.rmSync(path.join(outDir, file), { force: true });
+        }
       }
       const priorStageBlockers = [
         ...ensureArray(identityReferenceRewriteStage.blockers).map((blocker) => ({
@@ -1273,7 +1309,26 @@ export function createPostAuthoringFinalizeCommands({
         action:
           "Resolve every cleanup blocker and rerun post-authoring finalize before any downstream prewrite stage.",
       };
-      const blockers = [...priorStageBlockers, ...cleanupBlockers, cleanupNotReadyBlocker];
+      const invalidationBlockers =
+        staleManagedArtifacts.length > 0 && !mayInvalidateManagedArtifacts
+          ? [
+              {
+                code: "stale_finalize_artifacts_not_invalidated",
+                stage: "curation_cleanup",
+                source: "finalize_output_ownership",
+                severity: "error",
+                paths: staleManagedArtifacts.map((artifact) => repoRelativeMaybe(artifact)),
+                action:
+                  "Use a new empty or .foundry/workspaces finalize directory, or explicitly verify and remove stale artifacts before rerun.",
+              },
+            ]
+          : [];
+      const blockers = [
+        ...priorStageBlockers,
+        ...cleanupBlockers,
+        cleanupNotReadyBlocker,
+        ...invalidationBlockers,
+      ];
       const stageReports = [
         {
           stage: "identity_reference_rewrites",

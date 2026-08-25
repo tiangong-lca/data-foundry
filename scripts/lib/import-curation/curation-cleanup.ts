@@ -1,4 +1,4 @@
-import { rmSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { datasetTypeFromOptions, datasetTypePlural } from "./internal/dataset-types.ts";
 import { datasetIdentity } from "./internal/dataset-payload.ts";
@@ -86,6 +86,23 @@ export function runDatasetCurationCleanup({
   const defaultOutFile = path.join(outDir, `${datasetTypePlural[datasetType]}.cleaned.jsonl`);
   const explicitOutFile = resolveRepoPath(root, options.out || options.outFile);
   const outFile = explicitOutFile || defaultOutFile;
+  const managedWorkspaceRoot = path.resolve(root, ".foundry", "workspaces");
+  const managedRelative = path.relative(managedWorkspaceRoot, path.resolve(outFile));
+  const managedDefaultOutput =
+    !managedRelative.startsWith("..") && !path.isAbsolute(managedRelative);
+  const outputOwnershipMarker = `${outFile}.tiangong-foundry-output.json`;
+  let markerOwnsOutput = false;
+  if (fileExists(outputOwnershipMarker)) {
+    try {
+      const marker = JSON.parse(readFileSync(outputOwnershipMarker, "utf8")) as JsonRecord;
+      markerOwnsOutput =
+        marker.schema_version === 1 &&
+        marker.command === "dataset-curation-cleanup" &&
+        marker.output_file === path.resolve(outFile);
+    } catch {
+      markerOwnsOutput = false;
+    }
+  }
   if (!rowsFile || !fileExists(rowsFile)) {
     throw new Error("--rows-file is required and must point to a JSON/JSONL dataset row file.");
   }
@@ -131,7 +148,15 @@ export function runDatasetCurationCleanup({
   });
 
   if (invalidDateTimeBlockers.length > 0) {
-    if (!explicitOutFile && outFile !== rowsFile && fileExists(outFile)) rmSync(outFile);
+    if (
+      !explicitOutFile &&
+      outFile !== rowsFile &&
+      fileExists(outFile) &&
+      (managedDefaultOutput || markerOwnsOutput)
+    ) {
+      rmSync(outFile);
+      if (fileExists(outputOwnershipMarker)) rmSync(outputOwnershipMarker);
+    }
     const reportFileName = "dataset-curation-cleanup-report.json";
     const reportPath = path.join(outDir, reportFileName);
     const report: JsonRecord = {
@@ -205,6 +230,13 @@ export function runDatasetCurationCleanup({
     addedFoundryTraceNamespaces += ensureFoundryTraceNamespaces(cleaned);
   });
   writeText(outFile, jsonLines(cleanedRows));
+  if (!explicitOutFile) {
+    writeJson(outputOwnershipMarker, {
+      schema_version: 1,
+      command: "dataset-curation-cleanup",
+      output_file: path.resolve(outFile),
+    });
+  }
 
   const report: JsonRecord = {
     schema_version: 2,
