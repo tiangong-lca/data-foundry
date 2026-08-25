@@ -7,11 +7,85 @@ import {
   evidenceTraceKeys,
   firstNonEmptyEvidenceValue,
   hasNonEmptyTraceEvidence,
-} from "./workflow-authoring-tasks.mjs";
+} from "./workflow-authoring-tasks.ts";
 import { isAnnualSupplyTarget } from "./workflow-queue-context.ts";
 
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface PatchOperation extends JsonRecord {
+  path?: unknown;
+  value?: unknown;
+  closes?: unknown;
+  closes_action_items?: unknown;
+  closesActionItems?: unknown;
+  action_items?: unknown;
+  actionItems?: unknown;
+}
+
+interface ActionItem extends JsonRecord {
+  code?: unknown;
+  rule_id?: unknown;
+  ruleId?: unknown;
+  path?: unknown;
+}
+
+interface AuthoringTask extends JsonRecord {
+  entity?: JsonRecord;
+  action_items?: unknown;
+  files?: JsonRecord;
+}
+
+interface CategoryEntry {
+  level: number;
+  code: string;
+  text: string;
+}
+
+interface DeferredTraceOptions {
+  operation: unknown;
+  actionItems: unknown;
+}
+
+interface ClassificationDecisionOptions {
+  repoRoot: string;
+  operation: unknown;
+  schemaFile: string;
+  codeAttribute: string;
+  datasetLabel: string;
+  itemLabel: string;
+}
+
+interface TaskOperationOptions {
+  repoRoot: string;
+  task: unknown;
+  operation: unknown;
+}
+
+interface LocationDecisionOptions {
+  repoRoot: string;
+  operation: unknown;
+}
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function asOperation(value: unknown): PatchOperation {
+  return isRecord(value) ? value : {};
+}
+
+function asTask(value: unknown): AuthoringTask {
+  return isRecord(value) ? value : {};
+}
+
+function asActionItem(value: unknown): ActionItem {
+  return isRecord(value) ? value : {};
+}
+
 // part-04.mjs
-export function hasStructuredTraceEvidence(value) {
+export function hasStructuredTraceEvidence(value: unknown): boolean {
   return evidenceEntries(value)
     .filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry))
     .some(
@@ -21,47 +95,56 @@ export function hasStructuredTraceEvidence(value) {
     );
 }
 
-export function objectTraceEntries(value, traceKey) {
-  const entries = [];
-  const visit = (node) => {
+export function objectTraceEntries(value: unknown, traceKey: string): unknown[] {
+  const entries: unknown[] = [];
+  const visit = (node: unknown): void => {
     if (!node || typeof node !== "object") return;
     if (Array.isArray(node)) {
       node.forEach(visit);
       return;
     }
-    if (Object.hasOwn(node, traceKey)) {
-      entries.push(...ensureArray(node[traceKey]));
+    const record = node as JsonRecord;
+    if (Object.hasOwn(record, traceKey)) {
+      entries.push(...ensureArray(record[traceKey]));
     }
-    const commonOther = node["common:other"];
+    const commonOther = record["common:other"];
     if (commonOther && typeof commonOther === "object" && !Array.isArray(commonOther)) {
-      if (Object.hasOwn(commonOther, traceKey)) {
-        entries.push(...ensureArray(commonOther[traceKey]));
+      const commonOtherRecord = commonOther as JsonRecord;
+      if (Object.hasOwn(commonOtherRecord, traceKey)) {
+        entries.push(...ensureArray(commonOtherRecord[traceKey]));
       }
     }
-    for (const child of Object.values(node)) visit(child);
+    for (const child of Object.values(record)) visit(child);
   };
   visit(value);
   return entries;
 }
 
-export function operationTraceEntries(operation, traceKey) {
-  const pointer = asText(operation?.path);
-  const value = operation?.value;
+export function operationTraceEntries(operation: unknown, traceKey: string): unknown[] {
+  const typedOperation = asOperation(operation);
+  const pointer = asText(typedOperation.path);
+  const value = typedOperation.value;
   if (pointer.includes(`/${traceKey}`)) return ensureArray(value);
   if (pointer.includes("/common:other")) return objectTraceEntries(value, traceKey);
   return objectTraceEntries(value, traceKey);
 }
 
-export function validateDeferredCommonOtherTrace({ operation, actionItems }) {
+export function validateDeferredCommonOtherTrace({
+  operation,
+  actionItems,
+}: DeferredTraceOptions): JsonRecord[] {
   const traceEntries = operationTraceEntries(operation, "tiangongfoundry:unresolvedTrace");
   const closureCodes = new Set(operationClosureCodes(operation));
   const actionCodes = new Set(
     ensureArray(actionItems)
-      .map((item) => asText(item?.code ?? item?.rule_id ?? item?.ruleId))
+      .map((item) => {
+        const typedItem = asActionItem(item);
+        return asText(typedItem.code ?? typedItem.rule_id ?? typedItem.ruleId);
+      })
       .filter(Boolean),
   );
   const acceptedCodes = closureCodes.size > 0 ? closureCodes : actionCodes;
-  const blockers = [];
+  const blockers: JsonRecord[] = [];
   if (traceEntries.length === 0) {
     blockers.push({
       code: "patch_deferred_trace_missing",
@@ -73,7 +156,10 @@ export function validateDeferredCommonOtherTrace({ operation, actionItems }) {
   const closureCodesOnly = new Set([...closureCodes].filter(Boolean));
   const tracedActionCodes = new Set(
     traceEntries
-      .map((entry) => asText(entry?.action_item_code ?? entry?.actionItemCode ?? entry?.code))
+      .map((entry) => {
+        const record = isRecord(entry) ? entry : {};
+        return asText(record.action_item_code ?? record.actionItemCode ?? record.code);
+      })
       .filter(Boolean),
   );
   for (const closureCode of closureCodesOnly) {
@@ -95,14 +181,28 @@ export function validateDeferredCommonOtherTrace({ operation, actionItems }) {
       });
       return;
     }
-    const status = asText(entry.status ?? entry.decision_status ?? entry.decisionStatus);
-    const actionCode = asText(entry.action_item_code ?? entry.actionItemCode ?? entry.code);
-    const blockedPath = asText(
-      entry.blocked_path ?? entry.blockedPath ?? entry.field_path ?? entry.fieldPath ?? entry.path,
+    const typedEntry = entry as JsonRecord;
+    const status = asText(
+      typedEntry.status ?? typedEntry.decision_status ?? typedEntry.decisionStatus,
     );
-    const reason = asText(entry.reason ?? entry.deferred_reason ?? entry.deferredReason);
+    const actionCode = asText(
+      typedEntry.action_item_code ?? typedEntry.actionItemCode ?? typedEntry.code,
+    );
+    const blockedPath = asText(
+      typedEntry.blocked_path ??
+        typedEntry.blockedPath ??
+        typedEntry.field_path ??
+        typedEntry.fieldPath ??
+        typedEntry.path,
+    );
+    const reason = asText(
+      typedEntry.reason ?? typedEntry.deferred_reason ?? typedEntry.deferredReason,
+    );
     const nextAction = asText(
-      entry.next_action ?? entry.nextAction ?? entry.follow_up ?? entry.followUp,
+      typedEntry.next_action ??
+        typedEntry.nextAction ??
+        typedEntry.follow_up ??
+        typedEntry.followUp,
     );
     if (!["unresolved_deferred", "deferred_to_common_other", "needs_followup"].includes(status)) {
       blockers.push({
@@ -135,7 +235,7 @@ export function validateDeferredCommonOtherTrace({ operation, actionItems }) {
         trace_index: index,
       });
     }
-    const evidence = entry.evidence ?? entry.source_evidence ?? entry.sourceEvidence;
+    const evidence = typedEntry.evidence ?? typedEntry.source_evidence ?? typedEntry.sourceEvidence;
     if (!hasNonEmptyTraceEvidence(evidence)) {
       blockers.push({
         code: "patch_deferred_trace_evidence_missing",
@@ -162,12 +262,12 @@ export function validateDeferredCommonOtherTrace({ operation, actionItems }) {
   return blockers;
 }
 
-export function validateSourceExchangeCompletenessTrace(operation) {
+export function validateSourceExchangeCompletenessTrace(operation: unknown): JsonRecord[] {
   const traceEntries = operationTraceEntries(
     operation,
     "tiangongfoundry:sourceExchangeCompleteness",
   );
-  const blockers = [];
+  const blockers: JsonRecord[] = [];
   if (traceEntries.length === 0) {
     blockers.push({
       code: "patch_source_exchange_trace_missing",
@@ -185,7 +285,10 @@ export function validateSourceExchangeCompletenessTrace(operation) {
       });
       return;
     }
-    const status = asText(entry.status ?? entry.decision_status ?? entry.decisionStatus);
+    const typedEntry = entry as JsonRecord;
+    const status = asText(
+      typedEntry.status ?? typedEntry.decision_status ?? typedEntry.decisionStatus,
+    );
     if (
       !["source_only_output_exchange_verified", "accepted_source_only_output", "verified"].includes(
         status,
@@ -198,7 +301,11 @@ export function validateSourceExchangeCompletenessTrace(operation) {
         trace_index: index,
       });
     }
-    const evidence = entry.evidence ?? entry.source_evidence ?? entry.sourceEvidence ?? entry.trace;
+    const evidence =
+      typedEntry.evidence ??
+      typedEntry.source_evidence ??
+      typedEntry.sourceEvidence ??
+      typedEntry.trace;
     if (!hasNonEmptyTraceEvidence(evidence)) {
       blockers.push({
         code: "patch_source_exchange_trace_evidence_missing",
@@ -218,13 +325,13 @@ export function validateSourceExchangeCompletenessTrace(operation) {
   return blockers;
 }
 
-export function operationClosureCodes(operation) {
+export function operationClosureCodes(operation: unknown): string[] {
   return operationClosureKeys(operation)
     .map((key) => key.split("\u0000")[0])
     .filter(Boolean);
 }
 
-export function containsAiTemplatePlaceholder(value) {
+export function containsAiTemplatePlaceholder(value: unknown): boolean {
   if (typeof value === "string") {
     return /__AI_FILL_[A-Z0-9_]*__|\/__AI_FILL_JSON_POINTER__/u.test(value);
   }
@@ -235,55 +342,61 @@ export function containsAiTemplatePlaceholder(value) {
   return false;
 }
 
-export function operationClosureKeys(operation) {
+export function operationClosureKeys(operation: unknown): string[] {
+  const typedOperation = asOperation(operation);
   const raw =
-    operation?.closes ??
-    operation?.closes_action_items ??
-    operation?.closesActionItems ??
-    operation?.action_items ??
-    operation?.actionItems;
+    typedOperation.closes ??
+    typedOperation.closes_action_items ??
+    typedOperation.closesActionItems ??
+    typedOperation.action_items ??
+    typedOperation.actionItems;
   return ensureArray(raw)
     .map((item) => {
       if (typeof item === "string") return `${item}\u0000`;
+      const record = isRecord(item) ? item : {};
       const code = asText(
-        item?.code ??
-          item?.action_item_code ??
-          item?.actionItemCode ??
-          item?.rule_id ??
-          item?.ruleId,
+        record.code ??
+          record.action_item_code ??
+          record.actionItemCode ??
+          record.rule_id ??
+          record.ruleId,
       );
-      const itemPath = asText(item?.path ?? item?.json_path ?? item?.jsonPath);
+      const itemPath = asText(record.path ?? record.json_path ?? record.jsonPath);
       return code ? `${code}\u0000${itemPath}` : "";
     })
     .filter(Boolean);
 }
 
-export function operationClosesAnnualSupplyTarget(operation) {
+export function operationClosesAnnualSupplyTarget(operation: unknown): boolean {
   return operationClosureKeys(operation).some((key) => {
     const [code, itemPath] = key.split("\u0000");
     return isAnnualSupplyTarget(code, itemPath);
   });
 }
 
-export function categoryEntries(repoRoot, schemaFile) {
-  const schema = loadTidasSchema(repoRoot, schemaFile);
-  const entries = ensureArray(schema?.oneOf)
+export function categoryEntries(
+  repoRoot: string,
+  schemaFile: string,
+): { byCode: Map<string, CategoryEntry>; parentByCode: Map<string, CategoryEntry | null> } {
+  const schema = loadTidasSchema(repoRoot, schemaFile) as JsonRecord;
+  const entries = ensureArray(schema.oneOf)
     .map((entry) => {
-      const properties = entry?.properties ?? {};
-      const levelText = asText(properties?.["@level"]?.const);
-      const code = asText(
-        properties?.["@classId"]?.const ??
-          properties?.["@catId"]?.const ??
-          properties?.["@code"]?.const,
-      );
-      const text = asText(properties?.["#text"]?.const);
+      const properties = isRecord(entry) && isRecord(entry.properties) ? entry.properties : {};
+      const levelProperty = isRecord(properties["@level"]) ? properties["@level"] : {};
+      const classProperty = isRecord(properties["@classId"]) ? properties["@classId"] : {};
+      const categoryProperty = isRecord(properties["@catId"]) ? properties["@catId"] : {};
+      const codeProperty = isRecord(properties["@code"]) ? properties["@code"] : {};
+      const textProperty = isRecord(properties["#text"]) ? properties["#text"] : {};
+      const levelText = asText(levelProperty.const);
+      const code = asText(classProperty.const ?? categoryProperty.const ?? codeProperty.const);
+      const text = asText(textProperty.const);
       const level = levelText === "" ? Number.NaN : Number(levelText);
       return Number.isInteger(level) && code && text ? { level, code, text } : null;
     })
-    .filter(Boolean);
+    .filter((entry): entry is CategoryEntry => entry !== null);
   const byCode = new Map(entries.map((entry) => [entry.code, entry]));
-  const parentByCode = new Map();
-  const lastPerLevel = new Map();
+  const parentByCode = new Map<string, CategoryEntry | null>();
+  const lastPerLevel = new Map<number, CategoryEntry>();
   for (const entry of entries) {
     if (entry.level === 0) {
       parentByCode.set(entry.code, null);
@@ -300,7 +413,11 @@ export function categoryEntries(repoRoot, schemaFile) {
   return { byCode, parentByCode };
 }
 
-export function categoryPathForCode(repoRoot, schemaFile, code) {
+export function categoryPathForCode(
+  repoRoot: string,
+  schemaFile: string,
+  code: unknown,
+): CategoryEntry[] {
   const { byCode, parentByCode } = categoryEntries(repoRoot, schemaFile);
   const entry = byCode.get(asText(code));
   if (!entry) return [];
@@ -315,63 +432,67 @@ export function categoryPathForCode(repoRoot, schemaFile, code) {
   return pathEntries.reverse();
 }
 
-export function processCategoryPathForCode(repoRoot, code) {
+export function processCategoryPathForCode(repoRoot: string, code: unknown): CategoryEntry[] {
   return categoryPathForCode(repoRoot, "tidas_processes_category.json", code);
 }
 
-export function classCode(value) {
+export function classCode(value: unknown): string {
+  const record = isRecord(value) ? value : {};
   return asText(
-    value?.["@classId"] ??
-      value?.classId ??
-      value?.class_id ??
-      value?.["@catId"] ??
-      value?.catId ??
-      value?.cat_id,
+    record["@classId"] ??
+      record.classId ??
+      record.class_id ??
+      record["@catId"] ??
+      record.catId ??
+      record.cat_id,
   );
 }
 
-export function classText(value) {
-  return asText(value?.["#text"] ?? value?.text ?? value?.label ?? value?.name);
+export function classText(value: unknown): string {
+  const record = isRecord(value) ? value : {};
+  return asText(record["#text"] ?? record.text ?? record.label ?? record.name);
 }
 
-export function classLevel(value) {
-  const text = asText(value?.["@level"] ?? value?.level);
+export function classLevel(value: unknown): number | null {
+  const record = isRecord(value) ? value : {};
+  const text = asText(record["@level"] ?? record.level);
   return text === "" ? null : Number(text);
 }
 
-export function classificationItemsFromOperation(operation) {
-  const value = operation?.value;
+export function classificationItemsFromOperation(operation: unknown): unknown[] {
+  const value = asOperation(operation).value;
   if (Array.isArray(value)) return value;
   if (!value || typeof value !== "object" || Array.isArray(value)) return [];
-  const commonClass = value["common:class"];
+  const record = value as JsonRecord;
+  const commonClass = record["common:class"];
   if (Array.isArray(commonClass)) return commonClass;
   if (commonClass && typeof commonClass === "object") return [commonClass];
-  const commonCategory = value["common:category"];
+  const commonCategory = record["common:category"];
   if (Array.isArray(commonCategory)) return commonCategory;
   if (commonCategory && typeof commonCategory === "object") return [commonCategory];
-  const wrappedClassification = value["common:classification"];
+  const wrappedClassification = record["common:classification"];
   if (
     wrappedClassification &&
     typeof wrappedClassification === "object" &&
     !Array.isArray(wrappedClassification)
   ) {
-    const wrappedClass = wrappedClassification["common:class"];
+    const wrappedClass = (wrappedClassification as JsonRecord)["common:class"];
     if (Array.isArray(wrappedClass)) return wrappedClass;
     if (wrappedClass && typeof wrappedClass === "object") return [wrappedClass];
   }
-  const wrappedElementary = value["common:elementaryFlowCategorization"];
+  const wrappedElementary = record["common:elementaryFlowCategorization"];
   if (
     wrappedElementary &&
     typeof wrappedElementary === "object" &&
     !Array.isArray(wrappedElementary)
   ) {
-    const wrappedCategory = wrappedElementary["common:category"];
+    const wrappedCategory = (wrappedElementary as JsonRecord)["common:category"];
     if (Array.isArray(wrappedCategory)) return wrappedCategory;
     if (wrappedCategory && typeof wrappedCategory === "object") return [wrappedCategory];
   }
-  const classes = value.classes ?? value.classification_classes;
+  const classes = record.classes ?? record.classification_classes;
   if (Array.isArray(classes)) return classes;
-  const categories = value.categories ?? value.category;
+  const categories = record.categories ?? record.category;
   if (Array.isArray(categories)) return categories;
   return [];
 }
@@ -383,7 +504,7 @@ export function validateClassificationDecisionOperation({
   codeAttribute,
   datasetLabel,
   itemLabel,
-}) {
+}: ClassificationDecisionOptions): JsonRecord[] {
   const items = classificationItemsFromOperation(operation);
   if (items.length === 0) {
     return [
@@ -423,10 +544,10 @@ export function validateClassificationDecisionOperation({
       if (!expected) return null;
       const level = classLevel(item);
       const text = classText(item);
-      const problems = [];
+      const problems: string[] = [];
       if (level !== null && level !== expected.level) problems.push("level");
       if (text && text !== expected.text) problems.push("text");
-      const itemCode = asText(item?.[codeAttribute]);
+      const itemCode = asText(isRecord(item) ? item[codeAttribute] : undefined);
       if (itemCode && itemCode !== expected.code) problems.push(codeAttribute);
       return problems.length > 0
         ? {
@@ -454,8 +575,14 @@ export function validateClassificationDecisionOperation({
     : [];
 }
 
-export function validateProcessClassificationDecisionOperation({ repoRoot, task, operation }) {
-  if (asText(task?.entity?.dataset_type) !== "process") return [];
+export function validateProcessClassificationDecisionOperation({
+  repoRoot,
+  task,
+  operation,
+}: TaskOperationOptions): JsonRecord[] {
+  const typedTask = asTask(task);
+  const entity = isRecord(typedTask.entity) ? typedTask.entity : {};
+  if (asText(entity.dataset_type) !== "process") return [];
   return validateClassificationDecisionOperation({
     repoRoot,
     operation,
@@ -466,12 +593,18 @@ export function validateProcessClassificationDecisionOperation({ repoRoot, task,
   });
 }
 
-export function validateFlowClassificationDecisionOperation({ repoRoot, task, operation }) {
-  if (asText(task?.entity?.dataset_type) !== "flow") return [];
-  const actionPaths = ensureArray(task?.action_items)
-    .map((item) => asText(item?.path))
+export function validateFlowClassificationDecisionOperation({
+  repoRoot,
+  task,
+  operation,
+}: TaskOperationOptions): JsonRecord[] {
+  const typedTask = asTask(task);
+  const entity = isRecord(typedTask.entity) ? typedTask.entity : {};
+  if (asText(entity.dataset_type) !== "flow") return [];
+  const actionPaths = ensureArray(typedTask.action_items)
+    .map((item) => asText(asActionItem(item).path))
     .filter(Boolean);
-  const operationPath = asText(operation?.path);
+  const operationPath = asText(asOperation(operation).path);
   const isElementary =
     operationPath.includes("elementaryFlowCategorization") ||
     actionPaths.some((itemPath) => itemPath.includes("elementaryFlowCategorization"));
@@ -489,36 +622,41 @@ export function validateFlowClassificationDecisionOperation({ repoRoot, task, op
   });
 }
 
-export function locationCodeMapForPatch(repoRoot) {
-  const schema = loadTidasSchema(repoRoot, "tidas_locations_category.json");
+export function locationCodeMapForPatch(repoRoot: string): Map<string, string> {
+  const schema = loadTidasSchema(repoRoot, "tidas_locations_category.json") as JsonRecord;
   return new Map(
-    ensureArray(schema?.oneOf)
-      .map((entry) => [asText(entry?.const), asText(entry?.description)])
-      .filter(([code]) => code),
+    ensureArray(schema.oneOf)
+      .map((entry): [string, string] => {
+        const record = isRecord(entry) ? entry : {};
+        return [asText(record.const), asText(record.description)];
+      })
+      .filter(([code]) => Boolean(code)),
   );
 }
 
-export function locationCodeFromOperation(operation) {
-  const value = operation?.value;
+export function locationCodeFromOperation(operation: unknown): string {
+  const value = asOperation(operation).value;
   if (typeof value === "string") return value.trim();
   if (value && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as JsonRecord;
     return asText(
-      value.code ??
-        value.location ??
-        value["@location"] ??
-        value["@subLocation"] ??
-        value["#text"] ??
-        value.impactLocation ??
-        value.interventionLocation ??
-        value.intervensionSubLocation ??
-        value.locationOfSupply,
+      record.code ??
+        record.location ??
+        record["@location"] ??
+        record["@subLocation"] ??
+        record["#text"] ??
+        record.impactLocation ??
+        record.interventionLocation ??
+        record.intervensionSubLocation ??
+        record.locationOfSupply,
     );
   }
   return "";
 }
 
-export function operationTargetsLocationCode(operation) {
-  const pointer = asText(operation?.path);
+export function operationTargetsLocationCode(operation: unknown): boolean {
+  const typedOperation = asOperation(operation);
+  const pointer = asText(typedOperation.path);
   if (pointer.includes("/name/")) return false;
   const pointerSegments = pointer
     .split("/")
@@ -534,12 +672,15 @@ export function operationTargetsLocationCode(operation) {
     "intervensionSubLocation",
   ]);
   if (pointerSegments.some((segment) => codeFields.has(segment))) return true;
-  const value = operation?.value;
+  const value = typedOperation.value;
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   return [...codeFields].some((field) => Object.hasOwn(value, field));
 }
 
-export function validateLocationDecisionOperation({ repoRoot, operation }) {
+export function validateLocationDecisionOperation({
+  repoRoot,
+  operation,
+}: LocationDecisionOptions): JsonRecord[] {
   const code = locationCodeFromOperation(operation);
   if (!code) {
     return [
@@ -562,24 +703,26 @@ export function validateLocationDecisionOperation({ repoRoot, operation }) {
   return [];
 }
 
-export function taskActionItemKeys(task) {
-  return ensureArray(task?.action_items)
+export function taskActionItemKeys(task: unknown): string[] {
+  return ensureArray(asTask(task).action_items)
     .map((item) => {
-      const code = asText(item?.code ?? item?.rule_id ?? item?.ruleId);
-      const itemPath = asText(item?.path);
+      const typedItem = asActionItem(item);
+      const code = asText(typedItem.code ?? typedItem.rule_id ?? typedItem.ruleId);
+      const itemPath = asText(typedItem.path);
       return code ? `${code}\u0000${itemPath}` : "";
     })
     .filter(Boolean);
 }
 
-export function taskActionItemsForOperation(task, operation) {
+export function taskActionItemsForOperation(task: unknown, operation: unknown): unknown[] {
   const closures = operationClosureKeys(operation).map((key) => {
     const [code, itemPath] = key.split("\u0000");
     return { code, path: itemPath || null };
   });
-  return ensureArray(task?.action_items).filter((item) => {
-    const code = asText(item?.code ?? item?.rule_id ?? item?.ruleId);
-    const itemPath = asText(item?.path) || null;
+  return ensureArray(asTask(task).action_items).filter((item) => {
+    const typedItem = asActionItem(item);
+    const code = asText(typedItem.code ?? typedItem.rule_id ?? typedItem.ruleId);
+    const itemPath = asText(typedItem.path) || null;
     return closures.some(
       (closure) =>
         closure.code === code && (!closure.path || !itemPath || closure.path === itemPath),
@@ -587,7 +730,11 @@ export function taskActionItemsForOperation(task, operation) {
   });
 }
 
-export function taskAuthoringPackageName(repoRoot, task) {
-  const resolved = resolveRepoPath(repoRoot, task?.files?.authoring_package);
+export function taskAuthoringPackageName(repoRoot: string, task: unknown): string {
+  const files = asTask(task).files;
+  const resolved = resolveRepoPath(
+    repoRoot,
+    isRecord(files) ? asText(files.authoring_package) : "",
+  );
   return resolved ? path.basename(resolved) : "";
 }

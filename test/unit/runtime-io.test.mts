@@ -205,7 +205,7 @@ test("runtime I/O is native TypeScript and representative consumers target it", 
   const expectedConsumers = [
     ["scripts/lib/import-curation/curation-cleanup.mjs", "./internal/runtime-io.ts"],
     ["scripts/lib/import-curation/internal/dataset-payload.ts", "./runtime-io.ts"],
-    ["scripts/lib/import-curation/internal/workflow-semantic-actions.mjs", "./runtime-io.ts"],
+    ["scripts/lib/import-curation/internal/workflow-semantic-actions.ts", "./runtime-io.ts"],
     ["test/unit/runtime-io.test.mts", "../../scripts/lib/import-curation/internal/runtime-io.ts"],
   ] as const;
   for (const [consumer, specifier] of expectedConsumers) {

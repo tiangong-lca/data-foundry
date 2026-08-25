@@ -24,7 +24,7 @@ import {
   classText,
   locationCodeMapForPatch,
   processCategoryPathForCode,
-} from "./workflow-patch-evidence.mjs";
+} from "./workflow-patch-evidence.ts";
 import { identityPreflightIndexPath } from "./workflow-queue-context.ts";
 import { deterministicRowsFileTransformEntries } from "./workflow-row-transform-context.ts";
 import {
@@ -33,7 +33,7 @@ import {
   flowUsesElementaryClassification,
   jsonPointerToken,
   nameTextForPayload,
-} from "./workflow-semantic-actions.mjs";
+} from "./workflow-semantic-actions.ts";
 
 // part-01.mjs
 export function identityPreflightResultFile(repoRoot, indexPath, row) {

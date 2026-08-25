@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { datasetTypePlural, supportedDatasetTypes } from "./dataset-types.ts";
+import { type DatasetType, datasetTypePlural, supportedDatasetTypes } from "./dataset-types.ts";
 import { sha256Text } from "./hash-utils.ts";
 import { annualSupplyMissingDataSentinelText } from "./prewrite-cleanup.ts";
 import {
@@ -32,7 +32,149 @@ import {
   requiredFullContextFilePatterns,
   requiredFullContextKinds,
   sharedContextBundleReadinessBlockers,
-} from "./workflow-semantic-actions.mjs";
+} from "./workflow-semantic-actions.ts";
+
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface FullContextBlockerOptions {
+  repoRoot: string;
+  packagePayload: unknown;
+  actionItems: unknown;
+  packagePath?: string | null;
+}
+
+interface TaskReadinessOptions {
+  repoRoot: string;
+  task: unknown;
+}
+
+interface AuthoringBuildOptions extends JsonRecord {
+  patchFile?: string;
+  patch?: string;
+  patchedRows?: string;
+  out?: string;
+  applyDir?: string;
+}
+
+interface BuildAuthoringTaskOptions {
+  repoRoot: string;
+  packagePath: string;
+  outDir: string;
+  options?: AuthoringBuildOptions;
+}
+
+interface AuthoringEntity extends JsonRecord {
+  dataset_type: DatasetType;
+  entity_id: string;
+  version: string;
+  profile: string | null;
+}
+
+interface AuthoringContext extends JsonRecord {
+  source_rows_file: string | null;
+  authoring_package_sha256: string;
+  profile_context_files: JsonRecord[];
+  contract_context_files: JsonRecord[];
+  full_context_ai_completion: unknown;
+  missing_context_files: unknown[];
+  curation_queue_status: unknown;
+  shared_context_bundle?: SharedContextBundleRef;
+}
+
+interface AuthoringFiles extends JsonRecord {
+  authoring_package: string;
+  task_json: string;
+  task_markdown: string;
+  patch_template: string;
+  output_patch_file: string;
+  patched_rows: string;
+  apply_dir: string;
+}
+
+interface AuthoringCommands extends JsonRecord {
+  apply_patch: string;
+  validate_after_apply: string;
+}
+
+interface AuthoringActionItem extends JsonRecord {
+  index: number;
+  code: string;
+  path: string | null;
+  json_pointer: string;
+  message: string | null;
+  instruction: string | null;
+  allowed_resolution_modes: string[];
+  evidence: unknown;
+}
+
+interface AuthoringTask extends JsonRecord {
+  status: string;
+  entity: AuthoringEntity;
+  context: AuthoringContext;
+  action_items: AuthoringActionItem[];
+  decision_only_action_items: AuthoringActionItem[];
+  blockers: JsonRecord[];
+  files: AuthoringFiles;
+  commands: AuthoringCommands;
+}
+
+interface SharedContextOptions extends JsonRecord {
+  sharedContextCacheDir?: string;
+}
+
+interface SharedContextBundleRef extends JsonRecord {
+  path: string;
+  sha256: string;
+  counts: SharedContextCounts;
+  cache: JsonRecord;
+  instruction: string;
+}
+
+interface SharedContextCounts extends JsonRecord {
+  tasks: number;
+  authoring_packages: number;
+  files: number;
+  references: number;
+  duplicate_references: number;
+  unique_context_bytes: number;
+  referenced_context_bytes: number;
+  duplicate_context_bytes_avoided: number;
+}
+
+interface SharedContextBundle extends JsonRecord {
+  sha256: string;
+  counts: SharedContextCounts;
+}
+
+interface SharedContextFile extends JsonRecord {
+  scope: string;
+  kind: string;
+  path: string | null;
+  sha256: string;
+  bytes: number;
+  text: string;
+}
+
+interface SharedContextBuildResult {
+  path: string;
+  bundle: SharedContextBundle;
+  cache: JsonRecord;
+}
+
+interface EvidenceOperationOptions {
+  operation: unknown;
+  task: unknown;
+}
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function asRecord(value: unknown): JsonRecord {
+  return isRecord(value) ? value : {};
+}
 
 // part-03.mjs
 export function authoringPackageFullContextReadinessBlockers({
@@ -40,31 +182,34 @@ export function authoringPackageFullContextReadinessBlockers({
   packagePayload,
   actionItems,
   packagePath = null,
-}) {
+}: FullContextBlockerOptions): JsonRecord[] {
+  const typedPackage = asRecord(packagePayload);
   if (ensureArray(actionItems).length === 0) return [];
-  const requirement = packagePayload?.full_context_ai_completion;
+  const requirement = typedPackage.full_context_ai_completion;
   if (!fullContextAiConfigRequiresAuthoring(requirement)) return [];
-  const blockers = [];
+  const blockers: JsonRecord[] = [];
   const authoringPackage = packagePath ? repoRelativePath(repoRoot, packagePath) : null;
-  const contractFiles = ensureArray(packagePayload?.contract_context_files);
-  for (const missingContext of ensureArray(packagePayload?.missing_context_files)) {
+  const contractFiles = ensureArray(typedPackage.contract_context_files);
+  for (const missingContext of ensureArray(typedPackage.missing_context_files)) {
+    const typedContext = asRecord(missingContext);
     blockers.push({
       code: "authoring_task_context_file_missing",
       message:
         "AI authoring task cannot start while its authoring package records missing context files.",
       authoring_package: authoringPackage,
-      kind: asText(missingContext?.kind) || null,
-      path: asText(missingContext?.path) || null,
+      kind: asText(typedContext.kind) || null,
+      path: asText(typedContext.path) || null,
     });
   }
   for (const file of contractFiles) {
+    const typedFile = asRecord(file);
     if (!contextSummaryHasNonEmptyPayload(file)) {
       blockers.push({
         code: "authoring_task_context_file_empty",
         message: "AI authoring task cannot start with an empty contract context file.",
         authoring_package: authoringPackage,
-        kind: asText(file?.kind) || null,
-        path: asText(file?.path) || null,
+        kind: asText(typedFile.kind) || null,
+        path: asText(typedFile.path) || null,
       });
     }
   }
@@ -91,9 +236,9 @@ export function authoringPackageFullContextReadinessBlockers({
     }
   }
   if (
-    !packagePayload?.source_row ||
-    typeof packagePayload.source_row !== "object" ||
-    Array.isArray(packagePayload.source_row)
+    !typedPackage.source_row ||
+    typeof typedPackage.source_row !== "object" ||
+    Array.isArray(typedPackage.source_row)
   ) {
     blockers.push({
       code: "authoring_task_source_row_payload_missing",
@@ -102,9 +247,9 @@ export function authoringPackageFullContextReadinessBlockers({
     });
   }
   if (
-    !packagePayload?.entity_payload ||
-    typeof packagePayload.entity_payload !== "object" ||
-    Array.isArray(packagePayload.entity_payload)
+    !typedPackage.entity_payload ||
+    typeof typedPackage.entity_payload !== "object" ||
+    Array.isArray(typedPackage.entity_payload)
   ) {
     blockers.push({
       code: "authoring_task_entity_payload_missing",
@@ -115,27 +260,34 @@ export function authoringPackageFullContextReadinessBlockers({
   return blockers;
 }
 
-export function authoringTaskFullContextReadinessBlockers({ repoRoot, task }) {
-  if (ensureArray(task?.action_items).length === 0) return [];
-  const requirement = task?.context?.full_context_ai_completion;
+export function authoringTaskFullContextReadinessBlockers({
+  repoRoot,
+  task,
+}: TaskReadinessOptions): JsonRecord[] {
+  const typedTask = asRecord(task);
+  const context = asRecord(typedTask.context);
+  const files = asRecord(typedTask.files);
+  if (ensureArray(typedTask.action_items).length === 0) return [];
+  const requirement = context.full_context_ai_completion;
   if (!fullContextAiConfigRequiresAuthoring(requirement)) return [];
-  const blockers = [];
-  const contractFiles = ensureArray(task?.context?.contract_context_files);
+  const blockers: JsonRecord[] = [];
+  const contractFiles = ensureArray(context.contract_context_files);
   blockers.push(
     ...sharedContextBundleReadinessBlockers({
       repoRoot,
-      sharedContextBundle: task?.context?.shared_context_bundle,
+      sharedContextBundle: context.shared_context_bundle,
       sourceKind: "task",
-      sourcePath: task?.files?.task_json,
+      sourcePath: asText(files.task_json) || null,
     }),
   );
-  for (const missingContext of ensureArray(task?.context?.missing_context_files)) {
+  for (const missingContext of ensureArray(context.missing_context_files)) {
+    const typedContext = asRecord(missingContext);
     blockers.push({
       code: "authoring_task_context_file_missing",
       message:
         "AI patch collect cannot accept a task whose context files were missing at authoring time.",
-      kind: asText(missingContext?.kind) || null,
-      path: asText(missingContext?.path) || null,
+      kind: asText(typedContext.kind) || null,
+      path: asText(typedContext.path) || null,
     });
   }
   for (const kind of requiredFullContextKinds(requirement)) {
@@ -158,13 +310,13 @@ export function authoringTaskFullContextReadinessBlockers({ repoRoot, task }) {
       });
     }
   }
-  const packagePath = resolveRepoPath(repoRoot, task?.files?.authoring_package);
+  const packagePath = resolveRepoPath(repoRoot, asText(files.authoring_package));
   if (!packagePath || !fileExists(packagePath)) {
     blockers.push({
       code: "authoring_task_authoring_package_missing",
       message:
         "AI patch collect cannot verify full-context readiness without the authoring package.",
-      authoring_package: task?.files?.authoring_package ?? null,
+      authoring_package: files.authoring_package ?? null,
     });
     return blockers;
   }
@@ -174,7 +326,7 @@ export function authoringTaskFullContextReadinessBlockers({ repoRoot, task }) {
       ...authoringPackageFullContextReadinessBlockers({
         repoRoot,
         packagePayload,
-        actionItems: task.action_items,
+        actionItems: typedTask.action_items,
         packagePath,
       }),
     );
@@ -182,19 +334,19 @@ export function authoringTaskFullContextReadinessBlockers({ repoRoot, task }) {
     blockers.push({
       code: "authoring_task_authoring_package_invalid",
       message: error instanceof Error ? error.message : String(error),
-      authoring_package: task?.files?.authoring_package ?? null,
+      authoring_package: files.authoring_package ?? null,
     });
   }
   return blockers;
 }
 
-export function shellQuote(value) {
+export function shellQuote(value: unknown): string {
   const text = String(value ?? "");
   if (/^[A-Za-z0-9_./:@%+=,-]+$/u.test(text)) return text;
   return `'${text.replace(/'/gu, `'\\''`)}'`;
 }
 
-export function renderAuthoringTaskMarkdown(task) {
+export function renderAuthoringTaskMarkdown(task: AuthoringTask): string {
   const actionItems = task.action_items.map((item) => {
     const lines = [
       `- [${item.index}] ${item.code}`,
@@ -296,20 +448,21 @@ export function buildDatasetAuthoringTaskFromPackage({
   packagePath,
   outDir,
   options = {},
-}) {
+}: BuildAuthoringTaskOptions): AuthoringTask {
   if (!packagePath || !fileExists(packagePath)) {
     throw new Error(
       "--authoring-package is required and must point to a Foundry AI authoring package JSON file.",
     );
   }
 
-  const packagePayload = readJson(packagePath);
-  const datasetType = asText(packagePayload.dataset_type);
-  if (!supportedDatasetTypes.has(datasetType)) {
+  const packagePayload = readJson<JsonRecord>(packagePath);
+  const datasetTypeText = asText(packagePayload.dataset_type);
+  if (!supportedDatasetTypes.has(datasetTypeText)) {
     throw new Error(
       `Authoring package dataset_type must be one of ${[...supportedDatasetTypes].join(", ")}.`,
     );
   }
+  const datasetType = datasetTypeText as DatasetType;
   const entityId = asText(packagePayload.entity_id ?? packagePayload.process_id);
   if (!entityId) {
     throw new Error("Authoring package is missing entity_id.");
@@ -318,7 +471,7 @@ export function buildDatasetAuthoringTaskFromPackage({
   const patchFile = resolveRepoPath(
     repoRoot,
     options.patchFile || options.patch || path.join(outDir, "ai-patches.json"),
-  );
+  )!;
   const patchTemplateFile = path.join(outDir, "patch-template.json");
   const taskFile = path.join(outDir, "ai-authoring-task.json");
   const markdownFile = path.join(outDir, "ai-authoring-task.md");
@@ -327,8 +480,8 @@ export function buildDatasetAuthoringTaskFromPackage({
     options.patchedRows ||
       options.out ||
       path.join(outDir, `${datasetTypePlural[datasetType]}.patched.jsonl`),
-  );
-  const applyDir = resolveRepoPath(repoRoot, options.applyDir || path.join(outDir, "patch-apply"));
+  )!;
+  const applyDir = resolveRepoPath(repoRoot, options.applyDir || path.join(outDir, "patch-apply"))!;
   const packageDir = path.dirname(packagePath);
   const actionItems = patchAuthoringActionItems(packagePayload);
   const decisionOnlyItems = decisionOnlyActionItems(packagePayload);
@@ -340,7 +493,10 @@ export function buildDatasetAuthoringTaskFromPackage({
   });
   const patchTemplate = buildPatchTemplate(packagePayload, packagePath);
   const sourceRowsFile = packagePayload.source_rows_file
-    ? repoRelativePath(repoRoot, resolveRepoPath(repoRoot, packagePayload.source_rows_file))
+    ? repoRelativePath(
+        repoRoot,
+        resolveRepoPath(repoRoot, asText(packagePayload.source_rows_file))!,
+      )
     : null;
   const applyArgs = [
     "node",
@@ -359,7 +515,7 @@ export function buildDatasetAuthoringTaskFromPackage({
     "--require-authoring-package",
     "--require-action-item-closure",
   ];
-  const task = {
+  const task: AuthoringTask = {
     schema_version: 1,
     generated_at_utc: nowIso(),
     status:
@@ -385,7 +541,7 @@ export function buildDatasetAuthoringTaskFromPackage({
         required: false,
       },
       missing_context_files: ensureArray(packagePayload.missing_context_files),
-      curation_queue_status: packagePayload.curation_queue_context?.status ?? null,
+      curation_queue_status: asRecord(packagePayload.curation_queue_context).status ?? null,
     },
     action_items: actionItems,
     decision_only_action_items: decisionOnlyItems,
@@ -430,26 +586,34 @@ export function buildDatasetAuthoringTaskFromPackage({
   };
 }
 
-export function shouldBuildAuthoringTaskFromEntity(entity, includeReady) {
+export function shouldBuildAuthoringTaskFromEntity(
+  entity: unknown,
+  includeReady: boolean,
+): boolean {
+  const typedEntity = asRecord(entity);
   if (includeReady) return true;
-  const actionItemCount = Number(entity?.action_item_count ?? entity?.actionItemCount ?? 0);
+  const actionItemCount = Number(typedEntity.action_item_count ?? typedEntity.actionItemCount ?? 0);
   if (actionItemCount > 0) return true;
-  return String(entity?.status ?? "").includes("needs_foundry_ai_authoring");
+  return String(typedEntity.status ?? "").includes("needs_foundry_ai_authoring");
 }
 
-export function authoringPackageEntriesFromGate(repoRoot, reportPath, includeReady) {
-  const report = readJson(reportPath);
-  const entities = ensureArray(
-    report?.entities ?? report?.processes ?? report?.flows ?? report?.items,
-  );
+export function authoringPackageEntriesFromGate(
+  repoRoot: string,
+  reportPath: string,
+  includeReady: boolean,
+): JsonRecord[] {
+  const report = readJson<JsonRecord>(reportPath);
+  const entities = ensureArray(report.entities ?? report.processes ?? report.flows ?? report.items);
   return entities
     .filter((entity) => shouldBuildAuthoringTaskFromEntity(entity, includeReady))
     .map((entity, index) => {
-      const packageRef = asText(entity?.authoring_package ?? entity?.authoringPackage);
+      const typedEntity = asRecord(entity);
+      const packageRef = asText(typedEntity.authoring_package ?? typedEntity.authoringPackage);
       const packagePath = resolveRepoPath(repoRoot, packageRef);
-      const datasetType = asText(entity?.dataset_type ?? entity?.type) || "dataset";
+      const datasetType = asText(typedEntity.dataset_type ?? typedEntity.type) || "dataset";
       const entityId =
-        asText(entity?.entity_id ?? entity?.process_id ?? entity?.id) || `entity-${index + 1}`;
+        asText(typedEntity.entity_id ?? typedEntity.process_id ?? typedEntity.id) ||
+        `entity-${index + 1}`;
       return {
         index,
         entity,
@@ -460,30 +624,37 @@ export function authoringPackageEntriesFromGate(repoRoot, reportPath, includeRea
     });
 }
 
-export function buildSharedAuthoringContextBundle(repoRoot, outDir, tasks, source, options = {}) {
-  const fileMap = new Map();
-  const references = [];
+export function buildSharedAuthoringContextBundle(
+  repoRoot: string,
+  outDir: string,
+  tasks: AuthoringTask[],
+  source: string,
+  options: SharedContextOptions = {},
+): SharedContextBuildResult {
+  const fileMap = new Map<string, SharedContextFile>();
+  const references: JsonRecord[] = [];
   for (const task of tasks) {
     const packageRef = task.files?.authoring_package;
     const packagePath = resolveRepoPath(repoRoot, packageRef);
     if (!packagePath || !fileExists(packagePath)) continue;
     const stablePackageRef = packageRef ? path.basename(packageRef) : null;
-    let packagePayload = null;
+    let packagePayload: JsonRecord | null = null;
     try {
-      packagePayload = readJson(packagePath);
+      packagePayload = readJson<JsonRecord>(packagePath);
     } catch {
       continue;
     }
     for (const [scope, contextFiles] of [
       ["profile_context_files", packagePayload.profile_context_files],
       ["contract_context_files", packagePayload.contract_context_files],
-    ]) {
+    ] as Array<[string, unknown]>) {
       for (const contextFile of ensureArray(contextFiles)) {
-        const text = String(contextFile?.text ?? "");
-        const sha256 = asText(contextFile?.sha256) || sha256Text(text);
-        const bytes = Number(contextFile?.bytes) || Buffer.byteLength(text, "utf8");
-        const kind = asText(contextFile?.kind) || "context";
-        const contextPath = asText(contextFile?.path) || null;
+        const typedFile = asRecord(contextFile);
+        const text = String(typedFile.text ?? "");
+        const sha256 = asText(typedFile.sha256) || sha256Text(text);
+        const bytes = Number(typedFile.bytes) || Buffer.byteLength(text, "utf8");
+        const kind = asText(typedFile.kind) || "context";
+        const contextPath = asText(typedFile.path) || null;
         const key = JSON.stringify([scope, kind, contextPath, sha256]);
         if (!fileMap.has(key)) {
           fileMap.set(key, {
@@ -513,26 +684,27 @@ export function buildSharedAuthoringContextBundle(repoRoot, outDir, tasks, sourc
   const files = [...fileMap.values()];
   const uniqueBytes = files.reduce((total, file) => total + (Number(file.bytes) || 0), 0);
   const referenceBytes = references.reduce((total, ref) => total + (Number(ref.bytes) || 0), 0);
+  const counts: SharedContextCounts = {
+    tasks: tasks.length,
+    authoring_packages: unique(
+      tasks.map((task) => path.basename(task.files.authoring_package ?? "")).filter(Boolean),
+    ).length,
+    files: files.length,
+    references: references.length,
+    duplicate_references: Math.max(0, references.length - files.length),
+    unique_context_bytes: uniqueBytes,
+    referenced_context_bytes: referenceBytes,
+    duplicate_context_bytes_avoided: Math.max(0, referenceBytes - uniqueBytes),
+  };
   const stablePayload = {
     schema_version: 1,
     kind: "tiangong_foundry_shared_authoring_context_bundle",
     source,
-    counts: {
-      tasks: tasks.length,
-      authoring_packages: unique(
-        tasks.map((task) => path.basename(task.files?.authoring_package ?? "")).filter(Boolean),
-      ).length,
-      files: files.length,
-      references: references.length,
-      duplicate_references: Math.max(0, references.length - files.length),
-      unique_context_bytes: uniqueBytes,
-      referenced_context_bytes: referenceBytes,
-      duplicate_context_bytes_avoided: Math.max(0, referenceBytes - uniqueBytes),
-    },
+    counts,
     files,
     references,
   };
-  const bundle = {
+  const bundle: SharedContextBundle = {
     ...stablePayload,
     generated_at_utc: nowIso(),
     hash_scope:
@@ -548,7 +720,7 @@ export function buildSharedAuthoringContextBundle(repoRoot, outDir, tasks, sourc
   let cacheReused = false;
   if (cacheDir && fileExists(bundlePath)) {
     try {
-      cacheReused = readJson(bundlePath)?.sha256 === bundle.sha256;
+      cacheReused = readJson<JsonRecord>(bundlePath).sha256 === bundle.sha256;
     } catch {
       cacheReused = false;
     }
@@ -570,7 +742,10 @@ export function buildSharedAuthoringContextBundle(repoRoot, outDir, tasks, sourc
   };
 }
 
-export function attachSharedContextBundleToTask(task, sharedContextBundle) {
+export function attachSharedContextBundleToTask(
+  task: AuthoringTask,
+  sharedContextBundle: SharedContextBundleRef,
+): AuthoringTask {
   return {
     ...task,
     context: {
@@ -580,26 +755,36 @@ export function attachSharedContextBundleToTask(task, sharedContextBundle) {
   };
 }
 
-export function rewriteAuthoringTaskFile(repoRoot, task) {
+export function rewriteAuthoringTaskFile(repoRoot: string, task: AuthoringTask): void {
   const taskFile = resolveRepoPath(repoRoot, task?.files?.task_json);
   const markdownFile = resolveRepoPath(repoRoot, task?.files?.task_markdown);
   if (taskFile) writeJson(taskFile, task);
   if (markdownFile) writeText(markdownFile, renderAuthoringTaskMarkdown(task));
 }
 
-export function writeAuthoringTaskBatchManifest(repoRoot, outDir, tasks, source, options = {}) {
+export function writeAuthoringTaskBatchManifest(
+  repoRoot: string,
+  outDir: string,
+  tasks: AuthoringTask[],
+  source: string,
+  options: SharedContextOptions = {},
+): JsonRecord {
   const manifestPath = path.join(outDir, "authoring-task-manifest.json");
   const tasksPath = path.join(outDir, "authoring-tasks.jsonl");
   const batchPatchFile = path.join(outDir, "ai-patches.batch.json");
   const datasetTypes = [...new Set(tasks.map((task) => task.entity.dataset_type).filter(Boolean))];
   const sourceRowsFiles = [
-    ...new Set(tasks.map((task) => task.context.source_rows_file).filter(Boolean)),
+    ...new Set(
+      tasks
+        .map((task) => task.context.source_rows_file)
+        .filter((filePath): filePath is string => Boolean(filePath)),
+    ),
   ];
   const packageDirs = [
     ...new Set(
       tasks
         .map((task) => resolveRepoPath(repoRoot, task.files.authoring_package))
-        .filter(Boolean)
+        .filter((filePath): filePath is string => Boolean(filePath))
         .map((filePath) => repoRelativePath(repoRoot, path.dirname(filePath))),
     ),
   ];
@@ -735,44 +920,50 @@ export function writeAuthoringTaskBatchManifest(repoRoot, outDir, tasks, source,
   };
 }
 
-export function patchSetOperations(value) {
+export function patchSetOperations(value: unknown): JsonRecord[] | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const operations = Array.isArray(value.operations)
-    ? value.operations
-    : Array.isArray(value.patches)
-      ? value.patches
+  const record = value as JsonRecord;
+  const operations = Array.isArray(record.operations)
+    ? record.operations
+    : Array.isArray(record.patches)
+      ? record.patches
       : null;
   if (!operations || !operations.every((operation) => operation && typeof operation === "object")) {
     return null;
   }
-  return operations;
+  return operations as JsonRecord[];
 }
 
-export function patchPayloadPatchSets(rawPatch) {
+export function patchPayloadPatchSets(rawPatch: unknown): unknown[] {
   if (Array.isArray(rawPatch)) return rawPatch;
   if (!rawPatch || typeof rawPatch !== "object") return [];
   if (patchSetOperations(rawPatch)) return [rawPatch];
+  const record = rawPatch as JsonRecord;
   for (const key of ["patch_sets", "patchSets", "patches", "suggestions", "items"]) {
-    if (Array.isArray(rawPatch[key])) return rawPatch[key];
+    if (Array.isArray(record[key])) return record[key];
   }
   return [];
 }
 
-export function patchSetDatasetId(patchSet) {
-  return asText(patchSet?.dataset_id ?? patchSet?.id ?? patchSet?.uuid ?? patchSet?.entity_id);
+export function patchSetDatasetId(patchSet: unknown): string {
+  const record = asRecord(patchSet);
+  return asText(record.dataset_id ?? record.id ?? record.uuid ?? record.entity_id);
 }
 
-export function patchSetDatasetVersion(patchSet) {
-  return asText(patchSet?.dataset_version ?? patchSet?.version) || "00.00.001";
+export function patchSetDatasetVersion(patchSet: unknown): string {
+  const record = asRecord(patchSet);
+  return asText(record.dataset_version ?? record.version) || "00.00.001";
 }
 
-export function patchSetAuthoringPackage(patchSet) {
-  return asText(patchSet?.authoring_package ?? patchSet?.authoringPackage);
+export function patchSetAuthoringPackage(patchSet: unknown): string {
+  const record = asRecord(patchSet);
+  return asText(record.authoring_package ?? record.authoringPackage);
 }
 
-export function operationHasEvidence(operation) {
-  const basis = asText(operation?.basis);
-  const evidence = operation?.evidence;
+export function operationHasEvidence(operation: unknown): boolean {
+  const record = asRecord(operation);
+  const basis = asText(record.basis);
+  const evidence = record.evidence;
   if (basis) return true;
   if (typeof evidence === "string") return evidence.trim().length > 0;
   if (Array.isArray(evidence)) return evidence.length > 0;
@@ -780,23 +971,25 @@ export function operationHasEvidence(operation) {
   return false;
 }
 
-export function taskRequiresFullContextEvidence(task) {
+export function taskRequiresFullContextEvidence(task: unknown): boolean {
+  const context = asRecord(asRecord(task).context);
   return (
-    task?.context?.full_context_ai_completion?.required === true ||
-    task?.context?.fullContextAiCompletion?.required === true
+    asRecord(context.full_context_ai_completion).required === true ||
+    asRecord(context.fullContextAiCompletion).required === true
   );
 }
 
-export function evidenceEntries(value) {
+export function evidenceEntries(value: unknown): unknown[] {
   if (Array.isArray(value)) return value;
   if (value === undefined || value === null) return [];
   return [value];
 }
 
-export function firstNonEmptyEvidenceValue(entry, keys) {
+export function firstNonEmptyEvidenceValue(entry: unknown, keys: readonly string[]): string {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) return "";
+  const record = entry as JsonRecord;
   for (const key of keys) {
-    const value = asText(entry[key]);
+    const value = asText(record[key]);
     if (value) return value;
   }
   return "";
@@ -839,17 +1032,21 @@ export const evidenceTraceKeys = [
   "excerpt",
 ];
 
-export function operationFullContextEvidenceBlockers({ operation, task }) {
+export function operationFullContextEvidenceBlockers({
+  operation,
+  task,
+}: EvidenceOperationOptions): JsonRecord[] {
   if (!taskRequiresFullContextEvidence(task)) return [];
-  const blockers = [];
-  if (!asText(operation?.basis)) {
+  const blockers: JsonRecord[] = [];
+  const typedOperation = asRecord(operation);
+  if (!asText(typedOperation.basis)) {
     blockers.push({
       code: "patch_basis_required_full_context",
       message:
         "Full-context AI patch operations must include basis explaining why the value follows from the package/context.",
     });
   }
-  const structuredEntries = evidenceEntries(operation?.evidence).filter(
+  const structuredEntries = evidenceEntries(typedOperation.evidence).filter(
     (entry) => entry && typeof entry === "object" && !Array.isArray(entry),
   );
   if (structuredEntries.length === 0) {
@@ -875,19 +1072,18 @@ export function operationFullContextEvidenceBlockers({ operation, task }) {
   return blockers;
 }
 
-export function operationResolution(operation) {
-  return operation?.resolution &&
-    typeof operation.resolution === "object" &&
-    !Array.isArray(operation.resolution)
-    ? operation.resolution
+export function operationResolution(operation: unknown): JsonRecord | null {
+  const resolution = asRecord(operation).resolution;
+  return resolution && typeof resolution === "object" && !Array.isArray(resolution)
+    ? (resolution as JsonRecord)
     : null;
 }
 
-export function operationResolutionMode(operation) {
+export function operationResolutionMode(operation: unknown): string {
   return asText(operationResolution(operation)?.mode);
 }
 
-export function operationUsedContextKinds(operation) {
+export function operationUsedContextKinds(operation: unknown): string[] {
   return ensureArray(
     operationResolution(operation)?.used_context_kinds ??
       operationResolution(operation)?.usedContextKinds,
@@ -896,15 +1092,16 @@ export function operationUsedContextKinds(operation) {
     .filter(Boolean);
 }
 
-export function taskRequiredContextKinds(task) {
+export function taskRequiredContextKinds(task: unknown): string[] {
+  const context = asRecord(asRecord(task).context);
   const kinds = new Set(
-    ensureArray(task?.context?.contract_context_files)
-      .map((file) => asText(file?.kind))
+    ensureArray(context.contract_context_files)
+      .map((file) => asText(asRecord(file).kind))
       .filter(Boolean),
   );
   const requiredKinds = ensureArray(
-    task?.context?.full_context_ai_completion?.required_context_kinds ??
-      task?.context?.fullContextAiCompletion?.requiredContextKinds,
+    asRecord(context.full_context_ai_completion).required_context_kinds ??
+      asRecord(context.fullContextAiCompletion).requiredContextKinds,
   )
     .map((kind) => asText(kind))
     .filter(Boolean);
@@ -915,16 +1112,17 @@ export function taskRequiredContextKinds(task) {
   return candidates.filter((kind) => kinds.has(kind) || requiredKinds.includes(kind));
 }
 
-export function operationTouchesCommonOther(operation) {
-  const pointer = asText(operation?.path);
+export function operationTouchesCommonOther(operation: unknown): boolean {
+  const record = asRecord(operation);
+  const pointer = asText(record.path);
   if (pointer.includes("/common:other") || pointer.includes("/tiangongfoundry:")) return true;
   return (
-    JSON.stringify(operation?.value ?? "").includes("common:other") ||
-    JSON.stringify(operation?.value ?? "").includes("tiangongfoundry:")
+    JSON.stringify(record.value ?? "").includes("common:other") ||
+    JSON.stringify(record.value ?? "").includes("tiangongfoundry:")
   );
 }
 
-export function hasNonEmptyTraceEvidence(value) {
+export function hasNonEmptyTraceEvidence(value: unknown): boolean {
   if (typeof value === "string") return value.trim().length > 0;
   if (Array.isArray(value)) return value.some((item) => hasNonEmptyTraceEvidence(item));
   if (value && typeof value === "object") return Object.keys(value).length > 0;

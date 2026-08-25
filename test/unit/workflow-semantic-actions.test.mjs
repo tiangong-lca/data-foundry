@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { namePlanQualityFindings } from "../../scripts/lib/import-curation/internal/workflow-semantic-actions.mjs";
+import { namePlanQualityFindings } from "../../scripts/lib/import-curation/internal/workflow-semantic-actions.ts";
 
 test("name-plan QA treats season-year scope as temporal, not a source citation", () => {
   const seasonScopedFindings = namePlanQualityFindings({

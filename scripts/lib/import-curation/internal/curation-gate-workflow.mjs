@@ -66,4 +66,4 @@ export {
   readUnresolvedExchangeExternalizationContext,
   unresolvedExchangeExternalizationRowsForIdentity,
 } from "./workflow-row-transform-context.ts";
-export { collectProfileSemanticActionItems } from "./workflow-semantic-actions.mjs";
+export { collectProfileSemanticActionItems } from "./workflow-semantic-actions.ts";

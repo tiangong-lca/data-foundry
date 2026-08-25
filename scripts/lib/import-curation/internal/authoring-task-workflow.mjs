@@ -2,4 +2,4 @@ export {
   authoringPackageEntriesFromGate,
   buildDatasetAuthoringTaskFromPackage,
   writeAuthoringTaskBatchManifest,
-} from "./workflow-authoring-tasks.mjs";
+} from "./workflow-authoring-tasks.ts";

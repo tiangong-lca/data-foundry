@@ -14,14 +14,135 @@ import {
   resolveRepoPath,
 } from "./runtime-io.ts";
 import { collectCommonOtherTraceEntries } from "./trace-summary.ts";
-import { hasNonEmptyTraceEvidence } from "./workflow-authoring-tasks.mjs";
-import { hasStructuredTraceEvidence } from "./workflow-patch-evidence.mjs";
+import { hasNonEmptyTraceEvidence } from "./workflow-authoring-tasks.ts";
+import { hasStructuredTraceEvidence } from "./workflow-patch-evidence.ts";
 import { isAnnualSupplyTarget } from "./workflow-queue-context.ts";
 
+interface JsonRecord {
+  [key: string]: unknown;
+}
+
+interface TextEntry {
+  path: string;
+  text: string;
+}
+
+interface SemanticActionOptions {
+  code: string;
+  path?: string | null;
+  message: string;
+  evidence?: unknown;
+  instruction: string;
+  common_other_deferral_allowed?: boolean;
+  action_kind?: string;
+}
+
+interface SemanticAction extends JsonRecord {
+  code: string;
+  path: string | null;
+  message: string;
+  evidence: unknown;
+  instruction: string;
+}
+
+interface PlaceholderOptions {
+  allowNone?: boolean;
+}
+
+interface TraceObject {
+  node: JsonRecord;
+  trace_path: string;
+}
+
+interface TraceAttribute {
+  object_name: string;
+  attribute_name: string;
+  value: string;
+  trace_path: string;
+}
+
+interface ActionItem extends JsonRecord {
+  source?: unknown;
+  code?: unknown;
+  rule_id?: unknown;
+  ruleId?: unknown;
+  path?: unknown;
+  message?: unknown;
+  evidence?: unknown;
+  instruction?: unknown;
+  action_kind?: unknown;
+  required_owner?: unknown;
+  ai_required?: unknown;
+  common_other_deferral_allowed?: unknown;
+  commonOtherDeferralAllowed?: unknown;
+  deferral_cleanup_path?: unknown;
+  deferral_trace_path?: unknown;
+}
+
+interface CompactActionItem extends JsonRecord {
+  index: number;
+  source: string | null;
+  code: string;
+  path: string | null;
+  json_pointer: string;
+  message: string | null;
+  evidence: unknown;
+  instruction: string | null;
+  allowed_resolution_modes: string[];
+  action_kind: string;
+  required_owner: string;
+  ai_required: boolean;
+  common_other_deferral_allowed: boolean;
+  deferral_cleanup_path: string | null;
+  deferral_trace_path: string | null;
+}
+
+interface ProfileOptions {
+  profile?: JsonRecord | null;
+}
+
+interface ClassificationOptions extends ProfileOptions {
+  hasClassificationQueueContext?: boolean;
+}
+
+interface ProfileActionOptions extends ClassificationOptions {
+  datasetType: string;
+  payload: unknown;
+  profile: JsonRecord | null | undefined;
+}
+
+interface ContentSaturationOptions extends SemanticActionOptions {
+  datasetType: string;
+}
+
+interface SharedContextOptions {
+  repoRoot: string;
+  sharedContextBundle: unknown;
+  sourceKind: string;
+  sourcePath?: string | null;
+}
+
+interface NameFinding extends JsonRecord {
+  code: string;
+  path_field: string;
+}
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function asRecord(value: unknown): JsonRecord {
+  return isRecord(value) ? value : {};
+}
+
+function asActionItem(value: unknown): ActionItem {
+  return isRecord(value) ? value : {};
+}
+
 // part-02.mjs
-export function collectTextEntries(value, pathName = "") {
-  const entries = [];
-  const visit = (node, currentPath) => {
+export function collectTextEntries(value: unknown, pathName = ""): TextEntry[] {
+  const entries: TextEntry[] = [];
+  const visit = (node: unknown, currentPath: string): void => {
     if (typeof node === "string") {
       entries.push({ path: currentPath, text: node });
       return;
@@ -40,19 +161,19 @@ export function collectTextEntries(value, pathName = "") {
   return entries;
 }
 
-export function nameCarrier(root, datasetType) {
+export function nameCarrier(root: unknown, datasetType: string): JsonRecord {
   const info = dataSetInformation(root, datasetType);
   return info?.name && typeof info.name === "object" ? info.name : {};
 }
 
-export function nameTextForPayload(payload, datasetType) {
+export function nameTextForPayload(payload: unknown, datasetType: string): string {
   const root = datasetRoot(payload, datasetType);
   return collectTextEntries(nameCarrier(root, datasetType))
     .map((entry) => entry.text)
     .join(" ");
 }
 
-export function flowTypeForPayload(payload) {
+export function flowTypeForPayload(payload: unknown): string {
   const root = datasetRoot(payload, "flow");
   return asText(
     root?.modellingAndValidation?.LCIMethod?.typeOfDataSet ??
@@ -60,16 +181,16 @@ export function flowTypeForPayload(payload) {
   );
 }
 
-export function flowUsesElementaryClassification(payload) {
+export function flowUsesElementaryClassification(payload: unknown): boolean {
   return /^elementary flow$/iu.test(flowTypeForPayload(payload));
 }
 
-export function flowUsesProductClassification(payload) {
+export function flowUsesProductClassification(payload: unknown): boolean {
   const type = flowTypeForPayload(payload);
   return /^product flow$/iu.test(type) || /^waste flow$/iu.test(type);
 }
 
-export function classificationActionPathForPayload(payload, datasetType) {
+export function classificationActionPathForPayload(payload: unknown, datasetType: string): string {
   if (datasetType === "flow") {
     return flowUsesElementaryClassification(payload)
       ? "flowDataSet.flowInformation.dataSetInformation.classificationInformation.common:elementaryFlowCategorization"
@@ -78,7 +199,10 @@ export function classificationActionPathForPayload(payload, datasetType) {
   return "processDataSet.processInformation.dataSetInformation.classificationInformation.common:classification";
 }
 
-export function classificationEntriesForPayload(payload, datasetType) {
+export function classificationEntriesForPayload(
+  payload: unknown,
+  datasetType: string,
+): Array<{ index: number; level: string; class_id: string; text: string }> {
   const root = datasetRoot(payload, datasetType);
   const info = dataSetInformation(root, datasetType);
   if (datasetType === "flow") {
@@ -115,39 +239,45 @@ export function classificationEntriesForPayload(payload, datasetType) {
     }));
 }
 
-export function classificationPathForPayload(payload, datasetType) {
+export function classificationPathForPayload(payload: unknown, datasetType: string): string {
   return classificationEntriesForPayload(payload, datasetType)
     .map((entry) => entry.text)
     .filter(Boolean)
     .join(" > ");
 }
 
-export function processExchangeList(payload) {
+export function processExchangeList(payload: unknown): JsonRecord[] {
   const root = datasetRoot(payload, "process");
-  return ensureArray(root?.exchanges?.exchange).filter(
-    (exchange) => exchange && typeof exchange === "object",
-  );
+  return ensureArray(root?.exchanges?.exchange).filter(isRecord);
 }
 
-export function hasFoundryOtherEvidence(value, evidenceKey, acceptedStatuses = []) {
+export function hasFoundryOtherEvidence(
+  value: unknown,
+  evidenceKey: string,
+  acceptedStatuses: string[] = [],
+): boolean {
   let found = false;
   const accepted = new Set(acceptedStatuses.map((status) => String(status).toLowerCase()));
-  const visit = (node) => {
+  const visit = (node: unknown): void => {
     if (found || !node || typeof node !== "object") return;
     if (Array.isArray(node)) {
       for (const item of node) visit(item);
       return;
     }
-    const other = node["common:other"];
+    const record = node as JsonRecord;
+    const other = record["common:other"];
     if (other && typeof other === "object" && !Array.isArray(other)) {
-      const evidence = other[evidenceKey];
+      const evidence = (other as JsonRecord)[evidenceKey];
       if (evidence !== undefined) {
         if (accepted.size === 0) {
           found = true;
           return;
         }
         for (const item of ensureArray(evidence)) {
-          const status = asText(item?.status ?? item?.decision_status ?? item?.decisionStatus);
+          const typedItem = asRecord(item);
+          const status = asText(
+            typedItem.status ?? typedItem.decision_status ?? typedItem.decisionStatus,
+          );
           if (status && accepted.has(status.toLowerCase())) {
             found = true;
             return;
@@ -155,7 +285,7 @@ export function hasFoundryOtherEvidence(value, evidenceKey, acceptedStatuses = [
         }
       }
     }
-    for (const child of Object.values(node)) visit(child);
+    for (const child of Object.values(record)) visit(child);
   };
   visit(value);
   return found;
@@ -169,7 +299,7 @@ export function semanticActionItem({
   instruction,
   common_other_deferral_allowed = false,
   action_kind = "ai_authoring",
-}) {
+}: SemanticActionOptions): SemanticAction {
   return {
     source: "profile_semantic_gate",
     code,
@@ -184,82 +314,97 @@ export function semanticActionItem({
   };
 }
 
-export function textValue(value) {
+export function textValue(value: unknown): string {
   if (value === undefined || value === null) return "";
   if (typeof value === "string") return value.trim();
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   if (Array.isArray(value)) return value.map(textValue).filter(Boolean).join(" | ");
   if (typeof value !== "object") return "";
-  const direct = value["#text"] ?? value.text ?? value.value;
+  const record = value as JsonRecord;
+  const direct = record["#text"] ?? record.text ?? record.value;
   if (direct !== undefined && direct !== value) return textValue(direct);
-  return Object.entries(value)
+  return Object.entries(record)
     .filter(([key]) => !key.startsWith("@"))
     .map(([, child]) => textValue(child))
     .filter(Boolean)
     .join(" | ");
 }
 
-export function isPlaceholderishText(value, { allowNone = false } = {}) {
+export function isPlaceholderishText(
+  value: unknown,
+  { allowNone = false }: PlaceholderOptions = {},
+): boolean {
   const text = textValue(value);
   if (!text) return true;
   if (allowNone && /^none$/iu.test(text)) return false;
   return /^(na|n\/a|not specified|not declared|unspecified|undefined|-|--|unknown)$/iu.test(text);
 }
 
-export function hasMeaningfulFieldValue(value) {
+export function hasMeaningfulFieldValue(value: unknown): boolean {
   return !isPlaceholderishText(value);
 }
 
-export function sourceTracePayloads(value) {
-  const payloads = [];
-  const visit = (node) => {
+export function sourceTracePayloads(value: unknown): unknown[] {
+  const payloads: unknown[] = [];
+  const visit = (node: unknown): void => {
     if (!node || typeof node !== "object") return;
     if (Array.isArray(node)) {
       for (const item of node) visit(item);
       return;
     }
-    const trace = node["tidasimport:sourceTrace"];
-    if (trace && typeof trace === "object" && !Array.isArray(trace) && trace.payload) {
+    const record = node as JsonRecord;
+    const trace = record["tidasimport:sourceTrace"];
+    if (isRecord(trace) && trace.payload) {
       payloads.push(trace.payload);
     }
-    for (const child of Object.values(node)) visit(child);
+    for (const child of Object.values(record)) visit(child);
   };
   visit(value);
   return payloads;
 }
 
-export function traceObjectsNamed(value, names) {
+export function traceObjectsNamed(value: unknown, names: unknown): TraceObject[] {
   const wanted = new Set(
     ensureArray(names)
       .map((name) => asText(name))
       .filter(Boolean),
   );
-  const found = [];
-  const visit = (node, pathParts = []) => {
+  const found: TraceObject[] = [];
+  const visit = (node: unknown, pathParts: string[] = []): void => {
     if (!node || typeof node !== "object") return;
     if (Array.isArray(node)) {
       node.forEach((item, index) => visit(item, [...pathParts, String(index)]));
       return;
     }
-    const name = asText(node.name);
-    if (wanted.has(name) && Array.isArray(node.attributes)) {
-      found.push({ node, trace_path: pathParts.join(".") || "<root>" });
+    const record = node as JsonRecord;
+    const name = asText(record.name);
+    if (wanted.has(name) && Array.isArray(record.attributes)) {
+      found.push({ node: record, trace_path: pathParts.join(".") || "<root>" });
     }
-    for (const [key, child] of Object.entries(node)) visit(child, [...pathParts, key]);
+    for (const [key, child] of Object.entries(record)) visit(child, [...pathParts, key]);
   };
   for (const payload of ensureArray(value)) visit(payload);
   return found;
 }
 
-export function traceAttributeMap(traceObject) {
+export function traceAttributeMap(traceObject: unknown): Map<string, string> {
+  const record = asRecord(traceObject);
   return new Map(
-    ensureArray(traceObject?.attributes)
-      .map((attribute) => [asText(attribute?.name), textValue(attribute?.value)])
-      .filter(([name, value]) => name && value),
+    ensureArray(record.attributes)
+      .map((attribute): [string, string] => {
+        const typedAttribute = asRecord(attribute);
+        return [asText(typedAttribute.name), textValue(typedAttribute.value)];
+      })
+      .filter(([name, value]) => Boolean(name && value)),
   );
 }
 
-export function firstTraceAttribute(payloads, objectNames, attributeNames, options = {}) {
+export function firstTraceAttribute(
+  payloads: unknown,
+  objectNames: unknown,
+  attributeNames: unknown,
+  options: PlaceholderOptions = {},
+): TraceAttribute | null {
   const names = ensureArray(attributeNames)
     .map((name) => asText(name))
     .filter(Boolean);
@@ -280,7 +425,7 @@ export function firstTraceAttribute(payloads, objectNames, attributeNames, optio
   return null;
 }
 
-export function sourceTraceLanguage(payloads, fallback = "en") {
+export function sourceTraceLanguage(payloads: unknown, fallback = "en"): string {
   const rawLanguage = (
     firstTraceAttribute(payloads, "dataSetInformation", "localLanguageCode")?.value ||
     firstTraceAttribute(payloads, "dataSetInformation", "languageCode")?.value ||
@@ -291,14 +436,17 @@ export function sourceTraceLanguage(payloads, fallback = "en") {
   return normalizeTidasLanguageCode(rawLanguage, { field: "source trace language" });
 }
 
-export function multiLangSuggestion(value, language = "en") {
+export function multiLangSuggestion(value: unknown, language = "en"): JsonRecord {
   return {
     "@xml:lang": normalizeTidasLanguageCode(language),
     "#text": textValue(value),
   };
 }
 
-export function sourceTraceEvidence(attribute, extra = {}) {
+export function sourceTraceEvidence(
+  attribute: TraceAttribute | null | undefined,
+  extra: JsonRecord = {},
+): JsonRecord {
   return {
     source: "tidasimport:sourceTrace",
     trace_path: attribute?.trace_path ?? null,
@@ -309,7 +457,7 @@ export function sourceTraceEvidence(attribute, extra = {}) {
   };
 }
 
-export function locationCodeCandidate(value) {
+export function locationCodeCandidate(value: unknown): string | null {
   const text = textValue(value);
   if (!text) return null;
   const normalized = text.replace(/[{}]/gu, "").trim();
@@ -320,8 +468,11 @@ export function locationCodeCandidate(value) {
   return null;
 }
 
-export function flowNameLocationEvidence(root) {
-  const value = root?.flowInformation?.dataSetInformation?.name?.mixAndLocationTypes;
+export function flowNameLocationEvidence(root: JsonRecord): JsonRecord | null {
+  const flowInformation = asRecord(root.flowInformation);
+  const dataSetInfo = asRecord(flowInformation.dataSetInformation);
+  const name = asRecord(dataSetInfo.name);
+  const value = name.mixAndLocationTypes;
   const code = locationCodeCandidate(value);
   if (!code) return null;
   return {
@@ -332,7 +483,7 @@ export function flowNameLocationEvidence(root) {
   };
 }
 
-export function nameFieldPath(datasetType, field) {
+export function nameFieldPath(datasetType: string, field: string): string {
   const prefix =
     datasetType === "flow"
       ? "flowDataSet.flowInformation.dataSetInformation.name"
@@ -349,7 +500,7 @@ export function nameFieldPath(datasetType, field) {
 // unsupported name split, e.g. "Tyre wear emissions, passenger car {RER}" with
 // mixAndLocationTypes "RER"). Genuine qualifier braces, or location braces that do NOT
 // match the dataset location, are left in place and still flagged.
-function stripRedundantTrailingLocationBrace(baseName, mix) {
+function stripRedundantTrailingLocationBrace(baseName: unknown, mix: unknown): string {
   const text = String(baseName ?? "").trim();
   const match = /\{(?<code>[A-Z0-9][A-Z0-9+&-]*)\}\s*$/u.exec(text);
   if (!match?.groups?.code) return text;
@@ -360,13 +511,14 @@ function stripRedundantTrailingLocationBrace(baseName, mix) {
   return text.slice(0, match.index).trim();
 }
 
-export function namePlanQualityFindings(name) {
-  const baseName = textValue(name?.baseName);
-  const treatment = textValue(name?.treatmentStandardsRoutes);
-  const mix = textValue(name?.mixAndLocationTypes);
+export function namePlanQualityFindings(name: unknown): NameFinding[] {
+  const typedName = asRecord(name);
+  const baseName = textValue(typedName.baseName);
+  const treatment = textValue(typedName.treatmentStandardsRoutes);
+  const mix = textValue(typedName.mixAndLocationTypes);
   const quantitative =
-    textValue(name?.functionalUnitFlowProperties) || textValue(name?.flowProperties);
-  const findings = [];
+    textValue(typedName.functionalUnitFlowProperties) || textValue(typedName.flowProperties);
+  const findings: NameFinding[] = [];
   const sourceLocatorPatterns = [
     {
       kind: "latin-author-year",
@@ -498,7 +650,10 @@ export function namePlanQualityFindings(name) {
   return findings;
 }
 
-export function collectNamePlanQualitySemanticActions(payload, datasetType) {
+export function collectNamePlanQualitySemanticActions(
+  payload: unknown,
+  datasetType: string,
+): SemanticAction[] {
   if (!["flow", "process", "lifecyclemodel"].includes(datasetType)) return [];
   const root = datasetRoot(payload, datasetType);
   const name = nameCarrier(root, datasetType);
@@ -535,7 +690,7 @@ export function collectNamePlanQualitySemanticActions(payload, datasetType) {
   );
 }
 
-export function sourceTraceLocationEvidence(traces) {
+export function sourceTraceLocationEvidence(traces: unknown): JsonRecord | null {
   const candidates = [
     firstTraceAttribute(traces, "exchange", "location"),
     firstTraceAttribute(
@@ -548,7 +703,7 @@ export function sourceTraceLocationEvidence(traces) {
       ["process", "processInformation", "geography"],
       ["locationOfOperationSupplyOrProduction", "@location", "location"],
     ),
-  ].filter(Boolean);
+  ].filter((candidate): candidate is TraceAttribute => candidate !== null);
   if (candidates.length === 0) return null;
   const primary = candidates[0];
   return sourceTraceEvidence(primary, {
@@ -563,11 +718,14 @@ export function sourceTraceLocationEvidence(traces) {
   });
 }
 
-export function collectTextQualitySemanticActions(payload, datasetType) {
+export function collectTextQualitySemanticActions(
+  payload: unknown,
+  datasetType: string,
+): SemanticAction[] {
   const entries = collectTextEntries(payload);
-  const actions = [];
-  const seen = new Set();
-  const add = (item) => {
+  const actions: SemanticAction[] = [];
+  const seen = new Set<string>();
+  const add = (item: SemanticAction): void => {
     const key = JSON.stringify([item.code, item.path, item.message]);
     if (seen.has(key)) return;
     seen.add(key);
@@ -659,22 +817,22 @@ export function collectTextQualitySemanticActions(payload, datasetType) {
   return actions.map((item) => ({ ...item, dataset_type: datasetType }));
 }
 
-export function isBafuConvertedDefaultProcessClassification(classificationPath) {
+export function isBafuConvertedDefaultProcessClassification(classificationPath: string): boolean {
   return /Other service activities\s*>\s*Activities of membership organizations\s*>\s*Activities of other membership organizations\s*>\s*Activities of other membership organizations n\.e\.c\.|Community,\s*social and personal services\s*>\s*Sewage and waste collection,\s*treatment and disposal and other environmental protection services\s*>\s*Other environmental protection services n\.e\.c\./iu.test(
     classificationPath,
   );
 }
 
 export function collectClassificationSemanticActions(
-  payload,
-  datasetType,
-  { profile = null, hasClassificationQueueContext = false } = {},
-) {
+  payload: unknown,
+  datasetType: string,
+  { profile = null, hasClassificationQueueContext = false }: ClassificationOptions = {},
+): SemanticAction[] {
   if (!["flow", "process"].includes(datasetType)) return [];
   const classes = classificationEntriesForPayload(payload, datasetType);
   const classificationPath = classificationPathForPayload(payload, datasetType);
   const nameText = nameTextForPayload(payload, datasetType);
-  const actions = [];
+  const actions: SemanticAction[] = [];
   if (classes.length === 0) {
     actions.push(
       semanticActionItem({
@@ -745,11 +903,12 @@ export function collectClassificationSemanticActions(
   return actions;
 }
 
-export function effectiveContentDatasetType(payload, datasetType) {
-  if (payload?.processDataSet) return "process";
-  if (payload?.flowDataSet) return "flow";
-  if (payload?.sourceDataSet) return "source";
-  if (payload?.contactDataSet) return "contact";
+export function effectiveContentDatasetType(payload: unknown, datasetType: string): string {
+  const record = asRecord(payload);
+  if (record.processDataSet) return "process";
+  if (record.flowDataSet) return "flow";
+  if (record.sourceDataSet) return "source";
+  if (record.contactDataSet) return "contact";
   return datasetType;
 }
 
@@ -761,7 +920,7 @@ export function contentSaturationAction({
   evidence,
   instruction,
   common_other_deferral_allowed = false,
-}) {
+}: ContentSaturationOptions): SemanticAction {
   return {
     ...semanticActionItem({
       code,
@@ -776,7 +935,7 @@ export function contentSaturationAction({
   };
 }
 
-export function collectProcessContentSaturationActions(payload) {
+export function collectProcessContentSaturationActions(payload: unknown): SemanticAction[] {
   const root = datasetRoot(payload, "process");
   const info = root?.processInformation?.dataSetInformation ?? {};
   const representativeness =
@@ -784,7 +943,7 @@ export function collectProcessContentSaturationActions(payload) {
   const traces = sourceTracePayloads(payload);
   if (traces.length === 0) return [];
 
-  const actions = [];
+  const actions: SemanticAction[] = [];
   const localName = firstTraceAttribute(traces, "referenceFunction", "localName");
   if (localName && !hasMeaningfulFieldValue(info["common:synonyms"])) {
     const language = sourceTraceLanguage(traces, "de");
@@ -848,22 +1007,21 @@ export function collectProcessContentSaturationActions(payload) {
   return actions;
 }
 
-export function flowReferencePropertyNames(root) {
-  return ensureArray(root?.flowProperties?.flowProperty)
-    .map((property) =>
-      textValue(
-        property?.referenceToFlowPropertyDataSet?.["common:shortDescription"] ??
-          property?.referenceToFlowPropertyDataSet?.shortDescription,
-      ),
-    )
+export function flowReferencePropertyNames(root: JsonRecord): string[] {
+  const flowProperties = asRecord(root.flowProperties);
+  return ensureArray(flowProperties.flowProperty)
+    .map((property) => {
+      const reference = asRecord(asRecord(property).referenceToFlowPropertyDataSet);
+      return textValue(reference["common:shortDescription"] ?? reference.shortDescription);
+    })
     .filter(Boolean);
 }
 
-export function collectFlowContentSaturationActions(payload) {
+export function collectFlowContentSaturationActions(payload: unknown): SemanticAction[] {
   const root = datasetRoot(payload, "flow");
   const info = root?.flowInformation?.dataSetInformation ?? {};
   const traces = sourceTracePayloads(payload);
-  const actions = [];
+  const actions: SemanticAction[] = [];
   const locationEvidence = sourceTraceLocationEvidence(traces) ?? flowNameLocationEvidence(root);
   if (
     locationEvidence &&
@@ -924,7 +1082,7 @@ export function collectFlowContentSaturationActions(payload) {
   return actions;
 }
 
-export function collectSourceContentSaturationActions(payload) {
+export function collectSourceContentSaturationActions(payload: unknown): SemanticAction[] {
   const root = datasetRoot(payload, "source");
   const info = root?.sourceInformation?.dataSetInformation ?? {};
   const traces = sourceTracePayloads(payload);
@@ -942,7 +1100,7 @@ export function collectSourceContentSaturationActions(payload) {
     "publisher",
     "volumeNo",
   ];
-  const missing = [];
+  const missing: JsonRecord[] = [];
   for (const traceObject of sourceObjects) {
     const attributes = traceAttributeMap(traceObject.node);
     for (const attributeName of requiredAttributes) {
@@ -977,7 +1135,10 @@ export function collectSourceContentSaturationActions(payload) {
   ];
 }
 
-export function collectContactContentSaturationActions(payload, { profile = null } = {}) {
+export function collectContactContentSaturationActions(
+  payload: unknown,
+  { profile = null }: ProfileOptions = {},
+): SemanticAction[] {
   const root = datasetRoot(payload, "contact");
   const info = root?.contactInformation?.dataSetInformation ?? {};
   if (asText(profile?.id).toLowerCase() !== "bafu") return [];
@@ -1013,10 +1174,10 @@ export function collectContactContentSaturationActions(payload, { profile = null
 }
 
 export function collectContentSaturationSemanticActions(
-  payload,
-  datasetType,
-  { profile = null } = {},
-) {
+  payload: unknown,
+  datasetType: string,
+  { profile = null }: ProfileOptions = {},
+): SemanticAction[] {
   const effectiveDatasetType = effectiveContentDatasetType(payload, datasetType);
   if (effectiveDatasetType === "process") return collectProcessContentSaturationActions(payload);
   if (effectiveDatasetType === "flow") return collectFlowContentSaturationActions(payload);
@@ -1027,7 +1188,7 @@ export function collectContentSaturationSemanticActions(
   return [];
 }
 
-export function collectProcessExchangeSemanticActions(payload) {
+export function collectProcessExchangeSemanticActions(payload: unknown): SemanticAction[] {
   const exchanges = processExchangeList(payload);
   if (exchanges.length === 0) return [];
   const directions = exchanges.map((exchange) => asText(exchange.exchangeDirection));
@@ -1058,9 +1219,13 @@ export function collectProcessExchangeSemanticActions(payload) {
   return [];
 }
 
-export function collectFoundryTraceSemanticActions(payload, datasetType) {
-  const actions = [];
-  const add = (item) => actions.push({ ...item, dataset_type: datasetType });
+export function collectFoundryTraceSemanticActions(
+  payload: unknown,
+  datasetType: string,
+): SemanticAction[] {
+  const actions: SemanticAction[] = [];
+  const add = (item: SemanticAction): number =>
+    actions.push({ ...item, dataset_type: datasetType });
   for (const trace of collectCommonOtherTraceEntries(payload, "tiangongfoundry:unresolvedTrace")) {
     const entry = trace.entry;
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
@@ -1078,17 +1243,31 @@ export function collectFoundryTraceSemanticActions(payload, datasetType) {
       );
       continue;
     }
-    const status = asText(entry.status ?? entry.decision_status ?? entry.decisionStatus);
-    const actionCode = asText(entry.action_item_code ?? entry.actionItemCode ?? entry.code);
+    const typedEntry = entry as JsonRecord;
+    const status = asText(
+      typedEntry.status ?? typedEntry.decision_status ?? typedEntry.decisionStatus,
+    );
+    const actionCode = asText(
+      typedEntry.action_item_code ?? typedEntry.actionItemCode ?? typedEntry.code,
+    );
     const blockedPath = asText(
-      entry.blocked_path ?? entry.blockedPath ?? entry.field_path ?? entry.fieldPath ?? entry.path,
+      typedEntry.blocked_path ??
+        typedEntry.blockedPath ??
+        typedEntry.field_path ??
+        typedEntry.fieldPath ??
+        typedEntry.path,
     );
-    const reason = asText(entry.reason ?? entry.deferred_reason ?? entry.deferredReason);
+    const reason = asText(
+      typedEntry.reason ?? typedEntry.deferred_reason ?? typedEntry.deferredReason,
+    );
     const nextAction = asText(
-      entry.next_action ?? entry.nextAction ?? entry.follow_up ?? entry.followUp,
+      typedEntry.next_action ??
+        typedEntry.nextAction ??
+        typedEntry.follow_up ??
+        typedEntry.followUp,
     );
-    const evidence = entry.evidence ?? entry.source_evidence ?? entry.sourceEvidence;
-    const invalidReasons = [];
+    const evidence = typedEntry.evidence ?? typedEntry.source_evidence ?? typedEntry.sourceEvidence;
+    const invalidReasons: string[] = [];
     if (!["unresolved_deferred", "deferred_to_common_other", "needs_followup"].includes(status)) {
       invalidReasons.push("status");
     }
@@ -1107,7 +1286,7 @@ export function collectFoundryTraceSemanticActions(payload, datasetType) {
           code: "semantic_unresolved_trace_invalid",
           path: trace.path,
           message: `common:other.tiangongfoundry:unresolvedTrace is missing or has invalid fields: ${invalidReasons.join(", ")}.`,
-          evidence: { invalid_fields: invalidReasons, trace: entry },
+          evidence: { invalid_fields: invalidReasons, trace: typedEntry },
           instruction:
             "Rewrite the unresolved trace with status, action_item_code, blocked_path, reason, evidence, and next_action.",
           common_other_deferral_allowed: true,
@@ -1136,9 +1315,16 @@ export function collectFoundryTraceSemanticActions(payload, datasetType) {
       );
       continue;
     }
-    const status = asText(entry.status ?? entry.decision_status ?? entry.decisionStatus);
-    const evidence = entry.evidence ?? entry.source_evidence ?? entry.sourceEvidence ?? entry.trace;
-    const invalidReasons = [];
+    const typedEntry = entry as JsonRecord;
+    const status = asText(
+      typedEntry.status ?? typedEntry.decision_status ?? typedEntry.decisionStatus,
+    );
+    const evidence =
+      typedEntry.evidence ??
+      typedEntry.source_evidence ??
+      typedEntry.sourceEvidence ??
+      typedEntry.trace;
+    const invalidReasons: string[] = [];
     if (
       !["source_only_output_exchange_verified", "accepted_source_only_output", "verified"].includes(
         status,
@@ -1157,7 +1343,7 @@ export function collectFoundryTraceSemanticActions(payload, datasetType) {
           code: "semantic_source_exchange_trace_invalid",
           path: trace.path,
           message: `common:other.tiangongfoundry:sourceExchangeCompleteness is missing or has invalid fields: ${invalidReasons.join(", ")}.`,
-          evidence: { invalid_fields: invalidReasons, trace: entry },
+          evidence: { invalid_fields: invalidReasons, trace: typedEntry },
           instruction:
             "Rewrite source exchange completeness evidence with accepted status and source trace evidence.",
           common_other_deferral_allowed: true,
@@ -1168,7 +1354,10 @@ export function collectFoundryTraceSemanticActions(payload, datasetType) {
   return actions;
 }
 
-export function collectFlowReuseSemanticActions(payload, datasetType) {
+export function collectFlowReuseSemanticActions(
+  payload: unknown,
+  datasetType: string,
+): SemanticAction[] {
   if (datasetType !== "flow") return [];
   if (!flowUsesElementaryClassification(payload)) return [];
   const classification = classificationEntriesForPayload(payload, "flow")
@@ -1198,7 +1387,7 @@ export function collectProfileSemanticActionItems({
   datasetType,
   payload,
   hasClassificationQueueContext = false,
-}) {
+}: ProfileActionOptions): SemanticAction[] {
   const requirement = fullContextAiCompletionRequirement(profile, datasetType);
   const profileId = asText(profile?.id).toLowerCase();
   const requiresBafuSupportSemanticGate =
@@ -1218,11 +1407,11 @@ export function collectProfileSemanticActionItems({
   ];
 }
 
-export function jsonPointerToken(value) {
+export function jsonPointerToken(value: unknown): string {
   return String(value).replace(/~/gu, "~0").replace(/\//gu, "~1");
 }
 
-export function dotPathToJsonPointer(value) {
+export function dotPathToJsonPointer(value: unknown): string {
   const text = asText(value);
   if (!text || text === "<root>") return "/__AI_FILL_JSON_POINTER__";
   if (text.startsWith("/")) return text;
@@ -1235,9 +1424,10 @@ export function dotPathToJsonPointer(value) {
   return `/${tokens.map(jsonPointerToken).join("/")}`;
 }
 
-export function actionItemClosure(item) {
-  const code = asText(item?.code ?? item?.rule_id ?? item?.ruleId) || "action_item";
-  const itemPath = asText(item?.path) || null;
+export function actionItemClosure(item: unknown): { code: string; path?: string } {
+  const typedItem = asActionItem(item);
+  const code = asText(typedItem.code ?? typedItem.rule_id ?? typedItem.ruleId) || "action_item";
+  const itemPath = asText(typedItem.path) || null;
   return {
     code,
     ...(itemPath ? { path: itemPath } : {}),
@@ -1254,12 +1444,16 @@ export const allowedPatchResolutionModes = new Set([
   "deferred_to_common_other",
 ]);
 
-export function actionItemAllowsCommonOtherDeferral(item) {
-  if (item?.common_other_deferral_allowed === true || item?.commonOtherDeferralAllowed === true) {
+export function actionItemAllowsCommonOtherDeferral(item: unknown): boolean {
+  const typedItem = asActionItem(item);
+  if (
+    typedItem.common_other_deferral_allowed === true ||
+    typedItem.commonOtherDeferralAllowed === true
+  ) {
     return true;
   }
-  const code = asText(item?.code ?? item?.rule_id ?? item?.ruleId);
-  const itemPath = asText(item?.path);
+  const code = asText(typedItem.code ?? typedItem.rule_id ?? typedItem.ruleId);
+  const itemPath = asText(typedItem.path);
   if (isAnnualSupplyTarget(code, itemPath)) return true;
   return [
     "source_system_boilerplate",
@@ -1269,9 +1463,10 @@ export function actionItemAllowsCommonOtherDeferral(item) {
   ].some((token) => code.includes(token));
 }
 
-export function actionItemResolutionModes(item) {
-  const code = asText(item?.code ?? item?.rule_id ?? item?.ruleId);
-  const itemPath = asText(item?.path);
+export function actionItemResolutionModes(item: unknown): string[] {
+  const typedItem = asActionItem(item);
+  const code = asText(typedItem.code ?? typedItem.rule_id ?? typedItem.ruleId);
+  const itemPath = asText(typedItem.path);
   if (code.includes("classification")) return ["classification_decision"];
   if (code.includes("location")) return ["location_decision"];
   if (isAnnualSupplyTarget(code, itemPath)) {
@@ -1288,28 +1483,29 @@ export function actionItemResolutionModes(item) {
   return ["evidence_backed_completion"];
 }
 
-export function compactActionItemForAuthoring(item, index) {
-  const itemPath = asText(item?.path) || null;
+export function compactActionItemForAuthoring(item: unknown, index: number): CompactActionItem {
+  const typedItem = asActionItem(item);
+  const itemPath = asText(typedItem.path) || null;
   return {
     index,
-    source: asText(item?.source) || null,
-    code: asText(item?.code ?? item?.rule_id ?? item?.ruleId) || "action_item",
+    source: asText(typedItem.source) || null,
+    code: asText(typedItem.code ?? typedItem.rule_id ?? typedItem.ruleId) || "action_item",
     path: itemPath,
     json_pointer: dotPathToJsonPointer(itemPath),
-    message: asText(item?.message) || null,
-    evidence: item?.evidence ?? null,
-    instruction: asText(item?.instruction) || null,
+    message: asText(typedItem.message) || null,
+    evidence: typedItem.evidence ?? null,
+    instruction: asText(typedItem.instruction) || null,
     allowed_resolution_modes: actionItemResolutionModes(item),
-    action_kind: asText(item?.action_kind) || "ai_authoring",
-    required_owner: asText(item?.required_owner) || "foundry_ai_authoring",
-    ai_required: item?.ai_required !== false,
+    action_kind: asText(typedItem.action_kind) || "ai_authoring",
+    required_owner: asText(typedItem.required_owner) || "foundry_ai_authoring",
+    ai_required: typedItem.ai_required !== false,
     common_other_deferral_allowed: actionItemAllowsCommonOtherDeferral(item),
-    deferral_cleanup_path: asText(item?.deferral_cleanup_path) || null,
-    deferral_trace_path: asText(item?.deferral_trace_path) || null,
+    deferral_cleanup_path: asText(typedItem.deferral_cleanup_path) || null,
+    deferral_trace_path: asText(typedItem.deferral_trace_path) || null,
   };
 }
 
-export function markdownList(values, fallback = "- none") {
+export function markdownList(values: unknown, fallback = "- none"): string {
   const rows = ensureArray(values).filter(
     (value) => value !== undefined && value !== null && value !== "",
   );
@@ -1317,17 +1513,20 @@ export function markdownList(values, fallback = "- none") {
   return rows.map((value) => `- ${String(value)}`).join("\n");
 }
 
-export function relOrNull(repoRoot, filePath) {
+export function relOrNull(repoRoot: string, filePath: string | null | undefined): string | null {
   return filePath ? repoRelativePath(repoRoot, filePath) : null;
 }
 
-export function packageContextFileSummary(contextFiles) {
-  return ensureArray(contextFiles).map((file) => ({
-    kind: asText(file?.kind) || "context",
-    path: asText(file?.path) || null,
-    sha256: sha256Text(file?.text ?? ""),
-    bytes: Buffer.byteLength(String(file?.text ?? ""), "utf8"),
-  }));
+export function packageContextFileSummary(contextFiles: unknown): JsonRecord[] {
+  return ensureArray(contextFiles).map((file) => {
+    const typedFile = asRecord(file);
+    return {
+      kind: asText(typedFile.kind) || "context",
+      path: asText(typedFile.path) || null,
+      sha256: sha256Text(typedFile.text ?? ""),
+      bytes: Buffer.byteLength(String(typedFile.text ?? ""), "utf8"),
+    };
+  });
 }
 
 export const decisionOnlyActionKinds = new Set([
@@ -1336,29 +1535,31 @@ export const decisionOnlyActionKinds = new Set([
   "location_decision_authoring",
 ]);
 
-export function isPatchAuthoringActionItem(item) {
-  if (!item || item.ai_required === false) return false;
-  return !decisionOnlyActionKinds.has(asText(item.action_kind));
+export function isPatchAuthoringActionItem(item: unknown): boolean {
+  const typedItem = asActionItem(item);
+  if (!item || typedItem.ai_required === false) return false;
+  return !decisionOnlyActionKinds.has(asText(typedItem.action_kind));
 }
 
-export function patchAuthoringActionItems(packagePayload) {
-  return ensureArray(packagePayload.action_items)
+export function patchAuthoringActionItems(packagePayload: unknown): CompactActionItem[] {
+  return ensureArray(asRecord(packagePayload).action_items)
     .filter(isPatchAuthoringActionItem)
     .map(compactActionItemForAuthoring);
 }
 
-export function decisionOnlyActionItems(packagePayload) {
-  return ensureArray(packagePayload.action_items)
-    .filter((item) => item?.ai_required !== false && !isPatchAuthoringActionItem(item))
+export function decisionOnlyActionItems(packagePayload: unknown): CompactActionItem[] {
+  return ensureArray(asRecord(packagePayload).action_items)
+    .filter((item) => asActionItem(item).ai_required !== false && !isPatchAuthoringActionItem(item))
     .map(compactActionItemForAuthoring);
 }
 
-export function buildPatchTemplate(packagePayload, packagePath) {
+export function buildPatchTemplate(packagePayload: unknown, packagePath: string): JsonRecord {
+  const typedPackage = asRecord(packagePayload);
   const actionItems = patchAuthoringActionItems(packagePayload);
   const packageRef = path.basename(packagePath);
   const requiredContextKinds = ensureArray(
-    packagePayload.full_context_ai_completion?.required_context_kinds ??
-      packagePayload.full_context_ai_completion?.requiredContextKinds,
+    asRecord(typedPackage.full_context_ai_completion).required_context_kinds ??
+      asRecord(typedPackage.full_context_ai_completion).requiredContextKinds,
   )
     .map((kind) => asText(kind))
     .filter(Boolean);
@@ -1385,8 +1586,8 @@ export function buildPatchTemplate(packagePayload, packagePath) {
     ],
     patch_sets: [
       {
-        dataset_id: packagePayload.entity_id ?? packagePayload.process_id ?? null,
-        version: packagePayload.version ?? "00.00.001",
+        dataset_id: typedPackage.entity_id ?? typedPackage.process_id ?? null,
+        version: typedPackage.version ?? "00.00.001",
         authoring_package: packageRef,
         operations: actionItems.map((item) => ({
           op: "replace",
@@ -1411,12 +1612,14 @@ export function buildPatchTemplate(packagePayload, packagePath) {
   };
 }
 
-export function fullContextAiConfigRequiresAuthoring(value) {
-  return value?.required === true || value?.required === "true";
+export function fullContextAiConfigRequiresAuthoring(value: unknown): boolean {
+  const record = asRecord(value);
+  return record.required === true || record.required === "true";
 }
 
-export function requiredFullContextKinds(value) {
-  const kinds = ensureArray(value?.required_context_kinds ?? value?.requiredContextKinds)
+export function requiredFullContextKinds(value: unknown): string[] {
+  const record = asRecord(value);
+  const kinds = ensureArray(record.required_context_kinds ?? record.requiredContextKinds)
     .map((kind) => asText(kind))
     .filter(Boolean);
   return kinds.length > 0
@@ -1424,34 +1627,36 @@ export function requiredFullContextKinds(value) {
     : ["schema", "methodology_yaml", "ruleset", "classification_schema", "location_schema"];
 }
 
-export function requiredFullContextFilePatterns(value) {
-  return ensureArray(value?.required_context_file_patterns ?? value?.requiredContextFilePatterns)
+export function requiredFullContextFilePatterns(value: unknown): string[] {
+  const record = asRecord(value);
+  return ensureArray(record.required_context_file_patterns ?? record.requiredContextFilePatterns)
     .map((pattern) => asText(pattern))
     .filter(Boolean);
 }
 
-export function contextSummaryHasNonEmptyPayload(file) {
-  if (Number(file?.bytes ?? 0) > 0) return true;
-  return Buffer.byteLength(String(file?.text ?? ""), "utf8") > 0;
+export function contextSummaryHasNonEmptyPayload(file: unknown): boolean {
+  const record = asRecord(file);
+  if (Number(record.bytes ?? 0) > 0) return true;
+  return Buffer.byteLength(String(record.text ?? ""), "utf8") > 0;
 }
 
-export function contextSummaryHasKind(files, kind) {
+export function contextSummaryHasKind(files: unknown, kind: string): boolean {
   return ensureArray(files).some(
-    (file) => asText(file?.kind) === kind && contextSummaryHasNonEmptyPayload(file),
+    (file) => asText(asRecord(file).kind) === kind && contextSummaryHasNonEmptyPayload(file),
   );
 }
 
-export function contextSummaryHasPattern(files, pattern) {
+export function contextSummaryHasPattern(files: unknown, pattern: unknown): boolean {
   const needle = String(pattern).toLowerCase();
   return ensureArray(files).some(
     (file) =>
-      String(file?.path ?? "")
+      String(asRecord(file).path ?? "")
         .toLowerCase()
         .includes(needle) && contextSummaryHasNonEmptyPayload(file),
   );
 }
 
-export function stableSharedContextBundleSha256(bundle) {
+export function stableSharedContextBundleSha256(bundle: unknown): string | null {
   if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) {
     return null;
   }
@@ -1462,7 +1667,7 @@ export function stableSharedContextBundleSha256(bundle) {
     hashScope: _hashScopeCamel,
     sha256: _sha256,
     ...stablePayload
-  } = bundle;
+  } = bundle as JsonRecord;
   return sha256Text(JSON.stringify(stablePayload));
 }
 
@@ -1471,10 +1676,11 @@ export function sharedContextBundleReadinessBlockers({
   sharedContextBundle,
   sourceKind,
   sourcePath = null,
-}) {
-  const sharedPath = asText(sharedContextBundle?.path);
+}: SharedContextOptions): JsonRecord[] {
+  const sharedContext = asRecord(sharedContextBundle);
+  const sharedPath = asText(sharedContext.path);
   if (!sharedPath) return [];
-  const expectedSha256 = asText(sharedContextBundle?.sha256);
+  const expectedSha256 = asText(sharedContext.sha256);
   const prefix =
     sourceKind === "manifest"
       ? "authoring_manifest_shared_context_bundle"
@@ -1509,10 +1715,10 @@ export function sharedContextBundleReadinessBlockers({
     ];
   }
   try {
-    const bundle = readJson(bundlePath);
-    const actualSha256 = asText(bundle?.sha256);
+    const bundle = readJson<JsonRecord>(bundlePath);
+    const actualSha256 = asText(bundle.sha256);
     const computedSha256 = stableSharedContextBundleSha256(bundle);
-    const blockers = [];
+    const blockers: JsonRecord[] = [];
     if (actualSha256 !== expectedSha256) {
       blockers.push({
         ...base,
@@ -1532,7 +1738,7 @@ export function sharedContextBundleReadinessBlockers({
         actual_sha256: computedSha256,
       });
     }
-    if (!Array.isArray(bundle?.files)) {
+    if (!Array.isArray(bundle.files)) {
       blockers.push({
         ...base,
         code: `${prefix}_invalid`,

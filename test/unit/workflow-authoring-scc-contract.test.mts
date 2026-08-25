@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import * as authoring from "../../scripts/lib/import-curation/internal/workflow-authoring-tasks.mjs";
-import * as evidence from "../../scripts/lib/import-curation/internal/workflow-patch-evidence.mjs";
-import * as semantic from "../../scripts/lib/import-curation/internal/workflow-semantic-actions.mjs";
+import * as authoring from "../../scripts/lib/import-curation/internal/workflow-authoring-tasks.ts";
+import * as evidence from "../../scripts/lib/import-curation/internal/workflow-patch-evidence.ts";
+import * as semantic from "../../scripts/lib/import-curation/internal/workflow-semantic-actions.ts";
 
 test("authoring patch-set and operation helpers preserve aliases, evidence, resolution, context, and native cycle errors", () => {
   const operations = [{ op: "replace", path: "/field" }];
@@ -22,7 +22,7 @@ test("authoring patch-set and operation helpers preserve aliases, evidence, reso
   assert.equal(authoring.operationHasEvidence({ evidence: { source: "x" } }), true);
   assert.equal(authoring.operationHasEvidence({ evidence: {} }), false);
   assert.equal(
-    authoring.operationResolution({ resolution: { mode: "source_trace_verified" } }).mode,
+    authoring.operationResolution({ resolution: { mode: "source_trace_verified" } })!.mode,
     "source_trace_verified",
   );
   assert.equal(authoring.operationResolution({ resolution: [] }), null);

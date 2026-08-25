@@ -25,7 +25,7 @@ import {
   patchSetOperations,
   taskRequiredContextKinds,
   taskRequiresFullContextEvidence,
-} from "./workflow-authoring-tasks.mjs";
+} from "./workflow-authoring-tasks.ts";
 import {
   containsAiTemplatePlaceholder,
   operationClosesAnnualSupplyTarget,
@@ -40,8 +40,8 @@ import {
   validateLocationDecisionOperation,
   validateProcessClassificationDecisionOperation,
   validateSourceExchangeCompletenessTrace,
-} from "./workflow-patch-evidence.mjs";
-import { allowedPatchResolutionModes } from "./workflow-semantic-actions.mjs";
+} from "./workflow-patch-evidence.ts";
+import { allowedPatchResolutionModes } from "./workflow-semantic-actions.ts";
 
 interface JsonRecord {
   [key: string]: unknown;
@@ -54,11 +54,6 @@ interface PatchTask extends JsonRecord {
 interface PatchSet extends JsonRecord {
   row_index?: unknown;
   rowIndex?: unknown;
-}
-
-interface PatchOperation extends JsonRecord {
-  op?: unknown;
-  path?: unknown;
 }
 
 interface ValidateCollectedPatchSetOptions {
@@ -101,7 +96,7 @@ export function validateCollectedPatchSet({
   patchPath,
 }: ValidateCollectedPatchSetOptions): JsonRecord[] {
   const blockers: JsonRecord[] = [];
-  const operations = patchSetOperations(patchSet) as PatchOperation[] | null;
+  const operations = patchSetOperations(patchSet);
   const entity = (task.entity ?? {}) as JsonRecord;
   const datasetId = patchSetDatasetId(patchSet);
   const datasetVersion = patchSetDatasetVersion(patchSet);

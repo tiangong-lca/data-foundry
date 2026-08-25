@@ -147,7 +147,7 @@ export function normalizeFullContextAiCompletion(value: any): FullContextAiCompl
 export function fullContextAiCompletionRequirement(
   profile: any,
   datasetType: string,
-  repoRoot: string,
+  repoRoot?: string,
 ): FullContextAiCompletion | null {
   const requirement = profile?.fullContextAiCompletion ?? normalizeFullContextAiCompletion(null);
   if (!requirement.required) return null;

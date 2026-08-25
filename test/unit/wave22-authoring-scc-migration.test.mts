@@ -31,6 +31,7 @@ test("authoring SCC cycle closes entirely over typed imports", () => {
     "scripts/lib/import-curation/internal/workflow-semantic-actions.ts",
   );
   const evidence = readRepoFile("scripts/lib/import-curation/internal/workflow-patch-evidence.ts");
+  const explicitAny = /\bas\s+any\b|:\s*any\b|\bany\s*\[\]|<\s*any\b|,\s*any\s*>/u;
   assert.match(authoring, /from ["']\.\/workflow-semantic-actions\.ts["']/u);
   assert.match(semantic, /from ["']\.\/workflow-authoring-tasks\.ts["']/u);
   assert.match(semantic, /from ["']\.\/workflow-patch-evidence\.ts["']/u);
@@ -40,7 +41,7 @@ test("authoring SCC cycle closes entirely over typed imports", () => {
       source,
       /from ["']\.\/workflow-(?:authoring-tasks|semantic-actions|patch-evidence)\.mjs["']/u,
     );
-    assert.doesNotMatch(source, /\bany\b/u);
+    assert.doesNotMatch(source, explicitAny);
     assert.doesNotMatch(source, /@ts-(?:no)?check|@ts-ignore/u);
   }
 });

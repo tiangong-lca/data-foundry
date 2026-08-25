@@ -41,7 +41,7 @@ import {
   deterministicRowsFileTransformEntries,
   rowsFileReachableThroughTransformChain,
 } from "./workflow-row-transform-context.ts";
-import { allowedPatchResolutionModes, jsonPointerToken } from "./workflow-semantic-actions.mjs";
+import { allowedPatchResolutionModes, jsonPointerToken } from "./workflow-semantic-actions.ts";
 
 // part-11.mjs
 export function sourceContactRewriteSemanticEvidenceCount({

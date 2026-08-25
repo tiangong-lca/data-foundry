@@ -2,7 +2,7 @@ import test from "node:test";
 import {
   locationCodeFromOperation,
   operationTargetsLocationCode,
-} from "../../scripts/lib/import-curation/internal/workflow-patch-evidence.mjs";
+} from "../../scripts/lib/import-curation/internal/workflow-patch-evidence.ts";
 import {
   assert,
   fs,
