@@ -47,6 +47,8 @@ const coreOwner = "scripts/commands/core.mjs";
 const taskOwner = "scripts/commands/tasks.mjs";
 const tidasOwner = "scripts/commands/tidas-workflow.ts";
 const importOwner = (moduleName: string): string => `scripts/lib/import-curation/${moduleName}.mjs`;
+const typedImportOwner = (moduleName: string): string =>
+  `scripts/lib/import-curation/${moduleName}.ts`;
 
 function workflowEntryForCategory(category: string): CommandWorkflowEntry {
   switch (category) {
@@ -399,7 +401,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-authoring-task-build": metadata({
     category: "workflow-internal",
-    ownerModule: importOwner("authoring-packages"),
+    ownerModule: typedImportOwner("authoring-packages"),
     ownerExport: "runDatasetAuthoringTaskBuild",
     inputs: ["curation gate report", "AI authoring package"],
     outputs: [
@@ -418,7 +420,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-authoring-patch-collect": metadata({
     category: "workflow-internal",
-    ownerModule: importOwner("patch-collect"),
+    ownerModule: typedImportOwner("patch-collect"),
     ownerExport: "runDatasetAuthoringPatchCollect",
     inputs: ["authoring task manifest", "AI patch files", "authoring packages"],
     outputs: ["authoring-patch-collect-report.json", "ai-patches.batch.json"],
