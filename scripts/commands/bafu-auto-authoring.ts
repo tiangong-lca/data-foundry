@@ -2,9 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   type BafuNamePlan,
+  cleanProcessFunctionalUnitText,
+  englishText,
   mergeExistingTreatmentRoute,
   normalizeIdentityText,
   normalizeLocationTokenCode,
+  removeTrailingLocationToken,
   splitBafuNamePlan,
   splitBafuNamePlanFromNameParts,
   stripGeneratedPrefixText,
@@ -75,10 +78,6 @@ function lowerText(value: unknown): string {
 function arrayValues(value: unknown): unknown[] {
   if (Array.isArray(value)) return value;
   return value == null ? [] : [value];
-}
-
-function englishText(text: unknown): JsonRecord {
-  return { "@xml:lang": "en", "#text": text };
 }
 
 function actionCode(item: JsonRecord): string {
@@ -683,36 +682,6 @@ function identityDecisionRow(actionItem: JsonRecord, _task: JsonRecord): JsonRec
       physical_equivalence_decision: "not_identity_equivalent_to_existing_candidates",
     },
   };
-}
-
-function removeTrailingLocationToken(
-  value: unknown,
-  expectedLocationCode: unknown = null,
-): JsonRecord | null {
-  const text = textFromMultilang(value).trim();
-  const cleaned = stripTrailingLocationTokenText(text, expectedLocationCode);
-  return cleaned && cleaned !== text ? englishText(cleaned) : null;
-}
-
-function cleanProcessFunctionalUnitText(
-  value: unknown,
-  expectedLocationCode: unknown = null,
-): JsonRecord | null {
-  const text = textFromMultilang(value).trim();
-  const expected = normalizeLocationTokenCode(expectedLocationCode);
-  let cleaned = stripTrailingLocationTokenText(text, expectedLocationCode);
-  // SimaPro-style names also embed the location token inline
-  // ("1.0 MJ Product {RER} | activity | Alloc Rec, U"); remove inline
-  // occurrences only when they match the dataset geography field.
-  if (expected) {
-    cleaned = cleaned.split(`{${expected}}`).join(" ");
-  }
-  cleaned = cleaned
-    .replace(/(^|\s)xx\s+/iu, "$1")
-    .replace(/\s+/gu, " ")
-    .replace(/\s+\|/gu, " |")
-    .trim();
-  return cleaned && cleaned !== text ? englishText(cleaned) : null;
 }
 
 let locationLabelCache: Map<string, string> | null = null;
@@ -1429,6 +1398,7 @@ export const bafuAutoAuthoringTestHooks = {
   splitBafuNamePlan,
   splitBafuNamePlanFromNameParts,
   cleanProcessFunctionalUnitText,
+  removeTrailingLocationToken,
   nonEquivalentFlowCandidateReasons,
   strongNameMeaningDiffers,
   routeOrTechnologyDiffers,

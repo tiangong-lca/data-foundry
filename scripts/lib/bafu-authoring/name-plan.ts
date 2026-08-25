@@ -33,6 +33,10 @@ export function textFromMultilang(value: unknown): string {
   return "";
 }
 
+export function englishText(text: unknown): JsonRecord {
+  return { "@xml:lang": "en", "#text": text };
+}
+
 function splitBafuWasteDisposalName(baseName: unknown): BafuNamePlan | null {
   const text = textFromMultilang(baseName).trim();
   const match = /^(?<core>.+?),\s*(?<treatment>as building waste)$/iu.exec(text);
@@ -82,6 +86,36 @@ export function stripGeneratedPrefixText(value: unknown): string {
   return String(value ?? "")
     .replace(/^\s*x{2,}\s+/iu, "")
     .trim();
+}
+
+export function removeTrailingLocationToken(
+  value: unknown,
+  expectedLocationCode: unknown = null,
+): JsonRecord | null {
+  const text = textFromMultilang(value).trim();
+  const cleaned = stripTrailingLocationTokenText(text, expectedLocationCode);
+  return cleaned && cleaned !== text ? englishText(cleaned) : null;
+}
+
+export function cleanProcessFunctionalUnitText(
+  value: unknown,
+  expectedLocationCode: unknown = null,
+): JsonRecord | null {
+  const text = textFromMultilang(value).trim();
+  const expected = normalizeLocationTokenCode(expectedLocationCode);
+  let cleaned = stripTrailingLocationTokenText(text, expectedLocationCode);
+  // SimaPro-style names also embed the location token inline
+  // ("1.0 MJ Product {RER} | activity | Alloc Rec, U"); remove inline
+  // occurrences only when they match the dataset geography field.
+  if (expected) {
+    cleaned = cleaned.split(`{${expected}}`).join(" ");
+  }
+  cleaned = cleaned
+    .replace(/(^|\s)xx\s+/iu, "$1")
+    .replace(/\s+/gu, " ")
+    .replace(/\s+\|/gu, " |")
+    .trim();
+  return cleaned && cleaned !== text ? englishText(cleaned) : null;
 }
 
 function cleanNamePlanPart(value: unknown): string {

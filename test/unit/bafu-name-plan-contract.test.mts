@@ -7,6 +7,9 @@ import { fileURLToPath } from "node:url";
 
 import { bafuAutoAuthoringTestHooks } from "../../scripts/commands/bafu-auto-authoring.ts";
 import {
+  cleanProcessFunctionalUnitText,
+  englishText,
+  removeTrailingLocationToken,
   splitBafuNamePlan,
   splitBafuNamePlanFromNameParts,
 } from "../../scripts/lib/bafu-authoring/name-plan.ts";
@@ -36,7 +39,10 @@ test("BAFU name-plan is a pure typed leaf imported by the command owner and its 
   assert.doesNotMatch(moduleSource, /\bprocess\.env\b|\bfetch\s*\(|\bXMLHttpRequest\b/u);
   assert.match(moduleSource, /export interface BafuNamePlan\s*\{/u);
   assert.match(ownerSource, /from "\.\.\/lib\/bafu-authoring\/name-plan\.ts"/u);
+  assert.doesNotMatch(ownerSource, /function cleanProcessFunctionalUnitText\s*\(/u);
+  assert.doesNotMatch(ownerSource, /function englishText\s*\(/u);
   assert.doesNotMatch(ownerSource, /function normalizeIdentityText\s*\(/u);
+  assert.doesNotMatch(ownerSource, /function removeTrailingLocationToken\s*\(/u);
   assert.doesNotMatch(ownerSource, /function splitBafuNamePlan\s*\(/u);
   assert.doesNotMatch(ownerSource, /function splitBafuNamePlanFromNameParts\s*\(/u);
   assert.doesNotMatch(ownerSource, /function textFromMultilang\s*\(/u);
@@ -46,6 +52,11 @@ test("BAFU name-plan is a pure typed leaf imported by the command owner and its 
     bafuAutoAuthoringTestHooks.splitBafuNamePlanFromNameParts,
     splitBafuNamePlanFromNameParts,
   );
+  assert.equal(
+    bafuAutoAuthoringTestHooks.cleanProcessFunctionalUnitText,
+    cleanProcessFunctionalUnitText,
+  );
+  assert.equal(bafuAutoAuthoringTestHooks.removeTrailingLocationToken, removeTrailingLocationToken);
 });
 
 test("BAFU name-plan freezes real null, location, source-locator and recycling bytes", () => {
@@ -155,4 +166,71 @@ test("BAFU ENTSO storage-pump name planning remains patch-idempotent", () => {
     sha256Text(replayJson),
     "a16efdef3a9078764c6c7c92cf4b921adae0ab21de0f1fcef18c7fc899e4252d",
   );
+});
+
+test("BAFU functional-unit location cleanup preserves exact multilingual bytes and precedence", () => {
+  const cases: FrozenCase[] = [
+    {
+      name: "english text constructor keeps insertion order",
+      actual: englishText("Product"),
+      json: '{"@xml:lang":"en","#text":"Product"}',
+      bytes: 36,
+      sha256: "d14a3e9a77cb167deb3b39514163aa3c621f28f98b3345d650635df27831c176",
+    },
+    {
+      name: "matching trailing location becomes English text",
+      actual: removeTrailingLocationToken({ "@xml:lang": "en", "#text": "Product {CH}" }, "CH"),
+      json: '{"@xml:lang":"en","#text":"Product"}',
+      bytes: 36,
+      sha256: "d14a3e9a77cb167deb3b39514163aa3c621f28f98b3345d650635df27831c176",
+    },
+    {
+      name: "mismatched trailing location remains unresolved",
+      actual: removeTrailingLocationToken({ "@xml:lang": "en", "#text": "Product {CH}" }, "RER"),
+      json: "null",
+      bytes: 4,
+      sha256: "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    },
+    {
+      name: "matching inline SimaPro locations are removed before whitespace normalization",
+      actual: cleanProcessFunctionalUnitText(
+        {
+          "@xml:lang": "en",
+          "#text":
+            "1.0 MJ Refined Waste Cooking Oil {RER} | Refining of waste cooking oil Europe | Alloc Rec, U {RER}",
+        },
+        "RER",
+      ),
+      json: '{"@xml:lang":"en","#text":"1.0 MJ Refined Waste Cooking Oil | Refining of waste cooking oil Europe | Alloc Rec, U"}',
+      bytes: 115,
+      sha256: "baef64a5f423a4ffc9629ab2b458e98e9390ee67bc2b4199d5bc5f07790765ff",
+    },
+    {
+      name: "generated prefix and matching trailing location clean in existing order",
+      actual: cleanProcessFunctionalUnitText(
+        { "@xml:lang": "en", "#text": "xx 1.0 MJ Product {CH}" },
+        "CH",
+      ),
+      json: '{"@xml:lang":"en","#text":"1.0 MJ Product"}',
+      bytes: 43,
+      sha256: "8bca0a2ef590e247515aba9052531197f302b39e7ec2d19cab078a19596f4736",
+    },
+    {
+      name: "mismatched inline location remains unchanged",
+      actual: cleanProcessFunctionalUnitText(
+        { "@xml:lang": "en", "#text": "1.0 MJ Product {CH} mix" },
+        "RER",
+      ),
+      json: "null",
+      bytes: 4,
+      sha256: "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    },
+  ];
+
+  for (const item of cases) {
+    const serialized = JSON.stringify(item.actual);
+    assert.equal(serialized, item.json, `${item.name}: key order and bytes`);
+    assert.equal(Buffer.byteLength(serialized), item.bytes, `${item.name}: byte count`);
+    assert.equal(sha256Text(serialized), item.sha256, `${item.name}: sha256`);
+  }
 });
