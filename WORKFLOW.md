@@ -42,6 +42,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/profiles-config.ts
   - scripts/lib/import-curation/internal/workflow-patch-collect.ts
   - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
+  - scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -104,10 +105,12 @@ checkPaths:
   - test/unit/wave17-patch-collect-migration.test.mts
   - test/unit/workflow-identity-decision-context-contract.test.mts
   - test/unit/wave18-identity-decision-context-migration.test.mts
+  - test/unit/workflow-patch-evidence-context-contract.test.mts
+  - test/unit/wave19-patch-evidence-context-migration.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3baba4184e8e18391b055d9a15eae315d643a3cd
-lastReviewedNote: "Reviewed for Issue #67 Wave 18: typed identity context preserves rewrite/decision aliases, dual-index/merge order, proof/hash binding and native failures."
+lastReviewedCommit: c5c67646073da6da0d6cb8d454070362ab48f2c4
+lastReviewedNote: "Reviewed for Issue #67 Wave 19: typed patch evidence context preserves indexes/query order, apply/trace blockers, cleanup proof, policy hashes and native failures."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -161,6 +164,8 @@ Profile normalization and lookup must preserve configured profile order, alias p
 Patch collection remains an admission gate: every non-test operation needs a valid pointer, allowed resolution, evidence and required action closure. Annual-supply deferral, unresolved templates, incomplete full-context proof, trace mismatches and malformed readable artifacts must remain fail-closed before patch apply or mutation planning.
 
 Identity decision context may close an action only from a completed, matching decision and may surface reusable canonical identity only from the established decision value and aliases. File ordering, package proof, payload hashes, rewrite evidence and unresolved-flow keys remain bound evidence for later gates.
+
+Patch apply and trace evidence must remain bound to the exact row identity/index, payload hashes, resolution mode and closure codes. Deterministic cleanup substitutes only when owner, status, identity, row, trace hash and exchange signatures all match; otherwise reference closure remains blocked.
 
 `pnpm golden:diff` compares the current worktree with a non-`HEAD` merge-base using Node-native file comparison; CI must fetch full history. Test-only `.js`/`.mjs`/`.cjs` executable overrides are dispatched as `process.execPath + script path`, never as platform-native binaries. Keep the root `.gitattributes` LF policy intact so Windows, macOS, and Linux format checks consume identical text.
 

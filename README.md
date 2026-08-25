@@ -40,6 +40,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/profiles-config.ts
   - scripts/lib/import-curation/internal/workflow-patch-collect.ts
   - scripts/lib/import-curation/internal/workflow-identity-decision-context.ts
+  - scripts/lib/import-curation/internal/workflow-patch-evidence-context.ts
   - scripts/lib/import-curation/internal/artifact-inputs.ts
   - scripts/lib/import-curation/internal/context-inputs.ts
   - scripts/lib/import-curation/internal/dataset-payload.ts
@@ -68,8 +69,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3baba4184e8e18391b055d9a15eae315d643a3cd
-lastReviewedNote: "Reviewed for Issue #67 Wave 18: identity decision/rewrite context is native zero-any TS7 with aliases, dual indexes, proof/hash/merge order and errors unchanged."
+lastReviewedCommit: c5c67646073da6da0d6cb8d454070362ab48f2c4
+lastReviewedNote: "Reviewed for Issue #67 Wave 19: patch apply/trace evidence context is native zero-any TS7 with indexes, paths, hashes, blockers, snapshots and errors unchanged."
 ---
 
 # TianGong LCA Data Foundry
@@ -125,6 +126,8 @@ The profile-config wave migrates `import-curation/internal/profiles-config.ts`, 
 The patch-collect wave migrates `import-curation/internal/workflow-patch-collect.ts`, the admission/helper boundary shared by nine workflow modules. Characterization pins early invalid returns, deterministic blocker and operation order, action closure, annual-supply defer rejection, full-context/trace evidence, circular-input failure, JSON/JSONL delimiters and parse errors, artifact-option alias order and duplicates, source-rewrite discovery priority and normalized evidence envelopes. It remains zero-any and fail-closed; inventory moves from 121 to 120.
 
 The identity-decision context wave migrates `import-curation/internal/workflow-identity-decision-context.ts`, the evidence adapter shared by curation, mutation, preflight, patch evidence and full-context gates. Characterization pins rewrite candidate priority, scoped/dual-index encounter order, decision/canonical/package aliases, normalized reuse/create/block values, file-versus-embedded fallback, authoring-package proof dedupe, payload hash last-write, merge/unique order, completion predicates, unresolved flow reference keys and native JSON/path errors. It remains zero-any and fail-closed; inventory moves from 120 to 119.
+
+The patch-evidence context wave migrates `import-curation/internal/workflow-patch-evidence-context.ts`, the apply/trace evidence adapter shared by mutation and reference closure. Characterization pins compact aliases, identity/row indexes, exact-bare-row query/dedupe order, apply blockers, output path priority, payload hash last-write, closure codes, exact deterministic cleanup proof, unresolved-before-source trace blockers, safety/profile snapshot SHA/order, recursive import-only trace detection and native JSON/path/cycle failures. It remains zero-any and fail-closed; inventory moves from 119 to 118.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 
