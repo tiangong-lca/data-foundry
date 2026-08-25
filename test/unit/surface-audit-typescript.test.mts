@@ -184,14 +184,16 @@ test("surface audit keeps registered and profile docs while reporting true orpha
 
 test("surface audit exempts declared entrypoints but detects hidden handlers and random scripts", () => {
   const entrypointReport = auditFixture({
+    "scripts/check-lint-suppressions.ts": "export {};\n",
     "scripts/check-tidas-cutover.ts": "export {};\n",
+    "scripts/clean-build-output.ts": "export {};\n",
     "scripts/foundry.ts": "export {};\n",
     "scripts/foundry-golden-diff.ts": "export {};\n",
     "scripts/cases/production-contact-draft.ts": "export {};\n",
     "scripts/with-lca-account.ts": "export {};\n",
   });
   const entrypointInbound = reportCheck(entrypointReport, "inbound_modules");
-  assert.equal(entrypointInbound.scanned, 5);
+  assert.equal(entrypointInbound.scanned, 7);
   assert.deepEqual(entrypointInbound.errors, []);
 
   const guardedReport = auditFixture({

@@ -1,9 +1,12 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { resolveFoundryRuntimePaths } from "./foundry-runtime-paths.ts";
 import { sha256Json } from "./import-curation/internal/hash-utils.ts";
 
 type JsonRecord = Record<string, unknown>;
+
+const { entryPath: foundryEntryPath, repoRoot } = resolveFoundryRuntimePaths(import.meta.url);
 
 type FinalizeOptions = Record<string, unknown>;
 
@@ -488,8 +491,6 @@ export function createPostAuthoringFinalizeUtils({
       return { sharded: false, concurrency, total: total ?? 0 };
     }
     const chunk = Math.ceil(total / concurrency);
-    const foundry = resolveRepoPath("scripts/foundry.ts")!;
-    const repoRoot = path.dirname(resolveRepoPath("package.json")!);
     const timeoutMs =
       options.identityPreflightTimeoutMs ||
       options.identityPreflightTimeout ||
@@ -502,7 +503,7 @@ export function createPostAuthoringFinalizeUtils({
       const offset = i * chunk;
       if (offset >= total) break;
       const args = [
-        foundry,
+        foundryEntryPath,
         "dataset-identity-preflight-run",
         "--index",
         index,
@@ -726,3 +727,5 @@ export function createPostAuthoringFinalizeUtils({
     sourceReferenceRewritesFileForRowsFile,
   };
 }
+
+export const postAuthoringFinalizeUtilsTestHooks = { foundryEntryPath };

@@ -11,6 +11,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 test("active Foundry surfaces contain no retired Python TIDAS invocation paths", () => {
   const report = auditTidasCutover();
   assert.equal(report.status, "passed", JSON.stringify(report.findings, null, 2));
+  assert.ok(report.active_files_scanned > 0, "cutover audit must scan active runtime files");
   assert.equal(report.findings.length, 0);
 });
 

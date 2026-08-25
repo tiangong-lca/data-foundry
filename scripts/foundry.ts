@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { createAuthoringPlanCommands } from "./commands/authoring-plan.ts";
 import { createBafuAutoAuthoringCommands } from "./commands/bafu-auto-authoring.ts";
 import { createBafuBatchImportRunCommands } from "./commands/bafu-batch-import-run.ts";
@@ -35,6 +33,7 @@ import { parseArgs, parseScalar } from "./lib/foundry-args.ts";
 import { runFoundryCli } from "./lib/foundry-cli.ts";
 import { exitCodeForCommand, usage } from "./lib/foundry-command-registry.ts";
 import { createFoundryRuntimeUtils } from "./lib/foundry-runtime-utils.ts";
+import { resolveFoundryRuntimePaths } from "./lib/foundry-runtime-paths.ts";
 import { createFullContextProofUtils } from "./lib/full-context-proof.ts";
 import { createIdentityPreflightArtifactUtils } from "./lib/identity-preflight-artifacts.ts";
 import { createIdentityReferenceRewriteUtils } from "./lib/identity-reference-rewrite-utils.ts";
@@ -61,7 +60,7 @@ import {
 import { createTidasRowUtils } from "./lib/tidas-row-utils.ts";
 import { createTraceCoverageUtils } from "./lib/trace-coverage.ts";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const { repoRoot } = resolveFoundryRuntimePaths(import.meta.url);
 const foundryTraceNamespace = "https://tiangong-lca.dev/foundry/import-curation/1";
 
 type DependencyFactory = (dependencies: never) => unknown;

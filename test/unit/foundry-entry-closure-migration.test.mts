@@ -7,6 +7,7 @@ import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { commandMetadata } from "../../scripts/lib/foundry-command-metadata.ts";
 import { knownCommands } from "../../scripts/lib/foundry-command-registry.ts";
+import { resolveFoundryRuntimePaths } from "../../scripts/lib/foundry-runtime-paths.ts";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
@@ -49,6 +50,28 @@ function walkFiles(relativeDirectory: string): string[] {
   });
 }
 
+function runtimeImportClosure(relativeEntry: string): string[] {
+  const pending = [relativeEntry];
+  const visited = new Set<string>();
+  while (pending.length > 0) {
+    const relativePath = pending.pop()!;
+    if (visited.has(relativePath)) continue;
+    visited.add(relativePath);
+    const source = readRepoFile(relativePath);
+    for (const match of source.matchAll(
+      /(?:\bfrom\s+|\bimport\s*(?:\(\s*)?)["'](\.[^"']+)["']/gu,
+    )) {
+      const importedPath = path.resolve(repoRoot, path.dirname(relativePath), match[1]);
+      if (!fs.existsSync(importedPath) || !fs.statSync(importedPath).isFile()) continue;
+      const importedRelativePath = path.relative(repoRoot, importedPath).split(path.sep).join("/");
+      if (importedRelativePath.startsWith("scripts/") && /\.[cm]?ts$/u.test(importedRelativePath)) {
+        pending.push(importedRelativePath);
+      }
+    }
+  }
+  return [...visited].sort();
+}
+
 function historicalDocument(relativePath: string): boolean {
   if (!relativePath.endsWith(".md")) return false;
   return /^status:\s*historical\s*$/imu.test(
@@ -79,6 +102,19 @@ function assertHelpAndUnknown(entry: string, cwd = repoRoot): void {
   assert.equal(sha256(unknown.stderr), unknownSha256);
 }
 
+function assertProfilesList(entry: string, cwd: string): string {
+  const result = runEntry(entry, ["profiles-list"], cwd);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(result.stderr, "");
+  const parsed = JSON.parse(result.stdout) as {
+    default_profile?: unknown;
+    profiles?: Record<string, unknown>;
+  };
+  assert.equal(parsed.default_profile, "generic");
+  assert.deepEqual(Object.keys(parsed.profiles ?? {}), ["generic", "bafu", "uslci", "worldsteel"]);
+  return result.stdout;
+}
+
 test("Foundry entry closure exists atomically only as zero-escape native TypeScript", async () => {
   assert.equal(fs.existsSync(entryPath), true);
   assert.equal(fs.existsSync(cliPath), true);
@@ -93,6 +129,16 @@ test("Foundry entry closure exists atomically only as zero-escape native TypeScr
 
   const cliModule = (await import(pathToFileURL(cliPath).href)) as Record<string, unknown>;
   assert.deepEqual(Object.keys(cliModule), ["runFoundryCli"]);
+});
+
+test("runtime path resolution rejects unsupported entry mirrors", () => {
+  assert.throws(
+    () =>
+      resolveFoundryRuntimePaths(
+        pathToFileURL(path.join(repoRoot, "scripts", "lib", "unsupported-runtime.mjs")).href,
+      ),
+    /Unsupported Foundry runtime module extension '\.mjs'/u,
+  );
 });
 
 test("entry composition preserves all typed owners, registry metadata, and production case wiring", () => {
@@ -144,18 +190,26 @@ test("entry composition preserves all typed owners, registry metadata, and produ
   assert.equal(packageJson.scripts?.foundry, "node scripts/foundry.ts");
 });
 
-test("Node 24 source and emitted entries preserve exact help, stderr, and exit behavior", () => {
-  const sourceRoot = path.join(repoRoot, "tmp", `foundry-entry-source-${process.pid}`);
-  const buildRoot = path.join(repoRoot, "tmp", `foundry-entry-build-${process.pid}`);
-  fs.rmSync(sourceRoot, { recursive: true, force: true });
-  fs.rmSync(buildRoot, { recursive: true, force: true });
+test("Node 24 source and emitted entries preserve repository-backed commands and nested entry identity", async () => {
+  const fixtureRoot = path.join(repoRoot, "tmp", `foundry-entry-runtime-${process.pid}`);
+  const buildRoot = path.join(fixtureRoot, "dist");
+  fs.rmSync(fixtureRoot, { recursive: true, force: true });
   try {
-    fs.mkdirSync(sourceRoot, { recursive: true });
-    fs.cpSync(path.join(repoRoot, "scripts"), path.join(sourceRoot, "scripts"), {
+    fs.mkdirSync(path.join(fixtureRoot, "specs"), { recursive: true });
+    fs.copyFileSync(path.join(repoRoot, "package.json"), path.join(fixtureRoot, "package.json"));
+    fs.copyFileSync(
+      path.join(repoRoot, "specs", "import-profiles.json"),
+      path.join(fixtureRoot, "specs", "import-profiles.json"),
+    );
+    fs.cpSync(path.join(repoRoot, "scripts"), path.join(fixtureRoot, "scripts"), {
       recursive: true,
     });
-    assert.equal(fs.existsSync(path.join(sourceRoot, ".env")), false);
-    assertHelpAndUnknown(path.join(sourceRoot, "scripts", "foundry.ts"), sourceRoot);
+    const executionCwd = path.join(fixtureRoot, "unrelated-working-directory");
+    fs.mkdirSync(executionCwd, { recursive: true });
+    assert.equal(fs.existsSync(path.join(fixtureRoot, ".env")), false);
+    const sourceEntry = path.join(fixtureRoot, "scripts", "foundry.ts");
+    assertHelpAndUnknown(sourceEntry, executionCwd);
+    const sourceProfiles = assertProfilesList(sourceEntry, executionCwd);
 
     execFileSync(
       process.execPath,
@@ -174,12 +228,81 @@ test("Node 24 source and emitted entries preserve exact help, stderr, and exit b
     );
     const emittedEntry = path.join(buildRoot, "scripts", "foundry.js");
     assert.equal(fs.existsSync(emittedEntry), true);
-    assert.equal(fs.existsSync(path.join(buildRoot, ".env")), false);
-    assertHelpAndUnknown(emittedEntry, buildRoot);
+    // A copied manifest alone must not turn the emitted outDir into the trusted repository root.
+    fs.writeFileSync(
+      path.join(buildRoot, "package.json"),
+      `${JSON.stringify({ name: "tiangong-lca-data-foundry", type: "module" })}\n`,
+    );
+    assert.equal(fs.existsSync(path.join(fixtureRoot, ".env")), false);
+    assertHelpAndUnknown(emittedEntry, executionCwd);
+    assert.equal(assertProfilesList(emittedEntry, executionCwd), sourceProfiles);
+
+    const emittedBatchModule = (await import(
+      pathToFileURL(path.join(buildRoot, "scripts", "commands", "bafu-batch-import-run.js")).href
+    )) as {
+      bafuBatchImportRunTestHooks?: {
+        foundryCommand?: (command: string, options?: Record<string, unknown>) => string[];
+      };
+    };
+    const foundryCommand = emittedBatchModule.bafuBatchImportRunTestHooks?.foundryCommand;
+    assert.equal(typeof foundryCommand, "function");
+    if (!foundryCommand) throw new Error("emitted BAFU nested command hook is unavailable");
+    const nested = foundryCommand("profiles-list", { profile: "worldsteel" });
+    assert.equal(nested[0], process.execPath);
+    assert.equal(path.resolve(fixtureRoot, nested[1]), emittedEntry);
+    assert.deepEqual(nested.slice(2), ["profiles-list", "--profile", "worldsteel"]);
+
+    const emittedFinalizeUtilsModule = (await import(
+      pathToFileURL(path.join(buildRoot, "scripts", "lib", "post-authoring-finalize-utils.js")).href
+    )) as {
+      postAuthoringFinalizeUtilsTestHooks?: { foundryEntryPath?: string };
+    };
+    const finalizeEntry =
+      emittedFinalizeUtilsModule.postAuthoringFinalizeUtilsTestHooks?.foundryEntryPath;
+    assert.equal(typeof finalizeEntry, "string");
+    assert.equal(path.resolve(fixtureRoot, finalizeEntry!), emittedEntry);
+
+    const emittedProcessScopeModule = (await import(
+      pathToFileURL(path.join(buildRoot, "scripts", "commands", "bafu-process-scope-e2e.js")).href
+    )) as {
+      bafuProcessScopeE2eTestHooks?: { foundryEntryPath?: string };
+    };
+    const processScopeEntry =
+      emittedProcessScopeModule.bafuProcessScopeE2eTestHooks?.foundryEntryPath;
+    assert.equal(typeof processScopeEntry, "string");
+    assert.equal(path.resolve(fixtureRoot, processScopeEntry!), emittedEntry);
   } finally {
-    fs.rmSync(sourceRoot, { recursive: true, force: true });
-    fs.rmSync(buildRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
+});
+
+test("emitted CLI runtime closure centralizes repository roots and nested entry paths", () => {
+  const runtimeFiles = runtimeImportClosure("scripts/foundry.ts");
+  for (const expected of [
+    "scripts/commands/bafu-batch-import-run.ts",
+    "scripts/commands/bafu-process-scope-e2e.ts",
+    "scripts/lib/foundry-runtime-utils.ts",
+  ]) {
+    assert.equal(
+      runtimeFiles.includes(expected),
+      true,
+      `${expected} must stay in the runtime scan`,
+    );
+  }
+  const findings = runtimeFiles.flatMap((relativePath) => {
+    if (relativePath === "scripts/lib/foundry-runtime-paths.ts") return [];
+    const source = readRepoFile(relativePath);
+    const pattern = /(?:fileURLToPath\(\s*import\.meta\.url\s*\)|import\.meta\.dirname)/u;
+    return pattern.test(source) ? [{ relativePath, problem: "module_relative_repo_root" }] : [];
+  });
+  assert.deepEqual(findings, []);
+
+  const nestedSelfInvocationFindings = [
+    "scripts/commands/bafu-batch-import-run.ts",
+    "scripts/commands/bafu-process-scope-e2e.ts",
+    "scripts/lib/post-authoring-finalize-utils.ts",
+  ].filter((relativePath) => /["']scripts\/foundry\.ts["']/u.test(readRepoFile(relativePath)));
+  assert.deepEqual(nestedSelfInvocationFindings, []);
 });
 
 test("active entry consumers contain no retired Foundry entry path", () => {

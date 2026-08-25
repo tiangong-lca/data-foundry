@@ -1,10 +1,13 @@
 // This typed contract is the first file in the monotonic Foundry TypeScript migration.
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+
+import { cleanBuildOutput } from "../../scripts/clean-build-output.ts";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
@@ -12,6 +15,7 @@ type PackageJson = {
   packageManager?: string;
   engines?: Record<string, string>;
   scripts?: Record<string, string>;
+  "lint-staged"?: Record<string, string | string[]>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
 };
@@ -117,6 +121,8 @@ test("Foundry publishes one canonical pnpm TypeScript TDD gate", () => {
   const scripts = packageJson.scripts ?? {};
   for (const required of [
     "lint",
+    "lint:suppressions",
+    "lint:oxlint",
     "typecheck",
     "build",
     "test",
@@ -131,7 +137,16 @@ test("Foundry publishes one canonical pnpm TypeScript TDD gate", () => {
   ]) {
     assert.equal(typeof scripts[required], "string", `missing scripts.${required}`);
   }
-  assert.match(scripts.lint, /oxlint/u);
+  assert.equal(scripts["lint:suppressions"], "node scripts/check-lint-suppressions.ts");
+  assert.equal(
+    scripts.lint,
+    "pnpm lint:suppressions && pnpm lint:oxlint && pnpm lint:prettier && pnpm typecheck",
+  );
+  assert.match(scripts["lint:oxlint"], /--disable-nested-config/u);
+  assert.deepEqual(packageJson["lint-staged"]?.["*.{ts,mts,cts,tsx}"], [
+    "node scripts/check-lint-suppressions.ts",
+    "oxlint --disable-nested-config --type-aware --format=stylish --deny-warnings",
+  ]);
   assert.match(scripts.typecheck, /tsc/u);
   assert.equal(scripts["install:frozen"], "pnpm install --frozen-lockfile");
   assert.equal(scripts["audit:high"], "pnpm audit --audit-level high");
@@ -140,6 +155,153 @@ test("Foundry publishes one canonical pnpm TypeScript TDD gate", () => {
   assert.match(scripts["prepush:gate"], /pnpm\s+(?:run\s+)?test:toolchain/u);
   assert.match(scripts["prepush:gate"], /pnpm\s+(?:run\s+)?test/u);
   assert.match(scripts["prepush:gate"], /pnpm\s+(?:run\s+)?audit:high/u);
+});
+
+test("build removes seeded stale output through a cross-platform Node cleaner", () => {
+  const fixtureRoot = mkdtempSync(path.join(os.tmpdir(), "foundry-build-output-contract-"));
+  const staleFiles = [
+    path.join(fixtureRoot, "dist", "scripts", "foundry.mjs"),
+    path.join(fixtureRoot, "dist", "scripts", "foundry.mjs.map"),
+  ];
+  try {
+    const fixtureScripts = path.join(fixtureRoot, "scripts");
+    mkdirSync(fixtureScripts, { recursive: true });
+    writeFileSync(
+      path.join(fixtureScripts, "clean-build-output.ts"),
+      readText("scripts/clean-build-output.ts"),
+    );
+    writeFileSync(path.join(fixtureScripts, "foundry.ts"), "export const current = true;\n");
+    writeFileSync(
+      path.join(fixtureRoot, "tsconfig.build.json"),
+      `${JSON.stringify(
+        {
+          compilerOptions: {
+            target: "ES2024",
+            module: "NodeNext",
+            moduleResolution: "NodeNext",
+            noEmitOnError: true,
+            outDir: "./dist",
+            rootDir: ".",
+            skipLibCheck: true,
+          },
+          include: ["scripts/foundry.ts"],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    mkdirSync(path.dirname(staleFiles[0]), { recursive: true });
+    writeFileSync(staleFiles[0], "export const retiredEntrypoint = true;\n");
+    writeFileSync(staleFiles[1], '{"version":3,"file":"foundry.mjs"}\n');
+
+    const cleanResult = spawnSync(
+      process.execPath,
+      [path.join(fixtureScripts, "clean-build-output.ts")],
+      { ...commandOptions(), cwd: fixtureRoot },
+    );
+    assert.equal(cleanResult.status, 0, cleanResult.stderr || cleanResult.stdout);
+    const buildResult = spawnSync(
+      process.execPath,
+      [
+        path.join(repoRoot, "node_modules", "typescript", "bin", "tsc"),
+        "-p",
+        path.join(fixtureRoot, "tsconfig.build.json"),
+      ],
+      { ...commandOptions(), cwd: fixtureRoot },
+    );
+    assert.equal(buildResult.status, 0, buildResult.stderr || buildResult.stdout);
+    assert.deepEqual(
+      staleFiles.filter((file) => existsSync(file)),
+      [],
+      "build must remove retired entrypoint and source-map output",
+    );
+    assert.equal(existsSync(path.join(fixtureRoot, "dist", "scripts", "foundry.js")), true);
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+
+  assert.equal(
+    packageJson.scripts?.build,
+    "node scripts/clean-build-output.ts && pnpm exec tsc -p tsconfig.build.json",
+  );
+  const cleaner = readText("scripts/clean-build-output.ts");
+  assert.match(cleaner, /rmSync/u);
+  assert.doesNotMatch(cleaner, /node:child_process|\brm\s+-rf\b|\brmdir\b/u);
+});
+
+test("safe clean and no-emit-on-error leave no stale or misleading failed build", () => {
+  const fixtureRoot = mkdtempSync(path.join(os.tmpdir(), "foundry-build-clean-contract-"));
+  const staleFile = path.join(fixtureRoot, "dist", "scripts", "foundry.mjs");
+  const siblingFile = path.join(fixtureRoot, "keep.txt");
+  try {
+    mkdirSync(path.dirname(staleFile), { recursive: true });
+    writeFileSync(staleFile, "export const retiredEntrypoint = true;\n");
+    writeFileSync(siblingFile, "keep\n");
+
+    cleanBuildOutput(fixtureRoot);
+    assert.equal(existsSync(staleFile), false);
+    assert.equal(existsSync(siblingFile), true, "cleaner must stay inside the exact dist path");
+    assert.throws(
+      () => cleanBuildOutput(path.parse(fixtureRoot).root),
+      /Refusing to clean unsafe build output path/u,
+    );
+
+    const invalidSource = path.join(fixtureRoot, "invalid.ts");
+    writeFileSync(invalidSource, "export const invalid: string = 1;\n");
+    const result = spawnSync(
+      process.execPath,
+      [
+        path.join(repoRoot, "node_modules", "typescript", "bin", "tsc"),
+        invalidSource,
+        "--ignoreConfig",
+        "--target",
+        "ES2024",
+        "--module",
+        "NodeNext",
+        "--moduleResolution",
+        "NodeNext",
+        "--outDir",
+        path.join(fixtureRoot, "dist"),
+        "--noEmitOnError",
+        "--skipLibCheck",
+      ],
+      commandOptions(),
+    );
+    assert.notEqual(result.status, 0, "controlled type error must fail tsc");
+    assert.match(`${result.stdout}\n${result.stderr}`, /TS2322/u);
+    assert.equal(existsSync(path.join(fixtureRoot, "dist", "invalid.js")), false);
+    assert.equal(existsSync(staleFile), false, "failed tsc must not restore stale output");
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test("TypeScript enforces erasable-only runtime syntax for typecheck and build", () => {
+  const sourceConfig = JSON.parse(readText("tsconfig.json")) as {
+    compilerOptions?: Record<string, unknown>;
+  };
+  assert.equal(sourceConfig.compilerOptions?.erasableSyntaxOnly, true);
+
+  for (const configPath of ["tsconfig.json", "tsconfig.build.json"]) {
+    const result = spawnSync(
+      process.execPath,
+      [
+        path.join(repoRoot, "node_modules", "typescript", "bin", "tsc"),
+        "-p",
+        path.join(repoRoot, configPath),
+        "--showConfig",
+      ],
+      commandOptions(),
+    );
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    const effective = JSON.parse(result.stdout) as {
+      compilerOptions?: Record<string, unknown>;
+    };
+    assert.equal(effective.compilerOptions?.erasableSyntaxOnly, true, configPath);
+    if (configPath === "tsconfig.build.json") {
+      assert.equal(effective.compilerOptions?.noEmitOnError, true, configPath);
+    }
+  }
 });
 
 test("active tracked surfaces expose no legacy package-management commands", () => {
@@ -159,8 +321,13 @@ test("active tracked surfaces expose no legacy package-management commands", () 
 
 test("tracked first-party JavaScript remains permanently at zero", () => {
   assert.deepEqual(
-    trackedFiles().filter((file) => /\.(?:cjs|js|mjs)$/u.test(file)),
+    trackedFiles().filter((file) => /\.(?:cjs|js|jsx|mjs)$/u.test(file)),
     [],
+  );
+  assert.deepEqual(
+    trackedFiles().filter((file) => /\.tsx$/u.test(file)),
+    [],
+    "Foundry does not support a JSX/TSX runtime graph",
   );
   assert.equal(existsSync(path.join(repoRoot, "prettier.config.ts")), true);
 });
@@ -197,7 +364,9 @@ test("golden comparison is portable and cannot collapse into HEAD self-compariso
   const source = readText("scripts/foundry-golden-diff.ts");
   assert.match(source, /merge-base/u);
   assert.match(source, /FOUNDRY_GOLDEN_BASE/u);
-  assert.match(source, /pnpm["'],\s*\["install",\s*"--frozen-lockfile"/u);
+  assert.match(source, /const args = \["install", "--frozen-lockfile", "--ignore-scripts"\]/u);
+  assert.match(source, /run\("pnpm", args/u);
+  assert.match(source, /commandProcessor, \["\/d", "\/s", "\/c"/u);
   assert.doesNotMatch(source, /function linkInstalledDependencies/u);
   assert.doesNotMatch(
     source,

@@ -3,7 +3,6 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
 import {
   bafuFamilyPlanFields,
   bafuFamilySelectionRank,
@@ -21,6 +20,7 @@ import {
   type FoundryCommandSpec,
 } from "../lib/foundry-command-spec.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.ts";
+import { resolveFoundryRuntimePaths } from "../lib/foundry-runtime-paths.ts";
 import { stageContract } from "../lib/stage-contract.ts";
 import {
   assertReceiptBoundHandoffAccount,
@@ -349,7 +349,9 @@ function recordArray(value: unknown): JsonRecord[] {
   return Array.isArray(value) ? value.map(jsonRecord) : [];
 }
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const { entryRepoRelativePath: foundryEntryPath, repoRoot } = resolveFoundryRuntimePaths(
+  import.meta.url,
+);
 const commandName = "dataset-bafu-batch-import-run";
 const coverageCommandName = "dataset-bafu-universe-coverage-report";
 let supportCommitQueue: Promise<unknown> = Promise.resolve();
@@ -1106,7 +1108,7 @@ function appendPathOptions(args: string[], name: string, values: unknown): void 
 }
 
 function foundryCommand(command: string, options: JsonRecord = {}): string[] {
-  const args = [process.execPath, "scripts/foundry.ts", command];
+  const args = [process.execPath, foundryEntryPath, command];
   for (const [key, value] of Object.entries(options)) {
     const flag = `--${key.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`)}`;
     if (Array.isArray(value)) {
@@ -1658,7 +1660,7 @@ async function executeHandoff({
   const closeoutDir = path.join(outDir, "closeout");
   const closeoutArgv = [
     process.execPath,
-    "scripts/foundry.ts",
+    foundryEntryPath,
     "dataset-post-write-closeout",
     "--handoff-plan",
     repoRelative(handoffPlanPath),
@@ -3679,7 +3681,7 @@ function recordScopeExecutionException({
     report: null,
     rerunCommand: commandString([
       process.execPath,
-      "scripts/foundry.ts",
+      foundryEntryPath,
       commandName,
       "--scope-file",
       repoRelative(asText(paths.scopeFile)),
@@ -3823,7 +3825,7 @@ function buildFinalizeArgs({
 }: FinalizeArgsInput): string[] {
   const args = [
     process.execPath,
-    "scripts/foundry.ts",
+    foundryEntryPath,
     "dataset-post-authoring-finalize",
     "--type",
     type,
@@ -4406,7 +4408,7 @@ async function runIdentityAndPatch({
     stage: `${stagePrefix}.patch_apply`,
     argv: [
       process.execPath,
-      "scripts/foundry.ts",
+      foundryEntryPath,
       "dataset-patch-apply",
       "--input",
       repoRelative(identityOutputRows),
@@ -4804,7 +4806,7 @@ async function runOneScope({
   };
   const rerunCommand = commandString([
     process.execPath,
-    "scripts/foundry.ts",
+    foundryEntryPath,
     commandName,
     "--scope-file",
     repoRelative(paths.scopeFile),
@@ -4962,7 +4964,7 @@ async function runOneScope({
     stage: "classification.task",
     argv: [
       process.execPath,
-      "scripts/foundry.ts",
+      foundryEntryPath,
       "dataset-classification-decision-task-build",
       "--classification-queue",
       repoRelative(materialized.classificationQueue),
@@ -5127,7 +5129,7 @@ async function runOneScope({
       stage: "location.task",
       argv: [
         process.execPath,
-        "scripts/foundry.ts",
+        foundryEntryPath,
         "dataset-location-decision-task-build",
         "--location-queue",
         repoRelative(materialized.locationQueue),
@@ -6271,6 +6273,7 @@ export const bafuBatchImportRunTestHooks = {
   commitFailuresAllAlreadyExist,
   enforceSharedContextCacheCap,
   flowRowsPendingVerification,
+  foundryCommand,
   identityUnresolvedReferenceBlocker,
   invalidateIdentityPreflightResultCacheEntry,
   mergeCompletedReusableIdentityDecisions,

@@ -4,13 +4,17 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
+import {
+  runtimeEnvFilePolicyDisabled,
+  runtimeEnvFilePolicyKey,
+} from "./foundry-runtime-environment.ts";
+import { resolveFoundryRuntimePaths } from "./foundry-runtime-paths.ts";
 
 const require = createRequire(import.meta.url);
 const tiangongLcaCliPackageName = "@tiangong-lca/cli";
 const tiangongLcaCliPackageVersion = "0.1.1";
 const tiangongLcaCliBinName = "tiangong-lca";
-const foundryRepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const { repoRoot: foundryRepoRoot } = resolveFoundryRuntimePaths(import.meta.url);
 
 export interface InstalledTiangongLcaCliPackage {
   packageName: string;
@@ -56,6 +60,10 @@ interface RuntimeStage extends JsonRecord {
 
 interface LoadEnvOptions {
   override?: boolean;
+}
+
+interface LoadRuntimeEnvOptions {
+  allowFilesystemEnv?: boolean;
 }
 
 interface GateBlockerOptions {
@@ -400,8 +408,14 @@ export function createFoundryRuntimeUtils({ parseScalar, repoRoot }: FoundryRunt
     return { file: filePath, loaded: true, keys };
   }
 
-  function loadRuntimeEnv() {
-    const repoEnv = loadEnvFile(path.join(repoRoot, ".env"));
+  function loadRuntimeEnv(options: LoadRuntimeEnvOptions = {}) {
+    const envFile = path.join(repoRoot, ".env");
+    const allowFilesystemEnv =
+      options.allowFilesystemEnv ??
+      process.env[runtimeEnvFilePolicyKey] !== runtimeEnvFilePolicyDisabled;
+    const repoEnv = allowFilesystemEnv
+      ? loadEnvFile(envFile)
+      : { file: envFile, loaded: false, keys: [] };
     return { repoEnv };
   }
 

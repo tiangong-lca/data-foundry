@@ -27,7 +27,7 @@ function createNegativeFixtureRepository(): string {
     path.join(fixtureScripts, "check-tidas-cutover.ts"),
   );
   fs.writeFileSync(
-    path.join(fixtureScripts, "tidas-cutover-negative.mjs"),
+    path.join(fixtureScripts, "tidas-cutover-negative.ts"),
     ["export const safe = true;", 'export const retired = "python -m tidas_tools";', ""].join("\n"),
   );
   const initialized = spawnSync("git", ["init", "--quiet", fixtureRoot], { encoding: "utf8" });
@@ -42,6 +42,7 @@ test("TIDAS cutover script emits exact JSON stdout and zero exit for the active 
   const report = JSON.parse(result.stdout) as Record<string, unknown>;
   assert.equal(report.schema_version, 1);
   assert.equal(report.status, "passed");
+  assert.ok(Number(report.active_files_scanned) > 0);
   assert.equal((report.findings as unknown[]).length, 0);
   assert.equal(result.stdout, `${JSON.stringify(report, null, 2)}\n`);
 });
@@ -52,14 +53,16 @@ test("TIDAS cutover detects an untracked authoritative violation with stable lin
     const result = runAuditScript(fixtureRoot);
     const report = JSON.parse(result.stdout) as {
       status: string;
+      active_files_scanned: number;
       findings: Array<{ file: string; line: number; pattern: string }>;
     };
     assert.equal(result.status, 1);
     assert.equal(result.stderr, "");
     assert.equal(report.status, "failed");
+    assert.equal(report.active_files_scanned, 1);
     assert.deepEqual(report.findings, [
       {
-        file: "scripts/tidas-cutover-negative.mjs",
+        file: "scripts/tidas-cutover-negative.ts",
         line: 2,
         pattern: "python(?:3)?\\s+-m\\s+tidas_tools",
       },
@@ -75,6 +78,8 @@ test("TIDAS cutover audit exists only as zero-escape native TypeScript", () => {
   assert.equal(fs.existsSync(typedPath), true);
   assert.equal(fs.existsSync(typedPath.replace(/\.ts$/u, ".mjs")), false);
   const source = fs.readFileSync(typedPath, "utf8");
+  assert.match(source, /if \(import\.meta\.main\)/u);
+  assert.doesNotMatch(source, /process\.argv\[1\].*fileURLToPath/u);
   assert.doesNotMatch(source, /\bas\s+any\b|:\s*any\b|\bany\s*\[\]|<\s*any\b|,\s*any\s*>/u);
   assert.doesNotMatch(source, /@ts-(?:no)?check|@ts-ignore/u);
 });

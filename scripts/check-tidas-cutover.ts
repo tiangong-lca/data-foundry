@@ -81,7 +81,7 @@ export function auditTidasCutover(): TidasCutoverAuditReport {
       !historicalDocs.has(file) &&
       file !== "scripts/check-tidas-cutover.ts" &&
       !file.startsWith("reports/") &&
-      /\.(?:js|json|md|mjs|ya?ml)$/u.test(file),
+      /\.(?:[cm]?[jt]s|[jt]sx|json|md|ya?ml)$/u.test(file),
   );
   const findings: TidasCutoverFinding[] = [];
   for (const file of files) {
@@ -108,7 +108,7 @@ export function auditTidasCutover(): TidasCutoverAuditReport {
   };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (import.meta.main) {
   const report = auditTidasCutover();
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   if (report.status !== "passed") process.exitCode = 1;

@@ -62,6 +62,21 @@ test("Golden source preserves Node-native comparison and executable-plus-argv po
   assert.doesNotMatch(source, /worktree["'],\s*["']add["'].*["']HEAD["']/su);
 });
 
+test("Golden baseline and current commands share one explicit credential-free environment", () => {
+  const source = fs.readFileSync(path.join(repoRoot, "scripts/foundry-golden-diff.ts"), "utf8");
+  assert.match(source, /createFoundryIsolatedChildEnvironment/u);
+  assert.match(source, /copyFoundryIsolatedExecutable/u);
+  assert.match(source, /process\.platform\s*===\s*["']win32["']/u);
+  assert.match(source, /commandProcessor,\s*\["\/d",\s*"\/s",\s*"\/c"/u);
+  assert.match(source, /childEnvironmentSnapshot/u);
+  assert.match(source, /runSide\("before",\s*beforeRoot,\s*fixture,\s*commandEnvironment\)/u);
+  assert.match(source, /runSide\("after",\s*repoRoot,\s*fixture,\s*commandEnvironment\)/u);
+  assert.match(source, /baselineEnvironment\s*!==\s*currentEnvironment/u);
+  assert.match(source, /env:\s*commandEnvironment/u);
+  assert.doesNotMatch(source, /\.\.\.process\.env/u);
+  assert.doesNotMatch(source, /env:\s*options\.env\s*\?\?\s*process\.env/u);
+});
+
 test("Golden harness exists only as zero-escape native TypeScript", () => {
   const typedPath = path.join(repoRoot, "scripts/foundry-golden-diff.ts");
   assert.equal(fs.existsSync(typedPath), true);

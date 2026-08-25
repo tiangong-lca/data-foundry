@@ -16,6 +16,10 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import {
+  copyFoundryIsolatedExecutable,
+  createFoundryIsolatedChildEnvironment,
+} from "./lib/foundry-runtime-environment.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -47,6 +51,7 @@ const beforeOut = path.join(tempRoot, "before-output");
 const afterOut = path.join(tempRoot, "after-output");
 const normalizedRoot = path.join(tempRoot, "normalized");
 const fixtureRoot = path.join(tempRoot, "fixtures");
+const goldenProcessEnvironment = createFoundryIsolatedChildEnvironment({ tempRoot });
 const processId = "22222222-3333-5444-8555-666666666666";
 const sourceId = "33333333-4444-5555-8666-777777777777";
 const contactId = "11111111-2222-5333-8444-555555555555";
@@ -67,6 +72,7 @@ function resolveGoldenBase(): GoldenBase {
   for (const candidate of candidates) {
     const mergeBase = spawnSync("git", ["merge-base", "HEAD", candidate], {
       cwd: repoRoot,
+      env: goldenProcessEnvironment,
       encoding: "utf8",
     });
     const commit = mergeBase.status === 0 ? mergeBase.stdout.trim() : "";
@@ -74,6 +80,7 @@ function resolveGoldenBase(): GoldenBase {
   }
   const parent = spawnSync("git", ["rev-parse", "HEAD^"], {
     cwd: repoRoot,
+    env: goldenProcessEnvironment,
     encoding: "utf8",
   });
   const parentCommit = parent.status === 0 ? parent.stdout.trim() : "";
@@ -103,7 +110,7 @@ function replacePathVariants(value: string, variants: string[], replacement: str
 function run(command: string, args: string[], options: RunOptions = {}): SpawnSyncReturns<string> {
   const result = spawnSync(command, args, {
     cwd: options.cwd ?? repoRoot,
-    env: options.env ?? process.env,
+    env: options.env ?? goldenProcessEnvironment,
     encoding: "utf8",
   });
   if (result.status !== (options.expectedStatus ?? 0)) {
@@ -436,11 +443,25 @@ if (args[0] === "dataset" && args[1] === "validate") {
   return cliPath;
 }
 
+function isolatedFakeTidasScript(): string {
+  const sourcePath = ["fake-tidas.ts", "fake-tidas.mjs"]
+    .map((fileName) => path.join(beforeRoot, "test", "fixtures", fileName))
+    .find((candidate) => existsSync(candidate));
+  if (!sourcePath) throw new Error("Golden baseline does not contain a fake TIDAS fixture.");
+  const targetPath = path.join(tempRoot, path.basename(sourcePath));
+  copyFoundryIsolatedExecutable(sourcePath, targetPath);
+  return targetPath;
+}
+
 function installBaselineDependencies(root: string): void {
-  run("pnpm", ["install", "--frozen-lockfile", "--ignore-scripts"], {
-    cwd: root,
-    env: { ...process.env, HUSKY: "0" },
-  });
+  const args = ["install", "--frozen-lockfile", "--ignore-scripts"];
+  if (process.platform === "win32") {
+    const commandProcessor = goldenProcessEnvironment.ComSpec ?? goldenProcessEnvironment.COMSPEC;
+    if (!commandProcessor) throw new Error("Windows Golden execution requires ComSpec.");
+    run(commandProcessor, ["/d", "/s", "/c", ["pnpm", ...args].join(" ")], { cwd: root });
+    return;
+  }
+  run("pnpm", args, { cwd: root });
 }
 
 function linkLegacyInstalledCliAssets(): void {
@@ -471,7 +492,7 @@ function foundryCommand(
   root: string,
   args: string[],
   outFile: string,
-  env: NodeJS.ProcessEnv = {},
+  commandEnvironment: NodeJS.ProcessEnv,
   expectedStatus = 0,
 ): JsonRecord {
   const typedEntry = path.join("scripts", "foundry.ts");
@@ -479,42 +500,49 @@ function foundryCommand(
   const entry = existsSync(path.join(root, typedEntry)) ? typedEntry : legacyEntry;
   const result = run(process.execPath, [entry, ...args], {
     cwd: root,
-    env: { ...process.env, ...env },
+    env: commandEnvironment,
     expectedStatus,
   });
   writeFileSync(outFile, result.stdout);
   return JSON.parse(result.stdout) as JsonRecord;
 }
 
+function childEnvironmentSnapshot(root: string, commandEnvironment: NodeJS.ProcessEnv): string {
+  const probe = [
+    "const entries = Object.entries(process.env)",
+    ".sort(([left], [right]) => left.localeCompare(right));",
+    "process.stdout.write(JSON.stringify(entries));",
+  ].join("");
+  return run(process.execPath, ["--eval", probe], {
+    cwd: root,
+    env: commandEnvironment,
+  }).stdout;
+}
+
 function runSide(
   label: "before" | "after",
   root: string,
   fixture: FixturePaths,
-  cliPath: string,
-): void {
+  commandEnvironment: NodeJS.ProcessEnv,
+): string {
+  const environmentSnapshot = childEnvironmentSnapshot(root, commandEnvironment);
   const sideOut = label === "before" ? beforeOut : afterOut;
   const commandOut = path.join(sideOut, "commands");
   mkdirSync(commandOut, { recursive: true });
-  foundryCommand(root, ["init"], path.join(commandOut, "setup-init.json"));
-  const typedFakeTidas = path.join(root, "test", "fixtures", "fake-tidas.ts");
-  const baselineFakeTidas = path.join(
+  foundryCommand(root, ["init"], path.join(commandOut, "setup-init.json"), commandEnvironment);
+  foundryCommand(root, ["help"], path.join(commandOut, "help.json"), commandEnvironment);
+  foundryCommand(root, ["doctor"], path.join(commandOut, "doctor.json"), commandEnvironment, 1);
+  foundryCommand(
     root,
-    "test",
-    "fixtures",
-    `fake-tidas.${["m", "js"].join("")}`,
+    ["profiles-list"],
+    path.join(commandOut, "profiles-list.json"),
+    commandEnvironment,
   );
-  const commonEnv = {
-    TIANGONG_LCA_CLI_BIN: cliPath,
-    TIDAS_BIN: existsSync(typedFakeTidas) ? typedFakeTidas : baselineFakeTidas,
-  };
-  foundryCommand(root, ["help"], path.join(commandOut, "help.json"), commonEnv);
-  foundryCommand(root, ["doctor"], path.join(commandOut, "doctor.json"), commonEnv, 1);
-  foundryCommand(root, ["profiles-list"], path.join(commandOut, "profiles-list.json"), commonEnv);
   foundryCommand(
     root,
     ["capabilities-list"],
     path.join(commandOut, "capabilities-list.json"),
-    commonEnv,
+    commandEnvironment,
   );
   foundryCommand(
     root,
@@ -530,7 +558,7 @@ function runSide(
       path.join(sideOut, "route-task"),
     ],
     path.join(commandOut, "route-task.json"),
-    commonEnv,
+    commandEnvironment,
   );
   foundryCommand(
     root,
@@ -542,7 +570,7 @@ function runSide(
       path.join(sideOut, "authoring-task"),
     ],
     path.join(commandOut, "dataset-authoring-task-build.json"),
-    commonEnv,
+    commandEnvironment,
   );
   foundryCommand(
     root,
@@ -562,7 +590,7 @@ function runSide(
       path.join(sideOut, "curation-gate"),
     ],
     path.join(commandOut, "dataset-curation-gate.json"),
-    commonEnv,
+    commandEnvironment,
   );
   foundryCommand(
     root,
@@ -578,7 +606,7 @@ function runSide(
       path.join(sideOut, "bundle-sample-rows"),
     ],
     path.join(commandOut, "dataset-bundle-sample-rows.json"),
-    commonEnv,
+    commandEnvironment,
   );
   const finalize = foundryCommand(
     root,
@@ -596,7 +624,7 @@ function runSide(
       "0",
     ],
     path.join(commandOut, "dataset-post-authoring-finalize.json"),
-    commonEnv,
+    commandEnvironment,
   );
   const finalizeFiles = finalize.files as JsonRecord;
   foundryCommand(
@@ -619,8 +647,9 @@ function runSide(
       path.join(sideOut, "mutation-manifest"),
     ],
     path.join(commandOut, "dataset-mutation-manifest.json"),
-    commonEnv,
+    commandEnvironment,
   );
+  return environmentSnapshot;
 }
 
 function normalizeKnownContractMigration(value: JsonRecord): JsonRecord {
@@ -855,8 +884,19 @@ try {
   normalizeBaselineLineEndings();
   installBaselineDependencies(beforeRoot);
   linkLegacyInstalledCliAssets();
-  runSide("before", beforeRoot, fixture, cliPath);
-  runSide("after", repoRoot, fixture, cliPath);
+  const fakeTidasPath = isolatedFakeTidasScript();
+  const commandEnvironment = createFoundryIsolatedChildEnvironment({
+    tempRoot,
+    overrides: {
+      TIANGONG_LCA_CLI_BIN: cliPath,
+      TIDAS_BIN: fakeTidasPath,
+    },
+  });
+  const baselineEnvironment = runSide("before", beforeRoot, fixture, commandEnvironment);
+  const currentEnvironment = runSide("after", repoRoot, fixture, commandEnvironment);
+  if (baselineEnvironment !== currentEnvironment) {
+    throw new Error("Golden baseline and current commands must receive the same environment.");
+  }
   normalizeOutputs();
   compareNormalizedOutputs();
   console.log(

@@ -53,7 +53,9 @@ type PackageJson = {
 const commandHandlerHelpKeys = new Set(["help", "--help", "-h"]);
 const deprecatedNamePattern = /\b(?:legacy|deprecated|compat|compatibility|alias|old)\b/iu;
 const scriptEntrypoints = new Set([
+  "scripts/check-lint-suppressions.ts",
   "scripts/check-tidas-cutover.ts",
+  "scripts/clean-build-output.ts",
   "scripts/foundry.ts",
   "scripts/foundry-golden-diff.ts",
   "scripts/cases/production-contact-draft.ts",

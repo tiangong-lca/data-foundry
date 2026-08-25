@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
+import { resolveFoundryRuntimePaths } from "../lib/foundry-runtime-paths.ts";
 import { acceptTraceHashOnlyRemoteVerificationMismatch } from "../lib/remote-verification-accepted-diff.ts";
 import {
   assertFoundryCommandSpecArtifactsCurrent,
@@ -141,7 +141,9 @@ function jsonRecord(value: unknown): JsonRecord {
   return isJsonRecord(value) ? value : {};
 }
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const { entryRepoRelativePath: foundryEntryPath, repoRoot } = resolveFoundryRuntimePaths(
+  import.meta.url,
+);
 const commandName = "dataset-bafu-process-scope-e2e";
 const reportFileName = "bafu-process-scope-e2e-report.json";
 const ledgerFileName = "bafu-process-scope-e2e-ledger.jsonl";
@@ -395,7 +397,7 @@ function helperRerunCommand({
 }): string {
   const args = [
     "node",
-    "scripts/foundry.ts",
+    foundryEntryPath,
     "dataset-bafu-process-scope-e2e",
     "--rows-file",
     repoRelative(rowsFile) || "<rows.jsonl>",
@@ -699,7 +701,7 @@ function closeoutCommand({
 }): string[] {
   const args = [
     process.execPath,
-    "scripts/foundry.ts",
+    foundryEntryPath,
     "dataset-post-write-closeout",
     "--handoff-plan",
     repoRelative(handoffPlanPath),
@@ -957,7 +959,7 @@ function buildFinalizeCommand({
   const finalizeDir = resolveRepoPath(options.finalizeDir) || path.join(outDir, "finalize");
   const args = [
     process.execPath,
-    "scripts/foundry.ts",
+    foundryEntryPath,
     "dataset-post-authoring-finalize",
     "--type",
     "process",
@@ -1140,7 +1142,7 @@ function runPostFinalizeIdentityRecovery({
     stage: `post-finalize-${attempt}.identity-task`,
     argv: [
       process.execPath,
-      "scripts/foundry.ts",
+      foundryEntryPath,
       "dataset-identity-decision-task-build",
       "--curation-gate-report",
       repoRelative(gateReportPath),
@@ -1159,7 +1161,7 @@ function runPostFinalizeIdentityRecovery({
           stage: `post-finalize-${attempt}.identity-task`,
           command: commandString([
             process.execPath,
-            "scripts/foundry.ts",
+            foundryEntryPath,
             "dataset-identity-decision-task-build",
           ]),
           result: identityTask.result,
@@ -1180,7 +1182,7 @@ function runPostFinalizeIdentityRecovery({
       stage: `post-finalize-${attempt}.identity-task`,
       command: commandString([
         process.execPath,
-        "scripts/foundry.ts",
+        foundryEntryPath,
         "dataset-identity-decision-task-build",
         "--curation-gate-report",
         repoRelative(gateReportPath),
@@ -1220,7 +1222,7 @@ function runPostFinalizeIdentityRecovery({
   );
   const identityAutofillArgv = [
     process.execPath,
-    "scripts/foundry.ts",
+    foundryEntryPath,
     "dataset-bafu-identity-decisions-autofill",
     "--identity-decision-task",
     repoRelative(path.join(identityTaskDir, "identity-decision-task.json")),
@@ -1269,7 +1271,7 @@ function runPostFinalizeIdentityRecovery({
   const identityApplyReport = path.join(identityApplyDir, "identity-decisions-apply-report.json");
   const identityApplyArgv = [
     process.execPath,
-    "scripts/foundry.ts",
+    foundryEntryPath,
     "dataset-identity-decisions-apply",
     "--type",
     "process",
@@ -1349,7 +1351,7 @@ function runPostFinalizeSemanticRecovery({
   const taskManifest = path.join(authoringDir, "authoring-task-manifest.json");
   const taskBuildArgv = [
     process.execPath,
-    "scripts/foundry.ts",
+    foundryEntryPath,
     "dataset-authoring-task-build",
     "--curation-gate-report",
     repoRelative(gateReportPath),
@@ -1412,7 +1414,7 @@ function runPostFinalizeSemanticRecovery({
   );
   const patchAutofillArgv = [
     process.execPath,
-    "scripts/foundry.ts",
+    foundryEntryPath,
     "dataset-bafu-authoring-patches-autofill",
     "--task-manifest",
     repoRelative(taskManifest),
@@ -1460,7 +1462,7 @@ function runPostFinalizeSemanticRecovery({
   const patchCollectReport = path.join(authoringDir, "authoring-patch-collect-report.json");
   const patchCollectArgv = [
     process.execPath,
-    "scripts/foundry.ts",
+    foundryEntryPath,
     "dataset-authoring-patch-collect",
     "--task-manifest",
     repoRelative(taskManifest),
@@ -1516,7 +1518,7 @@ function runPostFinalizeSemanticRecovery({
   const patchApplyDir = path.join(authoringDir, "patch-apply");
   const patchApplyArgv = [
     process.execPath,
-    "scripts/foundry.ts",
+    foundryEntryPath,
     "dataset-patch-apply",
     "--input",
     repoRelative(currentRowsFile),
@@ -2195,6 +2197,7 @@ export function createBafuProcessScopeE2eCommands(deps: BafuProcessScopeE2eRunti
 export const bafuProcessScopeE2eTestHooks = {
   canRunPostFinalizeIdentityRecovery,
   canRunPostFinalizeSemanticRecovery,
+  foundryEntryPath,
   loadVerifiedSupportIdentities,
   postWriteVerifyRetryReason,
   supportIdentityKeysFromHandoffPlan,

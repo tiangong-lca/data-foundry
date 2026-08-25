@@ -358,6 +358,26 @@ test("runtime env-file helpers preserve explicit-file precedence without reading
   });
 });
 
+test("runtime env loading honors the explicit filesystem-disabled policy", () => {
+  withTempRoot("foundry-isolated-child-env", (root) => {
+    const variable = "FOUNDRY_GOLDEN_ENV_LEAK_TEST";
+    fs.writeFileSync(path.join(root, ".env"), `${variable}=must-not-load\n`);
+    const runtime = createRuntime(root);
+    withEnvironment({ FOUNDRY_RUNTIME_ENV_FILE_POLICY: "disabled", [variable]: undefined }, () => {
+      assert.deepEqual(runtime.loadRuntimeEnv(), {
+        repoEnv: { file: path.join(root, ".env"), loaded: false, keys: [] },
+      });
+      assert.equal(process.env[variable], undefined);
+    });
+    withEnvironment({ FOUNDRY_RUNTIME_ENV_FILE_POLICY: undefined, [variable]: undefined }, () => {
+      assert.deepEqual(runtime.loadRuntimeEnv(), {
+        repoEnv: { file: path.join(root, ".env"), loaded: true, keys: [variable] },
+      });
+      assert.equal(process.env[variable], "must-not-load");
+    });
+  });
+});
+
 test("runtime stage, blocker, artifact, and local CLI execution helpers preserve exact envelopes", () => {
   withTempRoot("foundry-runtime-stages", (root) => {
     const runtime = createRuntime(root);

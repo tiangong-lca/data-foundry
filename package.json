@@ -25,12 +25,13 @@
     "acceptance:check": "node scripts/foundry.ts acceptance-check",
     "format": "pnpm exec prettier . --write",
     "format:check": "pnpm exec prettier . --check",
-    "lint:oxlint": "pnpm exec oxlint --type-aware --format=stylish --deny-warnings ./scripts ./test",
+    "lint:suppressions": "node scripts/check-lint-suppressions.ts",
+    "lint:oxlint": "pnpm exec oxlint --disable-nested-config --type-aware --format=stylish --deny-warnings .",
     "lint:prettier": "pnpm format:check",
-    "lint": "pnpm lint:oxlint && pnpm lint:prettier && pnpm typecheck",
+    "lint": "pnpm lint:suppressions && pnpm lint:oxlint && pnpm lint:prettier && pnpm typecheck",
     "lint-staged": "pnpm exec lint-staged",
     "typecheck": "pnpm exec tsc --noEmit",
-    "build": "pnpm exec tsc -p tsconfig.build.json",
+    "build": "node scripts/clean-build-output.ts && pnpm exec tsc -p tsconfig.build.json",
     "skills:list": "pnpm dlx skills@latest list --json",
     "skills:update": "pnpm dlx skills@latest update --project --yes",
     "skills:install:shared": "pnpm dlx skills@latest add ../tiangong-lca-skills --skill external-dataset-curated-import source-evidence-dataset-development dataset-rls-maintenance --agent '*' --yes --full-depth && pnpm dlx skills@latest add https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search document-granular-decompose --agent '*' --yes --full-depth",
@@ -69,8 +70,11 @@
     "typescript": "7.0.2"
   },
   "lint-staged": {
-    "*.{ts,mts,cts}": "oxlint --type-aware --format=stylish --deny-warnings",
-    "*.{ts,mts,cts,json,md,yml,yaml}": [
+    "*.{ts,mts,cts,tsx}": [
+      "node scripts/check-lint-suppressions.ts",
+      "oxlint --disable-nested-config --type-aware --format=stylish --deny-warnings"
+    ],
+    "*.{ts,mts,cts,tsx,json,md,yml,yaml}": [
       "prettier --write"
     ]
   },
