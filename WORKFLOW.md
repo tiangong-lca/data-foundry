@@ -277,7 +277,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 9291dddf305dac9858c6287b8938d59d9aa02ead
+lastReviewedCommit: 5912c11b4175ae6e847b40206acf67e4edea861b
 lastReviewedNote: "Reviewed for Issue #69: strict cleanup and repository-anchored managed-task invalidation must pass before any cleaned artifact or downstream finalize stage is consumed."
 tracker:
   kind: filesystem

@@ -19,7 +19,7 @@ checkPaths:
   - package.json
   - scripts/commands/core.ts
 lastReviewedAt: 2026-08-26
-lastReviewedCommit: 9291dddf305dac9858c6287b8938d59d9aa02ead
+lastReviewedCommit: 5912c11b4175ae6e847b40206acf67e4edea861b
 lastReviewedNote: "Reviewed for Issue #69: strict datetime cleanup, ownership-guarded artifact invalidation and finalize short-circuiting do not change Stop-hook registration, recursion guard, output or authority."
 ---
 
