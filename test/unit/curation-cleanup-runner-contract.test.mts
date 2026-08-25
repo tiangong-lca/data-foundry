@@ -329,4 +329,21 @@ test("impossible datetime blocks the whole cleanup before partial transforms or 
     fs.readFileSync(path.join(root, String(files.report)), "utf8"),
     `${JSON.stringify(result, null, 2)}\n`,
   );
+
+  const explicitOutput = path.join(root, "retained-evidence", "explicit.jsonl");
+  const explicitBytes = writeJsonLines(explicitOutput, [{ retained: true }]);
+  const explicitResult = record(
+    runDatasetCurationCleanup({
+      repoRoot: root,
+      options: {
+        type: "process",
+        rowsFile: "rows/processes.jsonl",
+        outDir: "cleanup-explicit",
+        outFile: "retained-evidence/explicit.jsonl",
+      },
+    }),
+  );
+  assert.equal(explicitResult.status, "blocked_invalid_datetime_metadata");
+  assert.equal(explicitResult.cleaned_rows_file, null);
+  assert.equal(fs.readFileSync(explicitOutput, "utf8"), explicitBytes);
 });

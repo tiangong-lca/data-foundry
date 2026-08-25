@@ -131,6 +131,9 @@ function inspectUtcDateTimeString(value: unknown): DateTimeInspection {
     return { normalized: null, reason: "invalid_datetime_syntax" };
   }
   const normalized = new Date(time).toISOString();
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(normalized)) {
+    return { normalized: null, reason: null };
+  }
   return { normalized: normalized === value ? null : normalized, reason: null };
 }
 
@@ -139,7 +142,10 @@ export function normalizeUtcDateTimeString(value: unknown): string | null {
   return inspection.reason ? null : inspection.normalized;
 }
 
-export function normalizeDateTimeMetadata(value: unknown): number {
+function dateTimeMetadataPlan(value: unknown): {
+  updates: DateTimeUpdate[];
+  blockers: DateTimeMetadataBlocker[];
+} {
   const updates: DateTimeUpdate[] = [];
   const blockers: DateTimeMetadataBlocker[] = [];
   const visit = (node: unknown, currentPath: string): void => {
@@ -170,6 +176,11 @@ export function normalizeDateTimeMetadata(value: unknown): number {
     }
   };
   visit(value, "$");
+  return { updates, blockers };
+}
+
+export function normalizeDateTimeMetadata(value: unknown): number {
+  const { updates, blockers } = dateTimeMetadataPlan(value);
   if (blockers.length > 0) throw new InvalidDateTimeMetadataError(blockers);
   for (const update of updates) update.parent[update.key] = update.normalized;
   return updates.length;

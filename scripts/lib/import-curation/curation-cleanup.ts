@@ -84,7 +84,8 @@ export function runDatasetCurationCleanup({
   const defaultOut = `.foundry/workspaces/${datasetType}-dataset-curation-cleanup`;
   const outDir = resolveRepoPath(root, options.outDir || defaultOut)!;
   const defaultOutFile = path.join(outDir, `${datasetTypePlural[datasetType]}.cleaned.jsonl`);
-  const outFile = resolveRepoPath(root, options.out || options.outFile) || defaultOutFile;
+  const explicitOutFile = resolveRepoPath(root, options.out || options.outFile);
+  const outFile = explicitOutFile || defaultOutFile;
   if (!rowsFile || !fileExists(rowsFile)) {
     throw new Error("--rows-file is required and must point to a JSON/JSONL dataset row file.");
   }
@@ -130,7 +131,7 @@ export function runDatasetCurationCleanup({
   });
 
   if (invalidDateTimeBlockers.length > 0) {
-    if (outFile !== rowsFile && fileExists(outFile)) rmSync(outFile);
+    if (!explicitOutFile && outFile !== rowsFile && fileExists(outFile)) rmSync(outFile);
     const reportFileName = "dataset-curation-cleanup-report.json";
     const reportPath = path.join(outDir, reportFileName);
     const report: JsonRecord = {
@@ -164,7 +165,7 @@ export function runDatasetCurationCleanup({
           "Reject invalid TIDAS/ILCD datetime metadata before any cleanup transform or cleaned-row output.",
         preserves_payload_semantics: true,
         datetime_policy:
-          "Datetime fields require full timezone-qualified syntax, exact Gregorian calendar validity, valid clock fields, and an XML Schema-compatible timezone offset before UTC normalization.",
+          "Datetime fields require full timezone-qualified syntax, exact Gregorian calendar validity, valid clock fields, and a previously accepted HH:MM offset before UTC normalization.",
       },
       files: {
         report: repoRelativePath(root, reportPath),
@@ -240,7 +241,7 @@ export function runDatasetCurationCleanup({
       foundry_trace_locator_policy:
         "Local machine paths from tiangongfoundry:* trace evidence are redacted from write payloads; authoring packages and patch evidence retain the full local context.",
       datetime_policy:
-        "TIDAS/ILCD dateTime values with timezone offsets are normalized to UTC Z form.",
+        "TIDAS/ILCD dateTime values with timezone offsets are normalized to UTC Z form when the UTC projection remains inside the accepted four-digit year grammar; valid year-boundary offsets retain their exact source bytes.",
       annual_supply_placeholder_policy: `annualSupplyOrProductionVolume is schema-required. If source evidence is missing or converted as a placeholder such as 'Not specified', Foundry writes '${annualSupplyMissingDataSentinelText}' so the row remains importable and later database-side curation can bulk-locate the intentionally non-physical sentinel.`,
       source_exchange_completeness_policy:
         "For process rows, if an explicit source rows file is supplied and the source process row is Output-only with the same non-flow-reference exchange signature as the final row, Foundry may write deterministic tiangongfoundry:sourceExchangeCompleteness proof. Otherwise source-only-output acceptance still requires AI source_trace_verified evidence or exchange repair.",

@@ -194,6 +194,12 @@ test("datetime metadata rejects impossible calendars, invalid timezones, partial
     cleanup.normalizeUtcDateTimeString("2000-02-29T00:00:00Z"),
     "2000-02-29T00:00:00.000Z",
   );
+  for (const boundary of ["9999-12-31T23:59:59-14:00", "0000-01-01T00:00:00+14:00"]) {
+    assert.equal(cleanup.normalizeUtcDateTimeString(boundary), null, boundary);
+    const row = { "common:timeStamp": boundary };
+    assert.equal(cleanup.normalizeDateTimeMetadata(row), 0, boundary);
+    assert.equal(row["common:timeStamp"], boundary);
+  }
 });
 
 test("annual supply sentinel preserves process-only, real-value, wrapper, placeholder, and missing-container behavior", () => {

@@ -636,6 +636,7 @@ test("post-authoring finalize includes referenced true sources in source/contact
   const sourceId = "b1111111-2222-4333-8444-555555555555";
   const rowsFile = path.join(root, "rows", "processes.jsonl");
   const sourceSupportRowsFile = path.join(root, "rows", "sources.jsonl");
+  const parentCleanedRowsFile = path.join(root, "parent-output", "processes.cleaned.jsonl");
   const processRow = processRowWithDefaultClassification(processId) as unknown as FixtureRecord;
   processRow.processDataSet.modellingAndValidation = {
     dataSourcesTreatmentAndRepresentativeness: {
@@ -667,15 +668,15 @@ test("post-authoring finalize includes referenced true sources in source/contact
       rel(rowsFile),
       "--source-support-rows-file",
       rel(sourceSupportRowsFile),
+      "--finalize-source-contact-support",
+      "--cleaned-rows-file",
+      rel(parentCleanedRowsFile),
       "--out-dir",
       rel(path.join(root, "finalize")),
     ]);
 
     assert.equal(finalize.json.counts.source_contact_support_rows, 2);
-    assert.equal(
-      finalize.json.counts.source_contact_support_finalize_status,
-      "available_not_requested",
-    );
+    assert.equal(finalize.json.counts.source_contact_support_finalize_status, "blocked");
     assert.equal(finalize.json.counts.source_contact_source_reference_rewrites, 2);
     const supportRows = readJsonLines(
       path.join(repoRoot, finalize.json.files.source_contact_support_rows),
@@ -696,6 +697,28 @@ test("post-authoring finalize includes referenced true sources in source/contact
         "#text"
       ],
       "Fixture report",
+    );
+    const parentCleanedRows = readJsonLines(parentCleanedRowsFile);
+    assert.equal(parentCleanedRows.length, 1);
+    assert.ok(parentCleanedRows[0].processDataSet);
+    assert.equal(parentCleanedRows[0].contactDataSet, undefined);
+    assert.equal(parentCleanedRows[0].sourceDataSet, undefined);
+    assert.ok(finalize.json.files.source_contact_support_finalize_report);
+    const nestedReport = readJson(
+      path.join(repoRoot, finalize.json.files.source_contact_support_finalize_report),
+    );
+    const nestedFinalRows = readJsonLines(path.join(repoRoot, nestedReport.files.final_rows));
+    assert.equal(
+      nestedFinalRows.some((row) => row.contactDataSet),
+      true,
+    );
+    assert.equal(
+      nestedFinalRows.some((row) => row.sourceDataSet),
+      true,
+    );
+    assert.equal(
+      nestedFinalRows.some((row) => row.processDataSet),
+      false,
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -910,8 +933,11 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
   fs.rmSync(root, { recursive: true, force: true });
   const validId = "55555555-5555-4555-8555-555555555555";
   const invalidId = "66666666-6666-4666-8666-666666666666";
+  const sourceId = "88888888-8888-4888-8888-888888888888";
   const valid = processRowWithDefaultClassification(validId) as unknown as FixtureRecord;
   const invalid = processRowWithDefaultClassification(invalidId) as unknown as FixtureRecord;
+  const validRoot = valid.processDataSet;
+  const invalidRoot = invalid.processDataSet;
   const validAdmin = valid.processDataSet.administrativeInformation as FixtureRecord;
   const invalidAdmin = invalid.processDataSet.administrativeInformation as FixtureRecord;
   validAdmin.dataEntryBy = {
@@ -920,8 +946,54 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
   invalidAdmin.dataEntryBy = {
     "common:timeStamp": "2025-02-30T00:00:00Z",
   };
+  for (const processRoot of [validRoot, invalidRoot]) {
+    processRoot.modellingAndValidation = {
+      dataSourcesTreatmentAndRepresentativeness: {
+        referenceToDataSource: {
+          "@type": "source data set",
+          "@refObjectId": sourceId,
+          "@version": "00.00.001",
+          "common:shortDescription": { "@xml:lang": "en", "#text": "Fixture report" },
+        },
+      },
+    } as unknown as FixtureRecord;
+  }
   const rowsFile = path.join(root, "rows", "processes.jsonl");
+  const sourceSupportRowsFile = path.join(root, "rows", "sources.jsonl");
+  const explicitParentOutput = path.join(root, "retained-evidence", "parent-cleaned.jsonl");
   writeJsonLines(rowsFile, [valid, invalid]);
+  const explicitParentBytes = '{"retained":true}\n';
+  writeText(explicitParentOutput, explicitParentBytes);
+  const supportSource = sourceRow(sourceId) as unknown as FixtureRecord;
+  supportSource.sourceDataSet.sourceInformation.dataSetInformation.sourceCitation =
+    "Fixture report, 2026";
+  writeJsonLines(sourceSupportRowsFile, [supportSource]);
+  writeJson(path.join(root, "finalize", "mutation-manifest", "stale-report.json"), {
+    status: "ready_for_remote_write",
+  });
+  writeJson(path.join(root, "finalize", "commit-handoff", "stale-command-spec.json"), {
+    schema: "tiangong-foundry.command-spec.v1",
+    display: "must never survive the blocked rerun",
+  });
+  for (const staleDirectory of [
+    "source-contact-support-finalize",
+    "precommit-verify-remote",
+    "curation-queue-inputs",
+    "identity-preflight-run-parallel",
+    "identity-preflight-current-scope",
+  ]) {
+    writeJson(path.join(root, "finalize", staleDirectory, "stale-evidence.json"), {
+      stale: true,
+    });
+  }
+  writeText(
+    path.join(root, "finalize", "identity-reference-rewrite-external-flow-refs.jsonl"),
+    '{"stale":true}\n',
+  );
+  writeText(
+    path.join(root, "finalize", "process-reference-external-flow-refs.jsonl"),
+    '{"stale":true}\n',
+  );
 
   try {
     const finalize = runFoundry([
@@ -929,9 +1001,14 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
       "--type",
       "process",
       "--profile",
-      "generic",
+      "bafu",
       "--rows-file",
       rel(rowsFile),
+      "--source-support-rows-file",
+      rel(sourceSupportRowsFile),
+      "--finalize-source-contact-support",
+      "--cleaned-rows-file",
+      rel(explicitParentOutput),
       "--out-dir",
       rel(path.join(root, "finalize")),
     ]);
@@ -956,22 +1033,34 @@ test("post-authoring finalize stops after invalid datetime cleanup without downs
     );
     assert.equal(finalize.json.files.final_rows, null);
     assert.ok(finalize.json.files.cleanup_report);
+    assert.equal(fs.readFileSync(explicitParentOutput, "utf8"), explicitParentBytes);
     assert.ok(Number(finalize.json.counts.import_ledger_entries) > 0);
     const importLedger = finalize.json.files.import_ledger as unknown as FixtureRecord;
     assert.ok(importLedger.blocked_scopes);
     assert.equal(fs.existsSync(path.join(repoRoot, String(importLedger.blocked_scopes))), true);
     for (const absent of [
+      "source-contact-support-finalize",
       "identity-preflight-run",
+      "identity-preflight-run-parallel",
+      "identity-preflight-current-scope",
       "curation-queue",
+      "curation-queue-inputs",
       "schema",
       "qa",
       "location-audit",
       "curation-gate",
       "dry-run",
+      "precommit-verify-remote",
       "mutation-manifest",
       "commit-handoff",
     ]) {
       assert.equal(fs.existsSync(path.join(root, "finalize", absent)), false, absent);
+    }
+    for (const absentFile of [
+      "identity-reference-rewrite-external-flow-refs.jsonl",
+      "process-reference-external-flow-refs.jsonl",
+    ]) {
+      assert.equal(fs.existsSync(path.join(root, "finalize", absentFile)), false, absentFile);
     }
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

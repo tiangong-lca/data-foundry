@@ -91,6 +91,22 @@ test("post-authoring finalize preserves rewrite, evidence, gate, manifest, and h
   assert.doesNotMatch(source, /spawnSync|execSync|execFileSync|shell:\s*true/u);
 });
 
+test("source/contact support finalize waits for parent cleanup and owns its output path", () => {
+  const source = implementationSource();
+  const runnerSource = source.slice(source.indexOf("function runDatasetPostAuthoringFinalize"));
+  assert.ok(
+    runnerSource.indexOf('timeStage("curation_cleanup"') <
+      runnerSource.indexOf("sourceContactSupportFinalize = timeStage("),
+  );
+  const nestedCall = source.slice(
+    source.indexOf("const finalizeSourceContactSupport"),
+    source.indexOf("const canonicalSupportRewriteStage"),
+  );
+  for (const alias of ["cleanedRowsFile", "cleanedRows", "outFile", "out"]) {
+    assert.match(nestedCall, new RegExp(`${alias}: null`, "u"), alias);
+  }
+});
+
 test("post-authoring finalize owner exists only as zero-escape native TypeScript", () => {
   assert.equal(fs.existsSync(typedPath), true);
   assert.equal(fs.existsSync(legacyPath), false);
