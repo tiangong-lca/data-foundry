@@ -45,6 +45,8 @@ checkPaths:
   - scripts/lib/identity-preflight-artifacts.ts
   - scripts/lib/bafu-family-signatures.ts
   - scripts/lib/import-ledger.ts
+  - scripts/lib/canonical-support-rewrites.ts
+  - scripts/lib/bundle-sample-utils.ts
   - docs/architecture.md
   - docs/runtime-skill-management.md
   - docs/foundry-task-contracts.md
@@ -53,8 +55,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3a8be52f3dfe862fab6c1e0a9aaab5e40f1822b9
-lastReviewedNote: "Reviewed for Issue #67 Wave 8: BAFU family signatures and import-ledger factories are native TS7 with hash, ordering, JSONL, blocker, and resume contracts unchanged."
+lastReviewedCommit: 9af72cd28ee83d4558cf5973cd92a69dfd13c964
+lastReviewedNote: "Reviewed for Issue #67 Wave 9: canonical-support rewrites and bundle-sample utilities are native TS7 with profile, support, trace, contact, sample, scale, blocker, and artifact contracts retained."
 ---
 
 # TianGong LCA Data Foundry
@@ -88,6 +90,8 @@ The standalone-leaf slice migrates canonical FlowProperty mappings, profile-awar
 The evidence/decision slice migrates decision-task context and stable hashes, identity reference rewrites, full-context completion proof, and identity-preflight request artifacts. Characterization preserves exact paths/bytes/SHA/ordering, missing or ambiguous evidence blockers, artifact-bound CommandSpecs, source-index first binding, and positive-only cache/execution reuse boundaries.
 
 The family/ledger slice migrates BAFU family signatures and the append-only import ledger. Characterization preserves normalized family names, ordered exchange skeleton/template/amount hashes, scope-order master selection and summaries, verified/blocked/retry row schemas, payload identity hashes, duplicate suppression, human-review ordering, resume/skipped artifacts, relative paths, and native parse/filesystem errors.
+
+The canonical/bundle slice migrates canonical FlowProperty reference rewrites and bundle sampling utilities. Characterization preserves normalized mapping lookup, scale/pending/proof/stale-version decisions, support/source/contact/profile fallbacks, source-trace field repair, reference-closure materialization, deterministic selection/dedupe, exact report ordering, and native errors. Bundle sampling also carries the existing scale contract end to end: under the explicit blocking flag, known non-1 factors and unresolved invalid factors use distinct blockers and remain visible in scaling/report/scope-ledger artifacts; scale 1 and no-flag defaults do not change.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

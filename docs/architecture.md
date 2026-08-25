@@ -47,6 +47,8 @@ checkPaths:
   - scripts/lib/identity-preflight-artifacts.ts
   - scripts/lib/bafu-family-signatures.ts
   - scripts/lib/import-ledger.ts
+  - scripts/lib/canonical-support-rewrites.ts
+  - scripts/lib/bundle-sample-utils.ts
   - .prettierignore
   - package.json
   - pnpm-lock.yaml
@@ -56,8 +58,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3a8be52f3dfe862fab6c1e0a9aaab5e40f1822b9
-lastReviewedNote: "Reviewed for Issue #67 Wave 8: typed BAFU family signatures and local import-ledger persistence remain Foundry policy/evidence boundaries and do not alter CLI authority."
+lastReviewedCommit: 9af72cd28ee83d4558cf5973cd92a69dfd13c964
+lastReviewedNote: "Reviewed for Issue #67 Wave 9: typed canonical rewrite and bundle sampling remain Foundry-local policy/materialization boundaries; scale blockers stay pre-write evidence and do not alter CLI authority."
 ---
 
 # Architecture
@@ -106,6 +108,8 @@ This boundary avoids a misleading bulk rename. Each module remains in the invent
 The native TypeScript leaf set now also covers decision context, identity reference rewrite, full-context proof, and preflight artifact factories. Focused characterization preserves queue/context SHA scopes, exact reference rows/reports, fail-closed missing evidence, transform relevance, request/report artifact facts, CommandSpec argv, first-bound source indexes, positive-only execution reuse, and every static consumer.
 
 The typed BAFU family and import-ledger leaves preserve two local control-plane boundaries: deterministic family grouping/ranking over ordered signature hashes, and append-only resume evidence over verified, blocked, dependency, retry, and skipped JSONL rows. They do not change database writes, command ownership, public help, profile defaults, or the owner CLI boundary.
+
+The typed canonical-support and bundle-sampling leaves own local reference rewriting and source-package materialization, not amount conversion or remote execution. Canonical scale evidence is collected before the package-local FP reference is replaced: the explicit blocking flag distinguishes a known positive non-1 factor from an unresolved missing/non-finite/non-positive factor, and projects either blocker into the report and process-scope ledger. Without that flag, existing profile behavior remains compatible.
 
 Build and test resolution must be worktree-local. A clean arbitrary Git worktree must be able to run `pnpm install --frozen-lockfile`, lint, typecheck, build, toolchain tests, and the full test suite without a superproject-relative dependency, another checkout's `node_modules`, ignored `.foundry` state, or credentials.
 

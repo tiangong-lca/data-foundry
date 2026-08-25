@@ -41,12 +41,14 @@ checkPaths:
   - scripts/lib/identity-preflight-artifacts.ts
   - scripts/lib/bafu-family-signatures.ts
   - scripts/lib/import-ledger.ts
+  - scripts/lib/canonical-support-rewrites.ts
+  - scripts/lib/bundle-sample-utils.ts
   - scripts/commands/incremental-change-set.mjs
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3a8be52f3dfe862fab6c1e0a9aaab5e40f1822b9
-lastReviewedNote: "Reviewed for Issue #67 Wave 8: typed navigation records BAFU family hash/rank/missing contracts and import-ledger verified/blocked/retry/resume schemas and ordering."
+lastReviewedCommit: 9af72cd28ee83d4558cf5973cd92a69dfd13c964
+lastReviewedNote: "Reviewed for Issue #67 Wave 9: typed navigation records canonical mapping/scale/proof precedence and bundle trace/contact/profile/sample/materialization contracts."
 ---
 
 # Foundry AI Navigation
@@ -105,6 +107,8 @@ The typed standalone policy/row leaves are `canonical-support-mappings.ts`, `sou
 The typed evidence/decision leaves are `decision-task-utils.ts`, `identity-reference-rewrite-utils.ts`, `full-context-proof.ts`, and `identity-preflight-artifacts.ts`. They own stable decision selection/context bundles, exact identity reference reuse or unresolved traces, profile-required completion lineage, and content-bound preflight requests/CommandSpecs/source-index attachments. Missing, stale, ambiguous, cross-context, or non-positive evidence remains blocking; display strings and unbound cache candidates never become execution authority.
 
 The typed family/ledger leaves are `bafu-family-signatures.ts` and `import-ledger.ts`. Navigate to the former for location-aware family-name normalization, ordered skeleton/flow-template/amount-vector hashes, scope-order master selection, compact planning fields, and missing-signature summaries. Navigate to the latter for append-only verified/blocked/dependency/retry JSONL, row identity and payload hashes, human-action text, dedupe keys, manifest paths, and read-only resume/skipped reports. Preserve insertion order, exact JSON bytes, and native parse/filesystem failures during caller migrations.
+
+The typed canonical/materialization leaves are `canonical-support-rewrites.ts` and `bundle-sample-utils.ts`. Navigate to the former for normalized source-unit lookup, canonical FP/UG proof, stale-version and account-local precedence, exact rewrite/blocker/scaling artifacts, or deferred rows. Navigate to the latter for source traces and field repair, classification/elementary queues, profile-safe library contacts, bundle selection, and identity-key dedupe. Bundle sampling must pass the same scaling accumulator and block flag into canonical rewrites before the original source-unit reference is lost; known non-1 and unresolved invalid scales have distinct blocker codes.
 
 The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only, Oxlint, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
 

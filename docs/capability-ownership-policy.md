@@ -24,8 +24,8 @@ checkPaths:
   - docs/safety-policy.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3a8be52f3dfe862fab6c1e0a9aaab5e40f1822b9
-lastReviewedNote: "Reviewed for Issue #67 Wave 8: typed BAFU family grouping and append-only local import ledgers remain Foundry-owned policy/evidence helpers and add no sibling CLI, skill, SDK, converter, database, or Edge behavior."
+lastReviewedCommit: 6be9e559a1d2ab1fed1aaaa7778095b115b713f6
+lastReviewedNote: "Reviewed for Issue #67 Wave 9: typed canonical rewriting, bundle materialization, and fail-closed scale evidence remain Foundry-owned pre-write policy helpers and add no sibling CLI, SDK, converter, database, or Edge behavior."
 ---
 
 # Capability Ownership Policy

@@ -21,11 +21,13 @@ checkPaths:
   - scripts/lib/surface-audit.ts
   - scripts/lib/bafu-family-signatures.ts
   - scripts/lib/import-ledger.ts
+  - scripts/lib/canonical-support-rewrites.ts
+  - scripts/lib/bundle-sample-utils.ts
   - docs/incremental-change-set-contract.md
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3a8be52f3dfe862fab6c1e0a9aaab5e40f1822b9
-lastReviewedNote: "Reviewed for Issue #67 Wave 8: typing BAFU family signatures and import-ledger helpers changes no command category, owner/export metadata, help, artifact contract, exit behavior, or remote-write mode."
+lastReviewedCommit: 9af72cd28ee83d4558cf5973cd92a69dfd13c964
+lastReviewedNote: "Reviewed for Issue #67 Wave 9: typed canonical/bundle helpers preserve command categories and owners; bundle sampling conditionally declares scaling evidence and distinct known/unresolved blockers under its existing safety flag."
 ---
 
 # Foundry Command Surface
@@ -42,6 +44,8 @@ The metadata module must cover every command returned by `node scripts/foundry.m
 Issue #63 does not change the public command categories or behavior. It introduces the Node.js 24 / pnpm 11.23 / TypeScript 7.0.2 typed spine underneath the same surface. The argument parser and command registry are native TypeScript leaves; `test/unit/foundry-cli-spine.test.mts` fixes their scalar/argv parsing, exact help JSON, exit mapping, and static consumer contract. Later migration work must preserve the registered command name, help, stdout, exit code, stage contract, input/output artifacts, and remote-write mode before removing a JavaScript implementation from `specs/typescript-migration-inventory.json`. Use focused characterization and real cases; do not treat an extension rename as command migration.
 
 The Wave 8 BAFU family-signature and import-ledger migrations remain supporting typed leaves beneath the existing `dataset-bafu-batch-import-run` and `dataset-import-ledger-report` owners. Their command registry and metadata entries, help JSON, artifact schemas, exit mapping, and remote-write modes are unchanged.
+
+Wave 9 keeps `dataset-bundle-sample-rows` under its existing command owner and read-only mode. Its metadata now advertises the conditional `canonical-support-amount-scaling.jsonl` artifact and its command test: the explicit blocking flag retains known or unresolved scale evidence in the report and process-scope ledger rather than letting an early canonical-reference rewrite erase the source-unit safety decision.
 
 ## Categories
 

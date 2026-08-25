@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at_utc": "2026-08-25T05:00:00Z",
+  "updated_at_utc": "2026-08-25T07:15:00Z",
   "default_profile": "generic",
   "profiles": {
     "generic": {
@@ -34,7 +34,7 @@
           "unitgroup_write",
           "canonical_support_local_mint"
         ],
-        "note": "Set enabled=false to restore reference-only governance. Does NOT relax the unit-scale safety blocker (canonical_support_amount_scaling_required) or schema/curation/full-context proof gates — only the reference-only and elementary-create_new policy walls. Account-local rows are written at state_code=0 (My Data), keep their source units so amounts stay self-consistent, and remain in an account-local candidate registry outside the public canonical support cache until separately approved for promotion.",
+        "note": "Set enabled=false to restore reference-only governance. Does NOT relax either unit-scale safety blocker (canonical_support_amount_scaling_required for a known positive non-1 factor, or canonical_support_amount_scale_unresolved for a missing/non-finite/non-positive factor) or schema/curation/full-context proof gates — only the reference-only and elementary-create_new policy walls. Account-local rows are written at state_code=0 (My Data), keep their source units so amounts stay self-consistent, and remain in an account-local candidate registry outside the public canonical support cache until separately approved for promotion.",
         "report_policy": "Canonical support and finalize reports must state public-canonical-first plus this scoped account-local exception when enabled; they must not emit an unconditional reference-only or no-My-Data policy. Any profile-specific owner-draft alias maintenance report must bind all logical batches into one guarded database-atomic plan with whole-plan audit and readback proof; it must not treat independently committed dimension batches as complete."
       },
       "full_context_ai_completion": {
@@ -88,7 +88,7 @@
           "unitgroup_write",
           "canonical_support_local_mint"
         ],
-        "note": "Set enabled=false to restore reference-only governance. Does NOT relax the unit-scale safety blocker (canonical_support_amount_scaling_required) or schema/curation/full-context proof gates — only the reference-only and elementary-create_new policy walls. Account-local rows are written at state_code=0 (My Data) and keep their source units so amounts stay self-consistent."
+        "note": "Set enabled=false to restore reference-only governance. Does NOT relax either unit-scale safety blocker (canonical_support_amount_scaling_required for a known positive non-1 factor, or canonical_support_amount_scale_unresolved for a missing/non-finite/non-positive factor) or schema/curation/full-context proof gates — only the reference-only and elementary-create_new policy walls. Account-local rows are written at state_code=0 (My Data) and keep their source units so amounts stay self-consistent."
       },
       "full_context_ai_completion": {
         "required": false,
@@ -126,7 +126,7 @@
           "unitgroup_write",
           "canonical_support_local_mint"
         ],
-        "note": "Unlike BAFU/USLCI (which mint reference support at scale because their FEDEFL/ecoSpold support has no public canonical equivalent), worldsteel's reference support and elementary flows ARE canonical and are reused by original UUID. This override exists only as a capped allowance for the <=17 unmatched GaBi/Sphera pseudo-elementary flows. Does NOT relax the unit-scale safety blocker (canonical_support_amount_scaling_required) or schema/curation/full-context proof gates. Account-local rows are written at state_code=0 (My Data) keeping their source units. Set enabled=false to forbid all minting (then the residual flows externalize to common:other traces instead)."
+        "note": "Unlike BAFU/USLCI (which mint reference support at scale because their FEDEFL/ecoSpold support has no public canonical equivalent), worldsteel's reference support and elementary flows ARE canonical and are reused by original UUID. This override exists only as a capped allowance for the <=17 unmatched GaBi/Sphera pseudo-elementary flows. Does NOT relax either unit-scale safety blocker (canonical_support_amount_scaling_required for a known positive non-1 factor, or canonical_support_amount_scale_unresolved for a missing/non-finite/non-positive factor) or schema/curation/full-context proof gates. Account-local rows are written at state_code=0 (My Data) keeping their source units. Set enabled=false to forbid all minting (then the residual flows externalize to common:other traces instead)."
       },
       "full_context_ai_completion": {
         "required": false,

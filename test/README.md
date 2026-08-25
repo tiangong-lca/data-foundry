@@ -44,16 +44,21 @@ checkPaths:
   - scripts/lib/identity-preflight-artifacts.ts
   - scripts/lib/bafu-family-signatures.ts
   - scripts/lib/import-ledger.ts
+  - scripts/lib/canonical-support-rewrites.ts
+  - scripts/lib/bundle-sample-utils.ts
   - test/unit/bafu-family-signatures-contract.test.mts
   - test/unit/import-ledger-contract.test.mts
   - test/unit/wave8-large-leaf-migration.test.mts
+  - test/unit/canonical-support-rewrites-contract.test.mts
+  - test/unit/bundle-sample-utils-contract.test.mts
+  - test/unit/wave9-canonical-bundle-migration.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3a8be52f3dfe862fab6c1e0a9aaab5e40f1822b9
-lastReviewedNote: "Reviewed for Issue #67 Wave 8: tests cover BAFU name/hash/skeleton/rank/missing behavior plus import-ledger JSONL identity, closeout, blocker, retry, resume, dedupe, path, and error contracts."
+lastReviewedCommit: 9af72cd28ee83d4558cf5973cd92a69dfd13c964
+lastReviewedNote: "Reviewed for Issue #67 Wave 9: tests cover canonical lookup/rewrite/scale/proof/defer/errors and bundle trace/sanitize/contact/profile/selection/dedupe/materialization, including lost and unresolved scale blockers."
 ---
 
 # Test Layout
@@ -92,6 +97,8 @@ Every behavior or migration slice starts with a failing focused test or a realis
 `unit/evidence-decision-leaves.test.mts` characterizes decision selection/context SHA/dedupe, missing-index fail-close and exact identity reuse rows, required full-context missing-manifest blockers, preflight request bytes/CommandSpec artifact facts, queue attachment, and source-index first binding/missing context. Existing identity scenarios retain positive-only cache and end-to-end lineage coverage.
 
 `unit/bafu-family-signatures-contract.test.mts` and `unit/import-ledger-contract.test.mts` characterize the Wave 8 leaves independently: exact normalized family and ordered exchange hashes, scope-order grouping/rank/summary/missing envelopes, then append-only verified/blocked/dependency/retry bytes, root-based row identity, payload hashes, human actions, duplicate suppression, latest-row resume ordering, artifact paths, and native errors. `unit/wave8-large-leaf-migration.test.mts` pins both native `.ts` files, their consumers, and named exports.
+
+`unit/canonical-support-rewrites-contract.test.mts` and `unit/bundle-sample-utils-contract.test.mts` characterize Wave 9 independently: normalized cache lookup, traversal/rewrite order, known/unresolved scale contracts, pending/proof/override/stale/defer behavior, exact artifacts/errors, then trace DFS/sanitization, process evidence repair, classification/elementary queues, canonical contact reference proof, profile fallbacks, seeded selection, and identity-key conflicts. `commands/bundle-sample-rows.test.mjs` proves real materialization keeps scaling facts in the report and scope ledger before the source-unit FP is replaced; `unit/wave9-canonical-bundle-migration.test.mts` pins native files, consumers, and exports.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

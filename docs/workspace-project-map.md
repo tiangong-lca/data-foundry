@@ -22,8 +22,8 @@ checkPaths:
   - specs/workspace-capability-adapters.md
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 3a8be52f3dfe862fab6c1e0a9aaab5e40f1822b9
-lastReviewedNote: "Reviewed for Issue #67 Wave 8: native TS BAFU family signatures and import-ledger persistence remain Foundry-local control-plane helpers; no cross-repository owner or normal execution surface changes."
+lastReviewedCommit: 6be9e559a1d2ab1fed1aaaa7778095b115b713f6
+lastReviewedNote: "Reviewed for Issue #67 Wave 9: native TS canonical/bundle helpers and scale blocker propagation remain Foundry-local control-plane evidence; no cross-repository owner or normal execution surface changes."
 ---
 
 # Workspace Project Map
