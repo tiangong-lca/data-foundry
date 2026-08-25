@@ -621,6 +621,52 @@ test("dataset-bundle-sample-rows retains and blocks canonical amount scaling req
   assert.deepEqual(scopeLedger[0].blocker_counts_by_code, {
     canonical_support_amount_scaling_required: 1,
   });
+
+  const unresolvedCache = JSON.parse(fs.readFileSync(cachePath, "utf8"));
+  delete unresolvedCache.flow_property_mappings[0].source_unit_scales;
+  writeJson(cachePath, unresolvedCache);
+  const unresolvedOutDir = path.join(fixtureRoot, "out-canonical-scaling-unresolved");
+  const unresolvedResult = spawnSync(
+    process.execPath,
+    [
+      "scripts/foundry.mjs",
+      "dataset-bundle-sample-rows",
+      "--bundles-dir",
+      path.join(fixtureRoot, "process-bundles"),
+      "--process-id",
+      processId,
+      "--out-dir",
+      unresolvedOutDir,
+      "--contact-id",
+      newContactId,
+      "--canonical-support-cache",
+      cachePath,
+      "--block-on-unscaled-canonical-support",
+    ],
+    { cwd: repoRoot, env: process.env, encoding: "utf8" },
+  );
+  assert.notEqual(unresolvedResult.stdout.trim(), "", unresolvedResult.stderr);
+  const unresolvedReport = JSON.parse(unresolvedResult.stdout);
+  const unresolvedFlows = readJsonLines(path.join(repoRoot, unresolvedReport.files.rows.flow));
+  const unresolvedProperty = unresolvedFlows[0].flowDataSet.flowProperties.flowProperty;
+  assert.equal(
+    unresolvedProperty.referenceToFlowPropertyDataSet["@refObjectId"],
+    canonicalMassFlowPropertyId,
+  );
+  assert.equal(unresolvedProperty.meanValue, 7);
+  assert.equal(unresolvedResult.status, 1, unresolvedResult.stderr || unresolvedResult.stdout);
+  assert.equal(unresolvedReport.status, "blocked");
+  assert.equal(unresolvedReport.counts.amount_scaling_unresolved, 1);
+  assert.deepEqual(
+    unresolvedReport.blockers.map((blocker) => blocker.code),
+    ["canonical_support_amount_scale_unresolved"],
+  );
+  const unresolvedLedger = readJsonLines(
+    path.join(repoRoot, unresolvedReport.files.process_scope_ledger),
+  );
+  assert.deepEqual(unresolvedLedger[0].blocker_counts_by_code, {
+    canonical_support_amount_scale_unresolved: 1,
+  });
 });
 
 test("dataset-bundle-sample-rows blocks canonical flow property mappings when the cached unit group proof is missing", () => {

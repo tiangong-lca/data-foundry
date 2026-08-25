@@ -50,7 +50,7 @@ function withTempRoot(name: string, body: (root: string) => void): void {
   }
 }
 
-function makeUtils(root: string) {
+function makeUtils(root: string, overrides: { readJson?: (filePath: string) => JsonObject } = {}) {
   const asText = (value: any): string => {
     if (value == null) return "";
     if (typeof value === "string" || typeof value === "number") return String(value).trim();
@@ -81,7 +81,7 @@ function makeUtils(root: string) {
     }),
     nowIso: () => "2026-08-25T09:10:11.000Z",
     pathExpression: (parts: Array<string | number>) => parts.join("."),
-    readJson,
+    readJson: overrides.readJson ?? readJson,
     readRowsFile: readJsonLines,
     repoRelativeMaybe: (filePath: string | null) =>
       filePath ? toPosix(path.relative(root, filePath)) : null,
@@ -509,4 +509,75 @@ test("canonical rewrite retains empty-run artifacts and native JSON/filesystem e
       (error: unknown) => error instanceof Error && "code" in error && error.code === "ENOENT",
     );
   });
+});
+
+test("canonical rewrite fails closed on missing, non-finite, zero, and negative scale only under the block flag", async (t) => {
+  const variants = [
+    ["missing", undefined],
+    ["nan", Number.NaN],
+    ["positive-infinity", Number.POSITIVE_INFINITY],
+    ["negative-infinity", Number.NEGATIVE_INFINITY],
+    ["zero", 0],
+    ["negative", -1],
+  ] as const;
+
+  for (const [label, scale] of variants) {
+    await t.test(label, () => {
+      withTempRoot(`canonical-unresolved-scale-${label}`, (root) => {
+        const rowsFile = path.join(root, "flows.jsonl");
+        const cacheFile = path.join(root, "cache.json");
+        writeJson(cacheFile, {});
+        writeJsonLines(rowsFile, [flowRow(`flow-${label}`, ["unresolved-scale-unit"])]);
+        const cache = canonicalCache();
+        const mapping = cache.flow_property_mappings[0] as JsonObject;
+        mapping.source_units = ["unresolved-scale-unit"];
+        mapping.source_unit_scales = scale === undefined ? {} : { "unresolved-scale-unit": scale };
+        const utils = makeUtils(root, {
+          readJson: (filePath) => (filePath === cacheFile ? cache : readJson(filePath)),
+        });
+
+        const compatible = utils.applyCanonicalSupportRewrites({
+          datasetType: "flow",
+          rowsFile,
+          outDir: path.join(root, "compatible"),
+          options: { canonicalSupportCache: cacheFile },
+        });
+        assert.notEqual(compatible.status, "blocked");
+        assert.deepEqual(compatible.blockers, []);
+
+        const blocked = utils.applyCanonicalSupportRewrites({
+          datasetType: "flow",
+          rowsFile,
+          outDir: path.join(root, "blocked"),
+          options: {
+            canonicalSupportCache: cacheFile,
+            blockOnUnscaledCanonicalSupport: true,
+          },
+        });
+        assert.equal(blocked.status, "blocked");
+        assert.equal(blocked.counts.amount_scaling_unresolved, 1);
+        assert.deepEqual(
+          blocked.blockers.map((row: JsonObject) => row.code),
+          ["canonical_support_amount_scale_unresolved"],
+        );
+        assert.equal(blocked.blockers[0].scale_resolution_status, "unresolved_scale");
+        assert.equal(blocked.blockers[0].source_unit, "unresolved-scale-unit");
+        assert.equal(blocked.blockers[0].amount_scale_to_canonical_reference, null);
+        assert.equal(blocked.amount_scaling_requirements.length, 1);
+        assert.equal(
+          blocked.amount_scaling_requirements[0].scale_resolution_status,
+          "unresolved_scale",
+        );
+        const output = readJsonLines(
+          path.join(root, "blocked", "flows.canonical-support-rewritten.jsonl"),
+        );
+        const property = output[0].flowDataSet.flowProperties.flowProperty[0];
+        assert.equal(
+          property.referenceToFlowPropertyDataSet["@refObjectId"],
+          canonicalFlowPropertyId,
+        );
+        assert.equal(property.meanValue, "10");
+      });
+    });
+  }
 });
