@@ -458,6 +458,163 @@ test("dataset-bundle-sample-rows rewrites flow property refs to canonical suppor
   assert.equal(rewrites[0].canonical_reference_unit_group.ref_object_id, canonicalMassUnitGroupId);
 });
 
+test("dataset-bundle-sample-rows retains and blocks canonical amount scaling requirements", () => {
+  createBundleFixture();
+  const outDir = path.join(fixtureRoot, "out-canonical-scaling-required");
+  const cachePath = path.join(fixtureRoot, "canonical-scaling-cache.json");
+  const bundleDir = path.join(fixtureRoot, "process-bundles", processId);
+  writeJson(cachePath, {
+    schema_version: 1,
+    flow_properties: [
+      {
+        id: canonicalMassFlowPropertyId,
+        version: "03.00.003",
+        name: "mass*distance",
+        short_description: "mass*distance",
+        reference_unit_group: {
+          id: canonicalMassUnitGroupId,
+          version: "03.00.003",
+          short_description: "Unit of kg*km",
+        },
+      },
+    ],
+    unit_groups: [
+      {
+        id: canonicalMassUnitGroupId,
+        version: "03.00.003",
+        name: "Unit of kg*km",
+      },
+    ],
+    flow_property_mappings: [
+      {
+        source_units: ["tkm", "t*km", "kg*km"],
+        canonical_flow_property_id: canonicalMassFlowPropertyId,
+        canonical_reference_unit: "kg*km",
+        source_unit_scales: { tkm: 1000, "t*km": 1000, "kg*km": 1 },
+        reason: "Mass-distance units reuse canonical kg*km support.",
+      },
+    ],
+  });
+
+  writeJson(path.join(bundleDir, "tidas", "unitgroups", `${unitgroupId}.json`), {
+    unitGroupDataSet: {
+      unitGroupInformation: {
+        dataSetInformation: {
+          "common:UUID": unitgroupId,
+          "common:name": ml("Units of tkm"),
+        },
+      },
+      administrativeInformation: {
+        publicationAndOwnership: { "common:dataSetVersion": "00.00.001" },
+      },
+    },
+  });
+  writeJson(path.join(bundleDir, "tidas", "flowproperties", `${flowpropertyId}.json`), {
+    flowPropertyDataSet: {
+      flowPropertiesInformation: {
+        dataSetInformation: {
+          "common:UUID": flowpropertyId,
+          "common:name": ml("Amount in tkm"),
+        },
+        quantitativeReference: {
+          referenceToReferenceUnitGroup: {
+            "@type": "unit group data set",
+            "@refObjectId": unitgroupId,
+            "@version": "00.00.001",
+            "common:shortDescription": ml("Units of tkm"),
+          },
+        },
+      },
+      administrativeInformation: {
+        publicationAndOwnership: { "common:dataSetVersion": "00.00.001" },
+      },
+    },
+  });
+  writeJson(path.join(bundleDir, "tidas", "flows", `${flowId}.json`), {
+    flowDataSet: {
+      flowInformation: {
+        dataSetInformation: {
+          "common:UUID": flowId,
+          name: { baseName: ml("Fixture freight flow") },
+        },
+      },
+      flowProperties: {
+        flowProperty: {
+          "@dataSetInternalID": "1",
+          referenceToFlowPropertyDataSet: {
+            "@type": "flow property data set",
+            "@refObjectId": flowpropertyId,
+            "@version": "00.00.001",
+            "common:shortDescription": ml("Amount in tkm"),
+          },
+          meanValue: 7,
+        },
+      },
+      administrativeInformation: {
+        publicationAndOwnership: { "common:dataSetVersion": "00.00.001" },
+      },
+    },
+  });
+  const manifestPath = path.join(bundleDir, "manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  manifest.files.unitgroups.push(`tidas/unitgroups/${unitgroupId}.json`);
+  manifest.files.flowproperties.push(`tidas/flowproperties/${flowpropertyId}.json`);
+  manifest.files.flows.push(`tidas/flows/${flowId}.json`);
+  writeJson(manifestPath, manifest);
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      "scripts/foundry.mjs",
+      "dataset-bundle-sample-rows",
+      "--bundles-dir",
+      path.join(fixtureRoot, "process-bundles"),
+      "--process-id",
+      processId,
+      "--out-dir",
+      outDir,
+      "--contact-id",
+      newContactId,
+      "--canonical-support-cache",
+      cachePath,
+      "--block-on-unscaled-canonical-support",
+    ],
+    { cwd: repoRoot, env: process.env, encoding: "utf8" },
+  );
+  assert.notEqual(result.stdout.trim(), "", result.stderr);
+  const report = JSON.parse(result.stdout);
+
+  const flows = readJsonLines(path.join(repoRoot, report.files.rows.flow));
+  const flowProperty = flows[0].flowDataSet.flowProperties.flowProperty;
+  assert.equal(
+    flowProperty.referenceToFlowPropertyDataSet["@refObjectId"],
+    canonicalMassFlowPropertyId,
+  );
+  assert.equal(flowProperty.meanValue, 7, "bundle sampling must never silently scale amounts");
+  assert.equal(result.status, 1, result.stderr || result.stdout);
+  assert.equal(report.status, "blocked");
+  assert.equal(report.counts.canonical_support_rewrite_rows, 1);
+  assert.equal(report.counts.canonical_support_amount_scaling_rows, 1);
+  assert.equal(report.counts.amount_scaling_required_rewrites, 1);
+  assert.equal(report.counts.amount_scaling_blocked, 1);
+  assert.deepEqual(
+    report.blockers.map((blocker) => blocker.code),
+    ["canonical_support_amount_scaling_required"],
+  );
+  assert.equal(report.blockers[0].amount_scale_to_canonical_reference, 1000);
+  assert.equal(
+    report.files.canonical_support_amount_scaling,
+    rel(path.join(outDir, "canonical-support-amount-scaling.jsonl")),
+  );
+  const requirements = readJsonLines(
+    path.join(repoRoot, report.files.canonical_support_amount_scaling),
+  );
+  assert.equal(requirements.length, 1);
+  assert.equal(requirements[0].source_unit, "tkm");
+  assert.equal(requirements[0].canonical_reference_unit, "kg*km");
+  assert.equal(requirements[0].amount_scale_to_canonical_reference, 1000);
+});
+
 test("dataset-bundle-sample-rows blocks canonical flow property mappings when the cached unit group proof is missing", () => {
   createBundleFixture();
   const outDir = path.join(fixtureRoot, "out-canonical-support-missing-unitgroup");
