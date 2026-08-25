@@ -854,6 +854,7 @@ const bundleSampleRowsCommands = createBundleSampleRowsCommands({
   addDedupedBundleRow,
   asText,
   attachIdentityPreflightRows,
+  booleanOption,
   profileFor,
   repoRoot,
   buildBafuFallbackSourcePayload,

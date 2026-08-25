@@ -701,6 +701,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       "location-authoring-queue.jsonl",
       "identity-preflight-requests.jsonl",
       "process-scope-ledger.jsonl",
+      "canonical-support-amount-scaling.jsonl when scale conversion is required",
       "dataset-bundle-sample-rows-report.json",
     ],
     keyTests: [
@@ -716,6 +717,10 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       nodeTest(
         "test/commands/bundle-sample-rows.test.mjs",
         "dataset-bundle-sample-rows projects process geography into referenced flow location evidence",
+      ),
+      nodeTest(
+        "test/commands/bundle-sample-rows.test.mjs",
+        "dataset-bundle-sample-rows retains and blocks canonical amount scaling requirements",
       ),
     ],
   }),

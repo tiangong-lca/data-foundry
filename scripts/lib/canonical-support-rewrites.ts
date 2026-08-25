@@ -345,8 +345,10 @@ export function createCanonicalSupportRewriteUtils({
           if (cachedVersion && cachedVersion !== originalVersion) {
             const next = canonicalFlowPropertyReference(provenCanonical, language);
             record[key] = next;
-            stats.canonical_flow_property_reference_rewrites += 1;
-            stats.canonical_unit_group_reference_proofs += 1;
+            stats.canonical_flow_property_reference_rewrites =
+              Number(stats.canonical_flow_property_reference_rewrites ?? 0) + 1;
+            stats.canonical_unit_group_reference_proofs =
+              Number(stats.canonical_unit_group_reference_proofs ?? 0) + 1;
             rewriteRows.push({
               relation: "flow_property_reference_version_bump_to_canonical_support",
               dataset_type: datasetType,
@@ -379,8 +381,10 @@ export function createCanonicalSupportRewriteUtils({
         if (!alreadyCanonical && mapping && canonical) {
           const next = canonicalFlowPropertyReference(canonical, language);
           record[key] = next;
-          stats.canonical_flow_property_reference_rewrites += 1;
-          stats.canonical_unit_group_reference_proofs += 1;
+          stats.canonical_flow_property_reference_rewrites =
+            Number(stats.canonical_flow_property_reference_rewrites ?? 0) + 1;
+          stats.canonical_unit_group_reference_proofs =
+            Number(stats.canonical_unit_group_reference_proofs ?? 0) + 1;
           // The source unit may differ in scale from the canonical reference unit
           // (e.g. kWh->MJ = 3.6, t*km->kg*km = 1000). The rewrite only swaps the FP
           // pointer; exchange amounts are NOT converted here, so any scale != 1 must
@@ -416,7 +420,8 @@ export function createCanonicalSupportRewriteUtils({
             legacy_support_note: mapping.legacy_support_note ?? null,
           });
           if (needsScaling) {
-            stats.amount_scaling_required_rewrites += 1;
+            stats.amount_scaling_required_rewrites =
+              Number(stats.amount_scaling_required_rewrites ?? 0) + 1;
             const requirement = {
               dataset_type: datasetType,
               dataset_id: datasetIdentityCache?.id ?? null,
@@ -431,7 +436,7 @@ export function createCanonicalSupportRewriteUtils({
             };
             scalingRequirements.push(requirement);
             if (blockOnUnscaled) {
-              stats.amount_scaling_blocked += 1;
+              stats.amount_scaling_blocked = Number(stats.amount_scaling_blocked ?? 0) + 1;
               blockers.push({
                 code: "canonical_support_amount_scaling_required",
                 message:

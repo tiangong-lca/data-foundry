@@ -29,6 +29,7 @@ const bundleSampleStageContract = readOnlyStageContract([
     outputs: [
       "source-reference-rewrites.jsonl",
       "canonical-support-rewrites.jsonl",
+      "canonical-support-amount-scaling.jsonl when scale conversion is required",
       "source-semantics.jsonl",
       "flow location context traces embedded in flow rows",
     ],
@@ -63,6 +64,7 @@ export function createBundleSampleRowsCommands({
   addDedupedBundleRow,
   asText,
   attachIdentityPreflightRows,
+  booleanOption,
   profileFor,
   repoRoot,
   buildBafuFallbackSourcePayload,
@@ -626,6 +628,9 @@ export function createBundleSampleRowsCommands({
             )?.allowAccountLocalSupportAndElementary,
           )
         : false;
+    const blockOnUnscaledCanonicalSupport = booleanOption(
+      options.blockOnUnscaledCanonicalSupport || options.blockUnscaledCanonicalSupport,
+    );
     const classificationCommandsByType = {
       process: classificationAuthoringCommands({
         cliBin,
@@ -697,6 +702,13 @@ export function createBundleSampleRowsCommands({
     };
     const sourceReferenceRewriteRows = [];
     const canonicalSupportRewriteRows = [];
+    const canonicalSupportScalingRequirements = [];
+    const canonicalSupportStats = {
+      canonical_flow_property_reference_rewrites: 0,
+      canonical_unit_group_reference_proofs: 0,
+      amount_scaling_required_rewrites: 0,
+      amount_scaling_blocked: 0,
+    };
     const sourceClassificationRepairRows = [];
     const templateContact = findFirstBundleContactTemplate(selection.selected);
     const libraryContact = buildLibraryContactPayload(options, templateContact, {
@@ -788,9 +800,11 @@ export function createBundleSampleRowsCommands({
             cacheContext: canonicalSupportCache,
             datasetType: type,
             sourceFile,
-            stats: sanitizeStats,
+            stats: canonicalSupportStats,
             rewriteRows: canonicalSupportRewriteRows,
             blockers,
+            scalingRequirements: canonicalSupportScalingRequirements,
+            blockOnUnscaled: blockOnUnscaledCanonicalSupport,
             datasetIdentityCache: datasetIdentity(payload, type),
             language: asText(options.language || options.lang || "en") || "en",
             allowAccountLocalSupportAndElementary,
@@ -1069,6 +1083,21 @@ export function createBundleSampleRowsCommands({
     writeJsonLines(sourceReferenceRewritesPath, sourceReferenceRewriteRows);
     const canonicalSupportRewritesPath = path.join(outDir, "canonical-support-rewrites.jsonl");
     writeJsonLines(canonicalSupportRewritesPath, canonicalSupportRewriteRows);
+    const canonicalSupportScalingPath = path.join(outDir, "canonical-support-amount-scaling.jsonl");
+    if (canonicalSupportScalingRequirements.length > 0) {
+      writeJsonLines(canonicalSupportScalingPath, canonicalSupportScalingRequirements);
+    }
+    sanitizeStats.canonical_flow_property_reference_rewrites =
+      canonicalSupportStats.canonical_flow_property_reference_rewrites;
+    sanitizeStats.canonical_unit_group_reference_proofs =
+      canonicalSupportStats.canonical_unit_group_reference_proofs;
+    if (canonicalSupportStats.amount_scaling_required_rewrites > 0) {
+      sanitizeStats.amount_scaling_required_rewrites =
+        canonicalSupportStats.amount_scaling_required_rewrites;
+    }
+    if (canonicalSupportStats.amount_scaling_blocked > 0) {
+      sanitizeStats.amount_scaling_blocked = canonicalSupportStats.amount_scaling_blocked;
+    }
 
     const rowFiles = {};
     const countsByType = {};
@@ -1384,6 +1413,12 @@ export function createBundleSampleRowsCommands({
           "Process and flow matching uses CLI identity-preflight with complete fielded search briefs. The CLI sends query, filter, match_count, page_size, and data_source to process_hybrid_search or flow_hybrid_search, then applies deterministic local identity decisions to returned candidates.",
         canonical_flow_property_reference_rewrite:
           "Flow referenceToFlowPropertyDataSet values are rewritten from converted package-local Amount-in-unit rows to canonical Flow Property rows listed in the local support cache.",
+        ...(canonicalSupportScalingRequirements.length > 0 || blockOnUnscaledCanonicalSupport
+          ? {
+              canonical_support_amount_scaling:
+                "Canonical support rewrites never convert amounts. Scale!=1 requirements remain explicit local evidence and block bundle materialization only when --block-on-unscaled-canonical-support is supplied.",
+            }
+          : {}),
         true_source_classification_repair:
           "Report/publication sources with sourceCitation and converted Other source types classification are repaired to TIDAS Publications and communications before dry-run/write planning.",
         true_source_identity_repair:
@@ -1428,6 +1463,11 @@ export function createBundleSampleRowsCommands({
         process_source_reference_rows: processSourceReferenceQueueRows.length,
         source_reference_rewrite_rows: sourceReferenceRewriteRows.length,
         canonical_support_rewrite_rows: canonicalSupportRewriteRows.length,
+        ...(canonicalSupportScalingRequirements.length > 0
+          ? {
+              canonical_support_amount_scaling_rows: canonicalSupportScalingRequirements.length,
+            }
+          : {}),
         materialized_true_source_rows: sourceSemanticsRows.filter(
           (row) => row.kind === "true_source" && row.materialized_as_source_row !== false,
         ).length,
@@ -1443,6 +1483,9 @@ export function createBundleSampleRowsCommands({
         ),
       },
       process_scope_summary: processScopeProjection.summary,
+      ...(canonicalSupportScalingRequirements.length > 0
+        ? { amount_scaling_requirements: canonicalSupportScalingRequirements }
+        : {}),
       files: {
         report: repoRelativePath(reportPath),
         rows: rowFiles,
@@ -1457,6 +1500,11 @@ export function createBundleSampleRowsCommands({
         process_source_references: repoRelativePath(processSourceReferencesPath),
         source_reference_rewrites: repoRelativePath(sourceReferenceRewritesPath),
         canonical_support_rewrites: repoRelativePath(canonicalSupportRewritesPath),
+        ...(canonicalSupportScalingRequirements.length > 0
+          ? {
+              canonical_support_amount_scaling: repoRelativePath(canonicalSupportScalingPath),
+            }
+          : {}),
       },
       commands,
       blockers,

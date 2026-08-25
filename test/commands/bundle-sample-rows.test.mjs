@@ -597,6 +597,9 @@ test("dataset-bundle-sample-rows retains and blocks canonical amount scaling req
   assert.equal(report.counts.canonical_support_amount_scaling_rows, 1);
   assert.equal(report.counts.amount_scaling_required_rewrites, 1);
   assert.equal(report.counts.amount_scaling_blocked, 1);
+  assert.equal(report.process_scope_summary.needs_ai_authoring, 1);
+  assert.equal(report.amount_scaling_requirements.length, 1);
+  assert.match(report.policy.canonical_support_amount_scaling, /never convert amounts/u);
   assert.deepEqual(
     report.blockers.map((blocker) => blocker.code),
     ["canonical_support_amount_scaling_required"],
@@ -613,6 +616,11 @@ test("dataset-bundle-sample-rows retains and blocks canonical amount scaling req
   assert.equal(requirements[0].source_unit, "tkm");
   assert.equal(requirements[0].canonical_reference_unit, "kg*km");
   assert.equal(requirements[0].amount_scale_to_canonical_reference, 1000);
+  const scopeLedger = readJsonLines(path.join(repoRoot, report.files.process_scope_ledger));
+  assert.equal(scopeLedger[0].status, "needs_ai_authoring");
+  assert.deepEqual(scopeLedger[0].blocker_counts_by_code, {
+    canonical_support_amount_scaling_required: 1,
+  });
 });
 
 test("dataset-bundle-sample-rows blocks canonical flow property mappings when the cached unit group proof is missing", () => {
