@@ -65,9 +65,12 @@ export type IdentityPreflightBinding = {
   inputs: IdentityPreflightBindingInput;
 };
 
-type ExecutionManifest = {
+export type IdentityPreflightBindingEvidence = Omit<IdentityPreflightBinding, "inputs">;
+
+export type ExecutionManifest = {
   schema: "tiangong-foundry.identity-preflight-execution.v1";
   binding_sha256: string;
+  binding: IdentityPreflightBindingEvidence;
   report: {
     bytes_sha256: string;
     canonical_sha256: string;
@@ -232,6 +235,11 @@ export function createIdentityPreflightBinding(
   };
 }
 
+function bindingEvidence(binding: IdentityPreflightBinding): IdentityPreflightBindingEvidence {
+  const { inputs: _inputs, ...evidence } = binding;
+  return evidence;
+}
+
 function failure(code: string, message: string): ValidationFailure {
   return { ok: false, code, message };
 }
@@ -297,6 +305,7 @@ export function validateIdentityPreflightExecution(input: {
   const manifestScope = {
     schema: "tiangong-foundry.identity-preflight-execution.v1" as const,
     binding_sha256: input.binding.binding_sha256,
+    binding: bindingEvidence(input.binding),
     report: {
       bytes_sha256: sha256Text(input.diskReportText ?? ""),
       canonical_sha256: sha256Json(diskReport),
@@ -324,11 +333,13 @@ export function validateBoundExecutionManifest(
   const manifestScope = {
     schema: value.schema,
     binding_sha256: value.binding_sha256,
+    binding: value.binding,
     report: value.report,
     completed_at_utc: value.completed_at_utc,
   };
   if (
     value.binding_sha256 !== binding.binding_sha256 ||
+    stableJson(value.binding) !== stableJson(bindingEvidence(binding)) ||
     typeof value.manifest_sha256 !== "string" ||
     value.manifest_sha256 !== sha256Json(manifestScope) ||
     !report ||
@@ -345,4 +356,117 @@ export function validateBoundExecutionManifest(
     return { ok: false, code: "identity_preflight_manifest_report_invalid" };
   }
   return { ok: true };
+}
+
+export function validateIdentityPreflightEvidence(
+  value: unknown,
+  input: {
+    requestText: string | null;
+    reportText: string | null;
+    datasetType: string;
+    datasetId: string;
+    datasetVersion: string;
+    targetSha256: string;
+    expectedProjectRef?: string | null;
+    expectedUserId?: string | null;
+  },
+): { ok: boolean; code?: string; binding?: IdentityPreflightBindingEvidence } {
+  if (!isRecord(value) || value.schema !== "tiangong-foundry.identity-preflight-execution.v1") {
+    return { ok: false, code: "identity_preflight_manifest_invalid" };
+  }
+  if (!isRecord(value.binding) || !isRecord(value.report)) {
+    return { ok: false, code: "identity_preflight_manifest_invalid" };
+  }
+  const binding = value.binding;
+  if (
+    binding.schema !== "tiangong-foundry.identity-preflight-binding.v1" ||
+    !isRecord(binding.dataset) ||
+    !isRecord(binding.request) ||
+    !isRecord(binding.command) ||
+    !isRecord(binding.cli) ||
+    !isRecord(binding.relevant_input_hashes) ||
+    typeof binding.binding_sha256 !== "string"
+  ) {
+    return { ok: false, code: "identity_preflight_manifest_binding_invalid" };
+  }
+  const bindingScope = {
+    schema: binding.schema,
+    dataset: binding.dataset,
+    request: binding.request,
+    command: binding.command,
+    cli: binding.cli,
+    account: binding.account,
+    relevant_input_hashes: binding.relevant_input_hashes,
+  };
+  if (
+    binding.binding_sha256 !== sha256Json(bindingScope) ||
+    value.binding_sha256 !== binding.binding_sha256
+  ) {
+    return { ok: false, code: "identity_preflight_manifest_binding_mismatch" };
+  }
+  if (
+    binding.dataset.type !== input.datasetType ||
+    binding.dataset.id !== input.datasetId ||
+    binding.dataset.version !== input.datasetVersion ||
+    binding.dataset.target_sha256 !== input.targetSha256
+  ) {
+    return { ok: false, code: "identity_preflight_manifest_dataset_mismatch" };
+  }
+  if (input.requestText === null || input.reportText === null) {
+    return { ok: false, code: "identity_preflight_manifest_artifact_missing" };
+  }
+  let request: JsonRecord;
+  let reportValue: JsonRecord;
+  try {
+    const parsedRequest = JSON.parse(input.requestText);
+    const parsedReport = JSON.parse(input.reportText);
+    if (!isRecord(parsedRequest) || !isRecord(parsedReport)) throw new Error("not an object");
+    request = parsedRequest;
+    reportValue = parsedReport;
+  } catch {
+    return { ok: false, code: "identity_preflight_manifest_artifact_invalid" };
+  }
+  if (
+    binding.request.bytes_sha256 !== sha256Text(input.requestText) ||
+    binding.request.canonical_sha256 !== sha256Json(request) ||
+    sha256Json(request.target) !== input.targetSha256
+  ) {
+    return { ok: false, code: "identity_preflight_manifest_request_mismatch" };
+  }
+  const report = value.report;
+  if (
+    report.bytes_sha256 !== sha256Text(input.reportText) ||
+    report.canonical_sha256 !== sha256Json(reportValue) ||
+    report.status !== reportValue.status ||
+    report.decision !== (typeof reportValue.decision === "string" ? reportValue.decision : null) ||
+    !ALLOWED_REPORT_STATUSES.has(String(report.status ?? "")) ||
+    (Object.hasOwn(reportValue, "ok") && reportValue.ok !== true)
+  ) {
+    return { ok: false, code: "identity_preflight_manifest_report_mismatch" };
+  }
+  const manifestScope = {
+    schema: value.schema,
+    binding_sha256: value.binding_sha256,
+    binding: value.binding,
+    report: value.report,
+    completed_at_utc: value.completed_at_utc,
+  };
+  if (
+    typeof value.manifest_sha256 !== "string" ||
+    value.manifest_sha256 !== sha256Json(manifestScope) ||
+    typeof value.completed_at_utc !== "string" ||
+    !Number.isFinite(Date.parse(value.completed_at_utc))
+  ) {
+    return { ok: false, code: "identity_preflight_manifest_integrity_invalid" };
+  }
+  if (input.expectedProjectRef || input.expectedUserId) {
+    if (
+      !isRecord(binding.account) ||
+      (input.expectedProjectRef && binding.account.project_ref !== input.expectedProjectRef) ||
+      (input.expectedUserId && binding.account.user_id !== input.expectedUserId)
+    ) {
+      return { ok: false, code: "identity_preflight_manifest_account_mismatch" };
+    }
+  }
+  return { ok: true, binding: binding as IdentityPreflightBindingEvidence };
 }

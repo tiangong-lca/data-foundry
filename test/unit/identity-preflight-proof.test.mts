@@ -5,7 +5,9 @@ import test from "node:test";
 import {
   createIdentityPreflightBinding,
   parseFreshIntentBoundAuthReceipt,
+  sha256Json,
   validateBoundExecutionManifest,
+  validateIdentityPreflightEvidence,
   validateIdentityPreflightExecution,
 } from "../../scripts/lib/identity-preflight-proof.ts";
 
@@ -85,7 +87,7 @@ function binding() {
     datasetType: "flow",
     datasetId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
     datasetVersion: "00.00.001",
-    targetSha256: "1".repeat(64),
+    targetSha256: sha256Json({ id: "flow" }),
     requestText: '{"schema_version":1,"target":{"id":"flow"}}\n',
     semanticArgv: ["flow", "identity-preflight", "--json", "--timeout-ms", "60000"],
     cli: {
@@ -170,6 +172,25 @@ test("identity preflight execution fails closed on every enumerated output vecto
     validateBoundExecutionManifest(passed.manifest, binding(), baseline.diskReportText).ok,
     true,
   );
+  const evidenceInput = {
+    requestText: binding().inputs.requestText,
+    reportText: baseline.diskReportText,
+    datasetType: binding().dataset.type,
+    datasetId: binding().dataset.id,
+    datasetVersion: binding().dataset.version,
+    targetSha256: binding().dataset.target_sha256,
+    expectedProjectRef: PROJECT_REF,
+    expectedUserId: USER_ID,
+  };
+  assert.equal(validateIdentityPreflightEvidence(passed.manifest, evidenceInput).ok, true);
+  for (const changed of [
+    { ...evidenceInput, requestText: "{}\n" },
+    { ...evidenceInput, reportText: `${JSON.stringify({ ...report, decision: "reuse" })}\n` },
+    { ...evidenceInput, datasetId: "different-flow" },
+    { ...evidenceInput, expectedUserId: "11111111-1111-4111-8111-111111111111" },
+  ]) {
+    assert.equal(validateIdentityPreflightEvidence(passed.manifest, changed).ok, false);
+  }
 
   const cases = [
     { ...baseline, exitCode: 1 },
