@@ -2,10 +2,193 @@ import Ajv2020 from "ajv/dist/2020.js";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import type { ErrorObject, ValidateFunction } from "ajv";
 import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
+interface JsonObject {
+  [key: string]: JsonValue | undefined;
+  flowDataSet?: JsonObject;
+  processDataSet?: JsonObject;
+  flowInformation?: JsonObject;
+  processInformation?: JsonObject;
+  dataSetInformation?: JsonObject;
+  administrativeInformation?: JsonObject;
+  publicationAndOwnership?: JsonObject;
+  classificationInformation?: JsonObject;
+  exchanges?: JsonObject;
+  exchange?: JsonValue;
+  referenceToFlowDataSet?: JsonObject;
+  generalComment?: JsonValue;
+  "common:classification"?: JsonObject;
+  "common:class"?: JsonValue;
+  "common:shortDescription"?: JsonValue;
+  "common:synonyms"?: JsonValue;
+  "common:other"?: JsonObject;
+  "tidasimport:sourceTrace"?: JsonObject;
+  payload?: JsonObject;
+  sourceTrace?: JsonObject;
+  attributes?: JsonValue;
+  "#text"?: JsonValue;
+  "@xml:lang"?: JsonValue;
+  "@refObjectId"?: JsonValue;
+}
+
+interface Entity extends JsonObject {
+  table: string;
+  id: string;
+  version: string;
+}
+
+interface ArtifactFacts extends JsonObject {
+  path: string;
+  schema_version: string | null;
+  rows: number;
+  bytes: number;
+  sha256: string;
+}
+
+interface ArtifactRef extends JsonObject {
+  path: string;
+  rows: number;
+  bytes: number;
+  sha256: string;
+}
+
+interface VerifiedArtifact {
+  filePath: string;
+  facts: ArtifactRef;
+}
+
+interface RawLine {
+  line: number;
+  offset: number;
+  length: number;
+  raw: Buffer;
+}
+
+interface ParsedLine<T extends JsonObject = JsonObject> extends RawLine {
+  value: T;
+  raw_sha256: string;
+}
+
+interface SchemaRuntime {
+  request: ValidateFunction;
+  admissionReceipt: ValidateFunction;
+  candidateIndexRow: ValidateFunction;
+  classificationRow: ValidateFunction;
+}
+
+interface CandidateRow extends JsonObject {
+  entity: Entity;
+  path: string;
+  filePath: string;
+  bytes: number;
+  sha256: string;
+}
+
+interface SnapshotRow {
+  entity: Entity;
+  payload?: JsonObject;
+  payload_sha256: string;
+  user_id: string | null;
+  state_code: number | null;
+}
+
+interface SnapshotEntry extends SnapshotRow {
+  offset: number;
+  length: number;
+  line: number;
+  visibility: string;
+}
+
+interface SnapshotIndex {
+  filePath: string;
+  fd: number;
+  byKey: Map<string, SnapshotEntry[]>;
+  entries: SnapshotEntry[];
+}
+
+interface TopologyRequest extends JsonObject {
+  campaign_id: string;
+  production_authority: boolean;
+  execution_id: string;
+  candidate_package: ArtifactRef;
+  input_artifacts: Record<string, ArtifactRef>;
+  scope: { user_id: string; email: string; state_code: number; project_ref: string } & JsonObject;
+  classification_policy: { conflict_flow_id: string; selected_code: string } & JsonObject;
+  canonical_support: { flowproperties: string[]; unitgroups: string[] } & JsonObject;
+  expected: {
+    obsolete_flow_delete_ceiling: number;
+    [key: string]: JsonValue | undefined;
+  };
+  cli_fingerprint: JsonObject;
+}
+
+interface ClassificationRow extends JsonObject {
+  entity: Entity;
+  classification: JsonObject;
+  selected_code: string | null;
+  evidence_sha256: string;
+}
+
+interface ActionRow extends JsonObject {
+  action_id: string;
+  desired_sha256: string;
+}
+
+interface ExchangeOccurrence {
+  token: string;
+  number: string;
+  occurrence: number;
+  index: number;
+  exchange: JsonObject;
+}
+
+interface GermanSynonym {
+  value: JsonObject;
+  evidence_sha256: string;
+}
+
+interface OverlayResult extends JsonObject {
+  reference: JsonObject;
+  chinese: JsonObject[];
+}
+
+interface FlowMapping extends JsonObject {
+  old_flow_id: string | null;
+  new_flow_id: string;
+  mapping_kind: string;
+  evidence_sha256: string;
+}
+
+interface ComposeOptions extends JsonObject {
+  help?: boolean;
+  request?: string;
+  outDir?: string;
+}
+
+interface AdmissionReceipt extends JsonObject {
+  schema_version: string;
+  select_only: boolean;
+  fresh_owner_session: boolean;
+  captured_at_utc: string;
+  scope: JsonObject;
+  candidate_package_sha256: string;
+  request_binding_sha256: string;
+  input_artifact_sha256: Record<string, string>;
+  cli_fingerprint: JsonObject;
+  fingerprints: Record<string, string>;
+  guards: Record<string, number>;
+}
+
+interface AjvRuntime {
+  addSchema: (schema: object) => unknown;
+  compile: (schema: object) => ValidateFunction;
+}
+
 const REQUEST_SCHEMA = "foundry-topology-convergence-request.v1";
-const CANDIDATE_ROW_SCHEMA = "foundry-topology-candidate-index-row.v1";
 const EVENT_SCHEMA = "foundry-topology-conversion-event.v1";
 const REPORT_SCHEMA = "foundry-topology-convergence-report.v1";
 const MANIFEST_SCHEMA = "foundry-topology-convergence-manifest.v1";
@@ -14,11 +197,11 @@ const SAVE_DRAFT_CONTRACT_SCHEMA = "dataset-save-draft-execution-contract.v1";
 const ABSENCE_DOMAIN = "foundry-topology-absence.v1";
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 
-function compareText(left, right) {
+function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-export function stableValue(value) {
+export function stableValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stableValue);
   if (value && typeof value === "object") {
     return Object.fromEntries(
@@ -30,31 +213,35 @@ export function stableValue(value) {
   return value;
 }
 
-export function stableJson(value) {
+export function stableJson(value: unknown): string {
   return JSON.stringify(stableValue(value));
 }
 
-function sha256Bytes(value) {
+function sha256Bytes(value: crypto.BinaryLike): string {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
-export function sha256Json(value) {
+export function sha256Json(value: unknown): string {
   return sha256Bytes(stableJson(value));
 }
 
-function clone(value) {
+function clone<T>(value: T): T {
   return structuredClone(value);
 }
 
-function asToken(value) {
+function asToken(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function entityKey(entity) {
+function entityKey(entity: Entity): string {
   return `${entity.table}/${entity.id}@${entity.version}`;
 }
 
-function artifactFacts(filePath, rows, schemaVersion) {
+function artifactFacts(
+  filePath: string,
+  rows: number,
+  schemaVersion: string | null,
+): ArtifactFacts {
   const fd = fs.openSync(filePath, "r");
   const hash = crypto.createHash("sha256");
   const buffer = Buffer.allocUnsafe(1024 * 1024);
@@ -78,12 +265,12 @@ function artifactFacts(filePath, rows, schemaVersion) {
   };
 }
 
-function pathInside(root, candidate) {
+function pathInside(root: string, candidate: string): boolean {
   const relative = path.relative(root, candidate);
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
-function resolveInside(repoRoot, value, label, mustExist = true) {
+function resolveInside(repoRoot: string, value: unknown, label: string, mustExist = true): string {
   const token = asToken(value);
   if (!token) throw new Error(`${label} is required.`);
   const resolved = path.resolve(repoRoot, token);
@@ -105,13 +292,13 @@ function resolveInside(repoRoot, value, label, mustExist = true) {
   return realPath;
 }
 
-function resolveFreshOutput(repoRoot, value) {
+function resolveFreshOutput(repoRoot: string, value: unknown): string {
   const outDir = resolveInside(repoRoot, value, "--out-dir", false);
   if (fs.existsSync(outDir)) throw new Error("--out-dir must not already exist.");
   return outDir;
 }
 
-function* rawJsonLines(filePath) {
+function* rawJsonLines(filePath: string): Generator<RawLine> {
   const fd = fs.openSync(filePath, "r");
   const chunk = Buffer.allocUnsafe(1024 * 1024);
   let carry = Buffer.alloc(0);
@@ -150,14 +337,14 @@ function* rawJsonLines(filePath) {
   }
 }
 
-function* jsonLines(filePath) {
+function* jsonLines<T extends JsonObject = JsonObject>(filePath: string): Generator<ParsedLine<T>> {
   for (const line of rawJsonLines(filePath)) {
-    let value;
+    let value: T;
     try {
-      value = JSON.parse(line.raw.toString("utf8"));
-    } catch (error) {
+      value = JSON.parse(line.raw.toString("utf8")) as T;
+    } catch (error: unknown) {
       throw new Error(
-        `${path.basename(filePath)} line ${line.line} is invalid JSON: ${error.message}`,
+        `${path.basename(filePath)} line ${line.line} is invalid JSON: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
     yield { ...line, value, raw_sha256: sha256Bytes(line.raw) };
@@ -165,21 +352,26 @@ function* jsonLines(filePath) {
 }
 
 class JsonlWriter {
-  constructor(filePath) {
+  readonly filePath: string;
+  readonly fd: number;
+  rows: number;
+  closed: boolean;
+
+  constructor(filePath: string) {
     this.filePath = filePath;
     this.fd = fs.openSync(filePath, "wx", 0o600);
     this.rows = 0;
     this.closed = false;
   }
 
-  write(value) {
+  write(value: unknown): number {
     if (this.closed) throw new Error(`Writer already closed: ${this.filePath}`);
     fs.writeSync(this.fd, `${stableJson(value)}\n`, null, "utf8");
     this.rows += 1;
     return this.rows;
   }
 
-  close() {
+  close(): void {
     if (!this.closed) {
       fs.fsyncSync(this.fd);
       fs.closeSync(this.fd);
@@ -187,25 +379,27 @@ class JsonlWriter {
     }
   }
 
-  facts(schemaVersion) {
+  facts(schemaVersion: string | null): ArtifactFacts {
     this.close();
     return artifactFacts(this.filePath, this.rows, schemaVersion);
   }
 }
 
 class ConversionEventWriter extends JsonlWriter {
-  constructor(filePath) {
+  previous: string | null;
+
+  constructor(filePath: string) {
     super(filePath);
     this.previous = null;
   }
 
-  event(value) {
+  event(value: JsonObject): JsonObject {
     const event = {
       schema_version: EVENT_SCHEMA,
       sequence: this.rows + 1,
       ...value,
       previous_event_sha256: this.previous,
-    };
+    } as JsonObject & { event_sha256?: string };
     event.event_sha256 = sha256Json(event);
     this.previous = event.event_sha256;
     this.write(event);
@@ -213,7 +407,7 @@ class ConversionEventWriter extends JsonlWriter {
   }
 }
 
-function writeJson(filePath, value) {
+function writeJson(filePath: string, value: unknown): void {
   const fd = fs.openSync(filePath, "wx", 0o600);
   try {
     fs.writeFileSync(fd, `${JSON.stringify(value, null, 2)}\n`);
@@ -223,11 +417,16 @@ function writeJson(filePath, value) {
   }
 }
 
-function createSchemaRuntime(repoRoot) {
+function createSchemaRuntime(repoRoot: string): SchemaRuntime {
   const schema = JSON.parse(
-    fs.readFileSync(path.join(repoRoot, "specs", "schemas", "topology-convergence.schema.json")),
+    fs.readFileSync(
+      path.join(repoRoot, "specs", "schemas", "topology-convergence.schema.json"),
+    ) as unknown as string,
   );
-  const ajv = new Ajv2020({ allErrors: true, strict: true, formats: { email: true } });
+  const Ajv2020Constructor = Ajv2020 as unknown as new (
+    options: Record<string, unknown>,
+  ) => AjvRuntime;
+  const ajv = new Ajv2020Constructor({ allErrors: true, strict: true, formats: { email: true } });
   ajv.addSchema(schema);
   return {
     request: ajv.compile({ $ref: `${schema.$id}#/$defs/request` }),
@@ -237,15 +436,20 @@ function createSchemaRuntime(repoRoot) {
   };
 }
 
-function assertSchema(validate, value, label) {
+function assertSchema(validate: ValidateFunction, value: unknown, label: string): void {
   if (validate(value)) return;
   const details = (validate.errors ?? [])
-    .map((error) => `${error.instancePath || "/"} ${error.message ?? error.keyword}`)
+    .map((error: ErrorObject) => `${error.instancePath || "/"} ${error.message ?? error.keyword}`)
     .join("; ");
   throw new Error(`${label} schema mismatch: ${details}`);
 }
 
-function verifyArtifactRef(repoRoot, ref, label, singleDocument = false) {
+function verifyArtifactRef(
+  repoRoot: string,
+  ref: ArtifactRef,
+  label: string,
+  singleDocument = false,
+): VerifiedArtifact {
   const filePath = resolveInside(repoRoot, ref?.path, `${label}.path`);
   const facts = artifactFacts(filePath, ref.rows, null);
   if (facts.sha256 !== ref.sha256 || facts.bytes !== ref.bytes) {
@@ -262,10 +466,15 @@ function verifyArtifactRef(repoRoot, ref, label, singleDocument = false) {
   return { filePath, facts: { ...ref, path: ref.path } };
 }
 
-function readCandidateIndex(repoRoot, verified, table, validate) {
-  const rows = [];
-  const seen = new Set();
-  for (const { value, line } of jsonLines(verified.filePath)) {
+function readCandidateIndex(
+  repoRoot: string,
+  verified: VerifiedArtifact,
+  table: string,
+  validate: ValidateFunction,
+): CandidateRow[] {
+  const rows: CandidateRow[] = [];
+  const seen = new Set<string>();
+  for (const { value, line } of jsonLines<CandidateRow>(verified.filePath)) {
     assertSchema(validate, value, `${table} candidate index line ${line}`);
     if (value.entity.table !== table)
       throw new Error(`${table} candidate line ${line} table mismatch.`);
@@ -278,18 +487,22 @@ function readCandidateIndex(repoRoot, verified, table, validate) {
   return rows;
 }
 
-function loadCandidate(row) {
+function loadCandidate(row: CandidateRow): JsonObject {
   const bytes = fs.readFileSync(row.filePath);
   if (bytes.length !== row.bytes || sha256Bytes(bytes) !== row.sha256) {
     throw new Error(`Candidate payload binding mismatch: ${entityKey(row.entity)}`);
   }
-  const payload = JSON.parse(bytes.toString("utf8"));
+  const payload = JSON.parse(bytes.toString("utf8")) as JsonObject;
   return payload;
 }
 
-function normalizeSnapshotRow(row, expectedTable, line) {
-  const entity = row.entity ?? { table: row.table, id: row.id, version: row.version };
-  const payload = row.payload ?? row.json_ordered;
+function normalizeSnapshotRow(row: JsonObject, expectedTable: string, line: number): SnapshotRow {
+  const entity = (row.entity ?? {
+    table: row.table,
+    id: row.id,
+    version: row.version,
+  }) as Entity;
+  const payload = (row.payload ?? row.json_ordered) as JsonObject;
   if (
     entity?.table !== expectedTable ||
     !asToken(entity.id) ||
@@ -304,18 +517,24 @@ function normalizeSnapshotRow(row, expectedTable, line) {
     throw new Error(`${expectedTable} snapshot line ${line} payload hash mismatch.`);
   }
   assertPayloadIdentity(payload, entity);
+  const stateCode = row.state_code ?? (row.owner as JsonObject | undefined)?.state_code;
   return {
     entity,
     payload,
     payload_sha256: payloadSha256,
-    user_id: row.user_id ?? row.owner?.user_id ?? null,
-    state_code: row.state_code ?? row.owner?.state_code ?? null,
+    user_id: asToken(row.user_id ?? (row.owner as JsonObject | undefined)?.user_id) || null,
+    state_code: stateCode == null ? null : Number(stateCode),
   };
 }
 
-function buildSnapshotIndex(verified, table, visibility, request) {
-  const byKey = new Map();
-  const entries = [];
+function buildSnapshotIndex(
+  verified: VerifiedArtifact,
+  table: string,
+  visibility: string,
+  request: TopologyRequest,
+): SnapshotIndex {
+  const byKey = new Map<string, SnapshotEntry[]>();
+  const entries: SnapshotEntry[] = [];
   for (const { value, line, offset, length } of jsonLines(verified.filePath)) {
     const normalized = normalizeSnapshotRow(value, table, line);
     if (visibility === "owner") {
@@ -350,18 +569,18 @@ function buildSnapshotIndex(verified, table, visibility, request) {
   return { filePath: verified.filePath, fd: fs.openSync(verified.filePath, "r"), byKey, entries };
 }
 
-function loadSnapshotPayload(index, entry) {
+function loadSnapshotPayload(index: SnapshotIndex, entry: SnapshotEntry): JsonObject {
   const buffer = Buffer.allocUnsafe(entry.length);
   fs.readSync(index.fd, buffer, 0, entry.length, entry.offset);
-  const row = JSON.parse(buffer.toString("utf8"));
-  return row.payload ?? row.json_ordered;
+  const row = JSON.parse(buffer.toString("utf8")) as JsonObject;
+  return (row.payload ?? row.json_ordered) as JsonObject;
 }
 
-function closeSnapshotIndex(index) {
+function closeSnapshotIndex(index: SnapshotIndex): void {
   if (index?.fd != null) fs.closeSync(index.fd);
 }
 
-function extractIdentity(payload, table) {
+function extractIdentity(payload: JsonObject, table: string): Entity {
   const root = table === "flows" ? payload?.flowDataSet : payload?.processDataSet;
   const information = table === "flows" ? root?.flowInformation : root?.processInformation;
   return {
@@ -373,72 +592,83 @@ function extractIdentity(payload, table) {
   };
 }
 
-function assertPayloadIdentity(payload, entity) {
+function assertPayloadIdentity(payload: JsonObject, entity: Entity): void {
   const actual = extractIdentity(payload, entity.table);
   if (entityKey(actual) !== entityKey(entity)) {
     throw new Error(`Payload identity mismatch for ${entityKey(entity)}.`);
   }
 }
 
-function flowClassification(payload) {
-  return payload?.flowDataSet?.flowInformation?.dataSetInformation?.classificationInformation;
-}
-
-function setFlowClassification(payload, classification) {
-  payload.flowDataSet.flowInformation.dataSetInformation.classificationInformation =
+function setFlowClassification(payload: JsonObject, classification: JsonObject): void {
+  payload.flowDataSet!.flowInformation!.dataSetInformation!.classificationInformation =
     clone(classification);
 }
 
-function leafClassificationCode(classification) {
+function leafClassificationCode(classification: JsonObject): string {
   const classes = classification?.["common:classification"]?.["common:class"];
   const array = Array.isArray(classes) ? classes : classes ? [classes] : [];
-  return asToken(array.at(-1)?.["@classId"]);
+  return asToken((array.at(-1) as JsonObject | undefined)?.["@classId"]);
 }
 
-function referenceIdentity(reference) {
+function referenceIdentity(reference: JsonObject): string {
   return `${asToken(reference?.["@refObjectId"])}@${asToken(reference?.["@version"])}`;
 }
 
 function collectSupportReferences(
-  value,
-  result = { flowproperties: new Set(), unitgroups: new Set() },
+  value: unknown,
+  result: { flowproperties: Set<string>; unitgroups: Set<string> } = {
+    flowproperties: new Set<string>(),
+    unitgroups: new Set<string>(),
+  },
 ) {
   if (Array.isArray(value)) {
     for (const child of value) collectSupportReferences(child, result);
   } else if (value && typeof value === "object") {
     for (const [key, child] of Object.entries(value)) {
       if (key === "referenceToFlowPropertyDataSet")
-        result.flowproperties.add(referenceIdentity(child));
+        result.flowproperties.add(referenceIdentity(child as JsonObject));
       if (/referenceTo(?:Reference)?UnitGroup/u.test(key))
-        result.unitgroups.add(referenceIdentity(child));
+        result.unitgroups.add(referenceIdentity(child as JsonObject));
       collectSupportReferences(child, result);
     }
   }
   return result;
 }
 
-function candidateExchanges(payload) {
+function candidateExchanges(payload: JsonObject): JsonObject[] {
   const value = payload?.processDataSet?.exchanges?.exchange;
   if (value == null) return [];
-  return Array.isArray(value) ? value : [value];
+  return (Array.isArray(value) ? value : [value]).filter((entry): entry is JsonObject =>
+    Boolean(entry && typeof entry === "object"),
+  );
 }
 
-function textFragments(value, output = []) {
+function textFragments(value: unknown, output: string[] = []): string[] {
   if (typeof value === "string") output.push(value);
   else if (Array.isArray(value)) {
     for (const child of value) textFragments(child, output);
   } else if (value && typeof value === "object") {
-    if (typeof value["#text"] === "string") output.push(value["#text"]);
-    else for (const child of Object.values(value)) textFragments(child, output);
+    const record = value as JsonObject;
+    if (typeof record["#text"] === "string") output.push(record["#text"]);
+    else for (const child of Object.values(record)) textFragments(child, output);
   }
   return output;
 }
 
-function sourceExchangeNumber(exchange, processId, exchangeIndex) {
+function sourceExchangeNumber(
+  exchange: JsonObject,
+  processId: string,
+  exchangeIndex: number,
+): string {
+  const traceExchange =
+    exchange["common:other"]?.["tidasimport:sourceTrace"]?.payload?.sourceTrace?.exchange;
   const attributes =
-    exchange?.["common:other"]?.["tidasimport:sourceTrace"]?.payload?.sourceTrace?.exchange
-      ?.attributes;
-  const array = Array.isArray(attributes) ? attributes : attributes ? [attributes] : [];
+    traceExchange && typeof traceExchange === "object" && !Array.isArray(traceExchange)
+      ? traceExchange.attributes
+      : undefined;
+  const array = (Array.isArray(attributes) ? attributes : attributes ? [attributes] : []).filter(
+    (attribute): attribute is JsonObject => Boolean(attribute && typeof attribute === "object"),
+  );
   const traceNumbers = [
     ...new Set(
       array
@@ -471,9 +701,12 @@ function sourceExchangeNumber(exchange, processId, exchangeIndex) {
   return traceNumber || commentNumber;
 }
 
-export function occurrenceKeyedExchanges(exchanges, processId) {
-  const occurrences = new Map();
-  const ordered = [];
+export function occurrenceKeyedExchanges(
+  exchanges: JsonObject[],
+  processId: string,
+): ExchangeOccurrence[] {
+  const occurrences = new Map<string, number>();
+  const ordered: ExchangeOccurrence[] = [];
   for (let index = 0; index < exchanges.length; index += 1) {
     const exchange = exchanges[index];
     const number = sourceExchangeNumber(exchange, processId, index);
@@ -487,24 +720,33 @@ export function occurrenceKeyedExchanges(exchanges, processId) {
   return ordered;
 }
 
-function languageValues(value) {
+function languageValues(value: unknown): JsonObject[] {
   if (value == null) return [];
-  return Array.isArray(value) ? value : [value];
+  return (Array.isArray(value) ? value : [value]).filter((entry): entry is JsonObject =>
+    Boolean(entry && typeof entry === "object"),
+  );
 }
 
-function upsertLanguage(value, language, replacement) {
+function upsertLanguage(
+  value: unknown,
+  language: string,
+  replacement: JsonObject,
+): JsonObject | JsonObject[] {
   const kept = languageValues(value).filter((entry) => entry?.["@xml:lang"] !== language);
   const output = [...kept, clone(replacement)];
   return output.length === 1 ? output[0] : output;
 }
 
-function chineseDescriptions(exchange) {
+function chineseDescriptions(exchange: JsonObject): JsonObject[] {
   return languageValues(exchange?.referenceToFlowDataSet?.["common:shortDescription"]).filter(
     (entry) => entry?.["@xml:lang"] === "zh",
   );
 }
 
-function overlayChineseDescription(candidateReference, currentExchange) {
+function overlayChineseDescription(
+  candidateReference: JsonObject,
+  currentExchange: JsonObject,
+): OverlayResult {
   const output = clone(candidateReference);
   const chinese = chineseDescriptions(currentExchange);
   if (chinese.length > 1)
@@ -519,7 +761,7 @@ function overlayChineseDescription(candidateReference, currentExchange) {
   return { reference: output, chinese };
 }
 
-function canonicalDecimal(value) {
+function canonicalDecimal(value: unknown): string | null {
   if (typeof value !== "string" && typeof value !== "number") return null;
   const token = String(value).trim();
   const match = /^([+-]?)(\d+)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/u.exec(token);
@@ -541,22 +783,21 @@ function canonicalDecimal(value) {
   return magnitude === "0" ? "0" : `${match[1] === "-" ? "-" : ""}${magnitude}`;
 }
 
-function decimalEqual(left, right) {
+function decimalEqual(left: unknown, right: unknown): boolean {
   const normalized = [canonicalDecimal(left), canonicalDecimal(right)];
   return normalized[0] != null && normalized[0] === normalized[1];
 }
 
-function exchangeFlowIdentity(exchange) {
-  return referenceIdentity(exchange?.referenceToFlowDataSet);
+function exchangeFlowIdentity(exchange: JsonObject): string {
+  return referenceIdentity(exchange.referenceToFlowDataSet ?? {});
 }
 
-function hashOrNull(value) {
-  return value == null ? null : sha256Json(value);
-}
-
-function loadClassifications(verified, validate) {
-  const result = new Map();
-  for (const { value, line } of jsonLines(verified.filePath)) {
+function loadClassifications(
+  verified: VerifiedArtifact,
+  validate: ValidateFunction,
+): Map<string, ClassificationRow> {
+  const result = new Map<string, ClassificationRow>();
+  for (const { value, line } of jsonLines<ClassificationRow>(verified.filePath)) {
     assertSchema(validate, value, `target classification line ${line}`);
     if (value.entity.table !== "flows")
       throw new Error(`Classification line ${line} is not a flow.`);
@@ -567,11 +808,11 @@ function loadClassifications(verified, validate) {
   return result;
 }
 
-function loadGermanSynonyms(verified) {
-  const result = new Map();
+function loadGermanSynonyms(verified: VerifiedArtifact): Map<string, GermanSynonym> {
+  const result = new Map<string, GermanSynonym>();
   for (const { value, line } of jsonLines(verified.filePath)) {
-    const processId = asToken(value.process_id ?? value.entity?.id);
-    const desired = value.value ?? value.desired_value;
+    const processId = asToken(value.process_id ?? (value.entity as Entity | undefined)?.id);
+    const desired = (value.value ?? value.desired_value) as JsonObject;
     const evidence = asToken(value.evidence_sha256 ?? value.language_event_sha256);
     if (!processId || !desired || desired["@xml:lang"] !== "de" || !evidence) {
       throw new Error(`German synonym line ${line} is malformed.`);
@@ -585,9 +826,12 @@ function loadGermanSynonyms(verified) {
   return result;
 }
 
-function loadMappings(verified) {
-  const rows = [];
-  const byPair = new Map();
+function loadMappings(verified: VerifiedArtifact): {
+  rows: FlowMapping[];
+  byPair: Map<string, FlowMapping>;
+} {
+  const rows: FlowMapping[] = [];
+  const byPair = new Map<string, FlowMapping>();
   for (const { value, line } of jsonLines(verified.filePath)) {
     const oldId = asToken(value.old_flow_id ?? value.old_flow_uuid);
     const newId = asToken(value.new_flow_id ?? value.new_flow_uuid);
@@ -611,7 +855,7 @@ function loadMappings(verified) {
   return { rows, byPair };
 }
 
-export function admissionRequestBinding(request) {
+export function admissionRequestBinding(request: TopologyRequest): string {
   const { admission_receipt: ignored, ...inputArtifacts } = request.input_artifacts ?? {};
   void ignored;
   return sha256Json({
@@ -628,11 +872,15 @@ export function admissionRequestBinding(request) {
   });
 }
 
-function validateAdmission(receipt, request, refs) {
-  if (receipt?.schema_version !== ADMISSION_SCHEMA || receipt?.select_only !== true) {
+function validateAdmission(
+  receipt: AdmissionReceipt,
+  request: TopologyRequest,
+  refs: Record<string, VerifiedArtifact>,
+): void {
+  if (receipt?.schema_version !== ADMISSION_SCHEMA || !receipt?.select_only) {
     throw new Error("Admission receipt is not a fresh SELECT-only receipt.");
   }
-  if (receipt.fresh_owner_session !== true || receipt.captured_at_utc == null) {
+  if (!receipt.fresh_owner_session || receipt.captured_at_utc == null) {
     throw new Error("Admission receipt does not bind a fresh owner session.");
   }
   if (stableJson(receipt.scope) !== stableJson(request.scope)) {
@@ -665,7 +913,11 @@ function validateAdmission(receipt, request, refs) {
   void refs;
 }
 
-function executionContract(request, suffix, actions) {
+function executionContract(
+  request: TopologyRequest,
+  suffix: string,
+  actions: ActionRow[],
+): JsonObject {
   return {
     schema_version: SAVE_DRAFT_CONTRACT_SCHEMA,
     execution_id: `${request.campaign_id}-${suffix}`,
@@ -680,18 +932,23 @@ function executionContract(request, suffix, actions) {
   };
 }
 
-function actionId(entity, desiredSha) {
+function actionId(entity: Entity, desiredSha: string): string {
   return `${entity.table}/${entity.id}@${entity.version}#topology@${desiredSha}`;
 }
 
-function conversionActionId(entity, kind, key, desiredSha) {
+function conversionActionId(
+  entity: Entity,
+  kind: string,
+  key: { number: string; occurrence: number } | null,
+  desiredSha: string | null,
+): string {
   const exchange = key ? `#${key.number}:${key.occurrence}` : "";
   return `${entity.table}/${entity.id}@${entity.version}${exchange}#${kind}@${desiredSha ?? "absent"}`;
 }
 
-function addProcessLanguage(payload, german) {
+function addProcessLanguage(payload: JsonObject, german: GermanSynonym | undefined): void {
   if (!german) return;
-  const information = payload.processDataSet.processInformation.dataSetInformation;
+  const information = payload.processDataSet!.processInformation!.dataSetInformation!;
   information["common:synonyms"] = upsertLanguage(
     information["common:synonyms"],
     "de",
@@ -699,7 +956,7 @@ function addProcessLanguage(payload, german) {
   );
 }
 
-function makePaths(outDir) {
+function makePaths(outDir: string): Record<string, string> {
   return Object.fromEntries(
     Object.entries({
       request: "topology-request.snapshot.json",
@@ -723,11 +980,14 @@ function makePaths(outDir) {
   );
 }
 
-function auditEventChain(filePath) {
-  let previous = null;
+function auditEventChain(filePath: string): {
+  rows: number;
+  terminal_event_sha256: string | null;
+} {
+  let previous: string | null = null;
   let rows = 0;
   for (const { value, line } of jsonLines(filePath)) {
-    const recorded = value.event_sha256;
+    const recorded = asToken(value.event_sha256);
     const body = { ...value };
     delete body.event_sha256;
     if (body.previous_event_sha256 !== previous || sha256Json(body) !== recorded) {
@@ -751,7 +1011,13 @@ function auditEventChain(filePath) {
   return { rows, terminal_event_sha256: previous };
 }
 
-function independentAudit(artifacts, eventPath, algebra, p0, p1) {
+function independentAudit(
+  artifacts: ArtifactFacts[],
+  eventPath: string,
+  algebra: { passed: boolean } & Record<string, unknown>,
+  p0: number,
+  p1: number,
+): Record<string, unknown> {
   for (const artifact of artifacts) {
     const actual = artifactFacts(
       path.join(path.dirname(eventPath), artifact.path),
@@ -774,7 +1040,7 @@ function independentAudit(artifacts, eventPath, algebra, p0, p1) {
   };
 }
 
-function commandHelp() {
+function commandHelp(): unknown {
   return {
     status: "help",
     command: "dataset-topology-convergence-compose",
@@ -821,13 +1087,13 @@ function commandHelp() {
   };
 }
 
-export function createTopologyConvergenceCommands({ repoRoot }) {
-  async function runDatasetTopologyConvergenceCompose(options = {}) {
+export function createTopologyConvergenceCommands({ repoRoot }: { repoRoot: string }) {
+  async function runDatasetTopologyConvergenceCompose(options: ComposeOptions = {}) {
     if (options.help) return commandHelp();
     const runtime = createSchemaRuntime(repoRoot);
     const requestPath = resolveInside(repoRoot, options.request, "--request");
     const outDir = resolveFreshOutput(repoRoot, options.outDir);
-    const request = JSON.parse(fs.readFileSync(requestPath, "utf8"));
+    const request = JSON.parse(fs.readFileSync(requestPath, "utf8")) as TopologyRequest;
     assertSchema(runtime.request, request, "topology convergence request");
     const candidatePackagePath = resolveInside(
       repoRoot,
@@ -847,8 +1113,10 @@ export function createTopologyConvergenceCommands({ repoRoot }) {
         name,
         verifyArtifactRef(repoRoot, ref, name, name === "admission_receipt"),
       ]),
-    );
-    const receipt = JSON.parse(fs.readFileSync(refs.admission_receipt.filePath, "utf8"));
+    ) as Record<string, VerifiedArtifact>;
+    const receipt = JSON.parse(
+      fs.readFileSync(refs.admission_receipt.filePath, "utf8"),
+    ) as AdmissionReceipt;
     assertSchema(runtime.admissionReceipt, receipt, "fresh admission receipt");
     validateAdmission(receipt, request, refs);
 
@@ -890,12 +1158,12 @@ export function createTopologyConvergenceCommands({ repoRoot }) {
       holds: new JsonlWriter(paths.holds),
       ambiguity: new JsonlWriter(paths.ambiguity),
     };
-    const flowActions = [];
-    const processActions = [];
+    const flowActions: ActionRow[] = [];
+    const processActions: ActionRow[] = [];
     const targetFlowKeys = new Set(candidateFlows.map((row) => entityKey(row.entity)));
     const targetFlowIds = new Set(candidateFlows.map((row) => row.entity.id));
-    const findings = [];
-    const counts = {
+    const findings: JsonObject[] = [];
+    const counts: Record<string, number> = {
       candidate_flows: candidateFlows.length,
       flow_create: 0,
       flow_owner_no_write: 0,
@@ -920,7 +1188,10 @@ export function createTopologyConvergenceCommands({ repoRoot }) {
       machine_translation: 0,
       public_foreign_mutations: 0,
     };
-    const supportSeen = { flowproperties: new Set(), unitgroups: new Set() };
+    const supportSeen: Record<string, Set<string>> = {
+      flowproperties: new Set<string>(),
+      unitgroups: new Set<string>(),
+    };
 
     try {
       if (classifications.size !== candidateFlows.length) {
@@ -976,9 +1247,9 @@ export function createTopologyConvergenceCommands({ repoRoot }) {
         const ownerRows = ownerFlows.byKey.get(key) ?? [];
         const publicRows = publicFlows.byKey.get(key) ?? [];
         const foreignRows = foreignFlows?.byKey.get(key) ?? [];
-        let mappingKind;
-        let reason;
-        let beforeSha = null;
+        let mappingKind: string;
+        let reason: string;
+        let beforeSha: string | null = null;
         if (ownerRows.length > 1 || publicRows.length > 1) {
           mappingKind = "HOLD";
           reason = "NON_UNIQUE_VISIBLE_TARGET";
@@ -1059,7 +1330,7 @@ export function createTopologyConvergenceCommands({ repoRoot }) {
         flowproperties: new Set(request.canonical_support.flowproperties),
         unitgroups: new Set(request.canonical_support.unitgroups),
       };
-      for (const type of ["flowproperties", "unitgroups"]) {
+      for (const type of ["flowproperties", "unitgroups"] as const) {
         for (const identity of supportSeen[type]) {
           if (!allowedSupport[type].has(identity)) {
             findings.push({
@@ -1104,7 +1375,7 @@ export function createTopologyConvergenceCommands({ repoRoot }) {
         counts.obsolete_flow_delete_candidates += 1;
       }
 
-      const processFlowEdges = [];
+      const processFlowEdges: JsonObject[] = [];
       const candidateProcessIds = new Set(candidateProcesses.map((row) => row.entity.id));
       for (const processRow of candidateProcesses) {
         const candidate = loadCandidate(processRow);
@@ -1138,13 +1409,13 @@ export function createTopologyConvergenceCommands({ repoRoot }) {
         const currentByKey = new Map(currentOrdered.map((entry) => [entry.token, entry]));
         const candidateByKey = new Map(candidateOrdered.map((entry) => [entry.token, entry]));
         const desired = current ? clone(current) : clone(candidate);
-        const desiredExchanges = [];
+        const desiredExchanges: JsonObject[] = [];
         const entity = processRow.entity;
         const parentBeforeSha = currentRows[0]?.payload_sha256 ?? null;
 
         for (const candidateEntry of candidateOrdered) {
           const beforeEntry = currentByKey.get(candidateEntry.token);
-          let next;
+          let next: JsonObject;
           if (!beforeEntry) {
             next = clone(candidateEntry.exchange);
             if (current) {
@@ -1167,8 +1438,8 @@ export function createTopologyConvergenceCommands({ repoRoot }) {
             const before = beforeEntry.exchange;
             next = clone(before);
             next["@dataSetInternalID"] = candidateEntry.exchange["@dataSetInternalID"];
-            const beforeRef = before.referenceToFlowDataSet;
-            const candidateRef = candidateEntry.exchange.referenceToFlowDataSet;
+            const beforeRef = before.referenceToFlowDataSet ?? {};
+            const candidateRef = candidateEntry.exchange.referenceToFlowDataSet ?? {};
             const overlaid = overlayChineseDescription(candidateRef, before);
             next.referenceToFlowDataSet = overlaid.reference;
             for (const chinese of overlaid.chinese) {
@@ -1311,8 +1582,8 @@ export function createTopologyConvergenceCommands({ repoRoot }) {
             });
           }
         }
-        desired.processDataSet.exchanges = {
-          ...desired.processDataSet.exchanges,
+        desired.processDataSet!.exchanges = {
+          ...desired.processDataSet!.exchanges,
           exchange: desiredExchanges,
         };
         const germanRow = german.get(processRow.entity.id);
@@ -1373,7 +1644,7 @@ export function createTopologyConvergenceCommands({ repoRoot }) {
       }
 
       for (const { value, line } of jsonLines(refs.protected_no_write.filePath)) {
-        const entity = value.entity;
+        const entity = value.entity as Entity;
         const beforeSha = asToken(value.before_sha256 ?? value.before_sha);
         const reason = asToken(value.reason);
         const evidenceSha = asToken(value.evidence_sha256);

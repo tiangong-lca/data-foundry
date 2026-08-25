@@ -36,6 +36,10 @@ checkPaths:
   - scripts/commands/cli-wrappers.ts
   - scripts/commands/execution-capsule.ts
   - scripts/commands/post-write-closeout.ts
+  - scripts/commands/authoring-plan.ts
+  - scripts/commands/bundle-sample-rows.ts
+  - scripts/commands/incremental-change-set.ts
+  - scripts/commands/topology-convergence.ts
   - scripts/lib/foundry-args.ts
   - scripts/commands/identity-decisions.ts
   - scripts/commands/classification-decisions.ts
@@ -113,8 +117,8 @@ checkPaths:
   - scripts/with-lca-account.ts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed orchestration and adapter/tooling layers preserve profile/dependency boundaries, resumable gates, deterministic artifacts, process/report/hash and audit/comparison behavior without moving CLI, schema, search or database authority."
+lastReviewedCommit: 5af446bb230dd1f37e26d979352eda8c5ab51550
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed orchestration, adapter/tooling and algorithm layers preserve profile/dependency boundaries, deterministic artifacts, reports/hashes and local planning without moving CLI, schema, search or database authority."
 ---
 
 # Architecture

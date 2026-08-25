@@ -44,6 +44,10 @@ checkPaths:
   - scripts/commands/bafu-auto-authoring.ts
   - scripts/commands/bafu-process-scope-e2e.ts
   - scripts/commands/bafu-batch-import-run.ts
+  - scripts/commands/authoring-plan.ts
+  - scripts/commands/bundle-sample-rows.ts
+  - scripts/commands/incremental-change-set.ts
+  - scripts/commands/topology-convergence.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -199,8 +203,8 @@ checkPaths:
   - test/unit/foundry-golden-diff-contract.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed orchestration and TIDAS/finalize adapter tooling preserve dependency topology, resume/preflight/commit delegation, blockers/artifacts, argv/env, reports/hashes, audit output and merge-base normalization."
+lastReviewedCommit: 5af446bb230dd1f37e26d979352eda8c5ab51550
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed orchestration, adapters/tools and authoring/bundle/incremental/topology algorithms preserve dependency order, resumable delegation, blockers/artifacts, hashes/receipts, exact help and fail-closed authority."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

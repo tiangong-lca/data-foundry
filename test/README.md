@@ -38,6 +38,10 @@ checkPaths:
   - scripts/commands/bafu-auto-authoring.ts
   - scripts/commands/bafu-process-scope-e2e.ts
   - scripts/commands/bafu-batch-import-run.ts
+  - scripts/commands/authoring-plan.ts
+  - scripts/commands/bundle-sample-rows.ts
+  - scripts/commands/incremental-change-set.ts
+  - scripts/commands/topology-convergence.ts
   - scripts/lib/foundry-args.ts
   - scripts/commands/identity-decisions.ts
   - scripts/commands/classification-decisions.ts
@@ -183,13 +187,17 @@ checkPaths:
   - test/unit/post-authoring-finalize-utils-contract.test.mts
   - test/unit/tidas-cutover-script-contract.test.mts
   - test/unit/foundry-golden-diff-contract.test.mts
+  - test/unit/authoring-plan-command-migration.test.mts
+  - test/unit/bundle-sample-command-migration.test.mts
+  - test/unit/incremental-command-migration.test.mts
+  - test/unit/topology-command-migration.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: tests cover typed orchestration plus controlled TIDAS/finalize process, blocker/artifact/order/hash behavior, cutover stdout/exit, Golden normalization, exact help and native failures."
+lastReviewedCommit: 5af446bb230dd1f37e26d979352eda8c5ab51550
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: tests cover typed orchestration, adapters/tools and algorithms; exact help, deterministic lineage/sampling/receipts/F-P-D order, process/hash/audit behavior, native errors and write boundaries."
 ---
 
 # Test Layout
@@ -276,6 +284,8 @@ Wave 25 covers two re-export families. `unit/import-curation-leaf-barrels-migrat
 Wave 26 covers five dependency-ordered orchestration families. The five `unit/wave26-*-command-migration.test.mts` contracts require one native zero-escape owner, every dispatcher/metadata/wrapper consumer and exact serialized help bytes. Existing command and scenario fixtures remain the behavior authority for generic-versus-BAFU configuration, library/scope/classification/identity blocker and artifact order, resume ledgers, pause/stop, bounded parallel selection, read-only preflight, guarded commit delegation, native errors and deterministic report/JSONL bytes. All fixtures are local and read neither `.env` nor production.
 
 Wave 26 covers adapters and repository tooling in four RED/GREEN families. `unit/tidas-adapter-migration-contract.test.mts` uses controlled local executables to pin argv, environment, operation reports, version gates, path resolution, hashes and native spawn failures. `unit/post-authoring-finalize-utils-contract.test.mts` pins rewrite resolution, identity reuse, queue/input order and fail-closed preflight behavior. `unit/tidas-cutover-script-contract.test.mts` pins the tracked inventory, exact stdout and exit contract. `unit/foundry-golden-diff-contract.test.mts` pins merge-base selection, normalization, cross-platform executable/argv handling, Node-native comparison, Golden diffs and failure exits. All four require zero-escape native TypeScript and prohibit real external TIDAS or production access.
+
+Wave 26 covers four algorithmic command owners as independent RED/GREEN families. `unit/authoring-plan-command-migration.test.mts` pins the native owner/export, all consumers and exact help while existing authoring command cases preserve phase/row order, lineage, artifacts and hashes. `unit/bundle-sample-command-migration.test.mts` combines that migration contract with realistic selection cases for seed, row type, location and scale fail-close. `unit/incremental-command-migration.test.mts` covers native ownership/help while the existing unit, command and scenario fixtures preserve three-way activation, dependency holds, terminal receipts and no-authority CLI handoff. `unit/topology-command-migration.test.mts` does the same for occurrence-aware graph convergence, cycles, retry/hold behavior and ordered F/P/D handoffs. All four reject explicit type escapes and suppression directives.
 
 Toolchain and migration contracts must pass in a clean arbitrary Git worktree after `pnpm install --frozen-lockfile`. Tests must not borrow another worktree's `node_modules`, depend on the workspace superproject, read credentials, or use ignored `.foundry` artifacts as fixtures.
 

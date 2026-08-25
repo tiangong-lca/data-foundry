@@ -38,6 +38,10 @@ checkPaths:
   - scripts/commands/bafu-auto-authoring.ts
   - scripts/commands/bafu-process-scope-e2e.ts
   - scripts/commands/bafu-batch-import-run.ts
+  - scripts/commands/authoring-plan.ts
+  - scripts/commands/bundle-sample-rows.ts
+  - scripts/commands/incremental-change-set.ts
+  - scripts/commands/topology-convergence.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-cli.mjs
   - scripts/lib/foundry-command-registry.ts
@@ -95,12 +99,11 @@ checkPaths:
   - scripts/lib/bundle-sample-utils.ts
   - test/fixtures/fixture-roots.ts
   - test/fixtures/finalize-fixtures.ts
-  - scripts/commands/incremental-change-set.mjs
   - scripts/lib/import-curation/**
   - test/unit/foundry-command-metadata.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: navigation records typed dataset orchestration plus TIDAS/finalize adapters and cutover/Golden tools, their topology, process/hash/order/audit contracts, controlled fixtures and consumers."
+lastReviewedCommit: 5af446bb230dd1f37e26d979352eda8c5ab51550
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: navigation records typed orchestration, adapters/tools and authoring/bundle/incremental/topology owners, their topology, deterministic artifacts, process/hash/audit and receipt/handoff boundaries."
 ---
 
 # Foundry AI Navigation
@@ -128,7 +131,7 @@ The checked source of truth for command ownership is `scripts/lib/foundry-comman
 
 `test/unit/foundry-command-metadata.test.mts` enforces that the metadata covers all registered commands, that public commands remain reachable within two jumps from `scripts/foundry.mjs`, and that commit handoff metadata advertises the authoritative CommandSpec and final-row artifact evidence.
 
-The incremental lane is owned by `scripts/commands/incremental-change-set.mjs`, with its authoritative artifact and activation boundary in `docs/incremental-change-set-contract.md`. It composes Foundry-owned task evidence and stops before the CLI-owned mutation boundary.
+The incremental lane is owned by `scripts/commands/incremental-change-set.ts`, with its authoritative artifact and activation boundary in `docs/incremental-change-set-contract.md`. It composes Foundry-owned task evidence and stops before the CLI-owned mutation boundary. The related typed algorithm owners are `authoring-plan.ts` for row/task planning, `bundle-sample-rows.ts` for deterministic representative sampling, and `topology-convergence.ts` for occurrence-aware F/P/D convergence; each remains behind the same registered command and write-authority contract.
 
 ## TypeScript Migration Navigation
 

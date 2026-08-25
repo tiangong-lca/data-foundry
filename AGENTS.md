@@ -56,6 +56,10 @@ checkPaths:
   - scripts/commands/bafu-auto-authoring.ts
   - scripts/commands/bafu-process-scope-e2e.ts
   - scripts/commands/bafu-batch-import-run.ts
+  - scripts/commands/authoring-plan.ts
+  - scripts/commands/bundle-sample-rows.ts
+  - scripts/commands/incremental-change-set.ts
+  - scripts/commands/topology-convergence.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -149,8 +153,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed dataset orchestration plus TIDAS/finalize adapters and cutover/Golden tooling preserve configuration, blocker/artifact order, resumable delegation, executable argv/env, reports/hashes, audit output and fail-closed authority under local fixtures."
+lastReviewedCommit: c874ff1362a5d1248a34dd0d9d25d52937d39b28
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed orchestration, adapter/tooling and authoring/bundle/incremental/topology owners preserve deterministic artifacts, exact help, argv/reports/hashes, native errors and fail-closed credential/write boundaries."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

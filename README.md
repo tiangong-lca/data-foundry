@@ -46,6 +46,10 @@ checkPaths:
   - scripts/commands/bafu-auto-authoring.ts
   - scripts/commands/bafu-process-scope-e2e.ts
   - scripts/commands/bafu-batch-import-run.ts
+  - scripts/commands/authoring-plan.ts
+  - scripts/commands/bundle-sample-rows.ts
+  - scripts/commands/incremental-change-set.ts
+  - scripts/commands/topology-convergence.ts
   - scripts/lib/foundry-args.ts
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
@@ -112,8 +116,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed dataset orchestration and adapter/tooling owners preserve profile boundaries, resumable gates, exact help/argv/artifacts, TIDAS reports/hashes, finalize order, cutover output and Golden normalization without changing write authority."
+lastReviewedCommit: 5af446bb230dd1f37e26d979352eda8c5ab51550
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: native TS7 orchestration, adapter/tooling and four algorithm owners preserve profiles, resumable gates, exact help/argv/artifacts, authoring lineage, sampling, receipt and F/P/D semantics without changing authority."
 ---
 
 # TianGong LCA Data Foundry
@@ -197,6 +201,8 @@ Wave 25 migrates the import-curation re-export topology without wrappers. `profi
 Wave 26 migrates five dataset-orchestration owners in dependency order: generic `library-scope-workflow.ts`, then BAFU leaf classification and auto-authoring, process-scope E2E, and the shared BAFU batch engine used by the USLCI and Worldsteel adapters. Characterization preserves profile-agnostic versus BAFU configuration, library/scope/identity/classification blocker and artifact order, resume/pause/parallel/preflight/commit delegation, authoritative executable-plus-argv and receipt/hash checks, exact help/report bytes, native errors, and explicit-commit-only authority. Inventory moves 79→74 without changing command names, profile defaults, Golden artifacts, Worldsteel semantics, Date.parse behavior, or production authority; every case is local and reads neither `.env` nor production.
 
 Wave 26 migrates four adapter/tool boundaries. `tidas-adapter.ts` retains executable/config precedence, controlled script argv/env, operation/version/asset reports, batch document hashes and atomic rollback. `post-authoring-finalize-utils.ts` retains rewrite discovery, identity reuse, payload-freshness hashes, external-reference and finalize order. `check-tidas-cutover.ts` retains authoritative Git inventory and JSON/exit behavior; `foundry-golden-diff.ts` retains non-HEAD merge-base selection, cross-platform path/argv normalization and Node-native comparison. Inventory moves 89→85 without changing help, profiles, Worldsteel, Date.parse or remote-write authority.
+
+Wave 26 migrates four algorithmic command owners as four RED/GREEN families. `authoring-plan.ts` preserves phase and row ordering, source/task lineage, content hashes, exact plan artifacts and native input failures. `bundle-sample-rows.ts` preserves seeded selection, row-type/location order and canonical scale fail-close. `incremental-change-set.ts` preserves three-way merge, dependency activation/hold isolation, terminal hash-chained receipts and CLI handoff candidates. `topology-convergence.ts` preserves occurrence-aware graph composition, F/P/D ordering, cycle-safe retry/hold behavior and separate no-authority handoffs. Exact command help remains unchanged, and inventory moves 89→85 without changing profiles, Worldsteel semantics, Date.parse behavior or remote-write authority.
 
 Every toolchain or migration change must also pass from a clean arbitrary Git worktree: install with `pnpm install --frozen-lockfile`, then run the canonical lint, typecheck, build, toolchain, and test gates without borrowing sibling checkouts, another worktree's `node_modules`, ignored `.foundry` artifacts, or credentials.
 

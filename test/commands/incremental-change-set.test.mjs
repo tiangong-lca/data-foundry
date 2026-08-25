@@ -753,7 +753,7 @@ test("account-local unitgroup/flowproperty actions require the explicit request 
 
 test("incremental composer has no network, database, subprocess, or dataset-specific literal", () => {
   const source = fs.readFileSync(
-    path.join(repoRoot, "scripts", "commands", "incremental-change-set.mjs"),
+    path.join(repoRoot, "scripts", "commands", "incremental-change-set.ts"),
     "utf8",
   );
   for (const forbidden of [

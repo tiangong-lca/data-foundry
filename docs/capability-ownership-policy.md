@@ -47,6 +47,10 @@ checkPaths:
   - scripts/lib/import-curation/index.ts
   - scripts/lib/import-curation/profiles.ts
   - scripts/lib/import-curation/trace-summary.ts
+  - scripts/commands/authoring-plan.ts
+  - scripts/commands/bundle-sample-rows.ts
+  - scripts/commands/incremental-change-set.ts
+  - scripts/commands/topology-convergence.ts
   - scripts/lib/import-curation/internal/workflow-queue-context.ts
   - scripts/lib/import-curation/internal/full-context-proof.ts
   - scripts/lib/import-curation/internal/workflow-decision-apply-context.ts
@@ -74,8 +78,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typing orchestration plus TIDAS/finalize adapters and cutover/Golden tools changes no capability owner, remote operation, external tool, search, profile, Worldsteel/Date.parse or sibling boundary."
+lastReviewedCommit: c874ff1362a5d1248a34dd0d9d25d52937d39b28
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typing orchestration, adapters/tools and four local algorithm owners changes no capability owner, remote operation, external tool, search, profile, Worldsteel/Date.parse or sibling boundary."
 ---
 
 # Capability Ownership Policy

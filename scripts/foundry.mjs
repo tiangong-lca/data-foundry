@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createAuthoringPlanCommands } from "./commands/authoring-plan.mjs";
+import { createAuthoringPlanCommands } from "./commands/authoring-plan.ts";
 import { createBafuAutoAuthoringCommands } from "./commands/bafu-auto-authoring.ts";
 import { createBafuBatchImportRunCommands } from "./commands/bafu-batch-import-run.ts";
 import { createBafuLeafClassificationTaskCommands } from "./commands/bafu-leaf-classification-tasks.ts";
 import { createBafuProcessScopeE2eCommands } from "./commands/bafu-process-scope-e2e.ts";
-import { createBundleSampleRowsCommands } from "./commands/bundle-sample-rows.mjs";
+import { createBundleSampleRowsCommands } from "./commands/bundle-sample-rows.ts";
 import { createCliWrapperCommands } from "./commands/cli-wrappers.ts";
 import { createCommitHandoffCommands } from "./commands/commit-handoff.ts";
 import { createCoreCommands } from "./commands/core.mjs";
@@ -17,14 +17,14 @@ import { createIdentityPreflightRunCommands } from "./commands/identity-prefligh
 import { createIdentityReferenceRewriteCommands } from "./commands/identity-reference-rewrites.ts";
 import { createImportCompletionCommands } from "./commands/import-completion.ts";
 import { createImportLedgerCommands } from "./commands/import-ledger.ts";
-import { createIncrementalChangeSetCommands } from "./commands/incremental-change-set.mjs";
+import { createIncrementalChangeSetCommands } from "./commands/incremental-change-set.ts";
 import { createLibraryScopeWorkflowCommands } from "./commands/library-scope-workflow.ts";
 import { createPostAuthoringFinalizeCommands } from "./commands/post-authoring-finalize.mjs";
 import { createPostWriteCloseoutCommands } from "./commands/post-write-closeout.ts";
 import { createSupportCacheCommands } from "./commands/support-cache.ts";
 import { createTaskCommands } from "./commands/tasks.ts";
 import { createTidasWorkflowCommands } from "./commands/tidas-workflow.ts";
-import { createTopologyConvergenceCommands } from "./commands/topology-convergence.mjs";
+import { createTopologyConvergenceCommands } from "./commands/topology-convergence.ts";
 import { createUslciBatchImportRunCommands } from "./commands/uslci-batch-import-run.ts";
 import { createWorldsteelBatchImportRunCommands } from "./commands/worldsteel-batch-import-run.ts";
 import { bundleRowTypes } from "./lib/bundle-row-types.ts";

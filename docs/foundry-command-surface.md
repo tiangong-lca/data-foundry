@@ -47,6 +47,10 @@ checkPaths:
   - scripts/commands/cli-wrappers.ts
   - scripts/commands/execution-capsule.ts
   - scripts/commands/post-write-closeout.ts
+  - scripts/commands/authoring-plan.ts
+  - scripts/commands/bundle-sample-rows.ts
+  - scripts/commands/incremental-change-set.ts
+  - scripts/commands/topology-convergence.ts
   - scripts/lib/import-curation/internal/authoring-task-workflow.ts
   - scripts/lib/import-curation/internal/authoring-patch-workflow.ts
   - scripts/lib/import-curation/internal/curation-gate-workflow.ts
@@ -59,6 +63,7 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
   - docs/incremental-change-set-contract.md
+  - docs/topology-convergence-contract.md
   - test/unit/foundry-command-metadata.test.mts
   - test/unit/wave25-identity-decision-command-migration.test.mts
   - test/unit/wave25-classification-location-command-migration.test.mts
@@ -70,8 +75,8 @@ checkPaths:
   - test/unit/wave26-bafu-process-scope-command-migration.test.mts
   - test/unit/wave26-bafu-batch-command-migration.test.mts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 32455503bc25261ccec76e50d782e693f5ccd11d
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: dataset-orchestration and adapter/tool owners move to TS7 without changing commands/help, exports, process/report/exit artifacts, profiles, Worldsteel/Date.parse or remote-write modes."
+lastReviewedCommit: 5af446bb230dd1f37e26d979352eda8c5ab51550
+lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: orchestration, adapter/tool and algorithm owners move to TS7 without changing commands/help, exports, process/report/exit artifacts, profiles, Worldsteel/Date.parse or remote-write modes."
 ---
 
 # Foundry Command Surface
@@ -102,6 +107,8 @@ Wave 25 moves the import-curation leaf, index, and public barrels to TypeScript 
 Wave 26 moves the generic library-scope owner and four BAFU orchestration owners to TypeScript. Registered names, metadata categories/exports, serialized help, option aliases/defaults, blocker and artifact order, exit mapping, resumable preflight/batch behavior and explicit-commit-only modes remain unchanged. The USLCI and Worldsteel wrappers now point directly at the typed batch owner but retain their existing frozen profile configuration.
 
 Wave 26 moves TIDAS/finalize adapters and the cutover/Golden entrypoints to native TypeScript. Public Foundry command names and help remain unchanged; package scripts now call the typed audit and Golden entrypoints while retaining the same JSON, exit, merge-base and normalized-diff contracts.
+
+Wave 26 moves `authoring-plan`, `bundle-sample-rows`, `incremental-change-set`, and `topology-convergence` to native TypeScript. Their registered command names, categories, exports, exact help payloads, artifacts, exit mapping and write modes are unchanged. Realistic fixtures pin deterministic phase/row/sample/F-P-D order, path and hash bytes, scale and graph fail-close, terminal receipt and no-authority handoff semantics, native JSON/filesystem failures, and fresh-output boundaries.
 
 ## Categories
 

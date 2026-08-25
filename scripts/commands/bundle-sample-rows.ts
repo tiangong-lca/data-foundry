@@ -1,7 +1,179 @@
 import fs from "node:fs";
 import path from "node:path";
-import { bundleRowTypeOrder, bundleRowTypes } from "../lib/bundle-row-types.ts";
+import { bundleRowTypeOrder, bundleRowTypes, type BundleRowType } from "../lib/bundle-row-types.ts";
 import { readOnlyStageContract } from "../lib/stage-contract.ts";
+
+interface LooseRecord {
+  [key: string]: unknown;
+  processDataSet?: LooseRecord;
+  processInformation?: LooseRecord;
+  flowDataSet?: LooseRecord;
+  flowInformation?: LooseRecord;
+  contactDataSet?: LooseRecord;
+  contactInformation?: LooseRecord;
+  dataSetInformation?: LooseRecord;
+  name?: LooseRecord;
+  mixAndLocationTypes?: unknown;
+  geography?: LooseRecord;
+  locationOfOperationSupplyOrProduction?: LooseRecord;
+  exchanges?: LooseRecord;
+  referenceToFlowDataSet?: LooseRecord;
+  files?: LooseRecord;
+  inputs?: LooseRecord;
+  commands?: LooseRecord;
+  batch_patch_contract?: LooseRecord;
+  payload?: LooseRecord;
+  "common:name"?: LooseRecord;
+  "common:other"?: LooseRecord;
+}
+
+interface BundleSelection {
+  seed: unknown;
+  selected: string[];
+  missing_process_ids: string[];
+  [key: string]: unknown;
+}
+
+interface DatasetIdentity {
+  id: string;
+  version: string;
+}
+
+interface LocationCandidate {
+  code: string;
+  [key: string]: unknown;
+}
+
+interface ProcessFlowEvidence {
+  flow_id: string;
+  flow_version: string;
+  process_id: string;
+  process_version: string;
+  process_source_file: string | null;
+  process_location: string | null;
+  exchange_location: string | null;
+}
+
+interface SemanticSummary {
+  dataset_id: string;
+  kind: string;
+  materialized_as_source_row?: boolean;
+  [key: string]: unknown;
+}
+
+interface SourceReferenceRow {
+  relation: string;
+  referenced_source_kind: string;
+  ref_object_id: string;
+  short_description: unknown;
+  [key: string]: unknown;
+}
+
+interface IdentityPreflightArtifacts {
+  rows: unknown[];
+  indexPath: string;
+  [key: string]: unknown;
+}
+
+interface CanonicalSupportCache {
+  cachePath: string | null;
+  [key: string]: unknown;
+}
+
+interface SelectedBundle {
+  process_id: string;
+  bundle_dir: string | null;
+  manifest: string | null;
+}
+
+interface BundleSampleDependencies {
+  addDedupedBundleRow: (options: Record<string, unknown>) => void;
+  asText: (value: unknown) => string;
+  attachIdentityPreflightRows: (
+    rows: LooseRecord[],
+    artifacts: IdentityPreflightArtifacts,
+  ) => unknown;
+  booleanOption: (value: unknown) => boolean;
+  profileFor: (repoRoot: string, profile: string, options: LooseRecord) => LooseRecord;
+  repoRoot: string;
+  buildBafuFallbackSourcePayload: (options: Record<string, unknown>) => LooseRecord;
+  buildDatabaseFallbackSourcePayload: (options: Record<string, unknown>) => LooseRecord;
+  buildBafuProcessContextSourcePayload: (options: Record<string, unknown>) => LooseRecord | null;
+  buildIdentityPreflightArtifacts: (options: Record<string, unknown>) => IdentityPreflightArtifacts;
+  buildLibraryContactPayload: (
+    options: LooseRecord,
+    template: unknown,
+    context: Record<string, unknown>,
+  ) => LooseRecord;
+  classificationAuthoringCommands: (options: Record<string, unknown>) => LooseRecord;
+  cloneJson: (value: LooseRecord) => LooseRecord;
+  collectBundleQualityFindings: (options: Record<string, unknown>) => void;
+  collectElementaryFlowReuseFindings: (options: Record<string, unknown>) => void;
+  collectLocationQualityFindings: (options: Record<string, unknown>) => void;
+  collectSourceTracePayloads: (payload: LooseRecord) => LooseRecord[];
+  contactGlobalReference: (options: Record<string, unknown>) => LooseRecord;
+  datasetIdentity: (payload: LooseRecord, type: string) => DatasetIdentity;
+  ensureArray: (value: unknown) => LooseRecord[];
+  fileExists: (filePath: string | null | undefined) => boolean;
+  findFirstBundleContactTemplate: (bundleDirs: string[]) => unknown;
+  listProcessBundleDirs: (bundlesDir: unknown) => string[];
+  loadCanonicalSupportCache: (options: LooseRecord) => CanonicalSupportCache;
+  loadTidasLocationCodeMap: () => Map<string, unknown>;
+  locationAuthoringCommands: (options: Record<string, unknown>) => LooseRecord;
+  nowIso: () => string;
+  processOriginalSourceMetadata: (payload: LooseRecord) => LooseRecord | null;
+  processSourceReferenceRows: (
+    payload: LooseRecord,
+    sourceLookup: Map<string, SemanticSummary>,
+    sourceFile: unknown,
+  ) => SourceReferenceRow[];
+  readJson: (filePath: string) => LooseRecord;
+  repairTrueSourceClassification: (payload: LooseRecord, options: Record<string, unknown>) => void;
+  repairTrueSourceDescription: (payload: LooseRecord, options: Record<string, unknown>) => void;
+  repairTrueSourceIdentity: (payload: LooseRecord, options: Record<string, unknown>) => void;
+  repoRelativeMaybe: (filePath: unknown) => string | null;
+  repoRelativePath: (filePath: string) => string;
+  resolveRepoPath: (filePath: unknown) => string;
+  resolveTiangongLcaCliCommandPrefix?: () => string[];
+  resolveTiangongLcaCliBin: () => string;
+  rewriteCanonicalFlowPropertyReferences: (
+    payload: LooseRecord,
+    options: Record<string, unknown>,
+  ) => void;
+  rewriteCanonicalSourceReferences: (
+    payload: LooseRecord,
+    options: Record<string, unknown>,
+  ) => void;
+  rewriteProcessDataSourceReferences: (
+    payload: LooseRecord,
+    options: Record<string, unknown>,
+  ) => void;
+  rewriteContactReferences: (
+    payload: LooseRecord,
+    reference: LooseRecord,
+    stats: Record<string, unknown>,
+  ) => void;
+  rewriteTrueSourceReferenceDescriptions: (options: Record<string, unknown>) => void;
+  sanitizeBundlePayload: (
+    payload: LooseRecord,
+    type: BundleRowType,
+    sourceFile: string,
+    stats: Record<string, number>,
+    traceRows: LooseRecord[],
+    sourceTraces: LooseRecord[],
+  ) => void;
+  selectProcessBundleDirs: (bundleDirs: string[], options: LooseRecord) => BundleSelection;
+  shellQuote: (value: unknown) => string;
+  sourceReferenceSemanticBlockers: (rows: SourceReferenceRow[]) => LooseRecord[];
+  sourceSummaryMatchesOriginalMetadata: (
+    summary: SemanticSummary | undefined,
+    metadata: LooseRecord,
+  ) => boolean;
+  sourceSemanticSummary: (payload: LooseRecord, sourceFile: unknown) => SemanticSummary;
+  textValue: (value: unknown) => string;
+  writeJson: (filePath: string, value: unknown) => void;
+  writeJsonLines: (filePath: string, rows: readonly unknown[]) => void;
+}
 
 const bundleSampleStageContract = readOnlyStageContract([
   {
@@ -67,7 +239,6 @@ export function createBundleSampleRowsCommands({
   booleanOption,
   profileFor,
   repoRoot,
-  buildBafuFallbackSourcePayload,
   buildDatabaseFallbackSourcePayload,
   buildBafuProcessContextSourcePayload,
   buildIdentityPreflightArtifacts,
@@ -103,7 +274,6 @@ export function createBundleSampleRowsCommands({
   rewriteCanonicalSourceReferences,
   rewriteProcessDataSourceReferences,
   rewriteContactReferences,
-  rewriteTrueSourceReferenceDescriptions,
   sanitizeBundlePayload,
   selectProcessBundleDirs,
   shellQuote,
@@ -113,13 +283,13 @@ export function createBundleSampleRowsCommands({
   textValue,
   writeJson,
   writeJsonLines,
-}) {
-  function locationCodeFromValue(value, locationCodeMap) {
+}: BundleSampleDependencies) {
+  function locationCodeFromValue(value: unknown, locationCodeMap: Map<string, unknown>) {
     const code = asText(value);
     return code && locationCodeMap.has(code) ? code : null;
   }
 
-  function processLocationCode(payload, locationCodeMap) {
+  function processLocationCode(payload: LooseRecord, locationCodeMap: Map<string, unknown>) {
     return locationCodeFromValue(
       payload?.processDataSet?.processInformation?.geography
         ?.locationOfOperationSupplyOrProduction?.["@location"],
@@ -127,27 +297,30 @@ export function createBundleSampleRowsCommands({
     );
   }
 
-  function exchangeLocationCode(exchange, locationCodeMap) {
+  function exchangeLocationCode(exchange: LooseRecord, locationCodeMap: Map<string, unknown>) {
     return locationCodeFromValue(
       exchange?.location ?? exchange?.["@location"] ?? exchange?.locationOfSupply,
       locationCodeMap,
     );
   }
 
-  function flowLocationOfSupply(payload) {
+  function flowLocationOfSupply(payload: LooseRecord): string {
     return asText(payload?.flowDataSet?.flowInformation?.geography?.locationOfSupply);
   }
 
-  function flowNameMixAndLocationTypes(payload) {
+  function flowNameMixAndLocationTypes(payload: LooseRecord): string {
     return textValue(
       payload?.flowDataSet?.flowInformation?.dataSetInformation?.name?.mixAndLocationTypes,
     );
   }
 
-  function locationCodeCandidatesFromText(value, locationCodeMap) {
+  function locationCodeCandidatesFromText(
+    value: unknown,
+    locationCodeMap: Map<string, unknown>,
+  ): LocationCandidate[] {
     const text = asText(value);
     if (!text) return [];
-    const candidates = [];
+    const candidates: LocationCandidate[] = [];
     const normalized = text.replace(/[{}]/gu, "").trim();
     if (locationCodeMap.has(normalized)) {
       candidates.push({
@@ -169,8 +342,8 @@ export function createBundleSampleRowsCommands({
     return candidates;
   }
 
-  function uniqueLocationCandidates(candidates) {
-    const byKey = new Map();
+  function uniqueLocationCandidates(candidates: LocationCandidate[]): LocationCandidate[] {
+    const byKey = new Map<string, LocationCandidate>();
     for (const candidate of candidates) {
       if (!candidate?.code || byKey.has(candidate.code)) continue;
       byKey.set(candidate.code, candidate);
@@ -185,6 +358,13 @@ export function createBundleSampleRowsCommands({
     candidates,
     locationCommands,
     reason,
+  }: {
+    flowPayload: LooseRecord;
+    flowKey: string;
+    sourceFile: string | null;
+    candidates: LocationCandidate[];
+    locationCommands: LooseRecord;
+    reason: string;
   }) {
     const identity = datasetIdentity(flowPayload, "flow");
     const uniqueCandidates = uniqueLocationCandidates(candidates);
@@ -228,8 +408,17 @@ export function createBundleSampleRowsCommands({
     locationCommands,
     blockers,
     stats,
-  }) {
-    const processEvidenceByFlow = new Map(
+  }: {
+    rowsByType: Record<BundleRowType, Map<string, LooseRecord>>;
+    sourceByType: Record<BundleRowType, Map<string, string>>;
+    processFlowEvidenceRows: ProcessFlowEvidence[];
+    locationCodeMap: Map<string, unknown>;
+    locationQueueRows: Array<Record<string, unknown>>;
+    locationCommands: LooseRecord;
+    blockers: Array<Record<string, unknown>>;
+    stats: Record<string, number>;
+  }): void {
+    const processEvidenceByFlow = new Map<string, ProcessFlowEvidence>(
       processFlowEvidenceRows.map((row) => [`${row.flow_id}::${row.flow_version}`, row]),
     );
     const queuedKeys = new Set(
@@ -247,7 +436,7 @@ export function createBundleSampleRowsCommands({
         evidence_source: "flowDataSet.flowInformation.dataSetInformation.name.mixAndLocationTypes",
       }));
       const processEvidence = processEvidenceByFlow.get(flowKey);
-      const exchangeCandidates = [];
+      const exchangeCandidates: LocationCandidate[] = [];
       if (
         processEvidence?.exchange_location &&
         locationCodeMap.has(processEvidence.exchange_location)
@@ -261,7 +450,7 @@ export function createBundleSampleRowsCommands({
           process_version: processEvidence.process_version,
         });
       }
-      const processFallbackCandidates = [];
+      const processFallbackCandidates: LocationCandidate[] = [];
       if (
         processEvidence?.process_location &&
         locationCodeMap.has(processEvidence.process_location)
@@ -324,11 +513,11 @@ export function createBundleSampleRowsCommands({
     }
   }
 
-  function flowDataSetInformation(payload) {
+  function flowDataSetInformation(payload: LooseRecord): LooseRecord | null {
     return payload?.flowDataSet?.flowInformation?.dataSetInformation ?? null;
   }
 
-  function buildFlowLocationTracePayload(evidence) {
+  function buildFlowLocationTracePayload(evidence: ProcessFlowEvidence) {
     return {
       process: {
         name: "process",
@@ -361,7 +550,10 @@ export function createBundleSampleRowsCommands({
     };
   }
 
-  function appendFlowLocationSourceTrace(flowPayload, evidence) {
+  function appendFlowLocationSourceTrace(
+    flowPayload: LooseRecord,
+    evidence: ProcessFlowEvidence,
+  ): boolean {
     if (!flowPayload?.flowDataSet || flowLocationOfSupply(flowPayload)) return false;
     const dataSetInformation = flowDataSetInformation(flowPayload);
     if (!dataSetInformation || typeof dataSetInformation !== "object") return false;
@@ -380,10 +572,11 @@ export function createBundleSampleRowsCommands({
       if (!existingTrace || typeof existingTrace !== "object" || Array.isArray(existingTrace)) {
         return false;
       }
-      const payload = existingTrace.payload;
+      const payload = (existingTrace as LooseRecord).payload;
       if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
-      if (payload.flowLocationEvidence) return false;
-      payload.flowLocationEvidence = locationTrace;
+      const payloadRecord = payload;
+      if (payloadRecord.flowLocationEvidence) return false;
+      payloadRecord.flowLocationEvidence = locationTrace;
       return true;
     }
     commonOther["tidasimport:sourceTrace"] = {
@@ -398,8 +591,13 @@ export function createBundleSampleRowsCommands({
     sourceByType,
     locationCodeMap,
     stats,
-  }) {
-    const evidenceByFlowKey = new Map();
+  }: {
+    rowsByType: Record<BundleRowType, Map<string, LooseRecord>>;
+    sourceByType: Record<BundleRowType, Map<string, string>>;
+    locationCodeMap: Map<string, unknown>;
+    stats: Record<string, number>;
+  }): ProcessFlowEvidence[] {
+    const evidenceByFlowKey = new Map<string, ProcessFlowEvidence>();
     for (const [processKey, processPayload] of rowsByType.process.entries()) {
       const processIdentity = datasetIdentity(processPayload, "process");
       const processLocation = processLocationCode(processPayload, locationCodeMap);
@@ -437,14 +635,14 @@ export function createBundleSampleRowsCommands({
     return [...evidenceByFlowKey.values()];
   }
 
-  function processIdFromBundleRef(value) {
+  function processIdFromBundleRef(value: unknown): string {
     const text = asText(value).replaceAll("\\", "/");
     if (!text) return "";
     const match = text.match(/(?:^|\/)process-bundles\/([^/]+)/u);
     return match?.[1] ?? "";
   }
 
-  function blockerProcessId(blocker) {
+  function blockerProcessId(blocker: LooseRecord): string {
     return (
       asText(blocker?.process_id) ||
       processIdFromBundleRef(blocker?.source_file) ||
@@ -454,8 +652,8 @@ export function createBundleSampleRowsCommands({
     );
   }
 
-  function blockerCountsByCode(blockersForScope) {
-    const counts = new Map();
+  function blockerCountsByCode(blockersForScope: LooseRecord[]) {
+    const counts = new Map<string, number>();
     for (const blocker of blockersForScope) {
       const code = asText(blocker?.code) || "unknown_blocker";
       counts.set(code, (counts.get(code) ?? 0) + 1);
@@ -465,7 +663,7 @@ export function createBundleSampleRowsCommands({
     );
   }
 
-  function isHumanDependencyBlocker(blocker) {
+  function isHumanDependencyBlocker(blocker: LooseRecord): boolean {
     const code = asText(blocker?.code);
     return [
       "canonical_flow_property_reference_unresolved",
@@ -481,7 +679,17 @@ export function createBundleSampleRowsCommands({
     ].includes(code);
   }
 
-  function scopeRerunCommand({ bundlesDir, outDir, profile, processId }) {
+  function scopeRerunCommand({
+    bundlesDir,
+    outDir,
+    profile,
+    processId,
+  }: {
+    bundlesDir: unknown;
+    outDir: string;
+    profile: string;
+    processId: string;
+  }): string {
     return [
       "node",
       "scripts/foundry.mjs",
@@ -499,9 +707,31 @@ export function createBundleSampleRowsCommands({
       .join(" ");
   }
 
-  function buildProcessScopeLedger({ selectedBundles, blockers, bundlesDir, outDir, profile }) {
-    const blockersByProcess = new Map();
-    const globalBlockers = [];
+  function buildProcessScopeLedger({
+    selectedBundles,
+    blockers,
+    bundlesDir,
+    outDir,
+    profile,
+  }: {
+    selectedBundles: SelectedBundle[];
+    blockers: LooseRecord[];
+    bundlesDir: unknown;
+    outDir: string;
+    profile: string;
+  }): {
+    ledger: LooseRecord[];
+    summary: {
+      ready: number;
+      needs_ai_authoring: number;
+      blocked_deferred: number;
+      selected_scopes: number;
+      global_blockers: number;
+      recommended_next_process_ids: string[];
+    };
+  } {
+    const blockersByProcess = new Map<string, LooseRecord[]>();
+    const globalBlockers: LooseRecord[] = [];
     for (const blocker of blockers) {
       const processId = blockerProcessId(blocker);
       if (!processId) {
@@ -558,7 +788,7 @@ export function createBundleSampleRowsCommands({
         }),
       };
     });
-    const summaryCounts = ledger.reduce(
+    const summaryCounts = ledger.reduce<Record<string, number>>(
       (counts, row) => {
         counts[row.status] = (counts[row.status] ?? 0) + 1;
         return counts;
@@ -568,13 +798,19 @@ export function createBundleSampleRowsCommands({
     return {
       ledger,
       summary: {
-        ...summaryCounts,
+        ready: summaryCounts.ready ?? 0,
+        needs_ai_authoring: summaryCounts.needs_ai_authoring ?? 0,
+        blocked_deferred: summaryCounts.blocked_deferred ?? 0,
         selected_scopes: ledger.length,
         global_blockers: globalBlockers.length,
         recommended_next_process_ids: [...ledger]
           .filter((row) => row.status !== "blocked_deferred")
           .sort((left, right) => {
-            const statusRank = { ready: 0, needs_ai_authoring: 1, blocked_deferred: 2 };
+            const statusRank: Record<string, number> = {
+              ready: 0,
+              needs_ai_authoring: 1,
+              blocked_deferred: 2,
+            };
             return (
               (statusRank[left.status] ?? 99) - (statusRank[right.status] ?? 99) ||
               left.blocker_count - right.blocker_count ||
@@ -586,7 +822,7 @@ export function createBundleSampleRowsCommands({
     };
   }
 
-  function runDatasetBundleSampleRows(options) {
+  function runDatasetBundleSampleRows(options: LooseRecord) {
     if (options.help) {
       return {
         schema_version: 1,
@@ -671,7 +907,7 @@ export function createBundleSampleRowsCommands({
       });
     }
 
-    const sanitizeStats = {
+    const sanitizeStats: Record<string, number> = {
       removed_import_traces: 0,
       removed_import_trace_namespaces: 0,
       placeholder_text_replacements: 0,
@@ -700,9 +936,9 @@ export function createBundleSampleRowsCommands({
       elementary_flow_reuse_blockers: 0,
       flow_location_context_traces: 0,
     };
-    const sourceReferenceRewriteRows = [];
-    const canonicalSupportRewriteRows = [];
-    const canonicalSupportScalingRequirements = [];
+    const sourceReferenceRewriteRows: LooseRecord[] = [];
+    const canonicalSupportRewriteRows: LooseRecord[] = [];
+    const canonicalSupportScalingRequirements: LooseRecord[] = [];
     const canonicalSupportStats = {
       canonical_flow_property_reference_rewrites: 0,
       canonical_unit_group_reference_proofs: 0,
@@ -710,7 +946,7 @@ export function createBundleSampleRowsCommands({
       amount_scaling_blocked: 0,
       amount_scaling_unresolved: 0,
     };
-    const sourceClassificationRepairRows = [];
+    const sourceClassificationRepairRows: LooseRecord[] = [];
     const templateContact = findFirstBundleContactTemplate(selection.selected);
     const libraryContact = buildLibraryContactPayload(options, templateContact, {
       rewriteRows: sourceReferenceRewriteRows,
@@ -718,7 +954,9 @@ export function createBundleSampleRowsCommands({
     });
     const libraryContactIdentity = datasetIdentity(libraryContact, "contact");
     const libraryContactName = asText(
-      libraryContact.contactDataSet.contactInformation.dataSetInformation["common:name"]?.["#text"],
+      libraryContact.contactDataSet?.contactInformation?.dataSetInformation?.["common:name"]?.[
+        "#text"
+      ],
     );
     const libraryContactRef = contactGlobalReference({
       id: libraryContactIdentity.id,
@@ -727,8 +965,12 @@ export function createBundleSampleRowsCommands({
       language: asText(options.language || options.lang || "en") || "en",
     });
 
-    const rowsByType = Object.fromEntries(bundleRowTypeOrder.map((type) => [type, new Map()]));
-    const sourceByType = Object.fromEntries(bundleRowTypeOrder.map((type) => [type, new Map()]));
+    const rowsByType = Object.fromEntries(
+      bundleRowTypeOrder.map((type) => [type, new Map<string, LooseRecord>()]),
+    ) as Record<BundleRowType, Map<string, LooseRecord>>;
+    const sourceByType = Object.fromEntries(
+      bundleRowTypeOrder.map((type) => [type, new Map<string, string>()]),
+    ) as Record<BundleRowType, Map<string, string>>;
     rowsByType.contact.set(
       `${libraryContactIdentity.id}::${libraryContactIdentity.version}`,
       libraryContact,
@@ -740,25 +982,26 @@ export function createBundleSampleRowsCommands({
 
     const rewriteStats = {
       rewritten: 0,
-      previous_ids: new Set(),
-      previous_descriptions: new Set(),
+      previous_ids: new Set<string>(),
+      previous_descriptions: new Set<string>(),
     };
-    const traceRows = [];
-    const classificationQueueRows = [];
-    const locationQueueRows = [];
-    const elementaryFlowReuseRows = [];
-    const selectedBundles = [];
+    const traceRows: LooseRecord[] = [];
+    const classificationQueueRows: LooseRecord[] = [];
+    const locationQueueRows: LooseRecord[] = [];
+    const elementaryFlowReuseRows: LooseRecord[] = [];
+    const selectedBundles: SelectedBundle[] = [];
     for (const bundleDir of selection.selected) {
       const manifestPath = path.join(bundleDir, "manifest.json");
       const manifest = readJson(manifestPath);
       selectedBundles.push({
-        process_id: manifest.process_id || path.basename(bundleDir),
+        process_id: asText(manifest.process_id) || path.basename(bundleDir),
         bundle_dir: repoRelativeMaybe(bundleDir),
         manifest: repoRelativeMaybe(manifestPath),
       });
       for (const type of bundleRowTypeOrder.filter((rowType) => rowType !== "contact")) {
         const plural = bundleRowTypes[type].plural;
-        for (const relativeFile of ensureArray(manifest.files?.[plural])) {
+        for (const relativeFileValue of ensureArray(manifest.files?.[plural])) {
+          const relativeFile = asText(relativeFileValue);
           const sourceFile = path.join(bundleDir, relativeFile);
           if (!fileExists(sourceFile)) {
             blockers.push({
@@ -855,8 +1098,10 @@ export function createBundleSampleRowsCommands({
     let sourceSemanticsRows = [...rowsByType.source.entries()].map(([key, payload]) =>
       sourceSemanticSummary(payload, sourceByType.source.get(key)),
     );
-    const sourceLookup = new Map(
-      sourceSemanticsRows.filter((row) => row.dataset_id).map((row) => [row.dataset_id, row]),
+    const sourceLookup = new Map<string, SemanticSummary>(
+      sourceSemanticsRows
+        .filter((row) => row.dataset_id)
+        .map((row) => [row.dataset_id, row] as const),
     );
     for (const [key, payload] of rowsByType.process.entries()) {
       const metadata = processOriginalSourceMetadata(payload);
@@ -886,7 +1131,7 @@ export function createBundleSampleRowsCommands({
             sourceKey,
             `foundry:process-context-source:${processIdentity.id}`,
           );
-          const summary = {
+          const summary: SemanticSummary = {
             ...sourceSemanticSummary(sourcePayload, sourceByType.source.get(sourceKey)),
             process_context_source: true,
             source_context_process_id: processIdentity.id,
@@ -908,7 +1153,7 @@ export function createBundleSampleRowsCommands({
           });
         }
         const replacementSource = sourceLookup.get(sourceIdentity.id);
-        rewriteProcessDataSourceReferences(payload.processDataSet, {
+        rewriteProcessDataSourceReferences(payload.processDataSet!, {
           sourceLookup,
           replacementSource,
           forceReplacementSource: true,
@@ -934,7 +1179,7 @@ export function createBundleSampleRowsCommands({
           row.relation === "process_data_source" && row.referenced_source_kind !== "true_source",
       ),
     );
-    let fallbackSourceSummary = null;
+    let fallbackSourceSummary: SemanticSummary | null = null;
     if (!processSourceReplacement && needsFallbackSource) {
       const fallbackSource = buildDatabaseFallbackSourcePayload({
         profile: asText(options.profile) || "bafu",
@@ -955,7 +1200,7 @@ export function createBundleSampleRowsCommands({
       sourceLookup.set(fallbackSourceSummary.dataset_id, fallbackSourceSummary);
     }
     for (const [key, payload] of rowsByType.process.entries()) {
-      rewriteProcessDataSourceReferences(payload.processDataSet, {
+      rewriteProcessDataSourceReferences(payload.processDataSet!, {
         sourceLookup,
         replacementSource: processSourceReplacement || fallbackSourceSummary,
         sourceFile: sourceByType.process.get(key),
@@ -965,7 +1210,7 @@ export function createBundleSampleRowsCommands({
         language: asText(options.language || options.lang || "en") || "en",
       });
     }
-    const allProcessSourceReferenceRows = [];
+    const allProcessSourceReferenceRows: SourceReferenceRow[] = [];
     for (const [key, payload] of rowsByType.process.entries()) {
       allProcessSourceReferenceRows.push(
         ...processSourceReferenceRows(payload, sourceLookup, sourceByType.process.get(key)),
@@ -1103,8 +1348,8 @@ export function createBundleSampleRowsCommands({
       sanitizeStats.amount_scaling_unresolved = canonicalSupportStats.amount_scaling_unresolved;
     }
 
-    const rowFiles = {};
-    const countsByType = {};
+    const rowFiles: Partial<Record<BundleRowType | "support", string>> = {};
+    const countsByType: Record<string, number> = {};
     for (const type of bundleRowTypeOrder) {
       const rows = [...rowsByType[type].values()];
       countsByType[type] = rows.length;
@@ -1112,7 +1357,9 @@ export function createBundleSampleRowsCommands({
       writeJsonLines(filePath, rows);
       rowFiles[type] = repoRelativePath(filePath);
     }
-    const supportRows = ["contact", "source"].flatMap((type) => [...rowsByType[type].values()]);
+    const supportRows = (["contact", "source"] as BundleRowType[]).flatMap((type) => [
+      ...rowsByType[type].values(),
+    ]);
     countsByType.support = supportRows.length;
     const supportRowsPath = path.join(rowsDir, "support.jsonl");
     writeJsonLines(supportRowsPath, supportRows);
@@ -1159,9 +1406,12 @@ export function createBundleSampleRowsCommands({
     const processScopeLedgerPath = path.join(outDir, "process-scope-ledger.jsonl");
     writeJsonLines(processScopeLedgerPath, processScopeProjection.ledger);
 
-    const cleanupRowsPath = (type) =>
+    const cleanupRowsPath = (type: BundleRowType) =>
       path.join(outDir, "cleanup", type, `${bundleRowTypes[type].plural}.cleaned.jsonl`);
-    const cleanupCommand = (type, inputFile = resolveRepoPath(rowFiles[type])) =>
+    const cleanupCommand = (
+      type: BundleRowType | "support",
+      inputFile = resolveRepoPath(rowFiles[type]),
+    ) =>
       [
         "node",
         "scripts/foundry.mjs",
@@ -1175,7 +1425,10 @@ export function createBundleSampleRowsCommands({
       ]
         .map(shellQuote)
         .join(" ");
-    const schemaValidateCommand = (type, inputFile = resolveRepoPath(rowFiles[type])) =>
+    const schemaValidateCommand = (
+      type: BundleRowType,
+      inputFile = resolveRepoPath(rowFiles[type]),
+    ) =>
       [
         "node",
         "scripts/foundry.mjs",
@@ -1189,7 +1442,7 @@ export function createBundleSampleRowsCommands({
       ]
         .map(shellQuote)
         .join(" ");
-    const contextPackCommand = (type) =>
+    const contextPackCommand = (type: BundleRowType) =>
       [
         ...cliBin,
         "dataset",
@@ -1204,11 +1457,11 @@ export function createBundleSampleRowsCommands({
       ]
         .map(shellQuote)
         .join(" ");
-    const qaReportPath = (type) =>
+    const qaReportPath = (type: BundleRowType) =>
       type === "flow"
         ? path.join(outDir, "qa", type, "flow_qa_report.json")
         : path.join(outDir, "qa", type, "process-qa-report.json");
-    const qaCommand = (type, inputFile = resolveRepoPath(rowFiles[type])) =>
+    const qaCommand = (type: BundleRowType, inputFile = resolveRepoPath(rowFiles[type])) =>
       [
         ...cliBin,
         "qa",
@@ -1221,7 +1474,7 @@ export function createBundleSampleRowsCommands({
       ]
         .map(shellQuote)
         .join(" ");
-    const curationGateCommand = (type) =>
+    const curationGateCommand = (type: BundleRowType) =>
       [
         "node",
         "scripts/foundry.mjs",
@@ -1253,7 +1506,11 @@ export function createBundleSampleRowsCommands({
       ]
         .map(shellQuote)
         .join(" ");
-    const saveDraftCommand = (type, mode, inputFile = cleanupRowsPath(type)) => {
+    const saveDraftCommand = (
+      type: BundleRowType,
+      mode: "commit" | "validate",
+      inputFile = cleanupRowsPath(type),
+    ) => {
       const modeFlag = mode === "commit" ? "--commit" : "--dry-run";
       if (type === "lifecyclemodel") {
         return [
@@ -1286,7 +1543,7 @@ export function createBundleSampleRowsCommands({
         .map(shellQuote)
         .join(" ");
     };
-    const commands = Object.fromEntries(
+    const commands: Record<string, Record<string, unknown>> = Object.fromEntries(
       bundleRowTypeOrder
         .filter((type) => !["unitgroup", "flowproperty"].includes(type))
         .map((type) => [
@@ -1391,7 +1648,7 @@ export function createBundleSampleRowsCommands({
         version: libraryContactIdentity.version,
         name: libraryContactName,
         website:
-          libraryContact.contactDataSet.contactInformation.dataSetInformation.WWWAddress ?? null,
+          libraryContact.contactDataSet?.contactInformation?.dataSetInformation?.WWWAddress ?? null,
         policy: "one_shared_contact_per_source_library",
         replaced_contact_ids: [...rewriteStats.previous_ids].sort(),
         replaced_contact_descriptions: [...rewriteStats.previous_descriptions].sort(),

@@ -14,14 +14,15 @@ whenToUpdate:
 checkPaths:
   - docs/incremental-change-set-contract.md
   - specs/schemas/incremental-change-set.schema.json
-  - scripts/commands/incremental-change-set.mjs
+  - scripts/commands/incremental-change-set.ts
+  - test/unit/incremental-command-migration.test.mts
   - test/unit/incremental-change-set.test.mjs
   - test/commands/incremental-change-set.test.mjs
   - test/scenarios/incremental-change-set-handoff.test.mjs
   - docs/execution-capsule-contract.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 4d415fac33799011d37094ac79122c1eef3a7855
-lastReviewedNote: "Reviewed for Issue #63: the stage-contract module moved to TypeScript without changing incremental composition semantics or artifacts."
+lastReviewedCommit: 5af446bb230dd1f37e26d979352eda8c5ab51550
+lastReviewedNote: "Reviewed for Issue #67 Wave 26: the native zero-escape TS7 composer preserves exact three-way activation, dependency holds, terminal hash-chained receipts, CLI handoff artifacts, native failures and no-write authority."
 ---
 
 # Incremental Change-Set Contract

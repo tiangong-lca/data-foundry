@@ -291,7 +291,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-incremental-change-set-compose": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/incremental-change-set.mjs",
+    ownerModule: "scripts/commands/incremental-change-set.ts",
     ownerExport: "createIncrementalChangeSetCommands().runDatasetIncrementalChangeSetCompose",
     inputs: [
       "SHA-bound incremental change-set request",
@@ -325,7 +325,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-topology-convergence-compose": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/topology-convergence.mjs",
+    ownerModule: "scripts/commands/topology-convergence.ts",
     ownerExport: "createTopologyConvergenceCommands().runDatasetTopologyConvergenceCompose",
     inputs: [
       "SHA-bound topology convergence request",
@@ -389,7 +389,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-authoring-plan": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/authoring-plan.mjs",
+    ownerModule: "scripts/commands/authoring-plan.ts",
     ownerExport: "createAuthoringPlanCommands().runDatasetAuthoringPlan",
     inputs: ["curation gate reports", "authoring task manifests", "decision task manifests"],
     outputs: ["dataset-authoring-plan JSON report"],
@@ -702,7 +702,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
   }),
   "dataset-bundle-sample-rows": metadata({
     category: "workflow-internal",
-    ownerModule: "scripts/commands/bundle-sample-rows.mjs",
+    ownerModule: "scripts/commands/bundle-sample-rows.ts",
     ownerExport: "createBundleSampleRowsCommands().runDatasetBundleSampleRows",
     inputs: ["process-bundles directory", "sample selection options", "canonical support cache"],
     outputs: [
