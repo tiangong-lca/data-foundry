@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   runWithLcaAccount,
@@ -28,6 +29,7 @@ const PROJECT_REF = "exampleprojectref";
 const USER_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
 const API_KEY = "fake-test-api-key-never-print";
 const NOW_MS = Date.parse("2026-08-25T02:00:00.000Z");
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 type SpawnCall = {
   executable: string;
@@ -191,6 +193,20 @@ test("account wrapper obtains a fresh intent-bound CLI receipt before exact argv
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("account wrapper package and surface metadata point only at the typed entrypoint", () => {
+  const packageJson = JSON.parse(
+    fs.readFileSync(path.join(repositoryRoot, "package.json"), "utf8"),
+  );
+  const surfaceAudit = fs.readFileSync(
+    path.join(repositoryRoot, "scripts", "lib", "surface-audit.mjs"),
+    "utf8",
+  );
+  assert.equal(packageJson.scripts?.["account:run"], "node scripts/with-lca-account.ts");
+  assert.match(surfaceAudit, /scripts\/with-lca-account\.ts/u);
+  assert.doesNotMatch(surfaceAudit, /scripts\/with-lca-account\.mjs/u);
+  assert.equal(fs.existsSync(path.join(repositoryRoot, "scripts", "with-lca-account.mjs")), false);
 });
 
 test("account wrapper rejects legacy bypass and missing project or user intent before spawning", () => {

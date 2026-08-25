@@ -23,10 +23,11 @@ checkPaths:
   - docs/incremental-change-set-contract.md
   - specs/automated-lca-capability-registry.json
   - specs/capability-ownership-rules.json
+  - scripts/with-lca-account.ts
   - test/README.md
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
-lastReviewedNote: "Reviewed for Issue #65: typed CommandSpecs prevent same-path byte drift, and foreign/RLS-hidden state-0 references remain blocked without an accepted-diff escape hatch."
+lastReviewedCommit: f5206e37987e7ff8db7f5f207965dcd8b5204201
+lastReviewedNote: "Reviewed for Issue #65: CommandSpecs prevent byte drift, foreign hidden drafts remain blocked, and credential-scoped execution requires the fail-closed typed CLI 0.1.1 receipt wrapper."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -74,6 +75,8 @@ Issue #63 is the typed-spine foundation, not a declaration that the 160 tracked 
 Do not parse or execute rendered command strings. `tiangong-foundry.command-spec.v1` makes `executable` plus `argv` authoritative and keeps `display` reader-only. Its SHA-256 binds the authoritative command and exact artifact facts; commit and verify both bind the final rows path, bytes, and SHA-256, and runners reject same-path drift before `shell=false` spawn. Artifact-to-scope matching still normalizes platform separators. Durable writers fsync writable file descriptors, not read-only reopened handles.
 
 Use the exact installed project dependency as `pnpm exec tiangong-lca ...`. Foundry runtime adapters resolve that same `@tiangong-lca/cli@0.1.1` manifest and bin directly; only the external `skills@latest` source-evidence resolver remains intentionally floating, with the resolved ref recorded in task artifacts.
+
+Credential-scoped operator commands must run through `pnpm account:run -- <profile> -- <executable> [args...]`. The ignored profile must include `FOUNDRY_EXPECTED_PROJECT_REF` and `FOUNDRY_EXPECTED_USER_ID`. Before the requested argv is executed, the wrapper obtains a fresh `auth identity-receipt` from the installed CLI with both expectations, requires an intent-bound cache-disabled forced signin, and uses a restricted child environment. Missing expectations, thread-guard drift, stale or partial receipts, and the retired `--no-auth-check` path all fail before the requested command starts.
 
 ## Required Order
 

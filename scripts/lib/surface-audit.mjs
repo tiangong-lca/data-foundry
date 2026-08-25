@@ -8,7 +8,7 @@ const deprecatedNamePattern = /\b(?:legacy|deprecated|compat|compatibility|alias
 const scriptEntrypoints = new Set([
   "scripts/foundry.mjs",
   "scripts/foundry-golden-diff.mjs",
-  "scripts/with-lca-account.mjs",
+  "scripts/with-lca-account.ts",
 ]);
 
 function portablePath(filePath) {

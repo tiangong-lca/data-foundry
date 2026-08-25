@@ -30,8 +30,8 @@ checkPaths:
   - specs/import-profiles.json
   - specs/typescript-migration-inventory.json
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
-lastReviewedNote: "Reviewed for Issue #65: foreign/RLS-hidden state-0 differences are blocked, while authoritative typed CommandSpecs bind exact final-row bytes."
+lastReviewedCommit: f5206e37987e7ff8db7f5f207965dcd8b5204201
+lastReviewedNote: "Reviewed for Issue #65: typed CommandSpecs bind final-row bytes, foreign hidden drafts stay blocked, and the typed account boundary requires CLI 0.1.1 intent-bound receipts."
 ---
 
 # TianGong LCA Data Foundry
@@ -71,6 +71,8 @@ pnpm case:production:contact-draft -- \
 ```
 
 The runner accepts no API key or alternate CLI path on argv. It reads only `TIANGONG_LCA_API_BASE_URL`, `TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY`, and `TIANGONG_LCA_TEST_API_KEY`; the test key exists only in the child environment. It snapshots and hashes the exact installed CLI 0.1.1 runtime inside its pnpm dependency island, executes from a clean directory with `shell=false`, keeps artifacts private, redacts the key if a child artifact contains it, and publishes a content-addressed case manifest only after the runtime snapshot is removed. The created contact remains isolated, unreviewed, and unpublished under the authenticated test account for later case evidence; the lane never performs review/publish transitions or mutates foreign/public/shared rows.
+
+Credential-scoped commands use `pnpm account:run -- <profile> -- <executable> [args...]`. The ignored profile supplies both the expected Supabase project ref and canonical user UUID. The wrapper resolves the installed CLI 0.1.1, obtains a fresh intent-bound `auth identity-receipt`, and then executes the requested argv without a shell and without inheriting unrelated parent environment variables. Authentication bypass flags are unsupported.
 
 ## Import Lanes
 
