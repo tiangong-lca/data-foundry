@@ -11,6 +11,7 @@ type BudgetContract = {
   semantic_stage_target_lines: number;
   pure_rule_target_lines: number;
   owner_ceiling_lines: Record<string, number>;
+  semantic_module_ceiling_lines: Record<string, number>;
   allowed_upward_imports: Record<string, string[]>;
   allowed_cycles: string[][];
 };
@@ -120,6 +121,14 @@ test("orchestration owners have an explicit shrink-only line budget", () => {
       contract.owner_target_lines < ceiling,
       `${relativePath} ceiling must shrink to target`,
     );
+  }
+  assert.deepEqual(Object.keys(contract.semantic_module_ceiling_lines), [
+    "scripts/lib/bafu-authoring/name-plan.ts",
+    "scripts/lib/batch-orchestration/scope-selection.ts",
+  ]);
+  for (const [relativePath, ceiling] of Object.entries(contract.semantic_module_ceiling_lines)) {
+    assert.ok(fs.existsSync(path.join(repoRoot, relativePath)), relativePath);
+    assert.ok(sourceLineCount(relativePath) <= ceiling, `${relativePath} exceeds ${ceiling} lines`);
   }
 });
 
