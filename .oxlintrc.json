@@ -42,6 +42,12 @@
       }
     },
     {
+      "files": ["scripts/lib/remote-verification-accepted-diff.ts"],
+      "rules": {
+        "typescript/no-explicit-any": "error"
+      }
+    },
+    {
       "files": ["test/**/*.{js,mjs,cjs,ts,mts,cts}"],
       "rules": {
         "typescript/no-floating-promises": "off",
