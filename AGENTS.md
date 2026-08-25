@@ -80,8 +80,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: 928355cb582ce13499403a553cb7f09e8a8bcdd2
-lastReviewedNote: "Reviewed for Issue #67 Wave 21: dry-run artifact and evidence-scope families are native zero-any TS7 with map/blocker/order/fallback and native-error contracts preserved."
+lastReviewedCommit: f9d2a1e94a04e5b0cf3153100bfd8ddd031b2b93
+lastReviewedNote: "Reviewed for Issue #67 Wave 22b: import-ledger, tidas workflow, identity rewrite and USLCI/worldsteel profile factories are native zero-any TS7; injected-stub tests preserve command/report/profile behavior without credentials, production, or owner-runtime execution."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
