@@ -245,6 +245,8 @@ test("golden comparison is portable and cannot collapse into HEAD self-compariso
   const source = readText("scripts/foundry-golden-diff.mjs");
   assert.match(source, /merge-base/u);
   assert.match(source, /FOUNDRY_GOLDEN_BASE/u);
+  assert.match(source, /pnpm["'],\s*\["install",\s*"--frozen-lockfile"/u);
+  assert.doesNotMatch(source, /function linkInstalledDependencies/u);
   assert.doesNotMatch(source, /spawnSync\(\s*["']diff["']/u);
   assert.doesNotMatch(source, /worktree["'],\s*["']add["'].*["']HEAD["']/su);
 });
