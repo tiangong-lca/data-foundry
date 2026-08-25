@@ -38,6 +38,7 @@ checkPaths:
   - scripts/commands/bafu-auto-authoring.ts
   - scripts/commands/bafu-process-scope-e2e.ts
   - scripts/commands/bafu-batch-import-run.ts
+  - scripts/commands/worldsteel-batch-import-run.ts
   - scripts/commands/authoring-plan.ts
   - scripts/commands/bundle-sample-rows.ts
   - scripts/commands/incremental-change-set.ts
@@ -56,6 +57,9 @@ checkPaths:
   - scripts/lib/location-quality-utils.ts
   - scripts/lib/bundle-row-types.ts
   - scripts/lib/tidas-language-utils.ts
+  - specs/import-profiles.json
+  - docs/import-profiles/worldsteel/**
+  - test/unit/worldsteel-support-mint-truth.test.mts
   - scripts/lib/import-curation/internal/hash-utils.ts
   - scripts/lib/import-curation/internal/dataset-types.ts
   - scripts/lib/import-curation/internal/runtime-io.ts
@@ -216,6 +220,8 @@ The typed internal proof leaf is `import-curation/internal/full-context-proof.ts
 The typed decision apply leaf is `import-curation/internal/workflow-decision-apply-context.ts`. Navigate there for classification apply report aliases, normalized decision rows, decision-task proof binding, input/output row path lists, fallback dataset type selection, identity payload hashes and applied counts. Curation and mutation workflow facets re-export it; decision full-context logic consumes it directly.
 
 The typed profile leaf is `import-curation/internal/profiles-config.ts`. Navigate there for profile field alias precedence, full-context policy normalization, account-local override projection, config-file fallback, requested/default/generic lookup, operator-added docs/QA waivers and ordered profile listing. The public profiles facade plus curation and mutation facets consume it; profile defaults remain declarative in `specs/import-profiles.json`.
+
+Worldsteel's frozen adapter/profile policy is a governed cross-file contract. Start with `scripts/commands/worldsteel-batch-import-run.ts` for the executable batch-engine flags, then follow the `worldsteel.docs` list in `specs/import-profiles.json` for current policy, constraints, plan, and retained delivery evidence. `test/unit/worldsteel-support-mint-truth.test.mts` executes the factory, compares its unmatched FP/UG support value with the structured profile value, and requires every declared Worldsteel document to state the same truth. The hard candidate boundary is a materialized canonical-cache miss behind the profile and finalize gates; LANCA names and historical counts are evidence, not a runtime allowlist.
 
 The typed patch collect leaf is `import-curation/internal/workflow-patch-collect.ts`. Navigate there for patch-set admission blockers, action-item closure, resolution/context/evidence validation, JSON/JSONL and optional artifact readers, identity-apply report option aliases, default source-rewrite discovery and normalized source-rewrite evidence. Its nine workflow consumers span authoring, curation, mutation, dry-run, identity, evidence, reference closure and row transforms.
 

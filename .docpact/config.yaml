@@ -10,8 +10,9 @@ layout: repo
 # Review note, 2026-08-25: Issue #65 adds the typed CommandSpec envelope, authoritative executable/argv handoffs, final-row byte/SHA binding, and shell-free BAFU execution. Ownership and routing semantics are unchanged.
 # Review note, 2026-08-25: Issue #67 Wave 24 B3 migrates the curation aggregate, gate runner, and cleanup runner under the existing scripts/** and test/** ownership/rule coverage. No catalog, routing, rule, profile, environment, or remote-authority semantics change.
 # Review note, 2026-08-25: Issue #67 Wave 24 migrates five existing command-owner paths to TypeScript with local characterization. Existing control-plane, test-layout, ownership, and documentation routes already cover the moved paths; no rule or authority boundary changes.
-lastReviewedAt: "2026-08-25"
-lastReviewedCommit: "a9f003156cd58f223ae2bd4557616c9d9ee65b71"
+# Review note, 2026-08-26: Issue #68 adds a narrow Worldsteel runtime/profile/document truth route. The executable unmatched-FP/UG flag, structured profile authorization, current profile docs, and retained coverage evidence now review together without making shared batch-engine edits trigger dataset-specific documentation noise.
+lastReviewedAt: "2026-08-26"
+lastReviewedCommit: "0fa3657c4c42eb733c133ec95b69cf8a0b44ecd1"
 
 catalog:
   repos:
@@ -340,6 +341,28 @@ rules:
       - path: docs/architecture.md
         mode: review_or_update
     reason: Import profile constraints must remain generic profile contracts, not Foundry code paths.
+  - id: foundry-worldsteel-support-mint-contract
+    scope: repo
+    repo: data-foundry
+    triggers:
+      - path: scripts/commands/worldsteel-batch-import-run.ts
+        kind: worldsteel-frozen-runner-policy
+      - path: test/unit/worldsteel-support-mint-truth.test.mts
+        kind: worldsteel-policy-contract-test
+      - path: docs/import-profiles/worldsteel/**
+        kind: worldsteel-profile-doc
+    requiredDocs:
+      - path: specs/import-profiles.json
+        mode: review_or_update
+      - path: docs/import-profiles/worldsteel/profile.md
+        mode: review_or_update
+      - path: docs/import-profiles/worldsteel/constraints.md
+        mode: review_or_update
+      - path: docs/import-profiles/worldsteel/import-plan.md
+        mode: review_or_update
+      - path: docs/import-profiles/worldsteel/import-coverage.md
+        mode: review_or_update
+    reason: Worldsteel's frozen adapter flag, structured profile authorization, current constraints and plan, and retained coverage evidence must expose one canonical-vs-unmatched FP/UG mint policy.
   - id: foundry-execution-capsule-contract
     scope: repo
     repo: data-foundry
