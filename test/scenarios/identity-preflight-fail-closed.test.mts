@@ -68,7 +68,13 @@ const mode = process.env.FAKE_MODE;
 const marker = process.env.FAKE_MARKER;
 fs.mkdirSync(path.join(outDir, "outputs"), { recursive: true });
 fs.appendFileSync(marker, "run\\n");
-const disk = { schema_version: 1, status: mode === "failed-status" ? "failed" : "passed", decision: "create_new", ...(mode === "ok-false" ? { ok: false } : { ok: true }) };
+const disk = {
+  schema_version: 1,
+  status: mode === "failed-status" ? "failed" : "passed",
+  decision: mode === "positive-reuse" ? "reuse_existing_reference" : "create_new",
+  candidates: mode === "positive-reuse" ? [{ id: "existing-flow", version: "00.00.001" }] : [],
+  ...(mode === "ok-false" ? { ok: false } : { ok: true })
+};
 const stdout = mode === "mismatch" ? { ...disk, decision: "reuse_existing" } : disk;
 if (mode !== "stale") fs.writeFileSync(path.join(outDir, "outputs", "identity-decision.json"), JSON.stringify(disk, null, 2) + "\\n");
 if (mode === "malformed-stdout") process.stdout.write("not-json\\n");
@@ -154,8 +160,8 @@ test("identity preflight runner fails nonzero, malformed, stale, mismatch, ok:fa
   }
 });
 
-test("only-pending skips only an exact bound execution manifest", () => {
-  const { fixture, result } = runCase("valid");
+test("only-pending skips only exact positive reuse evidence", () => {
+  const { fixture, result } = runCase("positive-reuse");
   assert.equal(result.code, 0, JSON.stringify(result.json));
   assert.equal(result.json.status, "completed");
   const manifestFile = path.join(
@@ -181,7 +187,7 @@ test("only-pending skips only an exact bound execution manifest", () => {
         TIANGONG_LCA_CLI_BIN: fixture.fakeCli,
         FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
         FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
-        FAKE_MODE: "valid",
+        FAKE_MODE: "positive-reuse",
         FAKE_MARKER: fixture.marker,
       },
     },
@@ -215,12 +221,40 @@ test("only-pending skips only an exact bound execution manifest", () => {
         TIANGONG_LCA_CLI_BIN: fixture.fakeCli,
         FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
         FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
-        FAKE_MODE: "valid",
+        FAKE_MODE: "positive-reuse",
         FAKE_MARKER: fixture.marker,
       },
     },
   );
   assert.equal(rerun.code, 0);
+  assert.equal(rerun.json.counts.skipped_bound_execution, 0);
+  assert.equal(fs.readFileSync(fixture.marker, "utf8").trim().split(/\r?\n/u).length, 2);
+});
+
+test("create-new negative search evidence is never reused across runs", () => {
+  const { fixture, result } = runCase("valid");
+  assert.equal(result.code, 0, JSON.stringify(result.json));
+  const rerun = runFoundry(
+    [
+      "dataset-identity-preflight-run",
+      "--index",
+      rel(fixture.indexFile),
+      "--out-dir",
+      rel(path.join(fixture.caseRoot, "run-negative-rerun")),
+      "--only-pending",
+      ...receiptArgs(fixture),
+    ],
+    {
+      env: {
+        TIANGONG_LCA_CLI_BIN: fixture.fakeCli,
+        FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
+        FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+        FAKE_MODE: "valid",
+        FAKE_MARKER: fixture.marker,
+      },
+    },
+  );
+  assert.equal(rerun.code, 0, JSON.stringify(rerun.json));
   assert.equal(rerun.json.counts.skipped_bound_execution, 0);
   assert.equal(fs.readFileSync(fixture.marker, "utf8").trim().split(/\r?\n/u).length, 2);
 });
@@ -247,7 +281,7 @@ test("fresh receipt rotation preserves account-bound only-pending reuse", () => 
     TIANGONG_LCA_CLI_BIN: fixture.fakeCli,
     FOUNDRY_VERIFIED_PROJECT_REF: "qgzvkongdjqiiamzbbts",
     FOUNDRY_VERIFIED_USER_ID: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
-    FAKE_MODE: "valid",
+    FAKE_MODE: "positive-reuse",
     FAKE_MARKER: fixture.marker,
     FAKE_AUTH_RECEIPTS: receiptsFile,
     FAKE_AUTH_MARKER: authMarker,

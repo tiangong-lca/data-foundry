@@ -216,6 +216,15 @@ export function createIdentityPreflightRunCommands({
     );
   }
 
+  function reusablePositiveIdentityReport(report) {
+    const decision = asText(report?.decision).toLowerCase();
+    return (
+      ["reuse", "reuse_existing", "reuse_existing_reference", "block_duplicate"].includes(
+        decision,
+      ) && ensureArray(report?.candidates).length > 0
+    );
+  }
+
   function runDatasetIdentityPreflightRun(options) {
     if (options.help) {
       return {
@@ -580,9 +589,12 @@ export function createIdentityPreflightRunCommands({
               validateBoundExecutionManifest(cachedManifest, executionBinding, cachedReportText).ok
             ) {
               const outputsDir = path.join(outputDir, "outputs");
+              const restoredReport = JSON.parse(cachedReportText);
+              if (!reusablePositiveIdentityReport(restoredReport)) {
+                throw new Error("unsafe negative identity cache entry");
+              }
               fs.mkdirSync(outputsDir, { recursive: true });
               fs.cpSync(resultCacheEntryDir, outputsDir, { recursive: true });
-              const restoredReport = JSON.parse(cachedReportText);
               resultRows.push({
                 ...baseRow,
                 status: "restored_from_bound_cache",
@@ -613,6 +625,9 @@ export function createIdentityPreflightRunCommands({
               .ok
           ) {
             const existingReport = JSON.parse(existingReportText);
+            if (!reusablePositiveIdentityReport(existingReport)) {
+              throw new Error("negative identity evidence must be searched again");
+            }
             resultRows.push({
               ...baseRow,
               status: "skipped_bound_execution",
@@ -738,6 +753,10 @@ export function createIdentityPreflightRunCommands({
         fileExists(path.join(outputDir, "outputs"))
       ) {
         try {
+          const cacheableReport = JSON.parse(fs.readFileSync(reportFile, "utf8"));
+          if (!reusablePositiveIdentityReport(cacheableReport)) {
+            throw new Error("negative identity evidence is not cacheable");
+          }
           fs.mkdirSync(path.dirname(resultCacheEntryDir), { recursive: true });
           // Publish atomically: copy into a process-unique temp dir on the same
           // filesystem, then rename into place. Parallel scope workers share this
