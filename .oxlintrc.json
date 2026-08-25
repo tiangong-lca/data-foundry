@@ -78,6 +78,21 @@
       }
     },
     {
+      "files": [
+        "test/unit/bundle-dataset-types.test.mts",
+        "test/unit/canonical-support-rewrites-contract.test.mts",
+        "test/unit/dataset-payload.test.mts",
+        "test/unit/foundry-runtime-utils-contract.test.mts",
+        "test/unit/import-ledger-contract.test.mts",
+        "test/unit/location-quality-utils-contract.test.mts",
+        "test/unit/prewrite-cleanup-contract.test.mts",
+        "test/unit/workflow-queue-context-contract.test.mts"
+      ],
+      "rules": {
+        "typescript/no-explicit-any": "error"
+      }
+    },
+    {
       "files": ["test/**/*.{js,mjs,cjs,ts,mts,cts}"],
       "rules": {
         "typescript/no-floating-promises": "off",
