@@ -35,7 +35,7 @@ export type RootProofBlocker = {
 };
 
 function rootKey(table: unknown, id: unknown, version: unknown): string {
-  return `${String(table ?? "")}:${String(id ?? "")}@${String(version ?? "00.00.001")}`;
+  return `${String(table ?? "")}:${String(id ?? "")}@${String(version ?? "")}`;
 }
 
 function canonicalJsonValue(value: unknown): unknown {
@@ -141,7 +141,10 @@ export function validateUniqueRootReadbacks(input: {
         code: "root_readback_unexpected",
         message: `Readback contains an unexpected root ${key}.`,
         key,
-        row_index: Number.isInteger(Number(check.row_index)) ? Number(check.row_index) : null,
+        row_index:
+          typeof check.row_index === "number" && Number.isInteger(check.row_index)
+            ? check.row_index
+            : null,
       });
       continue;
     }
@@ -173,12 +176,19 @@ export function validateUniqueRootReadbacks(input: {
     }
     const check = matches[0];
     uniqueReadbackCount += 1;
-    if (Number(check.row_index) !== root.rowIndex) {
+    if (
+      typeof check.row_index !== "number" ||
+      !Number.isInteger(check.row_index) ||
+      check.row_index !== root.rowIndex
+    ) {
       blockers.push({
         code: "root_readback_index_mismatch",
         message: `Root ${key} readback row_index does not match the final rows index.`,
         key,
-        row_index: Number.isInteger(Number(check.row_index)) ? Number(check.row_index) : null,
+        row_index:
+          typeof check.row_index === "number" && Number.isInteger(check.row_index)
+            ? check.row_index
+            : null,
       });
     }
     if (check.status !== "ok") {
@@ -211,7 +221,10 @@ export function validateUniqueRootReadbacks(input: {
         row_index: root.rowIndex,
       });
     }
-    if (Number(check.remote_state_code) !== input.expectedStateCode) {
+    if (
+      typeof check.remote_state_code !== "number" ||
+      check.remote_state_code !== input.expectedStateCode
+    ) {
       blockers.push({
         code: "root_readback_state_mismatch",
         message: `Root ${key} is not in the intended state.`,

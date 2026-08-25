@@ -133,3 +133,17 @@ test("ordinary closeout accepts only exact traceHash normalization while product
   });
   assert.ok(production.blockers.some((item) => item.code === "root_readback_payload_mismatch"));
 });
+
+test("readback evidence requires explicit version and numeric row index", () => {
+  const missingVersion = { ...check(0), version: undefined };
+  const stringIndex = { ...check(1), row_index: "1" };
+  const result = validateUniqueRootReadbacks({
+    intended,
+    checks: [missingVersion, stringIndex],
+    targetUserId: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+    expectedStateCode: 0,
+  });
+  assert.ok(result.blockers.some((item) => item.code === "root_readback_unexpected"));
+  assert.ok(result.blockers.some((item) => item.code === "root_readback_missing"));
+  assert.ok(result.blockers.some((item) => item.code === "root_readback_index_mismatch"));
+});
