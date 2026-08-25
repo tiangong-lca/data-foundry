@@ -7,9 +7,9 @@ import { fileURLToPath } from "node:url";
 import { acceptTraceHashOnlyRemoteVerificationMismatch } from "../lib/remote-verification-accepted-diff.ts";
 import {
   assertFoundryCommandSpecArtifactsCurrent,
+  assertFoundryCommandSpecBindsArtifact,
   commandSpecOptionValue,
   executeFoundryCommandSpecSync,
-  parseFoundryCommandSpec,
 } from "../lib/foundry-command-spec.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -525,8 +525,18 @@ function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, label }) {
   let commitSpec;
   let verifySpec;
   try {
-    commitSpec = parseFoundryCommandSpec(handoffPlan.commands?.commit);
-    verifySpec = parseFoundryCommandSpec(handoffPlan.commands?.post_write_verify);
+    const requiredFinalRowsArtifact = {
+      role: "final_rows",
+      ...handoffPlan.final_rows_artifact,
+    };
+    commitSpec = assertFoundryCommandSpecBindsArtifact(
+      handoffPlan.commands?.commit,
+      requiredFinalRowsArtifact,
+    );
+    verifySpec = assertFoundryCommandSpecBindsArtifact(
+      handoffPlan.commands?.post_write_verify,
+      requiredFinalRowsArtifact,
+    );
   } catch (error) {
     blockers.push({
       code: "handoff_command_spec_invalid",

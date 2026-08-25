@@ -192,6 +192,15 @@ function validateCriticalFlags(argv: readonly string[]): void {
     const name = criticalFlagName(token);
     if (!name) continue;
     counts.set(name, (counts.get(name) ?? 0) + 1);
+    if (token.startsWith(`${name}=`)) {
+      const inlineValue = token.slice(name.length + 1);
+      if (VALUE_FLAGS.has(name) && inlineValue.length === 0) {
+        throw new Error(`CommandSpec critical flag ${name} requires one value.`);
+      }
+      if (BOOLEAN_FLAGS.has(name)) {
+        throw new Error(`CommandSpec boolean flag ${name} must not use an inline value.`);
+      }
+    }
     if (VALUE_FLAGS.has(name) && token === name) {
       const value = argv[index + 1];
       if (!value || value.startsWith("--")) {
@@ -314,6 +323,25 @@ export function assertFoundryCommandSpecArtifactsCurrent(
     if (bytes.byteLength !== artifact.bytes || sha256 !== artifact.sha256) {
       throw new Error(`CommandSpec artifact drift: ${artifact.role} bytes/SHA-256 changed.`);
     }
+  }
+  return spec;
+}
+
+export function assertFoundryCommandSpecBindsArtifact(
+  value: unknown,
+  requiredArtifact: FoundryArtifactFact,
+): FoundryCommandSpec {
+  const spec = parseFoundryCommandSpec(value);
+  const required = parseArtifactFact(requiredArtifact, 0);
+  const matched = spec.binding.artifacts.some(
+    (artifact) =>
+      artifact.role === required.role &&
+      artifact.path === required.path &&
+      artifact.bytes === required.bytes &&
+      artifact.sha256 === required.sha256,
+  );
+  if (!matched) {
+    throw new Error(`CommandSpec required artifact binding does not match: ${required.role}.`);
   }
   return spec;
 }

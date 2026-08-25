@@ -15,8 +15,8 @@ import {
 import { acceptTraceHashOnlyRemoteVerificationMismatch } from "../lib/remote-verification-accepted-diff.ts";
 import {
   assertFoundryCommandSpecArtifactsCurrent,
+  assertFoundryCommandSpecBindsArtifact,
   commandSpecOptionValue,
-  parseFoundryCommandSpec,
 } from "../lib/foundry-command-spec.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.mjs";
 import { stageContract } from "../lib/stage-contract.ts";
@@ -1053,8 +1053,18 @@ async function executeHandoff({ handoffPlanPath, ledgerDir, outDir, logDir, labe
   let commitSpec;
   let verifySpec;
   try {
-    commitSpec = parseFoundryCommandSpec(handoffPlan.commands?.commit);
-    verifySpec = parseFoundryCommandSpec(handoffPlan.commands?.post_write_verify);
+    const requiredFinalRowsArtifact = {
+      role: "final_rows",
+      ...handoffPlan.final_rows_artifact,
+    };
+    commitSpec = assertFoundryCommandSpecBindsArtifact(
+      handoffPlan.commands?.commit,
+      requiredFinalRowsArtifact,
+    );
+    verifySpec = assertFoundryCommandSpecBindsArtifact(
+      handoffPlan.commands?.post_write_verify,
+      requiredFinalRowsArtifact,
+    );
   } catch (error) {
     return {
       status: "blocked",
