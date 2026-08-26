@@ -22,6 +22,10 @@ import {
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const leafPath = path.join(repoRoot, "scripts/lib/bafu-classification/leaf-repair.ts");
+const categoryProjectionPath = path.join(
+  repoRoot,
+  "scripts/lib/bafu-classification/category-map-projection.ts",
+);
 const ownerPath = path.join(repoRoot, "scripts/commands/bafu-leaf-classification-tasks.ts");
 
 function isJsonRecord(value: unknown): value is JsonRecord {
@@ -107,8 +111,9 @@ const processTask: JsonRecord = {
   },
 };
 
-test("BAFU leaf repair is a pure typed leaf and the command owner imports it", () => {
+test("BAFU leaf repair stays pure and the category projection reuses it", () => {
   const moduleSource = fs.readFileSync(leafPath, "utf8");
+  const categoryProjectionSource = fs.readFileSync(categoryProjectionPath, "utf8");
   const ownerSource = fs.readFileSync(ownerPath, "utf8");
 
   assert.doesNotMatch(
@@ -118,7 +123,8 @@ test("BAFU leaf repair is a pure typed leaf and the command owner imports it", (
   assert.doesNotMatch(moduleSource, /^(?:let|var|const)\s+/gmu);
   assert.match(moduleSource, /export type JsonRecord = Record<string, unknown>/u);
   assert.match(moduleSource, /export interface LeafCategorySchema\s*\{/u);
-  assert.match(ownerSource, /from "\.\.\/lib\/bafu-classification\/leaf-repair\.ts"/u);
+  assert.match(categoryProjectionSource, /from "\.\/leaf-repair\.ts"/u);
+  assert.match(ownerSource, /from "\.\.\/lib\/bafu-classification\/category-map-projection\.ts"/u);
   for (const functionName of [
     "normalizedText",
     "classificationDecisionIsBroadFlowProduct",

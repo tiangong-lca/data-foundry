@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   buildBafuLeafCategoryMapProjectReport,
@@ -13,6 +16,7 @@ import {
 import type { JsonRecord } from "../../scripts/lib/bafu-classification/leaf-repair.ts";
 
 const contextSha = "a".repeat(64);
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 function textValue(value: unknown): string {
   if (typeof value === "string") return value.trim();
@@ -295,6 +299,25 @@ function semanticSnapshot(projection: BafuLeafCategoryMapProjection): JsonRecord
     category_manual_review: projection.categoryManualReview,
   };
 }
+
+test("category-map semantics stay below the command I/O boundary and module ceilings", () => {
+  const moduleSource = fs.readFileSync(
+    path.join(repoRoot, "scripts/lib/bafu-classification/category-map-projection.ts"),
+    "utf8",
+  );
+  const ownerSource = fs.readFileSync(
+    path.join(repoRoot, "scripts/commands/bafu-leaf-classification-tasks.ts"),
+    "utf8",
+  );
+  assert.ok(moduleSource.trimEnd().split("\n").length <= 800);
+  assert.ok(ownerSource.trimEnd().split("\n").length <= 500);
+  assert.doesNotMatch(
+    moduleSource,
+    /from\s+["']node:|\bprocess\.(?:env|cwd|argv|platform)\b|\bfetch\s*\(|\bspawn(?:Sync)?\s*\(/u,
+  );
+  assert.match(moduleSource, /from "\.\/leaf-repair\.ts"/u);
+  assert.match(ownerSource, /from "\.\.\/lib\/bafu-classification\/category-map-projection\.ts"/u);
+});
 
 test("category-map projection freezes resolved and fail-closed BAFU leaf artifacts", () => {
   const projection = projectBafuLeafCategoryMapArtifacts({
