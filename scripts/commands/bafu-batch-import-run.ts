@@ -27,6 +27,14 @@ import {
   selectScopesForRun,
   selectionOrderOption,
 } from "../lib/batch-orchestration/scope-selection.ts";
+import {
+  createBatchScopeExecutionService,
+  type BatchScopeExecutionPaths as BatchPaths,
+} from "../lib/batch-orchestration/scope-execution.ts";
+import {
+  createBatchScopePreparationService,
+  type BatchScopeMaterializedRows as MaterializedRows,
+} from "../lib/batch-orchestration/scope-preparation.ts";
 import { createSupportIdentityCacheService } from "../lib/batch-orchestration/support-identity-cache.ts";
 import {
   createUniverseCoverageService,
@@ -125,62 +133,6 @@ interface IdentityPatchBlocked extends JsonRecord {
 }
 
 type IdentityPatchResult = IdentityPatchCompleted | IdentityPatchBlocked;
-
-interface MaterializedRows {
-  flowRowsFile: string | null;
-  processRowsFile: string | null;
-  sourceRowsFile: string | null;
-  supportRowsFile: string | null;
-  flowpropertyRowsFile: string | null;
-  unitgroupRowsFile: string | null;
-  classificationQueue: string | null;
-  locationQueue: string | null;
-  identityPreflightIndex: string | null;
-}
-
-interface BatchPaths extends JsonRecord {
-  runDir: string;
-  outDir: string;
-  scopeFile: string;
-  processBundlesDir: string;
-  libraryClassificationDecisions: string | null;
-  scopeCheckpoints: string;
-  okFlows: string;
-  okProcesses: string;
-  okScopes: string;
-  blockedHumanReview: string;
-  blockedHumanReviewActive: string;
-  blockedHumanReviewResolved: string;
-  blocked_human_review: string;
-  blocked_reference_closure: string;
-  blocked_remote_write: string;
-  blockedOther: string;
-  failedRetry: string;
-  supportIdentityCache: string;
-  preflightPlan: string;
-  bafuFamilySignatures: string;
-  resolutionRewritesByProcess: Map<string, JsonRecord[]>;
-  applyResolutionRewritesMode: boolean;
-}
-
-interface ScopeActionInput {
-  stage: string;
-  blocker: JsonRecord;
-  report: string | null;
-}
-
-interface RunOneScopeInput {
-  scope: JsonRecord;
-  familySignature: BafuFamilySignature;
-  options: JsonRecord;
-  paths: BatchPaths;
-  schemas: SchemaPaths;
-  verifiedScopes: Set<string>;
-  verifiedFlows: Set<string>;
-  verifiedFlowRowsByKey: Map<string, JsonRecord>;
-  blockedScopes: Set<string>;
-  workerIndex?: number;
-}
 
 interface SupportFinalizeInput {
   type: string;
@@ -2535,970 +2487,6 @@ function enforceSharedContextCacheCap(
   }
 }
 
-async function runOneScope({
-  scope,
-  familySignature,
-  options,
-  paths,
-  schemas,
-  verifiedScopes,
-  verifiedFlows,
-  verifiedFlowRowsByKey,
-  blockedScopes,
-}: RunOneScopeInput): Promise<JsonRecord> {
-  const processId = asText(scope.process_id || scope.id);
-  const processVersion = asText(scope.process_version || scope.version) || "00.00.001";
-  const targetUserId = asText(options.targetUserId);
-  const stateCode = integerOption(options.stateCode, 0) ?? 0;
-  const scopeDir = path.join(paths.outDir, "scopes", processId);
-  const logDir = path.join(scopeDir, "logs");
-  const ledgerDir = path.join(scopeDir, "import-ledger");
-  const stages: JsonRecord[] = [];
-  const checkpointBase = {
-    schema_version: 1,
-    generated_at_utc: nowIso(),
-    process_id: processId,
-    process_version: processVersion,
-    scope_lock: `process:${processId}:${processVersion}`,
-    ...bafuFamilyPlanFields(familySignature),
-  };
-  const rerunCommand = commandString([
-    process.execPath,
-    foundryEntryPath,
-    commandName,
-    "--scope-file",
-    repoRelative(paths.scopeFile),
-    "--process-bundles-dir",
-    repoRelative(paths.processBundlesDir),
-    "--run-dir",
-    repoRelative(paths.runDir),
-    "--out-dir",
-    repoRelative(paths.outDir),
-    "--process-id",
-    processId,
-    "--commit",
-    "--parallel",
-    "1",
-  ]);
-
-  fs.mkdirSync(scopeDir, { recursive: true });
-  if (verifiedScopes.has(`${processId}@${processVersion}`) && !booleanOption(options.force)) {
-    const checkpoint = { ...checkpointBase, state: "skipped_already_verified" };
-    appendJsonLine(paths.scopeCheckpoints, checkpoint);
-    return { status: "skipped", checkpoint, stages };
-  }
-  const explicitProcessIds = new Set(requestedProcessIdValues(options));
-  if (
-    blockedScopes?.has(`${processId}@${processVersion}`) &&
-    !booleanOption(options.force) &&
-    !explicitProcessIds.has(processId)
-  ) {
-    const checkpoint = { ...checkpointBase, state: "skipped_blocked_deferred" };
-    appendJsonLine(paths.scopeCheckpoints, checkpoint);
-    return { status: "skipped_blocked", checkpoint, stages };
-  }
-
-  appendJsonLine(paths.scopeCheckpoints, { ...checkpointBase, state: "started" });
-
-  const block = ({ stage, blocker, report }: ScopeActionInput): JsonRecord => {
-    const row = blockRow({ scope, stage, blocker, report, rerunCommand });
-    appendJsonLine(paths.blockedHumanReview, row);
-    appendJsonLine(
-      asText(paths[`blocked_${categoryForBlocker(row.code).replace(/-/gu, "_")}`]) ||
-        paths.blockedOther,
-      row,
-    );
-    appendJsonLine(paths.scopeCheckpoints, {
-      ...checkpointBase,
-      state: "blocked_deferred",
-      stage,
-      code: row.code,
-    });
-    return {
-      status: "blocked",
-      checkpoint: { ...checkpointBase, state: "blocked_deferred" },
-      block: row,
-      stages,
-    };
-  };
-
-  const fail = ({ stage, blocker, report }: ScopeActionInput): JsonRecord => {
-    const row = blockRow({ scope, stage, blocker, report, rerunCommand });
-    appendJsonLine(paths.failedRetry, row);
-    appendJsonLine(paths.blocked_remote_write, row);
-    appendJsonLine(paths.scopeCheckpoints, {
-      ...checkpointBase,
-      state: "failed_retryable",
-      stage,
-      code: row.code,
-    });
-    return {
-      status: "failed",
-      checkpoint: { ...checkpointBase, state: "failed_retryable" },
-      block: row,
-      stages,
-    };
-  };
-
-  const defer = ({ stage, blocker, report }: ScopeActionInput): JsonRecord => {
-    const retryable = retryableStageFailure({ stage, blocker, report });
-    if (!retryable) return block({ stage, blocker, report });
-    return fail({
-      stage,
-      blocker: {
-        ...blocker,
-        retryable: true,
-        retryable_reason_code: retryable.code,
-        retryable_reason: retryable.message,
-        required_human_action:
-          "Do not manually curate this scope for the recorded stage failure. Restore CLI/npm/network availability or wait for remote consistency, then rerun the exact scope command.",
-      },
-      report,
-    });
-  };
-
-  const materializedDir = path.join(scopeDir, "materialized");
-  const materialize = await runArgvStage({
-    stage: "materialize",
-    argv: foundryCommand("dataset-bundle-sample-rows", {
-      bundlesDir: repoRelative(paths.processBundlesDir),
-      processId,
-      outDir: repoRelative(materializedDir),
-      profile: activeProfile(),
-      // Non-BAFU profiles must not inherit the BAFU FOEN library contact; the
-      // profile config supplies the dataset-appropriate library contact (e.g. NREL
-      // for USLCI). BAFU passes nothing here, keeping its FOEN default unchanged.
-      ...(bafuBatchConfig.libraryContact || {}),
-    }),
-    logDir,
-    reportPath: path.join(materializedDir, "dataset-bundle-sample-rows-report.json"),
-  });
-  stages.push(materialize);
-  const materializedReport = materialize.json;
-  const fatalMaterializeBlocker = recordArray(materializedReport?.blockers).find((blocker) =>
-    [
-      "requested_process_bundle_missing",
-      "bundle_row_identity_missing",
-      "process_scope_dependency_unresolved",
-    ].includes(String(blocker?.code || "")),
-  );
-  if (!materializedReport || fatalMaterializeBlocker) {
-    return defer({
-      stage: "materialize",
-      blocker:
-        fatalMaterializeBlocker ??
-        firstBlocker(materializedReport, "materialize_not_ready", "Bundle materialization failed."),
-      report: path.join(materializedDir, "dataset-bundle-sample-rows-report.json"),
-    });
-  }
-  const materializedFiles = jsonRecord(materializedReport.files);
-  const materializedRowFiles = jsonRecord(materializedFiles.rows);
-  const materialized: MaterializedRows = {
-    flowRowsFile: resolveRepoPath(materializedRowFiles.flow),
-    processRowsFile: resolveRepoPath(materializedRowFiles.process),
-    sourceRowsFile: resolveRepoPath(materializedRowFiles.source),
-    supportRowsFile: resolveRepoPath(materializedRowFiles.support),
-    flowpropertyRowsFile: resolveRepoPath(materializedRowFiles.flowproperty),
-    unitgroupRowsFile: resolveRepoPath(materializedRowFiles.unitgroup),
-    classificationQueue: resolveRepoPath(materializedFiles.classification_authoring_queue),
-    locationQueue: resolveRepoPath(materializedFiles.location_authoring_queue),
-    identityPreflightIndex: resolveRepoPath(materializedFiles.identity_preflight_requests),
-  };
-  const materializedProcessRowsFile = materialized.processRowsFile;
-  if (!materializedProcessRowsFile || !fileExists(materializedProcessRowsFile)) {
-    return defer({
-      stage: "materialize",
-      blocker: {
-        code: "materialized_process_rows_missing",
-        message: "Materialized process rows are missing.",
-      },
-      report: path.join(materializedDir, "dataset-bundle-sample-rows-report.json"),
-    });
-  }
-
-  const classificationTaskDir = path.join(scopeDir, "classification-task");
-  const processContext = defaultContext(paths.runDir, "process");
-  const classificationTask = await runArgvStage({
-    stage: "classification.task",
-    argv: [
-      process.execPath,
-      foundryEntryPath,
-      "dataset-classification-decision-task-build",
-      "--classification-queue",
-      repoRelative(materialized.classificationQueue),
-      "--schema-file",
-      repoRelative(processContext.schemaFile),
-      "--yaml-file",
-      repoRelative(processContext.yamlFile),
-      "--ruleset-file",
-      repoRelative(processContext.rulesetFile),
-      "--classification-schema",
-      schemas.allClassification.map(repoRelative).join(","),
-      "--location-schema",
-      repoRelative(schemas.location),
-      "--out-dir",
-      repoRelative(classificationTaskDir),
-      "--shared-context-cache-dir",
-      repoRelative(path.join(paths.runDir, "shared-context-cache")),
-    ],
-    logDir,
-    reportPath: path.join(classificationTaskDir, "classification-decision-task-report.json"),
-  });
-  stages.push(classificationTask);
-  if (
-    !statusIs(classificationTask.json, [
-      "ready_for_ai_classification_decisions",
-      "ready_no_classification_actions",
-    ])
-  ) {
-    return defer({
-      stage: "classification.task",
-      blocker: firstBlocker(
-        classificationTask.json,
-        "classification_task_not_ready",
-        "Classification decision task did not become ready.",
-      ),
-      report: path.join(classificationTaskDir, "classification-decision-task-report.json"),
-    });
-  }
-
-  let classificationApplyReport: string | null = null;
-  let flowClassifiedRows: string | null = materialized.flowRowsFile;
-  let processClassifiedRows = materializedProcessRowsFile;
-  if (statusIs(classificationTask.json, ["ready_for_ai_classification_decisions"])) {
-    const classificationProjectionDir = path.join(scopeDir, "classification-projection");
-    const classificationProjection = await runArgvStage({
-      stage: "classification.project",
-      argv: foundryCommand("dataset-library-classification-decisions-project", {
-        classificationQueue: repoRelative(materialized.classificationQueue),
-        libraryDecisions: repoRelative(paths.libraryClassificationDecisions),
-        decisionTask: repoRelative(
-          path.join(classificationTaskDir, "classification-decision-task.json"),
-        ),
-        outDir: repoRelative(classificationProjectionDir),
-      }),
-      logDir,
-      reportPath: path.join(
-        classificationProjectionDir,
-        "dataset-library-classification-decisions-project-report.json",
-      ),
-    });
-    stages.push(classificationProjection);
-    if (!statusIs(classificationProjection.json, ["completed", "completed_with_manual_review"])) {
-      return defer({
-        stage: "classification.project",
-        blocker: firstBlocker(
-          classificationProjection.json,
-          "classification_projection_not_completed",
-          "Library classification decisions could not be projected to this scope.",
-        ),
-        report: path.join(
-          classificationProjectionDir,
-          "dataset-library-classification-decisions-project-report.json",
-        ),
-      });
-    }
-    const schemaRepair = repairClassificationDecisionCodes({
-      decisionsFile: path.join(classificationProjectionDir, "classification-decisions.jsonl"),
-      schemas,
-      outDir: classificationProjectionDir,
-    });
-    if (schemaRepair.unresolved.length > 0) {
-      return defer({
-        stage: "classification.schema_repair",
-        blocker: {
-          code: "classification_decision_code_invalid",
-          message:
-            "Projected classification decisions contain codes that are not valid in the bundled TIDAS category schema.",
-          manual_review_rows: repoRelative(schemaRepair.unresolvedPath),
-        },
-        report: path.join(
-          classificationProjectionDir,
-          "dataset-library-classification-decisions-project-report.json",
-        ),
-      });
-    }
-    const manualRows = path.join(
-      classificationProjectionDir,
-      "classification-decisions.manual-review.jsonl",
-    );
-    if (readJsonLines(manualRows).length > 0) {
-      return defer({
-        stage: "classification.project",
-        blocker: {
-          code: "classification_requires_human_review",
-          message:
-            "This scope still has classification decisions without a completed library-level decision.",
-          manual_review_rows: repoRelative(manualRows),
-        },
-        report: path.join(
-          classificationProjectionDir,
-          "dataset-library-classification-decisions-project-report.json",
-        ),
-      });
-    }
-    const classificationApplyDir = path.join(scopeDir, "classification-apply");
-    const classificationApply = await runArgvStage({
-      stage: "classification.apply",
-      argv: foundryCommand("dataset-classification-decisions-apply", {
-        classificationQueue: repoRelative(materialized.classificationQueue),
-        decisions: repoRelative(
-          path.join(classificationProjectionDir, "classification-decisions.jsonl"),
-        ),
-        decisionTask: repoRelative(
-          path.join(classificationTaskDir, "classification-decision-task.json"),
-        ),
-        outDir: repoRelative(classificationApplyDir),
-      }),
-      logDir,
-      reportPath: path.join(classificationApplyDir, "classification-decisions-apply-report.json"),
-    });
-    stages.push(classificationApply);
-    classificationApplyReport = reportFile(
-      classificationApply.json,
-      path.join(classificationApplyDir, "classification-decisions-apply-report.json"),
-    );
-    if (!statusIs(classificationApply.json, ["completed"])) {
-      return defer({
-        stage: "classification.apply",
-        blocker: firstBlocker(
-          classificationApply.json,
-          "classification_apply_not_completed",
-          "Classification decisions did not apply cleanly.",
-        ),
-        report: classificationApplyReport,
-      });
-    }
-    flowClassifiedRows = outputRowsByStem(classificationApply.json, "flows.") || flowClassifiedRows;
-    processClassifiedRows =
-      outputRowsByStem(classificationApply.json, "processes.") || processClassifiedRows;
-  }
-
-  let flowRowsForFinalize: string | null = flowClassifiedRows;
-  let locationApplyReport: string | null = null;
-  if (
-    fileExists(materialized.locationQueue) &&
-    readJsonLines(materialized.locationQueue).length > 0 &&
-    fileExists(flowClassifiedRows)
-  ) {
-    const locationTaskDir = path.join(scopeDir, "location-task");
-    const flowContext = defaultContext(paths.runDir, "flow");
-    const locationTask = await runArgvStage({
-      stage: "location.task",
-      argv: [
-        process.execPath,
-        foundryEntryPath,
-        "dataset-location-decision-task-build",
-        "--location-queue",
-        repoRelative(materialized.locationQueue),
-        "--rows-file",
-        repoRelative(flowClassifiedRows),
-        "--schema-file",
-        repoRelative(flowContext.schemaFile),
-        "--yaml-file",
-        repoRelative(flowContext.yamlFile),
-        "--ruleset-file",
-        repoRelative(flowContext.rulesetFile),
-        "--classification-schema",
-        repoRelative(schemas.flowProductCategory),
-        "--location-schema",
-        repoRelative(schemas.location),
-        "--out-dir",
-        repoRelative(locationTaskDir),
-        "--shared-context-cache-dir",
-        repoRelative(path.join(paths.runDir, "shared-context-cache")),
-      ],
-      logDir,
-      reportPath: path.join(locationTaskDir, "location-decision-task-report.json"),
-    });
-    stages.push(locationTask);
-    if (
-      !statusIs(locationTask.json, ["ready_for_ai_location_decisions", "ready_no_location_actions"])
-    ) {
-      return defer({
-        stage: "location.task",
-        blocker: firstBlocker(
-          locationTask.json,
-          "location_task_not_ready",
-          "Location task did not become ready.",
-        ),
-        report: path.join(locationTaskDir, "location-decision-task-report.json"),
-      });
-    }
-    if (statusIs(locationTask.json, ["ready_for_ai_location_decisions"])) {
-      const locationDecisionDir = path.join(scopeDir, "location-decisions");
-      const locationSuggest = await runArgvStage({
-        stage: "location.suggest",
-        argv: foundryCommand("dataset-location-decisions-suggest", {
-          locationQueue: repoRelative(
-            findOneFile(locationTaskDir, /^location-authoring-queue\..*\.jsonl$/u) ||
-              materialized.locationQueue,
-          ),
-          decisionTask: repoRelative(path.join(locationTaskDir, "location-decision-task.json")),
-          locationSchema: repoRelative(schemas.location),
-          outDir: repoRelative(locationDecisionDir),
-        }),
-        logDir,
-        reportPath: path.join(
-          locationDecisionDir,
-          "dataset-location-decisions-suggest-report.json",
-        ),
-      });
-      stages.push(locationSuggest);
-      if (!statusIs(locationSuggest.json, ["completed", "completed_with_manual_review"])) {
-        return defer({
-          stage: "location.suggest",
-          blocker: firstBlocker(
-            locationSuggest.json,
-            "location_suggest_not_completed",
-            "Location decisions could not be suggested.",
-          ),
-          report: path.join(locationDecisionDir, "dataset-location-decisions-suggest-report.json"),
-        });
-      }
-      const manualRows = path.join(locationDecisionDir, "location-decisions.manual-review.jsonl");
-      if (readJsonLines(manualRows).length > 0) {
-        return defer({
-          stage: "location.suggest",
-          blocker: {
-            code: "location_requires_human_review",
-            message:
-              "This scope still has location decisions without one provable TIDAS location code.",
-            manual_review_rows: repoRelative(manualRows),
-          },
-          report: path.join(locationDecisionDir, "dataset-location-decisions-suggest-report.json"),
-        });
-      }
-      const taskQueue =
-        findOneFile(locationTaskDir, /^location-authoring-queue\..*\.jsonl$/u) ||
-        materialized.locationQueue;
-      const locationApplyDir = path.join(scopeDir, "location-apply");
-      const locationApply = await runArgvStage({
-        stage: "location.apply",
-        argv: foundryCommand("dataset-location-decisions-apply", {
-          locationQueue: repoRelative(taskQueue),
-          decisions: repoRelative(path.join(locationDecisionDir, "location-decisions.jsonl")),
-          decisionTask: repoRelative(path.join(locationTaskDir, "location-decision-task.json")),
-          outDir: repoRelative(locationApplyDir),
-        }),
-        logDir,
-        reportPath: path.join(locationApplyDir, "location-decisions-apply-report.json"),
-      });
-      stages.push(locationApply);
-      locationApplyReport = reportFile(
-        locationApply.json,
-        path.join(locationApplyDir, "location-decisions-apply-report.json"),
-      );
-      if (!statusIs(locationApply.json, ["completed"])) {
-        return defer({
-          stage: "location.apply",
-          blocker: firstBlocker(
-            locationApply.json,
-            "location_apply_not_completed",
-            "Location decisions did not apply cleanly.",
-          ),
-          report: locationApplyReport,
-        });
-      }
-      flowRowsForFinalize = outputRowsByStem(locationApply.json, "flows.") || flowRowsForFinalize;
-    }
-  }
-
-  const flowRows = readRows(flowRowsForFinalize);
-  const flowIds = flowRows
-    .map((row) => datasetIdentity(row, "flow"))
-    .filter((identity) => identity.id);
-  const flowVerificationPlan = flowRowsPendingVerification(flowRows, verifiedFlows);
-  const unverifiedFlowIds = flowVerificationPlan.pendingIdentities;
-  const carriedForwardFlows = writeScopeCarriedForwardVerifiedFlowRows({
-    ledgerDir,
-    processId,
-    verifiedIdentities: flowVerificationPlan.verifiedIdentities,
-    verifiedFlowRowsByKey,
-  });
-  if (carriedForwardFlows.count > 0) {
-    stages.push({
-      stage: "flow.carry_forward_verified",
-      status: "completed",
-      exit_code: 0,
-      report: null,
-      counts: {
-        carried_forward_verified_flows: carriedForwardFlows.count,
-      },
-      carried_forward_verified_identities: carriedForwardFlows.rows,
-      ledger: repoRelative(carriedForwardFlows.ledger),
-    });
-  }
-  if (
-    flowRows.length > 0 &&
-    flowVerificationPlan.pendingRows.length > 0 &&
-    flowVerificationPlan.pendingRows.length < flowRows.length
-  ) {
-    const flowFilterDir = path.join(scopeDir, "flow-filter-verified");
-    const pendingRowsFile = path.join(flowFilterDir, "flows.unverified.jsonl");
-    const filterReportPath = path.join(flowFilterDir, "flow-filter-verified-report.json");
-    writeJsonLines(pendingRowsFile, flowVerificationPlan.pendingRows);
-    writeJson(filterReportPath, {
-      schema_version: 1,
-      generated_at_utc: nowIso(),
-      status: "completed",
-      input_rows_file: repoRelative(flowRowsForFinalize),
-      output_rows_file: repoRelative(pendingRowsFile),
-      policy:
-        "Only flow rows not present in ok.flows.verified are passed to flow finalize/commit. Already verified flows remain remote dependencies for the process scope.",
-      counts: {
-        input_rows: flowRows.length,
-        output_rows: flowVerificationPlan.pendingRows.length,
-        skipped_verified_rows: flowVerificationPlan.verifiedRows.length,
-      },
-      pending_identities: flowVerificationPlan.pendingIdentities,
-      skipped_verified_identities: flowVerificationPlan.verifiedIdentities,
-      files: {
-        input_rows: repoRelative(flowRowsForFinalize),
-        output_rows: repoRelative(pendingRowsFile),
-        report: repoRelative(filterReportPath),
-      },
-    });
-    stages.push({
-      stage: "flow.filter_verified",
-      status: "completed",
-      exit_code: 0,
-      report: repoRelative(filterReportPath),
-      counts: {
-        input_rows: flowRows.length,
-        output_rows: flowVerificationPlan.pendingRows.length,
-        skipped_verified_rows: flowVerificationPlan.verifiedRows.length,
-      },
-    });
-    flowRowsForFinalize = pendingRowsFile;
-  }
-  let flowIdentityReport: string | null = null;
-  let flowIdentityReportsForProcess = existingIdentityApplyReportsWithReferenceRewrites(
-    scopeDir,
-    "flow",
-  );
-  if (flowRows.length > 0 && unverifiedFlowIds.length > 0) {
-    const flowPreDir = path.join(scopeDir, "flow-pre-finalize");
-    const flowPreReportPath = path.join(flowPreDir, "dataset-post-authoring-finalize-report.json");
-    const flowPreArgs = buildFinalizeArgs({
-      type: "flow",
-      rowsFile: flowRowsForFinalize!,
-      outDir: flowPreDir,
-      ledgerDir,
-      sourceSupportRowsFile: materialized.supportRowsFile,
-      sourceRowsFile: materialized.sourceRowsFile,
-      flowpropertyRowsFile: materialized.flowpropertyRowsFile,
-      unitgroupRowsFile: materialized.unitgroupRowsFile,
-      identityPreflightIndex: materialized.identityPreflightIndex,
-      context: defaultContext(paths.runDir, "flow"),
-      classificationQueue: materialized.classificationQueue,
-      locationQueue: materialized.locationQueue,
-      classificationApplyReport,
-      locationApplyReport,
-      identityApplyReports: [],
-      targetUserId,
-      stateCode,
-    });
-    const flowPre = await runFinalizeStage({
-      stage: "flow.pre_finalize",
-      args: flowPreArgs,
-      reportPath: flowPreReportPath,
-      logDir,
-    });
-    stages.push(flowPre);
-    if (flowPre.finalize_report_missing) {
-      return fail({
-        stage: "flow.pre_finalize",
-        blocker: firstBlocker(
-          flowPre.json,
-          "finalize_report_missing",
-          "Flow pre-finalize did not write the expected report.",
-        ),
-        report: flowPreReportPath,
-      });
-    }
-    // For a never-before-imported library, the dependency-flow references the
-    // shared library contact (ownership/data-entry) which is not yet remote and
-    // is not in the flow's own write scope, so pre-finalize blocks on reference
-    // closure. Commit the flow's source/contact support inline here (mirroring the
-    // process path) so the library contact lands remotely and the re-finalized
-    // flow proves closure. Gated off for BAFU (its FOEN contact already exists).
-    if (commitFlowSupportInline()) {
-      flowPre.json = await maybeCommitSupportThenRerunFinalize({
-        type: "flow",
-        finalizeReport: flowPre.json!,
-        finalizeReportPath: flowPreReportPath,
-        finalizeArgs: flowPreArgs,
-        ledgerDir,
-        scopeDir,
-        logDir,
-        stages,
-        supportIdentityCacheFile: paths.supportIdentityCache,
-      });
-    }
-    const flowPreFiles = jsonRecord(flowPre.json?.files);
-    let flowReadyRows = resolveRepoPath(flowPreFiles.final_rows) || flowRowsForFinalize!;
-    let flowPatchCollectReport: string | null = null;
-    let flowPatchApplyReport: string | null = null;
-    // FIX A (apply-gate): in deterministic resolution-rewrite mode the flow identity
-    // apply MUST run even when pre-finalize reports ready_for_remote_write. A "ready"
-    // status there means the source elementary flows would be MINTED as account-local
-    // as-is — but the library resolution already proved they reuse canonical. Forcing
-    // runIdentityAndPatch applies those reuses (rewrites references to canonical and
-    // drops reused flows from the write set) instead of wrongly minting them. Without
-    // this, scopes whose per-scope preflight surfaced no candidates skip identity
-    // entirely and over-mint (e.g. 00e711cb: 27/27 reuse-eligible minted). Gated on the
-    // mode + the presence of proven rewrites for THIS process, so BAFU is unaffected.
-    const deterministicFlowReuse =
-      Boolean(paths.applyResolutionRewritesMode) &&
-      (paths.resolutionRewritesByProcess?.get(processId)?.length || 0) > 0;
-    if (flowPre.json?.status !== "ready_for_remote_write" || deterministicFlowReuse) {
-      const flowAuthoring = await runIdentityAndPatch({
-        type: "flow",
-        inputRowsFile: flowReadyRows,
-        preFinalizeReport: flowPre.json!,
-        scopeDir,
-        runDir: paths.runDir,
-        logDir,
-        stages,
-        // FIX A: deterministic identity application from the authoritative
-        // library-resolution rewrites for THIS process (flow-only; process has no
-        // flow reuse). undefined rewrite rows -> mode no-ops, falling back to the
-        // unchanged carry-forward path.
-        resolutionRewriteRows: paths.resolutionRewritesByProcess?.get(processId),
-        applyResolutionRewritesMode: Boolean(paths.applyResolutionRewritesMode),
-      });
-      if (flowAuthoring.status !== "completed") {
-        return defer({
-          stage: "flow.authoring",
-          blocker: flowAuthoring.blocker,
-          report: flowAuthoring.report ?? null,
-        });
-      }
-      flowReadyRows = flowAuthoring.rowsFile;
-      flowIdentityReport = flowAuthoring.identityApplyReport;
-      flowIdentityReportsForProcess = uniqueExistingPaths([
-        ...flowIdentityReportsForProcess,
-        flowIdentityReport,
-      ]);
-      flowPatchCollectReport = flowAuthoring.patchCollectReport;
-      flowPatchApplyReport = flowAuthoring.patchApplyReport;
-      const recoveryBlocker = preFinalizeRecoveryBlocker({
-        type: "flow",
-        finalizeReport: flowPre.json!,
-        recovery: flowAuthoring,
-      });
-      if (recoveryBlocker) {
-        return defer({
-          stage: "flow.finalize",
-          blocker: recoveryBlocker,
-          report: flowPreReportPath,
-        });
-      }
-    }
-    const flowReadyRowCount = readRows(flowReadyRows).length;
-    if (flowReadyRowCount === 0) {
-      stages.push({
-        stage: "flow.finalize",
-        status: "skipped_no_write_rows_after_identity_reuse",
-        exit_code: 0,
-        rows_file: repoRelative(flowReadyRows),
-        identity_decision_apply_report: flowIdentityReport
-          ? repoRelative(flowIdentityReport)
-          : null,
-      });
-    } else {
-      const flowCommit = await finalizeAndCommitDataset({
-        type: "flow",
-        rowsFile: flowReadyRows,
-        scopeDir,
-        runDir: paths.runDir,
-        materialized,
-        classificationApplyReport,
-        locationApplyReport,
-        identityApplyReports: flowIdentityReport ? [flowIdentityReport] : [],
-        patchCollectReport: flowPatchCollectReport,
-        patchApplyReport: flowPatchApplyReport,
-        targetUserId,
-        stateCode,
-        logDir,
-        ledgerDir,
-        stages,
-        supportIdentityCacheFile: paths.supportIdentityCache,
-      });
-      if (flowCommit.status === "failed") {
-        return fail({
-          stage: "flow.commit",
-          blocker: flowCommit.blocker,
-          report: flowCommit.report,
-        });
-      }
-      if (flowCommit.status !== "completed") {
-        if (categoryForBlocker(flowCommit.blocker?.code) === "remote-write") {
-          return fail({
-            stage: "flow.finalize",
-            blocker: flowCommit.blocker,
-            report: flowCommit.report,
-          });
-        }
-        return defer({
-          stage: "flow.finalize",
-          blocker: flowCommit.blocker,
-          report: flowCommit.report,
-        });
-      }
-      const committedFinalRows = resolveRepoPath(
-        jsonRecord(flowCommit.finalizeReport.files).final_rows,
-      );
-      const committedFlowRows =
-        readRows(committedFinalRows).length > 0
-          ? readRows(committedFinalRows)
-          : readRows(flowReadyRows);
-      for (const identity of committedFlowRows
-        .map((row) => datasetIdentity(row, "flow"))
-        .filter((entry) => entry.id)) {
-        const identityKey = datasetIdentityKey(identity);
-        if (!identityKey) continue;
-        const alreadyVerified = verifiedFlows.has(identityKey);
-        verifiedFlows.add(identityKey);
-        invalidateIdentityPreflightResultCacheEntry(
-          `flow:${identity.id}@${identity.version || "00.00.001"}`,
-        );
-        const okFlowRow = okDatasetRow({
-          type: "flow",
-          id: identity.id,
-          version: identity.version,
-          processId,
-          report: flowCommit.report,
-          files: {
-            finalize_report: repoRelative(flowCommit.report),
-            closeout_report: repoRelative(flowCommit.handoff.closeoutReportPath),
-          },
-        });
-        verifiedFlowRowsByKey?.set(identityKey, {
-          ...okFlowRow,
-          source_ledger_file: repoRelative(paths.okFlows),
-        });
-        if (alreadyVerified) continue;
-        appendJsonLine(paths.okFlows, okFlowRow);
-      }
-    }
-  }
-
-  const processPreDir = path.join(scopeDir, "process-pre-finalize");
-  const processPreReportPath = path.join(
-    processPreDir,
-    "dataset-post-authoring-finalize-report.json",
-  );
-  const processPreArgs = buildFinalizeArgs({
-    type: "process",
-    rowsFile: processClassifiedRows,
-    outDir: processPreDir,
-    ledgerDir,
-    sourceSupportRowsFile: materialized.supportRowsFile,
-    sourceRowsFile: materialized.sourceRowsFile,
-    flowpropertyRowsFile: materialized.flowpropertyRowsFile,
-    unitgroupRowsFile: materialized.unitgroupRowsFile,
-    identityPreflightIndex: materialized.identityPreflightIndex,
-    context: defaultContext(paths.runDir, "process"),
-    classificationQueue: materialized.classificationQueue,
-    locationQueue: materialized.locationQueue,
-    classificationApplyReport,
-    locationApplyReport,
-    identityApplyReports: flowIdentityReportsForProcess,
-    targetUserId,
-    stateCode,
-  });
-  const processPre = await runFinalizeStage({
-    stage: "process.pre_finalize",
-    args: processPreArgs,
-    reportPath: processPreReportPath,
-    logDir,
-  });
-  stages.push(processPre);
-  if (processPre.finalize_report_missing) {
-    return fail({
-      stage: "process.pre_finalize",
-      blocker: firstBlocker(
-        processPre.json,
-        "finalize_report_missing",
-        "Process pre-finalize did not write the expected report.",
-      ),
-      report: processPreReportPath,
-    });
-  }
-  const processPreReport = await maybeCommitSupportThenRerunFinalize({
-    type: "process",
-    finalizeReport: processPre.json!,
-    finalizeReportPath: processPreReportPath,
-    finalizeArgs: processPreArgs,
-    ledgerDir,
-    scopeDir,
-    logDir,
-    stages,
-    supportIdentityCacheFile: paths.supportIdentityCache,
-  });
-  let processRowsForE2e =
-    resolveRepoPath(jsonRecord(processPreReport.files).final_rows) || processClassifiedRows;
-  let processIdentityReport: string | null = null;
-  let processPatchCollectReport: string | null = null;
-  let processPatchApplyReport: string | null = null;
-  if (processPreReport?.status !== "ready_for_remote_write") {
-    const processAuthoring = await runIdentityAndPatch({
-      type: "process",
-      inputRowsFile: processRowsForE2e,
-      preFinalizeReport: processPreReport,
-      scopeDir,
-      runDir: paths.runDir,
-      logDir,
-      stages,
-    });
-    if (processAuthoring.status !== "completed") {
-      return defer({
-        stage: "process.authoring",
-        blocker: processAuthoring.blocker,
-        report: processAuthoring.report ?? null,
-      });
-    }
-    processRowsForE2e = processAuthoring.rowsFile;
-    processIdentityReport = processAuthoring.identityApplyReport;
-    processPatchCollectReport = processAuthoring.patchCollectReport;
-    processPatchApplyReport = processAuthoring.patchApplyReport;
-    const recoveryBlocker = preFinalizeRecoveryBlocker({
-      type: "process",
-      finalizeReport: processPreReport,
-      recovery: processAuthoring,
-    });
-    if (recoveryBlocker) {
-      return defer({
-        stage: "process.finalize",
-        blocker: recoveryBlocker,
-        report: processPreReportPath,
-      });
-    }
-  }
-
-  let processScopeReport: string = processPreReportPath;
-  let processCloseoutReport: string | null = null;
-  if (processPreReport?.status === "ready_for_remote_write" && !processPatchApplyReport) {
-    const handoffPlan = resolveRepoPath(jsonRecord(processPreReport.files).commit_handoff_plan);
-    const handoff = await executeHandoff({
-      handoffPlanPath: handoffPlan!,
-      ledgerDir,
-      outDir: path.join(scopeDir, "process-handoff"),
-      logDir,
-      label: "process",
-    });
-    stages.push(...handoff.stages);
-    if (handoff.status !== "completed") {
-      const blocker = handoff.blockers?.[0] ?? {
-        code: "process_handoff_failed",
-        message: "Process commit/verify handoff failed.",
-      };
-      return fail({ stage: "process.commit", blocker, report: processPreReportPath });
-    }
-    processCloseoutReport = handoff.closeoutReportPath ?? null;
-  } else {
-    const processCommit = await finalizeAndCommitDataset({
-      type: "process",
-      rowsFile: processRowsForE2e,
-      scopeDir,
-      runDir: paths.runDir,
-      materialized,
-      classificationApplyReport,
-      locationApplyReport,
-      identityApplyReports: [...flowIdentityReportsForProcess, processIdentityReport].filter(
-        (report): report is string => Boolean(report),
-      ),
-      patchCollectReport: processPatchCollectReport,
-      patchApplyReport: processPatchApplyReport,
-      targetUserId,
-      stateCode,
-      logDir,
-      ledgerDir,
-      stages,
-      supportIdentityCacheFile: paths.supportIdentityCache,
-    });
-    if (processCommit.status === "failed") {
-      return fail({
-        stage: "process.commit",
-        blocker: processCommit.blocker,
-        report: processCommit.report,
-      });
-    }
-    if (processCommit.status !== "completed") {
-      if (categoryForBlocker(processCommit.blocker?.code) === "remote-write") {
-        return fail({
-          stage: "process.finalize",
-          blocker: processCommit.blocker,
-          report: processCommit.report,
-        });
-      }
-      return defer({
-        stage: "process.finalize",
-        blocker: processCommit.blocker,
-        report: processCommit.report,
-      });
-    }
-    processScopeReport = processCommit.report;
-    processCloseoutReport = processCommit.handoff.closeoutReportPath ?? null;
-  }
-
-  verifiedScopes.add(`${processId}@${processVersion}`);
-  appendJsonLine(
-    paths.okProcesses,
-    okDatasetRow({
-      type: "process",
-      id: processId,
-      version: processVersion,
-      processId,
-      report: processScopeReport,
-      files: {
-        process_finalize_report: repoRelative(processScopeReport),
-        process_closeout_report: repoRelative(processCloseoutReport),
-      },
-    }),
-  );
-  appendJsonLine(paths.okScopes, {
-    schema_version: 1,
-    generated_at_utc: nowIso(),
-    process_id: processId,
-    process_version: processVersion,
-    status: "verified",
-    report: repoRelative(processScopeReport),
-    rows: {
-      flows: flowIds.length,
-      processes: 1,
-    },
-  });
-  appendJsonLine(paths.scopeCheckpoints, {
-    ...checkpointBase,
-    state: "verified",
-    stages: stages.map((stage) => ({
-      stage: stage.stage,
-      exit_code: stage.exit_code,
-      report: stage.report,
-      stdout_log: stage.stdout_log,
-      stderr_log: stage.stderr_log,
-    })),
-  });
-  writeJson(path.join(scopeDir, "scope-run-report.json"), {
-    schema_version: 1,
-    generated_at_utc: nowIso(),
-    status: "verified",
-    process_id: processId,
-    process_version: processVersion,
-    bafu_family_signature: compactBafuFamilySignature(familySignature, repoRelative),
-    stages,
-    files: {
-      process_finalize_report: repoRelative(processScopeReport),
-      process_closeout_report: repoRelative(processCloseoutReport),
-    },
-  });
-  trimVerifiedScopeScratch(scopeDir, options);
-  return { status: "verified", stages };
-}
-
 export function createBafuBatchImportRunCommands(
   deps: BafuBatchRuntime,
   config: BafuBatchConfig = {},
@@ -3512,6 +2500,80 @@ export function createBafuBatchImportRunCommands(
   );
   const { ledgerFiles, resolveLedgerSourceDirs, summarizeLedgerSources, sumLedgerSourceRows } =
     universeCoverage;
+  const scopePreparation = createBatchScopePreparationService({
+    io: {
+      processExecPath: process.execPath,
+      foundryEntryPath,
+      joinPath: (...parts) => path.join(...parts),
+      repoRelative,
+      resolveRepoPath,
+      fileExists,
+      readJsonLines,
+    },
+    operations: {
+      runArgvStage,
+      foundryCommand,
+      activeProfile,
+      libraryContact: () => jsonRecord(bafuBatchConfig.libraryContact),
+      firstBlocker,
+      repairClassificationDecisionCodes,
+      defaultContext,
+      reportFile,
+      outputRowsByStem,
+      findOneFile,
+    },
+  });
+  const scopeExecution = createBatchScopeExecutionService({
+    io: {
+      processExecPath: process.execPath,
+      foundryEntryPath,
+      rerunCommandName: commandName,
+      joinPath: (...parts) => path.join(...parts),
+      ensureDirectory: (directory) => fs.mkdirSync(directory, { recursive: true }),
+      nowIso,
+      asText,
+      integerOption,
+      booleanOption,
+      repoRelative,
+      resolveRepoPath,
+      fileExists,
+      readJsonLines,
+      readRows,
+      writeJson,
+      writeJsonLines,
+      appendJsonLine,
+    },
+    operations: {
+      prepareScope: scopePreparation.prepareScope,
+      requestedProcessIdValues,
+      familyPlanFields: (signature) => bafuFamilyPlanFields(signature as BafuFamilySignature),
+      compactFamilySignature: (signature, relativePath) =>
+        compactBafuFamilySignature(signature as BafuFamilySignature, relativePath),
+      commandString,
+      blockRow,
+      categoryForBlocker,
+      retryableStageFailure,
+      firstBlocker,
+      datasetIdentity,
+      datasetIdentityKey,
+      flowRowsPendingVerification,
+      writeScopeCarriedForwardVerifiedFlowRows,
+      existingIdentityApplyReportsWithReferenceRewrites,
+      uniqueExistingPaths,
+      buildFinalizeArgs,
+      runFinalizeStage,
+      defaultContext,
+      commitFlowSupportInline,
+      maybeCommitSupportThenRerunFinalize,
+      runIdentityAndPatch,
+      preFinalizeRecoveryBlocker,
+      finalizeAndCommitDataset,
+      invalidateIdentityPreflightResultCacheEntry,
+      okDatasetRow,
+      executeHandoff,
+      trimVerifiedScopeScratch,
+    },
+  });
 
   function runDatasetBafuUniverseCoverageReport(options: JsonRecord = {}): JsonRecord {
     if (options.help) {
@@ -3938,7 +3000,7 @@ export function createBafuBatchImportRunCommands(
         nextIndex += 1;
         let result: JsonRecord;
         try {
-          result = await runOneScope({
+          result = await scopeExecution.runOneScope({
             scope,
             familySignature,
             options: { ...options, targetUserId, stateCode },

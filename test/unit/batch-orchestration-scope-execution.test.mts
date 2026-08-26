@@ -6,6 +6,7 @@ import test from "node:test";
 import { pathToFileURL } from "node:url";
 
 import { createBafuBatchImportRunCommands } from "../../scripts/commands/bafu-batch-import-run.ts";
+import { createBatchScopePreparationService } from "../../scripts/lib/batch-orchestration/scope-preparation.ts";
 import {
   readJson,
   readJsonLines,
@@ -19,9 +20,17 @@ type JsonRecord = Record<string, unknown>;
 type DatasetIdentity = { id: string | null; version: string };
 
 const ownerRelativePath = "scripts/commands/bafu-batch-import-run.ts";
+const contractRelativePath = "scripts/lib/batch-orchestration/scope-execution-contract.ts";
 const executionRelativePath = "scripts/lib/batch-orchestration/scope-execution.ts";
 const preparationRelativePath = "scripts/lib/batch-orchestration/scope-preparation.ts";
 const baselineOwnerLines = 4086;
+const processId = "11111111-2222-4333-8444-555555555555";
+
+function record(value: unknown): JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as JsonRecord)
+    : {};
+}
 
 function textValue(value: unknown): string {
   if (value == null) return "";
@@ -85,9 +94,11 @@ function writeRequiredBatchInputs(runDir: string, schemaDir: string): void {
 
 test("single-scope execution has coherent typed owners and shrinks the command owner by 700 lines", async () => {
   const ownerPath = path.join(repoRoot, ownerRelativePath);
+  const contractPath = path.join(repoRoot, contractRelativePath);
   const executionPath = path.join(repoRoot, executionRelativePath);
   const preparationPath = path.join(repoRoot, preparationRelativePath);
 
+  assert.equal(fs.existsSync(contractPath), true, contractRelativePath);
   assert.equal(fs.existsSync(executionPath), true, executionRelativePath);
   assert.equal(fs.existsSync(preparationPath), true, preparationRelativePath);
 
@@ -99,7 +110,11 @@ test("single-scope execution has coherent typed owners and shrinks the command o
     `expected ${ownerRelativePath} to lose at least 700 lines`,
   );
 
-  for (const relativePath of [executionRelativePath, preparationRelativePath]) {
+  for (const relativePath of [
+    contractRelativePath,
+    executionRelativePath,
+    preparationRelativePath,
+  ]) {
     const source = fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
     assert.ok(physicalLineCount(source) <= 800, `${relativePath} exceeds 800 lines`);
     assert.doesNotMatch(relativePath, /(?:^|[-_/])part[-_]?\d+(?:\.|$)/u);
@@ -119,6 +134,138 @@ test("single-scope execution has coherent typed owners and shrinks the command o
   assert.deepEqual(Object.keys(preparationModule), ["createBatchScopePreparationService"]);
 });
 
+test("scope preparation preserves decision stage order and re-reads the location task queue before apply", async () => {
+  const stageInputs: Array<{ stage: string; argv: string[] }> = [];
+  const stageReports: Record<string, JsonRecord> = {
+    materialize: {
+      status: "completed",
+      files: {
+        rows: {
+          flow: "/rows/flows.materialized.jsonl",
+          process: "/rows/processes.materialized.jsonl",
+          source: "/rows/sources.materialized.jsonl",
+          support: "/rows/support.materialized.jsonl",
+          flowproperty: "/rows/flowproperties.materialized.jsonl",
+          unitgroup: "/rows/unitgroups.materialized.jsonl",
+        },
+        classification_authoring_queue: "/queues/classification.jsonl",
+        location_authoring_queue: "/queues/location.jsonl",
+        identity_preflight_requests: "/queues/identity.jsonl",
+      },
+    },
+    "classification.task": { status: "ready_for_ai_classification_decisions" },
+    "classification.project": { status: "completed" },
+    "classification.apply": {
+      status: "completed",
+      files: {
+        output_rows: ["/rows/flows.classified.jsonl", "/rows/processes.classified.jsonl"],
+      },
+    },
+    "location.task": { status: "ready_for_ai_location_decisions" },
+    "location.suggest": { status: "completed" },
+    "location.apply": {
+      status: "completed",
+      files: { output_rows: ["/rows/flows.located.jsonl"] },
+    },
+  };
+  const locationTaskQueues = [
+    "/scope/location-task/location-authoring-queue.first.jsonl",
+    "/scope/location-task/location-authoring-queue.second.jsonl",
+  ];
+  const locationTaskQueueLookups: string[] = [];
+  const service = createBatchScopePreparationService({
+    io: {
+      processExecPath: "/node",
+      foundryEntryPath: "scripts/foundry.ts",
+      joinPath: (...parts) => path.posix.join(...parts),
+      repoRelative: (filePath) => filePath ?? "",
+      resolveRepoPath: (value) => (typeof value === "string" ? value : null),
+      fileExists: (filePath) => Boolean(filePath),
+      readJsonLines: (filePath) =>
+        filePath === "/queues/location.jsonl" ? [{ queue: "location" }] : [],
+    },
+    operations: {
+      runArgvStage: async (input) => {
+        stageInputs.push({ stage: input.stage, argv: input.argv });
+        return { stage: input.stage, json: stageReports[input.stage] ?? null };
+      },
+      foundryCommand: (command, options = {}) => {
+        const argv = ["/node", "scripts/foundry.ts", command];
+        for (const [key, value] of Object.entries(options)) {
+          argv.push(`--${key.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`)}`);
+          argv.push(String(value));
+        }
+        return argv;
+      },
+      activeProfile: () => "worldsteel",
+      libraryContact: () => ({ libraryName: "World Steel Association" }),
+      firstBlocker: (_report, code, message) => ({ code, message }),
+      repairClassificationDecisionCodes: () => ({
+        unresolved: [],
+        unresolvedPath: "/classification/unresolved.jsonl",
+      }),
+      defaultContext: (runDir, type) => ({
+        schemaFile: `${runDir}/context/${type}/schema.json`,
+        yamlFile: `${runDir}/context/${type}/methodology.yaml`,
+        rulesetFile: `${runDir}/context/${type}/runtime-ruleset.json`,
+      }),
+      reportFile: (_report, fallback) => fallback,
+      outputRowsByStem: (report, stem) => {
+        const files = record(report?.files);
+        const rows = Array.isArray(files.output_rows) ? files.output_rows : [];
+        const match = rows.find((row) => path.posix.basename(String(row)).startsWith(stem));
+        return typeof match === "string" ? match : null;
+      },
+      findOneFile: (rootDir) => {
+        locationTaskQueueLookups.push(String(rootDir));
+        return locationTaskQueues[locationTaskQueueLookups.length - 1] ?? null;
+      },
+    },
+  });
+  const stages: JsonRecord[] = [];
+
+  const result = await service.prepareScope({
+    processId,
+    scopeDir: "/scope",
+    logDir: "/scope/logs",
+    stages,
+    paths: {
+      runDir: "/run",
+      processBundlesDir: "/bundles",
+      libraryClassificationDecisions: "/library/classification-decisions.jsonl",
+    },
+    schemas: {
+      processCategory: "/schemas/process.json",
+      flowProductCategory: "/schemas/flow-product.json",
+      flowElementaryCategory: "/schemas/flow-elementary.json",
+      location: "/schemas/location.json",
+      allClassification: ["/schemas/process.json", "/schemas/flow-product.json"],
+    },
+  });
+
+  assert.equal(result.status, "completed");
+  if (result.status !== "completed") return;
+  assert.deepEqual(
+    stages.map((stage) => stage.stage),
+    [
+      "materialize",
+      "classification.task",
+      "classification.project",
+      "classification.apply",
+      "location.task",
+      "location.suggest",
+      "location.apply",
+    ],
+  );
+  assert.equal(result.processClassifiedRows, "/rows/processes.classified.jsonl");
+  assert.equal(result.flowRowsForFinalize, "/rows/flows.located.jsonl");
+  assert.deepEqual(locationTaskQueueLookups, ["/scope/location-task", "/scope/location-task"]);
+  const suggestArgv = stageInputs.find((entry) => entry.stage === "location.suggest")?.argv ?? [];
+  const applyArgv = stageInputs.find((entry) => entry.stage === "location.apply")?.argv ?? [];
+  assert.equal(suggestArgv[suggestArgv.indexOf("--location-queue") + 1], locationTaskQueues[0]);
+  assert.equal(applyArgv[applyArgv.indexOf("--location-queue") + 1], locationTaskQueues[1]);
+});
+
 test("verified resume keeps exact report and ledger bytes across the single-scope extraction", async () => {
   const fixtureRoot = path.join(
     repoRoot,
@@ -132,7 +279,6 @@ test("verified resume keeps exact report and ledger bytes across the single-scop
   const processBundlesDir = path.join(fixtureRoot, "process-bundles");
   const outDir = path.join(fixtureRoot, "batch");
   const scopeFile = path.join(fixtureRoot, "ready-scopes.jsonl");
-  const processId = "11111111-2222-4333-8444-555555555555";
   fs.mkdirSync(processBundlesDir, { recursive: true });
   writeRequiredBatchInputs(runDir, schemaDir);
   writeJsonLines(scopeFile, [
