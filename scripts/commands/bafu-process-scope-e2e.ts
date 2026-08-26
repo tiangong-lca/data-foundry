@@ -12,6 +12,11 @@ import {
   reportCodes,
 } from "../lib/bafu-orchestration/finalize-recovery-policy.ts";
 import {
+  runPostFinalizeIdentityRecovery,
+  runPostFinalizeSemanticRecovery,
+  type PostFinalizeRecoveryAdapter,
+} from "../lib/bafu-orchestration/post-finalize-recovery.ts";
+import {
   applyBafuProcessScopeHandoffSummary,
   compactCommandStage as projectCompactCommandStage,
   projectBafuProcessScopeFinalizeReport,
@@ -69,24 +74,6 @@ interface FinalizeCommandResult {
   argv: string[];
   finalizeDir: string;
   finalizeReportPath: string;
-}
-
-interface RecoveryInput {
-  finalizeReport: JsonRecord;
-  currentRowsFile: string;
-  outDir: string;
-  logDir: string;
-  attempt: number;
-}
-
-interface RecoveryResult extends JsonRecord {
-  status: string;
-  blocker?: JsonRecord;
-  rowsFile?: string;
-  identityApplyReport?: string | null;
-  patchCollectReport?: string | null;
-  patchApplyReport?: string | null;
-  stages?: JsonRecord[];
 }
 
 interface FinalizeReportInput {
@@ -512,6 +499,21 @@ function runArgvStage({ stage, argv, logDir }: ArgvStageInput): {
   fs.writeFileSync(stdoutLog, result.stdout || "");
   fs.writeFileSync(stderrLog, result.stderr || "");
   return { result, stdoutLog, stderrLog };
+}
+
+function postFinalizeRecoveryAdapter(): PostFinalizeRecoveryAdapter {
+  return {
+    processExecutable: process.execPath,
+    foundryEntryPath,
+    resolveRepoPath,
+    repoRelative,
+    fileExists,
+    readJson,
+    textValue,
+    commandString,
+    runArgvStage,
+    projectCommandStage,
+  };
 }
 
 function optionPathList(value: unknown): string[] {
@@ -973,471 +975,6 @@ function readCurationGateReport(finalizeReport: JsonRecord): JsonRecord | null {
   return fileExists(gateReportPath) ? readJson(gateReportPath!) : null;
 }
 
-function runPostFinalizeIdentityRecovery({
-  finalizeReport,
-  currentRowsFile,
-  outDir,
-  logDir,
-  attempt,
-}: RecoveryInput): RecoveryResult {
-  const gateReportPath = resolveRepoPath(jsonRecord(finalizeReport.files).curation_gate_report);
-  if (!fileExists(gateReportPath)) {
-    return {
-      status: "blocked",
-      blocker: {
-        code: "post_finalize_curation_gate_report_missing",
-        message: "Post-finalize identity recovery requires a readable curation gate report.",
-      },
-    };
-  }
-  const identityTaskDir = path.join(outDir, `post-finalize-${attempt}-identity-task`);
-  const identityTaskReport = path.join(identityTaskDir, "identity-decision-task-report.json");
-  const identityTask = runArgvStage({
-    stage: `post-finalize-${attempt}.identity-task`,
-    argv: [
-      process.execPath,
-      foundryEntryPath,
-      "dataset-identity-decision-task-build",
-      "--curation-gate-report",
-      repoRelative(gateReportPath),
-      "--out-dir",
-      repoRelative(identityTaskDir),
-      "--shared-context-cache-dir",
-      repoRelative(path.join(outDir, "shared-context-cache")),
-    ],
-    logDir,
-  });
-  if (!fileExists(identityTaskReport)) {
-    return {
-      status: "blocked",
-      stages: [
-        projectCommandStage({
-          stage: `post-finalize-${attempt}.identity-task`,
-          command: commandString([
-            process.execPath,
-            foundryEntryPath,
-            "dataset-identity-decision-task-build",
-          ]),
-          result: identityTask.result,
-          stdoutLog: identityTask.stdoutLog,
-          stderrLog: identityTask.stderrLog,
-          reportPath: identityTaskReport,
-        }),
-      ],
-      blocker: {
-        code: "post_finalize_identity_task_report_missing",
-        message: "Post-finalize identity task did not emit its report.",
-      },
-    };
-  }
-  const identityTaskJson = readJson(identityTaskReport);
-  const stages: JsonRecord[] = [
-    projectCommandStage({
-      stage: `post-finalize-${attempt}.identity-task`,
-      command: commandString([
-        process.execPath,
-        foundryEntryPath,
-        "dataset-identity-decision-task-build",
-        "--curation-gate-report",
-        repoRelative(gateReportPath),
-        "--out-dir",
-        repoRelative(identityTaskDir),
-      ]),
-      result: identityTask.result,
-      stdoutLog: identityTask.stdoutLog,
-      stderrLog: identityTask.stderrLog,
-      reportPath: identityTaskReport,
-    }),
-  ];
-  if (identityTaskJson.status === "ready_no_identity_actions") {
-    return {
-      status: "completed_noop",
-      rowsFile: currentRowsFile,
-      identityApplyReport: null,
-      stages,
-    };
-  }
-  if (identityTaskJson.status !== "ready_for_ai_identity_decisions") {
-    return {
-      status: "blocked",
-      stages,
-      blocker: {
-        code: "post_finalize_identity_task_not_ready",
-        message: `Post-finalize identity task status is ${identityTaskJson.status || "missing"}.`,
-        identity_task_status: identityTaskJson.status ?? null,
-        blockers: identityTaskJson.blockers ?? [],
-      },
-    };
-  }
-
-  const identityAutofillReport = path.join(
-    identityTaskDir,
-    "bafu-identity-decisions-autofill-report.json",
-  );
-  const identityAutofillArgv = [
-    process.execPath,
-    foundryEntryPath,
-    "dataset-bafu-identity-decisions-autofill",
-    "--identity-decision-task",
-    repoRelative(path.join(identityTaskDir, "identity-decision-task.json")),
-  ];
-  const identityAutofill = runArgvStage({
-    stage: `post-finalize-${attempt}.identity-autofill`,
-    argv: identityAutofillArgv,
-    logDir,
-  });
-  stages.push(
-    projectCommandStage({
-      stage: `post-finalize-${attempt}.identity-autofill`,
-      command: commandString(identityAutofillArgv),
-      result: identityAutofill.result,
-      stdoutLog: identityAutofill.stdoutLog,
-      stderrLog: identityAutofill.stderrLog,
-      reportPath: identityAutofillReport,
-    }),
-  );
-  if (!fileExists(identityAutofillReport)) {
-    return {
-      status: "blocked",
-      stages,
-      blocker: {
-        code: "post_finalize_identity_autofill_report_missing",
-        message: "Post-finalize BAFU identity autofill did not emit its report.",
-      },
-    };
-  }
-  const identityAutofillJson = readJson(identityAutofillReport);
-  if (
-    !["completed", "completed_with_manual_review"].includes(textValue(identityAutofillJson.status))
-  ) {
-    return {
-      status: "blocked",
-      stages,
-      blocker: {
-        code: "post_finalize_identity_autofill_not_completed",
-        message: `Post-finalize BAFU identity autofill status is ${identityAutofillJson.status || "missing"}.`,
-        blockers: identityAutofillJson.blockers ?? identityAutofillJson.blocked ?? [],
-      },
-    };
-  }
-
-  const identityApplyDir = path.join(outDir, `post-finalize-${attempt}-identity-apply`);
-  const identityApplyReport = path.join(identityApplyDir, "identity-decisions-apply-report.json");
-  const identityApplyArgv = [
-    process.execPath,
-    foundryEntryPath,
-    "dataset-identity-decisions-apply",
-    "--type",
-    "process",
-    "--rows-file",
-    repoRelative(currentRowsFile),
-    "--decisions",
-    repoRelative(path.join(identityTaskDir, "identity-decisions.jsonl")),
-    "--out-dir",
-    repoRelative(identityApplyDir),
-    "--authoring-package-dir",
-    repoRelative(path.join(identityTaskDir, "authoring-package-snapshots")),
-  ];
-  const identityApply = runArgvStage({
-    stage: `post-finalize-${attempt}.identity-apply`,
-    argv: identityApplyArgv,
-    logDir,
-  });
-  stages.push(
-    projectCommandStage({
-      stage: `post-finalize-${attempt}.identity-apply`,
-      command: commandString(identityApplyArgv),
-      result: identityApply.result,
-      stdoutLog: identityApply.stdoutLog,
-      stderrLog: identityApply.stderrLog,
-      reportPath: identityApplyReport,
-    }),
-  );
-  if (!fileExists(identityApplyReport)) {
-    return {
-      status: "blocked",
-      stages,
-      blocker: {
-        code: "post_finalize_identity_apply_report_missing",
-        message: "Post-finalize identity decisions apply did not emit its report.",
-      },
-    };
-  }
-  const identityApplyJson = readJson(identityApplyReport);
-  if (identityApplyJson.status !== "completed") {
-    return {
-      status: "blocked",
-      stages,
-      blocker: {
-        code: "post_finalize_identity_apply_not_completed",
-        message: `Post-finalize identity apply status is ${identityApplyJson.status || "missing"}.`,
-        blockers: identityApplyJson.blockers ?? [],
-      },
-    };
-  }
-  return {
-    status: "completed",
-    rowsFile: resolveRepoPath(jsonRecord(identityApplyJson.files).output_rows) || currentRowsFile,
-    identityApplyReport,
-    stages,
-  };
-}
-
-function runPostFinalizeSemanticRecovery({
-  finalizeReport,
-  currentRowsFile,
-  outDir,
-  logDir,
-  attempt,
-}: RecoveryInput): RecoveryResult {
-  const gateReportPath = resolveRepoPath(jsonRecord(finalizeReport.files).curation_gate_report);
-  if (!fileExists(gateReportPath)) {
-    return {
-      status: "blocked",
-      blocker: {
-        code: "post_finalize_curation_gate_report_missing",
-        message: "Post-finalize semantic recovery requires a readable curation gate report.",
-      },
-    };
-  }
-
-  const authoringDir = path.join(outDir, `post-finalize-${attempt}-semantic-task`);
-  const taskManifest = path.join(authoringDir, "authoring-task-manifest.json");
-  const taskBuildArgv = [
-    process.execPath,
-    foundryEntryPath,
-    "dataset-authoring-task-build",
-    "--curation-gate-report",
-    repoRelative(gateReportPath),
-    "--out-dir",
-    repoRelative(authoringDir),
-    "--shared-context-cache-dir",
-    repoRelative(path.join(outDir, "shared-context-cache")),
-  ];
-  const taskBuild = runArgvStage({
-    stage: `post-finalize-${attempt}.semantic-task`,
-    argv: taskBuildArgv,
-    logDir,
-  });
-  const stages: JsonRecord[] = [
-    projectCommandStage({
-      stage: `post-finalize-${attempt}.semantic-task`,
-      command: commandString(taskBuildArgv),
-      result: taskBuild.result,
-      stdoutLog: taskBuild.stdoutLog,
-      stderrLog: taskBuild.stderrLog,
-      reportPath: taskManifest,
-    }),
-  ];
-  if (!fileExists(taskManifest)) {
-    return {
-      status: "blocked",
-      stages,
-      blocker: {
-        code: "post_finalize_semantic_task_report_missing",
-        message: "Post-finalize semantic authoring task did not emit its manifest.",
-      },
-    };
-  }
-  const taskBuildJson = readJson(taskManifest);
-  if (taskBuildJson.status === "ready_no_action_items") {
-    return {
-      status: "completed_noop",
-      rowsFile: currentRowsFile,
-      patchCollectReport: null,
-      patchApplyReport: null,
-      stages,
-    };
-  }
-  if (taskBuildJson.status !== "ready_for_ai_authoring_batch") {
-    return {
-      status: "blocked",
-      stages,
-      blocker: {
-        code: "post_finalize_semantic_task_not_ready",
-        message: `Post-finalize semantic authoring task status is ${taskBuildJson.status || "missing"}.`,
-        authoring_task_status: taskBuildJson.status ?? null,
-        blockers: taskBuildJson.blockers ?? [],
-      },
-    };
-  }
-
-  const patchAutofillReport = path.join(
-    authoringDir,
-    "bafu-authoring-patches-autofill-report.json",
-  );
-  const patchAutofillArgv = [
-    process.execPath,
-    foundryEntryPath,
-    "dataset-bafu-authoring-patches-autofill",
-    "--task-manifest",
-    repoRelative(taskManifest),
-  ];
-  const patchAutofill = runArgvStage({
-    stage: `post-finalize-${attempt}.patch-autofill`,
-    argv: patchAutofillArgv,
-    logDir,
-  });
-  stages.push(
-    projectCommandStage({
-      stage: `post-finalize-${attempt}.patch-autofill`,
-      command: commandString(patchAutofillArgv),
-      result: patchAutofill.result,
-      stdoutLog: patchAutofill.stdoutLog,
-      stderrLog: patchAutofill.stderrLog,
-      reportPath: patchAutofillReport,
-    }),
-  );
-  if (!fileExists(patchAutofillReport)) {
-    return {
-      status: "blocked",
-      stages,
-      blocker: {
-        code: "post_finalize_semantic_patch_autofill_report_missing",
-        message: "Post-finalize BAFU semantic patch autofill did not emit its report.",
-      },
-    };
-  }
-  const patchAutofillJson = readJson(patchAutofillReport);
-  if (
-    !["completed", "completed_no_supported_patches"].includes(textValue(patchAutofillJson.status))
-  ) {
-    return {
-      status: "blocked",
-      stages,
-      blocker: {
-        code: "post_finalize_semantic_patch_autofill_not_completed",
-        message: `Post-finalize BAFU semantic patch autofill status is ${patchAutofillJson.status || "missing"}.`,
-        blockers: patchAutofillJson.blockers ?? patchAutofillJson.blocked ?? [],
-      },
-    };
-  }
-
-  const patchCollectReport = path.join(authoringDir, "authoring-patch-collect-report.json");
-  const patchCollectArgv = [
-    process.execPath,
-    foundryEntryPath,
-    "dataset-authoring-patch-collect",
-    "--task-manifest",
-    repoRelative(taskManifest),
-  ];
-  const patchCollect = runArgvStage({
-    stage: `post-finalize-${attempt}.patch-collect`,
-    argv: patchCollectArgv,
-    logDir,
-  });
-  stages.push(
-    projectCommandStage({
-      stage: `post-finalize-${attempt}.patch-collect`,
-      command: commandString(patchCollectArgv),
-      result: patchCollect.result,
-      stdoutLog: patchCollect.stdoutLog,
-      stderrLog: patchCollect.stderrLog,
-      reportPath: patchCollectReport,
-    }),
-  );
-  if (!fileExists(patchCollectReport)) {
-    return {
-      status: "blocked",
-      stages,
-      blocker: {
-        code: "post_finalize_semantic_patch_collect_report_missing",
-        message: "Post-finalize semantic patch collect did not emit its report.",
-      },
-    };
-  }
-  const patchCollectJson = readJson(patchCollectReport);
-  if (patchCollectJson.status === "ready_no_patch_required") {
-    return {
-      status: "completed_noop",
-      rowsFile: currentRowsFile,
-      patchCollectReport,
-      patchApplyReport: null,
-      stages,
-    };
-  }
-  if (patchCollectJson.status !== "ready_for_patch_apply") {
-    return {
-      status: "blocked",
-      stages,
-      blocker: {
-        code: "post_finalize_semantic_patch_collect_not_ready",
-        message: `Post-finalize semantic patch collect status is ${patchCollectJson.status || "missing"}.`,
-        blockers: patchCollectJson.blockers ?? [],
-      },
-    };
-  }
-
-  const patchedRowsFile = path.join(authoringDir, "processes.patched.jsonl");
-  const patchApplyDir = path.join(authoringDir, "patch-apply");
-  const patchApplyArgv = [
-    process.execPath,
-    foundryEntryPath,
-    "dataset-patch-apply",
-    "--input",
-    repoRelative(currentRowsFile),
-    "--patch",
-    repoRelative(
-      textValue(jsonRecord(patchCollectJson.files).batch_patch) ||
-        path.join(authoringDir, "ai-patches.batch.json"),
-    ),
-    "--out",
-    repoRelative(patchedRowsFile),
-    "--out-dir",
-    repoRelative(patchApplyDir),
-    "--authoring-package-dir",
-    repoRelative(path.join(authoringDir, "authoring-package-snapshots")),
-    "--require-authoring-package",
-    "--require-action-item-closure",
-  ];
-  const patchApply = runArgvStage({
-    stage: `post-finalize-${attempt}.patch-apply`,
-    argv: patchApplyArgv,
-    logDir,
-  });
-  const patchApplyReport = path.join(patchApplyDir, "outputs", "dataset-patch-apply-report.json");
-  stages.push(
-    projectCommandStage({
-      stage: `post-finalize-${attempt}.patch-apply`,
-      command: commandString(patchApplyArgv),
-      result: patchApply.result,
-      stdoutLog: patchApply.stdoutLog,
-      stderrLog: patchApply.stderrLog,
-      reportPath: patchApplyReport,
-    }),
-  );
-  if (!fileExists(patchApplyReport)) {
-    return {
-      status: "blocked",
-      stages,
-      blocker: {
-        code: "post_finalize_semantic_patch_apply_report_missing",
-        message: "Post-finalize semantic patch apply did not emit its report.",
-      },
-    };
-  }
-  const patchApplyJson = readJson(patchApplyReport);
-  if (patchApplyJson.status !== "completed") {
-    return {
-      status: "blocked",
-      stages,
-      blocker: {
-        code: "post_finalize_semantic_patch_apply_not_completed",
-        message: `Post-finalize semantic patch apply status is ${patchApplyJson.status || "missing"}.`,
-        blockers: patchApplyJson.blockers ?? [],
-      },
-    };
-  }
-
-  return {
-    status: "completed",
-    rowsFile: resolveRepoPath(jsonRecord(patchApplyJson.files).patched_rows) || patchedRowsFile,
-    patchCollectReport,
-    patchApplyReport,
-    stages,
-  };
-}
-
 function projectFinalizeReport({
   processScope,
   outDir,
@@ -1814,22 +1351,28 @@ function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
     let recoveryKind = null;
     if (canRunPostFinalizeIdentityRecovery(readCurationGateReport(finalizeReport))) {
       recoveryKind = "identity";
-      recovery = runPostFinalizeIdentityRecovery({
-        finalizeReport,
-        currentRowsFile,
-        outDir,
-        logDir,
-        attempt,
-      });
+      recovery = runPostFinalizeIdentityRecovery(
+        {
+          finalizeReport,
+          currentRowsFile,
+          outDir,
+          logDir,
+          attempt,
+        },
+        postFinalizeRecoveryAdapter(),
+      );
     } else if (canRunPostFinalizeSemanticRecovery(readCurationGateReport(finalizeReport))) {
       recoveryKind = "semantic";
-      recovery = runPostFinalizeSemanticRecovery({
-        finalizeReport,
-        currentRowsFile,
-        outDir,
-        logDir,
-        attempt,
-      });
+      recovery = runPostFinalizeSemanticRecovery(
+        {
+          finalizeReport,
+          currentRowsFile,
+          outDir,
+          logDir,
+          attempt,
+        },
+        postFinalizeRecoveryAdapter(),
+      );
     } else {
       break;
     }
