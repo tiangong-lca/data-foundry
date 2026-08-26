@@ -457,8 +457,8 @@ test("new scope plan freezes all input hashes, finalize argv, report and ledger 
 
 test("matching ledger checkpoint wins over a newer mismatched row and explicit finalize report", () => {
   const { run, state } = makeFixture();
-  const matchingReportPath = "/fixture/checkpoints/matching-finalize.json";
-  const mismatchedReportPath = "/fixture/checkpoints/newer-mismatched-finalize.json";
+  const matchingReportPath = "/fixture/checkpoints/matching/finalize.json";
+  const mismatchedReportPath = "/fixture/checkpoints/mismatched/finalize.json";
   const explicitReportPath = "/fixture/explicit/finalize.json";
   const matching = blockedFinalizeReport(matchingReportPath);
   const mismatched = readyFinalizeReport(mismatchedReportPath);

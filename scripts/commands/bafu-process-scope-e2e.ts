@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+
 import {
   canRunPostFinalizeIdentityRecovery,
   canRunPostFinalizeSemanticRecovery,
@@ -10,6 +11,7 @@ import {
   finalizeBlockers,
   postWriteVerifyRetryReasonFromReport,
   reportCodes,
+  type JsonRecord,
 } from "../lib/bafu-orchestration/finalize-recovery-policy.ts";
 import {
   runPostFinalizeIdentityRecovery,
@@ -22,30 +24,30 @@ import {
   type ProcessHandoffAdapter,
 } from "../lib/bafu-orchestration/process-handoff.ts";
 import {
+  createBafuProcessScopeRun,
+  type BafuProcessScopeRunAdapter,
+  type ProcessScopeFinalizeStageResult,
+} from "../lib/bafu-orchestration/process-scope-run.ts";
+import { createBafuProcessScopeRuntime } from "../lib/bafu-orchestration/process-scope-runtime.ts";
+import {
   applyBafuProcessScopeHandoffSummary,
   compactCommandStage as projectCompactCommandStage,
   projectBafuProcessScopeFinalizeReport,
-  type BafuProcessScopeFinalizeReport,
-  type CompactCommandStage as CommandStage,
+  type CompactCommandStage,
   type CompactCommandStageResult,
 } from "../lib/bafu-orchestration/process-scope-report.ts";
-import { resolveFoundryRuntimePaths } from "../lib/foundry-runtime-paths.ts";
-import { acceptTraceHashOnlyRemoteVerificationMismatch } from "../lib/remote-verification-accepted-diff.ts";
 import {
   assertFoundryCommandSpecArtifactsCurrent,
   assertFoundryCommandSpecBindsArtifact,
-  commandSpecOptionValue,
   executeFoundryCommandSpecSync,
   type FoundryCommandSpec,
 } from "../lib/foundry-command-spec.ts";
+import { resolveFoundryRuntimePaths } from "../lib/foundry-runtime-paths.ts";
 import {
   assertReceiptBoundHandoffAccount,
   traceHashNormalizationAllowed,
 } from "../lib/production-case-policy.ts";
-
-interface JsonRecord {
-  [key: string]: unknown;
-}
+import { acceptTraceHashOnlyRemoteVerificationMismatch } from "../lib/remote-verification-accepted-diff.ts";
 
 interface BafuProcessScopeE2eRuntime {
   nowIso: () => string;
@@ -74,33 +76,6 @@ interface ArgvStageInput {
   logDir: string;
 }
 
-interface FinalizeCommandResult {
-  argv: string[];
-  finalizeDir: string;
-  finalizeReportPath: string;
-}
-
-interface FinalizeReportInput {
-  processScope: JsonRecord;
-  outDir: string;
-  reportPath: string;
-  ledgerPath: string;
-  finalizeReport: JsonRecord;
-  finalizeReportPath: string;
-  finalizeCommand: string[];
-  mode: string;
-  sourceSupportRowsFile: string | null;
-  sourceRowsFile: string | null;
-}
-
-function isJsonRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function jsonRecord(value: unknown): JsonRecord {
-  return isJsonRecord(value) ? value : {};
-}
-
 const { entryRepoRelativePath: foundryEntryPath, repoRoot } = resolveFoundryRuntimePaths(
   import.meta.url,
 );
@@ -108,7 +83,6 @@ const commandName = "dataset-bafu-process-scope-e2e";
 const reportFileName = "bafu-process-scope-e2e-report.json";
 const ledgerFileName = "bafu-process-scope-e2e-ledger.jsonl";
 const finalizeReportName = "dataset-post-authoring-finalize-report.json";
-
 const bafuProcessScopeE2eRuntimeKeys = [
   "nowIso",
   "resolveRepoPath",
@@ -150,8 +124,12 @@ function resolveRepoPath(value: unknown): string | null {
   return runtime().resolveRepoPath(value);
 }
 
+function repoRelativeMaybe(filePath: string | null | undefined): string | null {
+  return runtime().repoRelativeMaybe(filePath);
+}
+
 function repoRelative(filePath: string | null | undefined): string {
-  return runtime().repoRelativeMaybe(filePath) as string;
+  return repoRelativeMaybe(filePath) as string;
 }
 
 function fileExists(filePath: string | null | undefined): boolean {
@@ -170,234 +148,45 @@ function readRowsFile(filePath: string): JsonRecord[] {
   return runtime().readRowsFile(filePath) as JsonRecord[];
 }
 
-function sha256File(filePath: string): string {
-  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+function writeJson(filePath: string, value: JsonRecord): void {
+  runtime().writeJson(filePath, value);
 }
 
 function textValue(value: unknown): string {
   return runtime().textValue(value);
 }
 
-function processIdentity(row: JsonRecord): { id: string; version: string } {
-  const payload = jsonRecord(row.processDataSet ?? row);
-  const dataSetInformation =
-    jsonRecord(payload.processInformation).dataSetInformation ??
-    jsonRecord(payload.processInformation)["common:dataSetInformation"] ??
-    {};
-  const information = jsonRecord(dataSetInformation);
-  const publication =
-    jsonRecord(payload.administrativeInformation).publicationAndOwnership ??
-    jsonRecord(payload.administrativeInformation)["common:publicationAndOwnership"] ??
-    {};
-  const publicationRecord = jsonRecord(publication);
-  return {
-    id:
-      textValue(information["common:UUID"]) ||
-      textValue(information.UUID) ||
-      textValue(row.dataset_id) ||
-      textValue(row.id),
-    version:
-      textValue(publicationRecord["common:dataSetVersion"]) ||
-      textValue(publicationRecord.dataSetVersion) ||
-      textValue(row.dataset_version) ||
-      textValue(row.version) ||
-      "00.00.001",
-  };
-}
-
-function datasetTypeFromRow(row: JsonRecord): string | null {
-  if (row.contactDataSet) return "contact";
-  if (row.sourceDataSet) return "source";
-  return null;
-}
-
-function supportIdentity(
-  row: JsonRecord,
-  fallbackType: string | null,
-): { type: string | null; id: string; version: string } {
-  const type = datasetTypeFromRow(row) || fallbackType;
-  const root = type ? jsonRecord(row[`${type}DataSet`]) : {};
-  const information =
-    jsonRecord(root[`${type}Information`]).dataSetInformation ??
-    jsonRecord(root[`${type}Information`])["common:dataSetInformation"] ??
-    {};
-  const informationRecord = jsonRecord(information);
-  const publication =
-    jsonRecord(root.administrativeInformation).publicationAndOwnership ??
-    jsonRecord(root.administrativeInformation)["common:publicationAndOwnership"] ??
-    {};
-  const publicationRecord = jsonRecord(publication);
-  return {
-    type,
-    id:
-      textValue(informationRecord["common:UUID"]) ||
-      textValue(informationRecord.UUID) ||
-      textValue(row.dataset_id) ||
-      textValue(row.id),
-    version:
-      textValue(publicationRecord["common:dataSetVersion"]) ||
-      textValue(publicationRecord.dataSetVersion) ||
-      textValue(row.dataset_version) ||
-      textValue(row.version) ||
-      "00.00.001",
-  };
-}
-
-function supportIdentityKeysFromHandoffPlan(handoffPlan: JsonRecord): string[] {
-  const commands = jsonRecord(handoffPlan.commands);
-  const inputPath = resolveRepoPath(
-    commandSpecOptionValue(commands.commit, "--input") ||
-      commandSpecOptionValue(commands.commit, "--input-file"),
-  );
-  const fallbackType = commandSpecOptionValue(commands.commit, "--type");
-  if (!fileExists(inputPath)) return [];
-  return readRowsFile(inputPath!)
-    .map((row) => {
-      const identity = supportIdentity(row, fallbackType);
-      if (!identity.type || !["contact", "source"].includes(identity.type) || !identity.id) {
-        return null;
-      }
-      return `${identity.type}:${identity.id}@${identity.version}`;
-    })
-    .filter((key): key is string => Boolean(key));
-}
-
-function supportIdentityKeyFromCacheRow(row: JsonRecord): string | null {
-  if (row.identity_key) return String(row.identity_key);
-  const type = textValue(row.dataset_type || row.type || textValue(row.table).replace(/s$/u, ""));
-  const id = row.dataset_id || row.id;
-  const version = row.dataset_version || row.version || "00.00.001";
-  return ["contact", "source"].includes(type) && id ? `${type}:${id}@${version}` : null;
-}
-
-function loadVerifiedSupportIdentities(cacheFile: unknown): Set<string> {
-  const resolved = resolveRepoPath(cacheFile);
-  if (!fileExists(resolved)) return new Set();
-  return new Set(
-    readJsonLines(resolved!)
-      .map(supportIdentityKeyFromCacheRow)
-      .filter((key): key is string => Boolean(key)),
-  );
-}
-
-function appendVerifiedSupportIdentities({
-  cacheFile,
-  identityKeys,
-  source,
-  report,
-}: {
-  cacheFile: unknown;
-  identityKeys: string[];
-  source: string;
-  report: string;
-}): void {
-  const resolved = resolveRepoPath(cacheFile);
-  if (!resolved || identityKeys.length === 0) return;
-  fs.mkdirSync(path.dirname(resolved), { recursive: true });
-  for (const identityKey of identityKeys) {
-    const match = /^(contact|source):([^@]+)@(.+)$/u.exec(identityKey);
-    if (!match) continue;
-    appendLedger(resolved, {
-      schema_version: 1,
-      generated_at_utc: nowIso(),
-      identity_key: identityKey,
-      dataset_type: match[1],
-      dataset_id: match[2],
-      dataset_version: match[3],
-      status: "verified",
-      source,
-      report: repoRelative(report),
-    });
-  }
-}
-
 function booleanOption(value: unknown): boolean {
   return runtime().booleanOption(value);
-}
-
-function appendOption(args: string[], name: string, value: unknown): void {
-  if (value === undefined || value === null || value === "") return;
-  if (value === true) {
-    args.push(name);
-    return;
-  }
-  args.push(name, String(value));
-}
-
-function appendPathOption(args: string[], name: string, value: unknown): void {
-  if (!value) return;
-  appendOption(args, name, repoRelative(resolveRepoPath(value)));
-}
-
-function appendPathOptions(args: string[], name: string, value: unknown): void {
-  const values = Array.isArray(value) ? value : String(value ?? "").split(",");
-  for (const item of values.map((entry) => String(entry).trim()).filter(Boolean)) {
-    appendPathOption(args, name, item);
-  }
 }
 
 function shellQuote(value: string): string {
   return runtime().shellQuote(value);
 }
 
-function commandString(argv: string[]): string {
-  return argv.map(shellQuote).join(" ");
-}
-
-function helperRerunCommand({
-  rowsFile,
-  outDir,
-  sourceSupportRowsFile,
-  sourceRowsFile,
-}: {
-  rowsFile: string;
-  outDir: string;
-  sourceSupportRowsFile?: string | null;
-  sourceRowsFile?: string | null;
-}): string {
-  const args = [
-    "node",
-    foundryEntryPath,
-    "dataset-bafu-process-scope-e2e",
-    "--rows-file",
-    repoRelative(rowsFile) || "<rows.jsonl>",
-    "--out-dir",
-    repoRelative(outDir),
-    "--execute",
-  ];
-  appendPathOption(args, "--source-support-rows-file", sourceSupportRowsFile);
-  appendPathOption(args, "--source-rows-file", sourceRowsFile);
-  return commandString(args);
-}
-
-function ensureNoRemoteCommitFlags(options: JsonRecord): void {
-  const forbidden = ["remoteCommit", "executeCommit", "allowRemoteCommit", "allowRemoteCommits"];
-  const requested = forbidden.filter((key) => booleanOption(options[key]));
-  if (requested.length > 0) {
-    throw new Error(
-      `${commandName} only performs remote commits through the explicit --commit handoff path; remove ${requested
-        .map((key) => `--${key.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`)}`)
-        .join(", ")}.`,
-    );
-  }
-}
-
-function latestLedgerEntry(
-  ledgerPath: string,
-  predicate: (row: JsonRecord) => boolean,
-): JsonRecord | null {
-  if (!fileExists(ledgerPath)) return null;
-  return readJsonLines(ledgerPath).reverse().find(predicate) ?? null;
-}
-
-function appendLedger(ledgerPath: string, row: unknown): void {
+function appendLedger(ledgerPath: string, row: JsonRecord): void {
   fs.mkdirSync(path.dirname(ledgerPath), { recursive: true });
   fs.appendFileSync(ledgerPath, `${JSON.stringify(row)}\n`);
 }
 
-function writeJson(filePath: string, value: unknown): void {
-  runtime().writeJson(filePath, value);
-}
+const processScopeRuntime = createBafuProcessScopeRuntime({
+  commandName,
+  finalizeReportName,
+  foundryEntryPath,
+  processExecutable: process.execPath,
+  nowIso,
+  resolveRepoPath,
+  repoRelative,
+  fileExists,
+  readJson,
+  readJsonLines,
+  readRowsFile,
+  textValue,
+  booleanOption,
+  shellQuote,
+  appendLedger,
+  makeDirectory: (directory) => fs.mkdirSync(directory, { recursive: true }),
+});
 
 function projectCommandStage({
   stage,
@@ -413,22 +202,40 @@ function projectCommandStage({
   stdoutLog: string;
   stderrLog: string;
   reportPath: string | null;
-}): CommandStage {
+}): CompactCommandStage {
   return projectCompactCommandStage({
     stage,
     command,
     result,
-    stdoutLog: repoRelative(stdoutLog),
-    stderrLog: repoRelative(stderrLog),
-    report: repoRelative(reportPath),
+    stdoutLog: repoRelativeMaybe(stdoutLog),
+    stderrLog: repoRelativeMaybe(stderrLog),
+    report: repoRelativeMaybe(reportPath),
   });
 }
 
-function runCommandSpecStage({ stage, commandSpec, cwd, logDir }: CommandSpecStageInput): {
-  result: ReturnType<typeof executeFoundryCommandSpecSync>;
-  stdoutLog: string;
-  stderrLog: string;
-} {
+function runFinalizeStage({
+  command,
+  logDir,
+  label,
+}: {
+  command: string[];
+  logDir: string;
+  label: string;
+}): ProcessScopeFinalizeStageResult {
+  fs.mkdirSync(logDir, { recursive: true });
+  const result = spawnSync(command[0], command.slice(1), {
+    cwd: repoRoot,
+    env: process.env,
+    encoding: "utf8",
+  });
+  const stdoutLog = path.join(logDir, `${label}.stdout.log`);
+  const stderrLog = path.join(logDir, `${label}.stderr.log`);
+  fs.writeFileSync(stdoutLog, result.stdout || "");
+  fs.writeFileSync(stderrLog, result.stderr || "");
+  return { result, stdoutLog, stderrLog };
+}
+
+function runCommandSpecStage({ stage, commandSpec, cwd, logDir }: CommandSpecStageInput) {
   fs.mkdirSync(logDir, { recursive: true });
   const stdoutLog = path.join(logDir, `${stage}.stdout.log`);
   const stderrLog = path.join(logDir, `${stage}.stderr.log`);
@@ -442,9 +249,22 @@ function runCommandSpecStage({ stage, commandSpec, cwd, logDir }: CommandSpecSta
   return { result, stdoutLog, stderrLog };
 }
 
+function runArgvStage({ stage, argv, logDir }: ArgvStageInput) {
+  fs.mkdirSync(logDir, { recursive: true });
+  const stdoutLog = path.join(logDir, `${stage}.stdout.log`);
+  const stderrLog = path.join(logDir, `${stage}.stderr.log`);
+  const result = spawnSync(argv[0], argv.slice(1), {
+    cwd: repoRoot,
+    env: process.env,
+    encoding: "utf8",
+  });
+  fs.writeFileSync(stdoutLog, result.stdout || "");
+  fs.writeFileSync(stderrLog, result.stderr || "");
+  return { result, stdoutLog, stderrLog };
+}
+
 function sleepSync(ms: number): void {
-  if (!ms || ms <= 0) return;
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+  if (ms > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
 function integerEnv(name: string, fallback: number): number {
@@ -476,22 +296,20 @@ function postWriteVerifyRetryReason(verifyReportPath: string | null): string | n
   });
 }
 
-function runArgvStage({ stage, argv, logDir }: ArgvStageInput): {
-  result: ReturnType<typeof spawnSync>;
-  stdoutLog: string;
-  stderrLog: string;
-} {
-  fs.mkdirSync(logDir, { recursive: true });
-  const stdoutLog = path.join(logDir, `${stage}.stdout.log`);
-  const stderrLog = path.join(logDir, `${stage}.stderr.log`);
-  const result = spawnSync(argv[0], argv.slice(1), {
-    cwd: repoRoot,
-    env: process.env,
-    encoding: "utf8",
-  });
-  fs.writeFileSync(stdoutLog, result.stdout || "");
-  fs.writeFileSync(stderrLog, result.stderr || "");
-  return { result, stdoutLog, stderrLog };
+function listProcessHandoffFiles(rootDir: string | null): string[] {
+  if (!rootDir || !fs.existsSync(rootDir)) return [];
+  const stack = [rootDir];
+  const files: string[] = [];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current) continue;
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const next = path.join(current, entry.name);
+      if (entry.isDirectory()) stack.push(next);
+      else if (entry.isFile()) files.push(next);
+    }
+  }
+  return files;
 }
 
 function postFinalizeRecoveryAdapter(): PostFinalizeRecoveryAdapter {
@@ -503,29 +321,10 @@ function postFinalizeRecoveryAdapter(): PostFinalizeRecoveryAdapter {
     fileExists,
     readJson,
     textValue,
-    commandString,
+    commandString: (argv) => processScopeRuntime.commandString(argv),
     runArgvStage,
     projectCommandStage,
   };
-}
-
-function listProcessHandoffFiles(rootDir: string | null): string[] {
-  if (!rootDir || !fs.existsSync(rootDir)) return [];
-  const stack = [rootDir];
-  const files: string[] = [];
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (!current) continue;
-    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      const next = path.join(current, entry.name);
-      if (entry.isDirectory()) {
-        stack.push(next);
-      } else if (entry.isFile()) {
-        files.push(next);
-      }
-    }
-  }
-  return files;
 }
 
 function processHandoffAdapter(): ProcessHandoffAdapter {
@@ -549,8 +348,8 @@ function processHandoffAdapter(): ProcessHandoffAdapter {
       assertFoundryCommandSpecArtifactsCurrent(commandSpec, resolveRepoPath),
     runCommandSpecStage,
     runArgvStage,
-    projectCommandStage: (input) => projectCommandStage(input),
-    commandString,
+    projectCommandStage,
+    commandString: (argv) => processScopeRuntime.commandString(argv),
     retryAttempts: postWriteVerifyRetryAttempts,
     retryDelayMs: postWriteVerifyRetryDelayMs,
     retryReason: postWriteVerifyRetryReason,
@@ -560,145 +359,74 @@ function processHandoffAdapter(): ProcessHandoffAdapter {
   };
 }
 
-function optionPathList(value: unknown): string[] {
-  const values = Array.isArray(value) ? value : String(value ?? "").split(",");
-  return values
-    .map((entry) => String(entry).trim())
-    .filter(Boolean)
-    .map(resolveRepoPath)
-    .filter((filePath): filePath is string => Boolean(filePath));
-}
-
-function processIdentityReportsFromOptions(options: JsonRecord): string[] {
-  return optionPathList(
-    options.identityDecisionApplyReports ||
-      options.identityDecisionsApplyReports ||
-      options.identityDecisionApplyReport ||
-      options.identityDecisionsApplyReport,
-  );
-}
-
-function buildFinalizeCommand({
-  options,
-  rowsFile,
-  outDir,
-  importLedgerDir,
-}: {
-  options: JsonRecord;
-  rowsFile: string;
-  outDir: string;
-  importLedgerDir: string;
-}): FinalizeCommandResult {
-  const finalizeDir = resolveRepoPath(options.finalizeDir) || path.join(outDir, "finalize");
-  const args = [
-    process.execPath,
-    foundryEntryPath,
-    "dataset-post-authoring-finalize",
-    "--type",
-    "process",
-    "--profile",
-    "bafu",
-    "--rows-file",
-    repoRelative(rowsFile),
-    "--out-dir",
-    repoRelative(finalizeDir),
-    "--ledger-dir",
-    repoRelative(importLedgerDir),
-  ];
-  appendPathOption(args, "--source-support-rows-file", options.sourceSupportRowsFile);
-  appendPathOption(args, "--source-rows-file", options.sourceRowsFile || options.originalRowsFile);
-  appendPathOption(args, "--identity-preflight-index", options.identityPreflightIndex);
-  appendPathOption(args, "--schema-file", options.schemaFile);
-  appendPathOption(args, "--yaml-file", options.yamlFile);
-  appendPathOption(args, "--ruleset-file", options.rulesetFile);
-  appendPathOption(args, "--queue-dir", options.queueDir || options.curationQueueDir);
-  appendPathOption(args, "--classification-queue", options.classificationQueue);
-  appendPathOption(args, "--location-queue", options.locationQueue);
-  appendPathOption(
-    args,
-    "--classification-decision-apply-report",
-    options.classificationDecisionApplyReport || options.classificationDecisionsApplyReport,
-  );
-  appendPathOption(
-    args,
-    "--location-decision-apply-report",
-    options.locationDecisionApplyReport || options.locationDecisionsApplyReport,
-  );
-  appendPathOptions(
-    args,
-    "--identity-decision-apply-report",
-    options.identityDecisionApplyReports ||
-      options.identityDecisionsApplyReports ||
-      options.identityDecisionApplyReport ||
-      options.identityDecisionsApplyReport,
-  );
-  appendPathOption(
-    args,
-    "--patch-collect-report",
-    options.patchCollectReport || options.authoringPatchCollectReport,
-  );
-  appendPathOption(args, "--patch-apply-report", options.patchApplyReport);
-  appendOption(args, "--target-user-id", options.targetUserId);
-  appendOption(args, "--state-code", options.stateCode);
-  appendOption(args, "--root-policy", options.rootPolicy);
-
-  for (const key of [
-    ["finalizeSourceContactSupport", "--finalize-source-contact-support"],
-    ["verifyRemote", "--verify-remote"],
-    ["requireQueueContext", "--require-queue-context"],
-    ["runIdentityPreflight", "--run-identity-preflight"],
-    ["refreshIdentityPreflight", "--refresh-identity-preflight"],
-    ["requirePatchCollectReport", "--require-patch-collect-report"],
-  ]) {
-    const [optionKey, flag] = key;
-    if (Object.hasOwn(options, optionKey)) appendOption(args, flag, options[optionKey]);
-  }
-
+function createRunAdapter(): BafuProcessScopeRunAdapter {
+  const handoffRuntime = processHandoffAdapter();
+  const recoveryRuntime = postFinalizeRecoveryAdapter();
   return {
-    argv: args,
-    finalizeDir,
-    finalizeReportPath: path.join(finalizeDir, finalizeReportName),
+    clock: { nowIso },
+    fs: {
+      exists: fileExists,
+      mkdir: (directory) => fs.mkdirSync(directory, { recursive: true }),
+      readJson,
+      readJsonLines,
+      readRowsFile,
+    },
+    path: {
+      join: (...parts) => path.join(...parts),
+      relative: repoRelativeMaybe,
+      resolve: resolveRepoPath,
+    },
+    hash: {
+      fileSha256: (filePath) =>
+        crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex"),
+    },
+    options: {
+      boolean: booleanOption,
+      identityReports: processScopeRuntime.processIdentityReportsFromOptions,
+      processIdentity: processScopeRuntime.processIdentity,
+    },
+    ledger: { append: appendLedger },
+    stage: {
+      project: projectCompactCommandStage,
+      runFinalize: runFinalizeStage,
+    },
+    finalize: {
+      build: processScopeRuntime.buildFinalizeCommand,
+      project: processScopeRuntime.projectFinalizeReport,
+      readGate: processScopeRuntime.readCurationGateReport,
+    },
+    handoff: {
+      appendVerifiedSupportIdentities: processScopeRuntime.appendVerifiedSupportIdentities,
+      applySummary: applyBafuProcessScopeHandoffSummary,
+      execute: (input) => executeHandoff(input, handoffRuntime),
+      loadVerifiedSupportIdentities: processScopeRuntime.loadVerifiedSupportIdentities,
+      readPlan: (finalizeReport, key) => readHandoffPlan(finalizeReport, key, handoffRuntime),
+      supportIdentityKeys: processScopeRuntime.supportIdentityKeysFromHandoffPlan,
+    },
+    recovery: {
+      canRunIdentity: canRunPostFinalizeIdentityRecovery,
+      canRunSemantic: canRunPostFinalizeSemanticRecovery,
+      runIdentity: (input) => runPostFinalizeIdentityRecovery(input, recoveryRuntime),
+      runSemantic: (input) => runPostFinalizeSemanticRecovery(input, recoveryRuntime),
+    },
+    report: {
+      commandString: processScopeRuntime.commandString,
+      rerunCommand: processScopeRuntime.rerunCommand,
+      writeJson,
+    },
   };
 }
 
-function readCurationGateReport(finalizeReport: JsonRecord): JsonRecord | null {
-  const gateReportPath = resolveRepoPath(jsonRecord(finalizeReport.files).curation_gate_report);
-  return fileExists(gateReportPath) ? readJson(gateReportPath!) : null;
-}
-
-function projectFinalizeReport({
-  processScope,
-  outDir,
-  reportPath,
-  ledgerPath,
-  finalizeReport,
-  finalizeReportPath,
-  finalizeCommand,
-  mode,
-  sourceSupportRowsFile,
-  sourceRowsFile,
-}: FinalizeReportInput): BafuProcessScopeFinalizeReport {
-  return projectBafuProcessScopeFinalizeReport({
-    generatedAtUtc: nowIso(),
-    processScope,
-    mode,
-    finalizeReport,
-    gateReport: readCurationGateReport(finalizeReport),
-    finalizeCommand: commandString(finalizeCommand),
-    rerunCommand: helperRerunCommand({
-      rowsFile: resolveRepoPath(finalizeReport.rows_file)!,
-      outDir,
-      sourceSupportRowsFile,
-      sourceRowsFile,
-    }),
-    paths: {
-      report: repoRelative(reportPath),
-      runLedger: repoRelative(ledgerPath),
-      finalizeReport: repoRelative(finalizeReportPath),
-      sourceSupportRowsFile: repoRelative(sourceSupportRowsFile),
-      sourceRowsFile: repoRelative(sourceRowsFile),
-    },
-  });
+function ensureNoRemoteCommitFlags(options: JsonRecord): void {
+  const forbidden = ["remoteCommit", "executeCommit", "allowRemoteCommit", "allowRemoteCommits"];
+  const requested = forbidden.filter((key) => booleanOption(options[key]));
+  if (requested.length > 0) {
+    throw new Error(
+      `${commandName} only performs remote commits through the explicit --commit handoff path; remove ${requested
+        .map((key) => `--${key.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`)}`)
+        .join(", ")}.`,
+    );
+  }
 }
 
 function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
@@ -718,497 +446,19 @@ function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
     };
   }
   ensureNoRemoteCommitFlags(options);
-  const profile = String(options.profile || "bafu")
-    .trim()
-    .toLowerCase();
-  if (profile !== "bafu") {
-    throw new Error(`${commandName} is intentionally scoped to --profile bafu.`);
-  }
-  const rowsFile = resolveRepoPath(options.rowsFile || options.rows || options.input);
-  if (!fileExists(rowsFile)) {
-    throw new Error("--rows-file is required and must point to one process row file.");
-  }
-  const rows = readRowsFile(rowsFile!);
-  if (rows.length !== 1) {
-    throw new Error(`--rows-file must contain exactly one process row; found ${rows.length}.`);
-  }
-  const processScope = processIdentity(rows[0]);
-  if (!processScope.id) {
-    throw new Error("--rows-file must contain a process UUID or dataset_id.");
-  }
-  const outDir = resolveRepoPath(
-    options.outDir ||
-      path.join(".foundry", "workspaces", "bafu-process-scope-e2e", processScope.id),
-  )!;
-  fs.mkdirSync(outDir, { recursive: true });
-  const reportPath = path.join(outDir, reportFileName);
-  const ledgerPath = path.join(outDir, ledgerFileName);
-  const importLedgerDir = resolveRepoPath(
-    options.ledgerDir || options.importLedgerDir || path.join(outDir, "import-ledger"),
-  )!;
-  const sourceSupportRowsFile = resolveRepoPath(options.sourceSupportRowsFile);
-  if (options.sourceSupportRowsFile && !fileExists(sourceSupportRowsFile)) {
-    throw new Error("--source-support-rows-file must point to a readable rows file.");
-  }
-  const sourceRowsFile = resolveRepoPath(options.sourceRowsFile || options.originalRowsFile);
-  if ((options.sourceRowsFile || options.originalRowsFile) && !fileExists(sourceRowsFile)) {
-    throw new Error("--source-rows-file must point to a readable rows file when provided.");
-  }
-  const inputHashes = {
-    rows_file_sha256: sha256File(rowsFile!),
-    source_support_rows_file_sha256: sourceSupportRowsFile
-      ? sha256File(sourceSupportRowsFile)
-      : null,
-    source_rows_file_sha256: sourceRowsFile ? sha256File(sourceRowsFile) : null,
-  };
-  let currentRowsFile = rowsFile!;
-  let currentIdentityReports = processIdentityReportsFromOptions(options);
-  let currentPatchCollectReport = resolveRepoPath(
-    options.patchCollectReport || options.authoringPatchCollectReport,
-  );
-  let currentPatchApplyReport = resolveRepoPath(options.patchApplyReport);
-  let finalizePlan = buildFinalizeCommand({
-    options,
-    rowsFile: currentRowsFile,
-    outDir,
-    importLedgerDir,
-  });
-  const explicitFinalizeReportPath = resolveRepoPath(options.finalizeReport);
-  let finalizeReportPath = explicitFinalizeReportPath || finalizePlan.finalizeReportPath;
-  let finalizeCommand = finalizePlan.argv;
-  const resume = !Object.hasOwn(options, "resume") || booleanOption(options.resume);
-  const previous = resume
-    ? latestLedgerEntry(
-        ledgerPath,
-        (row) =>
-          row.stage === "post_authoring_finalize" &&
-          jsonRecord(row.input_hashes).rows_file_sha256 === inputHashes.rows_file_sha256 &&
-          jsonRecord(row.input_hashes).source_support_rows_file_sha256 ===
-            inputHashes.source_support_rows_file_sha256 &&
-          jsonRecord(row.input_hashes).source_rows_file_sha256 ===
-            inputHashes.source_rows_file_sha256 &&
-          fileExists(resolveRepoPath(jsonRecord(row.files).finalize_report)),
-      )
-    : null;
-  const existingFinalizeReportPath = previous
-    ? resolveRepoPath(jsonRecord(previous.files).finalize_report)
-    : fileExists(finalizeReportPath)
-      ? finalizeReportPath
-      : null;
-
-  if (existingFinalizeReportPath && !booleanOption(options.force)) {
-    const finalizeReport = readJson(existingFinalizeReportPath);
-    const report = projectFinalizeReport({
-      processScope,
-      outDir,
-      reportPath,
-      ledgerPath,
-      finalizeReport,
-      finalizeReportPath: existingFinalizeReportPath,
-      finalizeCommand,
-      mode: previous ? "resume" : "existing-report",
-      sourceSupportRowsFile,
-      sourceRowsFile,
-    });
-    appendLedger(ledgerPath, {
-      schema_version: 1,
-      generated_at_utc: report.generated_at_utc,
-      command: commandName,
-      stage: "resume",
-      state: report.status,
-      process_scope: processScope,
-      input_hashes: inputHashes,
-      files: {
-        report: repoRelative(reportPath),
-        finalize_report: repoRelative(existingFinalizeReportPath),
-      },
-      blockers: report.blockers,
-    });
-    writeJson(reportPath, report);
-    return report;
-  }
-
-  if (!booleanOption(options.execute)) {
-    const report = {
-      schema_version: 1,
-      generated_at_utc: nowIso(),
-      command: commandName,
-      status: "planned",
-      profile: "bafu",
-      process_scope: processScope,
-      policy: {
-        uses_existing_foundry_commands: true,
-        existing_command: "dataset-post-authoring-finalize",
-        remote_commit_executed: false,
-        unresolved_ai_curation_items_hard_block: true,
-        one_process_scope_only: true,
-      },
-      counts: {
-        blockers: 0,
-      },
-      blockers: [],
-      commands: {
-        post_authoring_finalize: commandString(finalizeCommand),
-      },
-      inputs: {
-        rows_file: repoRelative(rowsFile),
-        source_support_rows_file: repoRelative(sourceSupportRowsFile),
-        source_rows_file: repoRelative(sourceRowsFile),
-      },
-      files: {
-        report: repoRelative(reportPath),
-        run_ledger: repoRelative(ledgerPath),
-        expected_finalize_report: repoRelative(finalizeReportPath),
-        import_ledger_dir: repoRelative(importLedgerDir),
-      },
-      resume: {
-        rerun_command: helperRerunCommand({
-          rowsFile: rowsFile!,
-          outDir,
-          sourceSupportRowsFile,
-          sourceRowsFile,
-        }),
-      },
-    };
-    appendLedger(ledgerPath, {
-      schema_version: 1,
-      generated_at_utc: report.generated_at_utc,
-      command: commandName,
-      stage: "plan",
-      state: "planned",
-      process_scope: processScope,
-      input_hashes: inputHashes,
-      files: {
-        report: repoRelative(reportPath),
-        expected_finalize_report: repoRelative(finalizeReportPath),
-      },
-    });
-    writeJson(reportPath, report);
-    return report;
-  }
-
-  const logDir = path.join(outDir, "logs");
-  fs.mkdirSync(logDir, { recursive: true });
-  const handoffRuntime = processHandoffAdapter();
-  let result = spawnSync(finalizeCommand[0], finalizeCommand.slice(1), {
-    cwd: repoRoot,
-    env: process.env,
-    encoding: "utf8",
-  });
-  const stdoutLog = path.join(logDir, "post-authoring-finalize.stdout.log");
-  const stderrLog = path.join(logDir, "post-authoring-finalize.stderr.log");
-  fs.writeFileSync(stdoutLog, result.stdout || "");
-  fs.writeFileSync(stderrLog, result.stderr || "");
-  if (!fileExists(finalizeReportPath)) {
-    const failedReport = {
-      schema_version: 1,
-      generated_at_utc: nowIso(),
-      command: commandName,
-      status: "failed",
-      profile: "bafu",
-      process_scope: processScope,
-      counts: { blockers: 1 },
-      blockers: [
-        {
-          code: "post_authoring_finalize_failed_without_report",
-          severity: "error",
-          message: "Existing Foundry finalize command failed before writing its report.",
-          exit_code: result.status ?? 1,
-          error: result.error ? String(result.error.message || result.error) : null,
-        },
-      ],
-      commands: {
-        post_authoring_finalize: commandString(finalizeCommand),
-      },
-      files: {
-        report: repoRelative(reportPath),
-        run_ledger: repoRelative(ledgerPath),
-        stdout_log: repoRelative(stdoutLog),
-        stderr_log: repoRelative(stderrLog),
-      },
-    };
-    appendLedger(ledgerPath, {
-      schema_version: 1,
-      generated_at_utc: failedReport.generated_at_utc,
-      command: commandName,
-      stage: "post_authoring_finalize",
-      state: "failed",
-      process_scope: processScope,
-      input_hashes: inputHashes,
-      exit_code: result.status ?? 1,
-      files: failedReport.files,
-      blockers: failedReport.blockers,
-    });
-    writeJson(reportPath, failedReport);
-    return failedReport;
-  }
-  let finalizeReport = readJson(finalizeReportPath);
-  const handoffStages: JsonRecord[] = [];
-  const handoffBlockers: JsonRecord[] = [];
-  let supportCommitted = false;
-  let supportReused = false;
-  if (booleanOption(options.commitSupport)) {
-    const supportHandoff = readHandoffPlan(
-      finalizeReport,
-      "source_contact_support_commit_handoff_plan",
-      handoffRuntime,
-    );
-    if (supportHandoff.path) {
-      const supportIdentityKeys = supportIdentityKeysFromHandoffPlan(
-        jsonRecord(supportHandoff.value),
-      );
-      const supportCacheFile =
-        options.verifiedSupportIdentitiesFile || options.supportIdentityCache || null;
-      const cachedSupportIdentities = loadVerifiedSupportIdentities(supportCacheFile);
-      const canReuseSupport =
-        supportIdentityKeys.length > 0 &&
-        supportIdentityKeys.every((identityKey) => cachedSupportIdentities.has(identityKey));
-      if (canReuseSupport) {
-        supportReused = true;
-        supportCommitted = true;
-        const reuseReportPath = path.join(
-          outDir,
-          "source-contact-support-handoff",
-          "reused-support-identities.json",
-        );
-        writeJson(reuseReportPath, {
-          schema_version: 1,
-          generated_at_utc: nowIso(),
-          status: "reused_verified_support_identities",
-          handoff_plan: repoRelative(supportHandoff.path),
-          support_identity_cache: repoRelative(resolveRepoPath(supportCacheFile)),
-          support_identities: supportIdentityKeys,
-        });
-        handoffStages.push({
-          stage: "support.reuse_verified",
-          status: "skipped",
-          report: repoRelative(reuseReportPath),
-          support_identities: supportIdentityKeys,
-        });
-      } else {
-        const supportResult = executeHandoff(
-          {
-            handoffPlanPath: supportHandoff.path,
-            ledgerDir: importLedgerDir,
-            outDir: path.join(outDir, "source-contact-support-handoff"),
-            logDir,
-            label: "support",
-          },
-          handoffRuntime,
-        );
-        handoffStages.push(...supportResult.stages);
-        handoffBlockers.push(...supportResult.blockers);
-        supportCommitted = supportResult.status === "completed";
-        if (supportCommitted && !handoffBlockers.length) {
-          appendVerifiedSupportIdentities({
-            cacheFile: supportCacheFile,
-            identityKeys: supportIdentityKeys,
-            source: "process_scope_e2e.support_handoff",
-            report: supportResult.closeoutReportPath!,
-          });
-        }
-      }
-      if (supportCommitted && !handoffBlockers.length) {
-        const rerun = spawnSync(finalizeCommand[0], finalizeCommand.slice(1), {
-          cwd: repoRoot,
-          env: process.env,
-          encoding: "utf8",
-        });
-        const rerunStdoutLog = path.join(
-          logDir,
-          "post-authoring-finalize-after-support.stdout.log",
-        );
-        const rerunStderrLog = path.join(
-          logDir,
-          "post-authoring-finalize-after-support.stderr.log",
-        );
-        fs.writeFileSync(rerunStdoutLog, rerun.stdout || "");
-        fs.writeFileSync(rerunStderrLog, rerun.stderr || "");
-        handoffStages.push(
-          projectCommandStage({
-            stage: "process.finalize_after_support",
-            command: commandString(finalizeCommand),
-            result: rerun,
-            stdoutLog: rerunStdoutLog,
-            stderrLog: rerunStderrLog,
-            reportPath: finalizeReportPath,
-          }),
-        );
-        if (fileExists(finalizeReportPath)) {
-          finalizeReport = readJson(finalizeReportPath);
-        }
-      }
-    }
-  }
-
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    if (finalizeReport?.status === "ready_for_remote_write") break;
-    let recovery = null;
-    let recoveryKind = null;
-    if (canRunPostFinalizeIdentityRecovery(readCurationGateReport(finalizeReport))) {
-      recoveryKind = "identity";
-      recovery = runPostFinalizeIdentityRecovery(
-        {
-          finalizeReport,
-          currentRowsFile,
-          outDir,
-          logDir,
-          attempt,
-        },
-        postFinalizeRecoveryAdapter(),
-      );
-    } else if (canRunPostFinalizeSemanticRecovery(readCurationGateReport(finalizeReport))) {
-      recoveryKind = "semantic";
-      recovery = runPostFinalizeSemanticRecovery(
-        {
-          finalizeReport,
-          currentRowsFile,
-          outDir,
-          logDir,
-          attempt,
-        },
-        postFinalizeRecoveryAdapter(),
-      );
-    } else {
-      break;
-    }
-    handoffStages.push(...(recovery.stages ?? []));
-    if (!["completed", "completed_noop"].includes(recovery.status)) {
-      handoffBlockers.push(
-        recovery.blocker ?? {
-          code: `post_finalize_${recoveryKind}_recovery_failed`,
-          message: `Post-finalize ${recoveryKind} recovery did not complete.`,
-        },
-      );
-      break;
-    }
-    currentRowsFile = recovery.rowsFile || currentRowsFile;
-    if (recovery.identityApplyReport) currentIdentityReports.push(recovery.identityApplyReport);
-    if (recovery.patchCollectReport) currentPatchCollectReport = recovery.patchCollectReport;
-    if (recovery.patchApplyReport) currentPatchApplyReport = recovery.patchApplyReport;
-    finalizePlan = buildFinalizeCommand({
-      options: {
-        ...options,
-        identityDecisionApplyReports: currentIdentityReports,
-        patchCollectReport: currentPatchCollectReport,
-        patchApplyReport: currentPatchApplyReport,
-      },
-      rowsFile: currentRowsFile,
-      outDir,
-      importLedgerDir,
-    });
-    finalizeReportPath = explicitFinalizeReportPath || finalizePlan.finalizeReportPath;
-    finalizeCommand = finalizePlan.argv;
-    result = spawnSync(finalizeCommand[0], finalizeCommand.slice(1), {
-      cwd: repoRoot,
-      env: process.env,
-      encoding: "utf8",
-    });
-    const recoveryStderrLog = path.join(
-      logDir,
-      `post-authoring-finalize-after-${recoveryKind}-${attempt}.stderr.log`,
-    );
-    const recoveryStdoutLog = path.join(
-      logDir,
-      `post-authoring-finalize-after-${recoveryKind}-${attempt}.stdout.log`,
-    );
-    fs.writeFileSync(recoveryStdoutLog, result.stdout || "");
-    fs.writeFileSync(recoveryStderrLog, result.stderr || "");
-    handoffStages.push(
-      projectCommandStage({
-        stage: `process.finalize_after_${recoveryKind}_${attempt}`,
-        command: commandString(finalizeCommand),
-        result,
-        stdoutLog: recoveryStdoutLog,
-        stderrLog: recoveryStderrLog,
-        reportPath: finalizeReportPath,
-      }),
-    );
-    if (!fileExists(finalizeReportPath)) break;
-    finalizeReport = readJson(finalizeReportPath);
-  }
-
-  let report = projectFinalizeReport({
-    processScope,
-    outDir,
-    reportPath,
-    ledgerPath,
-    finalizeReport,
-    finalizeReportPath,
-    finalizeCommand,
-    mode: "execute",
-    sourceSupportRowsFile,
-    sourceRowsFile,
-  });
-  report = applyBafuProcessScopeHandoffSummary({
-    report,
-    stages: handoffStages,
-    blockers: handoffBlockers,
-    supportCommitted,
-    supportReused,
-  });
-
-  if (booleanOption(options.commit) && report.status === "ready_for_explicit_commit") {
-    const processHandoff = readHandoffPlan(finalizeReport, "commit_handoff_plan", handoffRuntime);
-    if (!processHandoff.path) {
-      report.blockers = [
-        ...report.blockers,
-        {
-          code: "process_commit_handoff_plan_missing",
-          message: "Ready process scope is missing dataset-commit-handoff-plan.json.",
-        },
-      ];
-      report.counts.blockers = report.blockers.length;
-      report.status = "blocked";
-    } else {
-      const processResult = executeHandoff(
-        {
-          handoffPlanPath: processHandoff.path,
-          ledgerDir: importLedgerDir,
-          outDir: path.join(outDir, "process-handoff"),
-          logDir,
-          label: "process",
-        },
-        handoffRuntime,
-      );
-      report.handoff_stages = [...(report.handoff_stages ?? []), ...processResult.stages];
-      report.blockers = [...report.blockers, ...processResult.blockers];
-      report.counts.blockers = report.blockers.length;
-      report.files.process_commit_report = repoRelative(processResult.commitReportPath);
-      report.files.process_post_write_verify_report = repoRelative(processResult.verifyReportPath);
-      report.files.process_closeout_report = repoRelative(processResult.closeoutReportPath);
-      report.status = processResult.status === "completed" ? "completed" : "failed";
-      report.policy.remote_commit_executed = processResult.status === "completed";
-    }
-  }
-  appendLedger(ledgerPath, {
-    schema_version: 1,
-    generated_at_utc: report.generated_at_utc,
-    command: commandName,
-    stage: "post_authoring_finalize",
-    state: report.status,
-    process_scope: processScope,
-    input_hashes: inputHashes,
-    exit_code: result.status ?? 0,
-    files: {
-      report: repoRelative(reportPath),
-      finalize_report: repoRelative(finalizeReportPath),
-      stdout_log: repoRelative(stdoutLog),
-      stderr_log: repoRelative(stderrLog),
-    },
-    blockers: report.blockers,
-  });
-  writeJson(reportPath, report);
-  return report;
+  return createBafuProcessScopeRun({
+    commandName,
+    reportFileName,
+    ledgerFileName,
+    adapter: createRunAdapter(),
+  }).run(options);
 }
 
 export function createBafuProcessScopeE2eCommands(deps: BafuProcessScopeE2eRuntime): {
   runDatasetBafuProcessScopeE2e: typeof runDatasetBafuProcessScopeE2e;
 } {
   installBafuProcessScopeE2eRuntime(deps);
-  return {
-    runDatasetBafuProcessScopeE2e,
-  };
+  return { runDatasetBafuProcessScopeE2e };
 }
 
 export const bafuProcessScopeE2eTestHooks = {
@@ -1219,10 +469,10 @@ export const bafuProcessScopeE2eTestHooks = {
   curationGateBlockers,
   finalizeBlockers,
   foundryEntryPath,
-  loadVerifiedSupportIdentities,
+  loadVerifiedSupportIdentities: processScopeRuntime.loadVerifiedSupportIdentities,
   postWriteVerifyRetryReason,
   postWriteVerifyRetryReasonFromReport,
   projectBafuProcessScopeFinalizeReport,
   reportCodes,
-  supportIdentityKeysFromHandoffPlan,
+  supportIdentityKeysFromHandoffPlan: processScopeRuntime.supportIdentityKeysFromHandoffPlan,
 };
