@@ -331,7 +331,7 @@ test("BAFU carry-forward keeps duplicate-source precedence, exact package projec
     assert.equal(result.report.counts.conflicts, 0);
     assert.equal(
       result.report.replacements[0].source_file,
-      firstDecisionDir.slice(root.length + 1),
+      repoRelative(path.join(firstDecisionDir, "identity-decisions.jsonl")),
     );
     assert.equal(
       (readJsonLines(result.outputFile)[0] as JsonRecord).reason,
@@ -358,12 +358,12 @@ test("BAFU carry-forward keeps duplicate-source precedence, exact package projec
     const reportBytes = fs.readFileSync(result.reportPath, "utf8");
     assert.equal(
       sha256(outputBytes),
-      "0000000000000000000000000000000000000000000000000000000000000000",
+      "1a5fb2987c613de05c71c4acb05bb065d19ebe3872597b16e7dd68a5fdb030a1",
       "carry-forward JSONL byte contract",
     );
     assert.equal(
       sha256(reportBytes),
-      "0000000000000000000000000000000000000000000000000000000000000000",
+      "e3d9d99f38852b46832e1ad29ec6e2bdf3a6840bc03a57e8655442b4e690ae50",
       "carry-forward report byte contract",
     );
   } finally {

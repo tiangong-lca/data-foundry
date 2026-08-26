@@ -15,6 +15,7 @@ import {
   createClassificationSchemaRepairService,
   type SchemaPaths,
 } from "../lib/bafu-classification/schema-repair.ts";
+import { createBafuIdentityDecisionCarryForwardService } from "../lib/bafu-orchestration/identity-decision-carry-forward.ts";
 import {
   buildClassificationDecisionIndex,
   preflightPlanRows,
@@ -121,34 +122,6 @@ interface CommitFailureSummary {
   accepted: boolean;
   alreadyExists: number;
   otherFailures: number;
-}
-
-interface ReusableDecisionIndex {
-  files: string[];
-  byKey: Map<string, { row: JsonRecord; source_file: string }>;
-  conflicts: JsonRecord[];
-}
-
-interface CarryForwardReport extends JsonRecord {
-  status: string;
-  counts: {
-    replacements: number;
-    additions: number;
-    conflicts: number;
-    [key: string]: number;
-  };
-}
-
-interface CarryForwardResult {
-  report: CarryForwardReport;
-  reportPath: string;
-  outputFile: string;
-}
-
-interface GatePackageSnapshot extends JsonRecord {
-  authoring_package: string;
-  authoring_package_sha256: string;
-  contractContextKinds: string[];
 }
 
 interface IdentityPatchCompleted extends JsonRecord {
@@ -652,10 +625,6 @@ function requestedProcessIdValues(options: JsonRecord): string[] {
   return [...values, ...fileIds];
 }
 
-function uniqueValues<T>(values: T[]): T[] {
-  return [...new Set(values.filter((value) => value != null && value !== ""))];
-}
-
 function shellQuote(value: string): string {
   return runtime().shellQuote(value);
 }
@@ -700,6 +669,43 @@ function datasetIdentity(row: JsonRecord, type: string): DatasetIdentity {
       "00.00.001",
   };
 }
+
+const identityDecisionCarryForward = createBafuIdentityDecisionCarryForwardService({
+  nowIso,
+  repoRelative,
+  resolveRepoPath,
+  datasetIdentity: (row, datasetType) => datasetIdentity(jsonRecord(row), datasetType),
+  resultCacheDirectory: () => process.env.BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE ?? null,
+  fs: {
+    fileExists,
+    directoryExists,
+    readDirectory: (directory) =>
+      fs.readdirSync(directory, { withFileTypes: true }).map((entry) => ({
+        name: entry.name,
+        isDirectory: entry.isDirectory(),
+      })),
+    readJson,
+    readJsonLines,
+    writeJson,
+    writeJsonLines,
+    ensureDirectory: (directory) => fs.mkdirSync(directory, { recursive: true }),
+    copyFile: (source, destination) => fs.copyFileSync(source, destination),
+    readText: (filePath) => fs.readFileSync(filePath, "utf8"),
+    removeDirectory: (directory) => fs.rmSync(directory, { recursive: true, force: true }),
+  },
+  path: {
+    join: (...parts) => path.join(...parts),
+    basename: (filePath) => path.basename(filePath),
+    parse: (filePath) => path.parse(filePath),
+  },
+  hash: { sha256File },
+});
+
+const {
+  invalidateIdentityPreflightResultCacheEntry,
+  loadResolutionRewritesByProcess,
+  mergeCompletedReusableIdentityDecisions,
+} = identityDecisionCarryForward;
 
 const {
   batchRunStatus,
@@ -1539,398 +1545,6 @@ function existingIdentityApplyReportsWithReferenceRewrites(
     ),
   ];
   return uniqueExistingPaths(candidates).filter(identityApplyReportHasReferenceRewrites);
-}
-
-function identityDecisionDatasetKey(
-  row: JsonRecord,
-  fallbackType: string | null = null,
-): string | null {
-  const datasetType = asText(row?.dataset_type ?? row?.datasetType ?? row?.type ?? fallbackType);
-  const datasetId = asText(
-    row?.dataset_id ??
-      row?.datasetId ??
-      row?.source_dataset_id ??
-      row?.sourceDatasetId ??
-      row?.entity_id ??
-      row?.entityId,
-  );
-  if (!datasetType || !datasetId) return null;
-  const datasetVersion =
-    asText(
-      row?.dataset_version ??
-        row?.datasetVersion ??
-        row?.source_dataset_version ??
-        row?.sourceDatasetVersion ??
-        row?.version,
-    ) || "00.00.001";
-  return `${datasetType.toLowerCase()}:${datasetId}@${datasetVersion}`;
-}
-
-function identityDecisionValue(row: JsonRecord): string {
-  const value = asText(row?.identity_decision ?? row?.identityDecision ?? row?.decision);
-  if (["reuse", "reuse_existing", "reference_reuse"].includes(value)) {
-    return "reuse_existing_reference";
-  }
-  if (["block", "blocked", "unresolved"].includes(value)) return "block_unresolved";
-  return value;
-}
-
-function identityDecisionCanonical(row: JsonRecord): JsonRecord | null {
-  const canonical = jsonRecord(row.canonical ?? row.selected_reference ?? row.selectedReference);
-  if (Object.keys(canonical).length === 0) return null;
-  const id = asText(
-    canonical.ref_object_id ?? canonical.refObjectId ?? canonical.id ?? canonical["@refObjectId"],
-  );
-  if (!id) return null;
-  return {
-    table: asText(canonical.table) || "flows",
-    ref_object_id: id,
-    version:
-      asText(canonical.version ?? canonical.ref_version ?? canonical["@version"]) || "00.00.001",
-    short_description:
-      asText(
-        canonical.short_description ??
-          canonical.shortDescription ??
-          jsonRecord(canonical["common:shortDescription"])["#text"],
-      ) || id,
-  };
-}
-
-function canonicalDecisionKey(canonical: JsonRecord | null): string {
-  if (!canonical) return "";
-  return `${canonical.table}:${canonical.ref_object_id}@${canonical.version}`;
-}
-
-function completedReusableIdentityDecision(row: JsonRecord): boolean {
-  return (
-    asText(row?.decision_status ?? row?.decisionStatus ?? row?.status) === "completed" &&
-    identityDecisionValue(row) === "reuse_existing_reference" &&
-    Boolean(identityDecisionCanonical(row)) &&
-    Boolean(row?.evidence && typeof row.evidence === "object") &&
-    Boolean(asText(row.basis ?? row.reason))
-  );
-}
-
-// Invalidate a flow's run-level identity-preflight RESULT cache entry the moment
-// the flow is minted/committed. A later scope referencing the same source flow then
-// re-runs the (now cheap, post-mint) search and reuses the freshly created flow
-// instead of restoring the stale pre-mint result and minting a duplicate.
-// Paired with the cache in scripts/commands/identity-preflight-run.ts. No-op unless
-// BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE is set.
-function invalidateIdentityPreflightResultCacheEntry(identityKey: string): boolean {
-  const raw = process.env.BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE;
-  if (!raw || !identityKey) return false;
-  const cacheDir = resolveRepoPath(raw);
-  const match = String(identityKey).match(/^([^:]+):(.+)@([^@]+)$/u);
-  if (!cacheDir || !match || !directoryExists(cacheDir)) return false;
-  const [, datasetType, datasetId, datasetVersion] = match;
-  let removed = 0;
-  try {
-    for (const entry of fs.readdirSync(cacheDir, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      const entryDir = path.join(cacheDir, entry.name);
-      const manifestPath = path.join(entryDir, "foundry-identity-preflight-execution.json");
-      if (!fileExists(manifestPath)) continue;
-      let manifest;
-      try {
-        manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-      } catch {
-        continue;
-      }
-      const dataset = manifest?.binding?.dataset;
-      if (
-        dataset?.type === datasetType &&
-        dataset?.id === datasetId &&
-        String(dataset?.version || "00.00.001") === datasetVersion
-      ) {
-        fs.rmSync(entryDir, { recursive: true, force: true });
-        removed += 1;
-      }
-    }
-  } catch {
-    /* best-effort invalidation */
-  }
-  return removed > 0;
-}
-
-function identityDecisionSourceFiles(runDir: string): string[] {
-  if (!directoryExists(runDir)) return [];
-  return fs
-    .readdirSync(runDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && /^decisions(?:-|$)/u.test(entry.name))
-    .map((entry) => path.join(runDir, entry.name, "identity-decisions.jsonl"))
-    .filter(fileExists)
-    .sort();
-}
-
-function loadCompletedReusableIdentityDecisions(runDir: string): ReusableDecisionIndex {
-  const byKey = new Map<string, { row: JsonRecord; source_file: string }>();
-  const conflicts: JsonRecord[] = [];
-  const files = identityDecisionSourceFiles(runDir);
-  for (const filePath of files) {
-    for (const row of readJsonLines(filePath)) {
-      if (!completedReusableIdentityDecision(row)) continue;
-      const key = identityDecisionDatasetKey(row);
-      if (!key) continue;
-      const canonical = identityDecisionCanonical(row);
-      const existing = byKey.get(key);
-      if (existing) {
-        const existingCanonicalKey = canonicalDecisionKey(identityDecisionCanonical(existing.row));
-        const currentCanonicalKey = canonicalDecisionKey(canonical);
-        if (existingCanonicalKey !== currentCanonicalKey) {
-          conflicts.push({
-            key,
-            existing_source_file: repoRelative(existing.source_file),
-            existing_canonical: existingCanonicalKey,
-            source_file: repoRelative(filePath),
-            canonical: currentCanonicalKey,
-          });
-          byKey.delete(key);
-        }
-        continue;
-      }
-      byKey.set(key, { row, source_file: filePath });
-    }
-  }
-  return { files, byKey, conflicts };
-}
-
-// FIX A: load the authoritative library-resolution exchange-reference-rewrites into a
-// Map keyed by process_id -> array of rewrite rows. Each row proves, per process and
-// per exchange, that a materialized source flow (source_flow_id/source_flow_version)
-// should reference a canonical library flow (canonical_flow_id/canonical_flow_version).
-// Empty/missing dir yields an empty map (deterministic path simply applies no reuse).
-function loadResolutionRewritesByProcess(resolutionDir: string): Map<string, JsonRecord[]> {
-  const byProcess = new Map<string, JsonRecord[]>();
-  if (!resolutionDir) return byProcess;
-  const rewritesFile = path.join(
-    resolveRepoPath(resolutionDir)!,
-    "exchange-reference-rewrites.jsonl",
-  );
-  if (!fileExists(rewritesFile)) {
-    throw new Error(
-      `--library-resolution directory does not contain exchange-reference-rewrites.jsonl: ${repoRelative(rewritesFile)}`,
-    );
-  }
-  for (const row of readJsonLines(rewritesFile)) {
-    const processId = asText(row?.process_id);
-    if (!processId) continue;
-    if (!byProcess.has(processId)) byProcess.set(processId, []);
-    byProcess.get(processId)!.push(row);
-  }
-  return byProcess;
-}
-
-function curationGateAuthoringPackagesById(
-  curationGateReport: string | null,
-): Map<string, JsonRecord> {
-  const byId = new Map<string, JsonRecord>();
-  if (!curationGateReport || !fileExists(curationGateReport)) return byId;
-  let report: JsonRecord;
-  try {
-    report = readJson(curationGateReport);
-  } catch {
-    return byId;
-  }
-  const entities = [report?.entities, report?.processes, report?.flows, report?.items].find(
-    Array.isArray,
-  );
-  for (const entity of (entities ?? []).map(jsonRecord)) {
-    const id = asText(entity?.entity_id ?? entity?.dataset_id);
-    const packageRef = asText(entity?.authoring_package);
-    if (!id || !packageRef) continue;
-    byId.set(id, {
-      package_ref: packageRef,
-      sha256: asText(entity?.authoring_package_sha256) || null,
-    });
-  }
-  return byId;
-}
-
-// Mirrors dataset-identity-decision-task-build: bind the decision to a snapshot of the
-// entity's real full-context authoring package so downstream full-context proofs hold.
-function snapshotGateAuthoringPackage({
-  gatePackage,
-  outDir,
-}: {
-  gatePackage: JsonRecord;
-  outDir: string;
-}): GatePackageSnapshot | null {
-  const packagePath = resolveRepoPath(gatePackage.package_ref);
-  if (!packagePath || !fileExists(packagePath)) return null;
-  const sha = asText(gatePackage.sha256) || sha256File(packagePath);
-  const parsed = path.parse(path.basename(packagePath));
-  const snapshotPath = path.join(
-    outDir,
-    "authoring-package-snapshots",
-    `${parsed.name}.${sha}.snapshot${parsed.ext || ".json"}`,
-  );
-  fs.mkdirSync(path.dirname(snapshotPath), { recursive: true });
-  if (!fileExists(snapshotPath)) fs.copyFileSync(packagePath, snapshotPath);
-  let contractContextKinds: string[] = [];
-  try {
-    const snapshot = readJson(snapshotPath);
-    contractContextKinds = uniqueValues(
-      recordArray(snapshot.contract_context_files)
-        .filter((file) => asText(file.kind) && asText(file.text))
-        .map((file) => asText(file.kind)),
-    );
-  } catch {
-    contractContextKinds = [];
-  }
-  return {
-    authoring_package: repoRelative(snapshotPath),
-    authoring_package_sha256: sha,
-    contractContextKinds,
-  };
-}
-
-function mergeCompletedReusableIdentityDecisions({
-  runDir,
-  decisionsFile,
-  outDir,
-  datasetType,
-  rowsFile = null,
-  curationGateReport = null,
-}: {
-  runDir: string;
-  decisionsFile: string;
-  outDir: string;
-  datasetType: string;
-  rowsFile?: string | null;
-  curationGateReport?: string | null;
-}): CarryForwardResult {
-  const currentRows = fileExists(decisionsFile) ? readJsonLines(decisionsFile) : [];
-  const reusable = loadCompletedReusableIdentityDecisions(runDir);
-  const replacements: JsonRecord[] = [];
-  const additions: JsonRecord[] = [];
-  const mergedRows = currentRows.map((row) => {
-    const key = identityDecisionDatasetKey(row, datasetType);
-    const reusableDecision = key ? reusable.byKey.get(key) : null;
-    if (!reusableDecision || identityDecisionValue(row) !== "block_unresolved") return row;
-    replacements.push({
-      key,
-      source_file: repoRelative(reusableDecision.source_file),
-      previous_decision: identityDecisionValue(row),
-      replacement_decision: "reuse_existing_reference",
-      canonical: identityDecisionCanonical(reusableDecision.row),
-    });
-    return {
-      ...reusableDecision.row,
-      dataset_type: row.dataset_type ?? reusableDecision.row.dataset_type ?? datasetType,
-      dataset_id:
-        row.dataset_id ?? row.source_dataset_id ?? reusableDecision.row.dataset_id ?? null,
-      dataset_version:
-        row.dataset_version ??
-        row.source_dataset_version ??
-        reusableDecision.row.dataset_version ??
-        "00.00.001",
-      authoring_package: reusableDecision.row.authoring_package ?? row.authoring_package ?? null,
-      authoring_package_sha256:
-        reusableDecision.row.authoring_package_sha256 ?? row.authoring_package_sha256 ?? null,
-      used_context_kinds: uniqueValues([
-        ...normalizedList(reusableDecision.row.used_context_kinds),
-        ...normalizedList(row.used_context_kinds),
-      ]),
-      closes_action_items: uniqueValues([
-        ...normalizedList(reusableDecision.row.closes_action_items),
-        ...normalizedList(row.closes_action_items),
-      ]),
-    };
-  });
-  // A materialized row without any task decision would otherwise fall through to the
-  // write path even when the library already holds a completed reuse decision for it
-  // (e.g. an elementary flow that produced no preflight action item).
-  if (rowsFile && fileExists(rowsFile)) {
-    const gatePackagesById = curationGateAuthoringPackagesById(curationGateReport);
-    const decidedKeys = new Set<string>(
-      mergedRows
-        .map((row) => identityDecisionDatasetKey(row, datasetType))
-        .filter((key): key is string => Boolean(key)),
-    );
-    for (const payloadRow of readJsonLines(rowsFile)) {
-      const identity = datasetIdentity(payloadRow, datasetType);
-      if (!identity?.id) continue;
-      const key = identityDecisionDatasetKey(
-        { dataset_type: datasetType, dataset_id: identity.id, dataset_version: identity.version },
-        datasetType,
-      );
-      if (!key || decidedKeys.has(key)) continue;
-      const reusableDecision = reusable.byKey.get(key);
-      if (!reusableDecision) continue;
-      decidedKeys.add(key);
-      // Appended rows have no per-scope task decision, so bind them to the entity's own
-      // full-context authoring package from the curation gate (same trust pattern as
-      // replacement rows, which keep the task package while taking the library decision).
-      const gatePackage = gatePackagesById.get(identity.id);
-      const packageBinding = gatePackage
-        ? snapshotGateAuthoringPackage({ gatePackage, outDir })
-        : null;
-      additions.push({
-        key,
-        source_file: repoRelative(reusableDecision.source_file),
-        replacement_decision: "reuse_existing_reference",
-        canonical: identityDecisionCanonical(reusableDecision.row),
-        authoring_package: packageBinding?.authoring_package ?? null,
-      });
-      mergedRows.push({
-        ...reusableDecision.row,
-        dataset_type: datasetType,
-        dataset_id: identity.id,
-        dataset_version: identity.version || reusableDecision.row.dataset_version || "00.00.001",
-        ...(packageBinding
-          ? {
-              authoring_package: packageBinding.authoring_package,
-              authoring_package_sha256: packageBinding.authoring_package_sha256,
-            }
-          : {}),
-        // The full-context proof requires every profile context kind on each decision;
-        // replacement rows inherit them from the autofill template, appended rows declare
-        // exactly what their bound authoring package proves (plus the contract baseline).
-        used_context_kinds: uniqueValues([
-          ...normalizedList(reusableDecision.row.used_context_kinds),
-          "schema",
-          "methodology_yaml",
-          "ruleset",
-          ...(packageBinding?.contractContextKinds ?? []),
-        ]),
-      });
-    }
-  }
-  fs.mkdirSync(outDir, { recursive: true });
-  const changed = replacements.length > 0 || additions.length > 0;
-  const outputFile = changed
-    ? path.join(outDir, "identity-decisions.with-carry-forward.jsonl")
-    : decisionsFile;
-  if (changed) writeJsonLines(outputFile, mergedRows);
-  const reportPath = path.join(outDir, "identity-decision-carry-forward-report.json");
-  const report: CarryForwardReport = {
-    schema_version: 1,
-    generated_at_utc: nowIso(),
-    command: "dataset-bafu-identity-decision-carry-forward",
-    status: changed ? "completed" : "completed_noop",
-    remote_write_mode: "read-only",
-    dataset_type: datasetType,
-    files: {
-      report: repoRelative(reportPath),
-      input_decisions: repoRelative(decisionsFile),
-      output_decisions: repoRelative(outputFile),
-      source_decision_files: reusable.files.map(repoRelative),
-    },
-    counts: {
-      input_decisions: currentRows.length,
-      source_decision_files: reusable.files.length,
-      reusable_decisions: reusable.byKey.size,
-      replacements: replacements.length,
-      additions: additions.length,
-      conflicts: reusable.conflicts.length,
-    },
-    replacements,
-    additions,
-    conflicts: reusable.conflicts,
-  };
-  writeJson(reportPath, report);
-  return { report, reportPath, outputFile };
 }
 
 function categoryForBlocker(code: unknown): string {
