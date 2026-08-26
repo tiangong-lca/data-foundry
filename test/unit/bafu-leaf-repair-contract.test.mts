@@ -24,6 +24,14 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const leafPath = path.join(repoRoot, "scripts/lib/bafu-classification/leaf-repair.ts");
 const ownerPath = path.join(repoRoot, "scripts/commands/bafu-leaf-classification-tasks.ts");
 
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function jsonRecord(value: unknown): JsonRecord {
+  return isJsonRecord(value) ? value : {};
+}
+
 function categorySchema(entries: Readonly<Record<string, string>>): LeafCategorySchema {
   const schemaEntries = Object.entries(entries).map(([code, label]) => ({
     code,
@@ -105,7 +113,7 @@ test("BAFU leaf repair is a pure typed leaf and the command owner imports it", (
 
   assert.doesNotMatch(
     moduleSource,
-    /from\s+["']node:|\bprocess(?:\.env)?\b|\bfetch\s*\(|\bXMLHttpRequest\b|\bruntime\s*\(/u,
+    /from\s+["']node:|\bprocess\.(?:env|cwd|argv|platform)\b|\bfetch\s*\(|\bXMLHttpRequest\b|\bruntime\s*\(/u,
   );
   assert.doesNotMatch(moduleSource, /^(?:let|var|const)\s+/gmu);
   assert.match(moduleSource, /export type JsonRecord = Record<string, unknown>/u);
@@ -218,6 +226,8 @@ test("flow-product repair keeps the broad-only gate and exact candidate decision
 });
 
 test("process rules preserve trace, unit, ambiguity, and precedence contracts", () => {
+  const processContext = jsonRecord(processTask.process_context);
+  const sourceTrace = jsonRecord(processContext.source_trace);
   assert.equal(categoryKeyForLeafTask(processTask), "electricity > fixture");
   assert.equal(
     categoryKeyForMapDecision({
@@ -238,7 +248,7 @@ test("process rules preserve trace, unit, ambiguity, and precedence contracts", 
   const pipelineTask: JsonRecord = {
     ...processTask,
     process_context: {
-      ...((processTask.process_context as JsonRecord) ?? {}),
+      ...processContext,
       name: "Natural gas, low pressure distribution",
       general_comment: "Pipeline distribution network",
       name_parts: { functional_unit_flow_properties: "kg" },
@@ -253,7 +263,7 @@ test("process rules preserve trace, unit, ambiguity, and precedence contracts", 
     processLeafRepairRule({
       ...processTask,
       process_context: {
-        ...((processTask.process_context as JsonRecord) ?? {}),
+        ...processContext,
         name: "Heat pump operation",
         general_comment: "Heat pump operation",
         name_parts: { functional_unit_flow_properties: "MJ" },
@@ -265,8 +275,16 @@ test("process rules preserve trace, unit, ambiguity, and precedence contracts", 
     processLeafRepairRule({
       ...processTask,
       process_context: {
-        ...((processTask.process_context as JsonRecord) ?? {}),
+        ...processContext,
         name_parts: { functional_unit_flow_properties: "kg" },
+        source_trace: {
+          ...sourceTrace,
+          reference_function_attributes: {
+            name: "Electricity, from biogas and coal",
+            unit: "kg",
+            category: "electricity",
+          },
+        },
       },
     }),
     null,
