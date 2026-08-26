@@ -17,6 +17,7 @@ import {
   selectScopesForRun,
   selectionOrderOption,
 } from "../lib/batch-orchestration/scope-selection.ts";
+import { createSupportIdentityCacheService } from "../lib/batch-orchestration/support-identity-cache.ts";
 import {
   createUniverseCoverageService,
   type UniverseCoverageRuntimeAdapter,
@@ -544,6 +545,28 @@ function supportIdentityTypes(): string[] {
     ? ["contact", "source", "unitgroup", "flowproperty"]
     : ["contact", "source"];
 }
+
+const supportIdentityCache = createSupportIdentityCacheService(
+  {
+    nowIso,
+    repoRelative,
+    resolveRepoPath,
+    fileExists,
+    directoryExists,
+    readJson,
+    readJsonLines,
+    appendJsonLine,
+    findFiles,
+    supportedTypes: supportIdentityTypes,
+    path: {
+      join: (...parts: string[]) => path.join(...parts),
+      basename: (filePath: string) => path.basename(filePath),
+      dirname: (filePath: string) => path.dirname(filePath),
+      separator: path.sep,
+    },
+  },
+  verifiedSupportIdentities,
+);
 // When true (USLCI only), the flow-identity step applies the authoritative
 // library-resolution exchange-reference-rewrites deterministically: every flow the
 // resolution proved reusable becomes a canonical reference, only flows with NO
@@ -855,279 +878,12 @@ function supportIdentityKeysFromHandoffPlan(handoffPlan: JsonRecord): string[] {
     .filter((key): key is string => Boolean(key));
 }
 
-function splitSupportIdentityKey(identityKey: unknown): JsonRecord | null {
-  // contact|source for every profile; unitgroup|flowproperty additionally under
-  // --mint-unmatched-fp-ug-support. Parsing a wider key set is harmless for BAFU
-  // because BAFU never produces unitgroup/flowproperty support identity keys.
-  const match = /^(contact|source|unitgroup|flowproperty):([^@]+)@(.+)$/u.exec(
-    String(identityKey || ""),
-  );
-  if (!match) return null;
-  return { dataset_type: match[1], dataset_id: match[2], dataset_version: match[3] };
-}
+const splitSupportIdentityKey = supportIdentityCache.splitIdentityKey;
+const appendSupportIdentityCacheRows = supportIdentityCache.appendVerifiedRows;
+const appendSupportIdentityInvalidationRows = supportIdentityCache.appendInvalidationRows;
+const staleReusedSupportIdentityKeys = supportIdentityCache.staleReusedKeys;
 
-function supportIdentityKeyFromCacheRow(row: JsonRecord): string | null {
-  if (row?.identity_key) return String(row.identity_key);
-  const rawType = row?.dataset_type || row?.type || row?.table;
-  // Tables are plural (flowproperties/unitgroups/contacts/sources); strip to singular.
-  const type =
-    rawType === "flowproperties"
-      ? "flowproperty"
-      : rawType === "unitgroups"
-        ? "unitgroup"
-        : String(rawType || "").replace(/s$/u, "");
-  const id = row?.dataset_id || row?.id;
-  const version = row?.dataset_version || row?.version || "00.00.001";
-  return supportIdentityTypes().includes(type) && id ? `${type}:${id}@${version}` : null;
-}
-
-function supportIdentityCacheRow({
-  identityKey,
-  source,
-  report,
-}: {
-  identityKey: string;
-  source: string;
-  report: string | null;
-}): JsonRecord | null {
-  const identity = splitSupportIdentityKey(identityKey);
-  if (!identity) return null;
-  return {
-    schema_version: 1,
-    generated_at_utc: nowIso(),
-    identity_key: identityKey,
-    ...identity,
-    status: "verified",
-    source,
-    report: repoRelative(report),
-  };
-}
-
-function appendSupportIdentityCacheRows({
-  cacheFile,
-  identityKeys,
-  source,
-  report,
-}: {
-  cacheFile: string;
-  identityKeys: string[];
-  source: string;
-  report: string | null;
-}): number {
-  if (!cacheFile || identityKeys.length === 0) return 0;
-  let written = 0;
-  for (const identityKey of identityKeys) {
-    const row = supportIdentityCacheRow({ identityKey, source, report });
-    if (!row) continue;
-    appendJsonLine(cacheFile, row);
-    written += 1;
-  }
-  return written;
-}
-
-function appendSupportIdentityInvalidationRows({
-  cacheFile,
-  identityKeys,
-  source,
-  report,
-}: {
-  cacheFile: string;
-  identityKeys: string[];
-  source: string;
-  report: string;
-}): number {
-  if (!cacheFile || identityKeys.length === 0) return 0;
-  let written = 0;
-  for (const identityKey of identityKeys) {
-    const identity = splitSupportIdentityKey(identityKey);
-    if (!identity) continue;
-    appendJsonLine(cacheFile, {
-      schema_version: 1,
-      generated_at_utc: nowIso(),
-      identity_key: identityKey,
-      ...identity,
-      status: "invalidated_remote_missing",
-      source,
-      report: repoRelative(report),
-    });
-    written += 1;
-  }
-  return written;
-}
-
-function staleReusedSupportIdentityKeys(
-  finalizeReport: JsonRecord,
-  supportIdentityKeys: string[],
-): string[] {
-  const keySet = new Set(supportIdentityKeys);
-  const stale = new Set<string>();
-  for (const blocker of asArray(finalizeReport.blockers).map(jsonRecord)) {
-    if (!["missing_dataset", "reference_closure_unproven"].includes(asText(blocker.code))) {
-      continue;
-    }
-    const table = asText(blocker.table);
-    const type =
-      table === "contacts"
-        ? "contact"
-        : table === "sources"
-          ? "source"
-          : table === "unitgroups"
-            ? "unitgroup"
-            : table === "flowproperties"
-              ? "flowproperty"
-              : null;
-    if (!type || !supportIdentityTypes().includes(type)) continue;
-    const id = asText(blocker.reference_id ?? blocker.id);
-    if (!id) continue;
-    const version = asText(blocker.reference_version ?? blocker.version) || "00.00.001";
-    const identityKey = `${type}:${id}@${version}`;
-    if (keySet.has(identityKey)) stale.add(identityKey);
-  }
-  return [...stale];
-}
-
-function supportCacheRowsFromFile(cacheFile: string): JsonRecord[] {
-  const byKey = new Map<string, JsonRecord>();
-  for (const row of readJsonLines(cacheFile)) {
-    const identityKey = supportIdentityKeyFromCacheRow(row);
-    if (!identityKey) continue;
-    byKey.set(identityKey, { ...row, identity_key: identityKey });
-  }
-  return [...byKey.values()];
-}
-
-function supportCacheRowIsVerified(row: JsonRecord): boolean {
-  const status = asText(row?.status) || "verified";
-  return status === "verified";
-}
-
-function supportCacheRowsFromCommitSummary(
-  summaryPath: string,
-  closeoutPath: string,
-): JsonRecord[] {
-  const summary = readJson(summaryPath);
-  if (summary?.commit !== true || summary?.status !== "completed") return [];
-  return (Array.isArray(summary.rows) ? summary.rows : [])
-    .map(jsonRecord)
-    .filter((row) => row.status === "executed")
-    .map((row) => {
-      const type =
-        row.table === "contacts"
-          ? "contact"
-          : row.table === "sources"
-            ? "source"
-            : row.table === "unitgroups"
-              ? "unitgroup"
-              : row.table === "flowproperties"
-                ? "flowproperty"
-                : row.type;
-      const normalizedType = asText(type);
-      if (!supportIdentityTypes().includes(normalizedType) || !row.id) return null;
-      return supportIdentityCacheRow({
-        identityKey: `${normalizedType}:${row.id}@${row.version || "00.00.001"}`,
-        source: "existing_support_closeout_scan",
-        report: closeoutPath,
-      });
-    })
-    .filter((row): row is JsonRecord => Boolean(row));
-}
-
-function supportCacheRowsFromCloseoutReport(closeoutPath: string): JsonRecord[] {
-  const closeout = readJson(closeoutPath);
-  if (closeout?.status !== "completed") return [];
-  const commitReport = resolveRepoPath(closeout.commit_report);
-  if (
-    !fileExists(commitReport) ||
-    !commitReport!.includes(`${path.sep}dataset-save-draft${path.sep}`)
-  ) {
-    return [];
-  }
-  return supportCacheRowsFromCommitSummary(commitReport!, closeoutPath);
-}
-
-function discoverVerifiedSupportIdentityRows(outDir: string): JsonRecord[] {
-  const scopesDir = path.join(outDir, "scopes");
-  if (!directoryExists(scopesDir)) return [];
-  return findFiles(
-    scopesDir,
-    (filePath) =>
-      path.basename(filePath) === "dataset-post-write-closeout-report.json" &&
-      filePath.includes(`${path.sep}closeout${path.sep}`),
-  ).flatMap(supportCacheRowsFromCloseoutReport);
-}
-
-function primeVerifiedSupportIdentityCache({
-  outDir,
-  cacheFile,
-  sourceLedgerDirs = [],
-}: {
-  outDir: string;
-  cacheFile: string;
-  sourceLedgerDirs?: string[];
-}): JsonRecord {
-  verifiedSupportIdentities.clear();
-  const seen = new Set<string>();
-  let loaded_from_cache = 0;
-  let loaded_from_ledger_sources = 0;
-  let discovered_from_artifacts = 0;
-  let discovered_from_ledger_source_artifacts = 0;
-  for (const row of supportCacheRowsFromFile(cacheFile)) {
-    const identityKey = asText(row.identity_key);
-    if (!identityKey || seen.has(identityKey)) continue;
-    seen.add(identityKey);
-    if (!supportCacheRowIsVerified(row)) continue;
-    verifiedSupportIdentities.add(identityKey);
-    loaded_from_cache += 1;
-  }
-  for (const ledgerDir of sourceLedgerDirs) {
-    const sourceCacheFile = path.join(ledgerDir, "verified-support-identities.jsonl");
-    for (const row of supportCacheRowsFromFile(sourceCacheFile)) {
-      const identityKey = asText(row.identity_key);
-      if (!identityKey || seen.has(identityKey)) continue;
-      seen.add(identityKey);
-      appendJsonLine(cacheFile, {
-        ...row,
-        carried_forward_from: repoRelative(sourceCacheFile),
-        carried_forward_at_utc: nowIso(),
-      });
-      if (!supportCacheRowIsVerified(row)) continue;
-      verifiedSupportIdentities.add(identityKey);
-      loaded_from_ledger_sources += 1;
-    }
-  }
-  for (const row of discoverVerifiedSupportIdentityRows(outDir)) {
-    const identityKey = asText(row.identity_key);
-    if (!identityKey || seen.has(identityKey)) continue;
-    seen.add(identityKey);
-    verifiedSupportIdentities.add(identityKey);
-    appendJsonLine(cacheFile, row);
-    discovered_from_artifacts += 1;
-  }
-  for (const outDirFromLedger of sourceLedgerDirs
-    .filter((ledgerDir) => path.basename(ledgerDir) === "import-ledger")
-    .map((ledgerDir) => path.dirname(ledgerDir))) {
-    for (const row of discoverVerifiedSupportIdentityRows(outDirFromLedger)) {
-      const identityKey = asText(row.identity_key);
-      if (!identityKey || seen.has(identityKey)) continue;
-      seen.add(identityKey);
-      verifiedSupportIdentities.add(identityKey);
-      appendJsonLine(cacheFile, {
-        ...row,
-        carried_forward_from: repoRelative(outDirFromLedger),
-        carried_forward_at_utc: nowIso(),
-      });
-      discovered_from_ledger_source_artifacts += 1;
-    }
-  }
-  return {
-    cache_file: repoRelative(cacheFile),
-    loaded_from_cache,
-    loaded_from_ledger_sources,
-    discovered_from_artifacts,
-    discovered_from_ledger_source_artifacts,
-    verified_support_identities: verifiedSupportIdentities.size,
-  };
-}
+const primeVerifiedSupportIdentityCache = supportIdentityCache.prime;
 
 function appendOption(args: string[], name: string, value: unknown): void {
   if (value == null || value === "") return;
