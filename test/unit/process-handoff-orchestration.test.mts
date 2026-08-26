@@ -138,7 +138,7 @@ function createHarness(options: HarnessOptions = {}): {
       return value.startsWith("/") ? value : path.posix.join("/repo", value);
     },
     repoRelative(filePath) {
-      if (!filePath) return null;
+      if (!filePath) return "";
       return filePath.replace(/^\/repo\//u, "");
     },
     fileExists(filePath) {
@@ -149,6 +149,7 @@ function createHarness(options: HarnessOptions = {}): {
       assert.ok(value && typeof value === "object" && !Array.isArray(value), filePath);
       return value as JsonRecord;
     },
+    textValue: (value) => (value == null ? "" : String(value).trim()),
     joinPath: (...parts) => path.posix.join(...parts),
     basename: (filePath) => path.posix.basename(filePath),
     listFilesRecursively(rootDir) {
@@ -334,7 +335,7 @@ test("ready handoff commits once, verifies exact rows, closes out, and preserves
   );
   assert.equal(
     createHash("sha256").update(JSON.stringify(result)).digest("hex"),
-    "174fa0f1a891422cf54c55878478e3290c7ad8e71427582a923ebcc911233386",
+    "a5fefa9a392c02f6258bd024ff1150ad13f7a6e5a4802cb786cb693bbcf7a331",
   );
 });
 
@@ -459,7 +460,7 @@ test("trace-hash-only accepted difference remains SHA-bound before closeout", ()
   });
   assert.equal(
     createHash("sha256").update(JSON.stringify(result)).digest("hex"),
-    "166ca94a1640015197acfa2e21a262b3a2df16fac772dc1942d1561c2201ff65",
+    "87f6297b871326fdc0fec384b06359dc82fa2fb333ea197b5bba467da8ef47e1",
   );
 });
 

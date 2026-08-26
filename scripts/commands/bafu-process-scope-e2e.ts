@@ -17,6 +17,11 @@ import {
   type PostFinalizeRecoveryAdapter,
 } from "../lib/bafu-orchestration/post-finalize-recovery.ts";
 import {
+  executeHandoff,
+  readHandoffPlan,
+  type ProcessHandoffAdapter,
+} from "../lib/bafu-orchestration/process-handoff.ts";
+import {
   applyBafuProcessScopeHandoffSummary,
   compactCommandStage as projectCompactCommandStage,
   projectBafuProcessScopeFinalizeReport,
@@ -31,7 +36,6 @@ import {
   assertFoundryCommandSpecBindsArtifact,
   commandSpecOptionValue,
   executeFoundryCommandSpecSync,
-  type FoundryArtifactFact,
   type FoundryCommandSpec,
 } from "../lib/foundry-command-spec.ts";
 import {
@@ -87,17 +91,6 @@ interface FinalizeReportInput {
   mode: string;
   sourceSupportRowsFile: string | null;
   sourceRowsFile: string | null;
-}
-
-interface HandoffResult extends JsonRecord {
-  status: string;
-  blockers: JsonRecord[];
-  stages: JsonRecord[];
-  handoffPlan: JsonRecord;
-  closeoutReport?: JsonRecord | null;
-  commitReportPath?: string;
-  verifyReportPath?: string;
-  closeoutReportPath?: string;
 }
 
 function isJsonRecord(value: unknown): value is JsonRecord {
@@ -516,6 +509,57 @@ function postFinalizeRecoveryAdapter(): PostFinalizeRecoveryAdapter {
   };
 }
 
+function listProcessHandoffFiles(rootDir: string | null): string[] {
+  if (!rootDir || !fs.existsSync(rootDir)) return [];
+  const stack = [rootDir];
+  const files: string[] = [];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current) continue;
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const next = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(next);
+      } else if (entry.isFile()) {
+        files.push(next);
+      }
+    }
+  }
+  return files;
+}
+
+function processHandoffAdapter(): ProcessHandoffAdapter {
+  return {
+    processExecutable: process.execPath,
+    foundryEntryPath,
+    repoRoot,
+    environment: process.env,
+    resolveRepoPath,
+    repoRelative,
+    fileExists,
+    readJson,
+    textValue,
+    joinPath: (...parts) => path.join(...parts),
+    basename: (filePath) => path.basename(filePath),
+    listFilesRecursively: listProcessHandoffFiles,
+    assertReceiptBoundHandoffAccount,
+    assertCommandSpecBindsArtifact: (value, requiredArtifact) =>
+      assertFoundryCommandSpecBindsArtifact(value, requiredArtifact),
+    assertCommandSpecArtifactsCurrent: (commandSpec) =>
+      assertFoundryCommandSpecArtifactsCurrent(commandSpec, resolveRepoPath),
+    runCommandSpecStage,
+    runArgvStage,
+    projectCommandStage: (input) => projectCommandStage(input),
+    commandString,
+    retryAttempts: postWriteVerifyRetryAttempts,
+    retryDelayMs: postWriteVerifyRetryDelayMs,
+    retryReason: postWriteVerifyRetryReason,
+    sleep: sleepSync,
+    traceHashNormalizationAllowed,
+    acceptTraceHashOnlyRemoteVerificationMismatch,
+  };
+}
+
 function optionPathList(value: unknown): string[] {
   const values = Array.isArray(value) ? value : String(value ?? "").split(",");
   return values
@@ -532,359 +576,6 @@ function processIdentityReportsFromOptions(options: JsonRecord): string[] {
       options.identityDecisionApplyReport ||
       options.identityDecisionsApplyReport,
   );
-}
-
-function firstExistingPath(candidates: unknown[]): string | null {
-  return candidates.map(resolveRepoPath).find(fileExists) ?? null;
-}
-
-function findReportFile(rootDir: unknown, predicate: (filePath: string) => boolean): string | null {
-  const resolved = resolveRepoPath(rootDir);
-  if (!resolved || !fs.existsSync(resolved)) return null;
-  const stack = [resolved];
-  const matches: string[] = [];
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (!current) continue;
-    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      const next = path.join(current, entry.name);
-      if (entry.isDirectory()) {
-        stack.push(next);
-      } else if (entry.isFile() && predicate(next)) {
-        matches.push(next);
-      }
-    }
-  }
-  return matches.sort()[0] ?? null;
-}
-
-function commitReportForHandoffPlan(handoffPlan: JsonRecord): string | null {
-  const expectedDir = resolveRepoPath(jsonRecord(handoffPlan.files).expected_commit_report_dir);
-  return (
-    firstExistingPath([
-      path.join(
-        expectedDir || "",
-        "process-save-draft",
-        "outputs",
-        "save-draft-rpc",
-        "summary.json",
-      ),
-      path.join(
-        expectedDir || "",
-        "support-save-draft",
-        "outputs",
-        "dataset-save-draft",
-        "summary.json",
-      ),
-      path.join(
-        expectedDir || "",
-        "contact-save-draft",
-        "outputs",
-        "dataset-save-draft",
-        "summary.json",
-      ),
-      path.join(
-        expectedDir || "",
-        "source-save-draft",
-        "outputs",
-        "dataset-save-draft",
-        "summary.json",
-      ),
-      path.join(
-        expectedDir || "",
-        "lifecyclemodel-save-draft",
-        "outputs",
-        "save-draft-bundle",
-        "summary.json",
-      ),
-    ]) ??
-    findReportFile(expectedDir, (filePath) =>
-      /(?:summary|sync_report)\.json$/u.test(path.basename(filePath)),
-    )
-  );
-}
-
-function verifyReportForHandoffPlan(handoffPlan: JsonRecord): string | null {
-  const expectedDir = resolveRepoPath(jsonRecord(handoffPlan.files).expected_post_write_verify_dir);
-  return (
-    firstExistingPath([
-      path.join(expectedDir || "", "outputs", "remote-verification-report.json"),
-    ]) ??
-    findReportFile(
-      expectedDir,
-      (filePath) => path.basename(filePath) === "remote-verification-report.json",
-    )
-  );
-}
-
-function readHandoffPlan(
-  finalizeReport: JsonRecord,
-  key = "commit_handoff_plan",
-): { path: string | null; value: JsonRecord | null } {
-  const handoffPath = resolveRepoPath(jsonRecord(finalizeReport.files)[key]);
-  if (!fileExists(handoffPath)) {
-    return { path: null, value: null };
-  }
-  return { path: handoffPath!, value: readJson(handoffPath!) };
-}
-
-function closeoutCommand({
-  handoffPlanPath,
-  commitReportPath,
-  verifyReportPath,
-  outDir,
-  ledgerDir,
-}: {
-  handoffPlanPath: string;
-  commitReportPath: string;
-  verifyReportPath: string;
-  outDir: string;
-  ledgerDir: string;
-}): string[] {
-  const args = [
-    process.execPath,
-    foundryEntryPath,
-    "dataset-post-write-closeout",
-    "--handoff-plan",
-    repoRelative(handoffPlanPath),
-    "--commit-report",
-    repoRelative(commitReportPath),
-    "--post-write-verify-report",
-    repoRelative(verifyReportPath),
-    "--out-dir",
-    repoRelative(outDir),
-    "--ledger-dir",
-    repoRelative(ledgerDir),
-  ];
-  return args;
-}
-
-function executeHandoff({
-  handoffPlanPath,
-  ledgerDir,
-  outDir,
-  logDir,
-  label,
-}: {
-  handoffPlanPath: string;
-  ledgerDir: string;
-  outDir: string;
-  logDir: string;
-  label: string;
-}): HandoffResult {
-  const handoffPlan = readJson(handoffPlanPath);
-  const blockers: JsonRecord[] = [];
-  const stages: JsonRecord[] = [];
-  if (handoffPlan.status !== "ready_for_explicit_commit") {
-    blockers.push({
-      code: "handoff_plan_not_ready",
-      message: `Handoff plan status is ${handoffPlan.status || "missing"}.`,
-      handoff_plan: repoRelative(handoffPlanPath),
-    });
-    return { status: "blocked", blockers, stages, handoffPlan };
-  }
-  try {
-    assertReceiptBoundHandoffAccount(handoffPlan, process.env);
-  } catch (error) {
-    blockers.push({
-      code: "handoff_account_evidence_mismatch",
-      message: String(error instanceof Error ? error.message : error),
-      handoff_plan: repoRelative(handoffPlanPath),
-    });
-    return { status: "blocked", blockers, stages, handoffPlan };
-  }
-  let commitSpec: FoundryCommandSpec;
-  let verifySpec: FoundryCommandSpec;
-  try {
-    const commands = jsonRecord(handoffPlan.commands);
-    const finalRowsArtifact = jsonRecord(handoffPlan.final_rows_artifact);
-    const requiredFinalRowsArtifact: FoundryArtifactFact = {
-      role: "final_rows",
-      path: textValue(finalRowsArtifact.path),
-      bytes: Number(finalRowsArtifact.bytes),
-      sha256: textValue(finalRowsArtifact.sha256),
-    };
-    commitSpec = assertFoundryCommandSpecBindsArtifact(commands.commit, requiredFinalRowsArtifact);
-    verifySpec = assertFoundryCommandSpecBindsArtifact(
-      commands.post_write_verify,
-      requiredFinalRowsArtifact,
-    );
-  } catch (error) {
-    blockers.push({
-      code: "handoff_command_spec_invalid",
-      message: `Handoff plan must include valid authoritative commit and post_write_verify CommandSpecs: ${String(error instanceof Error ? error.message : error)}`,
-      handoff_plan: repoRelative(handoffPlanPath),
-    });
-    return { status: "blocked", blockers, stages, handoffPlan };
-  }
-
-  let commitStage: ReturnType<typeof runCommandSpecStage>;
-  try {
-    assertFoundryCommandSpecArtifactsCurrent(commitSpec, resolveRepoPath);
-    commitStage = runCommandSpecStage({
-      stage: `${label}.commit`,
-      commandSpec: commitSpec,
-      cwd: repoRoot,
-      logDir,
-    });
-  } catch (error) {
-    blockers.push({
-      code: "commit_handoff_artifact_binding_failed",
-      message: `Commit CommandSpec artifact binding failed before spawn: ${String(error instanceof Error ? error.message : error)}`,
-      handoff_plan: repoRelative(handoffPlanPath),
-    });
-    return { status: "failed", blockers, stages, handoffPlan };
-  }
-  const commitReportPath = commitReportForHandoffPlan(handoffPlan);
-  stages.push(
-    projectCommandStage({
-      stage: `${label}.commit`,
-      command: commitSpec.display,
-      result: commitStage.result,
-      stdoutLog: commitStage.stdoutLog,
-      stderrLog: commitStage.stderrLog,
-      reportPath: commitReportPath,
-    }),
-  );
-  if (commitStage.result.status !== 0 || !commitReportPath) {
-    blockers.push({
-      code: "commit_handoff_command_failed",
-      message: "CLI commit handoff failed or did not emit the expected commit report.",
-      handoff_plan: repoRelative(handoffPlanPath),
-      exit_code: commitStage.result.status ?? 1,
-      commit_report: repoRelative(commitReportPath),
-    });
-    return { status: "failed", blockers, stages, handoffPlan };
-  }
-
-  let verifyReportPath = null;
-  let verifyAccepted = false;
-  let verifyExitCode = 1;
-  let verifyAttempts = 0;
-  let verifyRetryReason = null;
-  const maxVerifyAttempts = postWriteVerifyRetryAttempts();
-  for (let attempt = 1; attempt <= maxVerifyAttempts; attempt += 1) {
-    const verifyStageName =
-      attempt === 1 ? `${label}.post_write_verify` : `${label}.post_write_verify.retry_${attempt}`;
-    let verifyStage: ReturnType<typeof runCommandSpecStage>;
-    try {
-      verifyStage = runCommandSpecStage({
-        stage: verifyStageName,
-        commandSpec: verifySpec,
-        cwd: repoRoot,
-        logDir,
-      });
-    } catch (error) {
-      blockers.push({
-        code: "post_write_verify_artifact_binding_failed",
-        message: `Verify CommandSpec artifact binding failed before spawn: ${String(error instanceof Error ? error.message : error)}`,
-        handoff_plan: repoRelative(handoffPlanPath),
-      });
-      return { status: "failed", blockers, stages, handoffPlan };
-    }
-    verifyReportPath = verifyReportForHandoffPlan(handoffPlan);
-    verifyExitCode = verifyStage.result.status ?? 1;
-    verifyAttempts = attempt;
-    const stageReport = projectCommandStage({
-      stage: verifyStageName,
-      command: verifySpec.display,
-      result: verifyStage.result,
-      stdoutLog: verifyStage.stdoutLog,
-      stderrLog: verifyStage.stderrLog,
-      reportPath: verifyReportPath,
-    });
-    stageReport.attempt = attempt;
-    stageReport.max_attempts = maxVerifyAttempts;
-    stages.push(stageReport);
-    verifyAccepted = verifyStage.result.status === 0 && Boolean(verifyReportPath);
-    if (
-      verifyStage.result.status !== 0 &&
-      verifyReportPath &&
-      traceHashNormalizationAllowed(handoffPlan)
-    ) {
-      const acceptedVerify = acceptTraceHashOnlyRemoteVerificationMismatch({
-        verifyReportPath,
-        outDir,
-        repoRoot,
-      });
-      if (acceptedVerify.accepted) {
-        verifyReportPath = acceptedVerify.verifyReportPath;
-        verifyAccepted = true;
-        stages.push({
-          stage: `${label}.post_write_verify.accepted_diff`,
-          status: "accepted",
-          report: repoRelative(acceptedVerify.acceptanceReportPath),
-          accepted_differences: acceptedVerify.evidence.length,
-        });
-      }
-    }
-    if (verifyAccepted) break;
-    verifyRetryReason = postWriteVerifyRetryReason(verifyReportPath);
-    if (!verifyRetryReason || attempt >= maxVerifyAttempts) break;
-    const retryDelayMs = postWriteVerifyRetryDelayMs(attempt - 1);
-    stageReport.retry_reason = verifyRetryReason;
-    stageReport.retry_next_delay_ms = retryDelayMs;
-    sleepSync(retryDelayMs);
-  }
-  if (!verifyAccepted || !verifyReportPath) {
-    blockers.push({
-      code: "post_write_verify_command_failed",
-      message:
-        "CLI post-write verification failed or did not emit the expected remote verification report.",
-      handoff_plan: repoRelative(handoffPlanPath),
-      exit_code: verifyExitCode,
-      post_write_verify_report: repoRelative(verifyReportPath),
-      post_write_verify_attempts: verifyAttempts,
-      retry_reason: verifyRetryReason,
-    });
-    return { status: "failed", blockers, stages, handoffPlan };
-  }
-
-  const closeoutDir = path.join(outDir, "closeout");
-  const closeoutArgv = closeoutCommand({
-    handoffPlanPath,
-    commitReportPath,
-    verifyReportPath,
-    outDir: closeoutDir,
-    ledgerDir,
-  });
-  const closeoutStage = runArgvStage({
-    stage: `${label}.closeout`,
-    argv: closeoutArgv,
-    logDir,
-  });
-  const closeoutReportPath = path.join(closeoutDir, "dataset-post-write-closeout-report.json");
-  stages.push(
-    projectCommandStage({
-      stage: `${label}.closeout`,
-      command: commandString(closeoutArgv),
-      result: closeoutStage.result,
-      stdoutLog: closeoutStage.stdoutLog,
-      stderrLog: closeoutStage.stderrLog,
-      reportPath: closeoutReportPath,
-    }),
-  );
-  const closeoutReport = fileExists(closeoutReportPath) ? readJson(closeoutReportPath) : null;
-  if (closeoutStage.result.status !== 0 || closeoutReport?.status !== "completed") {
-    blockers.push({
-      code: "post_write_closeout_failed",
-      message: `Post-write closeout status is ${closeoutReport?.status || "missing"}.`,
-      handoff_plan: repoRelative(handoffPlanPath),
-      closeout_report: repoRelative(closeoutReportPath),
-      closeout_blockers: closeoutReport?.blockers ?? [],
-    });
-    return { status: "failed", blockers, stages, handoffPlan, closeoutReport };
-  }
-  return {
-    status: "completed",
-    blockers,
-    stages,
-    handoffPlan,
-    closeoutReport,
-    commitReportPath,
-    verifyReportPath,
-    closeoutReportPath,
-  };
 }
 
 function buildFinalizeCommand({
@@ -1198,6 +889,7 @@ function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
 
   const logDir = path.join(outDir, "logs");
   fs.mkdirSync(logDir, { recursive: true });
+  const handoffRuntime = processHandoffAdapter();
   let result = spawnSync(finalizeCommand[0], finalizeCommand.slice(1), {
     cwd: repoRoot,
     env: process.env,
@@ -1259,6 +951,7 @@ function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
     const supportHandoff = readHandoffPlan(
       finalizeReport,
       "source_contact_support_commit_handoff_plan",
+      handoffRuntime,
     );
     if (supportHandoff.path) {
       const supportIdentityKeys = supportIdentityKeysFromHandoffPlan(
@@ -1293,13 +986,16 @@ function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
           support_identities: supportIdentityKeys,
         });
       } else {
-        const supportResult = executeHandoff({
-          handoffPlanPath: supportHandoff.path,
-          ledgerDir: importLedgerDir,
-          outDir: path.join(outDir, "source-contact-support-handoff"),
-          logDir,
-          label: "support",
-        });
+        const supportResult = executeHandoff(
+          {
+            handoffPlanPath: supportHandoff.path,
+            ledgerDir: importLedgerDir,
+            outDir: path.join(outDir, "source-contact-support-handoff"),
+            logDir,
+            label: "support",
+          },
+          handoffRuntime,
+        );
         handoffStages.push(...supportResult.stages);
         handoffBlockers.push(...supportResult.blockers);
         supportCommitted = supportResult.status === "completed";
@@ -1453,7 +1149,7 @@ function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
   });
 
   if (booleanOption(options.commit) && report.status === "ready_for_explicit_commit") {
-    const processHandoff = readHandoffPlan(finalizeReport, "commit_handoff_plan");
+    const processHandoff = readHandoffPlan(finalizeReport, "commit_handoff_plan", handoffRuntime);
     if (!processHandoff.path) {
       report.blockers = [
         ...report.blockers,
@@ -1465,13 +1161,16 @@ function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
       report.counts.blockers = report.blockers.length;
       report.status = "blocked";
     } else {
-      const processResult = executeHandoff({
-        handoffPlanPath: processHandoff.path,
-        ledgerDir: importLedgerDir,
-        outDir: path.join(outDir, "process-handoff"),
-        logDir,
-        label: "process",
-      });
+      const processResult = executeHandoff(
+        {
+          handoffPlanPath: processHandoff.path,
+          ledgerDir: importLedgerDir,
+          outDir: path.join(outDir, "process-handoff"),
+          logDir,
+          label: "process",
+        },
+        handoffRuntime,
+      );
       report.handoff_stages = [...(report.handoff_stages ?? []), ...processResult.stages];
       report.blockers = [...report.blockers, ...processResult.blockers];
       report.counts.blockers = report.blockers.length;
