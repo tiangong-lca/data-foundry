@@ -26,6 +26,7 @@ import {
   createUniverseCoverageService,
   type UniverseCoverageRuntimeAdapter,
 } from "../lib/batch-orchestration/universe-coverage.ts";
+import { createVerifiedLedgerProjectionService } from "../lib/batch-orchestration/verified-ledger-projection.ts";
 import { acceptTraceHashOnlyRemoteVerificationMismatch } from "../lib/remote-verification-accepted-diff.ts";
 import {
   assertFoundryCommandSpecArtifactsCurrent,
@@ -192,19 +193,6 @@ interface ContextPaths {
   schemaFile: string;
   yamlFile: string;
   rulesetFile: string;
-}
-
-interface FlowVerificationPartition {
-  pendingRows: JsonRecord[];
-  verifiedRows: JsonRecord[];
-  pendingIdentities: JsonRecord[];
-  verifiedIdentities: JsonRecord[];
-}
-
-interface CarriedForwardFlowRows extends JsonRecord {
-  count: number;
-  rows: JsonRecord[];
-  ledger: string;
 }
 
 interface MaterializedRows {
@@ -712,6 +700,28 @@ function datasetIdentity(row: JsonRecord, type: string): DatasetIdentity {
       "00.00.001",
   };
 }
+
+const {
+  batchRunStatus,
+  blockRow,
+  datasetIdentityKey,
+  flowRowsPendingVerification,
+  loadActiveBlockedScopeSetFromFiles,
+  loadVerifiedRowsByKeyFromFiles,
+  loadVerifiedSetFromFiles,
+  okDatasetRow,
+  writeBlockedScopeViews,
+  writeScopeCarriedForwardVerifiedFlowRows,
+} = createVerifiedLedgerProjectionService({
+  nowIso,
+  asText,
+  datasetIdentity,
+  readJsonLines,
+  writeJsonLines,
+  appendJsonLine,
+  repoRelative,
+  pathJoin: (...parts: string[]) => path.join(...parts),
+});
 
 function taskIdentity(task: JsonRecord): { id: string; version: string } {
   const entity = jsonRecord(task.entity);
@@ -2034,279 +2044,6 @@ function defaultSchemaFiles(options: JsonRecord): SchemaPaths {
 }
 
 const repairClassificationDecisionCodes = classificationSchemaRepair.repair;
-
-function loadVerifiedSetFromFiles(filePaths: string[], type: string): Set<string> {
-  const set = new Set<string>();
-  for (const filePath of filePaths) {
-    for (const row of readJsonLines(filePath)) {
-      const id = row.dataset_id || row.id || row[`${type}_id`] || row.process_id;
-      const version =
-        row.dataset_version ||
-        row.version ||
-        row[`${type}_version`] ||
-        row.process_version ||
-        "00.00.001";
-      if (id) set.add(`${id}@${version}`);
-    }
-  }
-  return set;
-}
-
-function loadVerifiedRowsByKeyFromFiles(
-  filePaths: string[],
-  type: string,
-): Map<string, JsonRecord> {
-  const rowsByKey = new Map<string, JsonRecord>();
-  for (const filePath of filePaths) {
-    for (const row of readJsonLines(filePath)) {
-      const id = row.dataset_id || row.id || row[`${type}_id`] || row.process_id;
-      const version =
-        row.dataset_version ||
-        row.version ||
-        row[`${type}_version`] ||
-        row.process_version ||
-        "00.00.001";
-      if (!id) continue;
-      const key = `${id}@${version}`;
-      if (rowsByKey.has(key)) continue;
-      rowsByKey.set(key, {
-        ...row,
-        source_ledger_file: repoRelative(filePath),
-      });
-    }
-  }
-  return rowsByKey;
-}
-
-function loadVerifiedSet(filePath: string, type: string): Set<string> {
-  return loadVerifiedSetFromFiles([filePath], type);
-}
-
-function datasetIdentityKey(identity: DatasetIdentity): string | null {
-  const id = asText(identity?.id);
-  if (!id) return null;
-  return `${id}@${asText(identity?.version) || "00.00.001"}`;
-}
-
-function flowRowsPendingVerification(
-  rows: JsonRecord[],
-  verifiedFlows: Set<string>,
-): FlowVerificationPartition {
-  const pendingRows: JsonRecord[] = [];
-  const verifiedRows: JsonRecord[] = [];
-  const pendingIdentities: JsonRecord[] = [];
-  const verifiedIdentities: JsonRecord[] = [];
-  for (const row of rows) {
-    const identity = datasetIdentity(row, "flow");
-    const key = datasetIdentityKey(identity);
-    if (!key) continue;
-    const entry = {
-      id: identity.id,
-      version: asText(identity.version) || "00.00.001",
-      identity_key: key,
-    };
-    if (verifiedFlows.has(key)) {
-      verifiedRows.push(row);
-      verifiedIdentities.push(entry);
-      continue;
-    }
-    pendingRows.push(row);
-    pendingIdentities.push(entry);
-  }
-  return {
-    pendingRows,
-    verifiedRows,
-    pendingIdentities,
-    verifiedIdentities,
-  };
-}
-
-function writeScopeCarriedForwardVerifiedFlowRows({
-  ledgerDir,
-  processId,
-  verifiedIdentities,
-  verifiedFlowRowsByKey,
-}: {
-  ledgerDir: string;
-  processId: string;
-  verifiedIdentities: JsonRecord[];
-  verifiedFlowRowsByKey: Map<string, JsonRecord>;
-}): CarriedForwardFlowRows {
-  const ledgerPath = path.join(ledgerDir, "ok.flows.verified.jsonl");
-  const existing = loadVerifiedSet(ledgerPath, "flow");
-  const written: JsonRecord[] = [];
-  for (const identity of verifiedIdentities) {
-    const normalizedIdentity: DatasetIdentity = {
-      id: asText(identity.id) || null,
-      version: asText(identity.version) || "00.00.001",
-    };
-    const key = asText(identity.identity_key) || datasetIdentityKey(normalizedIdentity);
-    if (!key || existing.has(key)) continue;
-    const sourceRow = verifiedFlowRowsByKey.get(key);
-    if (!sourceRow) continue;
-    const carried: JsonRecord = {
-      ...sourceRow,
-      schema_version: 1,
-      status: "verified",
-      carried_forward: true,
-      carried_forward_at_utc: nowIso(),
-      carried_forward_for_process_id: processId,
-    };
-    appendJsonLine(ledgerPath, carried);
-    existing.add(key);
-    written.push({
-      id: normalizedIdentity.id || carried.dataset_id || carried.flow_id,
-      version:
-        normalizedIdentity.version ||
-        carried.dataset_version ||
-        carried.flow_version ||
-        "00.00.001",
-      identity_key: key,
-      source_ledger_file: carried.source_ledger_file ?? null,
-    });
-  }
-  return {
-    count: written.length,
-    rows: written,
-    ledger: ledgerPath,
-  };
-}
-
-function scopeKeyFromLedgerRow(row: JsonRecord): string | null {
-  const id = row?.process_id || row?.dataset_id || row?.id;
-  const version = row?.process_version || row?.dataset_version || row?.version || "00.00.001";
-  return id ? `${id}@${version}` : null;
-}
-
-function writeBlockedScopeViews(paths: JsonRecord): JsonRecord {
-  const verified = new Map();
-  for (const row of readJsonLines(asText(paths.okScopes))) {
-    const key = scopeKeyFromLedgerRow(row);
-    if (key) verified.set(key, row);
-  }
-  const historical = readJsonLines(asText(paths.blockedHumanReview));
-  const active: JsonRecord[] = [];
-  const resolved: JsonRecord[] = [];
-  for (const row of historical) {
-    const key = scopeKeyFromLedgerRow(row);
-    const ok = key ? verified.get(key) : null;
-    if (!ok) {
-      active.push(row);
-      continue;
-    }
-    resolved.push({
-      ...row,
-      resolution_status: "resolved_by_verified_scope",
-      resolved_at_utc: ok.generated_at_utc ?? null,
-      resolved_report: ok.report ?? null,
-    });
-  }
-  writeJsonLines(asText(paths.blockedHumanReviewActive), active);
-  writeJsonLines(asText(paths.blockedHumanReviewResolved), resolved);
-  return {
-    historical: historical.length,
-    active: active.length,
-    resolved: resolved.length,
-  };
-}
-
-function loadActiveBlockedScopeSetFromFiles(
-  filePaths: string[],
-  verifiedScopes: Set<string>,
-): Set<string> {
-  const set = new Set<string>();
-  for (const filePath of filePaths) {
-    for (const row of readJsonLines(filePath)) {
-      const key = scopeKeyFromLedgerRow(row);
-      if (key && !verifiedScopes.has(key)) set.add(key);
-    }
-  }
-  return set;
-}
-
-function batchRunStatus(
-  results: JsonRecord[],
-  {
-    paused = false,
-    stoppedAfterBlocked = false,
-  }: {
-    paused?: boolean;
-    stoppedAfterBlocked?: boolean;
-  } = {},
-): string {
-  const failed = results.some((row) => row.status === "failed");
-  const blocked = results.some((row) => row.status === "blocked");
-  if (stoppedAfterBlocked) {
-    if (failed) return "stopped_after_blocked_with_retryable_failures";
-    return "stopped_after_blocked";
-  }
-  if (paused) {
-    if (failed) return "paused_with_retryable_failures";
-    if (blocked) return "paused_with_deferred_scopes";
-    return "paused";
-  }
-  if (failed) return "completed_with_retryable_failures";
-  if (blocked) return "completed_with_deferred_scopes";
-  return "completed";
-}
-
-function okDatasetRow({
-  type,
-  id,
-  version,
-  processId,
-  report,
-  files,
-}: {
-  type: string;
-  id: unknown;
-  version: unknown;
-  processId: unknown;
-  report: string;
-  files: unknown;
-}): JsonRecord {
-  return {
-    schema_version: 1,
-    generated_at_utc: nowIso(),
-    dataset_type: type,
-    dataset_id: id,
-    dataset_version: version || "00.00.001",
-    process_id: processId,
-    status: "verified",
-    report: repoRelative(report),
-    files,
-  };
-}
-
-function blockRow({
-  scope,
-  stage,
-  blocker,
-  report,
-  rerunCommand,
-}: {
-  scope: JsonRecord;
-  stage: string;
-  blocker: JsonRecord;
-  report?: string | null;
-  rerunCommand?: string;
-}): JsonRecord {
-  return {
-    schema_version: 1,
-    generated_at_utc: nowIso(),
-    process_id: scope.process_id || scope.id,
-    process_version: scope.process_version || scope.version || "00.00.001",
-    stage,
-    code: blocker?.code || "blocked",
-    message: blocker?.message || "Scope is blocked.",
-    blocker,
-    report: repoRelative(report),
-    required_human_action:
-      blocker?.required_human_action ||
-      "Review the stage report, complete missing semantic decisions or references, then rerun this scope.",
-    rerun_command: rerunCommand,
-  };
-}
 
 // Worker-level safety net: an uncaught throw inside runOneScope (e.g. a transient
 // fs EINVAL/ENOENT from concurrent shared-cache access at higher --parallel) would
