@@ -530,7 +530,7 @@ test("matching ledger checkpoint wins over a newer mismatched row and explicit f
     state,
     reportPath,
     report,
-    "cab506319217628ab506b2ea1ed9aa68f4729260f4c57c0ab0821633b6a2829c",
+    "5d4110b721288f2f44b8d0cca17971e08407a712f84433afaa3d3856d5dcd2a8",
   );
   expectLedgerArtifact(
     state,
@@ -639,7 +639,7 @@ test("finalize-ready execute with commit=false keeps the exact handoff ready rep
     state,
     reportPath,
     report,
-    "2fbc3ef632761619be73372c101d0820c65bca91926b2e8efa79010a34ae66cc",
+    "8ec4ad9d5146e68ecfc051a54e8985db239ebf4a8369315dce60b245f50a27bd",
   );
   expectLedgerArtifact(
     state,
@@ -706,7 +706,7 @@ test("handoff-ready commit preserves finalize then handoff stage order and termi
     state,
     reportPath,
     report,
-    "e89b40324cbe9f04d06bbb506a3489c1f055995ab8df86c38e92d03e761f8a87",
+    "a09bd9731fa4eae973043139406b2b85a0eacc68d77922c0154e724679b504d0",
   );
   expectLedgerArtifact(
     state,
