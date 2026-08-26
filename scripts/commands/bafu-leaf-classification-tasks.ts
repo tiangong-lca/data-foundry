@@ -11,6 +11,11 @@ import {
   repairProcessLeafDecision,
   sourceClassificationFromTask,
 } from "../lib/bafu-classification/leaf-repair.ts";
+import {
+  extractBafuLeafProcessPayloadContext,
+  projectBafuLeafClassificationTaskArtifacts,
+  type BafuLeafTaskProjectionHelpers,
+} from "../lib/bafu-classification/task-preparation.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.ts";
 
 interface JsonRecord {
@@ -72,23 +77,6 @@ interface CategoryMapDecisionResult {
   rows: EnrichedCategoryDecision[];
   resolved: Map<string, ResolvedCategoryDecision>;
   manualReview: JsonRecord[];
-}
-
-interface DecisionTemplateInput {
-  processId: string;
-  processVersion: string;
-  key: string;
-  entityRow?: JsonRecord;
-  existingDecision: JsonRecord | null | undefined;
-  taskId: string;
-}
-
-interface TaskRowInput {
-  ledgerRow: JsonRecord;
-  entityRow?: JsonRecord;
-  scopeRow?: JsonRecord;
-  existingDecision: JsonRecord | null | undefined;
-  options: { maxExchangeRefs: number; maxReferences: number };
 }
 
 function isJsonRecord(value: unknown): value is JsonRecord {
@@ -205,110 +193,16 @@ function truncateText(value: unknown, maxLength = DEFAULT_TEXT_LIMIT): string | 
   return `${text.slice(0, maxLength)}...`;
 }
 
-function trimObjectStrings(value: unknown, maxLength = 800): unknown {
-  if (Array.isArray(value)) return value.map((item) => trimObjectStrings(item, maxLength));
-  if (!value || typeof value !== "object") {
-    return typeof value === "string" ? truncateText(value, maxLength) : value;
-  }
-  return Object.fromEntries(
-    Object.entries(value).map(([key, entry]) => [key, trimObjectStrings(entry, maxLength)]),
-  );
-}
-
-function findNamedNode(
-  node: unknown,
-  wantedName: string,
-  seen: Set<object> = new Set(),
-): JsonRecord | null {
-  if (!node || typeof node !== "object") return null;
-  if (seen.has(node)) return null;
-  seen.add(node);
-  const record = jsonRecord(node);
-  if (record.name === wantedName) return record;
-  for (const child of ensureArray(record.children)) {
-    const found = findNamedNode(child, wantedName, seen);
-    if (found) return found;
-  }
-  for (const [key, value] of Object.entries(record)) {
-    if (key === "attributes" || key === "children") continue;
-    if (!value || typeof value !== "object") continue;
-    const found = findNamedNode(value, wantedName, seen);
-    if (found) return found;
-  }
-  return null;
-}
-
-function attributesObject(node: JsonRecord | null): Record<string, string> {
-  if (!node || typeof node !== "object") return {};
-  return Object.fromEntries(
-    ensureArray(node.attributes)
-      .map(jsonRecord)
-      .map((attribute) => [asText(attribute.name), asText(attribute.value)] as const)
-      .filter(([key]) => key),
-  );
-}
-
-function classificationRows(row: JsonRecord): JsonRecord[] {
-  const dataSetInformation = jsonRecord(
-    jsonRecord(jsonRecord(row.processDataSet).processInformation).dataSetInformation,
-  );
-  const classification = jsonRecord(
-    jsonRecord(dataSetInformation.classificationInformation)["common:classification"],
-  );
-  return ensureArray(classification["common:class"])
-    .map(jsonRecord)
-    .map((item) => ({
-      level: asText(item["@level"]) || null,
-      code: asText(item["@classId"]) || null,
-      label: asText(item) || null,
-    }));
-}
-
-function extractProcessPayloadContext(row: JsonRecord): JsonRecord {
-  const dataSetInformation = jsonRecord(
-    jsonRecord(jsonRecord(row.processDataSet).processInformation).dataSetInformation,
-  );
-  const name = jsonRecord(dataSetInformation.name);
-  const other = jsonRecord(dataSetInformation["common:other"]);
-  const sourceTracePayload = jsonRecord(jsonRecord(other["tidasimport:sourceTrace"]).payload);
-  const referenceFunction = findNamedNode(sourceTracePayload, "referenceFunction");
-  const sourceGeography = findNamedNode(sourceTracePayload, "geography");
-  const sourceTechnology = findNamedNode(sourceTracePayload, "technology");
-  const sourceTimePeriod = findNamedNode(sourceTracePayload, "timePeriod");
-  const classRows = classificationRows(row);
-
-  return {
-    name_parts: {
-      base_name: truncateText(name.baseName),
-      treatment_standards_routes: truncateText(name.treatmentStandardsRoutes),
-      mix_and_location_types: truncateText(name.mixAndLocationTypes),
-      functional_unit_flow_properties: truncateText(name.functionalUnitFlowProperties),
-    },
-    converted_classification_path: classRows
-      .map((item) => item.label)
-      .filter(Boolean)
-      .join(" > "),
-    converted_classification_classes: classRows,
-    general_comment: truncateText(dataSetInformation["common:generalComment"]),
-    source_trace:
-      Object.keys(sourceTracePayload).length > 0
-        ? {
-            source_object: truncateText(sourceTracePayload.sourceObject),
-            source_classification: trimObjectStrings(sourceTracePayload.sourceClassification),
-            reference_function_attributes: trimObjectStrings(attributesObject(referenceFunction)),
-            geography_attributes: trimObjectStrings(attributesObject(sourceGeography)),
-            technology_attributes: trimObjectStrings(attributesObject(sourceTechnology)),
-            time_period_attributes: trimObjectStrings(attributesObject(sourceTimePeriod)),
-          }
-        : null,
-  };
-}
+const bafuLeafTaskProjectionHelpers: BafuLeafTaskProjectionHelpers = {
+  textValue: asText,
+  ensureArray,
+};
 
 function readOptionalProcessContext(filePath: unknown): JsonRecord | null {
   const resolved = resolveRepoPath(filePath);
   if (!resolved || !fs.existsSync(resolved)) return null;
   try {
-    return extractProcessPayloadContext(readJson(resolved));
+    return extractBafuLeafProcessPayloadContext(readJson(resolved), bafuLeafTaskProjectionHelpers);
   } catch {
     return null;
   }
@@ -336,10 +230,6 @@ function entityKey(type: string, id: string, version: string): string {
   return `${type}:${id}:${version}`;
 }
 
-function decisionKey(type: string, id: string, version: string): string {
-  return `${type}::${id}::${version}`;
-}
-
 function classificationLibraryKey(row: JsonRecord): string {
   const categoryType = asText(row?.category_type ?? row?.schema_type);
   const datasetType =
@@ -354,34 +244,6 @@ function classificationLibraryKey(row: JsonRecord): string {
     asText(row?.dataset_id ?? row?.datasetId ?? row?.id ?? row?.uuid),
     asText(row?.dataset_version ?? row?.datasetVersion ?? row?.version) || "00.00.001",
   ].join(":");
-}
-
-function dependencyCounts(scopeRow: JsonRecord | undefined): Record<string, number> {
-  const dependencies = jsonRecord(scopeRow?.dependency_ids);
-  return Object.fromEntries(
-    Object.entries(dependencies).map(([key, value]) => [key, ensureArray(value).length]),
-  );
-}
-
-function limitRows(rows: unknown, limit: number): JsonRecord {
-  const safeRows = ensureArray(rows);
-  return {
-    rows: safeRows.slice(0, limit),
-    total_rows: safeRows.length,
-    truncated: safeRows.length > limit,
-  };
-}
-
-function processReferences(entityRow: JsonRecord | undefined, maxReferences: number): JsonRecord {
-  const references = ensureArray(entityRow?.references).map(jsonRecord);
-  const sourceReferences = references.filter((item) => asText(item.type) === "source data set");
-  const contactReferences = references.filter((item) => asText(item.type) === "contact data set");
-  const flowReferences = references.filter((item) => asText(item.type) === "flow data set");
-  return {
-    source_references: limitRows(sourceReferences, maxReferences),
-    contact_references: limitRows(contactReferences, maxReferences),
-    flow_references: limitRows(flowReferences, maxReferences),
-  };
 }
 
 function collectCategorySchemaEntries(schema: JsonRecord): CategoryEntry[] {
@@ -699,146 +561,6 @@ function projectedClassificationDecision({
   };
 }
 
-function buildDecisionTemplate({
-  processId,
-  processVersion,
-  key,
-  entityRow,
-  existingDecision,
-  taskId,
-}: DecisionTemplateInput): JsonRecord {
-  return {
-    schema_version: 1,
-    dataset_type: "process",
-    dataset_id: processId,
-    dataset_version: processVersion,
-    entity_key: key,
-    category_type: "process",
-    decision_status: "completed",
-    selected_code: "__AI_SELECT_TIDAS_PROCESS_LEAF_CODE__",
-    basis: "__AI_FILL_PROCESS_LEAF_CLASSIFICATION_BASIS__",
-    confidence: "__AI_FILL_CONFIDENCE_high_medium_low__",
-    classification_decision_level: "leaf",
-    source_name: entityRow?.name ?? existingDecision?.source_name ?? null,
-    converted_classification_reference:
-      entityRow?.classification_path ??
-      existingDecision?.converted_classification_reference ??
-      null,
-    required_resolution:
-      "Select a full TIDAS process leaf code from process category context. Converted classifications and broad section decisions are weak hints only.",
-    used_context_kinds: [
-      "library_entity_index",
-      "scope_projection",
-      "blocked_scope_ledger",
-      "process_payload_context",
-      "process_exchange_context",
-      "tidas_process_category_schema",
-    ],
-    evidence: {
-      source: "bafu_process_leaf_classification_authoring_task",
-      task_id: taskId,
-      broad_decision_replaced: compactExistingDecision(existingDecision),
-      source_file: entityRow?.source_file ?? null,
-      source_files: ensureArray(entityRow?.source_files),
-      payload_sha256: entityRow?.payload_sha256 ?? null,
-      semantic_key: entityRow?.semantic_key ?? null,
-    },
-  };
-}
-
-function buildTaskRow({
-  ledgerRow,
-  entityRow,
-  scopeRow,
-  existingDecision,
-  options,
-}: TaskRowInput): JsonRecord {
-  const blockingDependency = jsonRecord(ledgerRow.blocking_dependency);
-  const processId = asText(ledgerRow.blocked_process_id ?? blockingDependency.id);
-  const processVersion = asText(ledgerRow.blocked_process_version ?? blockingDependency.version);
-  const key = entityKey("process", processId, processVersion);
-  const processContext =
-    readOptionalProcessContext(scopeRow?.process_file) ??
-    readOptionalProcessContext(entityRow?.source_file) ??
-    {};
-  const usageRefs = jsonRecord(scopeRow?.usage_refs);
-  const exchangeRefs = ensureArray(usageRefs.process_exchange_flow_refs).map(jsonRecord);
-  const outputRefs = exchangeRefs.filter(
-    (item) => asText(item.direction).toLowerCase() === "output",
-  );
-  const nameParts = jsonRecord(processContext.name_parts);
-  const taskId = key;
-
-  return {
-    schema_version: 1,
-    task_kind: "bafu_process_leaf_classification_authoring",
-    task_id: taskId,
-    status: "needs_leaf_classification_decision",
-    dataset_type: "process",
-    dataset_id: processId,
-    dataset_version: processVersion,
-    entity_key: key,
-    blocked_scope: {
-      blocked_process_id: processId,
-      blocked_process_version: processVersion,
-      reason: ledgerRow.reason ?? null,
-      message: ledgerRow.message ?? null,
-      required_human_action: ledgerRow.required_human_action ?? null,
-      rerun_command: ledgerRow.rerun_command ?? null,
-    },
-    library_index_context: {
-      entity_row_found: Boolean(entityRow),
-      scope_projection_found: Boolean(scopeRow),
-      root_process_file: entityRow?.source_file ?? null,
-      bundle_process_file: scopeRow?.process_file ?? null,
-      bundle_dir: scopeRow?.bundle_dir ?? null,
-      manifest: scopeRow?.manifest ?? null,
-      tidas_dir: scopeRow?.tidas_dir ?? null,
-      payload_sha256: entityRow?.payload_sha256 ?? null,
-      semantic_key: entityRow?.semantic_key ?? null,
-      semantic_hash: entityRow?.semantic_hash ?? null,
-      estimated_weight: scopeRow?.estimated_weight ?? null,
-      dependency_counts: dependencyCounts(scopeRow),
-    },
-    process_context: {
-      name: entityRow?.name ?? nameParts.base_name ?? null,
-      name_parts: processContext.name_parts ?? null,
-      converted_classification_path:
-        entityRow?.classification_path ?? processContext.converted_classification_path ?? null,
-      converted_classification_classes: processContext.converted_classification_classes ?? [],
-      converted_classification_policy: "weak_hint_only",
-      general_comment: processContext.general_comment ?? null,
-      source_trace: processContext.source_trace ?? null,
-    },
-    reference_context: processReferences(entityRow, options.maxReferences),
-    exchange_context: {
-      output_flows: limitRows(outputRefs, options.maxExchangeRefs),
-      exchange_flow_refs: limitRows(exchangeRefs, options.maxExchangeRefs),
-    },
-    existing_library_decision: compactExistingDecision(existingDecision),
-    authoring_requirement: {
-      output_jsonl: "classification-decisions.jsonl",
-      category_type: "process",
-      required_decision_status: "completed",
-      required_leaf_code: true,
-      broad_code_policy:
-        "Reject single-letter section codes and short process section/division/group codes.",
-      preserve_source_classification_as_evidence: true,
-      do_not_edit_rows_directly: true,
-      deterministic_rerun:
-        "node scripts/foundry.ts dataset-library-decisions-apply --library-index <library-index> --decisions-dir <decisions-dir> --out-dir <library-resolution>",
-    },
-    decision_template: buildDecisionTemplate({
-      processId,
-      processVersion,
-      key,
-      entityRow,
-      existingDecision,
-      taskId,
-    }),
-  };
-}
-
 export function prepareBafuLeafClassificationTasks(rawOptions: JsonRecord): JsonRecord {
   if (rawOptions.help) {
     return {
@@ -889,162 +611,67 @@ export function prepareBafuLeafClassificationTasks(rawOptions: JsonRecord): Json
   const decisionRows =
     decisionsPath && fs.existsSync(decisionsPath) ? readJsonLines(decisionsPath) : [];
 
-  const processEntities = new Map<string, JsonRecord>(
-    entityRows
-      .filter((row) => row.dataset_type === "process")
-      .map((row) => [
-        entityKey("process", asText(row.dataset_id), asText(row.dataset_version)),
-        row,
-      ]),
-  );
-  const scopes = new Map<string, JsonRecord>(
-    scopeRows.map((row) => [
-      entityKey("process", asText(row.process_id), asText(row.process_version) || "00.00.001"),
-      row,
-    ]),
-  );
-  const decisions = new Map<string, JsonRecord>(
-    decisionRows
-      .filter((row) => row.dataset_type === "process" || row.category_type === "process")
-      .map((row) => [
-        decisionKey(
-          "process",
-          asText(row.dataset_id ?? row.id),
-          asText(row.dataset_version ?? row.version) || "00.00.001",
-        ),
-        row,
-      ]),
-  );
-  const blockedByProcess = new Map<string, JsonRecord>();
-  for (const row of blockedRows) {
-    if (row.reason !== "process_classification_requires_leaf_authoring") continue;
-    const dependency = jsonRecord(row.blocking_dependency);
-    const processId = asText(row.blocked_process_id ?? dependency.id);
-    const processVersion = asText(row.blocked_process_version ?? dependency.version ?? "00.00.001");
-    if (!processId) continue;
-    const key = entityKey("process", processId, processVersion);
-    if (!blockedByProcess.has(key)) blockedByProcess.set(key, row);
-  }
-
-  const selectedBlocked = [...blockedByProcess.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .slice(offset, limit === null ? undefined : offset + Math.max(0, limit));
-  const tasks = selectedBlocked.map(([key, ledgerRow]) => {
-    const dependency = jsonRecord(ledgerRow.blocking_dependency);
-    const processId = asText(ledgerRow.blocked_process_id ?? dependency.id);
-    const processVersion = asText(
-      ledgerRow.blocked_process_version ?? dependency.version ?? "00.00.001",
-    );
-    return buildTaskRow({
-      ledgerRow,
-      entityRow: processEntities.get(key),
-      scopeRow: scopes.get(key),
-      existingDecision: decisions.get(decisionKey("process", processId, processVersion)),
-      options,
-    });
-  });
-
   const taskIndexPath = path.join(outDir, "leaf-process-classification-tasks.jsonl");
   const templatePath = path.join(outDir, "classification-decisions.template.jsonl");
   const reportPath = path.join(outDir, "leaf-process-classification-task-report.json");
   const shardsDir = path.join(outDir, "shards");
-  writeJsonLines(taskIndexPath, tasks);
-  writeJsonLines(
-    templatePath,
-    tasks.map((task) => task.decision_template),
-  );
-
-  const shards = [];
-  for (let start = 0; start < tasks.length; start += shardSize) {
-    const shardIndex = Math.floor(start / shardSize);
-    const shardId = String(shardIndex).padStart(4, "0");
-    const shardTasks = tasks.slice(start, start + shardSize);
-    const shardTaskPath = path.join(
-      shardsDir,
-      `leaf-process-classification-tasks-${shardId}.jsonl`,
-    );
-    const shardTemplatePath = path.join(
-      shardsDir,
-      `classification-decisions-${shardId}.template.jsonl`,
-    );
-    writeJsonLines(shardTaskPath, shardTasks);
-    writeJsonLines(
-      shardTemplatePath,
-      shardTasks.map((task) => task.decision_template),
-    );
-    shards.push({
-      shard_id: shardId,
-      task_count: shardTasks.length,
-      tasks: repoRelative(shardTaskPath),
-      template: repoRelative(shardTemplatePath),
-    });
-  }
-
-  const missingEntityRows = tasks.filter(
-    (task) => !jsonRecord(task.library_index_context).entity_row_found,
-  );
-  const missingScopeRows = tasks.filter(
-    (task) => !jsonRecord(task.library_index_context).scope_projection_found,
-  );
-  const report = {
-    schema_version: 1,
-    generated_at_utc: runtime().nowIso(),
-    status:
-      tasks.length === 0
-        ? "ready_no_leaf_classification_blockers"
-        : missingEntityRows.length || missingScopeRows.length
-          ? "completed_with_context_gaps"
-          : "completed",
-    command: prepareCommandName,
-    inputs: {
-      library_index: repoRelative(indexDir),
-      library_entity_index: repoRelative(entityIndex),
-      scope_projection: repoRelative(scopeProjection),
-      blocked_ledger: repoRelative(blockedLedgerPath),
-      library_decisions:
-        decisionsPath && fs.existsSync(decisionsPath) ? repoRelative(decisionsPath) : null,
-    },
-    input_hashes: {
-      library_entity_index_sha256: sha256File(entityIndex),
-      scope_projection_sha256: sha256File(scopeProjection),
-      blocked_ledger_sha256: sha256File(blockedLedgerPath),
-      library_decisions_sha256:
-        decisionsPath && fs.existsSync(decisionsPath) ? sha256File(decisionsPath) : null,
-    },
-    counts: {
-      blocked_ledger_rows: blockedRows.length,
-      unique_leaf_classification_blocked_processes: blockedByProcess.size,
-      selected_tasks: tasks.length,
-      shards: shards.length,
-      missing_library_entity_rows: missingEntityRows.length,
-      missing_scope_projection_rows: missingScopeRows.length,
-      attached_existing_library_decisions: tasks.filter((task) => task.existing_library_decision)
-        .length,
-    },
+  const decisionsExist = Boolean(decisionsPath && fs.existsSync(decisionsPath));
+  const projection = projectBafuLeafClassificationTaskArtifacts({
+    entityRows,
+    scopeRows,
+    blockedRows,
+    decisionRows,
+    helpers: bafuLeafTaskProjectionHelpers,
+    readProcessContext: readOptionalProcessContext,
     selection: {
       offset,
       limit,
-      shard_size: shardSize,
-      max_exchange_refs_per_task: options.maxExchangeRefs,
-      max_references_per_task: options.maxReferences,
+      shardSize,
+      maxExchangeRefs: options.maxExchangeRefs,
+      maxReferences: options.maxReferences,
     },
-    files: {
-      report: repoRelative(reportPath),
-      tasks: repoRelative(taskIndexPath),
-      template: repoRelative(templatePath),
-      shards,
+    report: {
+      generatedAtUtc: runtime().nowIso(),
+      command: prepareCommandName,
+      inputs: {
+        library_index: repoRelative(indexDir),
+        library_entity_index: repoRelative(entityIndex),
+        scope_projection: repoRelative(scopeProjection),
+        blocked_ledger: repoRelative(blockedLedgerPath),
+        library_decisions: decisionsExist ? repoRelative(decisionsPath) : null,
+      },
+      inputHashes: {
+        library_entity_index_sha256: sha256File(entityIndex),
+        scope_projection_sha256: sha256File(scopeProjection),
+        blocked_ledger_sha256: sha256File(blockedLedgerPath),
+        library_decisions_sha256: decisionsExist ? sha256File(decisionsPath!) : null,
+      },
+      files: {
+        report: repoRelative(reportPath),
+        tasks: repoRelative(taskIndexPath),
+        template: repoRelative(templatePath),
+        shardTasks: (shardId) =>
+          repoRelative(path.join(shardsDir, `leaf-process-classification-tasks-${shardId}.jsonl`)),
+        shardTemplate: (shardId) =>
+          repoRelative(path.join(shardsDir, `classification-decisions-${shardId}.template.jsonl`)),
+      },
     },
-    expected_ai_output: {
-      file: "classification-decisions.jsonl",
-      row_contract:
-        "One completed process decision per task with dataset_type, dataset_id, dataset_version, category_type=process, selected_code=<TIDAS process leaf code>, basis, confidence, classification_decision_level=leaf, authoring_context.context_bundle_sha256, used_context_kinds, and structured evidence.",
-      broad_codes_rejected: true,
-    },
-    next_step:
-      "Merge completed shard decisions into the library decisions directory, rerun dataset-library-decisions-apply, then continue only ready scopes.",
-  };
-  writeJson(reportPath, report);
-  return report;
+  });
+
+  writeJsonLines(taskIndexPath, projection.tasks);
+  writeJsonLines(templatePath, projection.templates);
+  for (const shard of projection.shards) {
+    writeJsonLines(
+      path.join(shardsDir, `leaf-process-classification-tasks-${shard.shardId}.jsonl`),
+      shard.tasks,
+    );
+    writeJsonLines(
+      path.join(shardsDir, `classification-decisions-${shard.shardId}.template.jsonl`),
+      shard.templates,
+    );
+  }
+  writeJson(reportPath, projection.report);
+  return projection.report;
 }
 
 export function projectBafuLeafCategoryMapDecisions(rawOptions: JsonRecord): JsonRecord {
