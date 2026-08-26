@@ -17,6 +17,11 @@ import {
 } from "../lib/bafu-classification/schema-repair.ts";
 import { createBafuIdentityDecisionCarryForwardService } from "../lib/bafu-orchestration/identity-decision-carry-forward.ts";
 import {
+  createBatchFinalizeStageService,
+  type BatchFinalizeContextPaths as ContextPaths,
+  type BatchFinalizeStageResult as StageResult,
+} from "../lib/bafu-orchestration/batch-finalize-stage.ts";
+import {
   buildClassificationDecisionIndex,
   preflightPlanRows,
   selectScopesForRun,
@@ -88,25 +93,6 @@ interface BafuBatchConfig extends JsonRecord {
   applyResolutionRewrites?: boolean;
 }
 
-interface StageResult extends JsonRecord {
-  stage: string;
-  command: string;
-  exit_code: number;
-  signal: NodeJS.Signals | null;
-  timed_out: boolean;
-  timeout_ms: number;
-  started_at_utc: string;
-  finished_at_utc: string;
-  stdout_log: string;
-  stderr_log: string;
-  json: JsonRecord | null;
-  report?: string;
-  attempt?: number;
-  max_attempts?: number;
-  retry_reason?: string;
-  retry_next_delay_ms?: number;
-}
-
 interface HandoffResult extends JsonRecord {
   status: string;
   blockers: JsonRecord[];
@@ -139,34 +125,6 @@ interface IdentityPatchBlocked extends JsonRecord {
 }
 
 type IdentityPatchResult = IdentityPatchCompleted | IdentityPatchBlocked;
-
-interface FinalizeArgsInput {
-  type: string;
-  rowsFile: string;
-  outDir: string;
-  ledgerDir: string;
-  sourceSupportRowsFile?: string | null;
-  sourceRowsFile?: string | null;
-  flowpropertyRowsFile?: string | null;
-  unitgroupRowsFile?: string | null;
-  identityPreflightIndex?: string | null;
-  context: ContextPaths;
-  classificationQueue?: string | null;
-  locationQueue?: string | null;
-  classificationApplyReport?: string | null;
-  locationApplyReport?: string | null;
-  identityApplyReports: string[];
-  patchCollectReport?: string | null;
-  patchApplyReport?: string | null;
-  targetUserId: string;
-  stateCode: number;
-}
-
-interface ContextPaths {
-  schemaFile: string;
-  yamlFile: string;
-  rulesetFile: string;
-}
 
 interface MaterializedRows {
   flowRowsFile: string | null;
@@ -904,15 +862,6 @@ function appendOption(args: string[], name: string, value: unknown): void {
     return;
   }
   args.push(name, String(value));
-}
-
-function appendPathOption(args: string[], name: string, value: unknown): void {
-  if (!value) return;
-  appendOption(args, name, repoRelative(resolveRepoPath(value)));
-}
-
-function appendPathOptions(args: string[], name: string, values: unknown): void {
-  for (const value of normalizedList(values)) appendPathOption(args, name, value);
 }
 
 function foundryCommand(command: string, options: JsonRecord = {}): string[] {
@@ -1730,226 +1679,24 @@ function recordScopeExecutionException({
   };
 }
 
-const retryableStageFailurePattern =
-  /\b(?:ENOTFOUND|EAI_AGAIN|ETIMEDOUT|ECONNRESET|ECONNREFUSED|ECONNABORTED|EHOSTUNREACH|ENETUNREACH|ESOCKETTIMEDOUT)\b|npm error network|registry\.npmjs\.org|network connectivity|timed out after|lookup_failed after insert|identity_preflight_report_missing_or_non_json|identity_preflight_timeout|REMOTE_REQUEST_FAILED|Auth session missing/u;
+const batchFinalizeStage = createBatchFinalizeStageService({
+  processExecPath: process.execPath,
+  foundryEntryPath,
+  activeProfile,
+  libraryContact: () => jsonRecord(bafuBatchConfig.libraryContact),
+  mintUnmatchedFpUgSupport,
+  nowIso,
+  normalizedList,
+  repoRelative,
+  resolveRepoPath,
+  fileExists,
+  readJson,
+  runArgvStage,
+});
 
-function failedStageNestedReportText(stageEntry: JsonRecord): unknown[] {
-  if (!stageEntry || stageEntry.exit_code === 0) return [];
-  const nestedPath = resolveRepoPath(stageEntry.report_file);
-  if (!nestedPath || !fileExists(nestedPath)) return [];
-  let nested;
-  try {
-    nested = readJson(nestedPath);
-  } catch {
-    return [];
-  }
-  return [
-    nested?.status,
-    ...(Array.isArray(nested?.blockers) ? nested.blockers : []).map((entry) =>
-      JSON.stringify(entry),
-    ),
-  ].filter(Boolean);
-}
-
-function retryableStageFailureText({
-  blocker,
-  report,
-}: {
-  blocker: JsonRecord;
-  report: string | null;
-}): string {
-  const parts = [
-    blocker?.code,
-    blocker?.message,
-    blocker?.stderr,
-    jsonRecord(blocker.stage).stderr,
-    jsonRecord(blocker.stage).command,
-  ];
-  const reportPath = resolveRepoPath(report);
-  if (fileExists(reportPath)) {
-    const reportJson = readJson(reportPath!);
-    const blockers = recordArray(reportJson.blockers);
-    const reportStages = recordArray(reportJson.stages);
-    parts.push(
-      reportJson?.status,
-      ...blockers.map((entry) => JSON.stringify(entry)),
-      ...reportStages.map((entry) =>
-        [entry?.stage, entry?.status, entry?.exit_code, entry?.stderr, entry?.command]
-          .filter((value) => value != null && value !== "")
-          .join("\n"),
-      ),
-      ...reportStages.flatMap((entry) => failedStageNestedReportText(entry)),
-    );
-  }
-  return parts.filter(Boolean).join("\n");
-}
-
-function retryableStageFailure({
-  stage,
-  blocker,
-  report,
-}: {
-  stage: string;
-  blocker: JsonRecord;
-  report: string | null;
-}): JsonRecord | null {
-  const code = String(blocker?.code ?? "");
-  const stageName = String(stage ?? "");
-  if (
-    !/(?:_stage_failed|_command_failed|_timeout|_report_missing|not_completed|not_ready|handoff_failed)$/u.test(
-      code,
-    ) &&
-    !/(?:commit|verify|finalize|apply|materialize|preflight)/u.test(stageName)
-  ) {
-    return null;
-  }
-  const text = retryableStageFailureText({ blocker, report });
-  if (!retryableStageFailurePattern.test(text)) return null;
-  const match = text.match(retryableStageFailurePattern);
-  return {
-    code: match?.[0] ?? "retryable_stage_failure",
-    message:
-      "Stage failed for a retryable tool, network, or eventual-consistency reason; rerun the same scope instead of sending it to human review.",
-  };
-}
-
-function buildFinalizeArgs({
-  type,
-  rowsFile,
-  outDir,
-  ledgerDir,
-  sourceSupportRowsFile,
-  sourceRowsFile,
-  flowpropertyRowsFile,
-  unitgroupRowsFile,
-  identityPreflightIndex,
-  context,
-  classificationQueue,
-  locationQueue,
-  classificationApplyReport,
-  locationApplyReport,
-  identityApplyReports,
-  patchCollectReport,
-  patchApplyReport,
-  targetUserId,
-  stateCode,
-}: FinalizeArgsInput): string[] {
-  const args = [
-    process.execPath,
-    foundryEntryPath,
-    "dataset-post-authoring-finalize",
-    "--type",
-    type,
-    "--profile",
-    activeProfile(),
-    "--rows-file",
-    repoRelative(rowsFile),
-    "--out-dir",
-    repoRelative(outDir),
-    "--ledger-dir",
-    repoRelative(ledgerDir),
-  ];
-  appendPathOption(args, "--source-support-rows-file", sourceSupportRowsFile);
-  appendPathOption(args, "--source-rows-file", sourceRowsFile);
-  appendPathOption(args, "--identity-preflight-index", identityPreflightIndex);
-  appendPathOption(args, "--schema-file", context.schemaFile);
-  appendPathOption(args, "--yaml-file", context.yamlFile);
-  appendPathOption(args, "--ruleset-file", context.rulesetFile);
-  appendPathOption(args, "--classification-queue", classificationQueue);
-  appendPathOption(args, "--location-queue", locationQueue);
-  appendPathOption(args, "--classification-decision-apply-report", classificationApplyReport);
-  appendPathOption(args, "--location-decision-apply-report", locationApplyReport);
-  appendPathOptions(args, "--identity-decision-apply-report", identityApplyReports);
-  appendPathOption(args, "--patch-collect-report", patchCollectReport);
-  appendPathOption(args, "--patch-apply-report", patchApplyReport);
-  appendOption(args, "--target-user-id", targetUserId);
-  appendOption(args, "--state-code", stateCode);
-  appendOption(args, "--root-policy", "candidate");
-  args.push(
-    "--finalize-source-contact-support",
-    "--verify-remote",
-    "--run-identity-preflight",
-    "--refresh-identity-preflight",
-  );
-  // Thread the active profile's library contact identity into the finalize
-  // subprocess so its buildLibraryContactPayload mints the SAME shared library
-  // contact the materialize stage stamped (deterministic on profile+name+website).
-  // Without this the finalize would fall back to the default (BAFU FOEN) contact.
-  // Empty for BAFU (no libraryContact config) → BAFU finalize args unchanged.
-  const libraryContact = jsonRecord(bafuBatchConfig.libraryContact);
-  if (Object.keys(libraryContact).length > 0) {
-    appendOption(args, "--library-name", libraryContact.libraryName);
-    appendOption(args, "--library-short-name", libraryContact.shortName);
-    appendOption(args, "--library-website", libraryContact.website);
-    appendOption(args, "--library-email", libraryContact.email);
-    appendOption(args, "--library-telephone", libraryContact.telephone);
-    appendOption(args, "--library-contact-address", libraryContact.contactAddress);
-    appendOption(args, "--library-central-contact-point", libraryContact.centralContactPoint);
-    appendOption(args, "--library-description", libraryContact.description);
-    // Optional explicit identity to reuse an existing visible packaged contact as the
-    // shared library contact instead of deriving a deterministic owner-draft identity.
-    // Worldsteel intentionally omits these options because its packaged id is foreign/private.
-    appendOption(args, "--library-contact-id", libraryContact.contactId);
-    appendOption(args, "--library-contact-version", libraryContact.contactVersion);
-  }
-  // P1a: flag-enabled adapters mint unmatched FP/UG as account-local support before
-  // the flows that reference them. Empty for BAFU (config flag off) so its finalize
-  // args and reference-only FP/UG policy are unchanged.
-  if (mintUnmatchedFpUgSupport()) {
-    args.push("--mint-unmatched-fp-ug-support");
-    appendPathOption(args, "--support-flowproperty-rows-file", flowpropertyRowsFile);
-    appendPathOption(args, "--support-unitgroup-rows-file", unitgroupRowsFile);
-  }
-  if (patchCollectReport) args.push("--require-patch-collect-report");
-  return args;
-}
-
-async function runFinalizeStage({
-  stage,
-  args,
-  reportPath,
-  logDir,
-}: {
-  stage: string;
-  args: string[];
-  reportPath: string;
-  logDir: string;
-}): Promise<StageResult> {
-  const result = await runArgvStage({ stage, argv: args, logDir });
-  const reportExists = fileExists(reportPath);
-  const report = reportExists
-    ? readJson(reportPath)
-    : {
-        schema_version: 1,
-        generated_at_utc: nowIso(),
-        status: "failed_retryable",
-        blockers: [
-          {
-            code: result.timed_out ? "finalize_stage_timeout" : "finalize_report_missing",
-            message: result.timed_out
-              ? `${stage} timed out before writing the expected finalize report.`
-              : `${stage} did not write the expected finalize report.`,
-            stage,
-            expected_report: repoRelative(reportPath),
-            exit_code: result.exit_code,
-            timed_out: Boolean(result.timed_out),
-            stdout_log: result.stdout_log,
-            stderr_log: result.stderr_log,
-            stdout_report_status: result.json?.status ?? null,
-            stdout_report_dataset_type: result.json?.dataset_type ?? null,
-          },
-        ],
-        files: {
-          expected_report: repoRelative(reportPath),
-          stdout_log: result.stdout_log,
-          stderr_log: result.stderr_log,
-        },
-      };
-  result.finalize_report_missing = !reportExists;
-  result.report = repoRelative(reportPath);
-  result.json = report;
-  return result;
-}
+const buildFinalizeArgs = batchFinalizeStage.buildFinalizeArgs;
+const retryableStageFailure = batchFinalizeStage.retryableStageFailure;
+const runFinalizeStage = batchFinalizeStage.runFinalizeStage;
 
 async function runIdentityAndPatch({
   type,

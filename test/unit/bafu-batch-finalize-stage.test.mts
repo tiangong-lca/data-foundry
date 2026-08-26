@@ -59,6 +59,11 @@ function makeAdapter({
     libraryContact: () => libraryContact,
     mintUnmatchedFpUgSupport: () => mintUnmatchedFpUgSupport,
     nowIso: () => "2026-08-26T01:02:05.000Z",
+    normalizedList: (value) =>
+      (Array.isArray(value) ? value : value == null || value === "" ? [] : [value])
+        .flatMap((entry) => String(entry).split(","))
+        .map((entry) => entry.trim())
+        .filter(Boolean),
     repoRelative: (filePath) => path.relative(root, filePath).replaceAll("\\", "/"),
     resolveRepoPath: (value) => {
       if (typeof value !== "string" || value.length === 0) return null;
@@ -183,7 +188,7 @@ test("USLCI finalize planner threads the complete frozen library contact after c
   );
 
   const args = service.buildFinalizeArgs(finalizeInput(root));
-  assert.deepEqual(args.slice(-20), [
+  assert.deepEqual(args.slice(-21), [
     "--library-name",
     "U.S. Life Cycle Inventory Database",
     "--library-short-name",
@@ -204,6 +209,7 @@ test("USLCI finalize planner threads the complete frozen library contact after c
     "22222222-3333-4444-8555-666666666666",
     "--library-contact-version",
     "01.00.000",
+    "--require-patch-collect-report",
   ]);
   assert.equal(args.includes("--mint-unmatched-fp-ug-support"), false);
 });
@@ -289,7 +295,7 @@ test("finalize executor selects the expected report and preserves exact result/r
     );
     assert.equal(
       sha256Text(resultBytes),
-      "3ea4eac96c6a22159c050ee4b6d435639551d5f53a0cff638afbd81908f744c0",
+      "a52d883941c83ebb8859cbf1845f04ba183018628ead005add21d5f91a8a601b",
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
