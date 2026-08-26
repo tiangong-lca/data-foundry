@@ -661,7 +661,7 @@ test("library index and authoring plan modules preserve exact realistic bundle a
     action_items: 5,
     chunks: 3,
   });
-  assert.deepEqual(baselinePlanReport.files.chunks, [
+  assert.deepEqual(ensureArray(record(baselinePlanReport.files).chunks), [
     repoRelativePath(path.join(planDir, "chunks/identity-decisions.chunk-0001.jsonl")),
     repoRelativePath(path.join(planDir, "chunks/classification-decisions.chunk-0001.jsonl")),
     repoRelativePath(path.join(planDir, "chunks/canonical-support-mappings.chunk-0001.jsonl")),

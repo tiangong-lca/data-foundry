@@ -4,12 +4,13 @@ import os from "node:os";
 import path from "node:path";
 import {
   createLibraryEntityProjection,
-  type BundleEntry,
   type DatasetIdentity,
   type EntityRow,
   type JsonRecord,
   type ScopeProjection,
 } from "../lib/library-orchestration/entity-projection.ts";
+import { createLibraryAuthoringPlan } from "../lib/library-orchestration/authoring-plan.ts";
+import { createLibraryIndexBuild } from "../lib/library-orchestration/index-build.ts";
 import {
   evaluateElementaryIdentityDecision as evaluateElementaryIdentityDecisionPure,
   openLcaCompartmentClassification,
@@ -127,9 +128,6 @@ const libraryScopeStageContract = readOnlyStageContract([
   },
 ]);
 
-const indexedEntityTypes = ["process", "flow", "flowproperty", "unitgroup"] as const;
-type IndexedEntityType = (typeof indexedEntityTypes)[number];
-
 export function createLibraryScopeWorkflowCommands({
   asText,
   booleanOption,
@@ -155,13 +153,6 @@ export function createLibraryScopeWorkflowCommands({
   writeJson,
   writeJsonLines,
 }: LibraryScopeWorkflowDependencies) {
-  const typePlural: Record<IndexedEntityType, string> = {
-    process: "processes",
-    flow: "flows",
-    flowproperty: "flowproperties",
-    unitgroup: "unitgroups",
-  };
-
   function help(command: string, purpose: string, usage: string[]): JsonRecord {
     return {
       schema_version: 1,
@@ -187,6 +178,14 @@ export function createLibraryScopeWorkflowCommands({
       .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
       .map((entry) => path.join(dir, entry.name))
       .sort();
+  }
+
+  function listDirectoryNames(dir: string): string[] {
+    if (!directoryExists(dir)) return [];
+    return fs
+      .readdirSync(dir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
   }
 
   function sourceDirOption(options: JsonRecord): string | null {
@@ -223,7 +222,30 @@ export function createLibraryScopeWorkflowCommands({
     textValue,
     files: { fileExists, readJson },
   });
-  const { entityMaps, projectionForBundle, rootEntityForRef } = entityProjection;
+  const { entityMaps, rootEntityForRef } = entityProjection;
+  const libraryIndexBuild = createLibraryIndexBuild({
+    asText,
+    ensureArray,
+    nowIso,
+    repoRelativePath,
+    resolveRepoPath,
+    projection: entityProjection,
+    files: {
+      directoryExists,
+      fileExists,
+      listDirectoryNames,
+      listJsonFiles,
+      readJson,
+      writeJson,
+      writeJsonLines,
+    },
+  });
+  const libraryAuthoringPlan = createLibraryAuthoringPlan({
+    ensureArray,
+    nowIso,
+    repoRelativePath,
+    files: { fileExists, readJsonLines, writeJson, writeJsonLines },
+  });
   const decisionApply = createLibraryDecisionApply({
     asText,
     cloneJson,
@@ -235,72 +257,6 @@ export function createLibraryScopeWorkflowCommands({
     rootEntityForRef,
     textValue,
   });
-
-  function buildEntityIndex(sourceDir: string): EntityRow[] {
-    const sourceFiles = indexedEntityTypes.flatMap((type) =>
-      listJsonFiles(path.join(sourceDir, "tidas", typePlural[type])).map((sourceFile) => ({
-        type,
-        sourceFile,
-        sourceKind: "root_tidas",
-      })),
-    );
-    return entityProjection.buildEntityIndex(sourceFiles);
-  }
-
-  function processBundleEntries(processBundlesDir: string): BundleEntry[] {
-    function resolveBundlePath(value: unknown, expectedKind: "file" | "dir"): string | null {
-      if (!value) return null;
-      const text = asText(value);
-      if (path.isAbsolute(text)) return text;
-      const fromBundleRoot = path.join(processBundlesDir, text);
-      if (
-        (expectedKind === "file" && fileExists(fromBundleRoot)) ||
-        (expectedKind === "dir" && directoryExists(fromBundleRoot))
-      ) {
-        return fromBundleRoot;
-      }
-      return resolveRepoPath(text);
-    }
-    const indexFile = path.join(processBundlesDir, "index.json");
-    if (fileExists(indexFile)) {
-      const index = readJson(indexFile);
-      return ensureArray(index.bundles).map((value) => {
-        const bundle = jsonRecord(value);
-        const manifest = resolveBundlePath(bundle.manifest, "file");
-        const tidasDir = resolveBundlePath(bundle.tidas_dir, "dir");
-        const bundleDir = manifest
-          ? path.dirname(manifest)
-          : tidasDir
-            ? path.dirname(tidasDir)
-            : path.join(processBundlesDir, asText(bundle.process_id));
-        return {
-          process_id: asText(bundle.process_id),
-          bundle_id: asText(bundle.bundle_id ?? bundle.process_id),
-          bundle_dir: bundleDir,
-          manifest: manifest || path.join(bundleDir, "manifest.json"),
-          tidas_dir: tidasDir || path.join(bundleDir, "tidas"),
-          index_row: bundle,
-        };
-      });
-    }
-    if (!directoryExists(processBundlesDir)) return [];
-    return fs
-      .readdirSync(processBundlesDir, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => {
-        const bundleDir = path.join(processBundlesDir, entry.name);
-        return {
-          process_id: entry.name,
-          bundle_id: entry.name,
-          bundle_dir: bundleDir,
-          manifest: path.join(bundleDir, "manifest.json"),
-          tidas_dir: path.join(bundleDir, "tidas"),
-          index_row: null,
-        };
-      })
-      .filter((entry) => fileExists(entry.manifest))
-      .sort((left, right) => left.process_id.localeCompare(right.process_id));
-  }
 
   function runDatasetLibraryIndexBuild(options: JsonRecord): JsonRecord {
     if (options.help) {
@@ -323,78 +279,7 @@ export function createLibraryScopeWorkflowCommands({
     const outDir = resolveRepoPath(
       options.outDir || path.join(sourceDir, ".foundry", "library-index"),
     )!;
-    const entityRows = buildEntityIndex(sourceDir);
-    const maps = entityMaps(entityRows);
-    const projectionRows = processBundleEntries(processBundlesDir).map((bundle) =>
-      projectionForBundle(bundle, maps),
-    );
-    const entityIndexPath = path.join(outDir, "library-entity-index.jsonl");
-    const scopeProjectionPath = path.join(outDir, "scope-projection.jsonl");
-    const reportPath = path.join(outDir, "dataset-library-index-build-report.json");
-    writeJsonLines(entityIndexPath, entityRows);
-    writeJsonLines(scopeProjectionPath, projectionRows);
-    const countsByType = Object.fromEntries(
-      indexedEntityTypes.map((type) => [
-        type,
-        entityRows.filter((row) => row.dataset_type === type).length,
-      ]),
-    );
-    const report = {
-      schema_version: 1,
-      generated_at_utc: nowIso(),
-      status: "completed",
-      command: "dataset-library-index-build",
-      source_dir: repoRelativePath(sourceDir),
-      process_bundles_dir: repoRelativePath(processBundlesDir),
-      counts: {
-        unique_entities: entityRows.length,
-        process_scopes: projectionRows.length,
-        ...countsByType,
-        elementary_flows: entityRows.filter(
-          (row) => row.dataset_type === "flow" && /^elementary flow$/iu.test(row.flow_type ?? ""),
-        ).length,
-        reference_only_support: entityRows.filter((row) =>
-          ["flowproperty", "unitgroup"].includes(row.dataset_type),
-        ).length,
-      },
-      files: {
-        report: repoRelativePath(reportPath),
-        library_entity_index: repoRelativePath(entityIndexPath),
-        scope_projection: repoRelativePath(scopeProjectionPath),
-      },
-      policy: {
-        root_tidas_is_unique_entity_source: true,
-        process_bundles_index_is_scope_projection_source: true,
-      },
-      blockers: [],
-    };
-    writeJson(reportPath, report);
-    return report;
-  }
-
-  function chunkRows<T>(rows: T[], chunkSize: number): T[][] {
-    const chunks: T[][] = [];
-    for (let index = 0; index < rows.length; index += chunkSize) {
-      chunks.push(rows.slice(index, index + chunkSize));
-    }
-    return chunks;
-  }
-
-  function writeChunkFiles<T>(
-    outDir: string,
-    stem: string,
-    rows: T[],
-    chunkSize: number,
-  ): string[] {
-    const chunksDir = path.join(outDir, "chunks");
-    return chunkRows(rows, chunkSize).map((chunk, index) => {
-      const filePath = path.join(
-        chunksDir,
-        `${stem}.chunk-${String(index + 1).padStart(4, "0")}.jsonl`,
-      );
-      writeJsonLines(filePath, chunk);
-      return repoRelativePath(filePath);
-    });
+    return libraryIndexBuild.run({ sourceDir, processBundlesDir, outDir });
   }
 
   function runDatasetLibraryAuthoringPlan(options: JsonRecord): JsonRecord {
@@ -409,129 +294,11 @@ export function createLibraryScopeWorkflowCommands({
     }
     const indexDir = libraryIndexDirOption(options);
     if (!indexDir) throw new Error("--library-index is required.");
-    const entityIndexPath = path.join(indexDir, "library-entity-index.jsonl");
-    const scopeProjectionPath = path.join(indexDir, "scope-projection.jsonl");
-    if (!fileExists(entityIndexPath) || !fileExists(scopeProjectionPath)) {
-      throw new Error(
-        "--library-index must contain library-entity-index.jsonl and scope-projection.jsonl.",
-      );
-    }
     const outDir = resolveRepoPath(
       options.outDir || path.join(path.dirname(indexDir), "authoring-plan"),
     )!;
     const chunkSize = positiveIntegerOption(options.chunkSize, 200);
-    const entityRows = readJsonLines(entityIndexPath) as EntityRow[];
-    const projectionRows = readJsonLines(scopeProjectionPath) as ScopeProjection[];
-    const usedEntityKeys = new Set(
-      projectionRows.flatMap((scope) => [
-        scope.process_entity_key,
-        ...ensureArray(scope.dependency_ids?.flows).map((dep) => dep.entity_key),
-        ...ensureArray(scope.dependency_ids?.flowproperties).map((dep) => dep.entity_key),
-        ...ensureArray(scope.dependency_ids?.unitgroups).map((dep) => dep.entity_key),
-      ]),
-    );
-    const identityTemplateRows = entityRows
-      .filter(
-        (row) =>
-          row.dataset_type === "flow" &&
-          /^elementary flow$/iu.test(row.flow_type ?? "") &&
-          usedEntityKeys.has(row.entity_key),
-      )
-      .map((row) => ({
-        schema_version: 1,
-        decision: "__AI_DECIDE_REUSE_EXISTING_REFERENCE_OR_BLOCK__",
-        dataset_type: "flow",
-        source_dataset_id: row.dataset_id,
-        source_dataset_version: row.dataset_version,
-        source_entity_key: row.entity_key,
-        source_name: row.name,
-        flow_type: row.flow_type,
-        classification_path: row.classification_path,
-        required_resolution:
-          "If physically identity-equivalent to an existing TianGong elementary flow, return reuse_existing_reference with canonical_flow_id/version and evidence. Otherwise return manual_review/block_unresolved.",
-      }));
-    const classificationTemplateRows = entityRows
-      .filter(
-        (row) =>
-          usedEntityKeys.has(row.entity_key) &&
-          (row.dataset_type === "process" ||
-            (row.dataset_type === "flow" && !/^elementary flow$/iu.test(row.flow_type ?? ""))),
-      )
-      .map((row) => ({
-        schema_version: 1,
-        dataset_type: row.dataset_type,
-        dataset_id: row.dataset_id,
-        dataset_version: row.dataset_version,
-        entity_key: row.entity_key,
-        category_type: row.dataset_type === "process" ? "process" : "flow-product",
-        selected_code: "__AI_SELECT_CLASSIFICATION_CODE__",
-        basis: "__AI_WRITE_MEANING_BASED_BASIS__",
-        confidence: "__AI_CONFIDENCE__",
-        source_name: row.name,
-        converted_classification_reference: row.classification_path,
-        required_resolution:
-          "Classify from the real meaning of the process/flow. Converter classification is weak reference only.",
-      }));
-    const supportTemplateRows = entityRows
-      .filter(
-        (row) =>
-          usedEntityKeys.has(row.entity_key) &&
-          ["flowproperty", "unitgroup"].includes(row.dataset_type),
-      )
-      .map((row) => ({
-        schema_version: 1,
-        support_type: row.dataset_type,
-        source_support_id: row.dataset_id,
-        source_support_version: row.dataset_version,
-        source_entity_key: row.entity_key,
-        source_name: row.name,
-        source_units: row.units ?? null,
-        source_reference_unit_group: row.reference_unit_group ?? null,
-        canonical_support_id: "__AI_OR_HUMAN_SELECT_CANONICAL_SUPPORT_ID__",
-        canonical_support_version: "__AI_OR_HUMAN_SELECT_CANONICAL_SUPPORT_VERSION__",
-        physical_dimension_evidence: "__REQUIRED_FOR_AUTOMATIC_MAPPING_OR_LEAVE_BLOCKED__",
-        required_resolution:
-          "Map generated support to public canonical support only when unit/physical dimension equivalence is proven; otherwise leave blocked for human support authoring.",
-      }));
-
-    const identityPath = path.join(outDir, "identity-decisions.template.jsonl");
-    const classificationPathOut = path.join(outDir, "classification-decisions.template.jsonl");
-    const supportPath = path.join(outDir, "canonical-support-mappings.template.jsonl");
-    writeJsonLines(identityPath, identityTemplateRows);
-    writeJsonLines(classificationPathOut, classificationTemplateRows);
-    writeJsonLines(supportPath, supportTemplateRows);
-    const chunkFiles = [
-      ...writeChunkFiles(outDir, "identity-decisions", identityTemplateRows, chunkSize),
-      ...writeChunkFiles(outDir, "classification-decisions", classificationTemplateRows, chunkSize),
-      ...writeChunkFiles(outDir, "canonical-support-mappings", supportTemplateRows, chunkSize),
-    ];
-    const reportPath = path.join(outDir, "dataset-library-authoring-plan-report.json");
-    const actionItems =
-      identityTemplateRows.length + classificationTemplateRows.length + supportTemplateRows.length;
-    const report = {
-      schema_version: 1,
-      generated_at_utc: nowIso(),
-      status: actionItems > 0 ? "ready_for_ai_library_decisions" : "ready_no_action_items",
-      command: "dataset-library-authoring-plan",
-      library_index: repoRelativePath(indexDir),
-      counts: {
-        identity_decisions: identityTemplateRows.length,
-        classification_decisions: classificationTemplateRows.length,
-        canonical_support_mappings: supportTemplateRows.length,
-        action_items: actionItems,
-        chunks: chunkFiles.length,
-      },
-      files: {
-        report: repoRelativePath(reportPath),
-        identity_decisions_template: repoRelativePath(identityPath),
-        classification_decisions_template: repoRelativePath(classificationPathOut),
-        canonical_support_mappings_template: repoRelativePath(supportPath),
-        chunks: chunkFiles,
-      },
-      blockers: [],
-    };
-    writeJson(reportPath, report);
-    return report;
+    return libraryAuthoringPlan.run({ indexDir, outDir, chunkSize });
   }
 
   function readDecisionRows(

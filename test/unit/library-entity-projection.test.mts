@@ -401,9 +401,17 @@ test("entity projection preserves native malformed manifest failures", (t) => {
   );
 });
 
-test("entity projection is a read-adapter semantic leaf while the command retains I/O ownership", () => {
+test("library projection stages are injected semantic leaves while the command owns physical I/O", () => {
   const moduleSource = fs.readFileSync(
     path.join(repoRoot, "scripts/lib/library-orchestration/entity-projection.ts"),
+    "utf8",
+  );
+  const indexBuildSource = fs.readFileSync(
+    path.join(repoRoot, "scripts/lib/library-orchestration/index-build.ts"),
+    "utf8",
+  );
+  const authoringPlanSource = fs.readFileSync(
+    path.join(repoRoot, "scripts/lib/library-orchestration/authoring-plan.ts"),
     "utf8",
   );
   const ownerSource = fs.readFileSync(
@@ -413,10 +421,21 @@ test("entity projection is a read-adapter semantic leaf while the command retain
   assert.doesNotMatch(moduleSource, /node:(?:child_process|fs|http|https|net)/u);
   assert.doesNotMatch(moduleSource, /\b(?:spawn|spawnSync|process\.env)\b/u);
   assert.doesNotMatch(moduleSource, /^(?:const|let|var)\s/mu);
+  for (const source of [indexBuildSource, authoringPlanSource]) {
+    assert.doesNotMatch(source, /node:(?:child_process|fs|http|https|net)/u);
+    assert.doesNotMatch(source, /\b(?:spawn|spawnSync|process\.env)\b/u);
+  }
+  assert.match(indexBuildSource, /function processBundleEntries\(/u);
+  assert.match(indexBuildSource, /files\.listJsonFiles\(/u);
+  assert.match(authoringPlanSource, /function writeChunkFiles</u);
   assert.match(ownerSource, /from "\.\.\/lib\/library-orchestration\/entity-projection\.ts"/u);
+  assert.match(ownerSource, /createLibraryIndexBuild/u);
+  assert.match(ownerSource, /createLibraryAuthoringPlan/u);
   assert.match(ownerSource, /function listJsonFiles\(/u);
-  assert.match(ownerSource, /function processBundleEntries\(/u);
+  assert.match(ownerSource, /function listDirectoryNames\(/u);
   assert.match(ownerSource, /function runDatasetLibraryIndexBuild\(/u);
+  assert.doesNotMatch(ownerSource, /function processBundleEntries\(/u);
+  assert.doesNotMatch(ownerSource, /function writeChunkFiles</u);
   assert.doesNotMatch(ownerSource, /function entitySemanticKey\(/u);
   assert.doesNotMatch(ownerSource, /function projectionForBundle\(/u);
 });
