@@ -11,6 +11,14 @@ import {
   postWriteVerifyRetryReasonFromReport,
   reportCodes,
 } from "../lib/bafu-orchestration/finalize-recovery-policy.ts";
+import {
+  applyBafuProcessScopeHandoffSummary,
+  compactCommandStage as projectCompactCommandStage,
+  projectBafuProcessScopeFinalizeReport,
+  type BafuProcessScopeFinalizeReport,
+  type CompactCommandStage as CommandStage,
+  type CompactCommandStageResult,
+} from "../lib/bafu-orchestration/process-scope-report.ts";
 import { resolveFoundryRuntimePaths } from "../lib/foundry-runtime-paths.ts";
 import { acceptTraceHashOnlyRemoteVerificationMismatch } from "../lib/remote-verification-accepted-diff.ts";
 import {
@@ -44,21 +52,6 @@ interface BafuProcessScopeE2eRuntime {
   shellQuote: (value: string) => string;
 }
 
-interface CommandStage extends JsonRecord {
-  stage: string;
-  command: unknown;
-  exit_code: number;
-  signal?: NodeJS.Signals | null;
-  error?: string | null;
-  stdout_log?: string | null;
-  stderr_log?: string | null;
-  report?: unknown;
-  attempt?: number;
-  max_attempts?: number;
-  retry_reason?: string;
-  retry_next_delay_ms?: number;
-}
-
 interface CommandSpecStageInput {
   stage: string;
   commandSpec: FoundryCommandSpec;
@@ -70,12 +63,6 @@ interface ArgvStageInput {
   stage: string;
   argv: string[];
   logDir: string;
-}
-
-interface CompactStageResult {
-  status: number | null;
-  signal?: NodeJS.Signals | null;
-  error?: Error;
 }
 
 interface FinalizeCommandResult {
@@ -124,16 +111,6 @@ interface HandoffResult extends JsonRecord {
   commitReportPath?: string;
   verifyReportPath?: string;
   closeoutReportPath?: string;
-}
-
-interface ProcessScopeReport extends JsonRecord {
-  generated_at_utc: string;
-  status: string;
-  blockers: JsonRecord[];
-  counts: JsonRecord;
-  files: JsonRecord;
-  policy: JsonRecord;
-  handoff_stages?: JsonRecord[];
 }
 
 function isJsonRecord(value: unknown): value is JsonRecord {
@@ -442,7 +419,7 @@ function writeJson(filePath: string, value: unknown): void {
   runtime().writeJson(filePath, value);
 }
 
-function compactCommandStage({
+function projectCommandStage({
   stage,
   command,
   result,
@@ -452,21 +429,19 @@ function compactCommandStage({
 }: {
   stage: string;
   command: unknown;
-  result: CompactStageResult;
+  result: CompactCommandStageResult;
   stdoutLog: string;
   stderrLog: string;
   reportPath: string | null;
 }): CommandStage {
-  return {
+  return projectCompactCommandStage({
     stage,
     command,
-    exit_code: typeof result.status === "number" ? result.status : 1,
-    signal: result.signal ?? null,
-    error: result.error ? String(result.error.message || result.error) : null,
-    stdout_log: repoRelative(stdoutLog),
-    stderr_log: repoRelative(stderrLog),
+    result,
+    stdoutLog: repoRelative(stdoutLog),
+    stderrLog: repoRelative(stderrLog),
     report: repoRelative(reportPath),
-  };
+  });
 }
 
 function runCommandSpecStage({ stage, commandSpec, cwd, logDir }: CommandSpecStageInput): {
@@ -760,7 +735,7 @@ function executeHandoff({
   }
   const commitReportPath = commitReportForHandoffPlan(handoffPlan);
   stages.push(
-    compactCommandStage({
+    projectCommandStage({
       stage: `${label}.commit`,
       command: commitSpec.display,
       result: commitStage.result,
@@ -808,7 +783,7 @@ function executeHandoff({
     verifyReportPath = verifyReportForHandoffPlan(handoffPlan);
     verifyExitCode = verifyStage.result.status ?? 1;
     verifyAttempts = attempt;
-    const stageReport = compactCommandStage({
+    const stageReport = projectCommandStage({
       stage: verifyStageName,
       command: verifySpec.display,
       result: verifyStage.result,
@@ -878,7 +853,7 @@ function executeHandoff({
   });
   const closeoutReportPath = path.join(closeoutDir, "dataset-post-write-closeout-report.json");
   stages.push(
-    compactCommandStage({
+    projectCommandStage({
       stage: `${label}.closeout`,
       command: commandString(closeoutArgv),
       result: closeoutStage.result,
@@ -1036,7 +1011,7 @@ function runPostFinalizeIdentityRecovery({
     return {
       status: "blocked",
       stages: [
-        compactCommandStage({
+        projectCommandStage({
           stage: `post-finalize-${attempt}.identity-task`,
           command: commandString([
             process.execPath,
@@ -1057,7 +1032,7 @@ function runPostFinalizeIdentityRecovery({
   }
   const identityTaskJson = readJson(identityTaskReport);
   const stages: JsonRecord[] = [
-    compactCommandStage({
+    projectCommandStage({
       stage: `post-finalize-${attempt}.identity-task`,
       command: commandString([
         process.execPath,
@@ -1112,7 +1087,7 @@ function runPostFinalizeIdentityRecovery({
     logDir,
   });
   stages.push(
-    compactCommandStage({
+    projectCommandStage({
       stage: `post-finalize-${attempt}.identity-autofill`,
       command: commandString(identityAutofillArgv),
       result: identityAutofill.result,
@@ -1169,7 +1144,7 @@ function runPostFinalizeIdentityRecovery({
     logDir,
   });
   stages.push(
-    compactCommandStage({
+    projectCommandStage({
       stage: `post-finalize-${attempt}.identity-apply`,
       command: commandString(identityApplyArgv),
       result: identityApply.result,
@@ -1245,7 +1220,7 @@ function runPostFinalizeSemanticRecovery({
     logDir,
   });
   const stages: JsonRecord[] = [
-    compactCommandStage({
+    projectCommandStage({
       stage: `post-finalize-${attempt}.semantic-task`,
       command: commandString(taskBuildArgv),
       result: taskBuild.result,
@@ -1304,7 +1279,7 @@ function runPostFinalizeSemanticRecovery({
     logDir,
   });
   stages.push(
-    compactCommandStage({
+    projectCommandStage({
       stage: `post-finalize-${attempt}.patch-autofill`,
       command: commandString(patchAutofillArgv),
       result: patchAutofill.result,
@@ -1352,7 +1327,7 @@ function runPostFinalizeSemanticRecovery({
     logDir,
   });
   stages.push(
-    compactCommandStage({
+    projectCommandStage({
       stage: `post-finalize-${attempt}.patch-collect`,
       command: commandString(patchCollectArgv),
       result: patchCollect.result,
@@ -1422,7 +1397,7 @@ function runPostFinalizeSemanticRecovery({
   });
   const patchApplyReport = path.join(patchApplyDir, "outputs", "dataset-patch-apply-report.json");
   stages.push(
-    compactCommandStage({
+    projectCommandStage({
       stage: `post-finalize-${attempt}.patch-apply`,
       command: commandString(patchApplyArgv),
       result: patchApply.result,
@@ -1463,7 +1438,7 @@ function runPostFinalizeSemanticRecovery({
   };
 }
 
-function reportFromFinalize({
+function projectFinalizeReport({
   processScope,
   outDir,
   reportPath,
@@ -1474,79 +1449,28 @@ function reportFromFinalize({
   mode,
   sourceSupportRowsFile,
   sourceRowsFile,
-}: FinalizeReportInput): ProcessScopeReport {
-  const { gateReport, blockers: gateBlockers } = curationGateBlockers({
+}: FinalizeReportInput): BafuProcessScopeFinalizeReport {
+  return projectBafuProcessScopeFinalizeReport({
+    generatedAtUtc: nowIso(),
+    processScope,
+    mode,
     finalizeReport,
     gateReport: readCurationGateReport(finalizeReport),
-  });
-  const otherBlockers = finalizeBlockers(finalizeReport);
-  const blockers = [...gateBlockers, ...otherBlockers];
-  const gateCounts = jsonRecord(gateReport?.counts);
-  const finalizeCounts = jsonRecord(finalizeReport.counts);
-  const commitHandoff = jsonRecord(finalizeReport.commit_handoff);
-  const finalizeFiles = jsonRecord(finalizeReport.files);
-  const unresolvedAi = gateBlockers.some(
-    (blocker) => blocker.code === "unresolved_ai_curation_items",
-  );
-  const status =
-    blockers.length === 0
-      ? "ready_for_explicit_commit"
-      : unresolvedAi
-        ? "blocked_unresolved_ai_curation"
-        : "blocked";
-  return {
-    schema_version: 1,
-    generated_at_utc: nowIso(),
-    command: commandName,
-    status,
-    mode,
-    profile: "bafu",
-    process_scope: processScope,
-    policy: {
-      uses_existing_foundry_commands: true,
-      existing_command: "dataset-post-authoring-finalize",
-      remote_commit_executed: false,
-      remote_commit_boundary:
-        "This helper executes emitted commit handoff commands only when --commit is explicit and finalize is ready; otherwise it is read-only.",
-      unresolved_ai_curation_items_hard_block: true,
-      one_process_scope_only: true,
-    },
-    counts: {
-      blockers: blockers.length,
-      ai_action_items: Number(gateCounts.action_items ?? 0),
-      deterministic_cleanup_items: Number(gateCounts.deterministic_cleanup_items ?? 0),
-      finalize_blockers: Number(finalizeCounts.blockers ?? 0),
-      commit_handoff_blockers: Number(finalizeCounts.commit_handoff_blockers ?? 0),
-    },
-    blockers,
-    commands: {
-      post_authoring_finalize: commandString(finalizeCommand),
-      commit_handoff: commitHandoff.command ?? null,
-      post_write_verify: commitHandoff.post_write_verify_command ?? null,
-    },
-    inputs: {
-      source_support_rows_file: repoRelative(sourceSupportRowsFile),
-      source_rows_file: repoRelative(sourceRowsFile),
-    },
-    files: {
+    finalizeCommand: commandString(finalizeCommand),
+    rerunCommand: helperRerunCommand({
+      rowsFile: resolveRepoPath(finalizeReport.rows_file)!,
+      outDir,
+      sourceSupportRowsFile,
+      sourceRowsFile,
+    }),
+    paths: {
       report: repoRelative(reportPath),
-      run_ledger: repoRelative(ledgerPath),
-      finalize_report: repoRelative(finalizeReportPath),
-      curation_gate_report: finalizeFiles.curation_gate_report ?? null,
-      mutation_manifest: finalizeFiles.mutation_manifest ?? null,
-      commit_handoff_plan: finalizeFiles.commit_handoff_plan ?? null,
-      import_ledger: finalizeFiles.import_ledger ?? null,
+      runLedger: repoRelative(ledgerPath),
+      finalizeReport: repoRelative(finalizeReportPath),
+      sourceSupportRowsFile: repoRelative(sourceSupportRowsFile),
+      sourceRowsFile: repoRelative(sourceRowsFile),
     },
-    resume: {
-      rerun_command: helperRerunCommand({
-        rowsFile: resolveRepoPath(finalizeReport.rows_file)!,
-        outDir,
-        sourceSupportRowsFile,
-        sourceRowsFile,
-      }),
-      reused_existing_finalize_report: mode === "resume",
-    },
-  };
+  });
 }
 
 function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
@@ -1646,7 +1570,7 @@ function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
 
   if (existingFinalizeReportPath && !booleanOption(options.force)) {
     const finalizeReport = readJson(existingFinalizeReportPath);
-    const report = reportFromFinalize({
+    const report = projectFinalizeReport({
       processScope,
       outDir,
       reportPath,
@@ -1868,7 +1792,7 @@ function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
         fs.writeFileSync(rerunStdoutLog, rerun.stdout || "");
         fs.writeFileSync(rerunStderrLog, rerun.stderr || "");
         handoffStages.push(
-          compactCommandStage({
+          projectCommandStage({
             stage: "process.finalize_after_support",
             command: commandString(finalizeCommand),
             result: rerun,
@@ -1952,7 +1876,7 @@ function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
     fs.writeFileSync(recoveryStdoutLog, result.stdout || "");
     fs.writeFileSync(recoveryStderrLog, result.stderr || "");
     handoffStages.push(
-      compactCommandStage({
+      projectCommandStage({
         stage: `process.finalize_after_${recoveryKind}_${attempt}`,
         command: commandString(finalizeCommand),
         result,
@@ -1965,7 +1889,7 @@ function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
     finalizeReport = readJson(finalizeReportPath);
   }
 
-  let report = reportFromFinalize({
+  let report = projectFinalizeReport({
     processScope,
     outDir,
     reportPath,
@@ -1977,19 +1901,13 @@ function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
     sourceSupportRowsFile,
     sourceRowsFile,
   });
-  if (handoffStages.length > 0 || handoffBlockers.length > 0) {
-    report.handoff_stages = handoffStages;
-    report.support_handoff = {
-      requested: true,
-      completed: supportCommitted,
-      reused_verified_identities: supportReused,
-    };
-    report.blockers = [...handoffBlockers, ...report.blockers];
-    report.counts.blockers = report.blockers.length;
-    if (handoffBlockers.length > 0) {
-      report.status = "failed";
-    }
-  }
+  report = applyBafuProcessScopeHandoffSummary({
+    report,
+    stages: handoffStages,
+    blockers: handoffBlockers,
+    supportCommitted,
+    supportReused,
+  });
 
   if (booleanOption(options.commit) && report.status === "ready_for_explicit_commit") {
     const processHandoff = readHandoffPlan(finalizeReport, "commit_handoff_plan");
@@ -2052,14 +1970,17 @@ export function createBafuProcessScopeE2eCommands(deps: BafuProcessScopeE2eRunti
 }
 
 export const bafuProcessScopeE2eTestHooks = {
+  applyBafuProcessScopeHandoffSummary,
   canRunPostFinalizeIdentityRecovery,
   canRunPostFinalizeSemanticRecovery,
+  compactCommandStage: projectCompactCommandStage,
   curationGateBlockers,
   finalizeBlockers,
   foundryEntryPath,
   loadVerifiedSupportIdentities,
   postWriteVerifyRetryReason,
   postWriteVerifyRetryReasonFromReport,
+  projectBafuProcessScopeFinalizeReport,
   reportCodes,
   supportIdentityKeysFromHandoffPlan,
 };
