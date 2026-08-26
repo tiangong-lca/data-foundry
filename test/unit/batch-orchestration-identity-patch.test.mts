@@ -69,7 +69,10 @@ function sha256Text(value: string): string {
 
 function writeJsonLines(filePath: string, rows: readonly unknown[]): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, rows.length > 0 ? `${rows.map(JSON.stringify).join("\n")}\n` : "");
+  fs.writeFileSync(
+    filePath,
+    rows.length > 0 ? `${rows.map((row) => JSON.stringify(row)).join("\n")}\n` : "",
+  );
 }
 
 function appendOption(argv: string[], name: string, value: unknown): void {
@@ -101,7 +104,17 @@ function makeHarness({
     reportPath: path.join(root, "identity-task", "identity-decision-carry-forward-report.json"),
     report: {
       status: "completed",
-      counts: { replacements: 0, additions: 0, conflicts: 0 },
+      counts: {
+        input_decisions: 0,
+        source_decision_files: 0,
+        reusable_decisions: 0,
+        replacements: 0,
+        additions: 0,
+        conflicts: 0,
+      },
+      replacements: [],
+      additions: [],
+      conflicts: [],
     },
   };
   const adapter: IdentityPatchStageAdapter = {
@@ -235,7 +248,17 @@ test("BAFU identity autofill preserves identity, authoring, collect, and patch-a
         ),
         report: {
           status: "completed",
-          counts: { replacements: 1, additions: 2, conflicts: 0 },
+          counts: {
+            input_decisions: 3,
+            source_decision_files: 1,
+            reusable_decisions: 3,
+            replacements: 1,
+            additions: 2,
+            conflicts: 0,
+          },
+          replacements: [],
+          additions: [],
+          conflicts: [],
         },
       },
     });
@@ -312,8 +335,13 @@ test("BAFU identity autofill preserves identity, authoring, collect, and patch-a
       "--require-action-item-closure",
     ]);
     assert.equal(
-      sha256Text(JSON.stringify({ result, stages: stages.map((stage) => stage.stage) })),
-      "e7a46b73c721da5b711136101767387565535941066ea4b6b3f4e34bddcc7baa",
+      sha256Text(
+        JSON.stringify({ result, stages: stages.map((stage) => stage.stage) }).replaceAll(
+          root,
+          "<root>",
+        ),
+      ),
+      "98e939026220b848dab54cf1a0fabfa69b256c0b44053e0f7df9dd6778a280d2",
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -351,6 +379,7 @@ test("USLCI deterministic resolution rewrites preserve decision order and fail c
         },
         {
           source_flow_id: "source-flow-a",
+          source_flow_version: "01.00.000",
           canonical_flow_id: "ignored-duplicate",
           process_id: "process-b",
           exchange_index: 9,
@@ -415,7 +444,7 @@ test("USLCI deterministic resolution rewrites preserve decision order and fail c
     assert.equal(decisionRows[1].dataset_version, "00.00.001");
     assert.equal(
       sha256Text(decisionBytes),
-      "26897979b455809f545d63fc819deaf47190d40ae67ef8b6f665af9d6f9e3836",
+      "175fc53f259dc1c92af0bfc4e8188781bc6c61e63c495d26995aa6574f9bd7a2",
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -432,7 +461,17 @@ test("Worldsteel pre-authored reuse applies once and clean retained tasks skip B
       reportPath: path.join(root, "scope", "steel-identity-task", "carry-forward.json"),
       report: {
         status: "completed",
-        counts: { replacements: 0, additions: 3, conflicts: 0 },
+        counts: {
+          input_decisions: 3,
+          source_decision_files: 1,
+          reusable_decisions: 3,
+          replacements: 0,
+          additions: 3,
+          conflicts: 0,
+        },
+        replacements: [],
+        additions: [],
+        conflicts: [],
       },
     };
     const { adapter, calls } = makeHarness({
