@@ -135,6 +135,7 @@ test("orchestration owners have an explicit shrink-only line budget", () => {
     "scripts/lib/batch-orchestration/support-identity-cache.ts",
     "scripts/lib/batch-orchestration/universe-coverage.ts",
     "scripts/lib/batch-orchestration/verified-ledger-projection.ts",
+    "scripts/lib/library-orchestration/decision-apply.ts",
     "scripts/lib/library-orchestration/entity-projection.ts",
     "scripts/lib/library-orchestration/elementary-identity.ts",
     "scripts/lib/library-orchestration/identity-preflight-projection.ts",
