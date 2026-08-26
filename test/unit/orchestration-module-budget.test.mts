@@ -129,6 +129,7 @@ test("orchestration owners have an explicit shrink-only line budget", () => {
     "scripts/lib/bafu-classification/leaf-repair.ts",
     "scripts/lib/bafu-orchestration/finalize-recovery-policy.ts",
     "scripts/lib/batch-orchestration/scope-selection.ts",
+    "scripts/lib/batch-orchestration/universe-coverage.ts",
     "scripts/lib/library-orchestration/entity-projection.ts",
   ]);
   for (const [relativePath, ceiling] of Object.entries(contract.semantic_module_ceiling_lines)) {
