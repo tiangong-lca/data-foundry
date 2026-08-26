@@ -3,12 +3,15 @@ import os from "node:os";
 import path from "node:path";
 import {
   createLibraryEntityProjection,
-  type DatasetIdentity,
   type EntityRow,
   type JsonRecord,
   type ScopeProjection,
 } from "../lib/library-orchestration/entity-projection.ts";
 import { createLibraryAuthoringPlan } from "../lib/library-orchestration/authoring-plan.ts";
+import {
+  readyScopeFileValue,
+  type LibraryScopeWorkflowDependencies,
+} from "../lib/library-orchestration/command-runtime.ts";
 import { createLibraryIndexBuild } from "../lib/library-orchestration/index-build.ts";
 import { createLibraryIdentityPreflightRunner } from "../lib/library-orchestration/identity-preflight-runner.ts";
 import { createReadyProcessScopeRunner } from "../lib/library-orchestration/ready-process-scope-runner.ts";
@@ -17,40 +20,6 @@ import {
   type ScopeRewriteResult,
 } from "../lib/library-orchestration/decision-apply.ts";
 import { readOnlyStageContract } from "../lib/stage-contract.ts";
-
-interface LibraryScopeWorkflowDependencies {
-  asText: (value: unknown) => string;
-  booleanOption: (value: unknown, fallback?: boolean) => boolean;
-  profileFor: (repoRoot: string, profileId: string, options?: JsonRecord) => JsonRecord;
-  repoRoot: string;
-  bundleClassificationPath: (payload: unknown, datasetType: string) => unknown;
-  cloneJson: <T>(value: T) => T;
-  datasetIdentity: (row: unknown, datasetType: string) => DatasetIdentity;
-  directoryExists: (filePath: string | null | undefined) => boolean;
-  ensureArray: <T>(value: T | readonly T[] | null | undefined) => T[];
-  fileExists: (filePath: string | null | undefined) => boolean;
-  flowTypeOfDataSet: (payload: unknown) => string;
-  jsonSha256: (value: unknown) => string;
-  nowIso: () => string;
-  positiveIntegerOption: (value: unknown, fallback: number) => number;
-  readJson: (filePath: string) => JsonRecord;
-  readJsonLines: (filePath: string) => JsonRecord[];
-  repoRelativeMaybe: (filePath: string | null | undefined) => string | null;
-  repoRelativePath: (filePath: string) => string;
-  resolveRepoPath: (filePath: unknown) => string | null;
-  sha256Text: (value: unknown) => string;
-  textValue: (value: unknown) => string;
-  writeJson: (filePath: string, value: unknown) => void;
-  writeJsonLines: (filePath: string, rows: readonly unknown[]) => void;
-}
-
-function isJsonRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function jsonRecord(value: unknown): JsonRecord {
-  return isJsonRecord(value) ? value : {};
-}
 
 const libraryScopeStageContract = readOnlyStageContract([
   {
@@ -484,9 +453,7 @@ export function createLibraryScopeWorkflowCommands({
       throw new Error("--library-resolution is required.");
     }
     const resolution = readJson(libraryResolutionPath);
-    const scopeFile = resolveRepoPath(
-      options.scopeFile || jsonRecord(resolution.files).ready_scopes,
-    );
+    const scopeFile = resolveRepoPath(readyScopeFileValue(options, resolution));
     const outDir = resolveRepoPath(
       options.outDir || path.join(path.dirname(libraryResolutionPath), "process-scope-run"),
     )!;
