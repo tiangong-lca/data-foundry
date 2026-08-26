@@ -11,7 +11,12 @@
     "scripts/commands/bafu-batch-import-run.ts": 4724
   },
   "semantic_module_ceiling_lines": {
-    "scripts/lib/bafu-authoring/name-plan.ts": 1487,
+    "scripts/lib/bafu-authoring/name-plan.ts": 17,
+    "scripts/lib/bafu-authoring/name-plan-contract.ts": 8,
+    "scripts/lib/bafu-authoring/name-plan-from-parts.ts": 43,
+    "scripts/lib/bafu-authoring/name-plan-overrides.ts": 66,
+    "scripts/lib/bafu-authoring/name-plan-rules.ts": 1163,
+    "scripts/lib/bafu-authoring/name-plan-text.ts": 203,
     "scripts/lib/bafu-authoring/identity-equivalence.ts": 498,
     "scripts/lib/bafu-authoring/patch-projection.ts": 793,
     "scripts/lib/bafu-classification/category-map-projection.ts": 656,

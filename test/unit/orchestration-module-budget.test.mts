@@ -124,6 +124,11 @@ test("orchestration owners have an explicit shrink-only line budget", () => {
   }
   assert.deepEqual(Object.keys(contract.semantic_module_ceiling_lines), [
     "scripts/lib/bafu-authoring/name-plan.ts",
+    "scripts/lib/bafu-authoring/name-plan-contract.ts",
+    "scripts/lib/bafu-authoring/name-plan-from-parts.ts",
+    "scripts/lib/bafu-authoring/name-plan-overrides.ts",
+    "scripts/lib/bafu-authoring/name-plan-rules.ts",
+    "scripts/lib/bafu-authoring/name-plan-text.ts",
     "scripts/lib/bafu-authoring/identity-equivalence.ts",
     "scripts/lib/bafu-authoring/patch-projection.ts",
     "scripts/lib/bafu-classification/category-map-projection.ts",
