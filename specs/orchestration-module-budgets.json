@@ -4,7 +4,7 @@
   "semantic_stage_target_lines": 800,
   "pure_rule_target_lines": 1200,
   "owner_ceiling_lines": {
-    "scripts/commands/library-scope-workflow.ts": 2311,
+    "scripts/commands/library-scope-workflow.ts": 1532,
     "scripts/commands/bafu-leaf-classification-tasks.ts": 1348,
     "scripts/commands/bafu-auto-authoring.ts": 372,
     "scripts/commands/bafu-process-scope-e2e.ts": 2065,
@@ -18,7 +18,9 @@
     "scripts/lib/bafu-orchestration/finalize-recovery-policy.ts": 209,
     "scripts/lib/batch-orchestration/scope-selection.ts": 484,
     "scripts/lib/batch-orchestration/universe-coverage.ts": 702,
-    "scripts/lib/library-orchestration/entity-projection.ts": 624
+    "scripts/lib/library-orchestration/entity-projection.ts": 624,
+    "scripts/lib/library-orchestration/elementary-identity.ts": 672,
+    "scripts/lib/library-orchestration/identity-preflight-projection.ts": 258
   },
   "allowed_upward_imports": {
     "scripts/lib/foundry-cli.ts": [
