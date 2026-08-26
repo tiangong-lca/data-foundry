@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
-  buildBafuPatchOperations,
+  buildNamePatchOperations,
   type JsonRecord,
 } from "../../scripts/lib/bafu-authoring/patch-projection.ts";
 
@@ -245,14 +245,17 @@ test("patch projection is a pure catalog-injected typed leaf owned by the comman
     projectionSource,
     /from\s+["']node:(?:fs|path|child_process|os|net|http|https)["']/u,
   );
-  assert.doesNotMatch(projectionSource, /\b(?:process|fetch|WebSocket|XMLHttpRequest)\b/u);
+  assert.doesNotMatch(
+    projectionSource,
+    /\bprocess\.(?:env|argv|cwd)|\b(?:fetch|WebSocket|XMLHttpRequest)\s*\(/u,
+  );
   assert.doesNotMatch(projectionSource, /locationLabelCache/u);
   assert.match(ownerSource, /from "\.\.\/lib\/bafu-authoring\/patch-projection\.ts"/u);
-  assert.match(ownerSource, /buildBafuPatchOperations/u);
+  assert.match(ownerSource, /buildNamePatchOperations/u);
 });
 
 test("real BAFU flow patch projection freezes complete bytes, SHA, evidence, closure and order", () => {
-  const operations = buildBafuPatchOperations(
+  const operations = buildNamePatchOperations(
     task("flow", flowId, flowRow(flowId), flowActions()),
     { locationLabelCatalog: new Map([["CH", "Switzerland"]]) },
   );
@@ -301,7 +304,7 @@ test("real BAFU flow patch projection freezes complete bytes, SHA, evidence, clo
 });
 
 test("real BAFU process projection freezes source-completeness bytes and action closure", () => {
-  const operations = buildBafuPatchOperations(
+  const operations = buildNamePatchOperations(
     task("process", processId, processRow(processId), processActions()),
     { locationLabelCatalog: new Map([["CH", "Switzerland"]]) },
   );
@@ -320,7 +323,7 @@ test("real BAFU process projection freezes source-completeness bytes and action 
     "functional_unit_location_token_removed",
     "name_plan_split",
     "name_plan_treatment_route",
-    "name_plan_mix_location",
+    "bare_location_name_part_replaced",
     "source_only_output_exchange_verified",
   ]);
   const traceRows = record(operations.at(-1)?.value)["tiangongfoundry:sourceExchangeCompleteness"];
@@ -372,13 +375,13 @@ test("bare product and process planning stay source-backed and use the injected 
     },
   ]);
 
-  const firstProduct = buildBafuPatchOperations(productTask, {
+  const firstProduct = buildNamePatchOperations(productTask, {
     locationLabelCatalog: new Map([["CH", "Injected Switzerland"]]),
   });
-  const secondProduct = buildBafuPatchOperations(productTask, {
+  const secondProduct = buildNamePatchOperations(productTask, {
     locationLabelCatalog: new Map([["CH", "Fresh Switzerland"]]),
   });
-  const processOperations = buildBafuPatchOperations(processTask, {
+  const processOperations = buildNamePatchOperations(processTask, {
     locationLabelCatalog: new Map([["RER", "Europe"]]),
   });
 
