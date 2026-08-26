@@ -35,9 +35,9 @@ test("BAFU name-plan is a pure typed leaf imported by the command owner and its 
   const moduleSource = fs.readFileSync(modulePath, "utf8");
   const ownerSource = fs.readFileSync(ownerPath, "utf8");
 
-  assert.doesNotMatch(moduleSource, /^\s*import\s/imu);
+  assert.doesNotMatch(moduleSource, /node:(?:fs|child_process|process)/u);
   assert.doesNotMatch(moduleSource, /\bprocess\.env\b|\bfetch\s*\(|\bXMLHttpRequest\b/u);
-  assert.match(moduleSource, /export interface BafuNamePlan\s*\{/u);
+  assert.match(moduleSource, /export interface BafuNamePlan(?:\s+extends\s+\w+)?\s*\{/u);
   assert.match(ownerSource, /from "\.\.\/lib\/bafu-authoring\/name-plan\.ts"/u);
   assert.doesNotMatch(ownerSource, /function cleanProcessFunctionalUnitText\s*\(/u);
   assert.doesNotMatch(ownerSource, /function englishText\s*\(/u);

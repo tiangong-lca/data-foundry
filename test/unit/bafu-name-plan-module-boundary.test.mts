@@ -11,6 +11,8 @@ test("BAFU name-plan facade delegates bounded acyclic helper modules", async () 
   const facade = await import("../../scripts/lib/bafu-authoring/name-plan.ts");
   const text = await import("../../scripts/lib/bafu-authoring/name-plan-text.ts");
   const overrides = await import("../../scripts/lib/bafu-authoring/name-plan-overrides.ts");
+  const rules = await import("../../scripts/lib/bafu-authoring/name-plan-rules.ts");
+  const fromParts = await import("../../scripts/lib/bafu-authoring/name-plan-from-parts.ts");
   const contract = await import("../../scripts/lib/bafu-authoring/name-plan-contract.ts");
 
   assert.equal(typeof contract, "object");
@@ -29,12 +31,19 @@ test("BAFU name-plan facade delegates bounded acyclic helper modules", async () 
     assert.strictEqual(facade[name], text[name], `${name} must remain one direct public identity`);
   }
   assert.equal(typeof overrides.splitBafuExactNameOverride, "function");
+  assert.strictEqual(facade.splitBafuNamePlan, rules.splitBafuNamePlan);
+  assert.strictEqual(
+    facade.splitBafuNamePlanFromNameParts,
+    fromParts.splitBafuNamePlanFromNameParts,
+  );
 
   const ceilings = new Map([
     ["scripts/lib/bafu-authoring/name-plan.ts", 1200],
     ["scripts/lib/bafu-authoring/name-plan-text.ts", 800],
     ["scripts/lib/bafu-authoring/name-plan-overrides.ts", 800],
     ["scripts/lib/bafu-authoring/name-plan-contract.ts", 800],
+    ["scripts/lib/bafu-authoring/name-plan-rules.ts", 1200],
+    ["scripts/lib/bafu-authoring/name-plan-from-parts.ts", 800],
   ]);
   for (const [relativePath, ceiling] of ceilings) {
     const source = fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
