@@ -65,24 +65,32 @@ function ledgerBytes(rows: readonly unknown[]): string {
   return rows.map((row) => JSON.stringify(row)).join("\n") + (rows.length > 0 ? "\n" : "");
 }
 
-function expectJsonArtifact(state: FixtureState, filePath: string, expected: unknown): void {
+function expectJsonArtifact(
+  state: FixtureState,
+  filePath: string,
+  expected: unknown,
+  expectedSha256: string,
+): void {
   const expectedBytes = prettyBytes(expected);
   const actualBytes = state.bytes.get(filePath);
   assert.equal(actualBytes, expectedBytes);
   if (actualBytes === undefined) assert.fail(`missing JSON artifact: ${filePath}`);
-  assert.equal(sha256(actualBytes), sha256(expectedBytes));
+  assert.equal(sha256(actualBytes), expectedSha256);
+  assert.equal(sha256(expectedBytes), expectedSha256);
 }
 
 function expectLedgerArtifact(
   state: FixtureState,
   filePath: string,
   expected: readonly JsonRecord[],
+  expectedSha256: string,
 ): void {
   const expectedBytes = ledgerBytes(expected);
   const actualBytes = state.bytes.get(filePath);
   assert.equal(actualBytes, expectedBytes);
   if (actualBytes === undefined) assert.fail(`missing ledger artifact: ${filePath}`);
-  assert.equal(sha256(actualBytes), sha256(expectedBytes));
+  assert.equal(sha256(actualBytes), expectedSha256);
+  assert.equal(sha256(expectedBytes), expectedSha256);
 }
 
 function readyFinalizeReport(reportFile: string = finalizeReportPath): {
@@ -447,8 +455,18 @@ test("new scope plan freezes all input hashes, finalize argv, report and ledger 
   ];
 
   assert.deepEqual(report, expectedReport);
-  expectJsonArtifact(state, reportPath, expectedReport);
-  expectLedgerArtifact(state, ledgerPath, expectedLedger);
+  expectJsonArtifact(
+    state,
+    reportPath,
+    expectedReport,
+    "c6672b34e2b2ce1203b60a289a3debc425a0cad60d2ea6dc149f3ee24128c585",
+  );
+  expectLedgerArtifact(
+    state,
+    ledgerPath,
+    expectedLedger,
+    "a2cdb7a815ec0e4ca428820db5d693c9ce762cbf106cb5916743691b9369028f",
+  );
   assert.deepEqual(
     state.events.filter((event) => event.startsWith("stage:")),
     [],
@@ -508,8 +526,18 @@ test("matching ledger checkpoint wins over a newer mismatched row and explicit f
   const appended = state.ledgers.get(ledgerPath)!;
   assert.deepEqual(appended.at(-1)?.input_hashes, inputHashes);
   assert.equal(appended.at(-1)?.stage, "resume");
-  expectJsonArtifact(state, reportPath, report);
-  expectLedgerArtifact(state, ledgerPath, appended);
+  expectJsonArtifact(
+    state,
+    reportPath,
+    report,
+    "cab506319217628ab506b2ea1ed9aa68f4729260f4c57c0ab0821633b6a2829c",
+  );
+  expectLedgerArtifact(
+    state,
+    ledgerPath,
+    appended,
+    "c07426d408c857ea92fa8afddb4127004de11e3770f44b09ffdad2d226bf5074",
+  );
 });
 
 test("execute blocks with exact failure artifact when finalize exits without a report", () => {
@@ -568,8 +596,18 @@ test("execute blocks with exact failure artifact when finalize exits without a r
     state.events.find((event) => event.startsWith("stage:"))!,
     /--rows-file/u,
   );
-  expectJsonArtifact(state, reportPath, expectedReport);
-  expectLedgerArtifact(state, ledgerPath, expectedLedger);
+  expectJsonArtifact(
+    state,
+    reportPath,
+    expectedReport,
+    "49b8526b8881d7c0eb56d13e305b64487ff603e22e94e1dd1bb60bac2172c447",
+  );
+  expectLedgerArtifact(
+    state,
+    ledgerPath,
+    expectedLedger,
+    "060144fdad8eeafa603a7eee2325dfd81a17573ecc5c2ddcbb70523375418dd3",
+  );
 });
 
 test("finalize-ready execute with commit=false keeps the exact handoff ready report read-only", () => {
@@ -597,8 +635,18 @@ test("finalize-ready execute with commit=false keeps the exact handoff ready rep
   const ledgerRows = state.ledgers.get(ledgerPath)!;
   assert.deepEqual(ledgerRows.at(-1)?.input_hashes, inputHashes);
   assert.equal(ledgerRows.at(-1)?.exit_code, 0);
-  expectJsonArtifact(state, reportPath, report);
-  expectLedgerArtifact(state, ledgerPath, ledgerRows);
+  expectJsonArtifact(
+    state,
+    reportPath,
+    report,
+    "2fbc3ef632761619be73372c101d0820c65bca91926b2e8efa79010a34ae66cc",
+  );
+  expectLedgerArtifact(
+    state,
+    ledgerPath,
+    ledgerRows,
+    "82c9700021bf58334799a953a499761743c2b15954513f647d91e08882df3660",
+  );
 });
 
 test("handoff-ready commit preserves finalize then handoff stage order and terminal bytes", () => {
@@ -654,8 +702,18 @@ test("handoff-ready commit preserves finalize then handoff stage order and termi
     "run/process-handoff/closeout.json",
   );
   const ledgerRows = state.ledgers.get(ledgerPath)!;
-  expectJsonArtifact(state, reportPath, report);
-  expectLedgerArtifact(state, ledgerPath, ledgerRows);
+  expectJsonArtifact(
+    state,
+    reportPath,
+    report,
+    "e89b40324cbe9f04d06bbb506a3489c1f055995ab8df86c38e92d03e761f8a87",
+  );
+  expectLedgerArtifact(
+    state,
+    ledgerPath,
+    ledgerRows,
+    "28b48ee6a642786c7c2ae29fd52bb5e4eb3b7afbeb9031560eb441ef87fea230",
+  );
 });
 
 test("process owner and extracted semantic modules stay within their architecture budgets", () => {
