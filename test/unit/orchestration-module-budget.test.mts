@@ -139,6 +139,8 @@ test("orchestration owners have an explicit shrink-only line budget", () => {
     "scripts/lib/bafu-orchestration/identity-decision-carry-forward.ts",
     "scripts/lib/bafu-orchestration/post-finalize-recovery.ts",
     "scripts/lib/bafu-orchestration/process-handoff.ts",
+    "scripts/lib/bafu-orchestration/process-scope-run.ts",
+    "scripts/lib/bafu-orchestration/process-scope-runtime.ts",
     "scripts/lib/bafu-orchestration/process-scope-report.ts",
     "scripts/lib/batch-orchestration/scope-selection.ts",
     "scripts/lib/batch-orchestration/support-identity-cache.ts",

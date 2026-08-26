@@ -7,7 +7,7 @@
     "scripts/commands/library-scope-workflow.ts": 494,
     "scripts/commands/bafu-leaf-classification-tasks.ts": 485,
     "scripts/commands/bafu-auto-authoring.ts": 372,
-    "scripts/commands/bafu-process-scope-e2e.ts": 1228,
+    "scripts/commands/bafu-process-scope-e2e.ts": 478,
     "scripts/commands/bafu-batch-import-run.ts": 4339
   },
   "semantic_module_ceiling_lines": {
@@ -27,6 +27,8 @@
     "scripts/lib/bafu-orchestration/identity-decision-carry-forward.ts": 586,
     "scripts/lib/bafu-orchestration/post-finalize-recovery.ts": 540,
     "scripts/lib/bafu-orchestration/process-handoff.ts": 485,
+    "scripts/lib/bafu-orchestration/process-scope-run.ts": 678,
+    "scripts/lib/bafu-orchestration/process-scope-runtime.ts": 382,
     "scripts/lib/bafu-orchestration/process-scope-report.ts": 232,
     "scripts/lib/batch-orchestration/scope-selection.ts": 484,
     "scripts/lib/batch-orchestration/support-identity-cache.ts": 381,
