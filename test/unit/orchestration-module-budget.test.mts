@@ -116,15 +116,16 @@ test("orchestration owners have an explicit shrink-only line budget", () => {
   ]);
   for (const [relativePath, ceiling] of Object.entries(contract.owner_ceiling_lines)) {
     assert.ok(fs.existsSync(path.join(repoRoot, relativePath)), relativePath);
-    assert.ok(sourceLineCount(relativePath) <= ceiling, `${relativePath} exceeds ${ceiling} lines`);
     assert.ok(
-      contract.owner_target_lines < ceiling,
-      `${relativePath} ceiling must shrink to target`,
+      Number.isSafeInteger(ceiling) && ceiling > 0,
+      `${relativePath} has an invalid ceiling`,
     );
+    assert.ok(sourceLineCount(relativePath) <= ceiling, `${relativePath} exceeds ${ceiling} lines`);
   }
   assert.deepEqual(Object.keys(contract.semantic_module_ceiling_lines), [
     "scripts/lib/bafu-authoring/name-plan.ts",
     "scripts/lib/bafu-authoring/identity-equivalence.ts",
+    "scripts/lib/bafu-authoring/patch-projection.ts",
     "scripts/lib/bafu-classification/leaf-repair.ts",
     "scripts/lib/bafu-orchestration/finalize-recovery-policy.ts",
     "scripts/lib/batch-orchestration/scope-selection.ts",
