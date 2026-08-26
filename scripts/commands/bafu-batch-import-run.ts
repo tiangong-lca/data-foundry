@@ -675,6 +675,7 @@ const identityDecisionCarryForward = createBafuIdentityDecisionCarryForwardServi
   repoRelative,
   resolveRepoPath,
   datasetIdentity: (row, datasetType) => datasetIdentity(jsonRecord(row), datasetType),
+  // Cache entries are produced by scripts/commands/identity-preflight-run.ts.
   resultCacheDirectory: () => process.env.BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE ?? null,
   fs: {
     fileExists,
