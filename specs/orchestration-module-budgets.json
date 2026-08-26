@@ -5,7 +5,7 @@
   "pure_rule_target_lines": 1200,
   "owner_ceiling_lines": {
     "scripts/commands/library-scope-workflow.ts": 1067,
-    "scripts/commands/bafu-leaf-classification-tasks.ts": 975,
+    "scripts/commands/bafu-leaf-classification-tasks.ts": 485,
     "scripts/commands/bafu-auto-authoring.ts": 372,
     "scripts/commands/bafu-process-scope-e2e.ts": 1986,
     "scripts/commands/bafu-batch-import-run.ts": 4724
@@ -14,6 +14,7 @@
     "scripts/lib/bafu-authoring/name-plan.ts": 1487,
     "scripts/lib/bafu-authoring/identity-equivalence.ts": 498,
     "scripts/lib/bafu-authoring/patch-projection.ts": 793,
+    "scripts/lib/bafu-classification/category-map-projection.ts": 656,
     "scripts/lib/bafu-classification/leaf-repair.ts": 1056,
     "scripts/lib/bafu-classification/schema-repair.ts": 283,
     "scripts/lib/bafu-classification/task-preparation.ts": 595,
