@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -12,28 +11,12 @@ import {
 import { createLibraryAuthoringPlan } from "../lib/library-orchestration/authoring-plan.ts";
 import { createLibraryIndexBuild } from "../lib/library-orchestration/index-build.ts";
 import { createLibraryIdentityPreflightRunner } from "../lib/library-orchestration/identity-preflight-runner.ts";
+import { createReadyProcessScopeRunner } from "../lib/library-orchestration/ready-process-scope-runner.ts";
 import {
   createLibraryDecisionApply,
   type ScopeRewriteResult,
 } from "../lib/library-orchestration/decision-apply.ts";
 import { readOnlyStageContract } from "../lib/stage-contract.ts";
-
-interface SelectedScope extends JsonRecord {
-  process_id: string;
-  process_version: string;
-  state: string;
-  bundle_dir: unknown;
-  rewritten_process_file: unknown;
-  commit_command: string[];
-  verify_command: string[];
-}
-
-interface ScopeCommandOptions {
-  cwd: string;
-  logDir: string;
-  token: string;
-  stage: string;
-}
 
 interface LibraryScopeWorkflowDependencies {
   asText: (value: unknown) => string;
@@ -252,6 +235,20 @@ export function createLibraryScopeWorkflowCommands({
     rootEntityForRef,
     textValue,
   });
+  const readyProcessScopeRunner = createReadyProcessScopeRunner({
+    asText,
+    ensureArray,
+    fileExists,
+    nowIso,
+    readJson,
+    readJsonLines,
+    repoRelativeMaybe,
+    repoRelativePath,
+    writeJson,
+    writeJsonLines,
+    blockRow: decisionApply.blockRow,
+    buildBlockedScopeReport: decisionApply.buildBlockedScopeReport,
+  });
 
   function runDatasetLibraryIndexBuild(options: JsonRecord): JsonRecord {
     if (options.help) {
@@ -467,62 +464,6 @@ export function createLibraryScopeWorkflowCommands({
     return resolution;
   }
 
-  function scopeRowsFromFile(scopeFile: string | null): JsonRecord[] {
-    if (!scopeFile || !fileExists(scopeFile)) return [];
-    if (scopeFile.toLowerCase().endsWith(".jsonl")) return readJsonLines(scopeFile);
-    const value: unknown = readJson(scopeFile);
-    if (Array.isArray(value)) return value;
-    const record = jsonRecord(value);
-    if (Array.isArray(record.rows)) return record.rows.map(jsonRecord);
-    if (Array.isArray(record.scopes)) return record.scopes.map(jsonRecord);
-    return [record];
-  }
-
-  function commandArrayFromScope(scope: JsonRecord, key: string): string[] {
-    const value =
-      scope[key] ||
-      jsonRecord(scope.checkpoint)[key] ||
-      jsonRecord(scope.handoff)[key] ||
-      jsonRecord(scope.commit_handoff)[key];
-    if (Array.isArray(value)) return value.map(String).filter(Boolean);
-    return [];
-  }
-
-  function runScopeHandoffCommand(
-    argv: string[],
-    { cwd, logDir, token, stage }: ScopeCommandOptions,
-  ): JsonRecord | null {
-    if (!Array.isArray(argv) || argv.length === 0) return null;
-    const stdoutLog = path.join(logDir, `${token}.${stage}.stdout.log`);
-    const stderrLog = path.join(logDir, `${token}.${stage}.stderr.log`);
-    const result = spawnSync(argv[0], argv.slice(1), {
-      cwd,
-      env: process.env,
-      encoding: "utf8",
-    });
-    fs.mkdirSync(logDir, { recursive: true });
-    fs.writeFileSync(stdoutLog, result.stdout || "");
-    fs.writeFileSync(stderrLog, result.stderr || "");
-    const exitCode = typeof result.status === "number" ? result.status : 1;
-    if (result.error) {
-      return {
-        stage,
-        command: argv,
-        exit_code: exitCode,
-        error: String(result.error?.message || result.error),
-        stdout_log: repoRelativePath(stdoutLog),
-        stderr_log: repoRelativePath(stderrLog),
-      };
-    }
-    return {
-      stage,
-      command: argv,
-      exit_code: exitCode,
-      stdout_log: repoRelativePath(stdoutLog),
-      stderr_log: repoRelativePath(stderrLog),
-    };
-  }
-
   function runDatasetProcessScopeRun(options: JsonRecord): JsonRecord {
     if (options.help) {
       return help(
@@ -546,8 +487,6 @@ export function createLibraryScopeWorkflowCommands({
     const scopeFile = resolveRepoPath(
       options.scopeFile || jsonRecord(resolution.files).ready_scopes,
     );
-    const scopeRows = scopeRowsFromFile(scopeFile);
-    const readyIds = new Set(ensureArray(resolution.ready_scope_ids).map(asText));
     const outDir = resolveRepoPath(
       options.outDir || path.join(path.dirname(libraryResolutionPath), "process-scope-run"),
     )!;
@@ -557,144 +496,18 @@ export function createLibraryScopeWorkflowCommands({
     );
     const commit = booleanOption(options.commit);
     const dryRun = booleanOption(options.dryRun) || !commit;
-    const checkpoints: JsonRecord[] = [];
-    const blocked: JsonRecord[] = [];
-    const selectedScopes: SelectedScope[] = scopeRows.map((scope) => ({
-      process_id: asText(scope.process_id || scope.id),
-      process_version: asText(scope.process_version || scope.version) || "00.00.001",
-      state: asText(scope.state || scope.closure_status || jsonRecord(scope.checkpoint).state),
-      bundle_dir: scope.bundle_dir,
-      rewritten_process_file:
-        scope.rewritten_process_file || jsonRecord(scope.checkpoint).rewritten_process_file,
-      commit_command: commandArrayFromScope(scope, "commit_command"),
-      verify_command: commandArrayFromScope(scope, "verify_command"),
-    }));
-    const logDir = path.join(outDir, "logs");
-    for (const scope of selectedScopes) {
-      const isReady =
-        readyIds.has(scope.process_id) || scope.state === "ready" || scope.state === "";
-      if (!isReady) {
-        const row = decisionApply.blockRow(
-          scope,
-          { dataset_type: "process", id: scope.process_id, version: scope.process_version },
-          "scope_not_ready",
-          "Only dependency-closed ready scopes can enter dry-run/write/verify queues.",
-          "Resolve this scope in dataset-library-decisions-apply and rerun with the ready scope file.",
-        );
-        blocked.push(row);
-        checkpoints.push({
-          schema_version: 1,
-          process_id: scope.process_id,
-          process_version: scope.process_version,
-          state: "blocked_deferred",
-          reason: "scope_not_ready",
-        });
-        continue;
-      }
-      const commandStages: Array<JsonRecord | null> = [];
-      let state = dryRun ? "dry_run_planned" : "commit_handoff_planned";
-      if (commit && scope.commit_command.length > 0) {
-        const token = `${scope.process_id}-${scope.process_version}`.replace(
-          /[^A-Za-z0-9_.-]+/gu,
-          "-",
-        );
-        const commitStage = runScopeHandoffCommand(scope.commit_command, {
-          cwd: process.cwd(),
-          logDir,
-          token,
-          stage: "commit",
-        });
-        commandStages.push(commitStage);
-        if (commitStage?.exit_code === 0 && scope.verify_command.length > 0) {
-          const verifyStage = runScopeHandoffCommand(scope.verify_command, {
-            cwd: process.cwd(),
-            logDir,
-            token,
-            stage: "verify",
-          });
-          commandStages.push(verifyStage);
-          state = verifyStage?.exit_code === 0 ? "verified" : "verify_failed";
-        } else {
-          state = commitStage?.exit_code === 0 ? "committed" : "commit_failed";
-        }
-      }
-      checkpoints.push({
-        schema_version: 1,
-        process_id: scope.process_id,
-        process_version: scope.process_version,
-        state,
-        scope_lock: `process:${scope.process_id}:${scope.process_version}`,
-        parallel,
-        bundle_dir: scope.bundle_dir,
-        rewritten_process_file: scope.rewritten_process_file,
-        remote_write_mode: commit ? "commit_handoff_required" : "read-only",
-        command_stages: commandStages.filter(Boolean),
-      });
-    }
-    const checkpointPath = path.join(outDir, "scope-checkpoints.jsonl");
-    const blockedPath = path.join(outDir, "blocked-scope-ledger.jsonl");
-    const blockedReportPath = path.join(outDir, "blocked-scope-report.json");
-    const reportPath = path.join(outDir, "dataset-process-scope-run-report.json");
-    writeJsonLines(checkpointPath, checkpoints);
-    writeJsonLines(blockedPath, blocked);
-    const blockedReport = decisionApply.buildBlockedScopeReport({
-      command: "dataset-process-scope-run",
-      blockedRows: blocked,
-      blockedLedgerPath: blockedPath,
-      reportPath: blockedReportPath,
-    });
-    writeJson(blockedReportPath, blockedReport);
-    const commandFailures = checkpoints.filter((row) =>
-      ["commit_failed", "verify_failed"].includes(asText(row.state)),
-    );
-    const report = {
-      schema_version: 1,
-      generated_at_utc: nowIso(),
-      status:
-        commandFailures.length > 0
-          ? "failed"
-          : blocked.length > 0
-            ? "completed_with_deferred_scopes"
-            : "completed",
-      command: "dataset-process-scope-run",
-      process_bundles_dir: repoRelativePath(processBundlesDir),
-      library_resolution: repoRelativePath(libraryResolutionPath),
-      scope_file: repoRelativeMaybe(scopeFile),
-      mode: commit ? "commit" : "dry-run",
+    return readyProcessScopeRunner.run({
+      processBundlesDir,
+      libraryResolutionPath,
+      resolution,
+      scopeFile,
+      outDir,
       parallel,
-      counts: {
-        selected_scopes: selectedScopes.length,
-        ready_scopes_planned: checkpoints.filter((row) =>
-          ["dry_run_planned", "commit_handoff_planned"].includes(asText(row.state)),
-        ).length,
-        committed: checkpoints.filter((row) => row.state === "committed").length,
-        verified: checkpoints.filter((row) => row.state === "verified").length,
-        command_failures: commandFailures.length,
-        blocked_scopes_deferred: blocked.length,
-      },
-      files: {
-        report: repoRelativePath(reportPath),
-        scope_checkpoints: repoRelativePath(checkpointPath),
-        blocked_scope_ledger: repoRelativePath(blockedPath),
-        blocked_scope_report: repoRelativePath(blockedReportPath),
-      },
-      policy: {
-        ready_only_commit: true,
-        blocked_scopes_do_not_enter_write_queue: true,
-        process_scope_locking: true,
-        commit_mode_requires_existing_finalize_mutation_handoff_verify_chain:
-          "This command executes scope-provided commit/verify handoff commands only after the existing finalize/mutation-manifest/commit-handoff/post-write-verify chain has produced them. Without handoff commands, it creates scope-locked commit_handoff_planned checkpoints.",
-      },
-      blockers: commandFailures.map((row) => ({
-        code: row.state,
-        message: "Scope handoff command failed; inspect command stage logs.",
-        process_id: row.process_id,
-        process_version: row.process_version,
-        command_stages: row.command_stages,
-      })),
-    };
-    writeJson(reportPath, report);
-    return report;
+      commit,
+      dryRun,
+      commandCwd: process.cwd(),
+      commandEnvironment: process.env,
+    });
   }
 
   return {
