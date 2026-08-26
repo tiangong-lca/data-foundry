@@ -302,7 +302,7 @@ function makeFixture(): {
           gateReport,
           finalizeCommand: commandString(input.finalizeCommand),
           rerunCommand: rerunCommand({
-            rowsFile: String(input.finalizeReport.rows_file),
+            rowsFile: adapter.path.resolve(input.finalizeReport.rows_file)!,
             outDir: input.outDir,
             sourceSupportRowsFile: input.sourceSupportRowsFile,
             sourceRowsFile: input.sourceRowsFile,
