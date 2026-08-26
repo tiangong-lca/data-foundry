@@ -17,9 +17,7 @@ const F3 = "22222222-3333-4444-8555-666666666693";
 const VERSION = "00.00.001";
 
 function jsonRecord(value: unknown): JsonRecord {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as JsonRecord)
-    : {};
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
 }
 
 function textValue(value: unknown): string {
@@ -80,7 +78,8 @@ function datasetIdentity(row: unknown, type: string): { id: string | null; versi
   );
   return {
     id: textValue(information["common:UUID"] ?? information.UUID) || null,
-    version: textValue(publication["common:dataSetVersion"] ?? publication.dataSetVersion) || VERSION,
+    version:
+      textValue(publication["common:dataSetVersion"] ?? publication.dataSetVersion) || VERSION,
   };
 }
 
@@ -165,12 +164,10 @@ function flowPayload(id: string, typeOfDataSet: string): JsonRecord {
 }
 
 function seedCoverageFixture(root: string): void {
-  writeJson(path.join(root, "input/process-bundles/index.json"), {
-    bundles: [
-      { process_id: P1, process_version: VERSION, manifest: `${P1}/manifest.json` },
-      { process_id: P2, process_version: VERSION, manifest: `${P2}/manifest.json` },
-    ],
-  });
+  writeJson(path.join(root, "input/process-bundles/index.json"), [
+    { process_id: P1, process_version: VERSION, manifest: `${P1}/manifest.json` },
+    { process_id: P2, process_version: VERSION, manifest: `${P2}/manifest.json` },
+  ]);
   writeJson(path.join(root, `input/tidas/processes/${P1}.json`), processPayload(P1, [F1, F2]));
   writeJson(path.join(root, `input/tidas/processes/${P2}.json`), processPayload(P2, [F3]));
   writeJson(path.join(root, `input/tidas/flows/${F1}.json`), flowPayload(F1, "Product flow"));
@@ -430,11 +427,41 @@ test("universe coverage keeps ledger validation and malformed path failures nati
           },
         ),
       (error: unknown) =>
-        error instanceof TypeError &&
-        "code" in error &&
-        error.code === "ERR_INVALID_ARG_TYPE",
+        error instanceof TypeError && "code" in error && error.code === "ERR_INVALID_ARG_TYPE",
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("universe coverage services retain independent immutable runtime adapters", () => {
+  const firstRoot = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-universe-runtime-a-"));
+  const secondRoot = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-universe-runtime-b-"));
+  try {
+    writeJsonLines(path.join(firstRoot, "batch/import-ledger/ok.scopes.verified.jsonl"), []);
+    writeJsonLines(path.join(secondRoot, "batch/import-ledger/ok.scopes.verified.jsonl"), []);
+    const first = createUniverseCoverageService(runtimeFor(firstRoot));
+    const second = createUniverseCoverageService(runtimeFor(secondRoot));
+
+    assert.deepEqual(first.resolveLedgerSourceDirs("batch"), [
+      path.join(firstRoot, "batch/import-ledger"),
+    ]);
+    assert.deepEqual(second.resolveLedgerSourceDirs("batch"), [
+      path.join(secondRoot, "batch/import-ledger"),
+    ]);
+    assert.deepEqual(first.summarizeLedgerSources(first.resolveLedgerSourceDirs("batch")), [
+      {
+        ledger_dir: "batch/import-ledger",
+        ok_scope_rows: 0,
+        ok_flow_rows: 0,
+        blocked_scope_rows: 0,
+        verified_support_identity_rows: 0,
+      },
+    ]);
+    assert.equal(Object.isFrozen(first), true);
+    assert.equal(Object.isFrozen(second), true);
+  } finally {
+    fs.rmSync(firstRoot, { recursive: true, force: true });
+    fs.rmSync(secondRoot, { recursive: true, force: true });
   }
 });

@@ -14,10 +14,13 @@ import {
 import {
   buildClassificationDecisionIndex,
   preflightPlanRows,
-  scopeKey,
   selectScopesForRun,
   selectionOrderOption,
 } from "../lib/batch-orchestration/scope-selection.ts";
+import {
+  createUniverseCoverageService,
+  type UniverseCoverageRuntimeAdapter,
+} from "../lib/batch-orchestration/universe-coverage.ts";
 import { acceptTraceHashOnlyRemoteVerificationMismatch } from "../lib/remote-verification-accepted-diff.ts";
 import {
   assertFoundryCommandSpecArtifactsCurrent,
@@ -443,6 +446,50 @@ function installBafuBatchRuntime(deps: BafuBatchRuntime, config: BafuBatchConfig
   }
   bafuBatchRuntime = deps;
   bafuBatchConfig = config || {};
+}
+
+function createUniverseCoverageRuntimeAdapter(
+  deps: BafuBatchRuntime,
+): UniverseCoverageRuntimeAdapter {
+  const pathAdapter = Object.freeze({
+    join: (...parts: string[]) => path.join(...parts),
+    dirname: (filePath: string) => path.dirname(filePath),
+    basename: (filePath: string, suffix?: string) => path.basename(filePath, suffix),
+    isAbsolute: (filePath: string) => path.isAbsolute(filePath),
+    resolve: (filePath: string) => path.resolve(filePath),
+  });
+  return Object.freeze({
+    nowIso: deps.nowIso,
+    resolveRepoPath: deps.resolveRepoPath,
+    repoRelative: deps.repoRelativeMaybe,
+    fileExists: deps.fileExists,
+    directoryExists: deps.directoryExists,
+    readJson: deps.readJson,
+    readJsonLines: deps.readJsonLines,
+    writeJson: deps.writeJson,
+    writeJsonLines: deps.writeJsonLines,
+    ensureDirectory: (directory: string) => fs.mkdirSync(directory, { recursive: true }),
+    normalizedList: deps.normalizedList,
+    asText: deps.asText,
+    datasetIdentity: deps.datasetIdentity,
+    path: pathAdapter,
+    walkFiles: (rootDir: unknown, predicate: (filePath: string) => boolean): string[] => {
+      const resolved = deps.resolveRepoPath(rootDir);
+      if (!resolved || !fs.existsSync(resolved)) return [];
+      const stack = [resolved];
+      const files: string[] = [];
+      while (stack.length > 0) {
+        const current = stack.pop();
+        if (!current) continue;
+        for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+          const next = path.join(current, entry.name);
+          if (entry.isDirectory()) stack.push(next);
+          else if (entry.isFile() && predicate(next)) files.push(next);
+        }
+      }
+      return files.sort();
+    },
+  });
 }
 
 function runtime(): BafuBatchRuntime {
@@ -2438,595 +2485,6 @@ function repairClassificationDecisionCodes({
   writeJsonLines(repairPath, repairs);
   writeJsonLines(unresolvedPath, unresolved);
   return { repairs, unresolved, repairPath, unresolvedPath };
-}
-
-function ledgerDirCandidate(sourcePath: unknown): string | null {
-  if (!sourcePath) return null;
-  const source = asText(sourcePath);
-  if (directoryExists(path.join(source, "import-ledger"))) {
-    return path.join(source, "import-ledger");
-  }
-  if (!directoryExists(source)) return null;
-  if (path.basename(source) === "import-ledger") return source;
-  const knownLedgerFiles = [
-    "ok.scopes.verified.jsonl",
-    "ok.flows.verified.jsonl",
-    "blocked.scopes.human-review.jsonl",
-    "verified-support-identities.jsonl",
-  ];
-  if (knownLedgerFiles.some((name) => fileExists(path.join(source, name)))) return source;
-  return null;
-}
-
-function resolveLedgerSourceDirs(value: unknown): string[] {
-  const seen = new Set<string>();
-  const dirs: string[] = [];
-  for (const entry of normalizedList(value)) {
-    const resolved = resolveRepoPath(entry);
-    const ledgerDir = ledgerDirCandidate(resolved);
-    if (!ledgerDir) {
-      throw new Error(
-        `--ledger-source-dir must point to a batch directory or import-ledger directory: ${entry}`,
-      );
-    }
-    const key = path.resolve(ledgerDir);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    dirs.push(ledgerDir);
-  }
-  return dirs;
-}
-
-function ledgerFiles(sourceDirs: string[], name: string): string[] {
-  return sourceDirs.map((dir) => path.join(dir, name));
-}
-
-function summarizeLedgerSources(sourceDirs: string[]): JsonRecord[] {
-  return sourceDirs.map((dir) => ({
-    ledger_dir: repoRelative(dir),
-    ok_scope_rows: readJsonLines(path.join(dir, "ok.scopes.verified.jsonl")).length,
-    ok_flow_rows: readJsonLines(path.join(dir, "ok.flows.verified.jsonl")).length,
-    blocked_scope_rows: readJsonLines(path.join(dir, "blocked.scopes.human-review.jsonl")).length,
-    verified_support_identity_rows: readJsonLines(
-      path.join(dir, "verified-support-identities.jsonl"),
-    ).length,
-  }));
-}
-
-function sumLedgerSourceRows(summary: JsonRecord[], field: string): number {
-  return summary.reduce((sum, row) => sum + (Number(row[field]) || 0), 0);
-}
-
-function sortedSet(values: Iterable<string>): string[] {
-  return [...values].sort();
-}
-
-function setDifference(left: Set<string>, right: Set<string>): Set<string> {
-  return new Set([...left].filter((value) => !right.has(value)));
-}
-
-function setIntersection(left: Set<string>, right: Set<string>): Set<string> {
-  return new Set([...left].filter((value) => right.has(value)));
-}
-
-function datasetKeyFromParts(id: unknown, version: unknown): string | null {
-  return id ? `${id}@${version || "00.00.001"}` : null;
-}
-
-function datasetKeyFromRow(row: JsonRecord, type: string): string | null {
-  const id = row?.dataset_id || row?.id || row?.[`${type}_id`] || row?.process_id || row?.flow_id;
-  const version =
-    row?.dataset_version ||
-    row?.version ||
-    row?.[`${type}_version`] ||
-    row?.process_version ||
-    row?.flow_version ||
-    "00.00.001";
-  return datasetKeyFromParts(id, version);
-}
-
-function identityFromTidasRow(
-  row: JsonRecord,
-  type: string,
-  fallbackId: string | null = null,
-): DatasetIdentity {
-  const identity = runtime().datasetIdentity(row, type) ?? {};
-  const root = jsonRecord(row[`${type}DataSet`]);
-  const typeInformation = jsonRecord(root[`${type}Information`]);
-  const info =
-    typeInformation.dataSetInformation ?? typeInformation["common:dataSetInformation"] ?? {};
-  const information = jsonRecord(info);
-  const publication =
-    jsonRecord(root.administrativeInformation).publicationAndOwnership ??
-    jsonRecord(root.administrativeInformation)["common:publicationAndOwnership"] ??
-    {};
-  const publicationRecord = jsonRecord(publication);
-  return {
-    id: identity.id || asText(information["common:UUID"] ?? information.UUID) || fallbackId,
-    version:
-      identity.version ||
-      asText(publicationRecord["common:dataSetVersion"] ?? publicationRecord.dataSetVersion) ||
-      "00.00.001",
-  };
-}
-
-function readJsonIfExists(filePath: string | null | undefined): JsonRecord | null {
-  return fileExists(filePath) ? readJson(filePath!) : null;
-}
-
-function walkFiles(rootDir: unknown, predicate: (filePath: string) => boolean): string[] {
-  const resolved = resolveRepoPath(rootDir);
-  if (!resolved || !fs.existsSync(resolved)) return [];
-  const stack = [resolved];
-  const files: string[] = [];
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (!current) continue;
-    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      const next = path.join(current, entry.name);
-      if (entry.isDirectory()) {
-        stack.push(next);
-      } else if (entry.isFile() && predicate(next)) {
-        files.push(next);
-      }
-    }
-  }
-  return files.sort();
-}
-
-function bundleIndexRows(processBundlesDir: string): JsonRecord[] {
-  const indexFile = path.join(processBundlesDir, "index.json");
-  const indexDir = path.dirname(indexFile);
-  const index: unknown = readJsonIfExists(indexFile);
-  let entries: JsonRecord[] = [];
-  if (Array.isArray(index)) {
-    entries = index.map(jsonRecord);
-  } else if (Array.isArray(jsonRecord(index).bundles)) {
-    entries = (jsonRecord(index).bundles as unknown[]).map(jsonRecord);
-  } else if (Array.isArray(jsonRecord(index).process_bundles)) {
-    entries = (jsonRecord(index).process_bundles as unknown[]).map(jsonRecord);
-  } else if (index && typeof index === "object") {
-    entries = (Object.values(index).find(Array.isArray) ?? []).map(jsonRecord);
-  }
-  return entries.map((entry) => {
-    const processId = asText(
-      entry.process_id || entry.id || entry.dataset_id || jsonRecord(entry.process).id,
-    );
-    const processVersion = asText(
-      entry.process_version ||
-        entry.version ||
-        entry.dataset_version ||
-        jsonRecord(entry.process).version,
-    );
-    const bundleDir = processId ? path.join(processBundlesDir, processId) : null;
-    const manifestValue = asText(entry.manifest);
-    const manifest = manifestValue
-      ? resolveRepoPath(
-          path.isAbsolute(manifestValue) ? manifestValue : path.join(indexDir, manifestValue),
-        )
-      : bundleDir
-        ? path.join(bundleDir, "manifest.json")
-        : null;
-    const tidasDirValue = asText(entry.tidas_dir);
-    const tidasDir = tidasDirValue
-      ? resolveRepoPath(
-          path.isAbsolute(tidasDirValue) ? tidasDirValue : path.join(indexDir, tidasDirValue),
-        )
-      : bundleDir
-        ? path.join(bundleDir, "tidas")
-        : null;
-    return {
-      process_id: processId,
-      process_version: processVersion || "00.00.001",
-      process_key: datasetKeyFromParts(processId, processVersion || "00.00.001"),
-      manifest,
-      tidas_dir: tidasDir,
-    };
-  });
-}
-
-function processFileRows(processesDir: string): JsonRecord[] {
-  return walkFiles(processesDir, (filePath) => filePath.endsWith(".json")).map((filePath) => {
-    const row = readJson(filePath);
-    const fallbackId = path.basename(filePath, ".json");
-    const identity = identityFromTidasRow(row, "process", fallbackId);
-    return {
-      process_id: identity.id,
-      process_version: identity.version,
-      process_key: datasetKeyFromParts(identity.id, identity.version),
-      file: filePath,
-      row,
-    };
-  });
-}
-
-function textAt(value: unknown): string {
-  if (value == null) return "";
-  if (typeof value === "string" || typeof value === "number") return String(value);
-  if (Array.isArray(value)) return value.map(textAt).filter(Boolean).join("; ");
-  if (typeof value === "object") {
-    const record = jsonRecord(value);
-    return textAt(record["#text"] ?? record.value ?? record.id);
-  }
-  return "";
-}
-
-function collectFlowReferences(value: unknown, refs: JsonRecord[] = []): JsonRecord[] {
-  if (!value || typeof value !== "object") return refs;
-  if (Array.isArray(value)) {
-    for (const entry of value) collectFlowReferences(entry, refs);
-    return refs;
-  }
-  const record = jsonRecord(value);
-  const ref = jsonRecord(record.referenceToFlowDataSet);
-  if (Object.keys(ref).length > 0) {
-    const flowId = asText(ref["@refObjectId"] ?? ref.refObjectId ?? ref.id);
-    const flowVersion = asText(ref["@version"] ?? ref.version) || "00.00.001";
-    if (flowId) {
-      refs.push({
-        flow_id: flowId,
-        flow_version: flowVersion,
-        flow_key: datasetKeyFromParts(flowId, flowVersion),
-        short_description: textAt(ref["common:shortDescription"] ?? ref.shortDescription),
-      });
-    }
-  }
-  for (const entry of Object.values(record)) collectFlowReferences(entry, refs);
-  return refs;
-}
-
-function flowTypeOfRow(row: JsonRecord): string {
-  const flowInformation = jsonRecord(jsonRecord(row.flowDataSet).flowInformation);
-  const info =
-    flowInformation.dataSetInformation ?? flowInformation["common:dataSetInformation"] ?? {};
-  const information = jsonRecord(info);
-  return asText(
-    information.typeOfDataSet ?? information["common:typeOfDataSet"] ?? row.typeOfDataSet,
-  );
-}
-
-function flowRowsByKey(flowsDir: string): Map<string, JsonRecord> {
-  const rowsByKey = new Map<string, JsonRecord>();
-  for (const filePath of walkFiles(flowsDir, (entry) => entry.endsWith(".json"))) {
-    const row = readJson(filePath);
-    const fallbackId = path.basename(filePath, ".json");
-    const identity = identityFromTidasRow(row, "flow", fallbackId);
-    const key = datasetKeyFromParts(identity.id, identity.version);
-    if (!key) continue;
-    rowsByKey.set(key, {
-      flow_id: identity.id,
-      flow_version: identity.version,
-      flow_key: key,
-      flow_type: flowTypeOfRow(row),
-      file: filePath,
-    });
-  }
-  return rowsByKey;
-}
-
-function scopeFilesForCoverage(options: JsonRecord, runDir: string): string[] {
-  const explicit = normalizedList(options.scopeFile || options.scopeFiles);
-  if (explicit.length > 0) return uniqueExistingPaths(explicit);
-  return walkFiles(runDir, (filePath) => path.basename(filePath) === "ready-scopes.jsonl");
-}
-
-function scopeKeyRowsFromFiles(files: string[]): JsonRecord[] {
-  const rows: JsonRecord[] = [];
-  for (const filePath of files) {
-    for (const row of readJsonLines(filePath)) {
-      const key = scopeKey(row);
-      if (!key) continue;
-      rows.push({
-        process_id: row.process_id || row.id,
-        process_version: row.process_version || row.version || "00.00.001",
-        process_key: key,
-        closure_status: row.closure_status ?? row.status ?? null,
-        source_file: filePath,
-      });
-    }
-  }
-  return rows;
-}
-
-function keySetFromRows(rows: JsonRecord[], type: string): Set<string> {
-  return new Set(
-    rows.map((row) => datasetKeyFromRow(row, type)).filter((key): key is string => Boolean(key)),
-  );
-}
-
-function keySetFromFiles(files: string[], type: string): Set<string> {
-  return keySetFromRows(
-    files.flatMap((filePath) => readJsonLines(filePath)),
-    type,
-  );
-}
-
-function runDatasetBafuUniverseCoverageReport(options: JsonRecord = {}): JsonRecord {
-  if (options.help) {
-    return {
-      schema_version: 1,
-      status: "help",
-      command: coverageCommandName,
-      usage: [
-        "node scripts/foundry.ts dataset-bafu-universe-coverage-report --run-dir .foundry/workspaces/<bafu-run> --ledger-source-dir <batch/import-ledger> --out-dir <coverage-dir>",
-        "node scripts/foundry.ts dataset-bafu-universe-coverage-report --input-dir 'inputs/BAFU-2025 Version 2 - TIDAS 2026-03-09' --scope-file <ready-scopes.jsonl> --ledger-source-dir <batch/import-ledger>",
-      ],
-      purpose:
-        "Build a read-only BAFU full-universe coverage report from process-bundles, ready scopes, flow references, and explicit ledger sources.",
-      remote_write_mode: "read-only",
-    };
-  }
-
-  const inputDir = resolveRepoPath(
-    options.inputDir || "inputs/BAFU-2025 Version 2 - TIDAS 2026-03-09",
-  )!;
-  const processBundlesDir = resolveRepoPath(
-    options.processBundlesDir || options.bundlesDir || path.join(inputDir, "process-bundles"),
-  )!;
-  const processesDir = resolveRepoPath(
-    options.processesDir || path.join(inputDir, "tidas", "processes"),
-  )!;
-  const flowsDir = resolveRepoPath(options.flowsDir || path.join(inputDir, "tidas", "flows"))!;
-  const runDir = resolveRepoPath(options.runDir || path.dirname(processBundlesDir))!;
-  const outDir = resolveRepoPath(
-    options.outDir || path.join(runDir, "bafu-universe-coverage-report"),
-  )!;
-  if (!directoryExists(processBundlesDir)) {
-    throw new Error("--process-bundles-dir is required and must point to process-bundles.");
-  }
-  if (!directoryExists(processesDir)) {
-    throw new Error("--processes-dir is required and must point to tidas/processes.");
-  }
-  fs.mkdirSync(outDir, { recursive: true });
-
-  const ledgerSourceDirs = resolveLedgerSourceDirs(
-    options.ledgerSourceDir ||
-      options.ledgerSourceDirs ||
-      options.carryForwardLedgerDir ||
-      options.carryForwardLedgerDirs,
-  );
-  const ledgerSourceSummary = summarizeLedgerSources(ledgerSourceDirs);
-  const scopeFiles = scopeFilesForCoverage(options, runDir);
-  const scopeRows = scopeKeyRowsFromFiles(scopeFiles);
-  const readyScopeSet = new Set(scopeRows.map((row) => asText(row.process_key)).filter(Boolean));
-  const bundleRows = bundleIndexRows(processBundlesDir);
-  const processRows = processFileRows(processesDir);
-  const processByKey = new Map<string, JsonRecord>();
-  for (const row of bundleRows) {
-    if (!row.process_key) continue;
-    processByKey.set(asText(row.process_key), {
-      process_id: row.process_id,
-      process_version: row.process_version,
-      process_key: row.process_key,
-      in_process_bundles: true,
-      in_tidas_processes: false,
-      bundle_manifest: repoRelative(asText(row.manifest)),
-    });
-  }
-  for (const row of processRows) {
-    if (!row.process_key) continue;
-    const rowKey = asText(row.process_key);
-    const current = processByKey.get(rowKey) ?? {
-      process_id: row.process_id,
-      process_version: row.process_version,
-      process_key: row.process_key,
-      in_process_bundles: false,
-      in_tidas_processes: false,
-    };
-    current.in_tidas_processes = true;
-    current.process_file = repoRelative(asText(row.file));
-    processByKey.set(rowKey, current);
-  }
-  const processUniverseSet = new Set(processByKey.keys());
-
-  const verifiedScopes = keySetFromFiles(
-    ledgerFiles(ledgerSourceDirs, "ok.scopes.verified.jsonl"),
-    "scope",
-  );
-  const verifiedFlows = keySetFromFiles(
-    ledgerFiles(ledgerSourceDirs, "ok.flows.verified.jsonl"),
-    "flow",
-  );
-  const blockedScopeRows = ledgerFiles(
-    ledgerSourceDirs,
-    "blocked.scopes.human-review.jsonl",
-  ).flatMap((filePath) => readJsonLines(filePath));
-  const activeBlockedScopes = setDifference(
-    keySetFromRows(blockedScopeRows, "scope"),
-    verifiedScopes,
-  );
-  const retryScopeRows = [
-    ...ledgerFiles(ledgerSourceDirs, "failed.scopes.retry.jsonl"),
-    ...ledgerFiles(ledgerSourceDirs, "retry.scopes.jsonl"),
-  ].flatMap((filePath) => readJsonLines(filePath));
-  const retryScopes = setDifference(keySetFromRows(retryScopeRows, "scope"), verifiedScopes);
-  const nonImportableScopes = keySetFromFiles(
-    normalizedList(options.nonImportableScopesFile || options.nonImportableScopesFiles)
-      .map(resolveRepoPath)
-      .filter((filePath): filePath is string => Boolean(filePath)),
-    "scope",
-  );
-
-  const readyUniverseSet = setIntersection(processUniverseSet, readyScopeSet);
-  const missingReadySet = setDifference(processUniverseSet, readyScopeSet);
-  const verifiedUniverseSet = setIntersection(processUniverseSet, verifiedScopes);
-  const flowIndex = flowRowsByKey(flowsDir);
-  const referencedFlows = new Map<string, JsonRecord & { referencing_processes: Set<string> }>();
-  for (const row of processRows) {
-    for (const ref of collectFlowReferences(jsonRecord(row.row))) {
-      const flowKey = asText(ref.flow_key);
-      if (!flowKey) continue;
-      const current = referencedFlows.get(flowKey) ?? {
-        ...ref,
-        referencing_processes: new Set<string>(),
-      };
-      current.referencing_processes.add(asText(row.process_key));
-      referencedFlows.set(flowKey, current);
-    }
-  }
-  const productOrUnknownFlowKeys = new Set<string>();
-  const referencedFlowRows: JsonRecord[] = [];
-  for (const [flowKey, ref] of referencedFlows.entries()) {
-    const indexed = flowIndex.get(flowKey);
-    const flowType = asText(indexed?.flow_type) || "unknown";
-    const isElementary = /elementary/u.test(flowType.toLowerCase());
-    if (!isElementary) productOrUnknownFlowKeys.add(flowKey);
-    referencedFlowRows.push({
-      schema_version: 1,
-      flow_id: ref.flow_id,
-      flow_version: ref.flow_version,
-      flow_key: flowKey,
-      flow_type: flowType,
-      flow_file: repoRelative(asText(indexed?.file)),
-      reference_kind: isElementary
-        ? "elementary"
-        : flowType === "unknown"
-          ? "unknown"
-          : "product_or_waste",
-      verified: verifiedFlows.has(flowKey),
-      referencing_process_count: ref.referencing_processes.size,
-      sample_referencing_processes: sortedSet(ref.referencing_processes).slice(0, 20),
-    });
-  }
-  const unverifiedProductOrUnknownFlows = setDifference(productOrUnknownFlowKeys, verifiedFlows);
-
-  const processCoverageRows: JsonRecord[] = sortedSet(processUniverseSet).map((key) => {
-    const processRow = processByKey.get(key) ?? {};
-    const verified = verifiedScopes.has(key);
-    const nonImportable = nonImportableScopes.has(key);
-    const activeBlocked = activeBlockedScopes.has(key);
-    const retry = retryScopes.has(key);
-    const ready = readyScopeSet.has(key);
-    const coverageStatus = verified
-      ? "verified"
-      : nonImportable
-        ? "non_importable"
-        : retry
-          ? "retry"
-          : activeBlocked
-            ? "active_human_review"
-            : ready
-              ? "pending_ready_scope"
-              : "missing_ready_scope";
-    return {
-      schema_version: 1,
-      ...processRow,
-      ready_scope: ready,
-      verified,
-      non_importable: nonImportable,
-      active_human_review: activeBlocked,
-      retry,
-      coverage_status: coverageStatus,
-    };
-  });
-  const processCoverageStatusCounts = processCoverageRows.reduce<Record<string, number>>(
-    (counts, row) => {
-      const status = asText(row.coverage_status);
-      counts[status] = (counts[status] ?? 0) + 1;
-      return counts;
-    },
-    {},
-  );
-  const processGapRows = processCoverageRows.filter(
-    (row) => !["verified", "non_importable"].includes(asText(row.coverage_status)),
-  );
-  const flowGapRows = referencedFlowRows.filter(
-    (row) => row.reference_kind !== "elementary" && !row.verified,
-  );
-
-  const processUniversePath = path.join(outDir, "bafu-process-universe.coverage.jsonl");
-  const processGapPath = path.join(outDir, "bafu-process-coverage-gaps.jsonl");
-  const flowReferencePath = path.join(outDir, "bafu-flow-reference-coverage.jsonl");
-  const flowGapPath = path.join(outDir, "bafu-flow-reference-coverage-gaps.jsonl");
-  const reportPath = path.join(outDir, "bafu-universe-coverage-report.json");
-  writeJsonLines(processUniversePath, processCoverageRows);
-  writeJsonLines(processGapPath, processGapRows);
-  writeJsonLines(flowReferencePath, referencedFlowRows);
-  writeJsonLines(flowGapPath, flowGapRows);
-
-  const report = {
-    schema_version: 1,
-    generated_at_utc: nowIso(),
-    status:
-      processGapRows.length === 0 && flowGapRows.length === 0
-        ? "completed"
-        : "completed_with_coverage_gaps",
-    command: coverageCommandName,
-    remote_write_mode: "read-only",
-    inputs: {
-      input_dir: repoRelative(inputDir),
-      process_bundles_dir: repoRelative(processBundlesDir),
-      processes_dir: repoRelative(processesDir),
-      flows_dir: repoRelative(flowsDir),
-      run_dir: repoRelative(runDir),
-      scope_files: scopeFiles.map(repoRelative),
-      ledger_source_dirs: ledgerSourceDirs.map(repoRelative),
-      non_importable_scope_files: normalizedList(
-        options.nonImportableScopesFile || options.nonImportableScopesFiles,
-      ).map((entry) => repoRelative(resolveRepoPath(entry))),
-    },
-    counts: {
-      process_bundle_entries: bundleRows.length,
-      process_bundle_unique: new Set(
-        bundleRows.map((row) => asText(row.process_key)).filter(Boolean),
-      ).size,
-      tidas_process_files: processRows.length,
-      tidas_process_unique: new Set(
-        processRows.map((row) => asText(row.process_key)).filter(Boolean),
-      ).size,
-      process_universe: processUniverseSet.size,
-      ready_scope_files: scopeFiles.length,
-      ready_scope_rows: scopeRows.length,
-      ready_scope_unique: readyScopeSet.size,
-      ready_scopes_in_universe: readyUniverseSet.size,
-      missing_ready_scopes: missingReadySet.size,
-      verified_process_scopes: processCoverageStatusCounts.verified ?? 0,
-      non_importable_process_scopes: processCoverageStatusCounts.non_importable ?? 0,
-      active_human_review_scopes: processCoverageStatusCounts.active_human_review ?? 0,
-      retry_scopes: processCoverageStatusCounts.retry ?? 0,
-      pending_ready_scopes: processCoverageStatusCounts.pending_ready_scope ?? 0,
-      process_coverage_gap_rows: processGapRows.length,
-      referenced_flow_rows: referencedFlows.size,
-      product_or_unknown_flow_references: productOrUnknownFlowKeys.size,
-      verified_product_or_unknown_flow_references: setIntersection(
-        productOrUnknownFlowKeys,
-        verifiedFlows,
-      ).size,
-      unverified_product_or_unknown_flow_references: unverifiedProductOrUnknownFlows.size,
-      flow_coverage_gap_rows: flowGapRows.length,
-      ledger_source_dirs: ledgerSourceSummary.length,
-      ledger_source_ok_scope_rows: sumLedgerSourceRows(ledgerSourceSummary, "ok_scope_rows"),
-      ledger_source_ok_scope_unique: verifiedScopes.size,
-      ledger_source_ok_scope_unique_in_universe: verifiedUniverseSet.size,
-      ledger_source_ok_flow_rows: sumLedgerSourceRows(ledgerSourceSummary, "ok_flow_rows"),
-      ledger_source_ok_flow_unique: verifiedFlows.size,
-      ledger_source_ok_flow_unique_product_or_unknown_references: setIntersection(
-        productOrUnknownFlowKeys,
-        verifiedFlows,
-      ).size,
-      ledger_source_blocked_scope_rows: sumLedgerSourceRows(
-        ledgerSourceSummary,
-        "blocked_scope_rows",
-      ),
-    },
-    ledger_sources: ledgerSourceSummary,
-    files: {
-      report: repoRelative(reportPath),
-      process_universe: repoRelative(processUniversePath),
-      process_coverage_gaps: repoRelative(processGapPath),
-      flow_reference_coverage: repoRelative(flowReferencePath),
-      flow_reference_coverage_gaps: repoRelative(flowGapPath),
-    },
-    policy: {
-      ledger_sources_are_explicit:
-        "Coverage is computed only from the explicit --ledger-source-dir inputs. Root import-ledger is not assumed to aggregate prior batches.",
-      v8_ready_scope_is_not_full_universe:
-        "Ready scope files are treated as closure snapshots, not as the full input process universe.",
-      read_only: true,
-    },
-  };
-  writeJson(reportPath, report);
-  return report;
 }
 
 function loadVerifiedSetFromFiles(filePaths: string[], type: string): Set<string> {
@@ -5399,9 +4857,36 @@ export function createBafuBatchImportRunCommands(
   config: BafuBatchConfig = {},
 ): {
   runDatasetBafuBatchImportRun: (options?: JsonRecord) => Promise<JsonRecord>;
-  runDatasetBafuUniverseCoverageReport: typeof runDatasetBafuUniverseCoverageReport;
+  runDatasetBafuUniverseCoverageReport: (options?: JsonRecord) => JsonRecord;
 } {
   installBafuBatchRuntime(deps, config);
+  const universeCoverage = createUniverseCoverageService(
+    createUniverseCoverageRuntimeAdapter(deps),
+  );
+  const { ledgerFiles, resolveLedgerSourceDirs, summarizeLedgerSources, sumLedgerSourceRows } =
+    universeCoverage;
+
+  function runDatasetBafuUniverseCoverageReport(options: JsonRecord = {}): JsonRecord {
+    if (options.help) {
+      return {
+        schema_version: 1,
+        status: "help",
+        command: coverageCommandName,
+        usage: [
+          "node scripts/foundry.ts dataset-bafu-universe-coverage-report --run-dir .foundry/workspaces/<bafu-run> --ledger-source-dir <batch/import-ledger> --out-dir <coverage-dir>",
+          "node scripts/foundry.ts dataset-bafu-universe-coverage-report --input-dir 'inputs/BAFU-2025 Version 2 - TIDAS 2026-03-09' --scope-file <ready-scopes.jsonl> --ledger-source-dir <batch/import-ledger>",
+        ],
+        purpose:
+          "Build a read-only BAFU full-universe coverage report from process-bundles, ready scopes, flow references, and explicit ledger sources.",
+        remote_write_mode: "read-only",
+      };
+    }
+    return universeCoverage.runReport(options, {
+      commandName: coverageCommandName,
+      defaultInputDir: "inputs/BAFU-2025 Version 2 - TIDAS 2026-03-09",
+    });
+  }
+
   async function runDatasetBafuBatchImportRun(options: JsonRecord = {}): Promise<JsonRecord> {
     // Re-install this factory's profile config so a sibling factory (e.g. USLCI)
     // constructed against the same module cannot leak its config into this run.
