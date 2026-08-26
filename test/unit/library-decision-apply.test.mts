@@ -528,8 +528,7 @@ test("library decision apply preserves blocker order, deferred projection and ex
   ]);
   assert.equal(
     jsonSha256(blockedReport),
-    jsonSha256(cloneJson(blockedReport)),
-    "report SHA remains bound to exact object insertion and array order",
+    "ed4c582a35599a1a3a90ec703b6e59d4a5b4c8660fbbb150daa6799736650e7c",
   );
 
   const resolution = application.buildLibraryResolution({
@@ -576,7 +575,6 @@ test("library decision apply preserves blocker order, deferred projection and ex
   assert.deepEqual(resolution.blocked_scope_ids, ["process-blocked"]);
   assert.equal(
     jsonSha256(resolution),
-    jsonSha256(cloneJson(resolution)),
-    "resolution SHA remains bound to exact object insertion and array order",
+    "9cc04fae137d110d0205ff553aeaf5d8447aa773713ae40075913bfcce24c8ea",
   );
 });
