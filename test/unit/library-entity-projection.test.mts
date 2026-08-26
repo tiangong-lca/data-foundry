@@ -4,13 +4,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import {
   createLibraryEntityProjection,
-  type EntityRow,
   type JsonRecord,
 } from "../../scripts/lib/library-orchestration/entity-projection.ts";
 
 const version = "00.00.001";
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const ids = {
   process: "11111111-1111-5111-8111-111111111111",
   flow: "22222222-2222-5222-8222-222222222222",
@@ -38,8 +39,8 @@ function ensureArray<T>(value: T | readonly T[] | null | undefined): T[] {
   return Array.isArray(value) ? [...value] : [value as T];
 }
 
-function sha256(value: string): string {
-  return createHash("sha256").update(value).digest("hex");
+function sha256(value: unknown): string {
+  return createHash("sha256").update(String(value)).digest("hex");
 }
 
 function datasetRoot(payload: JsonRecord, type: string): JsonRecord {
@@ -64,7 +65,8 @@ function datasetInformation(payload: JsonRecord, type: string): JsonRecord {
   return record(record(root.unitGroupInformation).dataSetInformation);
 }
 
-function datasetIdentity(payload: JsonRecord, type: string) {
+function datasetIdentity(value: unknown, type: string) {
+  const payload = record(value);
   const root = datasetRoot(payload, type);
   return {
     id: asText(datasetInformation(payload, type)["common:UUID"]),
@@ -242,7 +244,7 @@ function fixture() {
     sha256Text: sha256,
     textValue,
     files: {
-      fileExists: fs.existsSync,
+      fileExists: (filePath) => typeof filePath === "string" && fs.existsSync(filePath),
       readJson: (filePath) => JSON.parse(fs.readFileSync(filePath, "utf8")) as JsonRecord,
     },
   });
@@ -270,7 +272,7 @@ test("entity projection deduplicates ordered real TIDAS rows and preserves unres
       `unitgroup:${ids.unitGroup}:${version}`,
     ],
   );
-  const deduplicatedFlow = entityRows[0] as EntityRow;
+  const deduplicatedFlow = entityRows[0];
   assert.deepEqual(deduplicatedFlow.source_files, [
     "tidas/flows/a-flow.json",
     "tidas/flows/z-flow-copy.json",
@@ -367,13 +369,21 @@ test("entity projection deduplicates ordered real TIDAS rows and preserves unres
   assert.equal(exactJson, expectedJson);
   assert.equal(
     sha256(exactJson),
-    "4f554a099e83659d7bc539d535dad1996ce64858695a55facbc0911dad474514",
+    "13b8beb2fffad9116152a5050d00a5ce74cf61a9a3565844e0a5297d780c0982",
   );
 });
 
 test("entity projection preserves native malformed manifest failures", (t) => {
   const { root, paths, manifest, projection } = fixture();
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.writeFileSync(paths.flow, "{not-json\n");
+  assert.throws(
+    () =>
+      projection.buildEntityIndex([
+        { type: "flow", sourceFile: paths.flow, sourceKind: "root_tidas" },
+      ]),
+    SyntaxError,
+  );
   fs.writeFileSync(manifest, "{not-json\n");
   assert.throws(
     () =>
@@ -389,4 +399,24 @@ test("entity projection preserves native malformed manifest failures", (t) => {
       ),
     SyntaxError,
   );
+});
+
+test("entity projection is a read-adapter semantic leaf while the command retains I/O ownership", () => {
+  const moduleSource = fs.readFileSync(
+    path.join(repoRoot, "scripts/lib/library-orchestration/entity-projection.ts"),
+    "utf8",
+  );
+  const ownerSource = fs.readFileSync(
+    path.join(repoRoot, "scripts/commands/library-scope-workflow.ts"),
+    "utf8",
+  );
+  assert.doesNotMatch(moduleSource, /node:(?:child_process|fs|http|https|net)/u);
+  assert.doesNotMatch(moduleSource, /\b(?:spawn|spawnSync|process\.env)\b/u);
+  assert.doesNotMatch(moduleSource, /^(?:const|let|var)\s/mu);
+  assert.match(ownerSource, /from "\.\.\/lib\/library-orchestration\/entity-projection\.ts"/u);
+  assert.match(ownerSource, /function listJsonFiles\(/u);
+  assert.match(ownerSource, /function processBundleEntries\(/u);
+  assert.match(ownerSource, /function runDatasetLibraryIndexBuild\(/u);
+  assert.doesNotMatch(ownerSource, /function entitySemanticKey\(/u);
+  assert.doesNotMatch(ownerSource, /function projectionForBundle\(/u);
 });
