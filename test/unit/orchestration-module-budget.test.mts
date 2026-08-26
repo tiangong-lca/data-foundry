@@ -136,6 +136,7 @@ test("orchestration owners have an explicit shrink-only line budget", () => {
     "scripts/lib/bafu-classification/schema-repair.ts",
     "scripts/lib/bafu-classification/task-preparation.ts",
     "scripts/lib/bafu-orchestration/finalize-recovery-policy.ts",
+    "scripts/lib/bafu-orchestration/identity-decision-carry-forward.ts",
     "scripts/lib/bafu-orchestration/post-finalize-recovery.ts",
     "scripts/lib/bafu-orchestration/process-handoff.ts",
     "scripts/lib/bafu-orchestration/process-scope-report.ts",
