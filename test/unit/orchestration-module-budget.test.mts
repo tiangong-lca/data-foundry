@@ -127,6 +127,7 @@ test("orchestration owners have an explicit shrink-only line budget", () => {
     "scripts/lib/bafu-authoring/identity-equivalence.ts",
     "scripts/lib/bafu-authoring/patch-projection.ts",
     "scripts/lib/bafu-classification/leaf-repair.ts",
+    "scripts/lib/bafu-classification/schema-repair.ts",
     "scripts/lib/bafu-orchestration/finalize-recovery-policy.ts",
     "scripts/lib/batch-orchestration/scope-selection.ts",
     "scripts/lib/batch-orchestration/support-identity-cache.ts",
