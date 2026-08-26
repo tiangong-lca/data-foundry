@@ -3,6 +3,14 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import {
+  canRunPostFinalizeIdentityRecovery,
+  canRunPostFinalizeSemanticRecovery,
+  curationGateBlockers,
+  finalizeBlockers,
+  postWriteVerifyRetryReasonFromReport,
+  reportCodes,
+} from "../lib/bafu-orchestration/finalize-recovery-policy.ts";
 import { resolveFoundryRuntimePaths } from "../lib/foundry-runtime-paths.ts";
 import { acceptTraceHashOnlyRemoteVerificationMismatch } from "../lib/remote-verification-accepted-diff.ts";
 import {
@@ -74,11 +82,6 @@ interface FinalizeCommandResult {
   argv: string[];
   finalizeDir: string;
   finalizeReportPath: string;
-}
-
-interface GateBlockerResult {
-  gateReport: JsonRecord | null;
-  blockers: JsonRecord[];
 }
 
 interface RecoveryInput {
@@ -508,52 +511,14 @@ function postWriteVerifyRetryDelayMs(attemptIndex: number): number {
   );
 }
 
-const postWriteVerifyRetryableCodes = new Set([
-  "lookup_failed",
-  "remote_lookup_failed",
-  "readback_failed",
-  "remote_readback_failed",
-  "remote_readback_missing",
-  "root_readback_incomplete",
-  "post_write_verify_root_readback_incomplete",
-  "verify_report_missing",
-]);
-
-function collectReportCodes(
-  value: unknown,
-  codes: Set<string> = new Set(),
-  depth = 0,
-): Set<string> {
-  if (value == null || depth > 6) return codes;
-  if (Array.isArray(value)) {
-    for (const entry of value) collectReportCodes(entry, codes, depth + 1);
-    return codes;
-  }
-  if (typeof value !== "object") return codes;
-  const record = jsonRecord(value);
-  for (const key of ["code", "failure_code", "status_code", "readback_status"]) {
-    const text = textValue(record[key]);
-    if (text) codes.add(text);
-  }
-  for (const key of ["blockers", "findings", "checks", "results", "rows", "items"]) {
-    collectReportCodes(record[key], codes, depth + 1);
-  }
-  return codes;
-}
-
 function postWriteVerifyRetryReason(verifyReportPath: string | null): string | null {
-  if (!verifyReportPath || !fileExists(verifyReportPath)) return "verify_report_missing";
-  const report = readJson(verifyReportPath);
-  const codes = collectReportCodes(report);
-  for (const code of codes) {
-    if (postWriteVerifyRetryableCodes.has(code)) return code;
+  if (!verifyReportPath || !fileExists(verifyReportPath)) {
+    return postWriteVerifyRetryReasonFromReport({ availability: "missing" });
   }
-  const counts = jsonRecord(report.counts);
-  const byStatus = jsonRecord(counts.by_status || counts.statuses);
-  for (const code of postWriteVerifyRetryableCodes) {
-    if (Number(byStatus?.[code] ?? 0) > 0) return code;
-  }
-  return null;
+  return postWriteVerifyRetryReasonFromReport({
+    availability: "available",
+    report: readJson(verifyReportPath),
+  });
 }
 
 function runArgvStage({ stage, argv, logDir }: ArgvStageInput): {
@@ -1028,95 +993,9 @@ function buildFinalizeCommand({
   };
 }
 
-function curationGateBlockers(finalizeReport: JsonRecord): GateBlockerResult {
-  const blockers: JsonRecord[] = [];
+function readCurationGateReport(finalizeReport: JsonRecord): JsonRecord | null {
   const gateReportPath = resolveRepoPath(jsonRecord(finalizeReport.files).curation_gate_report);
-  if (!fileExists(gateReportPath)) {
-    if (finalizeReport?.status === "ready_for_remote_write") {
-      blockers.push({
-        code: "curation_gate_report_missing",
-        severity: "error",
-        message: "Ready BAFU process scope is missing a readable curation gate report.",
-      });
-    }
-    return { gateReport: null, blockers };
-  }
-  const gateReport = readJson(gateReportPath!);
-  const counts = jsonRecord(gateReport.counts);
-  const actionItems = Number(counts.action_items ?? 0);
-  if (actionItems > 0) {
-    blockers.push({
-      code: "unresolved_ai_curation_items",
-      severity: "error",
-      message:
-        "BAFU process scope still has unresolved AI curation action items; rerun authoring/apply stages before write planning.",
-      action_items: actionItems,
-      identity_action_items: Number(counts.identity_action_items ?? 0),
-      semantic_action_items: Number(counts.semantic_action_items ?? 0),
-      classification_queue_action_items: Number(counts.classification_queue_action_items ?? 0),
-      location_queue_action_items: Number(counts.location_queue_action_items ?? 0),
-      examples: (Array.isArray(gateReport.entities)
-        ? gateReport.entities
-        : Array.isArray(gateReport.processes)
-          ? gateReport.processes
-          : []
-      )
-        .map(jsonRecord)
-        .filter((entity) => Number(entity.action_item_count ?? 0) > 0)
-        .slice(0, 5)
-        .map((entity) => ({
-          dataset_type: entity.dataset_type,
-          dataset_id: entity.entity_id ?? entity.process_id,
-          action_item_count: entity.action_item_count,
-          authoring_package: entity.authoring_package,
-        })),
-    });
-  }
-  const deterministicCleanupItems = Number(counts.deterministic_cleanup_items ?? 0);
-  if (deterministicCleanupItems > 0) {
-    blockers.push({
-      code: "unresolved_deterministic_curation_items",
-      severity: "error",
-      message:
-        "BAFU process scope still has deterministic cleanup items; rerun cleanup/finalize before write planning.",
-      deterministic_cleanup_items: deterministicCleanupItems,
-    });
-  }
-  if (!["ready", "ready_with_profile_waivers"].includes(String(gateReport.status))) {
-    blockers.push({
-      code: "curation_gate_not_ready",
-      severity: "error",
-      message: `Post-authoring curation gate status is ${gateReport.status || "missing"}.`,
-      curation_gate_status: gateReport.status ?? null,
-    });
-  }
-  return { gateReport, blockers };
-}
-
-function canRunPostFinalizeIdentityRecovery(finalizeReport: JsonRecord): boolean {
-  const gateReportPath = resolveRepoPath(jsonRecord(finalizeReport.files).curation_gate_report);
-  if (!fileExists(gateReportPath)) return false;
-  const gateReport = readJson(gateReportPath!);
-  const counts = jsonRecord(gateReport.counts);
-  return (
-    Number(counts.identity_action_items ?? 0) > 0 &&
-    Number(counts.semantic_action_items ?? 0) === 0 &&
-    Number(counts.classification_queue_action_items ?? 0) === 0 &&
-    Number(counts.location_queue_action_items ?? 0) === 0
-  );
-}
-
-function canRunPostFinalizeSemanticRecovery(finalizeReport: JsonRecord): boolean {
-  const gateReportPath = resolveRepoPath(jsonRecord(finalizeReport.files).curation_gate_report);
-  if (!fileExists(gateReportPath)) return false;
-  const gateReport = readJson(gateReportPath!);
-  const counts = jsonRecord(gateReport.counts);
-  return (
-    Number(counts.semantic_action_items ?? 0) > 0 &&
-    Number(counts.identity_action_items ?? 0) === 0 &&
-    Number(counts.classification_queue_action_items ?? 0) === 0 &&
-    Number(counts.location_queue_action_items ?? 0) === 0
-  );
+  return fileExists(gateReportPath) ? readJson(gateReportPath!) : null;
 }
 
 function runPostFinalizeIdentityRecovery({
@@ -1584,31 +1463,6 @@ function runPostFinalizeSemanticRecovery({
   };
 }
 
-function finalizeBlockers(finalizeReport: JsonRecord): JsonRecord[] {
-  const blockers: JsonRecord[] = [];
-  const commitHandoff = jsonRecord(finalizeReport.commit_handoff);
-  if (finalizeReport.status !== "ready_for_remote_write") {
-    blockers.push({
-      code: "post_authoring_finalize_not_ready",
-      severity: "error",
-      message: `Post-authoring finalize status is ${finalizeReport.status || "missing"}.`,
-      finalize_status: finalizeReport.status ?? null,
-    });
-  }
-  if (commitHandoff.status !== "ready_for_explicit_commit") {
-    blockers.push({
-      code: "commit_handoff_not_ready",
-      severity: "error",
-      message: `Commit handoff status is ${commitHandoff.status || "missing"}.`,
-      commit_handoff_status: commitHandoff.status ?? null,
-      commit_handoff_blockers: commitHandoff.blockers ?? [],
-    });
-  }
-  return blockers.concat(
-    Array.isArray(finalizeReport.blockers) ? finalizeReport.blockers.map(jsonRecord) : [],
-  );
-}
-
 function reportFromFinalize({
   processScope,
   outDir,
@@ -1621,7 +1475,10 @@ function reportFromFinalize({
   sourceSupportRowsFile,
   sourceRowsFile,
 }: FinalizeReportInput): ProcessScopeReport {
-  const { gateReport, blockers: gateBlockers } = curationGateBlockers(finalizeReport);
+  const { gateReport, blockers: gateBlockers } = curationGateBlockers({
+    finalizeReport,
+    gateReport: readCurationGateReport(finalizeReport),
+  });
   const otherBlockers = finalizeBlockers(finalizeReport);
   const blockers = [...gateBlockers, ...otherBlockers];
   const gateCounts = jsonRecord(gateReport?.counts);
@@ -2031,7 +1888,7 @@ function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
     if (finalizeReport?.status === "ready_for_remote_write") break;
     let recovery = null;
     let recoveryKind = null;
-    if (canRunPostFinalizeIdentityRecovery(finalizeReport)) {
+    if (canRunPostFinalizeIdentityRecovery(readCurationGateReport(finalizeReport))) {
       recoveryKind = "identity";
       recovery = runPostFinalizeIdentityRecovery({
         finalizeReport,
@@ -2040,7 +1897,7 @@ function runDatasetBafuProcessScopeE2e(options: JsonRecord = {}): JsonRecord {
         logDir,
         attempt,
       });
-    } else if (canRunPostFinalizeSemanticRecovery(finalizeReport)) {
+    } else if (canRunPostFinalizeSemanticRecovery(readCurationGateReport(finalizeReport))) {
       recoveryKind = "semantic";
       recovery = runPostFinalizeSemanticRecovery({
         finalizeReport,
@@ -2197,8 +2054,12 @@ export function createBafuProcessScopeE2eCommands(deps: BafuProcessScopeE2eRunti
 export const bafuProcessScopeE2eTestHooks = {
   canRunPostFinalizeIdentityRecovery,
   canRunPostFinalizeSemanticRecovery,
+  curationGateBlockers,
+  finalizeBlockers,
   foundryEntryPath,
   loadVerifiedSupportIdentities,
   postWriteVerifyRetryReason,
+  postWriteVerifyRetryReasonFromReport,
+  reportCodes,
   supportIdentityKeysFromHandoffPlan,
 };

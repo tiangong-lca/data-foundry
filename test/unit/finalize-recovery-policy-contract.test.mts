@@ -42,8 +42,12 @@ function assertFrozen(
   assert.equal(sha256Text(serialized), sha256, `${name}: sha256`);
 }
 
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 function jsonRecord(value: unknown): JsonRecord {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return isJsonRecord(value) ? value : {};
 }
 
 function recoveryGateReport(overrides: JsonRecord = {}): JsonRecord {
