@@ -224,7 +224,7 @@ test("source classification evaluator caches the first trace-backed classificati
     dataset_type: "flow",
     dataset_id: "water",
     dataset_version: "00.00.001",
-    source_file: relative(sourceFile),
+    source_file: relative(sourceFile)!,
     flow_type: "Elementary flow",
     name: "Water",
     flow_property_refs: [{ short_description: "Mass" }],
