@@ -84,8 +84,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
-lastReviewedNote: "Reviewed for Issue #70: CLI 0.1.3 public parser/batch ownership and Foundry semantic/test-fixture ownership remain explicit; no workspace boundary moves."
+lastReviewedCommit: 08fa2d01050f421b70c27a0fb307f213cfe8a494
+lastReviewedNote: "Reviewed for Issue #70: CLI-owned generic claims/run locking and Foundry-owned LCA callbacks/ledgers are now executable, with no workspace boundary move."
 ---
 
 # Workspace Project Map

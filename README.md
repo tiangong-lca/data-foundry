@@ -149,8 +149,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
-lastReviewedNote: "Reviewed for Issue #70: verified CLI 0.1.3 public batch/auth consumption and its exact release-age exception replace the failed 0.1.2 private deep-import path."
+lastReviewedCommit: 08fa2d01050f421b70c27a0fb307f213cfe8a494
+lastReviewedNote: "Reviewed for Issue #70: CLI 0.1.3 now executes the real scope claim/run-lock boundary; Foundry retains semantic stages, blockers, ledgers, and exact reports."
 ---
 
 # TianGong LCA Data Foundry
@@ -237,7 +237,7 @@ Wave 25 migrates the import-curation re-export topology without wrappers. `profi
 
 Wave 26 migrates five dataset-orchestration owners in dependency order: generic `library-scope-workflow.ts`, then BAFU leaf classification and auto-authoring, process-scope E2E, and the shared BAFU batch engine used by the USLCI and Worldsteel adapters. Characterization preserves profile-agnostic versus BAFU configuration, library/scope/identity/classification blocker and artifact order, resume/pause/parallel/preflight/commit delegation, authoritative executable-plus-argv and receipt/hash checks, exact help/report bytes, native errors, and explicit-commit-only authority. Inventory moves 79→74 without changing command names, profile defaults, Golden artifacts, Worldsteel semantics, Date.parse behavior, or production authority; every case is local and reads neither `.env` nor production.
 
-Issue #70 decomposes that stable typed layer by semantic stage. `scripts/lib/batch-orchestration/post-write-handoff.ts` owns asynchronous commit/report discovery, same-id/version idempotent recovery followed by mandatory readback, bounded read-only verification retry, accepted-difference delegation, and post-write closeout. `scripts/lib/batch-orchestration/scope-finalize-commit.ts` owns exact finalize reports, serialized support reuse/invalidation/commit, post-finalize identity/patch recovery, and the final dataset handoff. `bafu-batch-import-run.ts` retains stage-runner wiring and profile/scope orchestration; the exact shrink-only ceilings live in `specs/orchestration-module-budgets.json`.
+Issue #70 decomposes that stable typed layer by semantic stage. `scripts/lib/batch-orchestration/post-write-handoff.ts` owns asynchronous commit/report discovery, same-id/version idempotent recovery followed by mandatory readback, bounded read-only verification retry, accepted-difference delegation, and post-write closeout. `scripts/lib/batch-orchestration/scope-finalize-commit.ts` owns exact finalize reports, serialized support reuse/invalidation/commit, post-finalize identity/patch recovery, and the final dataset handoff. `scripts/lib/batch-orchestration/cli-bounded-batch-runner.ts` composes the public CLI contract/engine/run lock and owns bounded claims, family exclusive keys, pause/stop, and drain without absorbing LCA semantics. `bafu-batch-import-run.ts` retains stage-runner wiring, retryable ledger projection, cache capping, profile/scope orchestration, and report bytes; the exact shrink-only ceilings live in `specs/orchestration-module-budgets.json`.
 
 Wave 26 migrates four adapter/tool boundaries. `tidas-adapter.ts` retains executable/config precedence, controlled script argv/env, operation/version/asset reports, batch document hashes and atomic rollback. `post-authoring-finalize-utils.ts` retains rewrite discovery, identity reuse, payload-freshness hashes, external-reference and finalize order. `check-tidas-cutover.ts` retains authoritative Git inventory and JSON/exit behavior; `foundry-golden-diff.ts` retains non-HEAD merge-base selection, cross-platform path/argv normalization and Node-native comparison. Inventory moves 89→85 without changing help, profiles, Worldsteel, Date.parse or remote-write authority.
 

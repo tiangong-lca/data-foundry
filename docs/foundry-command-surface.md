@@ -84,8 +84,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
-lastReviewedNote: "Reviewed for Issue #70: CLI 0.1.3 public batch/auth consumption changes no 63-command surface, metadata owner, help/stdout/exit, artifact, profile, or write mode."
+lastReviewedCommit: 08fa2d01050f421b70c27a0fb307f213cfe8a494
+lastReviewedNote: "Reviewed for Issue #70: replacing the internal claim loop with public CLI batch/run-lock changes no 63-command surface, help/stdout/exit, artifact, profile, or write mode."
 ---
 
 # Foundry Command Surface

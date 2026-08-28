@@ -86,8 +86,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
-lastReviewedNote: "Reviewed for Issue #70: Foundry consumes verified CLI 0.1.3 public primitives while parser semantics, generic scheduling, and remote mutation remain CLI/platform owned."
+lastReviewedCommit: 08fa2d01050f421b70c27a0fb307f213cfe8a494
+lastReviewedNote: "Reviewed for Issue #70: CLI owns generic batch contracts, claims, resource queues, pause/stop/drain, and run locking; Foundry owns LCA execution callbacks and evidence."
 ---
 
 # Capability Ownership Policy
@@ -141,6 +141,8 @@ Foundry owns the `tiangong-foundry.command-spec.v1` handoff envelope: strict exe
 Profile-gated batch commit does not change ownership: Foundry may decide that an exact scope has passed policy and handoff gates, but the actual mutation command remains an official CLI/platform command executed under an account guard. Foundry's default platform invocation is the exact installed CLI package, `pnpm exec tiangong-lca ...`; credential-scoped account execution additionally requires its CLI 0.1.3 intent-bound identity receipt. Local CLI binary overrides are only explicit operator/test state, not the workflow contract.
 
 The supported library boundary is `@tiangong-lca/cli/command-spec`, `@tiangong-lca/cli/batch`, and `@tiangong-lca/cli/auth-identity-receipt`. Generic contracts, scheduling, run locks, and strict receipt parsing remain CLI-owned; Foundry owns semantic adapters and test-only fixture materialization. A private package file is never an ownership fallback.
+
+The real commit-mode batch owner now calls `runFoundryScopeBatch`, whose only scheduler implementation is public CLI `runBoundedBatch` under `withBatchRunLock`. Foundry provides content/family projections, scope execution, retryable ledger mapping, cache-cap callback, and report aggregation. This is delegation, not a copy of CLI scheduling semantics.
 
 High-level library and BAFU orchestration is Foundry-owned composition, not a transfer of sibling behavior. Foundry may order classification, authoring, scope-finalize, ledger, pause/preflight and bounded-parallel stages and may delegate an already-authorized handoff as executable plus argv. The CLI still owns mutation and readback semantics, profiles own dataset-specific policy, and USLCI/Worldsteel wrappers may configure the shared engine only within those existing boundaries.
 

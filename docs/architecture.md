@@ -147,8 +147,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
-lastReviewedNote: "Reviewed for Issue #70: CLI 0.1.3 public batch/auth boundaries replace private deep imports without changing the runtime, artifact, or remote-authority architecture."
+lastReviewedCommit: 08fa2d01050f421b70c27a0fb307f213cfe8a494
+lastReviewedNote: "Reviewed for Issue #70: public CLI batch/run-lock is now the real bounded scope scheduler; Foundry semantic callbacks and artifact/authority architecture remain local."
 ---
 
 # Architecture
@@ -202,7 +202,7 @@ The source-semantics, reusable TIDAS-row, and identity-reference-rewrite leaves 
 
 After the decision, source and proof families converge, `.oxlintrc.json` promotes `typescript/no-explicit-any` to one global error and removes every family-specific override. `zero-javascript-ratchet.test.mts` validates both raw and printed rule graphs and a controlled failing fixture, so all first-party TypeScript remains covered without a TS6 compatibility compiler.
 
-The typed BAFU family and import-ledger leaves preserve two local control-plane boundaries: deterministic family grouping/ranking over ordered signature hashes, and append-only resume evidence over verified, blocked, dependency, retry, and skipped JSONL rows. They do not change database writes, command ownership, public help, profile defaults, or the owner CLI boundary.
+The typed BAFU family and import-ledger leaves preserve two local control-plane boundaries: deterministic family grouping/ranking over ordered signature hashes, and append-only resume evidence over verified, blocked, dependency, retry, and skipped JSONL rows. `cli-bounded-batch-runner.ts` projects those family group keys into the public CLI scheduler's exclusive-resource queue and wraps the entire run in its cross-process lock; only independent families/scopes claim in parallel. Foundry callbacks still own database-command delegation and every ledger/report byte, so command ownership, public help, profile defaults, and remote authority do not move.
 
 The typed canonical-support and bundle-sampling leaves own local reference rewriting and source-package materialization, not amount conversion or remote execution. Canonical scale evidence is collected before the package-local FP reference is replaced: the explicit blocking flag distinguishes a known positive non-1 factor from an unresolved missing/non-finite/non-positive factor, and projects either blocker into the report and process-scope ledger. Without that flag, existing profile behavior remains compatible.
 

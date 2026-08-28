@@ -276,8 +276,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
-lastReviewedNote: "Reviewed for Issue #70: case-driven workflow uses verified CLI 0.1.3 public batch/auth subpaths and keeps private package internals fail-closed."
+lastReviewedCommit: 08fa2d01050f421b70c27a0fb307f213cfe8a494
+lastReviewedNote: "Reviewed for Issue #70: commit-mode scope claims now run under the public CLI 0.1.3 batch engine/run lock while Foundry preserves semantic execution and ledger/report authority."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -420,6 +420,8 @@ The queue state machine belongs to `pnpm exec tiangong-lca dataset curation-queu
 After build, workers should call `pnpm exec tiangong-lca dataset curation-queue next --queue-dir .foundry/workspaces/<task-id>/curation-queue --json` and execute only the returned task. Before write planning, call `pnpm exec tiangong-lca dataset curation-queue verify --queue-dir .foundry/workspaces/<task-id>/curation-queue --type <support|flow|process> --json`.
 
 Batch runners may execute multiple ready tasks in parallel only when queue locks and `depends_on` checkpoints prove independence. The task workspace must record configured `max_parallelism` and the runner identity for each claimed task. A blocked task must write its blocker artifact and release unrelated work; it must not stop independent ready tasks from completing, committing, and passing readback when their exact scopes have no blockers. Any workflow stage that defers scopes must write a complete `blocked-scope-ledger.jsonl` plus a reader-facing `blocked-scope-report.json` that names the concrete reasons, affected process scopes, blocking dependency types or examples, required human action, and rerun command.
+
+The high-level scope runner implements this through `cli-bounded-batch-runner.ts`: one public CLI batch contract and cross-process run lock, per-family exclusive keys, bounded claims, pause-before-claim, stop-after-blocked, and mandatory in-flight drain. The callback remains Foundry-owned and writes the same scope checkpoints, verified/blocked/retry ledgers, cache-cap effects, and reader report; do not add a second worker-index claim loop.
 
 Before AI curation for process/flow imports, audit and then run the generated identity-preflight request index. The audit checks the exact `flow_hybrid_search` / `process_hybrid_search` Edge request body before any remote call: Edge only parses `query`, `filter`/`filter_condition`, match/page options, and `data_source`, so complete identity and source evidence must be present in the compact fielded `query`. Foundry may include `remote_candidate_search.profile_hints` in the request for source-derived facts such as elementary categories, flow property, reference unit, geography, reference flow names, technology, and system boundary; the CLI uses those hints only for local target profiling and candidate scoring, not as Edge Function request fields.
 
