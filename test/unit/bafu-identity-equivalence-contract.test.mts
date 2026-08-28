@@ -196,6 +196,62 @@ test("flow and process review reasons preserve exact physical-evidence precedenc
   });
 });
 
+test("exact flow names cannot override material physical conflicts", () => {
+  const result = canCreateBafuProductFlow({
+    dataset_type: "flow",
+    evidence: {
+      target: {
+        names: ["Nylon 6", "at plant"],
+        fields: {
+          type_of_dataset: "Product flow",
+          flow_property: "Mass",
+          reference_unit: "kg",
+          geography: "RER",
+          categories: ["plastics"],
+        },
+      },
+      top_candidates: [
+        {
+          id: "canonical-nylon-conflict",
+          version: "01.00.000",
+          names: ["Nylon 6", "at plant"],
+          fields: {
+            type_of_dataset: "Product flow",
+            flow_property: "Volume",
+            reference_unit: "m3",
+            geography: "GLO",
+            categories: ["chemicals"],
+          },
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(result, {
+    ok: true,
+    reviewed: [
+      {
+        id: "canonical-nylon-conflict",
+        version: "01.00.000",
+        names: ["Nylon 6", "at plant"],
+        fields: {
+          type_of_dataset: "Product flow",
+          flow_property: "Volume",
+          reference_unit: "m3",
+          geography: "GLO",
+          categories: ["chemicals"],
+        },
+        non_equivalence_reasons: [
+          "flow property differs",
+          "reference unit differs",
+          "geography/market context differs",
+          "source category/route differs",
+        ],
+      },
+    ],
+  });
+});
+
 test("elementary, exact-flow, and exact-process decisions keep existing branch precedence", () => {
   const elementary = canCreateBafuProductFlow({
     dataset_type: "flow",

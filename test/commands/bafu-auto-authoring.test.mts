@@ -779,6 +779,114 @@ test("BAFU identity autofill reuses physically equivalent product-flow candidate
   }
 });
 
+test("BAFU identity autofill keeps exact-name physical conflicts as create-new evidence", () => {
+  const root = path.join(fixtureRoot, "identity-exact-name-physical-conflict");
+  fs.rmSync(root, { recursive: true, force: true });
+  const targetFlowId = "77777777-1111-4222-8333-444444444444";
+  const conflictingFlowId = "88888888-1111-4222-8333-444444444444";
+  const packagePath = path.join(root, "packages", `flow-${targetFlowId}.authoring-package.json`);
+  const rowsFile = path.join(root, "flows.jsonl");
+  const sourceRow = namedFlowRow(targetFlowId, "Nylon 6, at plant", "RER");
+  writeJson(packagePath, {
+    dataset_type: "flow",
+    entity_id: targetFlowId,
+    version: "00.00.001",
+    source_row: sourceRow,
+  });
+  const packageSha = sha256Text(fs.readFileSync(packagePath, "utf8"));
+  const taskPath = path.join(root, "identity-decision-task.json");
+  writeJson(taskPath, {
+    schema_version: 1,
+    status: "ready_for_ai_identity_decisions",
+    identity_action_items: [
+      {
+        dataset_type: "flow",
+        dataset_id: targetFlowId,
+        dataset_version: "00.00.001",
+        authoring_package: rel(packagePath),
+        authoring_package_sha256: packageSha,
+        evidence: {
+          target: {
+            id: targetFlowId,
+            version: "00.00.001",
+            names: ["Nylon 6", "at plant"],
+            fields: {
+              type_of_dataset: "Product flow",
+              flow_property: "Mass",
+              reference_unit: "kg",
+              categories: ["plastics"],
+              geography: "RER",
+            },
+          },
+          remote_search: { endpoint: "flow_hybrid_search", candidate_count: 1 },
+          top_candidates: [
+            {
+              id: conflictingFlowId,
+              version: "01.00.000",
+              names: ["Nylon 6", "at plant"],
+              fields: {
+                type_of_dataset: "Product flow",
+                flow_property: "Volume",
+                reference_unit: "m3",
+                categories: ["chemicals"],
+                geography: "GLO",
+              },
+            },
+          ],
+        },
+      },
+    ],
+    files: {
+      expected_decisions: rel(path.join(root, "identity-decisions.jsonl")),
+    },
+  });
+  writeJsonLines(rowsFile, [sourceRow]);
+
+  try {
+    const autofill = runFoundry([
+      "dataset-bafu-identity-decisions-autofill",
+      "--identity-decision-task",
+      rel(taskPath),
+    ]);
+    assert.equal(autofill.code, 0);
+    assert.equal(autofill.json.status, "completed");
+    const decisions = readJsonLines(path.join(repoRoot, autofill.json.files.decisions));
+    assert.equal(decisions[0].identity_decision, "create_new");
+    assert.equal(decisions[0].canonical, null);
+    assert.deepEqual(decisions[0].evidence.reviewed_top_candidates[0].non_equivalence_reasons, [
+      "flow property differs",
+      "reference unit differs",
+      "geography/market context differs",
+      "source category/route differs",
+    ]);
+    assert.equal(decisions[0].evidence.selected_candidate, undefined);
+
+    const apply = runFoundry([
+      "dataset-identity-decisions-apply",
+      "--type",
+      "flow",
+      "--rows-file",
+      rel(rowsFile),
+      "--decisions",
+      autofill.json.files.decisions,
+      "--out-dir",
+      rel(path.join(root, "identity-apply")),
+      "--authoring-package-dir",
+      rel(path.dirname(packagePath)),
+    ]);
+    assert.equal(apply.code, 0);
+    assert.equal(apply.json.status, "completed");
+    assert.equal(apply.json.counts.output_rows, 1);
+    const appliedRows = readJsonLines(path.join(repoRoot, apply.json.files.rows));
+    assert.equal(
+      appliedRows[0].flowDataSet.flowInformation.dataSetInformation["common:UUID"],
+      targetFlowId,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("BAFU identity autofill reuses physically equivalent elementary land-use candidates", () => {
   const root = path.join(fixtureRoot, "elementary-land-use-identity");
   fs.rmSync(root, { recursive: true, force: true });
