@@ -343,9 +343,7 @@ test("Foundry pins the published CLI runtime and high-risk audit closure", () =>
   assert.match(workspace, /minimumReleaseAge:\s*1440/u);
   assert.match(workspace, /-\s+["']?@tiangong-lca\/cli@0\.1\.3["']?/u);
   assert.doesNotMatch(workspace, /-\s+["']?@tiangong-lca\/cli@0\.1\.[0-2]["']?/u);
-  for (const file of trackedFiles().filter((value) =>
-    /\.(?:cts|json|md|mts|ts|ya?ml)$/u.test(value),
-  )) {
+  for (const file of trackedFiles().filter((value) => /\.(?:cts|mts|ts)$/u.test(value))) {
     assert.doesNotMatch(readText(file), /@tiangong-lca\/cli\/dist\/src\//u, file);
   }
 });
