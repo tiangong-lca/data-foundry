@@ -1,7 +1,7 @@
 ---
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
-lastReviewedNote: "Reviewed for Issue #68: canonical-cache misses are gated owner-draft candidates; the shared override, deterministic contact, row version, and non-allowlist semantics match runtime."
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
+lastReviewedNote: "Reviewed for Issue #70: exact CLI 0.1.3 public receipt/batch consumption changes no Worldsteel cache-miss, support, ordering, unit-scale, closure, or owner-draft constraint."
 title: worldsteel Import Constraints
 docType: constraints
 scope: import-profile

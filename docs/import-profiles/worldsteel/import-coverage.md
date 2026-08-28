@@ -1,7 +1,7 @@
 ---
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
-lastReviewedNote: "Reviewed for Issue #68 as retained delivery evidence; 10+10 LANCA and 11+11 owner rows are historical observations, not runtime caps."
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
+lastReviewedNote: "Reviewed for Issue #70: CLI 0.1.3 operational binding does not alter retained 10+10 LANCA evidence, 11+11 historical inventory, or their non-cap interpretation."
 title: worldsteel EF3.1 Import Coverage Evidence
 docType: report
 scope: import-profile/worldsteel

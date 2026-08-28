@@ -23,9 +23,9 @@ checkPaths:
   - scripts/lib/foundry-runtime-environment.ts
   - scripts/lib/foundry-runtime-utils.ts
   - test/unit/foundry-runtime-environment.test.mts
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
-lastReviewedNote: "Reviewed for Issue #69: strict datetime and non-destructive blocked artifact reporting add no environment input, credential forwarding or public .env surface."
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
+lastReviewedNote: "Reviewed for Issue #70: exact CLI 0.1.3 public parsing and deterministic test receipts add no environment input, credential forwarding, or public .env surface."
 ---
 
 # Environment Surface Policy

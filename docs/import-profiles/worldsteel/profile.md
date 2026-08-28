@@ -1,7 +1,7 @@
 ---
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
-lastReviewedNote: "Reviewed for Issue #68 against the frozen factory, PR #20 rationale, retained coverage, shared override coupling, deterministic contact, and owner-draft row-version behavior."
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
+lastReviewedNote: "Reviewed for Issue #70: verified CLI 0.1.3 public primitives change no frozen Worldsteel profile value, R1-R5 decision, support override, contact, row version, or write authority."
 title: worldsteel Import Profile
 docType: profile
 scope: import-profile

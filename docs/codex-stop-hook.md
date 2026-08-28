@@ -18,9 +18,9 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - package.json
   - scripts/commands/core.ts
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
-lastReviewedNote: "Reviewed for Issue #69: strict datetime cleanup, non-destructive stale reporting and finalize short-circuiting do not change Stop-hook registration, recursion guard, output or authority."
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
+lastReviewedNote: "Reviewed for Issue #70: orchestration decomposition, pnpm 11.24, and CLI 0.1.3 public consumption do not change Stop-hook registration, recursion guard, output, or authority."
 ---
 
 # Codex Stop Hook
