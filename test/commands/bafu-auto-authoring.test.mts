@@ -853,13 +853,15 @@ test("BAFU identity autofill keeps exact-name physical conflicts as create-new e
     const decisions = readJsonLines(path.join(repoRoot, autofill.json.files.decisions));
     assert.equal(decisions[0].identity_decision, "create_new");
     assert.equal(decisions[0].canonical, null);
-    assert.deepEqual(decisions[0].evidence.reviewed_top_candidates[0].non_equivalence_reasons, [
+    const decisionEvidence = decisions[0].evidence;
+    const reviewedCandidates = decisionEvidence.reviewed_top_candidates as FixtureRecord[];
+    assert.deepEqual(reviewedCandidates[0].non_equivalence_reasons, [
       "flow property differs",
       "reference unit differs",
       "geography/market context differs",
       "source category/route differs",
     ]);
-    assert.equal(decisions[0].evidence.selected_candidate, undefined);
+    assert.equal(decisionEvidence.selected_candidate, undefined);
 
     const apply = runFoundry([
       "dataset-identity-decisions-apply",
