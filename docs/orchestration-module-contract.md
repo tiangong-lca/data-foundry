@@ -44,7 +44,7 @@ checkPaths:
   - package.json
   - pnpm-lock.yaml
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 2376ed6
+lastReviewedCommit: f8f0633
 lastReviewedNote: "Reviewed for Issue #70: all five command owners are thin; the batch facade exposes a separately budgeted composition root plus focused semantic/CLI boundaries."
 related:
   - https://github.com/tiangong-lca/data-foundry/issues/70
@@ -92,6 +92,7 @@ Navigate directly to the narrowest owner:
 | BAFU flow/process identity equivalence | `scripts/lib/bafu-authoring/identity-equivalence.ts` | decision batch I/O and command envelope |
 | BAFU patch and source-trace projection | `scripts/lib/bafu-authoring/patch-projection.ts` | input/output files and report emission |
 | BAFU process/product leaf repair | `scripts/lib/bafu-classification/leaf-repair.ts` | schema loading, sharding, task/report files |
+| BAFU category-map closure-wide status and blocker report | `scripts/lib/bafu-classification/category-map-report.ts` | decision/task file I/O and artifact writes |
 | Library entity index and process-bundle scope projection | `scripts/lib/library-orchestration/entity-projection.ts` | directory enumeration and artifact writes |
 | Ready-scope filtering, classification preflight, family ordering, and preflight rows | `scripts/lib/batch-orchestration/scope-selection.ts` | ledger reads, profile adapters, worker execution |
 | Universe and ledger coverage | `scripts/lib/batch-orchestration/universe-coverage.ts` | command help/options and report destination |
@@ -122,7 +123,7 @@ Foundry injects profile and report projection. The generic engine must not know 
 
 The local ignored-runtime audit intentionally excluded credentials, receipt bodies, and data payloads. It found approximately 252 GiB of historical state, including about 173 GiB of Worldsteel batch/pilot copies. One USLCI run produced 10,830 checkpoints for 1,358 scopes over six resume rounds; a scope reached 50 snapshots. Of 75,400 historical artifact locators, only 326 still existed after scratch cleanup. Identity preflight consumed about 39.4 cumulative hours, and one outage produced 129 retryable finalize timeouts that later cleared.
 
-These observations are design inputs, not fixtures to commit. Replay tests use sanitized synthetic cases with the same counts/state transitions. Content-addressed artifact retention is Foundry #76; content/policy-bound resume is #75; raw-argv/fake parallel behavior is #74. Issue #77 separately makes exact names subordinate to the ordered physical-equivalence reasons: any material conflict disqualifies reuse, while a zero-conflict exact candidate retains the existing branch. Move-only #70 did not silently resolve any of them.
+These observations are design inputs, not fixtures to commit. Replay tests use sanitized synthetic cases with the same counts/state transitions. Content-addressed artifact retention is Foundry #76; content/policy-bound resume is #75; raw-argv/fake parallel behavior is #74. Issue #77 separately makes exact names subordinate to the ordered physical-equivalence reasons. Issue #79 makes every emitted category-map manual-review row closure-blocking even when no current task references it, while preserving resolved report bytes. Move-only #70 did not silently resolve any of them.
 
 ## 6. TDD and equivalence
 

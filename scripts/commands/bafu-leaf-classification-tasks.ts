@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { buildBafuLeafCategoryMapProjectReport } from "../lib/bafu-classification/category-map-report.ts";
 import {
-  buildBafuLeafCategoryMapProjectReport,
   parseBafuFlowProductCategorySchema,
   parseBafuProcessCategorySchema,
   projectBafuLeafCategoryMapArtifacts,

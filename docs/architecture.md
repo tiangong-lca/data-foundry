@@ -147,7 +147,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 2376ed6
+lastReviewedCommit: f8f0633
 lastReviewedNote: "Reviewed for Issue #70: the batch public owner is a five-line facade; a separately budgeted composition root wires focused Foundry stages to CLI scheduling."
 ---
 
@@ -247,6 +247,8 @@ The typed mutation reference stack remains an offline planning boundary. Referen
 The typed dataset-orchestration layer composes those owners without absorbing them. The generic library workflow prepares deduplicated library and scope artifacts; BAFU classification, auto-authoring and process-scope owners retain dataset-specific policy; the shared batch engine adds resumable ledgers, bounded parallelism, interruption/preflight modes and explicit handoff delegation. It owns local ordering and checkpoints, not CLI mutation, profile meaning, remote state or publication.
 
 BAFU flow identity equivalence is a narrow semantic boundary inside that layer. Candidate search remains Edge/database-owned, while `scripts/lib/bafu-authoring/identity-equivalence.ts` deterministically reviews returned candidates. Exact normalized names can rank a candidate but cannot suppress an ordered non-equivalence reason; only a zero-conflict exact candidate can be reused. Physically conflicting exact-name candidates flow through local `create_new` evidence and deterministic identity apply without changing the source flow UUID.
+
+BAFU category-map handling is split into two bounded leaves. `category-map-projection.ts` retains every supplied decision and manual-review artifact independent of task reachability; `category-map-report.ts` derives reader status/counts/blockers from that complete closure. Manual rows add compact source/reason/artifact blockers, produce `completed_with_manual_review`, and force a nonzero command exit; fully resolved inputs preserve the historical report bytes/status. This is local evidence control and does not move taxonomy choice or remote authority.
 
 The batch engine delegates its asynchronous post-write closure to `scripts/lib/batch-orchestration/post-write-handoff.ts`. That stage discovers the exact commit and verification reports, permits only the characterized same-id/version idempotent commit recovery, retries only classified read-only verification failures, delegates ordinary trace-hash normalization policy, and invokes Foundry closeout after successful readback. The command owner continues to supply process isolation, timeouts, paths, and profile context.
 

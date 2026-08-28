@@ -5,8 +5,8 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { buildBafuLeafCategoryMapProjectReport } from "../../scripts/lib/bafu-classification/category-map-report.ts";
 import {
-  buildBafuLeafCategoryMapProjectReport,
   parseBafuFlowProductCategorySchema,
   parseBafuProcessCategorySchema,
   projectBafuLeafCategoryMapArtifacts,
@@ -279,6 +279,26 @@ function artifactFact(bytes: string): { bytes: number; sha256: string } {
   return { bytes: Buffer.byteLength(bytes), sha256: sha256(bytes) };
 }
 
+function reportInput(label: string) {
+  return {
+    generatedAtUtc: "2026-08-29T00:00:00.000Z",
+    command: "dataset-bafu-leaf-classification-category-map-project",
+    inputs: { case: label },
+    inputHashes: { case_sha256: sha256(label) },
+    copiedDecisionFiles: [],
+    files: {
+      report: `tmp/category-map/${label}/report.json`,
+      classificationDecisions: `tmp/category-map/${label}/classification-decisions.jsonl`,
+      projectionManualReview: `tmp/category-map/${label}/projection-manual-review.jsonl`,
+      processLeafCandidates: `tmp/category-map/${label}/process-leaf-candidates.jsonl`,
+      flowProductCandidates: `tmp/category-map/${label}/flow-product-candidates.jsonl`,
+      categoryManualReview: `tmp/category-map/${label}/category-map-manual-review.jsonl`,
+      copiedDecisionFiles: [],
+    },
+    nextStep: "Resolve every manual-review row before library decisions apply.",
+  };
+}
+
 function semanticSnapshot(projection: BafuLeafCategoryMapProjection): JsonRecord {
   return {
     process_schema: {
@@ -309,7 +329,12 @@ test("category-map semantics stay below the command I/O boundary and module ceil
     path.join(repoRoot, "scripts/commands/bafu-leaf-classification-tasks.ts"),
     "utf8",
   );
+  const reportSource = fs.readFileSync(
+    path.join(repoRoot, "scripts/lib/bafu-classification/category-map-report.ts"),
+    "utf8",
+  );
   assert.ok(moduleSource.trimEnd().split("\n").length <= 800);
+  assert.ok(reportSource.trimEnd().split("\n").length <= 140);
   assert.ok(ownerSource.trimEnd().split("\n").length <= 500);
   assert.doesNotMatch(
     moduleSource,
@@ -317,6 +342,130 @@ test("category-map semantics stay below the command I/O boundary and module ceil
   );
   assert.match(moduleSource, /from "\.\/leaf-repair\.ts"/u);
   assert.match(ownerSource, /from "\.\.\/lib\/bafu-classification\/category-map-projection\.ts"/u);
+  assert.match(ownerSource, /from "\.\.\/lib\/bafu-classification\/category-map-report\.ts"/u);
+});
+
+test("unreferenced category-map manual review fails the top-level report closed", () => {
+  const resolvedProjection = projectBafuLeafCategoryMapArtifacts({
+    tasks: [],
+    originalClassificationRows: [],
+    categoryDecisionSources: [{ file: "/repo/decisions/resolved.jsonl", rows: [resolvedDecision] }],
+    processSchema,
+    flowProductSchema,
+    helpers,
+  });
+  const resolvedReport = buildBafuLeafCategoryMapProjectReport(
+    resolvedProjection,
+    reportInput("resolved"),
+  );
+  assert.equal(resolvedReport.status, "completed");
+  assert.equal("blockers" in resolvedReport, false);
+  assert.deepEqual(artifactFact(prettyJson(resolvedReport)), {
+    bytes: 2247,
+    sha256: "330d89e7f15ff9aed10453c02c423c83f8fabaa2b7417a613fa07ab073f6042d",
+  });
+
+  const cases: Array<{ categoryKey: string; reason: string; rows: JsonRecord[] }> = [
+    {
+      categoryKey: "unreferenced > conflict",
+      reason: "category_map_decision_conflict",
+      rows: [
+        {
+          category_key: "unreferenced > conflict",
+          decision_status: "completed",
+          selected_code: "2013",
+          basis: "First completed choice.",
+          authoring_context: { context_bundle_sha256: "1".repeat(64) },
+        },
+        {
+          category_key: "unreferenced > conflict",
+          decision_status: "completed",
+          selected_code: "3512",
+          basis: "Conflicting completed choice.",
+          authoring_context: { context_bundle_sha256: "2".repeat(64) },
+        },
+      ],
+    },
+    {
+      categoryKey: "unreferenced > invalid",
+      reason: "category_map_decision_code_invalid",
+      rows: [
+        {
+          category_key: "unreferenced > invalid",
+          decision_status: "completed",
+          selected_code: "9999",
+          basis: "Unknown leaf code.",
+          authoring_context: { context_bundle_sha256: "3".repeat(64) },
+        },
+      ],
+    },
+    {
+      categoryKey: "unreferenced > missing context",
+      reason: "category_map_decision_context_bundle_missing",
+      rows: [
+        {
+          category_key: "unreferenced > missing context",
+          decision_status: "completed",
+          selected_code: "2013",
+          basis: "Valid leaf without task-bound context.",
+        },
+      ],
+    },
+    {
+      categoryKey: "unreferenced > incomplete",
+      reason: "category_map_decision_not_completed",
+      rows: [
+        {
+          category_key: "unreferenced > incomplete",
+          decision_status: "manual_review",
+          basis: "No completed semantic choice.",
+        },
+      ],
+    },
+  ];
+
+  for (const item of cases) {
+    const decisionFile = `/repo/decisions/${item.reason}.jsonl`;
+    const projection = projectBafuLeafCategoryMapArtifacts({
+      tasks: [],
+      originalClassificationRows: [],
+      categoryDecisionSources: [{ file: decisionFile, rows: item.rows }],
+      processSchema,
+      flowProductSchema,
+      helpers,
+    });
+    assert.equal(projection.projectionManualReview.length, 0, item.reason);
+    assert.equal(projection.flowProductManualReview.length, 0, item.reason);
+    assert.equal(projection.categoryMap.manualReview.length, 1, item.reason);
+    assert.equal(projection.categoryManualReview.length, 1, item.reason);
+
+    const input = reportInput(item.reason);
+    const report = buildBafuLeafCategoryMapProjectReport(projection, input);
+    assert.equal(report.status, "completed_with_manual_review", item.reason);
+    assert.equal((report.counts as JsonRecord).category_map_manual_review, 1, item.reason);
+    assert.equal((report.counts as JsonRecord).category_manual_review_rows, 1, item.reason);
+    assert.equal(Array.isArray(report.blockers), true, item.reason);
+    const blockers = report.blockers as JsonRecord[];
+    assert.deepEqual(
+      blockers.map((blocker) => [
+        blocker.code,
+        blocker.source,
+        blocker.reason,
+        blocker.category_key,
+        blocker.manual_review_file,
+      ]),
+      [
+        [
+          "category_map_manual_review_required",
+          "category_map_decisions",
+          item.reason,
+          item.categoryKey,
+          input.files.categoryManualReview,
+        ],
+      ],
+      item.reason,
+    );
+  }
 });
 
 test("category-map projection freezes resolved and fail-closed BAFU leaf artifacts", () => {
@@ -436,6 +585,7 @@ test("category-map projection freezes resolved and fail-closed BAFU leaf artifac
     "inputs",
     "input_hashes",
     "counts",
+    "blockers",
     "copied_decision_files",
     "policy",
     "files",
@@ -480,8 +630,8 @@ test("category-map projection freezes resolved and fail-closed BAFU leaf artifac
       sha256: "5c5b2d728d85ef4a4f4e24b6322660f5ed6e8874525acadad26f8938c1c1fcac",
     },
     report: {
-      bytes: 3192,
-      sha256: "911305fe67c241ad7388e8849f85ee1c97e3f087f54b62dbcac7246acff02963",
+      bytes: 10_840,
+      sha256: "4f4fa4d169c9e797e0e185f720e1bcbe64ad8ee115e5ca3265efb20caed4f09f",
     },
   });
 });

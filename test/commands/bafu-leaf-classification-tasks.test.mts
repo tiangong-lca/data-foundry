@@ -118,12 +118,12 @@ function processPayload({
   };
 }
 
-function runFoundry(command: string, args: string[]) {
+function runFoundry(command: string, args: string[], expectedStatus = 0) {
   const result = spawnSync(process.execPath, ["scripts/foundry.ts", command, ...args], {
     cwd: repoRoot,
     encoding: "utf8",
   });
-  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(result.status, expectedStatus, result.stderr || result.stdout);
   return JSON.parse(result.stdout);
 }
 
@@ -795,20 +795,24 @@ test("BAFU leaf category-map projection writes task-bound decisions and candidat
     },
   ]);
 
-  const report = runFoundry("dataset-bafu-leaf-classification-category-map-project", [
-    "--task-dir",
-    rel(taskDir),
-    "--category-map-decisions-dir",
-    rel(categoryDecisionDir),
-    "--source-decisions-dir",
-    rel(decisionsDir),
-    "--process-category-schema",
-    rel(processSchema),
-    "--flow-product-category-schema",
-    rel(flowProductSchema),
-    "--out-dir",
-    rel(outDir),
-  ]);
+  const report = runFoundry(
+    "dataset-bafu-leaf-classification-category-map-project",
+    [
+      "--task-dir",
+      rel(taskDir),
+      "--category-map-decisions-dir",
+      rel(categoryDecisionDir),
+      "--source-decisions-dir",
+      rel(decisionsDir),
+      "--process-category-schema",
+      rel(processSchema),
+      "--flow-product-category-schema",
+      rel(flowProductSchema),
+      "--out-dir",
+      rel(outDir),
+    ],
+    1,
+  );
 
   assert.equal(report.status, "completed_with_manual_review");
   assert.equal(report.counts.projected_process_decisions, 1);

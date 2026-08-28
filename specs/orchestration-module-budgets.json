@@ -20,6 +20,7 @@
     "scripts/lib/bafu-authoring/identity-equivalence.ts": 498,
     "scripts/lib/bafu-authoring/patch-projection.ts": 793,
     "scripts/lib/bafu-classification/category-map-projection.ts": 656,
+    "scripts/lib/bafu-classification/category-map-report.ts": 140,
     "scripts/lib/bafu-classification/leaf-repair.ts": 1056,
     "scripts/lib/bafu-classification/schema-repair.ts": 283,
     "scripts/lib/bafu-classification/task-preparation.ts": 595,
