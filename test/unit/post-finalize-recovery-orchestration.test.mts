@@ -26,7 +26,7 @@ interface RecoveryHarness {
   invocations: PostFinalizeRecoveryArgvStageInput[];
 }
 
-const fakeRepoRoot = "/repo";
+const fakeRepoRoot = path.resolve(path.sep, "repo");
 const processExecutable = "/runtime/node";
 const foundryEntryPath = "scripts/foundry.ts";
 const testDir = path.dirname(fileURLToPath(import.meta.url));
@@ -46,14 +46,29 @@ function textValue(value: unknown): string {
 function resolveRepoPath(value: unknown): string | null {
   const text = textValue(value);
   if (!text) return null;
-  return path.posix.isAbsolute(text) ? text : path.posix.join(fakeRepoRoot, text);
+  return path.isAbsolute(text) ? text : path.join(fakeRepoRoot, text);
 }
 
 function repoRelative(filePath: string | null | undefined): string {
   if (!filePath) return "";
-  return path.posix.isAbsolute(filePath)
-    ? path.posix.relative(fakeRepoRoot, filePath)
-    : filePath.replace(/^\.\//u, "");
+  return (path.isAbsolute(filePath) ? path.relative(fakeRepoRoot, filePath) : filePath)
+    .replaceAll("\\", "/")
+    .replace(/^\.\//u, "");
+}
+
+function repoPath(...parts: string[]): string {
+  return path.join(fakeRepoRoot, ...parts);
+}
+
+function portableValue(value: unknown): unknown {
+  if (typeof value === "string") return value.replaceAll("\\", "/");
+  if (Array.isArray(value)) return value.map(portableValue);
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [key, portableValue(child)]),
+    );
+  }
+  return value;
 }
 
 function shellQuote(value: string): string {
@@ -123,7 +138,7 @@ function assertFrozen(
   value: unknown,
   expected: { bytes: number; sha256: string },
 ): void {
-  const serialized = JSON.stringify(value);
+  const serialized = JSON.stringify(portableValue(value));
   assert.equal(Buffer.byteLength(serialized), expected.bytes, `${name}: byte count`);
   assert.equal(
     createHash("sha256").update(serialized).digest("hex"),
@@ -193,9 +208,9 @@ test("post-finalize identity recovery preserves task, autofill, and apply argv p
   const result = runPostFinalizeIdentityRecovery(
     {
       finalizeReport: { files: { curation_gate_report: gateReport } },
-      currentRowsFile: "/repo/run/processes.cleaned.jsonl",
-      outDir: "/repo/run",
-      logDir: "/repo/run/logs",
+      currentRowsFile: repoPath("run", "processes.cleaned.jsonl"),
+      outDir: repoPath("run"),
+      logDir: repoPath("run", "logs"),
       attempt: 1,
     },
     adapter,
@@ -251,7 +266,7 @@ test("post-finalize identity recovery preserves task, autofill, and apply argv p
   assert.equal(result.status, "completed");
   assert.equal(
     result.rowsFile,
-    "/repo/run/post-finalize-1-identity-apply/processes.identity-applied.jsonl",
+    repoPath("run", "post-finalize-1-identity-apply", "processes.identity-applied.jsonl"),
   );
   assert.deepEqual(
     result.stages?.map((stage) => stage.stage),
@@ -294,7 +309,9 @@ test("post-finalize semantic recovery preserves task, autofill, collect, and app
             path: "run/post-finalize-2-semantic-task/authoring-patch-collect-report.json",
             value: {
               status: "ready_for_patch_apply",
-              files: { batch_patch: "/repo/run/custom/semantic-patches.batch.json" },
+              files: {
+                batch_patch: repoPath("run", "custom", "semantic-patches.batch.json"),
+              },
             },
           },
         ],
@@ -317,9 +334,9 @@ test("post-finalize semantic recovery preserves task, autofill, collect, and app
   const result = runPostFinalizeSemanticRecovery(
     {
       finalizeReport: { files: { curation_gate_report: gateReport } },
-      currentRowsFile: "/repo/run/processes.identity-applied.jsonl",
-      outDir: "/repo/run",
-      logDir: "/repo/run/logs",
+      currentRowsFile: repoPath("run", "processes.identity-applied.jsonl"),
+      outDir: repoPath("run"),
+      logDir: repoPath("run", "logs"),
       attempt: 2,
     },
     adapter,
@@ -385,7 +402,10 @@ test("post-finalize semantic recovery preserves task, autofill, collect, and app
     ],
   );
   assert.equal(result.status, "completed");
-  assert.equal(result.rowsFile, "/repo/run/post-finalize-2-semantic-task/processes.final.jsonl");
+  assert.equal(
+    result.rowsFile,
+    repoPath("run", "post-finalize-2-semantic-task", "processes.final.jsonl"),
+  );
   assert.deepEqual(
     result.stages?.map((stage) => stage.stage),
     [
@@ -408,9 +428,9 @@ test("post-finalize recovery stops on missing gate and missing stage evidence", 
       finalizeReport: {
         files: { curation_gate_report: "run/finalize/missing-curation-gate.json" },
       },
-      currentRowsFile: "/repo/run/processes.cleaned.jsonl",
-      outDir: "/repo/run",
-      logDir: "/repo/run/logs",
+      currentRowsFile: repoPath("run", "processes.cleaned.jsonl"),
+      outDir: repoPath("run"),
+      logDir: repoPath("run", "logs"),
       attempt: 3,
     },
     missingGateHarness.adapter,
@@ -432,9 +452,9 @@ test("post-finalize recovery stops on missing gate and missing stage evidence", 
   const missingIdentityTask = runPostFinalizeIdentityRecovery(
     {
       finalizeReport: { files: { curation_gate_report: gateReport } },
-      currentRowsFile: "/repo/run/processes.cleaned.jsonl",
-      outDir: "/repo/run",
-      logDir: "/repo/run/logs",
+      currentRowsFile: repoPath("run", "processes.cleaned.jsonl"),
+      outDir: repoPath("run"),
+      logDir: repoPath("run", "logs"),
       attempt: 4,
     },
     missingIdentityTaskHarness.adapter,
@@ -473,9 +493,9 @@ test("post-finalize recovery stops on missing gate and missing stage evidence", 
   const missingCollect = runPostFinalizeSemanticRecovery(
     {
       finalizeReport: { files: { curation_gate_report: gateReport } },
-      currentRowsFile: "/repo/run/processes.cleaned.jsonl",
-      outDir: "/repo/run",
-      logDir: "/repo/run/logs",
+      currentRowsFile: repoPath("run", "processes.cleaned.jsonl"),
+      outDir: repoPath("run"),
+      logDir: repoPath("run", "logs"),
       attempt: 5,
     },
     missingCollectHarness.adapter,

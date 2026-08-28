@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import path from "node:path";
 import test from "node:test";
 
 interface JsonRecord {
@@ -434,8 +435,9 @@ test("library elementary identity projection freezes exact rows, order, bytes, S
 test("identity preflight aliases preserve exact precedence, defaults and key bytes", async () => {
   const { identityPreflightArtifactPaths, identityPreflightKey } =
     await import("../../scripts/lib/library-orchestration/identity-preflight-projection.ts");
+  const fakeRoot = path.resolve(path.sep, "repo");
   const resolveRepoPath = (value: unknown): string | null =>
-    value ? `/repo/${String(value)}` : null;
+    value ? path.join(fakeRoot, String(value)) : null;
 
   assert.deepEqual(
     identityPreflightArtifactPaths(
@@ -449,13 +451,13 @@ test("identity preflight aliases preserve exact precedence, defaults and key byt
       resolveRepoPath,
     ),
     {
-      reportPath: "/repo/expected-report.json",
-      candidatesPath: "/repo/expected-candidates.jsonl",
+      reportPath: path.join(fakeRoot, "expected-report.json"),
+      candidatesPath: path.join(fakeRoot, "expected-candidates.jsonl"),
     },
   );
   assert.deepEqual(identityPreflightArtifactPaths({ outputDir: "flow-run" }, resolveRepoPath), {
-    reportPath: "/repo/flow-run/outputs/identity-decision.json",
-    candidatesPath: "/repo/flow-run/outputs/identity-candidates.jsonl",
+    reportPath: path.join(fakeRoot, "flow-run", "outputs", "identity-decision.json"),
+    candidatesPath: path.join(fakeRoot, "flow-run", "outputs", "identity-candidates.jsonl"),
   });
   assert.equal(
     identityPreflightKey({ type: "flow", source_dataset_id: "ef", version: "" }),

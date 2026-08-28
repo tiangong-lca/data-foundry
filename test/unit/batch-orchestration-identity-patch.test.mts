@@ -45,6 +45,17 @@ function record(value: unknown): IdentityPatchJsonRecord {
     : {};
 }
 
+function portableValue(value: unknown): unknown {
+  if (typeof value === "string") return value.replaceAll("\\", "/");
+  if (Array.isArray(value)) return value.map(portableValue);
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [key, portableValue(child)]),
+    );
+  }
+  return value;
+}
+
 function recordArray(value: unknown): IdentityPatchJsonRecord[] {
   return Array.isArray(value) ? value.map(record) : [];
 }
@@ -340,10 +351,9 @@ test("BAFU identity autofill preserves identity, authoring, collect, and patch-a
     ]);
     assert.equal(
       sha256Text(
-        JSON.stringify({ result, stages: stages.map((stage) => stage.stage) }).replaceAll(
-          root,
-          "<root>",
-        ),
+        JSON.stringify(
+          portableValue({ result, stages: stages.map((stage) => stage.stage) }),
+        ).replaceAll(root.replaceAll("\\", "/"), "<root>"),
       ),
       "98e939026220b848dab54cf1a0fabfa69b256c0b44053e0f7df9dd6778a280d2",
     );

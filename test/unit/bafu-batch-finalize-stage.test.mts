@@ -107,12 +107,12 @@ function finalizeInput(root: string): BatchFinalizeArgsInput {
 }
 
 test("BAFU finalize planner preserves source rows, gate evidence, and exact argv order", () => {
-  const root = "/repo";
+  const root = path.resolve(path.sep, "repo");
   const service = createBatchFinalizeStageService(makeAdapter({ root, profile: "bafu" }));
 
   assert.deepEqual(service.buildFinalizeArgs(finalizeInput(root)), [
     "/runtime/node",
-    "/repo/scripts/foundry.ts",
+    path.join(root, "scripts", "foundry.ts"),
     "dataset-post-authoring-finalize",
     "--type",
     "process",
@@ -167,7 +167,7 @@ test("BAFU finalize planner preserves source rows, gate evidence, and exact argv
 });
 
 test("USLCI finalize planner threads the complete frozen library contact after common flags", () => {
-  const root = "/repo";
+  const root = path.resolve(path.sep, "repo");
   const service = createBatchFinalizeStageService(
     makeAdapter({
       root,
@@ -215,7 +215,7 @@ test("USLCI finalize planner threads the complete frozen library contact after c
 });
 
 test("Worldsteel finalize planner appends account-local FP/UG support inputs after library contact", () => {
-  const root = "/repo";
+  const root = path.resolve(path.sep, "repo");
   const service = createBatchFinalizeStageService(
     makeAdapter({
       root,
