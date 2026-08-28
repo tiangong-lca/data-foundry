@@ -339,6 +339,79 @@ test("ready handoff commits once, verifies exact rows, closes out, and preserves
   );
 });
 
+test("same-id lost success recovers only through exact readback without replay", () => {
+  const { result, events } = runHarness({
+    commitStatus: 1,
+    commitReport: {
+      status: "failed",
+      counts: { failed: 1 },
+      failures: [
+        {
+          code: "23505",
+          message: "same id and version already exists",
+          dataset_id: "process-a",
+          dataset_version: "01.00.000",
+        },
+      ],
+    },
+  });
+
+  assert.equal(result.status, "completed");
+  assert.equal(events.filter((event) => event === "spec:process.commit:save-draft").length, 1);
+  assert.equal(
+    events.filter((event) => event === "spec:process.post_write_verify:verify-remote").length,
+    1,
+  );
+  assert.deepEqual(
+    result.stages.map((stage) => stage.stage),
+    [
+      "process.commit",
+      "process.commit.readback_recovery_pending",
+      "process.post_write_verify",
+      "process.closeout",
+    ],
+  );
+});
+
+test("same-id conflict with payload mismatch stays failed and never replays commit", () => {
+  const { result, events } = runHarness({
+    commitStatus: 1,
+    commitReport: {
+      status: "failed",
+      counts: { failed: 1 },
+      failures: [
+        {
+          code: "23505",
+          message: "same id and version already exists",
+          dataset_id: "process-a",
+          dataset_version: "01.00.000",
+        },
+      ],
+    },
+    verifyAttempts: [
+      {
+        status: 1,
+        report: {
+          status: "blocked_remote_verification",
+          blockers: [{ code: "root_payload_mismatch" }],
+        },
+      },
+    ],
+  });
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.blockers[0]?.code, "post_write_verify_command_failed");
+  assert.equal(events.filter((event) => event === "spec:process.commit:save-draft").length, 1);
+  assert.equal(
+    events.filter((event) => event === "spec:process.post_write_verify:verify-remote").length,
+    1,
+  );
+  assert.equal(
+    events.some((event) => event.startsWith("argv:process.closeout")),
+    false,
+  );
+});
+
 test("commit failure is at-most-once and already-exists evidence is not silently re-executed", () => {
   for (const commitReport of [
     null,

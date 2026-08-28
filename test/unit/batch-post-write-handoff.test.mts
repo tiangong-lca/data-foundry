@@ -283,3 +283,34 @@ test("batch post-write handoff rejects non-idempotent commit failures before ver
     false,
   );
 });
+
+test("batch post-write handoff rejects already-exists text without an explicit 23505 code", async () => {
+  const harness = createHarness({
+    commitExitCode: 1,
+    commitReport: {
+      rows: [
+        {
+          status: "failed",
+          error: {
+            code: "permission_denied",
+            message: "A dataset with the same id and version already exists",
+          },
+        },
+      ],
+    },
+  });
+  const result = await createBatchPostWriteHandoffService(harness.adapter).execute({
+    handoffPlanPath: harness.handoffPlanPath,
+    ledgerDir: "/repo/ledger",
+    outDir: "/repo/handoff",
+    logDir: "/repo/logs",
+    label: "process",
+  });
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.blockers[0]?.code, "commit_handoff_command_failed");
+  assert.equal(
+    harness.events.some((event) => event.includes("post_write_verify")),
+    false,
+  );
+});
