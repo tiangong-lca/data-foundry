@@ -83,9 +83,9 @@ checkPaths:
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
-lastReviewedNote: "Reviewed for Issue #69: strict datetime and non-destructive stale reporting do not change the 63-command surface, categories, profiles or remote-write modes."
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: 1f6df31bca8cd149b4e35318b37c3a599cf20ae9
+lastReviewedNote: "Reviewed for Issue #82: pnpm 11.24.0 changes no 63-command surface, metadata owner, help/stdout/exit behavior, profile, artifact, or remote-write mode."
 ---
 
 # Foundry Command Surface
@@ -100,6 +100,8 @@ Foundry CLI-spine and command governance has three checked contracts:
 The metadata module must cover every command returned by `node scripts/foundry.ts help`. It records each command category, owner module, owner export, input artifacts, output artifacts, workflow entry audit state, and key behavior checks.
 
 Issue #63 preserved the public command categories and behavior while establishing the Node.js 24 / pnpm 11.23 / TypeScript 7.0.2 spine. The argument parser and command registry are native TypeScript leaves; `test/unit/foundry-cli-spine.test.mts` fixes scalar/argv parsing, exact help JSON, exit mapping, and static consumers. The migration is complete, and `test/unit/zero-javascript-ratchet.test.mts` prevents JavaScript owners or compatibility globs from returning. Later work must still preserve command names, help, stdout, exit codes, stage contracts, artifacts, and remote-write modes through focused characterization and real cases.
+
+Issue #82 updates the current package-manager pin to pnpm 11.24.0 without touching that historical command migration or any command registry, metadata, help, stdout, exit, artifact, profile, or write-mode contract.
 
 Wave 25 moves the existing identity, classification, and location owner factories to `.ts` without changing their command metadata or dispatcher topology. The migration tests fix owner/export identity and exact help bytes, while the existing command/scenario fixtures remain the behavior authority for aliases, defaults, queue/path order, blockers, deterministic CLI apply stages, local artifacts, and fail-closed errors.
 

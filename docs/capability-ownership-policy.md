@@ -85,9 +85,9 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
-lastReviewedNote: "Reviewed for Issue #69: strict datetime and non-destructive blocked artifact reporting stay in Data Foundry; Rust schema and CLI/database authority do not move."
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: 1f6df31bca8cd149b4e35318b37c3a599cf20ae9
+lastReviewedNote: "Reviewed for Issue #82: pnpm 11.24.0 is repository-local toolchain ownership and moves no Rust, CLI, database, profile, or production authority."
 ---
 
 # Capability Ownership Policy
@@ -97,6 +97,8 @@ Foundry must distinguish project-specific orchestration from shared TianGong cap
 ## Boundary
 
 Foundry owns:
+
+- its exact pnpm package-manager contract, sole root workspace/lock, and repository-local validation gates;
 
 - task queue and task state;
 - per-task workspace layout;
