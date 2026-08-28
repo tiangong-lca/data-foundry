@@ -37,7 +37,7 @@ function write(filePath: string, text: string): void {
 }
 
 test("installed TIDAS schema resolution is exact, pinned, sorted, and missing-safe", () => {
-  assert.deepEqual(tidasSchemaSearchRoots, ["@tiangong-lca/cli@0.1.2/assets/tidas-schemas"]);
+  assert.deepEqual(tidasSchemaSearchRoots, ["@tiangong-lca/cli@0.1.3/assets/tidas-schemas"]);
   const schemaDir = firstTidasSchemaDir("ignored-root");
   assert.ok(schemaDir);
   assert.equal(fs.statSync(schemaDir).isDirectory(), true);

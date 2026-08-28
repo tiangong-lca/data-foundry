@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { createRequire } from "node:module";
 import os from "node:os";
 import test from "node:test";
 
@@ -22,63 +21,23 @@ import {
   writeJsonLines,
   writeText,
 } from "../fixtures/foundry-core.ts";
-
-const require = createRequire(import.meta.url);
-const cliAuth = require("@tiangong-lca/cli/dist/src/lib/auth-identity-receipt.js") as {
-  __testInternals: {
-    requestFingerprint(projectRef: string): string;
-    responseFingerprint(input: {
-      projectRef: string;
-      userId: string;
-      displayEmail: string;
-    }): string;
-    sha256Json(value: unknown): string;
-  };
-};
+import {
+  testAuthIdentityReceipt,
+  testCanonicalJsonSha256,
+} from "../fixtures/auth-identity-receipt.ts";
 
 const PROJECT_REF = "qgzvkongdjqiiamzbbts";
 const USER_ID = "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7";
 const CONTACT_ID = "11111111-2222-4333-8444-555555555555";
 const TEST_KEY = "fixture-production-test-key-never-persist";
 
-function receipt(capturedAtUtc: string, packageVersion = "0.1.2") {
-  const scope = {
-    schema: "tiangong-lca.auth-identity-receipt.v1",
-    status: "passed",
-    operation: "current-user-read",
-    remote_write_mode: "read-only",
-    captured_at_utc: capturedAtUtc,
-    cli: { package_name: "@tiangong-lca/cli", package_version: packageVersion },
-    project: {
-      project_ref: PROJECT_REF,
-      project_base_url: `https://${PROJECT_REF}.supabase.co`,
-    },
-    identity: { user_id: USER_ID, display_email: "te****@example.com" },
-    session: {
-      source: "signin",
-      cache_mode: "disabled",
-      force_reauth: true,
-      expires_at_utc: null,
-    },
-    bindings: {
-      request_sha256: cliAuth.__testInternals.requestFingerprint(PROJECT_REF),
-      response_sha256: cliAuth.__testInternals.responseFingerprint({
-        projectRef: PROJECT_REF,
-        userId: USER_ID,
-        displayEmail: "te****@example.com",
-      }),
-    },
-    assertions: {
-      mode: "intent-bound",
-      requested_count: 2,
-      expected_project_ref: PROJECT_REF,
-      expected_user_id: USER_ID,
-      project_ref_passed: true,
-      user_id_passed: true,
-      passed: true,
-    },
-  };
-  return { ...scope, receipt_scope_sha256: cliAuth.__testInternals.sha256Json(scope) };
+function receipt(capturedAtUtc: string, packageVersion = "0.1.3") {
+  return testAuthIdentityReceipt({
+    projectRef: PROJECT_REF,
+    userId: USER_ID,
+    capturedAtUtc,
+    packageVersion,
+  });
 }
 
 function option(args: string[], name: string): string {
@@ -177,7 +136,7 @@ test("production contact case requires POSIX-private ignored output before runti
     return {
       entrypoint: "/never/started.js",
       cliPackageName: "@tiangong-lca/cli",
-      cliPackageVersion: "0.1.2",
+      cliPackageVersion: "0.1.3",
       cliEntrypointSha256: "a".repeat(64),
       cliRuntimeSha256: "b".repeat(64),
       runnerSha256: "c".repeat(64),
@@ -333,7 +292,7 @@ test(
     let commitDispatches = 0;
     let runtimeCleanups = 0;
     let successfulSpawn: RunProductionContactDraftCaseDeps["spawnImpl"];
-    let receiptPackageVersion = "0.1.2";
+    let receiptPackageVersion = "0.1.3";
     let authCallsThisRun = 0;
     let mutateAfterWriteReceipt = false;
     let extraPostwriteCheckStatus: string | null = null;
@@ -347,7 +306,7 @@ test(
     ) => ({
       entrypoint: "/trusted/private/cli.js",
       cliPackageName: "@tiangong-lca/cli",
-      cliPackageVersion: "0.1.2",
+      cliPackageVersion: "0.1.3",
       cliEntrypointSha256: "a".repeat(64),
       cliRuntimeSha256: "b".repeat(64),
       runnerSha256: "c".repeat(64),
@@ -488,7 +447,7 @@ test(
                 "remote-verification.jsonl",
               );
               const payload = JSON.parse(fs.readFileSync(input as string, "utf8").trim());
-              const payloadSha = cliAuth.__testInternals.sha256Json(payload);
+              const payloadSha = testCanonicalJsonSha256(payload);
               writeJsonLines(checksPath, [
                 {
                   row_index: 0,
@@ -758,7 +717,7 @@ test(
         ),
         /receipt CLI does not match the pinned runtime/u,
       );
-      receiptPackageVersion = "0.1.2";
+      receiptPackageVersion = "0.1.3";
       assert.equal(
         readJson(path.join(wrongReceiptOutDir, "case-failure.json")).mutation_dispatch_count,
         0,

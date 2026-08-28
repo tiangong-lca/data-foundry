@@ -3,30 +3,10 @@ import {
   sha256Text,
   validateIdentityPreflightExecution,
 } from "../../scripts/lib/identity-preflight-proof.ts";
-import type { AuthIdentityReceipt } from "../../scripts/lib/identity-preflight-proof.ts";
-import { createRequire } from "node:module";
+import { testAuthIdentityReceipt } from "./auth-identity-receipt.ts";
 import { fs, path, rel, writeJson, writeJsonLines } from "./foundry-core.ts";
 
-const require = createRequire(import.meta.url);
-const cliAuthInternals = (
-  require("@tiangong-lca/cli/dist/src/lib/auth-identity-receipt.js") as {
-    __testInternals: {
-      requestFingerprint(projectRef: string): string;
-      responseFingerprint(input: {
-        projectRef: string;
-        userId: string;
-        displayEmail: string;
-      }): string;
-      sha256Json(value: unknown): string;
-    };
-  }
-).__testInternals;
-
-export interface AuthIdentityReceiptFixtureOptions {
-  projectRef?: string;
-  userId?: string;
-  capturedAtUtc?: string;
-}
+export { testAuthIdentityReceipt };
 
 export interface IdentityPreflightExecutionFixtureOptions {
   datasetType: string;
@@ -59,51 +39,6 @@ export interface IdentityPreflightFixtureRow {
   nextAction?: string;
 }
 
-export function testAuthIdentityReceipt({
-  projectRef = "qgzvkongdjqiiamzbbts",
-  userId = "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
-  capturedAtUtc = new Date().toISOString(),
-}: AuthIdentityReceiptFixtureOptions = {}): AuthIdentityReceipt {
-  const displayEmail = "te****@example.com";
-  const scope = {
-    schema: "tiangong-lca.auth-identity-receipt.v1",
-    status: "passed" as const,
-    operation: "current-user-read",
-    remote_write_mode: "read-only",
-    captured_at_utc: capturedAtUtc,
-    cli: { package_name: "@tiangong-lca/cli", package_version: "0.1.2" },
-    project: {
-      project_ref: projectRef,
-      project_base_url: `https://${projectRef}.supabase.co`,
-    },
-    identity: { user_id: userId, display_email: displayEmail },
-    session: {
-      source: "signin",
-      cache_mode: "disabled",
-      force_reauth: true,
-      expires_at_utc: null,
-    },
-    bindings: {
-      request_sha256: cliAuthInternals.requestFingerprint(projectRef),
-      response_sha256: cliAuthInternals.responseFingerprint({
-        projectRef,
-        userId,
-        displayEmail,
-      }),
-    },
-    assertions: {
-      mode: "intent-bound",
-      requested_count: 2,
-      expected_project_ref: projectRef,
-      expected_user_id: userId,
-      project_ref_passed: true,
-      user_id_passed: true,
-      passed: true,
-    },
-  };
-  return { ...scope, receipt_scope_sha256: cliAuthInternals.sha256Json(scope) };
-}
-
 export function writeIdentityPreflightExecutionFixture({
   datasetType,
   id,
@@ -127,7 +62,7 @@ export function writeIdentityPreflightExecutionFixture({
     semanticArgv: [datasetType, "identity-preflight", "--json", "--timeout-ms", "60000"],
     cli: {
       packageName: "@tiangong-lca/cli",
-      packageVersion: "0.1.2",
+      packageVersion: "0.1.3",
       packageIntegrity: null,
     },
     authReceipt: testAuthIdentityReceipt({ capturedAtUtc: "2026-08-25T00:00:00.000Z" }),

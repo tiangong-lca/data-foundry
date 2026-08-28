@@ -1,30 +1,13 @@
 import { createHash } from "node:crypto";
-import { createRequire } from "node:module";
+
+import {
+  parseAuthIdentityReceipt,
+  type AuthIdentityReceipt as CliAuthIdentityReceipt,
+} from "@tiangong-lca/cli/auth-identity-receipt";
 
 type JsonRecord = Record<string, unknown>;
 
-export type AuthIdentityReceipt = {
-  schema: string;
-  status: "passed";
-  captured_at_utc: string;
-  cli: { package_name: string; package_version: string };
-  project: { project_ref: string; project_base_url: string };
-  identity: { user_id: string; display_email: string };
-  session: {
-    source: string;
-    cache_mode: string;
-    force_reauth: boolean;
-    expires_at_utc: string | null;
-  };
-  assertions: {
-    mode: string;
-    expected_project_ref: string | null;
-    expected_user_id: string | null;
-    passed: boolean;
-  };
-  receipt_scope_sha256: string;
-  [key: string]: unknown;
-};
+export type AuthIdentityReceipt = CliAuthIdentityReceipt;
 
 export type CliIdentity = {
   packageName: string;
@@ -88,10 +71,6 @@ export type ExecutionManifest = {
 type ValidationFailure = { ok: false; code: string; message: string };
 type ValidationSuccess = { ok: true; report: JsonRecord; manifest: ExecutionManifest };
 
-const require = createRequire(import.meta.url);
-const cliAuth = require("@tiangong-lca/cli/dist/src/lib/auth-identity-receipt.js") as {
-  parseAuthIdentityReceipt(value: unknown): AuthIdentityReceipt;
-};
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const ALLOWED_REPORT_STATUSES = new Set(["passed", "blocked", "needs_review"]);
 
@@ -143,7 +122,7 @@ export function parseFreshIntentBoundAuthReceipt(
   ) {
     throw new Error("Auth receipt freshness options are invalid.");
   }
-  const receipt = cliAuth.parseAuthIdentityReceipt(value);
+  const receipt = parseAuthIdentityReceipt(value);
   const capturedAtMs = Date.parse(receipt.captured_at_utc);
   const ageMs = options.nowMs - capturedAtMs;
   if (!Number.isFinite(capturedAtMs) || ageMs < -5_000 || ageMs > options.maxAgeMs) {

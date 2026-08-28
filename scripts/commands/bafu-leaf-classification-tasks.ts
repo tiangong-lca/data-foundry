@@ -177,7 +177,7 @@ function loadProcessCategorySchema(schemaPath: unknown): BafuLeafCategorySchema 
     resolveRepoPath(schemaPath) || installedCliSchemaPath("tidas_processes_category.json");
   if (!resolved || !fs.existsSync(resolved)) {
     throw new Error(
-      "--process-category-schema is required unless the installed @tiangong-lca/cli@0.1.2 process category schema exists.",
+      "--process-category-schema is required unless the installed @tiangong-lca/cli@0.1.3 process category schema exists.",
     );
   }
   return parseBafuProcessCategorySchema({
@@ -192,7 +192,7 @@ function loadFlowProductCategorySchema(schemaPath: unknown): BafuLeafCategorySch
     resolveRepoPath(schemaPath) || installedCliSchemaPath("tidas_flows_product_category.json");
   if (!resolved || !fs.existsSync(resolved)) {
     throw new Error(
-      "--flow-product-category-schema is required unless the installed @tiangong-lca/cli@0.1.2 flow product category schema exists.",
+      "--flow-product-category-schema is required unless the installed @tiangong-lca/cli@0.1.3 flow product category schema exists.",
     );
   }
   return parseBafuFlowProductCategorySchema({

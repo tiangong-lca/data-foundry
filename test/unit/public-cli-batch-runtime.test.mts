@@ -4,17 +4,21 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { resolveInstalledTiangongLcaCliPackage } from "../../scripts/lib/foundry-runtime-utils.ts";
+import { parseAuthIdentityReceipt } from "@tiangong-lca/cli/auth-identity-receipt";
 
-test("Foundry consumes the published CLI 0.1.2 batch engine and run lock", async () => {
+import { resolveInstalledTiangongLcaCliPackage } from "../../scripts/lib/foundry-runtime-utils.ts";
+import { testAuthIdentityReceipt } from "../fixtures/auth-identity-receipt.ts";
+
+test("Foundry consumes the published CLI 0.1.3 batch, run-lock, and auth parser exports", async () => {
   const installed = resolveInstalledTiangongLcaCliPackage();
-  assert.equal(installed.packageVersion, "0.1.2");
-  assert.equal(installed.packageSpec, "@tiangong-lca/cli@0.1.2");
+  assert.equal(installed.packageVersion, "0.1.3");
+  assert.equal(installed.packageSpec, "@tiangong-lca/cli@0.1.3");
 
   const batch = await import("@tiangong-lca/cli/batch");
   assert.equal(typeof batch.createBatchContract, "function");
   assert.equal(typeof batch.runBoundedBatch, "function");
   assert.equal(typeof batch.withBatchRunLock, "function");
+  assert.equal(parseAuthIdentityReceipt(testAuthIdentityReceipt()).cli.package_version, "0.1.3");
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-public-cli-batch-"));
   try {
@@ -51,6 +55,18 @@ test("Foundry consumes the published CLI 0.1.2 batch engine and run lock", async
       ["scope-a:completed", "scope-b:completed"],
     );
     assert.equal(fs.existsSync(batch.batchRunLockPath(root)), false);
+    const unsupportedDeepPath = [
+      "@tiangong-lca/cli",
+      "dist",
+      "src",
+      "lib",
+      "auth-identity-receipt.js",
+    ].join("/");
+    await assert.rejects(import(unsupportedDeepPath), (error: unknown) => {
+      return (
+        error instanceof Error && "code" in error && error.code === "ERR_PACKAGE_PATH_NOT_EXPORTED"
+      );
+    });
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

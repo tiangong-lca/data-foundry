@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createRequire } from "node:module";
 import test from "node:test";
 
 import {
@@ -10,66 +9,19 @@ import {
   validateIdentityPreflightEvidence,
   validateIdentityPreflightExecution,
 } from "../../scripts/lib/identity-preflight-proof.ts";
-
-const require = createRequire(import.meta.url);
-const cliAuth = require("@tiangong-lca/cli/dist/src/lib/auth-identity-receipt.js") as {
-  __testInternals: {
-    requestFingerprint(projectRef: string): string;
-    responseFingerprint(input: {
-      projectRef: string;
-      userId: string;
-      displayEmail: string;
-    }): string;
-    sha256Json(value: unknown): string;
-  };
-};
+import { testAuthIdentityReceipt } from "../fixtures/auth-identity-receipt.ts";
 
 const PROJECT_REF = "qgzvkongdjqiiamzbbts";
 const USER_ID = "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7";
 const NOW = Date.parse("2026-08-25T01:00:00.000Z");
 
 function authReceipt(overrides: Record<string, unknown> = {}) {
-  const scope = {
-    schema: "tiangong-lca.auth-identity-receipt.v1",
-    status: "passed",
-    operation: "current-user-read",
-    remote_write_mode: "read-only",
-    captured_at_utc: "2026-08-25T00:59:30.000Z",
-    cli: { package_name: "@tiangong-lca/cli", package_version: "0.1.2" },
-    project: {
-      project_ref: PROJECT_REF,
-      project_base_url: `https://${PROJECT_REF}.supabase.co`,
-    },
-    identity: { user_id: USER_ID, display_email: "te****@example.com" },
-    session: {
-      source: "signin",
-      cache_mode: "disabled",
-      force_reauth: true,
-      expires_at_utc: null,
-    },
-    bindings: {
-      request_sha256: cliAuth.__testInternals.requestFingerprint(PROJECT_REF),
-      response_sha256: cliAuth.__testInternals.responseFingerprint({
-        projectRef: PROJECT_REF,
-        userId: USER_ID,
-        displayEmail: "te****@example.com",
-      }),
-    },
-    assertions: {
-      mode: "intent-bound",
-      requested_count: 2,
-      expected_project_ref: PROJECT_REF,
-      expected_user_id: USER_ID,
-      project_ref_passed: true,
-      user_id_passed: true,
-      passed: true,
-    },
-    ...overrides,
-  };
-  return {
-    ...scope,
-    receipt_scope_sha256: cliAuth.__testInternals.sha256Json(scope),
-  };
+  return testAuthIdentityReceipt({
+    projectRef: PROJECT_REF,
+    userId: USER_ID,
+    capturedAtUtc: "2026-08-25T00:59:30.000Z",
+    scopeOverrides: overrides,
+  });
 }
 
 function parsedReceipt() {
@@ -92,7 +44,7 @@ function binding() {
     semanticArgv: ["flow", "identity-preflight", "--json", "--timeout-ms", "60000"],
     cli: {
       packageName: "@tiangong-lca/cli",
-      packageVersion: "0.1.2",
+      packageVersion: "0.1.3",
       packageIntegrity: "sha512-test",
     },
     authReceipt: parsedReceipt(),
@@ -146,7 +98,7 @@ test("identity preflight binding changes with request, argv, CLI, account, or in
     }),
     createIdentityPreflightBinding({
       ...baseline.inputs,
-      cli: { ...baseline.inputs.cli, packageVersion: "0.1.2" },
+      cli: { ...baseline.inputs.cli, packageVersion: "0.1.4" },
     }),
     createIdentityPreflightBinding({
       ...baseline.inputs,
