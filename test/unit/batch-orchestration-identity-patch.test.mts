@@ -16,6 +16,7 @@ import {
 import { repoRoot } from "../fixtures/foundry-core.ts";
 
 const ownerRelativePath = "scripts/commands/bafu-batch-import-run.ts";
+const runtimeRelativePath = "scripts/lib/batch-orchestration/bafu-batch-command-runtime.ts";
 const stageRelativePath = "scripts/lib/batch-orchestration/identity-patch-stage.ts";
 const baselineOwnerLines = 3148;
 
@@ -194,13 +195,16 @@ function createGateReport(root: string): void {
 
 test("identity and patch recovery has one typed semantic owner and shrinks the command owner by 430 lines", async () => {
   const ownerPath = path.join(repoRoot, ownerRelativePath);
+  const runtimePath = path.join(repoRoot, runtimeRelativePath);
   const stagePath = path.join(repoRoot, stageRelativePath);
   assert.equal(fs.existsSync(stagePath), true, stageRelativePath);
 
   const ownerSource = fs.readFileSync(ownerPath, "utf8");
+  const runtimeSource = fs.readFileSync(runtimePath, "utf8");
   const stageSource = fs.readFileSync(stagePath, "utf8");
-  assert.match(ownerSource, /createIdentityPatchStageService/u);
-  assert.doesNotMatch(ownerSource, /async function runIdentityAndPatch\s*\(/u);
+  assert.match(ownerSource, /bafu-batch-command-runtime\.ts/u);
+  assert.match(runtimeSource, /createIdentityPatchStageService/u);
+  assert.doesNotMatch(runtimeSource, /async function runIdentityAndPatch\s*\(/u);
   assert.ok(
     physicalLineCount(ownerSource) <= baselineOwnerLines - 430,
     `expected ${ownerRelativePath} to lose at least 430 lines`,

@@ -20,6 +20,7 @@ type JsonRecord = Record<string, unknown>;
 type DatasetIdentity = { id: string | null; version: string };
 
 const ownerRelativePath = "scripts/commands/bafu-batch-import-run.ts";
+const runtimeRelativePath = "scripts/lib/batch-orchestration/bafu-batch-command-runtime.ts";
 const contractRelativePath = "scripts/lib/batch-orchestration/scope-execution-contract.ts";
 const executionRelativePath = "scripts/lib/batch-orchestration/scope-execution.ts";
 const preparationRelativePath = "scripts/lib/batch-orchestration/scope-preparation.ts";
@@ -94,6 +95,7 @@ function writeRequiredBatchInputs(runDir: string, schemaDir: string): void {
 
 test("single-scope execution has coherent typed owners and shrinks the command owner by 700 lines", async () => {
   const ownerPath = path.join(repoRoot, ownerRelativePath);
+  const runtimePath = path.join(repoRoot, runtimeRelativePath);
   const contractPath = path.join(repoRoot, contractRelativePath);
   const executionPath = path.join(repoRoot, executionRelativePath);
   const preparationPath = path.join(repoRoot, preparationRelativePath);
@@ -103,8 +105,10 @@ test("single-scope execution has coherent typed owners and shrinks the command o
   assert.equal(fs.existsSync(preparationPath), true, preparationRelativePath);
 
   const ownerSource = fs.readFileSync(ownerPath, "utf8");
-  assert.match(ownerSource, /createBatchScopeExecutionService/u);
-  assert.doesNotMatch(ownerSource, /async function runOneScope\s*\(/u);
+  const runtimeSource = fs.readFileSync(runtimePath, "utf8");
+  assert.match(ownerSource, /bafu-batch-command-runtime\.ts/u);
+  assert.match(runtimeSource, /createBatchScopeExecutionService/u);
+  assert.doesNotMatch(runtimeSource, /async function runOneScope\s*\(/u);
   assert.ok(
     physicalLineCount(ownerSource) <= baselineOwnerLines - 700,
     `expected ${ownerRelativePath} to lose at least 700 lines`,

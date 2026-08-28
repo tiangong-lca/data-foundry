@@ -97,7 +97,7 @@ test("identity-preflight consumers and metadata target the typed owner", () => {
   for (const consumer of [
     "scripts/foundry.ts",
     "scripts/lib/foundry-command-metadata.ts",
-    "scripts/commands/bafu-batch-import-run.ts",
+    "scripts/lib/batch-orchestration/bafu-batch-command-runtime.ts",
   ]) {
     const source = readRepoFile(consumer);
     assert.match(source, /(?:commands\/|scripts\/commands\/)identity-preflight-run\.ts/u, consumer);
