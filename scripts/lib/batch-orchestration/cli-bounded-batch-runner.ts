@@ -37,3 +37,49 @@ export async function runLockedCliBatch<
     }),
   );
 }
+
+export interface FoundryScopeBatchFamilyPolicy {
+  familyGroupKey: string | null;
+  optimizationRole: string;
+}
+
+export interface RunFoundryScopeBatchOptions<
+  TScope extends Record<string, unknown>,
+  TResult extends Record<string, unknown>,
+> {
+  runPath: string;
+  outDirIdentity: string;
+  scopeFileIdentity: string;
+  pauseFileIdentity: string | null;
+  command: string;
+  profile: string;
+  targetUserId: string;
+  stateCode: number;
+  selectionOrder: string;
+  stopAfterBlocked: number | null;
+  maxConcurrency: number;
+  items: readonly TScope[];
+  getScopeKey: (scope: TScope) => string;
+  getScopeContentSha256: (scope: TScope) => string;
+  getFamilyPolicy: (scope: TScope) => FoundryScopeBatchFamilyPolicy;
+  executeScope: (scope: TScope, inputIndex: number) => Promise<TResult>;
+  recoverScopeFailure: (scope: TScope, error: unknown) => TResult;
+  afterScope: () => void;
+  pauseRequested: () => boolean;
+}
+
+export interface FoundryScopeBatchResult<TResult extends Record<string, unknown>> {
+  results: TResult[];
+  paused: boolean;
+  stoppedAfterBlocked: boolean;
+  unclaimedCount: number;
+}
+
+export async function runFoundryScopeBatch<
+  TScope extends Record<string, unknown>,
+  TResult extends Record<string, unknown>,
+>(
+  _options: RunFoundryScopeBatchOptions<TScope, TResult>,
+): Promise<FoundryScopeBatchResult<TResult>> {
+  throw new Error("Foundry scope batch adapter is not implemented.");
+}

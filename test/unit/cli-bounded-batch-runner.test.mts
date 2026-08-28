@@ -6,7 +6,10 @@ import test from "node:test";
 
 import { batchRunLockPath } from "@tiangong-lca/cli/batch";
 
-import { runLockedCliBatch } from "../../scripts/lib/batch-orchestration/cli-bounded-batch-runner.ts";
+import {
+  runFoundryScopeBatch,
+  runLockedCliBatch,
+} from "../../scripts/lib/batch-orchestration/cli-bounded-batch-runner.ts";
 
 test("BAFU command delegates claims to the locked CLI batch boundary", () => {
   const ownerSource = fs.readFileSync(
@@ -103,5 +106,63 @@ test("locked CLI batch runner preserves pause and stop closure", async () => {
   } finally {
     fs.rmSync(pausedPath, { recursive: true, force: true });
     fs.rmSync(stoppedPath, { recursive: true, force: true });
+  }
+});
+
+test("Foundry scope adapter serializes one family while independent scope work continues", async () => {
+  const runPath = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-family-batch-"));
+  const starts: string[] = [];
+  let sharedInFlight = 0;
+  let sharedMaxInFlight = 0;
+  try {
+    const result = await runFoundryScopeBatch({
+      runPath,
+      outDirIdentity: "batch",
+      scopeFileIdentity: "ready-scopes.jsonl",
+      pauseFileIdentity: null,
+      command: "dataset-bafu-batch-import-run",
+      profile: "bafu",
+      targetUserId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+      stateCode: 0,
+      selectionOrder: "family-master-first",
+      stopAfterBlocked: null,
+      maxConcurrency: 2,
+      items: [
+        { id: "family-master", family: "shared", role: "master" },
+        { id: "family-variant", family: "shared", role: "variant" },
+        { id: "independent", family: "independent", role: "standard" },
+      ],
+      getScopeKey: (scope) => scope.id,
+      getScopeContentSha256: (scope) => scope.id.padEnd(64, "0").slice(0, 64),
+      getFamilyPolicy: (scope) => ({
+        familyGroupKey: scope.family,
+        optimizationRole: scope.role,
+      }),
+      executeScope: async (scope) => {
+        starts.push(scope.id);
+        if (scope.family === "shared") {
+          sharedInFlight += 1;
+          sharedMaxInFlight = Math.max(sharedMaxInFlight, sharedInFlight);
+        }
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        if (scope.family === "shared") sharedInFlight -= 1;
+        return { process_id: scope.id, status: "verified" };
+      },
+      recoverScopeFailure: (scope) => ({ process_id: scope.id, status: "failed" }),
+      afterScope: () => undefined,
+      pauseRequested: () => false,
+    });
+
+    assert.equal(result.paused, false);
+    assert.equal(result.stoppedAfterBlocked, false);
+    assert.equal(result.unclaimedCount, 0);
+    assert.equal(sharedMaxInFlight, 1);
+    assert.ok(starts.indexOf("family-master") < starts.indexOf("family-variant"));
+    assert.deepEqual(
+      result.results.map((entry) => entry.process_id).sort(),
+      ["family-master", "family-variant", "independent"].sort(),
+    );
+  } finally {
+    fs.rmSync(runPath, { recursive: true, force: true });
   }
 });
