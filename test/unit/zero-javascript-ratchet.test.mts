@@ -12,6 +12,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // permanent boundary against reintroducing first-party JavaScript compatibility paths.
 // Issue #68's Worldsteel profile-truth contract is native .mts and adds no compatibility path.
 // Issue #69's strict datetime cleanup and fail-closed scenarios remain native TypeScript too.
+// Issue #82 keeps the pnpm 11.24 package-manager edge exact and adds no compatibility runner.
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
@@ -93,9 +94,13 @@ test("TypeScript and pnpm surfaces contain no JavaScript compatibility graph", (
   ]);
 
   const packageJson = JSON.parse(readRepoFile("package.json")) as {
+    packageManager?: string;
+    engines?: Record<string, string>;
     scripts?: Record<string, string>;
     "lint-staged"?: Record<string, string | string[]>;
   };
+  assert.equal(packageJson.packageManager, "pnpm@11.24.0");
+  assert.equal(packageJson.engines?.pnpm, "11.24.0");
   assert.equal(packageJson.scripts?.test, 'node --test "test/**/*.test.mts"');
   assert.equal(packageJson.scripts?.["test:unit"], 'node --test "test/unit/*.test.mts"');
   assert.equal(packageJson.scripts?.["test:commands"], 'node --test "test/commands/*.test.mts"');
