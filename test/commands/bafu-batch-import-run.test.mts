@@ -1723,7 +1723,7 @@ test("BAFU authoring task filter reports ready_no_action_items when retained tas
   }
 });
 
-test("commitFailuresAllAlreadyExist accepts idempotent same-id-version conflicts only", () => {
+test("commitFailuresAllAlreadyExist requires structured same-id-version conflict evidence", () => {
   const root = path.join(fixtureRoot, "commit-idempotent");
   fs.rmSync(root, { recursive: true, force: true });
   const commitDir = path.join(root, "commit");
@@ -1731,7 +1731,7 @@ test("commitFailuresAllAlreadyExist accepts idempotent same-id-version conflicts
   const summaryPath = path.join(summaryDir, "summary.json");
   const handoffPlan = { files: { expected_commit_report_dir: commitDir } };
 
-  // All failures are "same id and version already exists" -> accepted reuse.
+  // Every failure has explicit 23505 plus exact same-id/version semantics -> recovery eligible.
   writeJson(summaryPath, {
     status: "completed_with_failures",
     counts: { selected: 1, failed: 1 },
@@ -1741,6 +1741,7 @@ test("commitFailuresAllAlreadyExist accepts idempotent same-id-version conflicts
         version: "20.20.002",
         status: "failed",
         error: {
+          code: "23505",
           message: "HTTP 409 returned from .../app_dataset_create",
           details:
             '{"ok":false,"code":"23505","message":"Dataset with the same id and version already exists"}',
@@ -1762,6 +1763,7 @@ test("commitFailuresAllAlreadyExist accepts idempotent same-id-version conflicts
         id: "a",
         status: "failed",
         error: {
+          code: "23505",
           message: "HTTP 409",
           details: '{"code":"23505","message":"same id and version already exists"}',
         },
@@ -1776,6 +1778,26 @@ test("commitFailuresAllAlreadyExist accepts idempotent same-id-version conflicts
   result = bafuBatchImportRunTestHooks.commitFailuresAllAlreadyExist(handoffPlan);
   assert.equal(result.accepted, false);
   assert.equal(result.alreadyExists, 1);
+  assert.equal(result.otherFailures, 1);
+
+  // A code hidden inside rendered JSON text is not structured recovery authority.
+  writeJson(summaryPath, {
+    status: "completed_with_failures",
+    counts: { selected: 1, failed: 1 },
+    rows: [
+      {
+        id: "c",
+        status: "failed",
+        error: {
+          message: "HTTP 409",
+          details: '{"code":"23505","message":"same id and version already exists"}',
+        },
+      },
+    ],
+  });
+  result = bafuBatchImportRunTestHooks.commitFailuresAllAlreadyExist(handoffPlan);
+  assert.equal(result.accepted, false);
+  assert.equal(result.alreadyExists, 0);
   assert.equal(result.otherFailures, 1);
 
   fs.rmSync(root, { recursive: true, force: true });
