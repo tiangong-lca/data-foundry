@@ -12,8 +12,9 @@ layout: repo
 # Review note, 2026-08-25: Issue #67 Wave 24 migrates five existing command-owner paths to TypeScript with local characterization. Existing control-plane, test-layout, ownership, and documentation routes already cover the moved paths; no rule or authority boundary changes.
 # Review note, 2026-08-26: Issue #68 adds a narrow Worldsteel wrapper/test/document route to the profile index, current docs, and retained evidence. The monolithic specs/import-profiles.json stays under the generic import-profile trigger so unrelated profile edits do not fan out to Worldsteel; the executable truth test is the cross-file backstop for its Worldsteel subtree.
 # Review note, 2026-08-26: Issue #69 adds a narrow strict prewrite-datetime route across bundle preservation, atomic cleanup blockers, non-destructive stale-artifact reporting, finalize short-circuiting, CLI exit behavior, and their focused contracts. It also closes the existing control-plane coverage gap for specs/prewrite-content-policy.json without changing ownership or mutation authority.
-lastReviewedAt: "2026-08-26"
-lastReviewedCommit: "e777666f66742bf9695533b11bbe2a07635c19a6"
+# Review note, 2026-08-29: Issue #82 updates only the exact pnpm toolchain pin to 11.24.0. Existing bootstrap, control-plane, test-layout, workflow, and governed-doc rules already cover the manifest, sole root lock, CI, toolchain test, and active guidance; no ownership, routing, dependency, runtime, command, or authority rule changes.
+lastReviewedAt: "2026-08-29"
+lastReviewedCommit: "1f6df31bca8cd149b4e35318b37c3a599cf20ae9"
 
 catalog:
   repos:

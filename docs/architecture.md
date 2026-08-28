@@ -146,9 +146,9 @@ checkPaths:
   - test/unit/foundry-runtime-environment.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
-lastReviewedNote: "Reviewed for Issue #69: batch-wide datetime planning emits no blocked rows, and blocked commands preserve/report all pre-existing artifacts."
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: 1f6df31bca8cd149b4e35318b37c3a599cf20ae9
+lastReviewedNote: "Reviewed for Issue #82: pnpm 11.24.0 changes only package-manager compatibility; the runtime, compiler, dependency, lock, orchestration, and authority architecture is unchanged."
 ---
 
 # Architecture
@@ -180,7 +180,9 @@ profiles
 
 ## Toolchain And Typed-Spine Boundary
 
-Foundry's non-JSX Node runtime is standardized on Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2`, Oxlint, and Prettier. pnpm is the sole dependency manager and owns the only root workspace and lockfile. The compiler graph must contain TypeScript 7.0.2 only and enforce erasable-only runtime syntax; tracked `.jsx`/`.tsx`, TypeScript 5/6 aliases, `@typescript-eslint`, and formatting plugins that load the TypeScript compiler API are not compatibility paths. Git inventory is reconciled against intentional first-party Oxlint and typecheck file lists; root lint disables nested configs, bans TypeScript suppression comments, and runs a comment-aware tracked-TypeScript native-disable audit before Oxlint. Repository-local Git environment is stripped before that audit or its fixture commands target another root, keeping hook state out of the parent index. The build removes the exact stale `dist` tree before compilation, and `noEmitOnError` prevents TypeScript diagnostics from emitting replacement JavaScript; arbitrary I/O failures are outside that guarantee. Emitted and source runtimes use one trusted-root/active-entry resolver rather than deriving repository state from an output directory or CWD.
+Foundry's non-JSX Node runtime is standardized on Node.js 24, `pnpm@11.24.0`, TypeScript `7.0.2`, Oxlint, and Prettier. pnpm is the sole dependency manager and owns the only root workspace and lockfile. The compiler graph must contain TypeScript 7.0.2 only and enforce erasable-only runtime syntax; tracked `.jsx`/`.tsx`, TypeScript 5/6 aliases, `@typescript-eslint`, and formatting plugins that load the TypeScript compiler API are not compatibility paths. Git inventory is reconciled against intentional first-party Oxlint and typecheck file lists; root lint disables nested configs, bans TypeScript suppression comments, and runs a comment-aware tracked-TypeScript native-disable audit before Oxlint. Repository-local Git environment is stripped before that audit or its fixture commands target another root, keeping hook state out of the parent index. The build removes the exact stale `dist` tree before compilation, and `noEmitOnError` prevents TypeScript diagnostics from emitting replacement JavaScript; arbitrary I/O failures are outside that guarantee. Emitted and source runtimes use one trusted-root/active-entry resolver rather than deriving repository state from an output directory or CWD.
+
+Issue #82 moves only the package-manager compatibility edge from 11.23.0 to 11.24.0. The root workspace, byte-identical lock, resolved graph, Node 24.19.0 / TypeScript 7.0.2 single tracks, CI topology, command runtime, and remote-write ownership remain unchanged.
 
 The historical Issue #63 baseline contained 160 tracked JavaScript artifacts: 95 runtime files, 64 tests, and one Prettier config. The migration is complete. A permanent zero-JavaScript ratchet and TS-only compiler/test/lint graph now replace the retired migration ledger. The typed spine was introduced in dependency order:
 

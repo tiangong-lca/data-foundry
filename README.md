@@ -148,9 +148,9 @@ checkPaths:
   - test/unit/foundry-runtime-environment.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
-lastReviewedNote: "Reviewed for Issue #69: strict datetime plus non-destructive blocked artifact reporting replaces rollover behavior without changing package, profile or remote-write authority."
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: 1f6df31bca8cd149b4e35318b37c3a599cf20ae9
+lastReviewedNote: "Reviewed for Issue #82: active setup now pins pnpm 11.24.0 while Node 24.19.0, TypeScript 7.0.2, the sole lock, dependencies, runtime behavior, and safety boundaries stay fixed."
 ---
 
 # TianGong LCA Data Foundry
@@ -165,7 +165,9 @@ Remote verification is visibility-bound. A `missing_dataset` reference that is f
 
 ## Toolchain And Typed Spine
 
-Foundry is a pnpm-only, non-JSX Node.js 24 project. The reproducible toolchain is `pnpm@11.23.0`, TypeScript `7.0.2` as the only compiler anywhere in the dependency graph, Oxlint for linting, and Prettier for formatting; tracked `.jsx`/`.tsx` are rejected. TypeScript enforces erasable-only runtime syntax; root lint ignores nested Oxlint configs, bans TypeScript error-suppression comments, runs a comment-aware tracked-source audit that rejects native disable directives without treating strings as directives, and reconciles every Git-enumerated `.ts`/`.mts`/`.cts` file against intentional first-party includes. The audit clears inherited repository-local Git bindings before inspecting its target, preventing pre-push hook state from redirecting temporary fixtures into the parent index. Builds use the Node-native safe cleaner to remove stale `dist` output before `tsc`; `noEmitOnError` guarantees that TypeScript diagnostics emit no replacement JavaScript, without claiming arbitrary I/O failure atomicity. Source and built commands resolve one trusted repository root and their active `.ts`/`.js` entry independently of CWD. The repository keeps one root `pnpm-workspace.yaml` and `pnpm-lock.yaml`; npm/Yarn lockfiles, TypeScript 5/6 aliases, `@typescript-eslint`, and TypeScript-compiler-backed formatting plugins are outside the supported graph.
+Foundry is a pnpm-only, non-JSX Node.js 24 project. The reproducible toolchain is `pnpm@11.24.0`, TypeScript `7.0.2` as the only compiler anywhere in the dependency graph, Oxlint for linting, and Prettier for formatting; tracked `.jsx`/`.tsx` are rejected. TypeScript enforces erasable-only runtime syntax; root lint ignores nested Oxlint configs, bans TypeScript error-suppression comments, runs a comment-aware tracked-source audit that rejects native disable directives without treating strings as directives, and reconciles every Git-enumerated `.ts`/`.mts`/`.cts` file against intentional first-party includes. The audit clears inherited repository-local Git bindings before inspecting its target, preventing pre-push hook state from redirecting temporary fixtures into the parent index. Builds use the Node-native safe cleaner to remove stale `dist` output before `tsc`; `noEmitOnError` guarantees that TypeScript diagnostics emit no replacement JavaScript, without claiming arbitrary I/O failure atomicity. Source and built commands resolve one trusted repository root and their active `.ts`/`.js` entry independently of CWD. The repository keeps one root `pnpm-workspace.yaml` and `pnpm-lock.yaml`; npm/Yarn lockfiles, TypeScript 5/6 aliases, `@typescript-eslint`, and TypeScript-compiler-backed formatting plugins are outside the supported graph.
+
+Issue #82 updates only that exact package-manager contract to pnpm 11.24.0. A 11.24 lockfile-only reconciliation leaves the sole root lock byte-identical and preserves the resolved dependency graph; no runtime, profile, credential, production case, or remote-write behavior changes.
 
 Issue #63 began with a historical baseline of 160 tracked JavaScript artifacts: 95 runtime `.mjs` files, 64 `.mjs` tests, and one Prettier `.cjs` config. That monotonic migration is complete. `test/unit/zero-javascript-ratchet.test.mts` now permanently enforces zero tracked first-party JavaScript, native TypeScript configuration, and TS-only compiler/test/lint globs; characterization and real-case TDD remain mandatory for later changes.
 

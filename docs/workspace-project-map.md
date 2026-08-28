@@ -83,9 +83,9 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
-lastReviewedNote: "Reviewed for Issue #69: strict datetime cleanup and finalize fail-close are Data Foundry-local; workspace repository ownership and cross-project boundaries are unchanged."
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: 1f6df31bca8cd149b4e35318b37c3a599cf20ae9
+lastReviewedNote: "Reviewed for Issue #82: exact pnpm 11.24.0 remains a Data Foundry toolchain responsibility and changes no workspace ownership or cross-project boundary."
 ---
 
 # Workspace Project Map
@@ -112,7 +112,7 @@ The Wave 26 library, classification, authoring, process-scope and batch modules 
 | Incremental release planning and conversion logs | `tiangong-lca-data-foundry` for offline composition; `tiangong-lca-cli` for execution/readback | `dataset-incremental-change-set-compose`, per-conversion JSONL, dependency closure, CLI candidate contract, then fresh reconciliation/capsule admission and published CLI execution |
 | Flow-topology convergence and physical retirement | `tiangong-lca-data-foundry` for offline F/P/D composition; `tiangong-lca-cli` for protected execution/readback | `dataset-topology-convergence-compose`, occurrence-keyed conversion logs, F/P contracts, post-P zero-inbound D candidates, then fixed-fingerprint `dataset maintenance apply` |
 | Foundry test structure and command navigation checks | `tiangong-lca-data-foundry` | `test/README.md`, `test/unit`, `test/commands`, `test/scenarios`, `test/fixtures`, `scripts/lib/foundry-command-metadata.ts`, `scripts/lib/surface-audit.ts` |
-| Foundry package/compiler, portable artifact I/O, and typed runtime | `tiangong-lca-data-foundry` | Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` with erasable-only syntax, root-only Oxlint config plus Git-hook-isolated tracked-source suppression audit, intentional TS includes with Git-enumerated coverage, clean/type-error-no-emit builds, trusted source/emitted entry discovery, credential-free symmetric Golden comparison, native `prettier.config.ts`, permanent zero-JavaScript ratchet, `.gitattributes` LF policy, and separator-neutral artifacts |
+| Foundry package/compiler, portable artifact I/O, and typed runtime | `tiangong-lca-data-foundry` | Node.js 24, `pnpm@11.24.0`, TypeScript `7.0.2` with erasable-only syntax, root-only Oxlint config plus Git-hook-isolated tracked-source suppression audit, intentional TS includes with Git-enumerated coverage, clean/type-error-no-emit builds, trusted source/emitted entry discovery, credential-free symmetric Golden comparison, native `prettier.config.ts`, permanent zero-JavaScript ratchet, `.gitattributes` LF policy, and separator-neutral artifacts |
 | Foundry-local surface cleanup | `tiangong-lca-data-foundry` | remove old aliases, empty command categories, and orphaned draft docs only after metadata, tests, docs, and docpact show no remaining consumer |
 
 Before implementing a missing capability, classify it with `docs/capability-ownership-policy.md` and `specs/capability-ownership-rules.json`.
