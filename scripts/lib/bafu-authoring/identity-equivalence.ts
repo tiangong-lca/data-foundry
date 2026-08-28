@@ -301,7 +301,7 @@ export function nonEquivalentFlowCandidateReasons(
     if (routeOrTechnologyDiffers(targetNames, candidateNames)) {
       reasons.push("technology/route qualifier differs");
     }
-    if (namesAreExactIdentityMatch(targetNames, candidateNames)) {
+    if (reasons.length === 0 && namesAreExactIdentityMatch(targetNames, candidateNames)) {
       exactEquivalentCandidate = candidate;
     }
     reviewed.push({

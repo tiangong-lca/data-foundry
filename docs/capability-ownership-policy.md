@@ -86,7 +86,7 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: b4c9b777929ac27694fbebd748f0c4bec968fab2
+lastReviewedCommit: 2376ed6
 lastReviewedNote: "Reviewed for Issue #70: the thin Foundry command facade, visible composition root, semantic modules, and CLI scheduler retain explicit ownership boundaries."
 ---
 
@@ -145,6 +145,8 @@ The supported library boundary is `@tiangong-lca/cli/command-spec`, `@tiangong-l
 The real commit-mode batch owner now calls `runFoundryScopeBatch`, whose only scheduler implementation is public CLI `runBoundedBatch` under `withBatchRunLock`. Foundry provides content/family projections, scope execution, retryable ledger mapping, cache-cap callback, and report aggregation. This is delegation, not a copy of CLI scheduling semantics.
 
 High-level library and BAFU orchestration is Foundry-owned composition, not a transfer of sibling behavior. Foundry may order classification, authoring, scope-finalize, ledger, pause/preflight and bounded-parallel stages and may delegate an already-authorized handoff as executable plus argv. The CLI still owns mutation and readback semantics, profiles own dataset-specific policy, and USLCI/Worldsteel wrappers may configure the shared engine only within those existing boundaries.
+
+Candidate retrieval does not own BAFU identity equivalence. Edge Functions and database search return candidate evidence; Foundry's `identity-equivalence.ts` owns the deterministic local physical review used by BAFU auto-authoring. An exact name cannot override a recorded property, unit, geography, category/route, technology, or physical-meaning conflict, and this local decision never grants remote-write authority.
 
 Deterministic import/conversion/schema validation follows a separate native-tool boundary. Foundry selects the Rust `tidas` executable with `--tidas-bin`, `TIDAS_BIN`, then `PATH`, and optional config with `--tidas-config` then `TIDAS_CONFIG`. It accepts compatible 0.2.x releases only after a `tidas version` handshake proves `tidas.operation-report.v1`; it does not install a Python package, inspect a Python checkout, or pin one patch release. A script-backed test override is dispatched through Node plus an argv prefix on every platform; that portability adapter does not move Rust validation behavior into Foundry. Foundry may materialize the official validation-batch manifest and map the stable Rust report/exit result into its existing validation report, but must not reproduce schema or converter rules.
 
