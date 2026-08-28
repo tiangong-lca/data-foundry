@@ -8,7 +8,7 @@
     "scripts/commands/bafu-leaf-classification-tasks.ts": 485,
     "scripts/commands/bafu-auto-authoring.ts": 372,
     "scripts/commands/bafu-process-scope-e2e.ts": 478,
-    "scripts/commands/bafu-batch-import-run.ts": 2640
+    "scripts/commands/bafu-batch-import-run.ts": 2197
   },
   "semantic_module_ceiling_lines": {
     "scripts/lib/bafu-authoring/name-plan.ts": 17,
@@ -32,6 +32,7 @@
     "scripts/lib/bafu-orchestration/process-scope-runtime.ts": 382,
     "scripts/lib/bafu-orchestration/process-scope-report.ts": 232,
     "scripts/lib/batch-orchestration/identity-patch-stage.ts": 618,
+    "scripts/lib/batch-orchestration/post-write-handoff.ts": 559,
     "scripts/lib/batch-orchestration/scope-execution-contract.ts": 249,
     "scripts/lib/batch-orchestration/scope-execution.ts": 626,
     "scripts/lib/batch-orchestration/scope-preparation.ts": 532,

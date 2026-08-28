@@ -42,13 +42,15 @@ import {
   type UniverseCoverageRuntimeAdapter,
 } from "../lib/batch-orchestration/universe-coverage.ts";
 import { createVerifiedLedgerProjectionService } from "../lib/batch-orchestration/verified-ledger-projection.ts";
+import {
+  createBatchPostWriteHandoffService,
+  type BatchPostWriteHandoffResult as HandoffResult,
+} from "../lib/batch-orchestration/post-write-handoff.ts";
 import { acceptTraceHashOnlyRemoteVerificationMismatch } from "../lib/remote-verification-accepted-diff.ts";
 import {
   assertFoundryCommandSpecArtifactsCurrent,
   assertFoundryCommandSpecBindsArtifact,
   commandSpecOptionValue,
-  type FoundryArtifactFact,
-  type FoundryCommandSpec,
 } from "../lib/foundry-command-spec.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.ts";
 import { resolveFoundryRuntimePaths } from "../lib/foundry-runtime-paths.ts";
@@ -100,23 +102,6 @@ interface BafuBatchConfig extends JsonRecord {
   commitFlowSupportInline?: boolean;
   mintUnmatchedFpUgSupport?: boolean;
   applyResolutionRewrites?: boolean;
-}
-
-interface HandoffResult extends JsonRecord {
-  status: string;
-  blockers: JsonRecord[];
-  stages: JsonRecord[];
-  handoffPlan?: JsonRecord;
-  closeoutReport?: JsonRecord | null;
-  commitReportPath?: string | null;
-  verifyReportPath?: string | null;
-  closeoutReportPath?: string | null;
-}
-
-interface CommitFailureSummary {
-  accepted: boolean;
-  alreadyExists: number;
-  otherFailures: number;
 }
 
 interface SupportFinalizeInput {
@@ -180,11 +165,6 @@ function jsonRecord(value: unknown): JsonRecord {
 
 function recordArray(value: unknown): JsonRecord[] {
   return Array.isArray(value) ? value.map(jsonRecord) : [];
-}
-
-function asArray(value: unknown): unknown[] {
-  if (value == null) return [];
-  return Array.isArray(value) ? value : [value];
 }
 
 const { entryRepoRelativePath: foundryEntryPath, repoRoot } = resolveFoundryRuntimePaths(
@@ -385,6 +365,23 @@ function supportIdentityTypes(): string[] {
   return mintUnmatchedFpUgSupport()
     ? ["contact", "source", "unitgroup", "flowproperty"]
     : ["contact", "source"];
+}
+
+function findFiles(rootDir: unknown, predicate: (filePath: string) => boolean): string[] {
+  const resolved = resolveRepoPath(rootDir);
+  if (!resolved || !fs.existsSync(resolved)) return [];
+  const stack = [resolved];
+  const matches: string[] = [];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current) continue;
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const next = path.join(current, entry.name);
+      if (entry.isDirectory()) stack.push(next);
+      else if (entry.isFile() && predicate(next)) matches.push(next);
+    }
+  }
+  return matches.sort();
 }
 
 const supportIdentityCache = createSupportIdentityCacheService(
@@ -863,27 +860,6 @@ async function runArgvStage({
   return result;
 }
 
-function runCommandSpecStage({
-  stage,
-  commandSpec,
-  logDir,
-}: {
-  stage: string;
-  commandSpec: unknown;
-  logDir: string;
-}): Promise<StageResult> {
-  const spec = assertFoundryCommandSpecArtifactsCurrent(commandSpec, resolveRepoPath);
-  return runStage({
-    stage,
-    logDir,
-    command: [spec.executable, ...spec.argv],
-  });
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 function runStage({
   stage,
   command,
@@ -951,452 +927,33 @@ function runStage({
   });
 }
 
-function postWriteVerifyRetryAttempts(): number {
-  const parsed = integerOption(process.env.BAFU_POST_WRITE_VERIFY_ATTEMPTS, 3);
-  return Math.max(1, Math.min(8, parsed || 3));
-}
+const batchPostWriteHandoff = createBatchPostWriteHandoffService({
+  processExecutable: process.execPath,
+  foundryEntryPath,
+  repoRoot,
+  environment: process.env,
+  resolveRepoPath,
+  repoRelative,
+  fileExists,
+  readJson,
+  findFiles,
+  joinPath: (...parts: string[]) => path.join(...parts),
+  basename: (filePath: string) => path.basename(filePath),
+  asText,
+  integerOption,
+  assertReceiptBoundHandoffAccount,
+  assertCommandSpecBindsArtifact: assertFoundryCommandSpecBindsArtifact,
+  assertCommandSpecArtifactsCurrent: (commandSpec) =>
+    assertFoundryCommandSpecArtifactsCurrent(commandSpec, resolveRepoPath),
+  runStage,
+  sleep: (delayMs) => new Promise((resolve) => setTimeout(resolve, delayMs)),
+  traceHashNormalizationAllowed,
+  acceptTraceHashOnlyRemoteVerificationMismatch,
+});
 
-function postWriteVerifyRetryDelayMs(attemptIndex: number): number {
-  const base = integerOption(process.env.BAFU_POST_WRITE_VERIFY_RETRY_DELAY_MS, 2_000);
-  return Math.max(0, Math.min(60_000, (base || 2_000) * 2 ** attemptIndex));
-}
-
-const postWriteVerifyRetryableCodes = new Set([
-  "lookup_failed",
-  "remote_lookup_failed",
-  "readback_failed",
-  "remote_readback_failed",
-  "remote_readback_missing",
-  "root_readback_incomplete",
-  "post_write_verify_root_readback_incomplete",
-  "verify_report_missing",
-]);
-
-function collectReportCodes(
-  value: unknown,
-  codes: Set<string> = new Set(),
-  depth = 0,
-): Set<string> {
-  if (value == null || depth > 6) return codes;
-  if (Array.isArray(value)) {
-    for (const entry of value) collectReportCodes(entry, codes, depth + 1);
-    return codes;
-  }
-  if (typeof value !== "object") return codes;
-  const record = jsonRecord(value);
-  for (const key of ["code", "failure_code", "status_code", "readback_status"]) {
-    const text = asText(record[key]);
-    if (text) codes.add(text);
-  }
-  for (const key of ["blockers", "findings", "checks", "results", "rows", "items"]) {
-    collectReportCodes(record[key], codes, depth + 1);
-  }
-  return codes;
-}
-
-function postWriteVerifyRetryReason(verifyReportPath: string | null): string | null {
-  if (!verifyReportPath || !fileExists(verifyReportPath)) return "verify_report_missing";
-  const report = readJson(verifyReportPath);
-  const codes = collectReportCodes(report);
-  for (const code of codes) {
-    if (postWriteVerifyRetryableCodes.has(code)) return code;
-  }
-  const counts = jsonRecord(report.counts);
-  const byStatus = jsonRecord(counts.by_status || counts.statuses);
-  for (const code of postWriteVerifyRetryableCodes) {
-    if (Number(byStatus?.[code] ?? 0) > 0) return code;
-  }
-  return null;
-}
-
-function firstExistingPath(candidates: unknown[]): string | null {
-  return candidates.map(resolveRepoPath).find(fileExists) ?? null;
-}
-
-function findReportFile(rootDir: unknown, predicate: (filePath: string) => boolean): string | null {
-  const resolved = resolveRepoPath(rootDir);
-  if (!resolved || !fs.existsSync(resolved)) return null;
-  const stack = [resolved];
-  const matches: string[] = [];
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (!current) continue;
-    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      const next = path.join(current, entry.name);
-      if (entry.isDirectory()) {
-        stack.push(next);
-      } else if (entry.isFile() && predicate(next)) {
-        matches.push(next);
-      }
-    }
-  }
-  return matches.sort()[0] ?? null;
-}
-
-function findFiles(rootDir: unknown, predicate: (filePath: string) => boolean): string[] {
-  const resolved = resolveRepoPath(rootDir);
-  if (!resolved || !fs.existsSync(resolved)) return [];
-  const stack = [resolved];
-  const matches: string[] = [];
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (!current) continue;
-    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      const next = path.join(current, entry.name);
-      if (entry.isDirectory()) {
-        stack.push(next);
-      } else if (entry.isFile() && predicate(next)) {
-        matches.push(next);
-      }
-    }
-  }
-  return matches.sort();
-}
-
-function commitReportForHandoffPlan(handoffPlan: JsonRecord): string | null {
-  const expectedDir = resolveRepoPath(jsonRecord(handoffPlan.files).expected_commit_report_dir);
-  return (
-    firstExistingPath([
-      path.join(
-        expectedDir || "",
-        "process-save-draft",
-        "outputs",
-        "save-draft-rpc",
-        "summary.json",
-      ),
-      path.join(
-        expectedDir || "",
-        "support-save-draft",
-        "outputs",
-        "dataset-save-draft",
-        "summary.json",
-      ),
-      path.join(
-        expectedDir || "",
-        "contact-save-draft",
-        "outputs",
-        "dataset-save-draft",
-        "summary.json",
-      ),
-      path.join(
-        expectedDir || "",
-        "source-save-draft",
-        "outputs",
-        "dataset-save-draft",
-        "summary.json",
-      ),
-      path.join(expectedDir || "", "flow-publish-version", "outputs", "summary.json"),
-    ]) ??
-    findReportFile(expectedDir, (filePath) =>
-      /(?:summary|sync_report)\.json$/u.test(path.basename(filePath)),
-    )
-  );
-}
-
-// A support commit whose only failures are "the dataset already exists with the same
-// id and version" is an idempotent no-op, not a real failure: the row is already present
-// remotely, so the referencing process/flow rows resolve against it. This is the normal
-// case for reference-reuse imports (e.g. worldsteel reuses the canonical World Steel
-// Association contact and other standard ILCD reference support) and for resuming a run
-// that already committed some support. Postgres unique-violation 23505 with the
-// "same id and version already exists" message is the authoritative signal. Any other
-// failure type is NOT accepted.
-function commitFailuresAllAlreadyExist(handoffPlan: JsonRecord): CommitFailureSummary {
-  const expectedDir = resolveRepoPath(jsonRecord(handoffPlan.files).expected_commit_report_dir);
-  if (!expectedDir) return { accepted: false, alreadyExists: 0, otherFailures: 0 };
-  const summaries = findFiles(expectedDir, (filePath) =>
-    /(?:summary|sync_report)\.json$/u.test(path.basename(filePath)),
-  );
-  let failed = 0;
-  let alreadyExists = 0;
-  for (const summaryPath of summaries) {
-    let report: JsonRecord;
-    try {
-      report = readJson(summaryPath);
-    } catch {
-      continue;
-    }
-    for (const row of asArray(report.rows).map(jsonRecord)) {
-      if (asText(row.status) !== "failed") continue;
-      failed += 1;
-      const error = jsonRecord(row.error);
-      const haystack = `${asText(error.message)} ${asText(error.details)}`.toLowerCase();
-      if (
-        haystack.includes("same id and version already exists") ||
-        (haystack.includes("23505") && haystack.includes("already exists"))
-      ) {
-        alreadyExists += 1;
-      }
-    }
-  }
-  return {
-    accepted: failed > 0 && failed === alreadyExists,
-    alreadyExists,
-    otherFailures: failed - alreadyExists,
-  };
-}
-
-function verifyReportForHandoffPlan(handoffPlan: JsonRecord): string | null {
-  const expectedDir = resolveRepoPath(jsonRecord(handoffPlan.files).expected_post_write_verify_dir);
-  return (
-    firstExistingPath([
-      path.join(expectedDir || "", "outputs", "remote-verification-report.json"),
-    ]) ??
-    findReportFile(
-      expectedDir,
-      (filePath) => path.basename(filePath) === "remote-verification-report.json",
-    )
-  );
-}
-
-async function executeHandoff({
-  handoffPlanPath,
-  ledgerDir,
-  outDir,
-  logDir,
-  label,
-}: {
-  handoffPlanPath: string;
-  ledgerDir: string;
-  outDir: string;
-  logDir: string;
-  label: string;
-}): Promise<HandoffResult> {
-  if (!fileExists(handoffPlanPath)) {
-    return {
-      status: "blocked",
-      blockers: [{ code: "handoff_plan_missing", message: `${label} handoff plan is missing.` }],
-      stages: [],
-    };
-  }
-  const handoffPlan = readJson(handoffPlanPath);
-  const blockers: JsonRecord[] = [];
-  const stages: JsonRecord[] = [];
-  if (handoffPlan.status !== "ready_for_explicit_commit") {
-    return {
-      status: "blocked",
-      blockers: [
-        {
-          code: "handoff_plan_not_ready",
-          message: `${label} handoff plan status is ${handoffPlan.status || "missing"}.`,
-          handoff_plan: repoRelative(handoffPlanPath),
-        },
-      ],
-      stages,
-      handoffPlan,
-    };
-  }
-  try {
-    assertReceiptBoundHandoffAccount(handoffPlan, process.env);
-  } catch (error) {
-    return {
-      status: "blocked",
-      blockers: [
-        {
-          code: "handoff_account_evidence_mismatch",
-          message: String(error instanceof Error ? error.message : error),
-          handoff_plan: repoRelative(handoffPlanPath),
-        },
-      ],
-      stages,
-      handoffPlan,
-    };
-  }
-  let commitSpec: FoundryCommandSpec;
-  let verifySpec: FoundryCommandSpec;
-  try {
-    const commands = jsonRecord(handoffPlan.commands);
-    const artifact = jsonRecord(handoffPlan.final_rows_artifact);
-    const requiredFinalRowsArtifact: FoundryArtifactFact = {
-      role: "final_rows",
-      path: asText(artifact.path),
-      bytes: Number(artifact.bytes),
-      sha256: asText(artifact.sha256),
-    };
-    commitSpec = assertFoundryCommandSpecBindsArtifact(commands.commit, requiredFinalRowsArtifact);
-    verifySpec = assertFoundryCommandSpecBindsArtifact(
-      commands.post_write_verify,
-      requiredFinalRowsArtifact,
-    );
-  } catch (error) {
-    return {
-      status: "blocked",
-      blockers: [
-        {
-          code: "handoff_command_spec_invalid",
-          message: `${label} handoff plan must include valid authoritative commit and post_write_verify CommandSpecs: ${String(error instanceof Error ? error.message : error)}`,
-          handoff_plan: repoRelative(handoffPlanPath),
-        },
-      ],
-      stages,
-      handoffPlan,
-    };
-  }
-
-  let commitStage: StageResult;
-  try {
-    commitStage = await runCommandSpecStage({
-      stage: `${label}.commit`,
-      commandSpec: commitSpec,
-      logDir,
-    });
-  } catch (error) {
-    blockers.push({
-      code: "commit_handoff_artifact_binding_failed",
-      message: `${label} commit CommandSpec artifact binding failed before spawn: ${String(error instanceof Error ? error.message : error)}`,
-      handoff_plan: repoRelative(handoffPlanPath),
-    });
-    return { status: "failed", blockers, stages, handoffPlan };
-  }
-  const commitReportPath = commitReportForHandoffPlan(handoffPlan);
-  stages.push({ ...commitStage, report: repoRelative(commitReportPath) });
-  if (commitStage.exit_code !== 0 || !commitReportPath) {
-    // Accept the commit when its only failures are idempotent "already exists with the
-    // same id and version" rows: those datasets are present remotely and the references
-    // resolve, so the post-write verify below confirms them. Any other failure blocks.
-    const idempotent = commitReportPath ? commitFailuresAllAlreadyExist(handoffPlan) : null;
-    if (!idempotent?.accepted) {
-      blockers.push({
-        code: "commit_handoff_command_failed",
-        message: `${label} commit handoff failed or did not emit the expected commit report.`,
-        handoff_plan: repoRelative(handoffPlanPath),
-        exit_code: commitStage.exit_code,
-        commit_report: repoRelative(commitReportPath),
-      });
-      return { status: "failed", blockers, stages, handoffPlan };
-    }
-    stages.push({
-      stage: `${label}.commit.accepted_existing_support`,
-      status: "accepted",
-      report: repoRelative(commitReportPath),
-      reused_existing_rows: idempotent.alreadyExists,
-      message: `${label} commit reused ${idempotent.alreadyExists} support row(s) that already exist with the same id and version; references resolve to the present datasets and are confirmed by post-write verification.`,
-    });
-  }
-
-  let verifyReportPath = null;
-  let verifyAccepted = false;
-  let verifyExitCode = 1;
-  let verifyAttempts = 0;
-  let verifyRetryReason = null;
-  const maxVerifyAttempts = postWriteVerifyRetryAttempts();
-  for (let attempt = 1; attempt <= maxVerifyAttempts; attempt += 1) {
-    const verifyStageName =
-      attempt === 1 ? `${label}.post_write_verify` : `${label}.post_write_verify.retry_${attempt}`;
-    let verifyStage: StageResult;
-    try {
-      verifyStage = await runCommandSpecStage({
-        stage: verifyStageName,
-        commandSpec: verifySpec,
-        logDir,
-      });
-    } catch (error) {
-      blockers.push({
-        code: "post_write_verify_artifact_binding_failed",
-        message: `${label} verify CommandSpec artifact binding failed before spawn: ${String(error instanceof Error ? error.message : error)}`,
-        handoff_plan: repoRelative(handoffPlanPath),
-      });
-      return { status: "failed", blockers, stages, handoffPlan };
-    }
-    verifyReportPath = verifyReportForHandoffPlan(handoffPlan);
-    verifyExitCode = verifyStage.exit_code;
-    verifyAttempts = attempt;
-    const stageRecord: StageResult = {
-      ...verifyStage,
-      report: repoRelative(verifyReportPath),
-      attempt,
-      max_attempts: maxVerifyAttempts,
-    };
-    stages.push(stageRecord);
-    verifyAccepted = verifyStage.exit_code === 0 && Boolean(verifyReportPath);
-    if (
-      verifyStage.exit_code !== 0 &&
-      verifyReportPath &&
-      traceHashNormalizationAllowed(handoffPlan)
-    ) {
-      const acceptedVerify = acceptTraceHashOnlyRemoteVerificationMismatch({
-        verifyReportPath,
-        outDir,
-        repoRoot,
-      });
-      if (acceptedVerify.accepted) {
-        verifyReportPath = acceptedVerify.verifyReportPath;
-        verifyAccepted = true;
-        stages.push({
-          stage: `${label}.post_write_verify.accepted_diff`,
-          status: "accepted",
-          report: repoRelative(acceptedVerify.acceptanceReportPath),
-          accepted_differences: acceptedVerify.evidence.length,
-        });
-      }
-    }
-    if (verifyAccepted) break;
-    verifyRetryReason = postWriteVerifyRetryReason(verifyReportPath);
-    if (!verifyRetryReason || attempt >= maxVerifyAttempts) break;
-    const retryDelayMs = postWriteVerifyRetryDelayMs(attempt - 1);
-    stageRecord.retry_reason = verifyRetryReason;
-    stageRecord.retry_next_delay_ms = retryDelayMs;
-    await sleep(retryDelayMs);
-  }
-  if (!verifyAccepted || !verifyReportPath) {
-    blockers.push({
-      code: "post_write_verify_command_failed",
-      message: `${label} post-write verification failed or did not emit the expected remote verification report.`,
-      handoff_plan: repoRelative(handoffPlanPath),
-      exit_code: verifyExitCode,
-      post_write_verify_report: repoRelative(verifyReportPath),
-      post_write_verify_attempts: verifyAttempts,
-      retry_reason: verifyRetryReason,
-    });
-    return { status: "failed", blockers, stages, handoffPlan };
-  }
-
-  const closeoutDir = path.join(outDir, "closeout");
-  const closeoutArgv = [
-    process.execPath,
-    foundryEntryPath,
-    "dataset-post-write-closeout",
-    "--handoff-plan",
-    repoRelative(handoffPlanPath),
-    "--commit-report",
-    repoRelative(commitReportPath),
-    "--post-write-verify-report",
-    repoRelative(verifyReportPath),
-    "--out-dir",
-    repoRelative(closeoutDir),
-    "--ledger-dir",
-    repoRelative(ledgerDir),
-  ];
-  const closeoutStage = await runArgvStage({
-    stage: `${label}.closeout`,
-    argv: closeoutArgv,
-    logDir,
-  });
-  const closeoutReportPath = path.join(closeoutDir, "dataset-post-write-closeout-report.json");
-  const closeoutReport = fileExists(closeoutReportPath) ? readJson(closeoutReportPath) : null;
-  stages.push({ ...closeoutStage, report: repoRelative(closeoutReportPath) });
-  if (closeoutStage.exit_code !== 0 || closeoutReport?.status !== "completed") {
-    blockers.push({
-      code: "post_write_closeout_failed",
-      message: `${label} post-write closeout status is ${closeoutReport?.status || "missing"}.`,
-      handoff_plan: repoRelative(handoffPlanPath),
-      closeout_report: repoRelative(closeoutReportPath),
-      closeout_blockers: closeoutReport?.blockers ?? [],
-    });
-    return { status: "failed", blockers, stages, handoffPlan, closeoutReport };
-  }
-
-  return {
-    status: "completed",
-    blockers,
-    stages,
-    handoffPlan,
-    closeoutReport,
-    commitReportPath,
-    verifyReportPath,
-    closeoutReportPath,
-  };
-}
+const executeHandoff = batchPostWriteHandoff.execute;
+const commitFailuresAllAlreadyExist = batchPostWriteHandoff.commitFailuresAllAlreadyExist;
+const postWriteVerifyRetryReason = batchPostWriteHandoff.postWriteVerifyRetryReason;
 
 function reportFile(stageJson: JsonRecord | null, fallback: string): string | null {
   const value = jsonRecord(stageJson?.files).report ?? stageJson?.report;
