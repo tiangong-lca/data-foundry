@@ -26,7 +26,7 @@ interface RecoveryHarness {
   invocations: PostFinalizeRecoveryArgvStageInput[];
 }
 
-const fakeRepoRoot = path.resolve(path.sep, "repo");
+const fakeRepoRoot = path.join(path.sep, "repo");
 const processExecutable = "/runtime/node";
 const foundryEntryPath = "scripts/foundry.ts";
 const testDir = path.dirname(fileURLToPath(import.meta.url));
