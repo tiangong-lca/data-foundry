@@ -276,7 +276,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 363f06b
+lastReviewedCommit: f8f0633
 lastReviewedNote: "Reviewed for Issue #70: public commands are thin facades; batch wiring lives in the explicit composition root and behavior remains in focused semantic/CLI owners."
 tracker:
   kind: filesystem
@@ -358,7 +358,7 @@ The high-level dataset orchestration layer is native TypeScript. `library-scope-
 
 Within BAFU auto-authoring, an exact product/waste-flow name never overrides the physical review. `identity-equivalence.ts` may return an exact reuse candidate only when its ordered non-equivalence reasons are empty; property, unit, geography/market, category/route, technology, or physical-meaning conflicts remain in decision evidence and produce `create_new` rather than `reuse_existing_reference`. Matching exact-flow evidence, elementary land-use special cases, and process exact-name explicit review remain characterized separately.
 
-BAFU category-map projection must evaluate every supplied decision row, not only categories referenced by the current task set. A non-empty emitted category-map/process/flow-product manual-review closure requires `completed_with_manual_review`, a blocker naming the exact source/reason/artifact, and a nonzero CLI exit. Do not continue library decisions apply from shell success alone; resolve the referenced manual-review rows and rerun. A blocker-free report remains byte-identical to the prior `completed` contract.
+BAFU category-map projection must evaluate every supplied decision row, not only categories referenced by the current task set. `category-map-report.ts` owns closure-wide status and blocker projection. A non-empty emitted category-map/process/flow-product manual-review closure requires `completed_with_manual_review`, a blocker naming the exact source/reason/artifact, and a nonzero CLI exit. Do not continue library decisions apply from shell success alone; resolve the referenced manual-review rows and rerun. A blocker-free report remains byte-identical to the prior `completed` contract.
 
 Within the shared batch owner, `scripts/lib/batch-orchestration/post-write-handoff.ts` owns the asynchronous commit → post-write verify/retry → closeout stage. Same-id/version conflicts are accepted only as an idempotent commit outcome and only when subsequent verification succeeds; missing reports and non-retryable failures remain blocking. The module receives the existing stage runner and never retries the commit mutation or executes rendered display text.
 

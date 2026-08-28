@@ -137,7 +137,7 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 363f06b
+lastReviewedCommit: f8f0633
 lastReviewedNote: "Reviewed for Issue #70: the five-line batch facade routes wiring questions to one visible composition root and behavior questions directly to focused semantic/CLI modules."
 ---
 
@@ -250,7 +250,7 @@ The typed high-level orchestration path is `library-scope-workflow.ts` for profi
 
 For BAFU flow reuse, navigate directly to `scripts/lib/bafu-authoring/identity-equivalence.ts`. If an exact-name candidate is reused despite property, reference-unit, geography/market, category/route, technology, or physical-meaning conflict evidence, the defect is in that leaf—not candidate search, the command envelope, or the batch composition root. `test/unit/bafu-identity-equivalence-contract.test.mts` freezes the pure decision and reason order; `test/commands/bafu-auto-authoring.test.mts` proves the resulting `create_new`/reuse decision and deterministic apply boundary.
 
-For a BAFU category-map report that says `completed` while any manual-review JSONL is non-empty, navigate to `scripts/lib/bafu-classification/category-map-projection.ts`. The report builder owns closure-wide status and compact blockers; `foundry-command-registry.ts` owns its nonzero manual-review exit. `test/unit/bafu-leaf-category-map-projection.test.mts` covers unreferenced conflict/invalid/context/incomplete decisions plus resolved byte stability, and `test/commands/bafu-leaf-classification-tasks.test.mts` covers the real nonzero command/artifact boundary.
+For wrong BAFU category decision/artifact semantics, navigate to `category-map-projection.ts`; for a report that says `completed` while any manual-review JSONL is non-empty, navigate to `category-map-report.ts`. The report leaf owns closure-wide status and compact blockers; `foundry-command-registry.ts` owns its nonzero manual-review exit. `test/unit/bafu-leaf-category-map-projection.test.mts` covers unreferenced conflict/invalid/context/incomplete decisions plus resolved byte stability, and `test/commands/bafu-leaf-classification-tasks.test.mts` covers the real nonzero command/artifact boundary.
 
 The typed runtime command owners are `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts`. Navigate to the wrapper for direct executable/argv delegation and process diagnostics, to the capsule for offline immutable admission and attempt-state evidence, and to closeout for already-produced commit/readback aggregation. Root uniqueness and accepted-difference decisions remain in `post-write-root-proof.ts` and `remote-verification-accepted-diff.ts`.
 

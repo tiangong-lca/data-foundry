@@ -274,7 +274,7 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 363f06b
+lastReviewedCommit: f8f0633
 lastReviewedNote: "Reviewed for Issue #70: tests pin the five-line batch facade, explicit composition-root path, focused stage budgets, and unchanged runtime exports/help bytes."
 ---
 
@@ -371,7 +371,7 @@ Issue #70's `unit/batch-post-write-handoff.test.mts` isolates the asynchronous b
 
 Issue #77 is pinned at two layers. `unit/bafu-identity-equivalence-contract.test.mts` proves an exact product-flow name with property/unit/geography/category conflicts cannot become a reuse candidate, freezes the ordered reasons, and retains exact-name reuse when the physical evidence matches. `commands/bafu-auto-authoring.test.mts` drives a real task/package through autofill and deterministic identity apply, proving the conflicting candidate becomes `create_new` evidence and the source flow UUID survives.
 
-Issue #79 is pinned across semantic report and CLI boundaries. `unit/bafu-leaf-category-map-projection.test.mts` supplies unreferenced conflict, invalid-code, missing-context, and incomplete decisions; each must produce manual status plus a source/reason/artifact blocker, while resolved-only report bytes remain frozen. `unit/foundry-cli-spine.test.mts` requires manual status to exit nonzero, and `commands/bafu-leaf-classification-tasks.test.mts` proves the real command still writes its complete JSON/manual-review/candidate artifacts on that nonzero exit.
+Issue #79 is pinned across artifact, report, and CLI boundaries. `unit/bafu-leaf-category-map-projection.test.mts` supplies unreferenced conflict, invalid-code, missing-context, and incomplete decisions to the bounded `category-map-report.ts` leaf; each must produce manual status plus a source/reason/artifact blocker, while resolved-only report bytes remain frozen. `unit/orchestration-module-budget.test.mts` keeps projection/report at 656/140-line shrink-only ceilings and cycle-free. `unit/foundry-cli-spine.test.mts` requires manual status to exit nonzero, and `commands/bafu-leaf-classification-tasks.test.mts` proves the real command still writes its complete JSON/manual-review/candidate artifacts on that nonzero exit.
 
 `fixtures/auth-identity-receipt.ts` is the only test-only receipt materializer. It recreates the frozen public wire fingerprints and scope hash, then every consumer still passes the bytes through `@tiangong-lca/cli/auth-identity-receipt`. `unit/public-cli-batch-runtime.test.mts` loads exact installed CLI 0.1.3, exercises public batch/run-lock plus strict receipt parsing, and proves the former private deep path stays unexported. `unit/toolchain-contract.test.mts` rejects any tracked `@tiangong-lca/cli/dist/src/**` import and binds the exact provenance-verified 0.1.3 maturity exception.
 

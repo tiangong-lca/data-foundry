@@ -84,7 +84,7 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 363f06b
+lastReviewedCommit: f8f0633
 lastReviewedNote: "Reviewed for Issue #70: thin Foundry command facades and an explicit local composition root change no cross-project ownership or workspace boundary."
 ---
 
@@ -106,7 +106,7 @@ The Wave 26 library, classification, authoring, process-scope and batch modules 
 | Deterministic QA and curation gates | `tiangong-lca-cli` | `pnpm exec tiangong-lca qa`, `dataset curation-queue build/next/verify` |
 | Identity-preflight candidate search | Edge Functions for request orchestration; `database-engine` for `extracted_md` lexical and `embedding_ft` semantic execution | Foundry forwards one `lexical_weight` and one `semantic_weight` through `dataset-identity-preflight-run` |
 | BAFU candidate physical-equivalence review | `tiangong-lca-data-foundry` for deterministic local decision evidence; Edge/database remain candidate-search owners | `scripts/lib/bafu-authoring/identity-equivalence.ts` → `dataset-bafu-identity-decisions-autofill`; exact names cannot override recorded physical conflicts |
-| BAFU category-map completion and manual-review projection | `tiangong-lca-data-foundry` for local closure/status/blockers; TIDAS schema and AI/human decisions retain vocabulary/choice ownership | `category-map-projection.ts` → `dataset-bafu-leaf-classification-category-map-project`; any emitted manual review returns nonzero |
+| BAFU category-map completion and manual-review projection | `tiangong-lca-data-foundry` for local closure/status/blockers; TIDAS schema and AI/human decisions retain vocabulary/choice ownership | `category-map-projection.ts` artifacts → `category-map-report.ts` closure report → command nonzero on any emitted manual review |
 | Remote commit, readback, and publish prep | `tiangong-lca-cli`, Edge Functions, database | `dataset-post-authoring-finalize` and source/contact support handoff artifacts, installed CLI commit commands, `pnpm exec tiangong-lca dataset verify-remote`, `publish run`, Edge verification; Foundry does not override foreign/RLS-hidden `missing_dataset` readback |
 | Credential-scoped identity proof and process guard | `tiangong-lca-cli` for live session/receipt; `tiangong-lca-data-foundry` for profile/thread intent and child isolation | `pnpm account:run -- <profile> -- <executable> [args...]` → installed CLI 0.1.3 `auth identity-receipt` |
 | Foundry task routing and manifests | `tiangong-lca-data-foundry` | `scripts/foundry.ts route-task` |

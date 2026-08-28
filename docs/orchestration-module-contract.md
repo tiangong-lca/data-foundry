@@ -44,7 +44,7 @@ checkPaths:
   - package.json
   - pnpm-lock.yaml
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 363f06b
+lastReviewedCommit: f8f0633
 lastReviewedNote: "Reviewed for Issue #70: all five command owners are thin; the batch facade exposes a separately budgeted composition root plus focused semantic/CLI boundaries."
 related:
   - https://github.com/tiangong-lca/data-foundry/issues/70
@@ -92,6 +92,7 @@ Navigate directly to the narrowest owner:
 | BAFU flow/process identity equivalence | `scripts/lib/bafu-authoring/identity-equivalence.ts` | decision batch I/O and command envelope |
 | BAFU patch and source-trace projection | `scripts/lib/bafu-authoring/patch-projection.ts` | input/output files and report emission |
 | BAFU process/product leaf repair | `scripts/lib/bafu-classification/leaf-repair.ts` | schema loading, sharding, task/report files |
+| BAFU category-map closure-wide status and blocker report | `scripts/lib/bafu-classification/category-map-report.ts` | decision/task file I/O and artifact writes |
 | Library entity index and process-bundle scope projection | `scripts/lib/library-orchestration/entity-projection.ts` | directory enumeration and artifact writes |
 | Ready-scope filtering, classification preflight, family ordering, and preflight rows | `scripts/lib/batch-orchestration/scope-selection.ts` | ledger reads, profile adapters, worker execution |
 | Universe and ledger coverage | `scripts/lib/batch-orchestration/universe-coverage.ts` | command help/options and report destination |
