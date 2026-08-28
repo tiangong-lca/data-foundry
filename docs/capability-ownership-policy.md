@@ -86,7 +86,7 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 5faceff
+lastReviewedCommit: b466bf1
 lastReviewedNote: "Reviewed for Issue #81: Foundry owns recovery eligibility and no-replay orchestration while CLI and database retain mutation and readback truth."
 ---
 

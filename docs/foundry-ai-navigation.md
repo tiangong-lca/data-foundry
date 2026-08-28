@@ -137,7 +137,7 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 5faceff
+lastReviewedCommit: b466bf1
 lastReviewedNote: "Reviewed for Issue #81: same-id/version ambiguity routes through the shared classifier, process handoff helpers, and batch post-write handoff."
 ---
 

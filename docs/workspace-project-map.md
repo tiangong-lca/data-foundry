@@ -84,7 +84,7 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 5faceff
+lastReviewedCommit: b466bf1
 lastReviewedNote: "Reviewed for Issue #81: Foundry recovery eligibility remains separate from CLI, Edge, and database mutation/readback ownership."
 ---
 

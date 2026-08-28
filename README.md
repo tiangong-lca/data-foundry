@@ -149,7 +149,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 5faceff
+lastReviewedCommit: b466bf1
 lastReviewedNote: "Reviewed for Issue #81: same-id/version recovery requires structured 23505 evidence, one commit dispatch, and exact content-bound readback."
 ---
 

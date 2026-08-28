@@ -274,7 +274,7 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 5faceff
+lastReviewedCommit: b466bf1
 lastReviewedNote: "Reviewed for Issue #81: tests pin strict conflict evidence, no replay, exact readback rejection, retry exhaustion, budgets, and cycle freedom."
 ---
 
@@ -369,7 +369,7 @@ Wave 26 covers five dependency-ordered orchestration families. The five `unit/wa
 
 Issue #70's `unit/batch-post-write-handoff.test.mts` isolates the asynchronous batch closure stage. It proves process, support, and Flow same-id/version conflicts require successful readback before closeout, retryable verification failures preserve attempt/delay evidence, missing reports exhaust the bounded retry plan without closeout, and other commit failures stop before verification. `unit/orchestration-module-budget.test.mts` keeps the command owner and semantic module ceilings shrink-only and includes the new module in cycle analysis once tracked.
 
-Issue #81 strengthens that boundary in `unit/process-handoff-orchestration.test.mts` and `unit/batch-post-write-handoff.test.mts`. Process lost-success recovery verifies without a second commit; owner, state, payload, unexpected-row, and repeated missing-readback findings fail before closeout. Batch and process both reject text-only, mixed, malformed, and incomplete conflict evidence unless structured code `23505` and exact same-id/version semantics agree. The orchestration budget and cycle contract tracks the shared classifier plus bounded process plan/closeout helpers.
+Issue #81 strengthens that boundary in `unit/process-handoff-orchestration.test.mts`, `unit/batch-post-write-handoff.test.mts`, and the command-level `commands/bafu-batch-import-run.test.mts` hook contract. Process lost-success recovery verifies without a second commit; owner, state, payload, unexpected-row, and repeated missing-readback findings fail before closeout. Batch and process both reject text-only, mixed, malformed, and incomplete conflict evidence unless structured code `23505` and exact same-id/version semantics agree. The orchestration budget and cycle contract tracks the shared classifier plus bounded process plan/closeout helpers.
 
 Issue #77 is pinned at two layers. `unit/bafu-identity-equivalence-contract.test.mts` proves an exact product-flow name with property/unit/geography/category conflicts cannot become a reuse candidate, freezes the ordered reasons, and retains exact-name reuse when the physical evidence matches. `commands/bafu-auto-authoring.test.mts` drives a real task/package through autofill and deterministic identity apply, proving the conflicting candidate becomes `create_new` evidence and the source flow UUID survives.
 

@@ -44,7 +44,7 @@ checkPaths:
   - package.json
   - pnpm-lock.yaml
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 5faceff
+lastReviewedCommit: b466bf1
 lastReviewedNote: "Reviewed for Issue #81: strict conflict classification, one mutation attempt, and exact owner/state/id/version/payload/root readback are explicit module boundaries."
 related:
   - https://github.com/tiangong-lca/data-foundry/issues/70

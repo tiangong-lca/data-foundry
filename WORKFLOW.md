@@ -276,7 +276,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 5faceff
+lastReviewedCommit: b466bf1
 lastReviewedNote: "Reviewed for Issue #81: process and batch handoffs fail closed on ambiguous conflict evidence and never replay a commit."
 tracker:
   kind: filesystem

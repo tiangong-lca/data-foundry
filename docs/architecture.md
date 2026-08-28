@@ -147,7 +147,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 5faceff
+lastReviewedCommit: b466bf1
 lastReviewedNote: "Reviewed for Issue #81: a shared strict classifier and bounded process helpers keep lost-success recovery pending until exact readback."
 ---
 

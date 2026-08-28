@@ -233,7 +233,7 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 5faceff
+lastReviewedCommit: b466bf1
 lastReviewedNote: "Reviewed for Issue #81: process and batch lost-success recovery now share strict structured conflict evidence, no replay, and exact readback before closeout."
 ---
 
