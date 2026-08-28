@@ -286,18 +286,11 @@ test("BAFU process scope helper recognizes post-finalize semantic-only recovery"
   });
 
   try {
-    const finalizeReport = {
-      files: {
-        curation_gate_report: rel(curationGateReport),
-      },
-    };
+    const gateReport = readJson(curationGateReport);
 
+    assert.equal(bafuProcessScopeE2eTestHooks.canRunPostFinalizeSemanticRecovery(gateReport), true);
     assert.equal(
-      bafuProcessScopeE2eTestHooks.canRunPostFinalizeSemanticRecovery(finalizeReport),
-      true,
-    );
-    assert.equal(
-      bafuProcessScopeE2eTestHooks.canRunPostFinalizeIdentityRecovery(finalizeReport),
+      bafuProcessScopeE2eTestHooks.canRunPostFinalizeIdentityRecovery(gateReport),
       false,
     );
   } finally {

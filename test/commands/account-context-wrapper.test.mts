@@ -3,7 +3,6 @@ import { spawnSync, type SpawnSyncOptions } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { createRequire } from "node:module";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -11,19 +10,7 @@ import {
   runWithLcaAccount,
   type WithLcaAccountDependencies,
 } from "../../scripts/with-lca-account.ts";
-
-const require = createRequire(import.meta.url);
-const cliAuth = require("@tiangong-lca/cli/dist/src/lib/auth-identity-receipt.js") as {
-  __testInternals: {
-    requestFingerprint(projectRef: string): string;
-    responseFingerprint(input: {
-      projectRef: string;
-      userId: string;
-      displayEmail: string;
-    }): string;
-    sha256Json(value: unknown): string;
-  };
-};
+import { testAuthIdentityReceipt } from "../fixtures/auth-identity-receipt.ts";
 
 const PROJECT_REF = "exampleprojectref";
 const USER_ID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
@@ -38,47 +25,12 @@ type SpawnCall = {
 };
 
 function receipt(overrides: Record<string, unknown> = {}) {
-  const scope = {
-    schema: "tiangong-lca.auth-identity-receipt.v1",
-    status: "passed",
-    operation: "current-user-read",
-    remote_write_mode: "read-only",
-    captured_at_utc: "2026-08-25T01:59:45.000Z",
-    cli: { package_name: "@tiangong-lca/cli", package_version: "0.1.1" },
-    project: {
-      project_ref: PROJECT_REF,
-      project_base_url: `https://${PROJECT_REF}.supabase.co`,
-    },
-    identity: { user_id: USER_ID, display_email: "te****@example.com" },
-    session: {
-      source: "signin",
-      cache_mode: "disabled",
-      force_reauth: true,
-      expires_at_utc: null,
-    },
-    bindings: {
-      request_sha256: cliAuth.__testInternals.requestFingerprint(PROJECT_REF),
-      response_sha256: cliAuth.__testInternals.responseFingerprint({
-        projectRef: PROJECT_REF,
-        userId: USER_ID,
-        displayEmail: "te****@example.com",
-      }),
-    },
-    assertions: {
-      mode: "intent-bound",
-      requested_count: 2,
-      expected_project_ref: PROJECT_REF,
-      expected_user_id: USER_ID,
-      project_ref_passed: true,
-      user_id_passed: true,
-      passed: true,
-    },
-    ...overrides,
-  };
-  return {
-    ...scope,
-    receipt_scope_sha256: cliAuth.__testInternals.sha256Json(scope),
-  };
+  return testAuthIdentityReceipt({
+    projectRef: PROJECT_REF,
+    userId: USER_ID,
+    capturedAtUtc: "2026-08-25T01:59:45.000Z",
+    scopeOverrides: overrides,
+  });
 }
 
 function writeProfile(
@@ -127,7 +79,7 @@ function baseDeps(
     },
     resolveInstalledCli: () => ({
       packageName: "@tiangong-lca/cli",
-      packageVersion: "0.1.1",
+      packageVersion: "0.1.3",
       binPath: path.join(root, "trusted", "tiangong-lca.js"),
     }),
     spawnSyncImpl: (executable: string, argv: readonly string[], options: SpawnCall["options"]) => {
@@ -274,7 +226,7 @@ test("account wrapper executes when invoked through a symlinked entrypoint", (co
       encoding: "utf8",
     });
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /fresh, intent-bound CLI 0\.1\.1 identity receipt/u);
+    assert.match(result.stdout, /fresh, intent-bound CLI 0\.1\.3 identity receipt/u);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

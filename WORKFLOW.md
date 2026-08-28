@@ -276,8 +276,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 1f6df31bca8cd149b4e35318b37c3a599cf20ae9
-lastReviewedNote: "Reviewed for Issue #82: workflow preflight now requires exact pnpm 11.24.0 with unchanged Node 24, TypeScript 7, lock, TDD gates, and production authority."
+lastReviewedCommit: b4c9b777929ac27694fbebd748f0c4bec968fab2
+lastReviewedNote: "Reviewed for Issue #70: public commands are thin facades; batch wiring lives in the explicit composition root and behavior remains in focused semantic/CLI owners."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -356,6 +356,10 @@ The mutation reference stack is native TypeScript. Preserve reference DFS and ta
 
 The high-level dataset orchestration layer is native TypeScript. `library-scope-workflow.ts` stays profile-agnostic; BAFU classification, auto-authoring, process-scope and batch owners retain their established BAFU defaults, while USLCI and Worldsteel wrappers delegate into the shared typed batch engine. Preserve resume ledgers, pause/stop and bounded-parallel selection, read-only preflight, exact scope/library/identity/classification gate order, local artifact bytes, shell-free argv and receipt/hash binding. Only the existing explicit `--commit` path may reach a guarded CLI handoff.
 
+Within the shared batch owner, `scripts/lib/batch-orchestration/post-write-handoff.ts` owns the asynchronous commit → post-write verify/retry → closeout stage. Same-id/version conflicts are accepted only as an idempotent commit outcome and only when subsequent verification succeeds; missing reports and non-retryable failures remain blocking. The module receives the existing stage runner and never retries the commit mutation or executes rendered display text.
+
+The enclosing per-dataset state machine lives in `scripts/lib/batch-orchestration/scope-finalize-commit.ts`. It serializes support commits across concurrent scopes, reuses only verified support identities, invalidates stale reuse before a fresh support handoff, reruns finalize on exact recovered rows/evidence, and invokes the main handoff only from `ready_for_remote_write`. A missing finalize report or failed support handoff remains blocking.
+
 CLI wrappers, execution-capsule admission, and post-write closeout are native TypeScript. Wrappers must pass executable plus argv arrays directly, retain the existing environment/CWD/stdout/stderr/exit contract, and surface native spawn errors without executing display text. Capsule admission stays offline and unattempted until exact external dispatch evidence exists. Closeout stays read-only and requires one exact owner/state/payload readback per intended root; production-test mode accepts no traceHash normalization, and foreign or RLS-hidden missing rows never pass.
 
 Core commands, the identity-preflight runner, and post-authoring finalize are native TypeScript. Core must retain runtime directory, workflow, storage, environment, surface, route, doctor and exact help behavior. Identity preflight must keep receipt-bound executable/argv arrays, request/target/binding hashes, positive-only cache reuse, stale disk and stdout/disk mismatch failures, nonzero exit handling and only-pending fail-close without a shell. Finalize must preserve identity/source/contact/canonical rewrite order, cleanup and validation gates, mutation evidence and read-only commit-handoff preparation; a blocked prerequisite never becomes dry-run or write authority.
@@ -376,7 +380,9 @@ All scenario suites are native `.test.mts`. Preserve every multi-command artifac
 
 Do not parse or execute rendered command strings. `tiangong-foundry.command-spec.v1` makes `executable` plus `argv` authoritative and keeps `display` reader-only. Its SHA-256 binds the authoritative command and exact artifact facts; commit and verify both bind the final rows path, bytes, and SHA-256, and runners reject same-path drift before `shell=false` spawn. Artifact-to-scope matching still normalizes platform separators. Durable writers fsync writable file descriptors, not read-only reopened handles.
 
-Use the exact installed project dependency as `pnpm exec tiangong-lca ...`. Foundry runtime adapters resolve that same `@tiangong-lca/cli@0.1.1` manifest and bin directly; only the external `skills@latest` source-evidence resolver remains intentionally floating, with the resolved ref recorded in task artifacts.
+Use the exact installed project dependency as `pnpm exec tiangong-lca ...`. Foundry runtime adapters resolve that same `@tiangong-lca/cli@0.1.3` manifest and bin directly; only the external `skills@latest` source-evidence resolver remains intentionally floating, with the resolved ref recorded in task artifacts.
+
+Reusable scheduling/run-lock and receipt parsing come only from `@tiangong-lca/cli/batch` and `@tiangong-lca/cli/auth-identity-receipt`. Never restore a `dist/src/**` import or expose CLI test internals; fixture receipt construction is test-only and must pass the same public parser before it can drive a case.
 
 Credential-scoped operator commands must run through `pnpm account:run -- <profile> -- <executable> [args...]`. The ignored profile must include `FOUNDRY_EXPECTED_PROJECT_REF` and `FOUNDRY_EXPECTED_USER_ID`. Before the requested argv is executed, the wrapper obtains a fresh `auth identity-receipt` from the installed CLI with both expectations, requires an intent-bound cache-disabled forced signin, and uses a restricted child environment. Missing expectations, thread-guard drift, stale or partial receipts, and the retired `--no-auth-check` path all fail before the requested command starts.
 
@@ -414,6 +420,8 @@ The queue state machine belongs to `pnpm exec tiangong-lca dataset curation-queu
 After build, workers should call `pnpm exec tiangong-lca dataset curation-queue next --queue-dir .foundry/workspaces/<task-id>/curation-queue --json` and execute only the returned task. Before write planning, call `pnpm exec tiangong-lca dataset curation-queue verify --queue-dir .foundry/workspaces/<task-id>/curation-queue --type <support|flow|process> --json`.
 
 Batch runners may execute multiple ready tasks in parallel only when queue locks and `depends_on` checkpoints prove independence. The task workspace must record configured `max_parallelism` and the runner identity for each claimed task. A blocked task must write its blocker artifact and release unrelated work; it must not stop independent ready tasks from completing, committing, and passing readback when their exact scopes have no blockers. Any workflow stage that defers scopes must write a complete `blocked-scope-ledger.jsonl` plus a reader-facing `blocked-scope-report.json` that names the concrete reasons, affected process scopes, blocking dependency types or examples, required human action, and rerun command.
+
+The high-level scope runner implements this through `cli-bounded-batch-runner.ts`: one public CLI batch contract and cross-process run lock, per-family exclusive keys, bounded claims, pause-before-claim, stop-after-blocked, and mandatory in-flight drain. The callback remains Foundry-owned and writes the same scope checkpoints, verified/blocked/retry ledgers, cache-cap effects, and reader report; do not add a second worker-index claim loop.
 
 Before AI curation for process/flow imports, audit and then run the generated identity-preflight request index. The audit checks the exact `flow_hybrid_search` / `process_hybrid_search` Edge request body before any remote call: Edge only parses `query`, `filter`/`filter_condition`, match/page options, and `data_source`, so complete identity and source evidence must be present in the compact fielded `query`. Foundry may include `remote_candidate_search.profile_hints` in the request for source-derived facts such as elementary categories, flow property, reference unit, geography, reference flow names, technology, and system boundary; the CLI uses those hints only for local target profiling and candidate scoring, not as Edge Function request fields.
 

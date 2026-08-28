@@ -273,9 +273,9 @@ checkPaths:
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
-lastReviewedNote: "Reviewed for Issue #69: unit/scenario layers cover strict calendar fail-close, zero blocked-run deletion, CLI failure and finalize suppression."
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: b4c9b777929ac27694fbebd748f0c4bec968fab2
+lastReviewedNote: "Reviewed for Issue #70: tests pin the five-line batch facade, explicit composition-root path, focused stage budgets, and unchanged runtime exports/help bytes."
 ---
 
 # Test Layout
@@ -366,6 +366,14 @@ Wave 25 covers the three decision command factories. `unit/wave25-identity-decis
 Wave 25 covers two re-export families. `unit/import-curation-leaf-barrels-migration.test.mts` pins the exact profile/trace namespaces and direct owner references. `unit/import-curation-entry-barrels-migration.test.mts` pins the complete eight-export index/public namespace, every owner reference, Foundry CLI injection keys, metadata owner routes, TS-only atomic entry migration, and a clean temporary TypeScript build loaded by Node 24. No fixture reads credentials, `.env`, production state, or ignored Foundry artifacts.
 
 Wave 26 covers five dependency-ordered orchestration families. The five `unit/wave26-*-command-migration.test.mts` contracts require one native zero-escape owner, every dispatcher/metadata/wrapper consumer and exact serialized help bytes. Existing command and scenario fixtures remain the behavior authority for generic-versus-BAFU configuration, library/scope/classification/identity blocker and artifact order, resume ledgers, pause/stop, bounded parallel selection, read-only preflight, guarded commit delegation, native errors and deterministic report/JSONL bytes. All fixtures are local and read neither `.env` nor production.
+
+Issue #70's `unit/batch-post-write-handoff.test.mts` isolates the asynchronous batch closure stage. It proves process, support, and Flow same-id/version conflicts require successful readback before closeout, retryable verification failures preserve attempt/delay evidence, missing reports exhaust the bounded retry plan without closeout, and other commit failures stop before verification. `unit/orchestration-module-budget.test.mts` keeps the command owner and semantic module ceilings shrink-only and includes the new module in cycle analysis once tracked.
+
+`fixtures/auth-identity-receipt.ts` is the only test-only receipt materializer. It recreates the frozen public wire fingerprints and scope hash, then every consumer still passes the bytes through `@tiangong-lca/cli/auth-identity-receipt`. `unit/public-cli-batch-runtime.test.mts` loads exact installed CLI 0.1.3, exercises public batch/run-lock plus strict receipt parsing, and proves the former private deep path stays unexported. `unit/toolchain-contract.test.mts` rejects any tracked `@tiangong-lca/cli/dist/src/**` import and binds the exact provenance-verified 0.1.3 maturity exception.
+
+`unit/cli-bounded-batch-runner.test.mts` is the Foundry/CLI scheduling boundary: it proves the physical run lock exists only during execution, public contract claims are bounded, pause leaves items unclaimed, stop drains claimed work, one family key is FIFO-serialized while an independent key proceeds, and the composition root has no manual worker/`Promise.all` claim loop. Existing BAFU command cases preserve pending-before-limit, pause report bytes, family-master selection, ledgers, and preflight behavior. `wave26-bafu-batch-command-migration.test.mts` fixes the five-line facade's three exports and exact help bytes; `unit/orchestration-module-budget.test.mts` separately exposes the 20-line facade and 1,700-line composition-root ceilings instead of hiding the move.
+
+`unit/batch-scope-finalize-commit.test.mts` covers the enclosing state machine: a missing finalize report fails before recovery or handoff; verified support is reused before the main handoff; stale reuse is invalidated before fresh support commit/cache evidence; recovered rows and reports feed the next finalize attempt; and failed support never reaches the main handoff.
 
 Wave 26 covers adapters and repository tooling in four RED/GREEN families. `unit/tidas-adapter-migration-contract.test.mts` uses controlled local executables to pin argv, environment, operation reports, version gates, path resolution, hashes and native spawn failures. `unit/post-authoring-finalize-utils-contract.test.mts` pins rewrite resolution, identity reuse, queue/input order and fail-closed preflight behavior. `unit/tidas-cutover-script-contract.test.mts` pins the TypeScript-aware tracked inventory, exact stdout and exit contract. `unit/foundry-golden-diff-contract.test.mts` pins merge-base selection, normalization, cross-platform executable/argv handling, byte-equal credential-free child environments, Node-native comparison, Golden diffs and failure exits. All four require zero-escape native TypeScript and prohibit real external TIDAS or production access.
 

@@ -84,8 +84,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 1f6df31bca8cd149b4e35318b37c3a599cf20ae9
-lastReviewedNote: "Reviewed for Issue #82: pnpm 11.24.0 changes no 63-command surface, metadata owner, help/stdout/exit behavior, profile, artifact, or remote-write mode."
+lastReviewedCommit: b4c9b777929ac27694fbebd748f0c4bec968fab2
+lastReviewedNote: "Reviewed for Issue #70: the batch command is a five-line re-export facade over the same three runtime exports; 63-command help/stdout/exit and metadata remain exact."
 ---
 
 # Foundry Command Surface

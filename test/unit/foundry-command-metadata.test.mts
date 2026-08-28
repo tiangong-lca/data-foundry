@@ -37,6 +37,15 @@ function readRepoFile(filePath: string): string {
   return fs.readFileSync(path.join(repoRoot, filePath), "utf8");
 }
 
+function readOwnerClosure(filePath: string): string {
+  const source = readRepoFile(filePath);
+  const reexport = /export\s*\{[\s\S]*?\}\s*from\s*["'](?<specifier>\.[^"']+)["']/u.exec(source)
+    ?.groups?.specifier;
+  if (!reexport) return source;
+  const target = path.posix.normalize(path.posix.join(path.posix.dirname(filePath), reexport));
+  return `${source}\n${readRepoFile(target)}`;
+}
+
 test("foundry command metadata covers every registered command", () => {
   const metadataCommands = Object.keys(commandMetadata).sort();
   assert.deepEqual(metadataCommands, [...knownCommands].sort());
@@ -147,7 +156,7 @@ test("metadata preserves exact owner, artifact, workflow, and key-test schemas",
 
     const ownerMatch = /^(?:(\w+)\(\)\.)?(\w+)$/u.exec(entry.ownerExport);
     assert.ok(ownerMatch, `${entry.command} ownerExport is not navigable: ${entry.ownerExport}`);
-    const ownerSource = readRepoFile(entry.ownerModule);
+    const ownerSource = readOwnerClosure(entry.ownerModule);
     for (const token of [ownerMatch[1], ownerMatch[2]].filter(Boolean)) {
       assert.match(
         ownerSource,

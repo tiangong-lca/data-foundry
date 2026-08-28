@@ -19,7 +19,7 @@ const RECEIPT_PROCESS_TIMEOUT_MS = 20_000;
 const RECEIPT_MAX_AGE_MS = 60_000;
 const MAX_RECEIPT_OUTPUT_BYTES = 256 * 1024;
 const EXPECTED_CLI_PACKAGE = "@tiangong-lca/cli";
-const EXPECTED_CLI_VERSION = "0.1.1";
+const EXPECTED_CLI_VERSION = "0.1.3";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 const PROJECT_REF_PATTERN = /^[a-z0-9]+$/u;
 const SAFE_FILE_STEM_PATTERN = /^[A-Za-z0-9._-]+$/u;
@@ -101,7 +101,7 @@ Account profile requirements:
   FOUNDRY_EXPECTED_PROJECT_REF
   FOUNDRY_EXPECTED_USER_ID
 
-The wrapper always obtains a fresh, intent-bound CLI 0.1.1 identity receipt before it
+The wrapper always obtains a fresh, intent-bound CLI 0.1.3 identity receipt before it
 executes the requested executable and argv without a shell. Authentication bypass flags
 are not supported. The requested executable receives the account credential and inherits
 terminal stdio, so invoke only trusted project CLI or Foundry entrypoints.

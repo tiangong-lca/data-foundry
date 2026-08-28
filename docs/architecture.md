@@ -147,8 +147,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 1f6df31bca8cd149b4e35318b37c3a599cf20ae9
-lastReviewedNote: "Reviewed for Issue #82: pnpm 11.24.0 changes only package-manager compatibility; the runtime, compiler, dependency, lock, orchestration, and authority architecture is unchanged."
+lastReviewedCommit: b4c9b777929ac27694fbebd748f0c4bec968fab2
+lastReviewedNote: "Reviewed for Issue #70: the batch public owner is a five-line facade; a separately budgeted composition root wires focused Foundry stages to CLI scheduling."
 ---
 
 # Architecture
@@ -202,7 +202,9 @@ The source-semantics, reusable TIDAS-row, and identity-reference-rewrite leaves 
 
 After the decision, source and proof families converge, `.oxlintrc.json` promotes `typescript/no-explicit-any` to one global error and removes every family-specific override. `zero-javascript-ratchet.test.mts` validates both raw and printed rule graphs and a controlled failing fixture, so all first-party TypeScript remains covered without a TS6 compatibility compiler.
 
-The typed BAFU family and import-ledger leaves preserve two local control-plane boundaries: deterministic family grouping/ranking over ordered signature hashes, and append-only resume evidence over verified, blocked, dependency, retry, and skipped JSONL rows. They do not change database writes, command ownership, public help, profile defaults, or the owner CLI boundary.
+The typed BAFU family and import-ledger leaves preserve two local control-plane boundaries: deterministic family grouping/ranking over ordered signature hashes, and append-only resume evidence over verified, blocked, dependency, retry, and skipped JSONL rows. `cli-bounded-batch-runner.ts` projects those family group keys into the public CLI scheduler's exclusive-resource queue and wraps the entire run in its cross-process lock; only independent families/scopes claim in parallel. Foundry callbacks still own database-command delegation and every ledger/report byte, so command ownership, public help, profile defaults, and remote authority do not move.
+
+The public `bafu-batch-import-run.ts` file contains only re-exports. `bafu-batch-command-runtime.ts` is a composition root, not a semantic owner: it installs the runtime/profile adapters and combines selection, semantic callbacks, CLI scheduling, and final reports. Its explicit 1,700-line ceiling makes remaining composition density visible; the ordinary semantic-stage target remains 800 lines and applies to the focused modules reached from it.
 
 The typed canonical-support and bundle-sampling leaves own local reference rewriting and source-package materialization, not amount conversion or remote execution. Canonical scale evidence is collected before the package-local FP reference is replaced: the explicit blocking flag distinguishes a known positive non-1 factor from an unresolved missing/non-finite/non-positive factor, and projects either blocker into the report and process-scope ledger. Without that flag, existing profile behavior remains compatible.
 
@@ -244,6 +246,10 @@ The typed mutation reference stack remains an offline planning boundary. Referen
 
 The typed dataset-orchestration layer composes those owners without absorbing them. The generic library workflow prepares deduplicated library and scope artifacts; BAFU classification, auto-authoring and process-scope owners retain dataset-specific policy; the shared batch engine adds resumable ledgers, bounded parallelism, interruption/preflight modes and explicit handoff delegation. It owns local ordering and checkpoints, not CLI mutation, profile meaning, remote state or publication.
 
+The batch engine delegates its asynchronous post-write closure to `scripts/lib/batch-orchestration/post-write-handoff.ts`. That stage discovers the exact commit and verification reports, permits only the characterized same-id/version idempotent commit recovery, retries only classified read-only verification failures, delegates ordinary trace-hash normalization policy, and invokes Foundry closeout after successful readback. The command owner continues to supply process isolation, timeouts, paths, and profile context.
+
+`scripts/lib/batch-orchestration/scope-finalize-commit.ts` composes finalize and handoff without absorbing their owners. It holds the support-commit serialization queue and verified identity set adapter, invalidates stale support reuse, reruns finalize after support or evidence recovery, and preserves the exact three-attempt post-finalize recovery ceiling before delegating the content-bound main handoff.
+
 The typed runtime-command layer also includes CLI wrappers, offline capsule admission and post-write closeout. Wrappers delegate to the installed CLI with an executable and argv array; capsule admission writes immutable local evidence with zero dispatch; closeout aggregates already-produced commit/readback proof without issuing a remote operation. Unique-root, owner/state/payload, accepted-diff and production-test rules remain in their typed proof owners rather than moving into transport code.
 
 The typed command-owner layer now also includes `core.ts`, `identity-preflight-run.ts`, and `post-authoring-finalize.ts`. Core owns local runtime/bootstrap and diagnostic projection. Identity preflight invokes only the published read-only CLI through receipt-bound executable/argv arrays and content-bound request evidence. Finalize orders existing rewrite, parent cleanup, nested source/contact support finalize, validation, curation, dry-run, mutation-manifest and handoff adapters; cleanup must return `completed` plus a concrete cleaned artifact before nested support or any later stage is constructed. A blocked attempt preserves every pre-existing downstream artifact, reports the stale paths as blockers, and emits only current blocker/import-ledger evidence. None of these owners implement schema/search semantics, direct database mutation, review, or publication.
@@ -264,7 +270,9 @@ Build and test resolution must be worktree-local. A clean arbitrary Git worktree
 
 Cross-platform characterization is also explicit: the Golden harness compares normalized outputs to a non-`HEAD` merge-base, performs recursive comparison in Node rather than calling an external Unix utility, and uses full Git history in CI. Script-backed executable overrides are represented as an executable plus argv prefix and run through Node on macOS, Linux, and Windows. The root `.gitattributes` fixes text files to LF while allowing Windows launcher exceptions, preventing checkout policy from masquerading as format drift.
 
-The first credential-bearing entrypoint on that spine is `scripts/with-lca-account.ts`. It does not authenticate against Supabase itself. It resolves the exact installed CLI 0.1.1, requests `auth identity-receipt` with both expected project and user assertions, accepts only a fresh intent-bound forced signin, and then launches the requested executable plus argv with `shell:false` and a restricted environment. The CLI owns session and live identity behavior; Foundry owns the profile/thread intent checks and safe process boundary.
+The first credential-bearing entrypoint on that spine is `scripts/with-lca-account.ts`. It does not authenticate against Supabase itself. It resolves the exact installed CLI 0.1.3, requests `auth identity-receipt` with both expected project and user assertions, accepts only a fresh intent-bound forced signin, and then launches the requested executable plus argv with `shell:false` and a restricted environment. The CLI owns session and live identity behavior; Foundry owns the profile/thread intent checks and safe process boundary.
+
+`scripts/lib/identity-preflight-proof.ts` imports the strict parser from the public `@tiangong-lca/cli/auth-identity-receipt` subpath. `test/fixtures/auth-identity-receipt.ts` is the sole test-only wire-fixture owner and produces bytes that must pass that public parser. No production module or fixture may load CLI `dist/src/**`; the installed-package contract also exercises public batch scheduling/run-lock behavior and proves the private path remains closed.
 
 The artifact layer treats JSON paths as portable identifiers: scope extraction normalizes separators, transitional command parsers retain native backslashes, and durable writers flush a writable descriptor before close. POSIX file-mode assertions are evidence on POSIX platforms rather than a fabricated Windows contract.
 

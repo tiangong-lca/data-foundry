@@ -84,13 +84,15 @@ test("full-context fixture preserves artifact order, bytes, hashes, and isolated
 });
 
 test("identity receipt bytes and native missing-file errors remain exact", () => {
-  const receiptText = JSON.stringify(
-    identity.testAuthIdentityReceipt({ capturedAtUtc: "2026-08-25T00:00:00.000Z" }),
-  );
+  const receipt = identity.testAuthIdentityReceipt({
+    capturedAtUtc: "2026-08-25T00:00:00.000Z",
+  });
+  assert.equal(receipt.cli.package_version, "0.1.3");
+  const receiptText = JSON.stringify(receipt);
   assert.equal(Buffer.byteLength(receiptText, "utf8"), 1047);
   assert.equal(
     sha256(receiptText),
-    "fdf7d74fa0b98e46b6ec93e91fe4f51d2deed11f97f91f463359821874a791d7",
+    "9a2e40915c583622e0cb20d7495bdf349297be334d602225c7e8127d56d010c0",
   );
 
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-identity-fixture-"));

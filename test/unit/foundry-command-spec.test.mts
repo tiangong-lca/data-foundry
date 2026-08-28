@@ -183,7 +183,7 @@ test("CommandSpec blocks same-path artifact byte drift before spawn and never ex
 
 test("handoff runners contain no shell-string parser or shell:true execution path", () => {
   for (const file of [
-    "scripts/commands/bafu-batch-import-run.ts",
+    "scripts/lib/batch-orchestration/bafu-batch-command-runtime.ts",
     "scripts/commands/bafu-process-scope-e2e.ts",
   ]) {
     const source = fs.readFileSync(path.resolve(file), "utf8");

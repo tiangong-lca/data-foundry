@@ -82,7 +82,7 @@ function createHarness(root: string, script: string) {
         command: process.execPath,
         args: [script, "--prefix"],
         display: "fixture tiangong-lca",
-        package: { name: "@tiangong-lca/cli", version: "0.1.1" },
+        package: { name: "@tiangong-lca/cli", version: "0.1.3" },
       };
     },
     resolveTiangongLcaCliBin() {
@@ -166,7 +166,7 @@ test("CLI queue wrapper preserves executable prefix, option order, CWD, environm
     assert.equal(report.foundry_wrapper.stderr, "fixture-warning\n");
     assert.deepEqual(report.foundry_wrapper.cli_package, {
       name: "@tiangong-lca/cli",
-      version: "0.1.1",
+      version: "0.1.3",
     });
   });
 });

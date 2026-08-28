@@ -137,13 +137,15 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 1f6df31bca8cd149b4e35318b37c3a599cf20ae9
-lastReviewedNote: "Reviewed for Issue #82: AI navigation now identifies exact pnpm 11.24.0 while module ownership, TS7 validation, case routing, and safety boundaries remain unchanged."
+lastReviewedCommit: b4c9b777929ac27694fbebd748f0c4bec968fab2
+lastReviewedNote: "Reviewed for Issue #70: the five-line batch facade routes wiring questions to one visible composition root and behavior questions directly to focused semantic/CLI modules."
 ---
 
 # Foundry AI Navigation
 
 Foundry is a thin control plane. Start from commands and artifacts, then move to the semantic owner module. Do not start from large implementation files.
+
+For shared CLI primitives, start at `scripts/lib/identity-preflight-proof.ts` for public receipt parsing, `scripts/lib/foundry-runtime-utils.ts` for exact installed package/bin resolution, and `scripts/lib/batch-orchestration/` for Foundry semantic adapters around `@tiangong-lca/cli/batch`. Test receipt bytes belong only to `test/fixtures/auth-identity-receipt.ts`; installed-package public export proof is `test/unit/public-cli-batch-runtime.test.mts`. A `dist/src/**` path is a contract violation, not a navigation shortcut.
 
 ## Command Path
 
@@ -244,7 +246,7 @@ The typed command factories are `scripts/commands/tasks.ts`, `import-completion.
 
 The typed mutation reference stack starts at `workflow-reference-closure.ts` for reference/table/partition algebra, then `workflow-source-reference-context.ts` for ordered source proof admission, then the pure `mutation-manifest-workflow.ts` aggregate and `mutation-manifest.ts` artifact runner. Navigate downward for individual proof rules; the runner only partitions and reports exact evidence and never executes a write.
 
-The typed high-level orchestration path is `library-scope-workflow.ts` for profile-agnostic library/scope preparation, then `bafu-leaf-classification-tasks.ts` and `bafu-auto-authoring.ts`, then `bafu-process-scope-e2e.ts`, with `bafu-batch-import-run.ts` owning resume, selection, interruption, bounded parallelism and explicit handoff delegation. USLCI and Worldsteel adapters import that same batch owner with frozen profile configuration. Start at command metadata and the Wave 26 migration tests, then navigate to the narrower command owner for blocker and artifact semantics.
+The typed high-level orchestration path is `library-scope-workflow.ts` for profile-agnostic library/scope preparation, then `bafu-leaf-classification-tasks.ts` and `bafu-auto-authoring.ts`, then `bafu-process-scope-e2e.ts`. `scripts/commands/bafu-batch-import-run.ts` is only the public facade; enter `bafu-batch-command-runtime.ts` solely for composition/wiring or final aggregate reporting, not for domain-rule searches. For generic contract hashes, cross-process run locking, bounded claims, family resource FIFO, pause-before-claim, stop-after-blocked, or in-flight drain, navigate to `cli-bounded-batch-runner.ts`. For authoring task row filtering use `authoring-task-filter.ts`; for recovery report/blocker discovery use `scope-recovery-evidence.ts`; for scratch/cache retention use `scope-scratch-policy.ts`; for commit/readback/closeout use `post-write-handoff.ts`; and for finalize/support/recovery/handoff use `scope-finalize-commit.ts`. USLCI and Worldsteel adapters import the same public facade with frozen profile configuration. Start at command metadata and the orchestration budget contract, then navigate to the narrowest semantic owner.
 
 The typed runtime command owners are `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts`. Navigate to the wrapper for direct executable/argv delegation and process diagnostics, to the capsule for offline immutable admission and attempt-state evidence, and to closeout for already-produced commit/readback aggregation. Root uniqueness and accepted-difference decisions remain in `post-write-root-proof.ts` and `remote-verification-accepted-diff.ts`.
 

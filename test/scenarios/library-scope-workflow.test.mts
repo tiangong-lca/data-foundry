@@ -851,7 +851,7 @@ test("identity preflight retry dry-run selects only failed rows and records publ
   );
 });
 
-test("published CLI resolver binds the installed 0.1.1 package bin through Node", () => {
+test("published CLI resolver binds the installed 0.1.3 package bin through Node", () => {
   const previous = process.env.TIANGONG_LCA_CLI_BIN;
   delete process.env.TIANGONG_LCA_CLI_BIN;
   try {
@@ -863,8 +863,8 @@ test("published CLI resolver binds the installed 0.1.1 package bin through Node"
     const installed = resolveInstalledTiangongLcaCliPackage();
     assert.equal(cli.command, process.execPath);
     assert.deepEqual(cli.args, [installed.binPath]);
-    assert.equal(cli.package, "@tiangong-lca/cli@0.1.1");
-    assert.equal(cli.package_version, "0.1.1");
+    assert.equal(cli.package, "@tiangong-lca/cli@0.1.3");
+    assert.equal(cli.package_version, "0.1.3");
     assert.equal(cli.bin_path, installed.binPath);
     assert.match(
       cli.display.replaceAll("\\", "/"),
@@ -897,5 +897,5 @@ test("installed CLI schemas resolve independently of cwd and sibling worktrees",
     encoding: "utf8",
   });
   assert.equal(version.status, 0, version.stderr);
-  assert.equal(version.stdout.trim(), "0.1.1");
+  assert.equal(version.stdout.trim(), "0.1.3");
 });
