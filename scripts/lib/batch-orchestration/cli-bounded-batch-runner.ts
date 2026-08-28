@@ -1,7 +1,10 @@
-import type {
-  BatchJsonValue,
-  BatchRunResult,
-  RunBoundedBatchOptions,
+import {
+  createBatchContract,
+  runBoundedBatch,
+  withBatchRunLock,
+  type BatchJsonValue,
+  type BatchRunResult,
+  type RunBoundedBatchOptions,
 } from "@tiangong-lca/cli/batch";
 
 export type RunLockedCliBatchOptions<
@@ -23,7 +26,14 @@ export async function runLockedCliBatch<
   TIdentity extends BatchJsonValue,
   TExclusiveKey extends string = string,
 >(
-  _options: RunLockedCliBatchOptions<TInput, TOutput, TIdentity, TExclusiveKey>,
+  options: RunLockedCliBatchOptions<TInput, TOutput, TIdentity, TExclusiveKey>,
 ): Promise<BatchRunResult<TInput, TOutput, TIdentity>> {
-  throw new Error("CLI bounded batch runner is not implemented.");
+  const { runPath, reason, identity, content, policy, ...batchOptions } = options;
+  const contract = createBatchContract({ identity, content, policy });
+  return withBatchRunLock({ runPath, identity: contract.identity, reason }, () =>
+    runBoundedBatch<TInput, TOutput, TIdentity, TExclusiveKey>({
+      ...batchOptions,
+      contract,
+    }),
+  );
 }
