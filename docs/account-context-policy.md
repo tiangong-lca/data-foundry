@@ -69,7 +69,7 @@ Run commands through:
 pnpm account:run -- <profile> -- <executable> [args...]
 ```
 
-The wrapper selects only the required LCA credential values from the profile, disables the CLI session cache, forces a fresh signin, and invokes the exact installed CLI 0.1.1 as:
+The wrapper selects only the required LCA credential values from the profile, disables the CLI session cache, forces a fresh signin, and invokes the exact installed CLI 0.1.2 as:
 
 ```text
 auth identity-receipt --expected-project-ref <ref> --expected-user-id <uuid> --timeout-ms 10000 --json
@@ -81,7 +81,7 @@ The wrapper never prints or persists the key and never relays the captured ident
 
 There is no `--no-auth-check`, missing-expectation fallback, session-cache fallback, or environment-controlled skip path. Commands that do not need credentials should run directly instead of through `account:run`.
 
-Package installation, lint, typecheck, build, unit tests, and the clean arbitrary-worktree toolchain test are credential-free. They must not read `.env`, account profiles, thread guards, or `.foundry` runtime state. A real remote case enters this policy only when it deliberately invokes the exact installed CLI dependency (`pnpm exec tiangong-lca`, backed by `@tiangong-lca/cli@0.1.1`) through the approved receipt guard.
+Package installation, lint, typecheck, build, unit tests, and the clean arbitrary-worktree toolchain test are credential-free. They must not read `.env`, account profiles, thread guards, or `.foundry` runtime state. A real remote case enters this policy only when it deliberately invokes the exact installed CLI dependency (`pnpm exec tiangong-lca`, backed by `@tiangong-lca/cli@0.1.2`) through the approved receipt guard.
 
 ## Codex Thread Guards
 

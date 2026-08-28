@@ -44,7 +44,7 @@ function receipt(overrides: Record<string, unknown> = {}) {
     operation: "current-user-read",
     remote_write_mode: "read-only",
     captured_at_utc: "2026-08-25T01:59:45.000Z",
-    cli: { package_name: "@tiangong-lca/cli", package_version: "0.1.1" },
+    cli: { package_name: "@tiangong-lca/cli", package_version: "0.1.2" },
     project: {
       project_ref: PROJECT_REF,
       project_base_url: `https://${PROJECT_REF}.supabase.co`,
@@ -127,7 +127,7 @@ function baseDeps(
     },
     resolveInstalledCli: () => ({
       packageName: "@tiangong-lca/cli",
-      packageVersion: "0.1.1",
+      packageVersion: "0.1.2",
       binPath: path.join(root, "trusted", "tiangong-lca.js"),
     }),
     spawnSyncImpl: (executable: string, argv: readonly string[], options: SpawnCall["options"]) => {

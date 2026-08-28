@@ -333,7 +333,7 @@ test("tracked first-party JavaScript remains permanently at zero", () => {
 });
 
 test("Foundry pins the published CLI runtime and high-risk audit closure", () => {
-  assert.equal(packageJson.dependencies?.["@tiangong-lca/cli"], "0.1.1");
+  assert.equal(packageJson.dependencies?.["@tiangong-lca/cli"], "0.1.2");
   const runtimeSource = readText("scripts/lib/foundry-runtime-utils.ts");
   assert.match(runtimeSource, /tiangongLcaCliPackageVersion\s*=\s*"0\.1\.1"/u);
   assert.doesNotMatch(runtimeSource, /tiangongLcaCliPackageVersion\s*=\s*"0\.1\.0"/u);

@@ -62,7 +62,7 @@ related:
 
 The high-level orchestration layer must be easy for an Agent to navigate without moving LCA semantics into generic execution code. Public command owners converge toward help, option validation, stage-contract wiring, and calls into typed semantic modules. Foundry retains profile policy, scope selection, classification and identity meaning, blocker taxonomy, artifact projection, and import-ledger interpretation. The published CLI owns reusable executable-plus-argv validation, bounded scheduling, attempt/recovery mechanics, and mutation no-replay guarantees.
 
-`@tiangong-lca/cli@0.1.1`, still pinned by this Foundry branch, does not expose a public library API. CLI `0.1.2` has now published the reviewed CommandSpec, batch, and run-lock surfaces, but Foundry must first pin and verify that exact release before migrating execution mechanics. Until that dependency wave lands, Foundry must not deep-import `dist/src/**`, invent a compatibility wrapper, or copy the CLI scheduler into semantic modules.
+Foundry now pins the published `@tiangong-lca/cli@0.1.2` release. CommandSpec, batch, and run-lock are consumed only through the package's public `./command-spec` and `./batch` exports; Foundry must not deep-import `dist/src/**`, invent a compatibility wrapper, or copy the CLI scheduler into semantic modules. LCA/profile semantics, Foundry reports, and remote-write gates remain Foundry-owned adapters around those public primitives.
 
 ## 2. Baseline and ratchet
 

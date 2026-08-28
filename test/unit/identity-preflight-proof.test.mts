@@ -35,7 +35,7 @@ function authReceipt(overrides: Record<string, unknown> = {}) {
     operation: "current-user-read",
     remote_write_mode: "read-only",
     captured_at_utc: "2026-08-25T00:59:30.000Z",
-    cli: { package_name: "@tiangong-lca/cli", package_version: "0.1.1" },
+    cli: { package_name: "@tiangong-lca/cli", package_version: "0.1.2" },
     project: {
       project_ref: PROJECT_REF,
       project_base_url: `https://${PROJECT_REF}.supabase.co`,
@@ -92,7 +92,7 @@ function binding() {
     semanticArgv: ["flow", "identity-preflight", "--json", "--timeout-ms", "60000"],
     cli: {
       packageName: "@tiangong-lca/cli",
-      packageVersion: "0.1.1",
+      packageVersion: "0.1.2",
       packageIntegrity: "sha512-test",
     },
     authReceipt: parsedReceipt(),

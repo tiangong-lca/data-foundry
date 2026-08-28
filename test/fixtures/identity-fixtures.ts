@@ -71,7 +71,7 @@ export function testAuthIdentityReceipt({
     operation: "current-user-read",
     remote_write_mode: "read-only",
     captured_at_utc: capturedAtUtc,
-    cli: { package_name: "@tiangong-lca/cli", package_version: "0.1.1" },
+    cli: { package_name: "@tiangong-lca/cli", package_version: "0.1.2" },
     project: {
       project_ref: projectRef,
       project_base_url: `https://${projectRef}.supabase.co`,
@@ -127,7 +127,7 @@ export function writeIdentityPreflightExecutionFixture({
     semanticArgv: [datasetType, "identity-preflight", "--json", "--timeout-ms", "60000"],
     cli: {
       packageName: "@tiangong-lca/cli",
-      packageVersion: "0.1.1",
+      packageVersion: "0.1.2",
       packageIntegrity: null,
     },
     authReceipt: testAuthIdentityReceipt({ capturedAtUtc: "2026-08-25T00:00:00.000Z" }),
