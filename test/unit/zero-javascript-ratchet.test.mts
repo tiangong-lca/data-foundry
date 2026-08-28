@@ -12,6 +12,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // permanent boundary against reintroducing first-party JavaScript compatibility paths.
 // Issue #68's Worldsteel profile-truth contract is native .mts and adds no compatibility path.
 // Issue #69's strict datetime cleanup and fail-closed scenarios remain native TypeScript too.
+// Issue #70's orchestration stages and post-write handoff cases remain native TypeScript.
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");

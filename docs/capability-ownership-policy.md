@@ -85,8 +85,8 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: f68d6ca408fe0aff429ae45475c730c40eb766fb
 lastReviewedNote: "Reviewed for Issue #69: strict datetime and non-destructive blocked artifact reporting stay in Data Foundry; Rust schema and CLI/database authority do not move."
 ---
 

@@ -83,8 +83,8 @@ checkPaths:
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: f68d6ca408fe0aff429ae45475c730c40eb766fb
 lastReviewedNote: "Reviewed for Issue #69: strict datetime and non-destructive stale reporting do not change the 63-command surface, categories, profiles or remote-write modes."
 ---
 

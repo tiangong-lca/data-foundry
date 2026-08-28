@@ -136,8 +136,8 @@ checkPaths:
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: e777666f66742bf9695533b11bbe2a07635c19a6
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: f68d6ca408fe0aff429ae45475c730c40eb766fb
 lastReviewedNote: "Reviewed for Issue #69: navigation identifies strict datetime, non-destructive stale reporting, bundle preservation, blocked CLI/finalize flow and focused contracts."
 ---
 
@@ -244,7 +244,7 @@ The typed command factories are `scripts/commands/tasks.ts`, `import-completion.
 
 The typed mutation reference stack starts at `workflow-reference-closure.ts` for reference/table/partition algebra, then `workflow-source-reference-context.ts` for ordered source proof admission, then the pure `mutation-manifest-workflow.ts` aggregate and `mutation-manifest.ts` artifact runner. Navigate downward for individual proof rules; the runner only partitions and reports exact evidence and never executes a write.
 
-The typed high-level orchestration path is `library-scope-workflow.ts` for profile-agnostic library/scope preparation, then `bafu-leaf-classification-tasks.ts` and `bafu-auto-authoring.ts`, then `bafu-process-scope-e2e.ts`, with `bafu-batch-import-run.ts` owning resume, selection, interruption, bounded parallelism and explicit handoff delegation. USLCI and Worldsteel adapters import that same batch owner with frozen profile configuration. Start at command metadata and the Wave 26 migration tests, then navigate to the narrower command owner for blocker and artifact semantics.
+The typed high-level orchestration path is `library-scope-workflow.ts` for profile-agnostic library/scope preparation, then `bafu-leaf-classification-tasks.ts` and `bafu-auto-authoring.ts`, then `bafu-process-scope-e2e.ts`, with `bafu-batch-import-run.ts` owning resume, selection, interruption, bounded parallelism and explicit handoff delegation. For commit report discovery, same-id/version idempotent recovery, post-write verify retry/missing-report classification, accepted-diff delegation, or closeout ordering, navigate directly to `scripts/lib/batch-orchestration/post-write-handoff.ts` and `test/unit/batch-post-write-handoff.test.mts`. USLCI and Worldsteel adapters import the same batch owner with frozen profile configuration. Start at command metadata and the orchestration budget contract, then navigate to the narrowest semantic owner for blocker and artifact semantics.
 
 The typed runtime command owners are `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts`. Navigate to the wrapper for direct executable/argv delegation and process diagnostics, to the capsule for offline immutable admission and attempt-state evidence, and to closeout for already-produced commit/readback aggregation. Root uniqueness and accepted-difference decisions remain in `post-write-root-proof.ts` and `remote-verification-accepted-diff.ts`.
 

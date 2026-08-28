@@ -12,8 +12,9 @@ layout: repo
 # Review note, 2026-08-25: Issue #67 Wave 24 migrates five existing command-owner paths to TypeScript with local characterization. Existing control-plane, test-layout, ownership, and documentation routes already cover the moved paths; no rule or authority boundary changes.
 # Review note, 2026-08-26: Issue #68 adds a narrow Worldsteel wrapper/test/document route to the profile index, current docs, and retained evidence. The monolithic specs/import-profiles.json stays under the generic import-profile trigger so unrelated profile edits do not fan out to Worldsteel; the executable truth test is the cross-file backstop for its Worldsteel subtree.
 # Review note, 2026-08-26: Issue #69 adds a narrow strict prewrite-datetime route across bundle preservation, atomic cleanup blockers, non-destructive stale-artifact reporting, finalize short-circuiting, CLI exit behavior, and their focused contracts. It also closes the existing control-plane coverage gap for specs/prewrite-content-policy.json without changing ownership or mutation authority.
-lastReviewedAt: "2026-08-26"
-lastReviewedCommit: "e777666f66742bf9695533b11bbe2a07635c19a6"
+# Review note, 2026-08-29: Issue #70 governs high-level orchestration decomposition, shrink-only module budgets, and AI navigation. The batch post-write handoff extraction preserves artifact-bound CLI execution, idempotent conflict handling, bounded readback retries, accepted-diff policy, and closeout without changing remote authority.
+lastReviewedAt: "2026-08-29"
+lastReviewedCommit: "f68d6ca408fe0aff429ae45475c730c40eb766fb"
 
 catalog:
   repos:
@@ -25,6 +26,7 @@ catalog:
         - README.md
         - WORKFLOW.md
         - docs/architecture.md
+        - docs/orchestration-module-contract.md
         - docs/capability-ownership-policy.md
         - docs/runtime-skill-management.md
         - docs/env-surface-policy.md
@@ -70,6 +72,7 @@ ownership:
           - specs/capability-ownership-rules.json
           - specs/data-foundry-service.md
           - specs/prewrite-content-policy.json
+          - specs/orchestration-module-budgets.json
           - specs/schemas/**
           - test/unit/zero-javascript-ratchet.test.mts
           - specs/workspace-capability-adapters.md
@@ -161,6 +164,7 @@ routing:
         - specs/capability-ownership-rules.json
         - specs/data-foundry-service.md
         - specs/prewrite-content-policy.json
+        - specs/orchestration-module-budgets.json
         - specs/schemas/**
         - test/unit/zero-javascript-ratchet.test.mts
         - specs/workspace-capability-adapters.md
@@ -193,6 +197,7 @@ docInventory:
     - WORKFLOW.md
     - .docpact/config.yaml
     - docs/architecture.md
+    - docs/orchestration-module-contract.md
     - docs/capability-ownership-policy.md
     - docs/runtime-skill-management.md
     - docs/env-surface-policy.md
@@ -494,6 +499,60 @@ rules:
       - path: docs/foundry-command-surface.md
         mode: must_exist
     reason: Test changes must preserve the unit/commands/scenarios/fixtures layout and remain aligned with command navigation.
+  - id: foundry-orchestration-decomposition-contract
+    scope: repo
+    repo: data-foundry
+    triggers:
+      - path: docs/orchestration-module-contract.md
+        kind: orchestration-module-contract
+      - path: scripts/commands/library-scope-workflow.ts
+        kind: library-command-owner
+      - path: scripts/commands/bafu-leaf-classification-tasks.ts
+        kind: classification-command-owner
+      - path: scripts/commands/bafu-auto-authoring.ts
+        kind: authoring-command-owner
+      - path: scripts/commands/bafu-process-scope-e2e.ts
+        kind: process-scope-command-owner
+      - path: scripts/commands/bafu-batch-import-run.ts
+        kind: batch-command-owner
+      - path: scripts/commands/uslci-batch-import-run.ts
+        kind: uslci-batch-adapter
+      - path: scripts/commands/worldsteel-batch-import-run.ts
+        kind: worldsteel-batch-adapter
+      - path: scripts/lib/bafu-authoring/**
+        kind: bafu-authoring-stage
+      - path: scripts/lib/bafu-classification/**
+        kind: bafu-classification-stage
+      - path: scripts/lib/bafu-orchestration/**
+        kind: bafu-orchestration-stage
+      - path: scripts/lib/batch-orchestration/**
+        kind: generic-batch-semantic-stage
+      - path: scripts/lib/library-orchestration/**
+        kind: library-semantic-stage
+      - path: specs/orchestration-module-budgets.json
+        kind: module-budget-contract
+      - path: test/unit/orchestration-module-budget.test.mts
+        kind: architecture-ratchet-test
+      - path: test/unit/bafu-*-contract.test.mts
+        kind: bafu-semantic-contract-test
+      - path: test/unit/library-*.test.mts
+        kind: library-semantic-contract-test
+    requiredDocs:
+      - path: docs/orchestration-module-contract.md
+        mode: review_or_update
+      - path: AGENTS.md
+        mode: review_or_update
+      - path: README.md
+        mode: review_or_update
+      - path: WORKFLOW.md
+        mode: review_or_update
+      - path: docs/architecture.md
+        mode: review_or_update
+      - path: docs/foundry-ai-navigation.md
+        mode: review_or_update
+      - path: test/README.md
+        mode: review_or_update
+    reason: High-level orchestration owners, semantic stages, size/cycle ratchets, AI navigation, and CLI execution ownership must move together without hidden behavior drift.
   - id: foundry-skill-orchestration-contract
     scope: repo
     repo: data-foundry
