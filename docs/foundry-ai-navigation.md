@@ -137,8 +137,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 1f0b3b282827b03a009f7acd544a07dd7785baee
-lastReviewedNote: "Reviewed for Issue #69: navigation identifies strict datetime, non-destructive stale reporting, bundle preservation, blocked CLI/finalize flow and focused contracts."
+lastReviewedCommit: 4e442943ce4d3c89c2b79766720c7eb8fce0e254
+lastReviewedNote: "Reviewed for Issues #70/#82: AI navigation identifies bounded orchestration owners and exact pnpm 11.24.0 / TS7 validation without changing case or safety routing."
 ---
 
 # Foundry AI Navigation
@@ -260,7 +260,9 @@ All unit suites use `.test.mts`. Navigate through the four `unit-*-test-migratio
 
 All scenario suites use `.test.mts`. Navigate through the four `scenario-*-test-migration.test.mts` contracts for authoring/curation, identity/reference, mutation/finalize and library/algorithm partitions. Their shared report types describe captured test artifacts only; semantic ownership stays in command metadata and runtime owners.
 
-The supported toolchain is Node.js 24, `pnpm@11.23.0`, TypeScript `7.0.2` only with erasable syntax, root-config Oxlint plus the native-suppression audit, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install, clean/type-error-no-emit build proof, and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
+The supported toolchain is Node.js 24, `pnpm@11.24.0`, TypeScript `7.0.2` only with erasable syntax, root-config Oxlint plus the native-suppression audit, and Prettier. Before merging a migration slice, verify it in a clean arbitrary Git worktree with frozen pnpm install, clean/type-error-no-emit build proof, and no dependency on sibling checkouts, external `node_modules`, credentials, or ignored `.foundry` state.
+
+Issue #82 is a toolchain-only compatibility update: route package-manager failures to `package.json`, `test/unit/toolchain-contract.test.mts`, the sole root lock, and four-platform CI; do not treat them as orchestration or production-case failures.
 
 The typed handoff primitive is `scripts/lib/foundry-command-spec.ts`. Navigate there for exact-key parsing, canonical command hashing, critical-flag uniqueness, final-row artifact facts, or pre-spawn drift checks. Callers must never reconstruct argv from `display`.
 

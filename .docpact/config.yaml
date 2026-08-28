@@ -13,8 +13,9 @@ layout: repo
 # Review note, 2026-08-26: Issue #68 adds a narrow Worldsteel wrapper/test/document route to the profile index, current docs, and retained evidence. The monolithic specs/import-profiles.json stays under the generic import-profile trigger so unrelated profile edits do not fan out to Worldsteel; the executable truth test is the cross-file backstop for its Worldsteel subtree.
 # Review note, 2026-08-26: Issue #69 adds a narrow strict prewrite-datetime route across bundle preservation, atomic cleanup blockers, non-destructive stale-artifact reporting, finalize short-circuiting, CLI exit behavior, and their focused contracts. It also closes the existing control-plane coverage gap for specs/prewrite-content-policy.json without changing ownership or mutation authority.
 # Review note, 2026-08-29: Issue #70 governs high-level orchestration decomposition, shrink-only module budgets, and AI navigation. The batch post-write handoff and scope-finalize/commit extractions preserve artifact-bound CLI execution, idempotent conflict handling, bounded readback retries, support reuse/invalidation, patch recovery, and closeout without changing remote authority.
+# Review note, 2026-08-29: Issue #82 updates only the exact pnpm toolchain pin to 11.24.0. Existing bootstrap, control-plane, test-layout, workflow, and governed-doc rules already cover the manifest, sole root lock, CI, toolchain test, and active guidance; no ownership, routing, dependency, runtime, command, or authority rule changes.
 lastReviewedAt: "2026-08-29"
-lastReviewedCommit: "1f0b3b282827b03a009f7acd544a07dd7785baee"
+lastReviewedCommit: "4e442943ce4d3c89c2b79766720c7eb8fce0e254"
 
 catalog:
   repos:

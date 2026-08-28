@@ -27,8 +27,8 @@ type PnpmDependencyNode = {
 };
 
 const packageJson = readJson<PackageJson>("package.json");
-const packageManager = "pnpm@11.23.0";
-const packageManagerVersion = "11.23.0";
+const packageManager = "pnpm@11.24.0";
+const packageManagerVersion = "11.24.0";
 const typescriptVersion = "7.0.2";
 const nodeVersion = "24.19.0";
 const contractPath = "test/unit/toolchain-contract.test.mts";

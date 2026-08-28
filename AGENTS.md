@@ -233,8 +233,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 1f0b3b282827b03a009f7acd544a07dd7785baee
-lastReviewedNote: "Reviewed for Issue #69: strict datetime fail-close preserves and reports every pre-existing artifact without automatic deletion or remote-write authority."
+lastReviewedCommit: 4e442943ce4d3c89c2b79766720c7eb8fce0e254
+lastReviewedNote: "Reviewed for Issues #70/#82: orchestration decomposition remains native TS7 while exact pnpm 11.24.0 changes no dependency, runtime, command, profile, or remote-authority boundary."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -262,7 +262,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 
 ## Toolchain And TypeScript Migration Contract
 
-- pnpm `11.23.0` is the only package manager for this Node project. The repository has one root `pnpm-workspace.yaml` and one root `pnpm-lock.yaml`; do not add npm, Yarn, a nested lockfile, or a package-manager fallback.
+- pnpm `11.24.0` is the only package manager for this Node project. The repository has one root `pnpm-workspace.yaml` and one root `pnpm-lock.yaml`; do not add npm, Yarn, a nested lockfile, or a package-manager fallback.
 - Node.js 24 is the runtime line. TypeScript `7.0.2` is the only compiler allowed in the direct or recursive dependency graph: do not add TypeScript 5/6 aliases, `@typescript-eslint`, `typescript-eslint`, or a formatter plugin that loads the TypeScript compiler API.
 - Oxlint owns linting and Prettier owns formatting. Lint and check commands must be read-only; formatting is an explicit write command.
 - `typescript/no-explicit-any` is a repository-wide error with no target-specific override. Root lint disables nested Oxlint configuration, bans TypeScript suppression comments, and runs a comment-aware audit that rejects native disable directives across every Git-visible `.ts`/`.mts`/`.cts` file. The audit and its temporary Git fixtures clear inherited repository-local `GIT_*` bindings before enumerating another root, so pre-push hooks cannot redirect them into the parent index. New code must use semantic interfaces or narrow `unknown`, never an explicit-any exception or TS6 compiler API bridge.
@@ -272,6 +272,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - The owner CLI is installed as the exact project dependency `@tiangong-lca/cli@0.1.2` and invoked with `pnpm exec tiangong-lca`; Foundry runtime adapters and the account wrapper resolve the same installed package manifest and bin directly. Do not use `dlx` or `@latest` for the owner CLI. The external `skills@latest` package remains intentionally floating and its resolved upstream ref must still be recorded in task evidence.
 - The historical pre-migration baseline at commit `c996633832ea23bf7883c7b219f524bf28e6ce7e` contained 160 tracked JavaScript artifacts: 95 runtime `.mjs` files, 64 `.mjs` tests, and one Prettier `.cjs` config. Migration is complete; `test/unit/zero-javascript-ratchet.test.mts` permanently requires zero tracked first-party `.js`/`.mjs`/`.cjs` files, TS-only compiler/test globs, and native `prettier.config.ts`.
 - Issue #63 established the pnpm/TS7 toolchain and typed spine in dependency order: entrypoints, registry/metadata, runtime I/O, artifact/receipt primitives, command families, fixtures, and tests. The permanent ratchet is zero tracked first-party JavaScript; future changes must start directly in TypeScript with equivalent characterization and case coverage.
+- Issue #82 advances only the exact pnpm pin to 11.24.0. Corepack package identity, engine enforcement, toolchain tests, CI bootstrap, and active guidance agree; lockfile-only reconciliation produces no byte or dependency-graph change, while Node 24.19.0 and TypeScript 7.0.2 remain exact.
 - The characterized TypeScript leaves include the CLI/data/evidence spine plus canonical-support rewrite and bundle-sampling factories. Focused tests pin mapping lookup and traversal order, scale/pending/Unit Group proof blockers, account-local/stale-version precedence, source-trace cleanup, contact/profile fallbacks, support/reference closure materialization, deterministic sampling/dedupe, invalid inputs, and every static consumer.
 - `source-semantics.ts`, `tidas-row-utils.ts`, `identity-reference-rewrite-utils.ts`, and their directly coupled contract fixtures use concrete dependency, row, reference, mapping, report, and blocker interfaces or `unknown` narrowed at the read boundary. Their focused worktree-local Oxlint contracts reject every explicit TypeScript `any` node without loading the TypeScript compiler API; existing source/profile/reference bytes, order, errors, and fail-closed write boundaries remain the behavior authority.
 - Canonical FP rewrites never convert amounts. When bundle sampling uses `--block-on-unscaled-canonical-support`, a known finite positive non-1 factor emits `canonical_support_amount_scaling_required`; a missing, non-finite, zero, or negative factor emits `canonical_support_amount_scale_unresolved`. Both remain in the scaling JSONL, command report, and process-scope ledger before any later stage can lose the source-unit evidence.

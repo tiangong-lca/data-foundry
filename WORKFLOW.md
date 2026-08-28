@@ -276,8 +276,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 1f0b3b282827b03a009f7acd544a07dd7785baee
-lastReviewedNote: "Reviewed for Issue #69: strict cleanup and non-destructive stale reporting must pass before any cleaned artifact or downstream finalize stage is consumed."
+lastReviewedCommit: 4e442943ce4d3c89c2b79766720c7eb8fce0e254
+lastReviewedNote: "Reviewed for Issues #70/#82: workflow stages remain case-driven and fail-closed on the exact pnpm 11.24.0 / Node 24 / TypeScript 7 toolchain."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -316,7 +316,9 @@ Choose one lane:
 
 ## Toolchain Preflight
 
-Use Node.js 24 and the repository-pinned `pnpm@11.23.0`. TypeScript `7.0.2` is the sole compiler, Oxlint is the linter, and Prettier is the formatter. TypeScript must keep `erasableSyntaxOnly`; Git-enumerated `.ts`/`.mts`/`.cts` files must all appear in the intentional first-party Oxlint and typecheck graphs, while tracked `.jsx`/`.tsx` are forbidden in this non-JSX control plane. Root lint ignores nested Oxlint configs, bans `@ts-ignore`/`@ts-nocheck`/`@ts-expect-error`, and runs the comment-aware native-disable audit before Oxlint, so inline suppression cannot bypass zero-any or erasable-syntax enforcement. Suppression inventory and temp-repository fixtures clear inherited repository-local Git variables before selecting their target root. The build removes stale `dist` output before compiling and emits nothing on TypeScript diagnostics; it does not promise atomic recovery from arbitrary filesystem failure. Source and emitted commands must resolve the same trusted root, use their active `.ts`/`.js` entry for nested argv, and remain equivalent from an unrelated CWD. Do not create npm/Yarn lockfiles, TypeScript 5/6 aliases, or compiler-API lint/format bridges.
+Use Node.js 24 and the repository-pinned `pnpm@11.24.0`. TypeScript `7.0.2` is the sole compiler, Oxlint is the linter, and Prettier is the formatter. TypeScript must keep `erasableSyntaxOnly`; Git-enumerated `.ts`/`.mts`/`.cts` files must all appear in the intentional first-party Oxlint and typecheck graphs, while tracked `.jsx`/`.tsx` are forbidden in this non-JSX control plane. Root lint ignores nested Oxlint configs, bans `@ts-ignore`/`@ts-nocheck`/`@ts-expect-error`, and runs the comment-aware native-disable audit before Oxlint, so inline suppression cannot bypass zero-any or erasable-syntax enforcement. Suppression inventory and temp-repository fixtures clear inherited repository-local Git variables before selecting their target root. The build removes stale `dist` output before compiling and emits nothing on TypeScript diagnostics; it does not promise atomic recovery from arbitrary filesystem failure. Source and emitted commands must resolve the same trusted root, use their active `.ts`/`.js` entry for nested argv, and remain equivalent from an unrelated CWD. Do not create npm/Yarn lockfiles, TypeScript 5/6 aliases, or compiler-API lint/format bridges.
+
+Issue #82 changes only the exact pnpm pin. Frozen install, toolchain, full tests, Golden, surface, build, audit, four-platform CI, and Docpact remain the same required workflow; this toolchain-only change needs no credential or production case.
 
 Issue #63 established the typed spine and its migration is complete. Keep the permanent `test/unit/zero-javascript-ratchet.test.mts` green: tracked first-party JavaScript, compatibility compiler includes, and mixed JS test/lint globs must remain at zero. Drive every later slice with focused characterization plus a realistic case, and verify toolchain changes from a clean arbitrary worktree after `pnpm install --frozen-lockfile`, without credentials, ignored `.foundry` artifacts, a sibling checkout, or another worktree's dependencies.
 

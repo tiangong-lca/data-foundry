@@ -86,8 +86,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: f68d6ca408fe0aff429ae45475c730c40eb766fb
-lastReviewedNote: "Reviewed for Issue #69: strict datetime and non-destructive blocked artifact reporting stay in Data Foundry; Rust schema and CLI/database authority do not move."
+lastReviewedCommit: 4e442943ce4d3c89c2b79766720c7eb8fce0e254
+lastReviewedNote: "Reviewed for Issues #70/#82: Foundry owns semantic orchestration plus its exact pnpm toolchain; shared CLI, Rust, database, profile, and production authority do not move."
 ---
 
 # Capability Ownership Policy
@@ -97,6 +97,8 @@ Foundry must distinguish project-specific orchestration from shared TianGong cap
 ## Boundary
 
 Foundry owns:
+
+- its exact pnpm package-manager contract, sole root workspace/lock, and repository-local validation gates;
 
 - task queue and task state;
 - per-task workspace layout;
