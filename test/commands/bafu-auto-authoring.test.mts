@@ -877,7 +877,7 @@ test("BAFU identity autofill keeps exact-name physical conflicts as create-new e
     assert.equal(apply.code, 0);
     assert.equal(apply.json.status, "completed");
     assert.equal(apply.json.counts.output_rows, 1);
-    const appliedRows = readJsonLines(path.join(repoRoot, apply.json.files.rows));
+    const appliedRows = readJsonLines(path.join(repoRoot, apply.json.files.output_rows));
     assert.equal(
       appliedRows[0].flowDataSet.flowInformation.dataSetInformation["common:UUID"],
       targetFlowId,

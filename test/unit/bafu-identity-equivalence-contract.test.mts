@@ -252,7 +252,7 @@ test("exact flow names cannot override material physical conflicts", () => {
   });
 });
 
-test("elementary, exact-flow, and exact-process decisions keep existing branch precedence", () => {
+test("elementary, physically matching exact-flow, and exact-process decisions keep precedence", () => {
   const elementary = canCreateBafuProductFlow({
     dataset_type: "flow",
     evidence: {
@@ -307,10 +307,10 @@ test("elementary, exact-flow, and exact-process decisions keep existing branch p
           names: ["Nylon 6", "at plant"],
           fields: {
             type_of_dataset: "Product flow",
-            flow_property: "Volume",
-            reference_unit: "m3",
-            geography: "GLO",
-            categories: ["chemicals"],
+            flow_property: "Mass",
+            reference_unit: "kg",
+            geography: "RER",
+            categories: ["plastics"],
           },
         },
       ],
@@ -319,10 +319,10 @@ test("elementary, exact-flow, and exact-process decisions keep existing branch p
   assert.equal(exactFlow.ok, false);
   assert.equal(exactFlow.reuse?.id, "canonical-nylon");
   assertFrozen({
-    name: "exact flow name wins before reviewed differences",
+    name: "exact flow name with matching physical evidence reuses",
     actual: exactFlow,
-    bytes: 691,
-    sha256: "fffab50fa4a49932953fdc2de583300b3595b13826d4fd37ac1b6e6f43c188c5",
+    bytes: 570,
+    sha256: "6eaaf04a9c034fc09105ee0055c1747fe92f5d5a3d86409f420b5fc54de5e0a7",
   });
 
   const exactProcess = canCreateBafuProcess({
