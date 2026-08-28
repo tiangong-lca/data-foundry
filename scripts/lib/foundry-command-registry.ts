@@ -180,7 +180,6 @@ export function exitCodeForCommand(
     case "dataset-classification-decisions-apply":
     case "dataset-library-classification-decisions-project":
     case "dataset-bafu-leaf-classification-tasks-prepare":
-    case "dataset-bafu-leaf-classification-category-map-project":
     case "dataset-location-decisions-suggest":
     case "dataset-location-decisions-apply":
     case "dataset-bafu-identity-decisions-autofill":
@@ -204,6 +203,8 @@ export function exitCodeForCommand(
       ])
         ? 0
         : 1;
+    case "dataset-bafu-leaf-classification-category-map-project":
+      return statusIs(result, ["help", "completed"]) ? 0 : 1;
     case "dataset-location-decision-task-build":
       return statusIs(result, [
         "help",
