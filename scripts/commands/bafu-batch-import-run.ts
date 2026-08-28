@@ -30,6 +30,7 @@ import {
 import { runFoundryScopeBatch } from "../lib/batch-orchestration/cli-bounded-batch-runner.ts";
 import { createAuthoringTaskFilterService } from "../lib/batch-orchestration/authoring-task-filter.ts";
 import { createScopeRecoveryEvidenceService } from "../lib/batch-orchestration/scope-recovery-evidence.ts";
+import { createScopeScratchPolicy } from "../lib/batch-orchestration/scope-scratch-policy.ts";
 import {
   createBatchScopeExecutionService,
   type BatchScopeExecutionPaths as BatchPaths,
@@ -983,69 +984,10 @@ const maybeCommitSupportThenRerunFinalize =
   batchScopeFinalizeCommit.maybeCommitSupportThenRerunFinalize;
 const finalizeAndCommitDataset = batchScopeFinalizeCommit.finalizeAndCommit;
 
-// --- Post-commit disk reclamation -----------------------------------------
-// A committed scope's heavy per-scope scratch (flow-pre-finalize — which holds the
-// multi-GB mutation-manifest items file + curation-gate — plus flow-identity-task and
-// flow-authoring-tasks) is pure derived data once the scope verifies: the remote is the
-// source of truth, and import-ledger + scope-run-report.json carry the audit trail.
-// Without trimming, each committed mega-scope leaves ~15G behind, so the run directory
-// grows without bound. Delete every child of scopeDir except the two audit artifacts.
-// Best-effort (never fails the import), gated on a real commit; --keep-scratch (or
-// BAFU_KEEP_SCOPE_SCRATCH=1) opts out for debugging / re-verify sessions.
-const VERIFIED_SCOPE_KEEP = new Set(["import-ledger", "scope-run-report.json"]);
-function keepScratchRequested(options: JsonRecord): boolean {
-  return booleanOption(options?.keepScratch) || process.env.BAFU_KEEP_SCOPE_SCRATCH === "1";
-}
-function trimVerifiedScopeScratch(scopeDir: string, options: JsonRecord): void {
-  if (!booleanOption(options?.commit)) return;
-  if (keepScratchRequested(options)) return;
-  let entries;
-  try {
-    entries = fs.readdirSync(scopeDir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    if (VERIFIED_SCOPE_KEEP.has(entry.name)) continue;
-    try {
-      fs.rmSync(path.join(scopeDir, entry.name), { recursive: true, force: true });
-    } catch {
-      // best-effort: a locked or partially-written dir must never fail the import
-    }
-  }
-}
-
-// The shared-context-cache (runDir/shared-context-cache) is a run-level, content-addressed
-// store of inlined authoring context with no eviction, so across thousands of scopes it grew
-// to ~118G. Cross-scope hits are rare (per-scope context differs); the real value is
-// intra-scope dedup. Bound it: once it exceeds a cap, clear it. Cheap (names only, no
-// per-file stat), robust to mid-run kills, correctness-safe (a miss just recomputes).
-const SHARED_CONTEXT_CACHE_MAX_ENTRIES = (() => {
-  const raw = Number(process.env.BAFU_CONTEXT_CACHE_MAX_ENTRIES);
-  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 6000;
-})();
-function enforceSharedContextCacheCap(
-  runDir: string,
-  options: JsonRecord,
-  maxEntries = SHARED_CONTEXT_CACHE_MAX_ENTRIES,
-): void {
-  if (keepScratchRequested(options)) return;
-  const cacheDir = path.join(runDir, "shared-context-cache");
-  let names;
-  try {
-    names = fs.readdirSync(cacheDir);
-  } catch {
-    return;
-  }
-  if (names.length <= maxEntries) return;
-  for (const name of names) {
-    try {
-      fs.rmSync(path.join(cacheDir, name), { recursive: true, force: true });
-    } catch {
-      // best-effort
-    }
-  }
-}
+const { enforceSharedContextCacheCap, trimVerifiedScopeScratch } = createScopeScratchPolicy({
+  booleanOption,
+  processEnv: process.env,
+});
 
 export function createBafuBatchImportRunCommands(
   deps: BafuBatchRuntime,
