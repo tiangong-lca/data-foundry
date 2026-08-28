@@ -5,8 +5,8 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { buildBafuLeafCategoryMapProjectReport } from "../../scripts/lib/bafu-classification/category-map-report.ts";
 import {
-  buildBafuLeafCategoryMapProjectReport,
   parseBafuFlowProductCategorySchema,
   parseBafuProcessCategorySchema,
   projectBafuLeafCategoryMapArtifacts,
@@ -329,7 +329,12 @@ test("category-map semantics stay below the command I/O boundary and module ceil
     path.join(repoRoot, "scripts/commands/bafu-leaf-classification-tasks.ts"),
     "utf8",
   );
+  const reportSource = fs.readFileSync(
+    path.join(repoRoot, "scripts/lib/bafu-classification/category-map-report.ts"),
+    "utf8",
+  );
   assert.ok(moduleSource.trimEnd().split("\n").length <= 800);
+  assert.ok(reportSource.trimEnd().split("\n").length <= 140);
   assert.ok(ownerSource.trimEnd().split("\n").length <= 500);
   assert.doesNotMatch(
     moduleSource,
@@ -337,6 +342,7 @@ test("category-map semantics stay below the command I/O boundary and module ceil
   );
   assert.match(moduleSource, /from "\.\/leaf-repair\.ts"/u);
   assert.match(ownerSource, /from "\.\.\/lib\/bafu-classification\/category-map-projection\.ts"/u);
+  assert.match(ownerSource, /from "\.\.\/lib\/bafu-classification\/category-map-report\.ts"/u);
 });
 
 test("unreferenced category-map manual review fails the top-level report closed", () => {
