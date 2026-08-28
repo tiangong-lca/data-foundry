@@ -234,6 +234,18 @@ test("exit mapping preserves adapter, aggregate, wrapper, status-family, and def
     1,
   );
   assert.equal(exitCodeForCommand("dataset-curation-cleanup", { status: "failed" }), 1);
+  assert.equal(
+    exitCodeForCommand("dataset-bafu-leaf-classification-category-map-project", {
+      status: "completed",
+    }),
+    0,
+  );
+  assert.equal(
+    exitCodeForCommand("dataset-bafu-leaf-classification-category-map-project", {
+      status: "completed_with_manual_review",
+    }),
+    1,
+  );
   assert.equal(exitCodeForCommand("execution-capsule-admit", { status: "sealed" }), 0);
   assert.equal(exitCodeForCommand("execution-capsule-admit", { status: "blocked" }), 1);
   assert.equal(
