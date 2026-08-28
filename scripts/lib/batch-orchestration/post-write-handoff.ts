@@ -1,4 +1,8 @@
 import type { FoundryArtifactFact, FoundryCommandSpec } from "../foundry-command-spec.ts";
+import {
+  summarizeSameIdentityCommitFailures,
+  type SameIdentityCommitFailureSummary,
+} from "../same-identity-commit-recovery.ts";
 
 export interface BatchPostWriteHandoffJsonRecord {
   [key: string]: unknown;
@@ -74,11 +78,7 @@ export interface BatchPostWriteHandoffResult extends BatchPostWriteHandoffJsonRe
   closeoutReportPath?: string | null;
 }
 
-export interface BatchPostWriteCommitFailureSummary {
-  accepted: boolean;
-  alreadyExists: number;
-  otherFailures: number;
-}
+export type BatchPostWriteCommitFailureSummary = SameIdentityCommitFailureSummary;
 
 export interface BatchPostWriteHandoffService {
   execute: (input: BatchPostWriteHandoffInput) => Promise<BatchPostWriteHandoffResult>;
@@ -94,11 +94,6 @@ function isJsonRecord(value: unknown): value is BatchPostWriteHandoffJsonRecord 
 
 function jsonRecord(value: unknown): BatchPostWriteHandoffJsonRecord {
   return isJsonRecord(value) ? value : {};
-}
-
-function asArray(value: unknown): unknown[] {
-  if (value == null) return [];
-  return Array.isArray(value) ? value : [value];
 }
 
 const postWriteVerifyRetryableCodes = [
@@ -268,35 +263,15 @@ export function createBatchPostWriteHandoffService(
     const summaries = adapter.findFiles(expectedDir, (filePath) =>
       /(?:summary|sync_report)\.json$/u.test(adapter.basename(filePath)),
     );
-    let failed = 0;
-    let alreadyExists = 0;
+    const reports: BatchPostWriteHandoffJsonRecord[] = [];
     for (const summaryPath of summaries) {
-      let report: BatchPostWriteHandoffJsonRecord;
       try {
-        report = adapter.readJson(summaryPath);
+        reports.push(adapter.readJson(summaryPath));
       } catch {
         continue;
       }
-      for (const rowValue of asArray(report.rows)) {
-        const row = jsonRecord(rowValue);
-        if (adapter.asText(row.status) !== "failed") continue;
-        failed += 1;
-        const error = jsonRecord(row.error);
-        const haystack =
-          `${adapter.asText(error.message)} ${adapter.asText(error.details)}`.toLowerCase();
-        if (
-          haystack.includes("same id and version already exists") ||
-          (haystack.includes("23505") && haystack.includes("already exists"))
-        ) {
-          alreadyExists += 1;
-        }
-      }
     }
-    return {
-      accepted: failed > 0 && failed === alreadyExists,
-      alreadyExists,
-      otherFailures: failed - alreadyExists,
-    };
+    return summarizeSameIdentityCommitFailures(reports);
   }
 
   async function runCommandSpecStage(

@@ -28,6 +28,8 @@
     "scripts/lib/bafu-orchestration/finalize-recovery-policy.ts": 209,
     "scripts/lib/bafu-orchestration/identity-decision-carry-forward.ts": 586,
     "scripts/lib/bafu-orchestration/post-finalize-recovery.ts": 540,
+    "scripts/lib/bafu-orchestration/process-handoff-closeout.ts": 60,
+    "scripts/lib/bafu-orchestration/process-handoff-plan.ts": 40,
     "scripts/lib/bafu-orchestration/process-handoff.ts": 485,
     "scripts/lib/bafu-orchestration/process-scope-run.ts": 678,
     "scripts/lib/bafu-orchestration/process-scope-runtime.ts": 382,
@@ -55,7 +57,8 @@
     "scripts/lib/library-orchestration/identity-preflight-projection.ts": 258,
     "scripts/lib/library-orchestration/identity-preflight-runner.ts": 198,
     "scripts/lib/library-orchestration/index-build.ts": 194,
-    "scripts/lib/library-orchestration/ready-process-scope-runner.ts": 314
+    "scripts/lib/library-orchestration/ready-process-scope-runner.ts": 314,
+    "scripts/lib/same-identity-commit-recovery.ts": 100
   },
   "allowed_upward_imports": {
     "scripts/lib/foundry-cli.ts": [

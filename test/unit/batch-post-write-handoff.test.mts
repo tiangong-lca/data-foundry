@@ -284,10 +284,9 @@ test("batch post-write handoff rejects non-idempotent commit failures before ver
   );
 });
 
-test("batch post-write handoff rejects already-exists text without an explicit 23505 code", async () => {
-  const harness = createHarness({
-    commitExitCode: 1,
-    commitReport: {
+test("batch post-write handoff rejects textual mixed and incomplete conflict evidence", async () => {
+  for (const commitReport of [
+    {
       rows: [
         {
           status: "failed",
@@ -298,19 +297,39 @@ test("batch post-write handoff rejects already-exists text without an explicit 2
         },
       ],
     },
-  });
-  const result = await createBatchPostWriteHandoffService(harness.adapter).execute({
-    handoffPlanPath: harness.handoffPlanPath,
-    ledgerDir: "/repo/ledger",
-    outDir: "/repo/handoff",
-    logDir: "/repo/logs",
-    label: "process",
-  });
+    {
+      rows: [
+        {
+          status: "failed",
+          error: { code: "23505", message: "same id and version already exists" },
+        },
+        { status: "failed", error: { code: "permission_denied", message: "mixed failure" } },
+      ],
+    },
+    {
+      counts: { failed: 2 },
+      rows: [
+        {
+          status: "failed",
+          error: { code: "23505", message: "same id and version already exists" },
+        },
+      ],
+    },
+  ]) {
+    const harness = createHarness({ commitExitCode: 1, commitReport });
+    const result = await createBatchPostWriteHandoffService(harness.adapter).execute({
+      handoffPlanPath: harness.handoffPlanPath,
+      ledgerDir: "/repo/ledger",
+      outDir: "/repo/handoff",
+      logDir: "/repo/logs",
+      label: "process",
+    });
 
-  assert.equal(result.status, "failed");
-  assert.equal(result.blockers[0]?.code, "commit_handoff_command_failed");
-  assert.equal(
-    harness.events.some((event) => event.includes("post_write_verify")),
-    false,
-  );
+    assert.equal(result.status, "failed");
+    assert.equal(result.blockers[0]?.code, "commit_handoff_command_failed");
+    assert.equal(
+      harness.events.some((event) => event.includes("post_write_verify")),
+      false,
+    );
+  }
 });

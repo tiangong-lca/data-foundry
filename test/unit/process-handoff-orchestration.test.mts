@@ -9,11 +9,11 @@ import type {
   FoundryArtifactFact,
   FoundryCommandSpec,
 } from "../../scripts/lib/foundry-command-spec.ts";
+import { closeoutCommand } from "../../scripts/lib/bafu-orchestration/process-handoff-closeout.ts";
+import { readHandoffPlan } from "../../scripts/lib/bafu-orchestration/process-handoff-plan.ts";
 import {
-  closeoutCommand,
   commitReportForHandoffPlan,
   executeHandoff,
-  readHandoffPlan,
   verifyReportForHandoffPlan,
   type ProcessHandoffAdapter,
   type ProcessHandoffCommandResult,
@@ -35,7 +35,7 @@ const artifactSha = "0123456789abcdef".repeat(4);
 
 type VerifyAttempt = {
   status: number;
-  report?: JsonRecord;
+  report?: JsonRecord | null;
   reportPath?: string;
 };
 
@@ -412,7 +412,78 @@ test("same-id conflict with payload mismatch stays failed and never replays comm
   );
 });
 
-test("commit failure is at-most-once and already-exists evidence is not silently re-executed", () => {
+test("same-id recovery rejects owner state payload and unexpected readback findings", () => {
+  for (const blockerCode of [
+    "root_readback_owner_mismatch",
+    "root_readback_state_mismatch",
+    "root_readback_payload_mismatch",
+    "root_readback_unexpected",
+  ]) {
+    const { result, events } = runHarness({
+      commitStatus: 1,
+      commitReport: {
+        status: "failed",
+        counts: { failed: 1 },
+        failures: [{ code: "23505", message: "same id and version already exists" }],
+      },
+      verifyAttempts: [
+        {
+          status: 1,
+          report: { status: "blocked_remote_verification", blockers: [{ code: blockerCode }] },
+        },
+      ],
+    });
+
+    assert.equal(result.status, "failed", blockerCode);
+    assert.equal(result.blockers[0]?.code, "post_write_verify_command_failed", blockerCode);
+    assert.equal(events.filter((event) => event === "spec:process.commit:save-draft").length, 1);
+    assert.equal(
+      events.filter((event) => event === "spec:process.post_write_verify:verify-remote").length,
+      1,
+      blockerCode,
+    );
+    assert.equal(
+      events.some((event) => event.startsWith("argv:process.closeout")),
+      false,
+    );
+  }
+});
+
+test("same-id recovery exhausts missing readback without replay or closeout", () => {
+  const { result, events, sleeps } = runHarness({
+    commitStatus: 1,
+    commitReport: {
+      status: "failed",
+      counts: { failed: 1 },
+      failures: [{ code: "23505", message: "same id and version already exists" }],
+    },
+    verifyAttempts: [
+      { status: 1, report: null },
+      { status: 1, report: null },
+      { status: 1, report: null },
+    ],
+  });
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.blockers[0]?.code, "post_write_verify_command_failed");
+  assert.equal(result.blockers[0]?.post_write_verify_attempts, 3);
+  assert.deepEqual(sleeps, [17, 34]);
+  assert.equal(events.filter((event) => event === "spec:process.commit:save-draft").length, 1);
+  assert.equal(
+    events.filter((event) => event === "spec:process.post_write_verify:verify-remote").length,
+    1,
+  );
+  assert.equal(
+    events.filter((event) => event.includes("process.post_write_verify.retry_")).length,
+    2,
+  );
+  assert.equal(
+    events.some((event) => event.startsWith("argv:process.closeout")),
+    false,
+  );
+});
+
+test("commit failure without strict recovery evidence is at-most-once and stops before readback", () => {
   for (const commitReport of [
     null,
     {
@@ -420,7 +491,7 @@ test("commit failure is at-most-once and already-exists evidence is not silently
       counts: { failed: 1 },
       failures: [
         {
-          code: "23505",
+          code: "permission_denied",
           message: "same id and version already exists",
           dataset_id: "process-a",
         },

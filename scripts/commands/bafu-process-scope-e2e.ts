@@ -20,9 +20,9 @@ import {
 } from "../lib/bafu-orchestration/post-finalize-recovery.ts";
 import {
   executeHandoff,
-  readHandoffPlan,
   type ProcessHandoffAdapter,
 } from "../lib/bafu-orchestration/process-handoff.ts";
+import { readHandoffPlan } from "../lib/bafu-orchestration/process-handoff-plan.ts";
 import {
   createBafuProcessScopeRun,
   type BafuProcessScopeRunAdapter,
