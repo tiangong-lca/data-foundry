@@ -12,13 +12,18 @@ import {
 } from "../../scripts/lib/batch-orchestration/cli-bounded-batch-runner.ts";
 
 test("BAFU command delegates claims to the locked CLI batch boundary", () => {
-  const ownerSource = fs.readFileSync(
+  const facadeSource = fs.readFileSync(
     path.resolve("scripts/commands/bafu-batch-import-run.ts"),
     "utf8",
   );
-  assert.match(ownerSource, /runFoundryScopeBatch/u);
-  assert.doesNotMatch(ownerSource, /async function worker\(workerIndex/u);
-  assert.doesNotMatch(ownerSource, /Promise\.all\(Array\.from\(\{ length: parallel \}/u);
+  const runtimeSource = fs.readFileSync(
+    path.resolve("scripts/lib/batch-orchestration/bafu-batch-command-runtime.ts"),
+    "utf8",
+  );
+  assert.match(facadeSource, /bafu-batch-command-runtime\.ts/u);
+  assert.match(runtimeSource, /runFoundryScopeBatch/u);
+  assert.doesNotMatch(runtimeSource, /async function worker\(workerIndex/u);
+  assert.doesNotMatch(runtimeSource, /Promise\.all\(Array\.from\(\{ length: parallel \}/u);
 });
 
 test("locked CLI batch runner binds the public contract and releases its run lock", async () => {
