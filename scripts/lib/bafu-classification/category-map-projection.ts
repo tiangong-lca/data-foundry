@@ -604,13 +604,46 @@ export function buildBafuLeafCategoryMapProjectReport(
   projection: BafuLeafCategoryMapProjection,
   input: BafuLeafCategoryMapReportInput,
 ): JsonRecord {
+  const blockers: JsonRecord[] = [
+    ...projection.categoryMap.manualReview.map((row) => ({
+      schema_version: 1,
+      code: "category_map_manual_review_required",
+      source: "category_map_decisions",
+      reason: row.reason ?? null,
+      category_key: row.category_key ?? null,
+      manual_review_file: input.files.categoryManualReview,
+      decision_rows: row.decision_rows ?? [],
+      required_human_action: row.required_human_action ?? null,
+    })),
+    ...projection.projectionManualReview.map((row) => ({
+      schema_version: 1,
+      code: "process_classification_projection_manual_review_required",
+      source: "process_classification_projection",
+      reason: row.reason ?? null,
+      category_key: row.category_key ?? null,
+      dataset_type: row.dataset_type ?? null,
+      dataset_id: row.dataset_id ?? null,
+      dataset_version: row.dataset_version ?? null,
+      manual_review_file: input.files.projectionManualReview,
+      required_human_action: row.required_human_action ?? null,
+    })),
+    ...projection.flowProductManualReview.map((row) => ({
+      schema_version: 1,
+      code: "flow_product_classification_manual_review_required",
+      source: "flow_product_classification_projection",
+      reason: row.reason ?? null,
+      decision_key: row.decision_key ?? null,
+      dataset_type: row.dataset_type ?? null,
+      dataset_id: row.dataset_id ?? null,
+      dataset_version: row.dataset_version ?? null,
+      manual_review_file: input.files.projectionManualReview,
+      required_human_action: row.required_human_action ?? null,
+    })),
+  ];
   return {
     schema_version: 1,
     generated_at_utc: input.generatedAtUtc,
-    status:
-      projection.projectionManualReview.length > 0 || projection.flowProductManualReview.length > 0
-        ? "completed_with_manual_review"
-        : "completed",
+    status: blockers.length > 0 ? "completed_with_manual_review" : "completed",
     command: input.command,
     inputs: input.inputs,
     input_hashes: input.inputHashes,
@@ -634,6 +667,7 @@ export function buildBafuLeafCategoryMapProjectReport(
       flow_product_manual_review_rows: projection.flowProductManualReview.length,
       category_manual_review_rows: projection.categoryManualReview.length,
     },
+    ...(blockers.length > 0 ? { blockers } : {}),
     copied_decision_files: [...input.copiedDecisionFiles],
     policy: {
       tidas_tools_classification_policy: "weak_hint_only",

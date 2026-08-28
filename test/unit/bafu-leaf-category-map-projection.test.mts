@@ -579,6 +579,7 @@ test("category-map projection freezes resolved and fail-closed BAFU leaf artifac
     "inputs",
     "input_hashes",
     "counts",
+    "blockers",
     "copied_decision_files",
     "policy",
     "files",
@@ -623,8 +624,8 @@ test("category-map projection freezes resolved and fail-closed BAFU leaf artifac
       sha256: "5c5b2d728d85ef4a4f4e24b6322660f5ed6e8874525acadad26f8938c1c1fcac",
     },
     report: {
-      bytes: 3192,
-      sha256: "911305fe67c241ad7388e8849f85ee1c97e3f087f54b62dbcac7246acff02963",
+      bytes: 10_840,
+      sha256: "4f4fa4d169c9e797e0e185f720e1bcbe64ad8ee115e5ca3265efb20caed4f09f",
     },
   });
 });
