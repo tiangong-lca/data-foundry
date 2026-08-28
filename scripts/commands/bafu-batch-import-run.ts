@@ -25,7 +25,9 @@ import {
   preflightPlanRows,
   selectScopesForRun,
   selectionOrderOption,
+  scopeKey,
 } from "../lib/batch-orchestration/scope-selection.ts";
+import { runFoundryScopeBatch } from "../lib/batch-orchestration/cli-bounded-batch-runner.ts";
 import {
   createBatchScopeExecutionService,
   type BatchScopeExecutionPaths as BatchPaths,
@@ -1040,11 +1042,8 @@ function defaultSchemaFiles(options: JsonRecord): SchemaPaths {
 
 const repairClassificationDecisionCodes = classificationSchemaRepair.repair;
 
-// Worker-level safety net: an uncaught throw inside runOneScope (e.g. a transient
-// fs EINVAL/ENOENT from concurrent shared-cache access at higher --parallel) would
-// otherwise reject Promise.all and abort the ENTIRE batch with no ledgers written.
-// Record the scope as a retryable failure (mirroring the in-scope `fail` path) so the
-// remaining scopes continue and the failed scope can simply be rerun.
+// Convert uncaught scope failures to retryable ledger rows; the CLI scheduler drains
+// independent claims and leaves the failed scope resumable.
 function recordScopeExecutionException({
   scope,
   familySignature,
@@ -1732,63 +1731,62 @@ export function createBafuBatchImportRunCommands(
       return report;
     }
 
-    const results: JsonRecord[] = [];
-    let nextIndex = 0;
-    let pauseObserved = false;
-    let stoppedAfterBlocked = false;
-    function pauseRequested() {
-      if (!pauseFile || !fileExists(pauseFile)) return false;
-      pauseObserved = true;
-      return true;
-    }
-    function stopRequested() {
-      return stoppedAfterBlocked;
-    }
-    async function worker(workerIndex: number): Promise<void> {
-      while (nextIndex < scopes.length) {
-        if (pauseRequested() || stopRequested()) break;
-        const scope = scopes[nextIndex];
+    const batchResult = await runFoundryScopeBatch({
+      runPath: outDir,
+      outDirIdentity: repoRelative(outDir),
+      scopeFileIdentity: repoRelative(scopeFile),
+      pauseFileIdentity: repoRelative(pauseFile),
+      command: activeCommandName(),
+      profile: activeProfile(),
+      targetUserId,
+      stateCode,
+      selectionOrder,
+      stopAfterBlocked,
+      maxConcurrency: parallel,
+      items: scopes,
+      getScopeKey: scopeKey,
+      getFamilyPolicy: (scope) => {
         const familySignature = bafuFamilySignatureForScope(familySignatureIndex, scope);
-        nextIndex += 1;
-        let result: JsonRecord;
-        try {
-          result = await scopeExecution.runOneScope({
-            scope,
-            familySignature,
-            options: { ...options, targetUserId, stateCode },
-            paths,
-            schemas,
-            verifiedScopes,
-            verifiedFlows,
-            verifiedFlowRowsByKey,
-            blockedScopes,
-            workerIndex,
-          });
-        } catch (error) {
-          result = recordScopeExecutionException({ scope, familySignature, error, paths });
-        }
-        results.push({
+        return {
+          familyGroupKey: familySignature?.family_group_key ?? null,
+          optimizationRole: familySignature?.optimization_role ?? "unknown",
+        };
+      },
+      executeScope: async (scope, inputIndex) => {
+        const familySignature = bafuFamilySignatureForScope(familySignatureIndex, scope);
+        return scopeExecution.runOneScope({
+          scope,
+          familySignature,
+          options: { ...options, targetUserId, stateCode },
+          paths,
+          schemas,
+          verifiedScopes,
+          verifiedFlows,
+          verifiedFlowRowsByKey,
+          blockedScopes,
+          workerIndex: inputIndex % parallel,
+        });
+      },
+      recoverScopeFailure: (scope, error) => {
+        const familySignature = bafuFamilySignatureForScope(familySignatureIndex, scope);
+        return recordScopeExecutionException({ scope, familySignature, error, paths });
+      },
+      summarizeScope: (scope, result) => {
+        const familySignature = bafuFamilySignatureForScope(familySignatureIndex, scope);
+        return {
           process_id: scope.process_id || scope.id,
           status: result.status,
           ...bafuFamilyPlanFields(familySignature),
-        });
-        try {
-          enforceSharedContextCacheCap(paths.runDir, options);
-        } catch {
-          /* best-effort cache cap; never abort the run on a cache-eviction fs race */
-        }
-        if (
-          stopAfterBlocked != null &&
-          results.filter((row) => row.status === "blocked").length >= stopAfterBlocked
-        ) {
-          stoppedAfterBlocked = true;
-        }
-      }
-    }
-    await Promise.all(Array.from({ length: parallel }, (_, index) => worker(index)));
+        };
+      },
+      afterScope: () => enforceSharedContextCacheCap(paths.runDir, options),
+      pauseRequested: () => Boolean(pauseFile && fileExists(pauseFile)),
+    });
+    const results: JsonRecord[] = batchResult.results;
+    const pauseObserved = batchResult.paused;
+    const stoppedAfterBlocked = batchResult.stoppedAfterBlocked;
     const blockedScopeViews = writeBlockedScopeViews(paths);
-    const pausedNotStarted =
-      pauseObserved || stoppedAfterBlocked ? scopes.length - results.length : 0;
+    const pausedNotStarted = pauseObserved || stoppedAfterBlocked ? batchResult.unclaimedCount : 0;
 
     const report = {
       schema_version: 1,

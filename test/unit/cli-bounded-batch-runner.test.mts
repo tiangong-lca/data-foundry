@@ -16,7 +16,7 @@ test("BAFU command delegates claims to the locked CLI batch boundary", () => {
     path.resolve("scripts/commands/bafu-batch-import-run.ts"),
     "utf8",
   );
-  assert.match(ownerSource, /runLockedCliBatch/u);
+  assert.match(ownerSource, /runFoundryScopeBatch/u);
   assert.doesNotMatch(ownerSource, /async function worker\(workerIndex/u);
   assert.doesNotMatch(ownerSource, /Promise\.all\(Array\.from\(\{ length: parallel \}/u);
 });
@@ -133,7 +133,6 @@ test("Foundry scope adapter serializes one family while independent scope work c
         { id: "independent", family: "independent", role: "standard" },
       ],
       getScopeKey: (scope) => scope.id,
-      getScopeContentSha256: (scope) => scope.id.padEnd(64, "0").slice(0, 64),
       getFamilyPolicy: (scope) => ({
         familyGroupKey: scope.family,
         optimizationRole: scope.role,
@@ -149,6 +148,7 @@ test("Foundry scope adapter serializes one family while independent scope work c
         return { process_id: scope.id, status: "verified" };
       },
       recoverScopeFailure: (scope) => ({ process_id: scope.id, status: "failed" }),
+      summarizeScope: (_scope, result) => result,
       afterScope: () => undefined,
       pauseRequested: () => false,
     });
