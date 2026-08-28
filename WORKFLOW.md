@@ -276,7 +276,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: b4c9b777929ac27694fbebd748f0c4bec968fab2
+lastReviewedCommit: 2376ed6
 lastReviewedNote: "Reviewed for Issue #70: public commands are thin facades; batch wiring lives in the explicit composition root and behavior remains in focused semantic/CLI owners."
 tracker:
   kind: filesystem
@@ -355,6 +355,8 @@ The task/completion, commit-handoff/identity-task, and support-cache command own
 The mutation reference stack is native TypeScript. Preserve reference DFS and table resolution, planned-self/public-remote/proven/unresolved/foreign closure partitions, explicit-before-default source rewrite selection, public-canonical source proof filtering, write/reference/blocked item order and report/items bytes. A blocked manifest must keep write-candidates empty; rendered plans and evidence never become mutation authority.
 
 The high-level dataset orchestration layer is native TypeScript. `library-scope-workflow.ts` stays profile-agnostic; BAFU classification, auto-authoring, process-scope and batch owners retain their established BAFU defaults, while USLCI and Worldsteel wrappers delegate into the shared typed batch engine. Preserve resume ledgers, pause/stop and bounded-parallel selection, read-only preflight, exact scope/library/identity/classification gate order, local artifact bytes, shell-free argv and receipt/hash binding. Only the existing explicit `--commit` path may reach a guarded CLI handoff.
+
+Within BAFU auto-authoring, an exact product/waste-flow name never overrides the physical review. `identity-equivalence.ts` may return an exact reuse candidate only when its ordered non-equivalence reasons are empty; property, unit, geography/market, category/route, technology, or physical-meaning conflicts remain in decision evidence and produce `create_new` rather than `reuse_existing_reference`. Matching exact-flow evidence, elementary land-use special cases, and process exact-name explicit review remain characterized separately.
 
 Within the shared batch owner, `scripts/lib/batch-orchestration/post-write-handoff.ts` owns the asynchronous commit → post-write verify/retry → closeout stage. Same-id/version conflicts are accepted only as an idempotent commit outcome and only when subsequent verification succeeds; missing reports and non-retryable failures remain blocking. The module receives the existing stage runner and never retries the commit mutation or executes rendered display text.
 

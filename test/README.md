@@ -274,7 +274,7 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: b4c9b777929ac27694fbebd748f0c4bec968fab2
+lastReviewedCommit: 2376ed6
 lastReviewedNote: "Reviewed for Issue #70: tests pin the five-line batch facade, explicit composition-root path, focused stage budgets, and unchanged runtime exports/help bytes."
 ---
 
@@ -368,6 +368,8 @@ Wave 25 covers two re-export families. `unit/import-curation-leaf-barrels-migrat
 Wave 26 covers five dependency-ordered orchestration families. The five `unit/wave26-*-command-migration.test.mts` contracts require one native zero-escape owner, every dispatcher/metadata/wrapper consumer and exact serialized help bytes. Existing command and scenario fixtures remain the behavior authority for generic-versus-BAFU configuration, library/scope/classification/identity blocker and artifact order, resume ledgers, pause/stop, bounded parallel selection, read-only preflight, guarded commit delegation, native errors and deterministic report/JSONL bytes. All fixtures are local and read neither `.env` nor production.
 
 Issue #70's `unit/batch-post-write-handoff.test.mts` isolates the asynchronous batch closure stage. It proves process, support, and Flow same-id/version conflicts require successful readback before closeout, retryable verification failures preserve attempt/delay evidence, missing reports exhaust the bounded retry plan without closeout, and other commit failures stop before verification. `unit/orchestration-module-budget.test.mts` keeps the command owner and semantic module ceilings shrink-only and includes the new module in cycle analysis once tracked.
+
+Issue #77 is pinned at two layers. `unit/bafu-identity-equivalence-contract.test.mts` proves an exact product-flow name with property/unit/geography/category conflicts cannot become a reuse candidate, freezes the ordered reasons, and retains exact-name reuse when the physical evidence matches. `commands/bafu-auto-authoring.test.mts` drives a real task/package through autofill and deterministic identity apply, proving the conflicting candidate becomes `create_new` evidence and the source flow UUID survives.
 
 `fixtures/auth-identity-receipt.ts` is the only test-only receipt materializer. It recreates the frozen public wire fingerprints and scope hash, then every consumer still passes the bytes through `@tiangong-lca/cli/auth-identity-receipt`. `unit/public-cli-batch-runtime.test.mts` loads exact installed CLI 0.1.3, exercises public batch/run-lock plus strict receipt parsing, and proves the former private deep path stays unexported. `unit/toolchain-contract.test.mts` rejects any tracked `@tiangong-lca/cli/dist/src/**` import and binds the exact provenance-verified 0.1.3 maturity exception.
 
