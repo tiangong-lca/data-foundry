@@ -64,6 +64,7 @@ checkPaths:
   - scripts/commands/bafu-process-scope-e2e.ts
   - scripts/commands/bafu-batch-import-run.ts
   - scripts/lib/batch-orchestration/post-write-handoff.ts
+  - scripts/lib/batch-orchestration/scope-finalize-commit.ts
   - scripts/commands/worldsteel-batch-import-run.ts
   - scripts/commands/authoring-plan.ts
   - scripts/commands/bundle-sample-rows.ts
@@ -232,7 +233,7 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: f68d6ca408fe0aff429ae45475c730c40eb766fb
+lastReviewedCommit: 1f0b3b282827b03a009f7acd544a07dd7785baee
 lastReviewedNote: "Reviewed for Issue #69: strict datetime fail-close preserves and reports every pre-existing artifact without automatic deletion or remote-write authority."
 ---
 
@@ -297,6 +298,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - `scripts/commands/tasks.ts`, `import-completion.ts`, `commit-handoff.ts`, `identity-decision-task.ts`, and `support-cache.ts` are typed command-owner boundaries. They preserve queue/report ordering, exact report and snapshot bytes, CommandSpec executable/argv plus final-row byte/SHA binding, identity action dedupe, public-support cache ordering, fail-closed blockers, and native errors. Their tests use local filesystem fixtures, injected spies, and stubbed read-only HTTP responses only; migration grants no credential, mutation, review, or publish authority.
 - `library-scope-workflow.ts`, `bafu-leaf-classification-tasks.ts`, `bafu-auto-authoring.ts`, `bafu-process-scope-e2e.ts`, and `bafu-batch-import-run.ts` are the typed dataset-orchestration layer. Keep the generic library owner profile-agnostic and BAFU defaults explicit; preserve dependency order, resume/interruption/parallel/preflight behavior, artifact and blocker order, executable-plus-argv delegation, receipt/hash checks and explicit-commit-only gates. The USLCI and Worldsteel adapters continue to delegate into the same typed batch owner without changing profile semantics.
 - `scripts/lib/batch-orchestration/post-write-handoff.ts` is the batch-only asynchronous handoff stage. It owns commit/verify report discovery, same-id/version idempotent commit recovery that must still pass readback, bounded retry of read-only verification failures, trace-hash accepted-diff delegation, and closeout projection. It never retries a mutation, parses display text, or broadens CLI/database authority.
+- `scripts/lib/batch-orchestration/scope-finalize-commit.ts` owns the per-dataset finalize/commit state machine above that handoff: exact finalize reports, serialized verified-support reuse and stale invalidation, support handoff plus cache evidence, bounded post-finalize identity/patch recovery, and the final dataset handoff. Missing reports and failed support remain blocking, and no mutation is replayed by this stage.
 - `scripts/commands/cli-wrappers.ts`, `execution-capsule.ts`, and `post-write-closeout.ts` are typed runtime command boundaries. CLI wrappers preserve executable-prefix/argv arrays, inherited environment, stdout/stderr, exit mapping and native spawn errors without shell strings. Capsule admission remains offline, exclusive-write, receipt/hash/seal and no-replay evidence only. Closeout remains read-only and fail-closed on artifact drift, non-unique roots, owner/state/payload mismatch, foreign or hidden missing data, and production-test accepted-diff restrictions.
 - `scripts/commands/core.ts`, `identity-preflight-run.ts`, and `post-authoring-finalize.ts` are typed command-owner boundaries. Core preserves init, doctor, environment, workflow, storage, surface, routing and help contracts. Identity preflight preserves receipt-bound executable/argv, request and target hashes, positive-only cache reuse, stdout/disk freshness and fail-closed exits without shell strings. Finalize preserves identity/source/contact/canonical rewrite order, cleanup, schema/QA/location/curation/dry-run gates, exact mutation evidence and read-only handoff planning; it never grants commit authority.
 - The shared fixture layer is native TypeScript: `foundry-core.ts` owns worktree-local file/process helpers, `row-builders.ts` owns deterministic payloads, workflow and algorithm fixtures own realistic evidence packages, and `fake-tidas.ts` is always dispatched as `process.execPath` plus argv. Fixtures remain test-only, zero-credential local evidence and never emulate sibling schema or database authority.

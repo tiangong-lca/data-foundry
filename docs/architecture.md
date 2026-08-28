@@ -147,7 +147,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: f68d6ca408fe0aff429ae45475c730c40eb766fb
+lastReviewedCommit: 1f0b3b282827b03a009f7acd544a07dd7785baee
 lastReviewedNote: "Reviewed for Issue #69: batch-wide datetime planning emits no blocked rows, and blocked commands preserve/report all pre-existing artifacts."
 ---
 
@@ -243,6 +243,8 @@ The typed mutation reference stack remains an offline planning boundary. Referen
 The typed dataset-orchestration layer composes those owners without absorbing them. The generic library workflow prepares deduplicated library and scope artifacts; BAFU classification, auto-authoring and process-scope owners retain dataset-specific policy; the shared batch engine adds resumable ledgers, bounded parallelism, interruption/preflight modes and explicit handoff delegation. It owns local ordering and checkpoints, not CLI mutation, profile meaning, remote state or publication.
 
 The batch engine delegates its asynchronous post-write closure to `scripts/lib/batch-orchestration/post-write-handoff.ts`. That stage discovers the exact commit and verification reports, permits only the characterized same-id/version idempotent commit recovery, retries only classified read-only verification failures, delegates ordinary trace-hash normalization policy, and invokes Foundry closeout after successful readback. The command owner continues to supply process isolation, timeouts, paths, and profile context.
+
+`scripts/lib/batch-orchestration/scope-finalize-commit.ts` composes finalize and handoff without absorbing their owners. It holds the support-commit serialization queue and verified identity set adapter, invalidates stale support reuse, reruns finalize after support or evidence recovery, and preserves the exact three-attempt post-finalize recovery ceiling before delegating the content-bound main handoff.
 
 The typed runtime-command layer also includes CLI wrappers, offline capsule admission and post-write closeout. Wrappers delegate to the installed CLI with an executable and argv array; capsule admission writes immutable local evidence with zero dispatch; closeout aggregates already-produced commit/readback proof without issuing a remote operation. Unique-root, owner/state/payload, accepted-diff and production-test rules remain in their typed proof owners rather than moving into transport code.
 

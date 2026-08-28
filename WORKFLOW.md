@@ -276,7 +276,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: f68d6ca408fe0aff429ae45475c730c40eb766fb
+lastReviewedCommit: 1f0b3b282827b03a009f7acd544a07dd7785baee
 lastReviewedNote: "Reviewed for Issue #69: strict cleanup and non-destructive stale reporting must pass before any cleaned artifact or downstream finalize stage is consumed."
 tracker:
   kind: filesystem
@@ -355,6 +355,8 @@ The mutation reference stack is native TypeScript. Preserve reference DFS and ta
 The high-level dataset orchestration layer is native TypeScript. `library-scope-workflow.ts` stays profile-agnostic; BAFU classification, auto-authoring, process-scope and batch owners retain their established BAFU defaults, while USLCI and Worldsteel wrappers delegate into the shared typed batch engine. Preserve resume ledgers, pause/stop and bounded-parallel selection, read-only preflight, exact scope/library/identity/classification gate order, local artifact bytes, shell-free argv and receipt/hash binding. Only the existing explicit `--commit` path may reach a guarded CLI handoff.
 
 Within the shared batch owner, `scripts/lib/batch-orchestration/post-write-handoff.ts` owns the asynchronous commit → post-write verify/retry → closeout stage. Same-id/version conflicts are accepted only as an idempotent commit outcome and only when subsequent verification succeeds; missing reports and non-retryable failures remain blocking. The module receives the existing stage runner and never retries the commit mutation or executes rendered display text.
+
+The enclosing per-dataset state machine lives in `scripts/lib/batch-orchestration/scope-finalize-commit.ts`. It serializes support commits across concurrent scopes, reuses only verified support identities, invalidates stale reuse before a fresh support handoff, reruns finalize on exact recovered rows/evidence, and invokes the main handoff only from `ready_for_remote_write`. A missing finalize report or failed support handoff remains blocking.
 
 CLI wrappers, execution-capsule admission, and post-write closeout are native TypeScript. Wrappers must pass executable plus argv arrays directly, retain the existing environment/CWD/stdout/stderr/exit contract, and surface native spawn errors without executing display text. Capsule admission stays offline and unattempted until exact external dispatch evidence exists. Closeout stays read-only and requires one exact owner/state/payload readback per intended root; production-test mode accepts no traceHash normalization, and foreign or RLS-hidden missing rows never pass.
 

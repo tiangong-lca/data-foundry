@@ -44,7 +44,7 @@ checkPaths:
   - package.json
   - pnpm-lock.yaml
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: f68d6ca408fe0aff429ae45475c730c40eb766fb
+lastReviewedCommit: 1f0b3b282827b03a009f7acd544a07dd7785baee
 lastReviewedNote: "Reviewed for Issue #70: semantic extraction is move-only while public CLI CommandSpec/batch work remains tracked in CLI #232 and behavior changes remain separate Foundry tasks."
 related:
   - https://github.com/tiangong-lca/data-foundry/issues/70
@@ -95,6 +95,7 @@ Navigate directly to the narrowest owner:
 | Universe and ledger coverage | `scripts/lib/batch-orchestration/universe-coverage.ts` | command help/options and report destination |
 | Finalize blocker/recovery eligibility | `scripts/lib/bafu-orchestration/finalize-recovery-policy.ts` | subprocess, CommandSpec, retries, file reads |
 | Batch commit, post-write verify/retry, and closeout | `scripts/lib/batch-orchestration/post-write-handoff.ts` | stage runner, timeouts, profile/scope labels, and report aggregation |
+| Per-dataset finalize, support reuse/commit, recovery, and handoff | `scripts/lib/batch-orchestration/scope-finalize-commit.ts` | injected finalize/identity/handoff services, paths, and profile context |
 
 Some paths may be introduced later in the same Issue #70 branch. A path named here is not executable authority until its code, tests, metadata, and review evidence are merged.
 
@@ -125,7 +126,7 @@ These observations are design inputs, not fixtures to commit. Replay tests use s
 
 Every extraction begins with a failing contract that imports the intended semantic owner. GREEN first moves existing logic without changing regexes, precedence, option defaults, stage order, object insertion order, stdout, exit status, report paths, hashes, retry classification, or write authority.
 
-The batch post-write handoff slice is characterized by six focused cases: process, support, and Flow same-id/version conflicts proceed only through successful readback and closeout; retryable readback failures preserve attempts and exponential delay; missing verification reports exhaust the bounded retry count without closeout; and non-idempotent commit failures stop before verification. The owner ceiling ratchets from 2,640 to 2,197 lines while the 559-line semantic stage stays under the ordinary 800-line ceiling.
+The batch post-write handoff slice is characterized by six focused cases: process, support, and Flow same-id/version conflicts proceed only through successful readback and closeout; retryable readback failures preserve attempts and exponential delay; missing verification reports exhaust the bounded retry count without closeout; and non-idempotent commit failures stop before verification. The finalize/commit slice adds five cases for missing reports, verified support reuse, stale support invalidation plus fresh commit/cache, exact recovered-row evidence, and support-failure short-circuiting. Together they ratchet the batch owner from 2,640 to 1,900 lines; the 559-line handoff and 425-line finalize/commit stages remain under the ordinary 800-line ceiling.
 
 Required evidence grows with the boundary:
 

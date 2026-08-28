@@ -12,9 +12,9 @@ layout: repo
 # Review note, 2026-08-25: Issue #67 Wave 24 migrates five existing command-owner paths to TypeScript with local characterization. Existing control-plane, test-layout, ownership, and documentation routes already cover the moved paths; no rule or authority boundary changes.
 # Review note, 2026-08-26: Issue #68 adds a narrow Worldsteel wrapper/test/document route to the profile index, current docs, and retained evidence. The monolithic specs/import-profiles.json stays under the generic import-profile trigger so unrelated profile edits do not fan out to Worldsteel; the executable truth test is the cross-file backstop for its Worldsteel subtree.
 # Review note, 2026-08-26: Issue #69 adds a narrow strict prewrite-datetime route across bundle preservation, atomic cleanup blockers, non-destructive stale-artifact reporting, finalize short-circuiting, CLI exit behavior, and their focused contracts. It also closes the existing control-plane coverage gap for specs/prewrite-content-policy.json without changing ownership or mutation authority.
-# Review note, 2026-08-29: Issue #70 governs high-level orchestration decomposition, shrink-only module budgets, and AI navigation. The batch post-write handoff extraction preserves artifact-bound CLI execution, idempotent conflict handling, bounded readback retries, accepted-diff policy, and closeout without changing remote authority.
+# Review note, 2026-08-29: Issue #70 governs high-level orchestration decomposition, shrink-only module budgets, and AI navigation. The batch post-write handoff and scope-finalize/commit extractions preserve artifact-bound CLI execution, idempotent conflict handling, bounded readback retries, support reuse/invalidation, patch recovery, and closeout without changing remote authority.
 lastReviewedAt: "2026-08-29"
-lastReviewedCommit: "f68d6ca408fe0aff429ae45475c730c40eb766fb"
+lastReviewedCommit: "1f0b3b282827b03a009f7acd544a07dd7785baee"
 
 catalog:
   repos:
