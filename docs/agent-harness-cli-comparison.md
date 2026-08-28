@@ -18,9 +18,9 @@ checkPaths:
   - .codex/hooks.json
   - .codex/hooks/run-foundry-acceptance-check.sh
   - scripts/commands/core.ts
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: 417a0a2c440c976a32a1b767319e7594b85c066c
-lastReviewedNote: "Reviewed for Issue #69: strict datetime cleanup and ownership-guarded finalize artifacts do not change the pnpm Stop-hook, acceptance continuation, ignored report policy, environment checks or failure-artifact contract."
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
+lastReviewedNote: "Reviewed for Issue #70: pnpm 11.24, CLI 0.1.3 public primitives, and orchestration decomposition do not change Stop-hook continuation, ignored reports, environment checks, or failure-artifact contracts."
 related:
   - docs/file-organization.md
   - docs/codex-stop-hook.md
@@ -37,7 +37,7 @@ Useful pattern:
 - the Codex Stop hook runs `pnpm acceptance:check`;
 - blocking failures point the agent at concrete missing or inconsistent files.
 
-The pnpm/TS7 migration extends the same evidence model: `pnpm test:toolchain` checks the single lock/compiler graph and migration inventory, while a clean arbitrary-worktree run proves the project did not borrow dependencies, credentials, or ignored runtime state from the developer checkout.
+The pnpm/TS7 migration extends the same evidence model: `pnpm test:toolchain` checks the single lock/compiler graph and permanent compatibility ratchets, while a clean arbitrary-worktree run proves the project did not borrow dependencies, credentials, or ignored runtime state from the developer checkout. Issue #70 additionally proves exact CLI 0.1.3 public batch/auth consumption without changing acceptance-loop authority or artifact locations.
 
 `scripts/commands/core.ts` owns the local acceptance aggregation invoked by the existing package script. Its TypeScript migration preserves workflow, storage, environment and surface-check order plus the same `.foundry/state/acceptance/latest.json` artifact; it does not change Stop-hook registration or introduce a remote check.
 
