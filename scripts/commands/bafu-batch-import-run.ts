@@ -28,6 +28,7 @@ import {
   scopeKey,
 } from "../lib/batch-orchestration/scope-selection.ts";
 import { runFoundryScopeBatch } from "../lib/batch-orchestration/cli-bounded-batch-runner.ts";
+import { createAuthoringTaskFilterService } from "../lib/batch-orchestration/authoring-task-filter.ts";
 import {
   createBatchScopeExecutionService,
   type BatchScopeExecutionPaths as BatchPaths,
@@ -569,119 +570,6 @@ const {
   pathJoin: (...parts: string[]) => path.join(...parts),
 });
 
-function taskIdentity(task: JsonRecord): { id: string; version: string } {
-  const entity = jsonRecord(task.entity);
-  return {
-    id: asText(entity.entity_id ?? task.dataset_id ?? task.id),
-    version: asText(entity.version ?? task.dataset_version ?? task.version) || "00.00.001",
-  };
-}
-
-export function filterAuthoringTaskManifestToRows({
-  taskManifest,
-  rowsFile,
-  type,
-  reportPath,
-}: {
-  taskManifest: unknown;
-  rowsFile: unknown;
-  type: string;
-  reportPath?: unknown;
-}): JsonRecord {
-  const resolvedTaskManifest = resolveRepoPath(taskManifest);
-  const resolvedRowsFile = resolveRepoPath(rowsFile);
-  const resolvedReportPath =
-    resolveRepoPath(reportPath) ||
-    path.join(path.dirname(resolvedTaskManifest!), "authoring-task-filter-report.json");
-  const manifest = readJson(resolvedTaskManifest!);
-  const rows = readRows(resolvedRowsFile);
-  const retainedKeys = new Set(
-    rows
-      .map((row) => datasetIdentity(row, type))
-      .filter((identity) => identity.id)
-      .map((identity) => `${identity.id}@${identity.version}`),
-  );
-  const tasks = Array.isArray(manifest.tasks) ? manifest.tasks.map(jsonRecord) : [];
-  const retainedTasks: JsonRecord[] = [];
-  const skippedTasks: JsonRecord[] = [];
-  for (const task of tasks) {
-    const identity = taskIdentity(task);
-    const key = identity.id ? `${identity.id}@${identity.version}` : "";
-    if (key && retainedKeys.has(key)) {
-      retainedTasks.push(task);
-    } else {
-      skippedTasks.push({
-        dataset_type: jsonRecord(task.entity).dataset_type ?? type,
-        dataset_id: identity.id || null,
-        dataset_version: identity.version || null,
-        reason: "dataset_not_present_after_identity_apply",
-      });
-    }
-  }
-  const filtered =
-    skippedTasks.length > 0
-      ? path.join(path.dirname(resolvedTaskManifest!), "authoring-task-manifest.current-rows.json")
-      : resolvedTaskManifest!;
-  if (filtered !== resolvedTaskManifest) {
-    writeJson(filtered, {
-      ...manifest,
-      tasks: retainedTasks,
-      counts: {
-        ...(manifest.counts ?? {}),
-        tasks: retainedTasks.length,
-        original_tasks: tasks.length,
-        skipped_not_in_current_rows: skippedTasks.length,
-      },
-      filter: {
-        source_manifest: repoRelative(resolvedTaskManifest),
-        current_rows_file: repoRelative(resolvedRowsFile),
-        reason: "identity decisions may rewrite/reuse rows before content patches are applied",
-      },
-    });
-  }
-  // Status reflects whether the RETAINED tasks actually carry authoring action items,
-  // not merely how many tasks survived the current-rows filter. A reuse-heavy scope
-  // (e.g. worldsteel) can retain only already-authored new rows whose action items are
-  // all closed; those are `ready_no_action_items` tasks and must NOT force the
-  // autofill-off block. Count-based status wrongly reported ready_for_ai_authoring_batch
-  // for a scope with zero outstanding action items. BAFU/USLCI scopes whose retained
-  // tasks still carry action items are unaffected (count > 0 keeps the batch status).
-  const retainedActionItemCount = retainedTasks.reduce(
-    (sum, task) =>
-      sum +
-      (Number.isFinite(Number(task.action_item_count))
-        ? Number(task.action_item_count)
-        : Array.isArray(task.action_items)
-          ? task.action_items.length
-          : 0),
-    0,
-  );
-  const report: JsonRecord = {
-    schema_version: 1,
-    generated_at_utc: nowIso(),
-    status: retainedActionItemCount > 0 ? "ready_for_ai_authoring_batch" : "ready_no_action_items",
-    task_manifest: repoRelative(resolvedTaskManifest),
-    filtered_task_manifest: repoRelative(filtered),
-    current_rows_file: repoRelative(resolvedRowsFile),
-    type,
-    counts: {
-      current_rows: rows.length,
-      original_tasks: tasks.length,
-      retained_tasks: retainedTasks.length,
-      retained_action_items: retainedActionItemCount,
-      skipped_tasks: skippedTasks.length,
-    },
-    skipped_tasks: skippedTasks.slice(0, 200),
-  };
-  writeJson(resolvedReportPath, report);
-  return {
-    status: report.status,
-    taskManifest: filtered,
-    reportPath: resolvedReportPath,
-    counts: report.counts,
-  };
-}
-
 function readRows(filePath: string | null | undefined): JsonRecord[] {
   if (!fileExists(filePath)) return [];
   if (String(filePath).toLowerCase().endsWith(".jsonl")) return readJsonLines(filePath);
@@ -691,6 +579,17 @@ function readRows(filePath: string | null | undefined): JsonRecord[] {
   if (Array.isArray(record.rows)) return record.rows.map(jsonRecord);
   return [record];
 }
+
+export const { filterAuthoringTaskManifestToRows } = createAuthoringTaskFilterService({
+  nowIso,
+  resolveRepoPath,
+  readJson,
+  readRows,
+  writeJson,
+  repoRelative,
+  asText,
+  datasetIdentity,
+});
 
 function uniqueExistingPaths(paths: unknown[]): string[] {
   return [
