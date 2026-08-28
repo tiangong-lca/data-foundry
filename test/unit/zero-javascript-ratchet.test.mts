@@ -15,6 +15,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // Issue #70's orchestration stages and post-write handoff cases remain native TypeScript.
 // Issue #77's identity-equivalence RED/GREEN cases remain native TypeScript too.
 // Issue #79's category-map closure and nonzero-exit cases remain native TypeScript too.
+// Issue #81's strict no-replay handoff recovery and helper leaves remain native TypeScript too.
 // Issue #82 keeps the pnpm 11.24 package-manager edge exact and adds no compatibility runner.
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));

@@ -274,8 +274,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: f8f0633
-lastReviewedNote: "Reviewed for Issue #70: tests pin the five-line batch facade, explicit composition-root path, focused stage budgets, and unchanged runtime exports/help bytes."
+lastReviewedCommit: 5faceff
+lastReviewedNote: "Reviewed for Issue #81: tests pin strict conflict evidence, no replay, exact readback rejection, retry exhaustion, budgets, and cycle freedom."
 ---
 
 # Test Layout
@@ -368,6 +368,8 @@ Wave 25 covers two re-export families. `unit/import-curation-leaf-barrels-migrat
 Wave 26 covers five dependency-ordered orchestration families. The five `unit/wave26-*-command-migration.test.mts` contracts require one native zero-escape owner, every dispatcher/metadata/wrapper consumer and exact serialized help bytes. Existing command and scenario fixtures remain the behavior authority for generic-versus-BAFU configuration, library/scope/classification/identity blocker and artifact order, resume ledgers, pause/stop, bounded parallel selection, read-only preflight, guarded commit delegation, native errors and deterministic report/JSONL bytes. All fixtures are local and read neither `.env` nor production.
 
 Issue #70's `unit/batch-post-write-handoff.test.mts` isolates the asynchronous batch closure stage. It proves process, support, and Flow same-id/version conflicts require successful readback before closeout, retryable verification failures preserve attempt/delay evidence, missing reports exhaust the bounded retry plan without closeout, and other commit failures stop before verification. `unit/orchestration-module-budget.test.mts` keeps the command owner and semantic module ceilings shrink-only and includes the new module in cycle analysis once tracked.
+
+Issue #81 strengthens that boundary in `unit/process-handoff-orchestration.test.mts` and `unit/batch-post-write-handoff.test.mts`. Process lost-success recovery verifies without a second commit; owner, state, payload, unexpected-row, and repeated missing-readback findings fail before closeout. Batch and process both reject text-only, mixed, malformed, and incomplete conflict evidence unless structured code `23505` and exact same-id/version semantics agree. The orchestration budget and cycle contract tracks the shared classifier plus bounded process plan/closeout helpers.
 
 Issue #77 is pinned at two layers. `unit/bafu-identity-equivalence-contract.test.mts` proves an exact product-flow name with property/unit/geography/category conflicts cannot become a reuse candidate, freezes the ordered reasons, and retains exact-name reuse when the physical evidence matches. `commands/bafu-auto-authoring.test.mts` drives a real task/package through autofill and deterministic identity apply, proving the conflicting candidate becomes `create_new` evidence and the source flow UUID survives.
 

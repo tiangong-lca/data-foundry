@@ -276,8 +276,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: f8f0633
-lastReviewedNote: "Reviewed for Issue #70: public commands are thin facades; batch wiring lives in the explicit composition root and behavior remains in focused semantic/CLI owners."
+lastReviewedCommit: 5faceff
+lastReviewedNote: "Reviewed for Issue #81: process and batch handoffs fail closed on ambiguous conflict evidence and never replay a commit."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -360,7 +360,9 @@ Within BAFU auto-authoring, an exact product/waste-flow name never overrides the
 
 BAFU category-map projection must evaluate every supplied decision row, not only categories referenced by the current task set. `category-map-report.ts` owns closure-wide status and blocker projection. A non-empty emitted category-map/process/flow-product manual-review closure requires `completed_with_manual_review`, a blocker naming the exact source/reason/artifact, and a nonzero CLI exit. Do not continue library decisions apply from shell success alone; resolve the referenced manual-review rows and rerun. A blocker-free report remains byte-identical to the prior `completed` contract.
 
-Within the shared batch owner, `scripts/lib/batch-orchestration/post-write-handoff.ts` owns the asynchronous commit → post-write verify/retry → closeout stage. Same-id/version conflicts are accepted only as an idempotent commit outcome and only when subsequent verification succeeds; missing reports and non-retryable failures remain blocking. The module receives the existing stage runner and never retries the commit mutation or executes rendered display text.
+Within the process and shared batch owners, same-id/version lost-success recovery is governed by `scripts/lib/same-identity-commit-recovery.ts`. A failure may enter recovery only when its structured evidence contains explicit code `23505` and exact same-id/version conflict semantics; display text alone, mixed or malformed failures, and missing detail remain blocking. The commit mutation is dispatched at most once and never replayed. Its status remains `readback_recovery_pending` until the existing content-bound verifier proves exact owner, state, identity, version, payload, and root closure; missing, unexpected, foreign, mismatched, or exhausted readback cannot reach closeout.
+
+Within the shared batch owner, `scripts/lib/batch-orchestration/post-write-handoff.ts` owns the asynchronous commit → post-write verify/retry → closeout stage. It applies that shared recovery classifier, retries only classified read-only verification failures, and closes only after the final exact verification report succeeds. The module receives the existing stage runner and never executes rendered display text.
 
 The enclosing per-dataset state machine lives in `scripts/lib/batch-orchestration/scope-finalize-commit.ts`. It serializes support commits across concurrent scopes, reuses only verified support identities, invalidates stale reuse before a fresh support handoff, reruns finalize on exact recovered rows/evidence, and invokes the main handoff only from `ready_for_remote_write`. A missing finalize report or failed support handoff remains blocking.
 
