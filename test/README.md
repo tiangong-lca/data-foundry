@@ -274,8 +274,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 08fa2d01050f421b70c27a0fb307f213cfe8a494
-lastReviewedNote: "Reviewed for Issue #70: focused cases now prove the real command delegates bounded claims, family FIFO, pause/stop/drain, and run locking to CLI 0.1.3."
+lastReviewedCommit: b4c9b777929ac27694fbebd748f0c4bec968fab2
+lastReviewedNote: "Reviewed for Issue #70: tests pin the five-line batch facade, explicit composition-root path, focused stage budgets, and unchanged runtime exports/help bytes."
 ---
 
 # Test Layout
@@ -371,7 +371,7 @@ Issue #70's `unit/batch-post-write-handoff.test.mts` isolates the asynchronous b
 
 `fixtures/auth-identity-receipt.ts` is the only test-only receipt materializer. It recreates the frozen public wire fingerprints and scope hash, then every consumer still passes the bytes through `@tiangong-lca/cli/auth-identity-receipt`. `unit/public-cli-batch-runtime.test.mts` loads exact installed CLI 0.1.3, exercises public batch/run-lock plus strict receipt parsing, and proves the former private deep path stays unexported. `unit/toolchain-contract.test.mts` rejects any tracked `@tiangong-lca/cli/dist/src/**` import and binds the exact provenance-verified 0.1.3 maturity exception.
 
-`unit/cli-bounded-batch-runner.test.mts` is the Foundry/CLI scheduling boundary: it proves the physical run lock exists only during execution, public contract claims are bounded, pause leaves items unclaimed, stop drains claimed work, one family key is FIFO-serialized while an independent key proceeds, and the BAFU owner has no manual worker/`Promise.all` claim loop. Existing BAFU command cases preserve pending-before-limit, pause report bytes, family-master selection, ledgers, and preflight behavior; `unit/orchestration-module-budget.test.mts` pins the 1,899-line owner ceiling and 180-line adapter ceiling.
+`unit/cli-bounded-batch-runner.test.mts` is the Foundry/CLI scheduling boundary: it proves the physical run lock exists only during execution, public contract claims are bounded, pause leaves items unclaimed, stop drains claimed work, one family key is FIFO-serialized while an independent key proceeds, and the composition root has no manual worker/`Promise.all` claim loop. Existing BAFU command cases preserve pending-before-limit, pause report bytes, family-master selection, ledgers, and preflight behavior. `wave26-bafu-batch-command-migration.test.mts` fixes the five-line facade's three exports and exact help bytes; `unit/orchestration-module-budget.test.mts` separately exposes the 20-line facade and 1,700-line composition-root ceilings instead of hiding the move.
 
 `unit/batch-scope-finalize-commit.test.mts` covers the enclosing state machine: a missing finalize report fails before recovery or handoff; verified support is reused before the main handoff; stale reuse is invalidated before fresh support commit/cache evidence; recovered rows and reports feed the next finalize attempt; and failed support never reaches the main handoff.
 

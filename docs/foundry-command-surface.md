@@ -84,8 +84,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 08fa2d01050f421b70c27a0fb307f213cfe8a494
-lastReviewedNote: "Reviewed for Issue #70: replacing the internal claim loop with public CLI batch/run-lock changes no 63-command surface, help/stdout/exit, artifact, profile, or write mode."
+lastReviewedCommit: b4c9b777929ac27694fbebd748f0c4bec968fab2
+lastReviewedNote: "Reviewed for Issue #70: the batch command is a five-line re-export facade over the same three runtime exports; 63-command help/stdout/exit and metadata remain exact."
 ---
 
 # Foundry Command Surface

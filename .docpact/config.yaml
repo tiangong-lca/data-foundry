@@ -17,8 +17,9 @@ layout: repo
 # Review note, 2026-08-29: Issue #70 pins provenance-verified CLI 0.1.3, consumes batch/run-lock and auth receipt parsing through supported package subpaths, centralizes deterministic test-only receipt bytes, and ratchets private `dist/src/**` imports to zero. Existing orchestration, account, test-layout, bootstrap, and control-plane rules cover the change without widening remote authority.
 # Review note, 2026-08-29: Issue #70 also re-reviews the Worldsteel profile family after its operational CLI-version update. The machine profile timestamp and all four governed documents move together; R1-R5, retained counts, cache-miss policy, support ordering, and production authority remain unchanged.
 # Review note, 2026-08-29: Issue #70 replaces the remaining manual scope claim loop with a 166-line Foundry adapter over public CLI batch/run-lock. Existing orchestration rules now cover contract projection, family resource FIFO, pause/stop/drain, the 1,898-line owner, focused boundary cases, and unchanged semantic ledger/report authority.
+# Review note, 2026-08-29: Issue #70 makes the batch public owner a five-line facade and moves the 1,649-line composition root to an explicitly named/budgeted lib path. This preserves the same three exports, help, profile adapters, semantic modules, CLI delegation, and authority while keeping residual composition density visible.
 lastReviewedAt: "2026-08-29"
-lastReviewedCommit: "08fa2d01050f421b70c27a0fb307f213cfe8a494"
+lastReviewedCommit: "b4c9b777929ac27694fbebd748f0c4bec968fab2"
 
 catalog:
   repos:

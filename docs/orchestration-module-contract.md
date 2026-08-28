@@ -44,8 +44,8 @@ checkPaths:
   - package.json
   - pnpm-lock.yaml
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 08fa2d01050f421b70c27a0fb307f213cfe8a494
-lastReviewedNote: "Reviewed for Issue #70: the real scope execution boundary delegates generic claims, family resources, pause/stop/drain, and cross-process locking to CLI 0.1.3."
+lastReviewedCommit: b4c9b777929ac27694fbebd748f0c4bec968fab2
+lastReviewedNote: "Reviewed for Issue #70: all five command owners are thin; the batch facade exposes a separately budgeted composition root plus focused semantic/CLI boundaries."
 related:
   - https://github.com/tiangong-lca/data-foundry/issues/70
   - https://github.com/tiangong-lca/tiangong-cli/issues/232
@@ -64,7 +64,7 @@ The high-level orchestration layer must be easy for an Agent to navigate without
 
 Foundry now pins the published `@tiangong-lca/cli@0.1.3` release. CommandSpec, batch/run-lock, and strict identity receipt parsing are consumed only through the package's public `./command-spec`, `./batch`, and `./auth-identity-receipt` exports; Foundry must not deep-import `dist/src/**`, expose CLI test internals, invent a compatibility wrapper, or copy the CLI scheduler/parser into semantic modules. LCA/profile semantics, Foundry reports, test-only receipt fixture bytes, and remote-write gates remain Foundry-owned adapters around those public primitives.
 
-`cli-bounded-batch-runner.ts` is the executable delegation boundary: it creates the run/item contracts, acquires `withBatchRunLock`, and calls `runBoundedBatch` with family-group exclusive keys, bounded concurrency, pause-before-claim, stop-after-blocked, and drain. The callback remains Foundry-owned and returns the same scope status projection after semantic execution or retryable exception recording. The command contains no worker counter or `Promise.all` claim loop.
+`cli-bounded-batch-runner.ts` is the executable delegation boundary: it creates the run/item contracts, acquires `withBatchRunLock`, and calls `runBoundedBatch` with family-group exclusive keys, bounded concurrency, pause-before-claim, stop-after-blocked, and drain. The callback remains Foundry-owned and returns the same scope status projection after semantic execution or retryable exception recording. The five-line command facade contains no implementation; `bafu-batch-command-runtime.ts` is the explicit composition root and contains no alternate worker counter or `Promise.all` claim loop.
 
 ## 2. Baseline and ratchet
 
@@ -128,7 +128,7 @@ These observations are design inputs, not fixtures to commit. Replay tests use s
 
 Every extraction begins with a failing contract that imports the intended semantic owner. GREEN first moves existing logic without changing regexes, precedence, option defaults, stage order, object insertion order, stdout, exit status, report paths, hashes, retry classification, or write authority.
 
-The batch post-write handoff slice is characterized by six focused cases: process, support, and Flow same-id/version conflicts proceed only through successful readback and closeout; retryable readback failures preserve attempts and exponential delay; missing verification reports exhaust the bounded retry count without closeout; and non-idempotent commit failures stop before verification. The finalize/commit slice adds five cases for missing reports, verified support reuse, stale support invalidation plus fresh commit/cache, exact recovered-row evidence, and support-failure short-circuiting. The CLI boundary adds four focused cases for public contract/run-lock release, pause/stop closure, family serialization with independent progress, and command delegation. Together they ratchet the batch owner from 2,640 to 1,898 lines; the 166-line CLI adapter, 559-line handoff, and 425-line finalize/commit stages remain under their explicit ceilings.
+The batch post-write handoff slice is characterized by six focused cases: process, support, and Flow same-id/version conflicts proceed only through successful readback and closeout; retryable readback failures preserve attempts and exponential delay; missing verification reports exhaust the bounded retry count without closeout; and non-idempotent commit failures stop before verification. The finalize/commit slice adds five cases for missing reports, verified support reuse, stale support invalidation plus fresh commit/cache, exact recovered-row evidence, and support-failure short-circuiting. The CLI boundary adds four focused cases for public contract/run-lock release, pause/stop closure, family serialization with independent progress, and command delegation. The public batch owner is now 5 lines (ceiling 20); the 1,649-line composition root is visible under a separate 1,700-line shrink-only ceiling, while the 166-line CLI adapter, 136-line authoring filter, 149-line recovery evidence, 68-line scratch policy, 559-line handoff, and 425-line finalize/commit modules remain independently budgeted.
 
 Required evidence grows with the boundary:
 

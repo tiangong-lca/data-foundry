@@ -84,8 +84,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 08fa2d01050f421b70c27a0fb307f213cfe8a494
-lastReviewedNote: "Reviewed for Issue #70: CLI-owned generic claims/run locking and Foundry-owned LCA callbacks/ledgers are now executable, with no workspace boundary move."
+lastReviewedCommit: b4c9b777929ac27694fbebd748f0c4bec968fab2
+lastReviewedNote: "Reviewed for Issue #70: thin Foundry command facades and an explicit local composition root change no cross-project ownership or workspace boundary."
 ---
 
 # Workspace Project Map

@@ -86,8 +86,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 08fa2d01050f421b70c27a0fb307f213cfe8a494
-lastReviewedNote: "Reviewed for Issue #70: CLI owns generic batch contracts, claims, resource queues, pause/stop/drain, and run locking; Foundry owns LCA execution callbacks and evidence."
+lastReviewedCommit: b4c9b777929ac27694fbebd748f0c4bec968fab2
+lastReviewedNote: "Reviewed for Issue #70: the thin Foundry command facade, visible composition root, semantic modules, and CLI scheduler retain explicit ownership boundaries."
 ---
 
 # Capability Ownership Policy

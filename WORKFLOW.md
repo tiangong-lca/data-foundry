@@ -276,8 +276,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 08fa2d01050f421b70c27a0fb307f213cfe8a494
-lastReviewedNote: "Reviewed for Issue #70: commit-mode scope claims now run under the public CLI 0.1.3 batch engine/run lock while Foundry preserves semantic execution and ledger/report authority."
+lastReviewedCommit: b4c9b777929ac27694fbebd748f0c4bec968fab2
+lastReviewedNote: "Reviewed for Issue #70: public commands are thin facades; batch wiring lives in the explicit composition root and behavior remains in focused semantic/CLI owners."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
