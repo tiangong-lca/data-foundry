@@ -14,8 +14,9 @@ layout: repo
 # Review note, 2026-08-26: Issue #69 adds a narrow strict prewrite-datetime route across bundle preservation, atomic cleanup blockers, non-destructive stale-artifact reporting, finalize short-circuiting, CLI exit behavior, and their focused contracts. It also closes the existing control-plane coverage gap for specs/prewrite-content-policy.json without changing ownership or mutation authority.
 # Review note, 2026-08-29: Issue #70 governs high-level orchestration decomposition, shrink-only module budgets, and AI navigation. The batch post-write handoff and scope-finalize/commit extractions preserve artifact-bound CLI execution, idempotent conflict handling, bounded readback retries, support reuse/invalidation, patch recovery, and closeout without changing remote authority.
 # Review note, 2026-08-29: Issue #82 updates only the exact pnpm toolchain pin to 11.24.0. Existing bootstrap, control-plane, test-layout, workflow, and governed-doc rules already cover the manifest, sole root lock, CI, toolchain test, and active guidance; no ownership, routing, dependency, runtime, command, or authority rule changes.
+# Review note, 2026-08-29: Issue #70 pins provenance-verified CLI 0.1.3, consumes batch/run-lock and auth receipt parsing through supported package subpaths, centralizes deterministic test-only receipt bytes, and ratchets private `dist/src/**` imports to zero. Existing orchestration, account, test-layout, bootstrap, and control-plane rules cover the change without widening remote authority.
 lastReviewedAt: "2026-08-29"
-lastReviewedCommit: "4e442943ce4d3c89c2b79766720c7eb8fce0e254"
+lastReviewedCommit: "05fdeaf22520efb2325ffcde44f86b925e0a7b8a"
 
 catalog:
   repos:

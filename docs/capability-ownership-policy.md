@@ -86,8 +86,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 4e442943ce4d3c89c2b79766720c7eb8fce0e254
-lastReviewedNote: "Reviewed for Issues #70/#82: Foundry owns semantic orchestration plus its exact pnpm toolchain; shared CLI, Rust, database, profile, and production authority do not move."
+lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
+lastReviewedNote: "Reviewed for Issue #70: Foundry consumes verified CLI 0.1.3 public primitives while parser semantics, generic scheduling, and remote mutation remain CLI/platform owned."
 ---
 
 # Capability Ownership Policy
@@ -138,7 +138,9 @@ Foundry also owns portability and fail-closed handling of its local artifact pat
 
 Foundry owns the `tiangong-foundry.command-spec.v1` handoff envelope: strict executable/argv validation, duplicate critical-flag rejection, reader-only display rendering, command hashing, and exact input artifact facts. The published CLI still owns the command's remote behavior. Foundry runners may execute only the parsed executable and argv with `shell=false`, after rechecking bound artifact bytes.
 
-Profile-gated batch commit does not change ownership: Foundry may decide that an exact scope has passed policy and handoff gates, but the actual mutation command remains an official CLI/platform command executed under an account guard. Foundry's default platform invocation is the exact installed CLI package, `pnpm exec tiangong-lca ...`; credential-scoped account execution additionally requires its CLI 0.1.2 intent-bound identity receipt. Local CLI binary overrides are only explicit operator/test state, not the workflow contract.
+Profile-gated batch commit does not change ownership: Foundry may decide that an exact scope has passed policy and handoff gates, but the actual mutation command remains an official CLI/platform command executed under an account guard. Foundry's default platform invocation is the exact installed CLI package, `pnpm exec tiangong-lca ...`; credential-scoped account execution additionally requires its CLI 0.1.3 intent-bound identity receipt. Local CLI binary overrides are only explicit operator/test state, not the workflow contract.
+
+The supported library boundary is `@tiangong-lca/cli/command-spec`, `@tiangong-lca/cli/batch`, and `@tiangong-lca/cli/auth-identity-receipt`. Generic contracts, scheduling, run locks, and strict receipt parsing remain CLI-owned; Foundry owns semantic adapters and test-only fixture materialization. A private package file is never an ownership fallback.
 
 High-level library and BAFU orchestration is Foundry-owned composition, not a transfer of sibling behavior. Foundry may order classification, authoring, scope-finalize, ledger, pause/preflight and bounded-parallel stages and may delegate an already-authorized handoff as executable plus argv. The CLI still owns mutation and readback semantics, profiles own dataset-specific policy, and USLCI/Worldsteel wrappers may configure the shared engine only within those existing boundaries.
 

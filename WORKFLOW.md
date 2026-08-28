@@ -276,8 +276,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 4e442943ce4d3c89c2b79766720c7eb8fce0e254
-lastReviewedNote: "Reviewed for Issues #70/#82: workflow stages remain case-driven and fail-closed on the exact pnpm 11.24.0 / Node 24 / TypeScript 7 toolchain."
+lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
+lastReviewedNote: "Reviewed for Issue #70: case-driven workflow uses verified CLI 0.1.3 public batch/auth subpaths and keeps private package internals fail-closed."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -380,7 +380,9 @@ All scenario suites are native `.test.mts`. Preserve every multi-command artifac
 
 Do not parse or execute rendered command strings. `tiangong-foundry.command-spec.v1` makes `executable` plus `argv` authoritative and keeps `display` reader-only. Its SHA-256 binds the authoritative command and exact artifact facts; commit and verify both bind the final rows path, bytes, and SHA-256, and runners reject same-path drift before `shell=false` spawn. Artifact-to-scope matching still normalizes platform separators. Durable writers fsync writable file descriptors, not read-only reopened handles.
 
-Use the exact installed project dependency as `pnpm exec tiangong-lca ...`. Foundry runtime adapters resolve that same `@tiangong-lca/cli@0.1.2` manifest and bin directly; only the external `skills@latest` source-evidence resolver remains intentionally floating, with the resolved ref recorded in task artifacts.
+Use the exact installed project dependency as `pnpm exec tiangong-lca ...`. Foundry runtime adapters resolve that same `@tiangong-lca/cli@0.1.3` manifest and bin directly; only the external `skills@latest` source-evidence resolver remains intentionally floating, with the resolved ref recorded in task artifacts.
+
+Reusable scheduling/run-lock and receipt parsing come only from `@tiangong-lca/cli/batch` and `@tiangong-lca/cli/auth-identity-receipt`. Never restore a `dist/src/**` import or expose CLI test internals; fixture receipt construction is test-only and must pass the same public parser before it can drive a case.
 
 Credential-scoped operator commands must run through `pnpm account:run -- <profile> -- <executable> [args...]`. The ignored profile must include `FOUNDRY_EXPECTED_PROJECT_REF` and `FOUNDRY_EXPECTED_USER_ID`. Before the requested argv is executed, the wrapper obtains a fresh `auth identity-receipt` from the installed CLI with both expectations, requires an intent-bound cache-disabled forced signin, and uses a restricted child environment. Missing expectations, thread-guard drift, stale or partial receipts, and the retired `--no-auth-check` path all fail before the requested command starts.
 

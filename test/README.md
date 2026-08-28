@@ -274,8 +274,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 1f0b3b282827b03a009f7acd544a07dd7785baee
-lastReviewedNote: "Reviewed for Issue #69: unit/scenario layers cover strict calendar fail-close, zero blocked-run deletion, CLI failure and finalize suppression."
+lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
+lastReviewedNote: "Reviewed for Issue #70: installed CLI 0.1.3 public batch/auth proof and a single deterministic test-only receipt fixture replace all private deep imports."
 ---
 
 # Test Layout
@@ -368,6 +368,8 @@ Wave 25 covers two re-export families. `unit/import-curation-leaf-barrels-migrat
 Wave 26 covers five dependency-ordered orchestration families. The five `unit/wave26-*-command-migration.test.mts` contracts require one native zero-escape owner, every dispatcher/metadata/wrapper consumer and exact serialized help bytes. Existing command and scenario fixtures remain the behavior authority for generic-versus-BAFU configuration, library/scope/classification/identity blocker and artifact order, resume ledgers, pause/stop, bounded parallel selection, read-only preflight, guarded commit delegation, native errors and deterministic report/JSONL bytes. All fixtures are local and read neither `.env` nor production.
 
 Issue #70's `unit/batch-post-write-handoff.test.mts` isolates the asynchronous batch closure stage. It proves process, support, and Flow same-id/version conflicts require successful readback before closeout, retryable verification failures preserve attempt/delay evidence, missing reports exhaust the bounded retry plan without closeout, and other commit failures stop before verification. `unit/orchestration-module-budget.test.mts` keeps the command owner and semantic module ceilings shrink-only and includes the new module in cycle analysis once tracked.
+
+`fixtures/auth-identity-receipt.ts` is the only test-only receipt materializer. It recreates the frozen public wire fingerprints and scope hash, then every consumer still passes the bytes through `@tiangong-lca/cli/auth-identity-receipt`. `unit/public-cli-batch-runtime.test.mts` loads exact installed CLI 0.1.3, exercises public batch/run-lock plus strict receipt parsing, and proves the former private deep path stays unexported. `unit/toolchain-contract.test.mts` rejects any tracked `@tiangong-lca/cli/dist/src/**` import and binds the exact provenance-verified 0.1.3 maturity exception.
 
 `unit/batch-scope-finalize-commit.test.mts` covers the enclosing state machine: a missing finalize report fails before recovery or handoff; verified support is reused before the main handoff; stale reuse is invalidated before fresh support commit/cache evidence; recovered rows and reports feed the next finalize attempt; and failed support never reaches the main handoff.
 

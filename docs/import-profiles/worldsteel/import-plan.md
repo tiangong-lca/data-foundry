@@ -1,7 +1,7 @@
 ---
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: da6b0838ae2e2d1d17654bbd8cd5a21fbdff80f6
-lastReviewedNote: "Reviewed for Issue #68: R1/R4 corrections and R5 supersede the unavailable-contact, native-row-version, and FP/UG reference-only assumptions."
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
+lastReviewedNote: "Reviewed for Issue #70: Worldsteel account execution now binds exact verified CLI 0.1.3 through public receipt parsing without changing R1-R5 decisions or production authority."
 title: worldsteel EF3.1 ILCD Import Plan
 docType: plan
 scope: import-profile/worldsteel
@@ -186,7 +186,7 @@ Input: `inputs/CUP2025-2_2022b_v10_worldsteel_products_Tiangong_v1 EF3.1 2026_01
 | **Reuse vs mint** | Canonical-first for the ~1,315-flow reference layer and FP/UG. **R3:** a capped allowance to mint **≤17** GaBi/Sphera pseudo-elementary flows. **R5:** `mintUnmatchedFpUgSupport=true` sends materialized FP/UG canonical-cache misses through the gated account-local support path. | Canonical rows are reused, never minted. R5 was prompted by the 10+10 LANCA gap but is enforced by cache-miss + profile/gate semantics, not a name/count whitelist. Support failure defers the dependent scope while independent ready scopes may continue. **Do not copy another profile wholesale.** |
 | **17 GaBi pseudo-elementary (R3)** | Reuse-match first **with full AI context** (NOT by UUID); mint the residual as account-local My Data (state_code=0), capped at ≤17. **Review the actual residual count after the UUID-reuse pass**; set the shared `enabled=false` only when both R3 elementary and R5 FP/UG support no longer require account-local authorization. | Keeps canonical clean while guaranteeing the 33 steel processes stay complete. |
 | **Profile** | `worldsteel` entry in `specs/import-profiles.json`: `allow_account_local_support_and_elementary.enabled=true`, R3/R5 write scopes, process QA waiver, and profile prose declaring `mintUnmatchedFpUgSupport=true`. The wrapper independently freezes that executable flag. | The contract test freezes runtime `true`, checks structured authorization, and compares the profile declaration against every active Worldsteel document without pretending an unconsumed JSON mirror is an execution gate. |
-| **Account** | **`data@worldsteel.org`** (dedicated). Create ignored `.foundry/account-profiles/worldsteel.env` with the three CLI credential values plus `FOUNDRY_EXPECTED_PROJECT_REF` and the canonical `FOUNDRY_EXPECTED_USER_ID`. Do not select accounts by commenting blocks in the repository `.env`. | Account identity is **not** in profile JSON; it lives in the runtime account profile, Codex thread guard when applicable, and the fresh CLI 0.1.2 intent-bound receipt. The same receipt-gated account context authenticates the external-doc upload (D2). |
+| **Account** | **`data@worldsteel.org`** (dedicated). Create ignored `.foundry/account-profiles/worldsteel.env` with the three CLI credential values plus `FOUNDRY_EXPECTED_PROJECT_REF` and the canonical `FOUNDRY_EXPECTED_USER_ID`. Do not select accounts by commenting blocks in the repository `.env`. | Account identity is **not** in profile JSON; it lives in the runtime account profile, Codex thread guard when applicable, and the fresh CLI 0.1.3 intent-bound receipt. The same receipt-gated account context authenticates the external-doc upload (D2). |
 | **State / version (R4)** | `state_code=0` (My Data draft) and DB row-version key `00.00.001` for new Worldsteel-owned rows; reused canonical refs stay `state_code=100` at their published versions. Preserve the source `dataSetVersion` inside the payload as provenance. | Native DB slots are occupied by other accounts. Separating payload provenance from the DB row key preserves source evidence without collisions. |
 | **Library/attribution contact (R1)** | Mint one deterministic same-owner `00.00.001` contact from the runner's real World Steel Association identity fields; do not pass the unavailable packaged `d5710976` id/version and never use NREL/FOEN/GaBi-software defaults. | The first-import bootstrap (`commitFlowSupportInline:true`) needs a visible owner-draft contact; the deterministic identity is stable and faithful. |
 | **DB-fallback source (R2)** | `worldsteel` branch added to `source-semantics.ts databaseFallbackSourceConfig` (shortName "worldsteel LCI database", worldsteel citation, `worldsteel.org/lci/<id>` URI). | **Without it, worldsteel processes silently inherit the BAFU 2025 default fallback source — a data-integrity corruption, not an error.** |
@@ -215,7 +215,7 @@ Input: `inputs/CUP2025-2_2022b_v10_worldsteel_products_Tiangong_v1 EF3.1 2026_01
 Environment for every step:
 
 ```bash
-pnpm install --frozen-lockfile   # installs the exact @tiangong-lca/cli@0.1.2 project dependency
+pnpm install --frozen-lockfile   # installs the exact @tiangong-lca/cli@0.1.3 project dependency
 RUN=".foundry/workspaces/worldsteel-full-import-$(date -u +%Y%m%dT%H%M%SZ)"   # stamp once; the runtime forbids Date.now in workflows but the shell is fine
 TUID="<worldsteel target user id>"   # in zsh, NOT UID (reserved)
 ```
@@ -329,7 +329,7 @@ The vast majority of those exchanges point at EF3.1 reference flows that will re
 
 ## 9. Risk register (consolidated gotchas)
 
-- **Use the project-installed CLI** — leave `TIANGONG_LCA_CLI_BIN` blank so Foundry resolves exact `@tiangong-lca/cli@0.1.2`; an override is only for an explicit local test binary. Credential-scoped execution still goes through the receipt-gated `pnpm account:run` wrapper.
+- **Use the project-installed CLI** — leave `TIANGONG_LCA_CLI_BIN` blank so Foundry resolves exact `@tiangong-lca/cli@0.1.3`; an override is only for an explicit local test binary. Credential-scoped execution still goes through the receipt-gated `pnpm account:run` wrapper.
 - **Don't copy BAFU/USLCI profile wholesale** — Worldsteel reuses every canonical row by UUID, caps the R3 elementary tail, and enables R5 only for materialized FP/UG canonical-cache misses behind the full account-local support gates.
 - **`databaseFallbackSourceConfig` silently inherits BAFU** for any unknown profile → ✅ worldsteel branch added.
 - **`source_contact_rewrites` gated to bafu/uslci** → ✅ widened to include `worldsteel`.
@@ -363,7 +363,7 @@ The vast majority of those exchanges point at EF3.1 reference flows that will re
 3. [x] **tiangong-lca-cli** `dataset source upload-attachments` — authenticated `external_docs` upload + `referenceToDigitalFile` rewrite. 25 tests, 100% coverage.
 4. [x] **foundry** `worldsteel` profile (R3 capped elementary mint + R5 unmatched FP/UG support, full-context policy) + docs; `source-semantics.ts` worldsteel branch; widened `post-authoring-finalize.ts` gate; `worldsteel-batch-import-run.ts` wrapper (deterministic owner-draft World Steel Association contact) + registrations. New tests green.
 5. [ ] Implement a dedicated hash-bound library-resolution seed manifest before restoring any identity-preflight skip; unbound synthetic decisions remain disabled.
-6. [ ] `.foundry/account-profiles/worldsteel.env` with the exact expected project ref and canonical expected user id for `data@worldsteel.org`; obtain a fresh CLI 0.1.2 intent-bound receipt before the run. Library contact = deterministic same-owner World Steel Association identity at `00.00.001` (packaged id `d5710976` is unavailable). _(needs a live session)_
+6. [ ] `.foundry/account-profiles/worldsteel.env` with the exact expected project ref and canonical expected user id for `data@worldsteel.org`; obtain a fresh CLI 0.1.3 intent-bound receipt before the run. Library contact = deterministic same-owner World Steel Association identity at `00.00.001` (packaged id `d5710976` is unavailable). _(needs a live session)_
 7. [ ] Publish tidas-tools (≥ the version the CLI bundles) + the CLI, so the foundry run picks up the adapter + upload command. _(release action)_
 8. [ ] **Phase 1** convert (`--from-format ilcd`) → gates (0 error, LCIA=0 tolerated, extensions OK, Perc/CAS corrected, source versions preserved).
 9. [ ] **Phase 1.5** upload 13 external_docs + rewrite source URIs → signed-URL verify (CLI command, account-wrapped).

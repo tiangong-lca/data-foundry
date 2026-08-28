@@ -84,8 +84,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 4e442943ce4d3c89c2b79766720c7eb8fce0e254
-lastReviewedNote: "Reviewed for Issues #70/#82: orchestration decomposition and pnpm 11.24.0 change no 63-command surface, metadata owner, help/stdout/exit, profile, artifact, or write mode."
+lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
+lastReviewedNote: "Reviewed for Issue #70: CLI 0.1.3 public batch/auth consumption changes no 63-command surface, metadata owner, help/stdout/exit, artifact, profile, or write mode."
 ---
 
 # Foundry Command Surface

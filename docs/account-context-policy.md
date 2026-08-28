@@ -18,9 +18,9 @@ checkPaths:
   - package.json
   - scripts/with-lca-account.ts
   - scripts/commands/commit-handoff.ts
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: a9f003156cd58f223ae2bd4557616c9d9ee65b71
-lastReviewedNote: "Reviewed for Issue #67 Wave 24: the typed commit-handoff owner preserves receipt-bound target-user/account-mode checks, current-session binding for unsupported commands, exact CommandSpec artifacts, and no authentication bypass."
+lastReviewedAt: 2026-08-29
+lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
+lastReviewedNote: "Reviewed for Issue #70: exact CLI 0.1.3 account receipts are parsed through the supported public subpath; private runtime/test internals remain closed and production authority is unchanged."
 ---
 
 # Account Context Policy
@@ -69,7 +69,7 @@ Run commands through:
 pnpm account:run -- <profile> -- <executable> [args...]
 ```
 
-The wrapper selects only the required LCA credential values from the profile, disables the CLI session cache, forces a fresh signin, and invokes the exact installed CLI 0.1.2 as:
+The wrapper selects only the required LCA credential values from the profile, disables the CLI session cache, forces a fresh signin, and invokes the exact installed CLI 0.1.3 as:
 
 ```text
 auth identity-receipt --expected-project-ref <ref> --expected-user-id <uuid> --timeout-ms 10000 --json
@@ -81,7 +81,7 @@ The wrapper never prints or persists the key and never relays the captured ident
 
 There is no `--no-auth-check`, missing-expectation fallback, session-cache fallback, or environment-controlled skip path. Commands that do not need credentials should run directly instead of through `account:run`.
 
-Package installation, lint, typecheck, build, unit tests, and the clean arbitrary-worktree toolchain test are credential-free. They must not read `.env`, account profiles, thread guards, or `.foundry` runtime state. A real remote case enters this policy only when it deliberately invokes the exact installed CLI dependency (`pnpm exec tiangong-lca`, backed by `@tiangong-lca/cli@0.1.2`) through the approved receipt guard.
+Package installation, lint, typecheck, build, unit tests, and the clean arbitrary-worktree toolchain test are credential-free. They must not read `.env`, account profiles, thread guards, or `.foundry` runtime state. A real remote case enters this policy only when it deliberately invokes the exact installed CLI dependency (`pnpm exec tiangong-lca`, backed by `@tiangong-lca/cli@0.1.3`) through the approved receipt guard.
 
 ## Codex Thread Guards
 

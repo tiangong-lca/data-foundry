@@ -147,8 +147,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 4e442943ce4d3c89c2b79766720c7eb8fce0e254
-lastReviewedNote: "Reviewed for Issues #70/#82: bounded orchestration modules and the pnpm 11.24.0 toolchain preserve the existing runtime, dependency, artifact, and authority architecture."
+lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
+lastReviewedNote: "Reviewed for Issue #70: CLI 0.1.3 public batch/auth boundaries replace private deep imports without changing the runtime, artifact, or remote-authority architecture."
 ---
 
 # Architecture
@@ -268,7 +268,9 @@ Build and test resolution must be worktree-local. A clean arbitrary Git worktree
 
 Cross-platform characterization is also explicit: the Golden harness compares normalized outputs to a non-`HEAD` merge-base, performs recursive comparison in Node rather than calling an external Unix utility, and uses full Git history in CI. Script-backed executable overrides are represented as an executable plus argv prefix and run through Node on macOS, Linux, and Windows. The root `.gitattributes` fixes text files to LF while allowing Windows launcher exceptions, preventing checkout policy from masquerading as format drift.
 
-The first credential-bearing entrypoint on that spine is `scripts/with-lca-account.ts`. It does not authenticate against Supabase itself. It resolves the exact installed CLI 0.1.2, requests `auth identity-receipt` with both expected project and user assertions, accepts only a fresh intent-bound forced signin, and then launches the requested executable plus argv with `shell:false` and a restricted environment. The CLI owns session and live identity behavior; Foundry owns the profile/thread intent checks and safe process boundary.
+The first credential-bearing entrypoint on that spine is `scripts/with-lca-account.ts`. It does not authenticate against Supabase itself. It resolves the exact installed CLI 0.1.3, requests `auth identity-receipt` with both expected project and user assertions, accepts only a fresh intent-bound forced signin, and then launches the requested executable plus argv with `shell:false` and a restricted environment. The CLI owns session and live identity behavior; Foundry owns the profile/thread intent checks and safe process boundary.
+
+`scripts/lib/identity-preflight-proof.ts` imports the strict parser from the public `@tiangong-lca/cli/auth-identity-receipt` subpath. `test/fixtures/auth-identity-receipt.ts` is the sole test-only wire-fixture owner and produces bytes that must pass that public parser. No production module or fixture may load CLI `dist/src/**`; the installed-package contract also exercises public batch scheduling/run-lock behavior and proves the private path remains closed.
 
 The artifact layer treats JSON paths as portable identifiers: scope extraction normalizes separators, transitional command parsers retain native backslashes, and durable writers flush a writable descriptor before close. POSIX file-mode assertions are evidence on POSIX platforms rather than a fabricated Windows contract.
 

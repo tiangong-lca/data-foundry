@@ -44,8 +44,8 @@ checkPaths:
   - package.json
   - pnpm-lock.yaml
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 1f0b3b282827b03a009f7acd544a07dd7785baee
-lastReviewedNote: "Reviewed for Issue #70: semantic extraction is move-only while public CLI CommandSpec/batch work remains tracked in CLI #232 and behavior changes remain separate Foundry tasks."
+lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
+lastReviewedNote: "Reviewed for Issue #70: semantic extraction consumes verified CLI 0.1.3 CommandSpec, batch/run-lock, and auth parser exports with no private deep import or compatibility copy."
 related:
   - https://github.com/tiangong-lca/data-foundry/issues/70
   - https://github.com/tiangong-lca/tiangong-cli/issues/232
@@ -62,7 +62,7 @@ related:
 
 The high-level orchestration layer must be easy for an Agent to navigate without moving LCA semantics into generic execution code. Public command owners converge toward help, option validation, stage-contract wiring, and calls into typed semantic modules. Foundry retains profile policy, scope selection, classification and identity meaning, blocker taxonomy, artifact projection, and import-ledger interpretation. The published CLI owns reusable executable-plus-argv validation, bounded scheduling, attempt/recovery mechanics, and mutation no-replay guarantees.
 
-Foundry now pins the published `@tiangong-lca/cli@0.1.2` release. CommandSpec, batch, and run-lock are consumed only through the package's public `./command-spec` and `./batch` exports; Foundry must not deep-import `dist/src/**`, invent a compatibility wrapper, or copy the CLI scheduler into semantic modules. LCA/profile semantics, Foundry reports, and remote-write gates remain Foundry-owned adapters around those public primitives.
+Foundry now pins the published `@tiangong-lca/cli@0.1.3` release. CommandSpec, batch/run-lock, and strict identity receipt parsing are consumed only through the package's public `./command-spec`, `./batch`, and `./auth-identity-receipt` exports; Foundry must not deep-import `dist/src/**`, expose CLI test internals, invent a compatibility wrapper, or copy the CLI scheduler/parser into semantic modules. LCA/profile semantics, Foundry reports, test-only receipt fixture bytes, and remote-write gates remain Foundry-owned adapters around those public primitives.
 
 ## 2. Baseline and ratchet
 

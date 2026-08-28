@@ -137,13 +137,15 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 4e442943ce4d3c89c2b79766720c7eb8fce0e254
-lastReviewedNote: "Reviewed for Issues #70/#82: AI navigation identifies bounded orchestration owners and exact pnpm 11.24.0 / TS7 validation without changing case or safety routing."
+lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
+lastReviewedNote: "Reviewed for Issue #70: navigation now identifies the verified CLI 0.1.3 public batch/auth boundary and the single test-only receipt fixture owner."
 ---
 
 # Foundry AI Navigation
 
 Foundry is a thin control plane. Start from commands and artifacts, then move to the semantic owner module. Do not start from large implementation files.
+
+For shared CLI primitives, start at `scripts/lib/identity-preflight-proof.ts` for public receipt parsing, `scripts/lib/foundry-runtime-utils.ts` for exact installed package/bin resolution, and `scripts/lib/batch-orchestration/` for Foundry semantic adapters around `@tiangong-lca/cli/batch`. Test receipt bytes belong only to `test/fixtures/auth-identity-receipt.ts`; installed-package public export proof is `test/unit/public-cli-batch-runtime.test.mts`. A `dist/src/**` path is a contract violation, not a navigation shortcut.
 
 ## Command Path
 
