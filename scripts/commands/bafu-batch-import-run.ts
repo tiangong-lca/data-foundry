@@ -18,7 +18,6 @@ import {
 import { createBafuIdentityDecisionCarryForwardService } from "../lib/bafu-orchestration/identity-decision-carry-forward.ts";
 import {
   createBatchFinalizeStageService,
-  type BatchFinalizeContextPaths as ContextPaths,
   type BatchFinalizeStageResult as StageResult,
 } from "../lib/bafu-orchestration/batch-finalize-stage.ts";
 import {
@@ -32,20 +31,15 @@ import {
   type BatchScopeExecutionPaths as BatchPaths,
 } from "../lib/batch-orchestration/scope-execution.ts";
 import { createIdentityPatchStageService } from "../lib/batch-orchestration/identity-patch-stage.ts";
-import {
-  createBatchScopePreparationService,
-  type BatchScopeMaterializedRows as MaterializedRows,
-} from "../lib/batch-orchestration/scope-preparation.ts";
+import { createBatchScopePreparationService } from "../lib/batch-orchestration/scope-preparation.ts";
 import { createSupportIdentityCacheService } from "../lib/batch-orchestration/support-identity-cache.ts";
 import {
   createUniverseCoverageService,
   type UniverseCoverageRuntimeAdapter,
 } from "../lib/batch-orchestration/universe-coverage.ts";
 import { createVerifiedLedgerProjectionService } from "../lib/batch-orchestration/verified-ledger-projection.ts";
-import {
-  createBatchPostWriteHandoffService,
-  type BatchPostWriteHandoffResult as HandoffResult,
-} from "../lib/batch-orchestration/post-write-handoff.ts";
+import { createBatchPostWriteHandoffService } from "../lib/batch-orchestration/post-write-handoff.ts";
+import { createBatchScopeFinalizeCommitService } from "../lib/batch-orchestration/scope-finalize-commit.ts";
 import { acceptTraceHashOnlyRemoteVerificationMismatch } from "../lib/remote-verification-accepted-diff.ts";
 import {
   assertFoundryCommandSpecArtifactsCurrent,
@@ -104,54 +98,6 @@ interface BafuBatchConfig extends JsonRecord {
   applyResolutionRewrites?: boolean;
 }
 
-interface SupportFinalizeInput {
-  type: string;
-  finalizeReport: JsonRecord;
-  finalizeReportPath: string;
-  finalizeArgs: string[];
-  ledgerDir: string;
-  scopeDir: string;
-  logDir: string;
-  stages: JsonRecord[];
-  supportIdentityCacheFile: string;
-}
-
-interface FinalizeAndCommitInput {
-  type: string;
-  rowsFile: string;
-  scopeDir: string;
-  runDir: string;
-  materialized: MaterializedRows;
-  classificationApplyReport: string | null;
-  locationApplyReport: string | null;
-  identityApplyReports: string[];
-  patchCollectReport: string | null;
-  patchApplyReport: string | null;
-  targetUserId: string;
-  stateCode: number;
-  logDir: string;
-  ledgerDir: string;
-  stages: JsonRecord[];
-  supportIdentityCacheFile: string;
-}
-
-interface DatasetCommitCompleted extends JsonRecord {
-  status: "completed";
-  report: string;
-  finalizeReport: JsonRecord;
-  handoff: HandoffResult;
-}
-
-interface DatasetCommitBlocked extends JsonRecord {
-  status: "failed" | "blocked";
-  blocker: JsonRecord;
-  report: string;
-  finalizeReport: JsonRecord | null;
-  handoff?: HandoffResult;
-}
-
-type DatasetCommitResult = DatasetCommitCompleted | DatasetCommitBlocked;
-
 type BafuFamilyIndex = ReturnType<typeof buildBafuFamilySignatureIndex>;
 type BafuFamilySignature = ReturnType<typeof bafuFamilySignatureForScope>;
 
@@ -172,7 +118,6 @@ const { entryRepoRelativePath: foundryEntryPath, repoRoot } = resolveFoundryRunt
 );
 const commandName = "dataset-bafu-batch-import-run";
 const coverageCommandName = "dataset-bafu-universe-coverage-report";
-let supportCommitQueue: Promise<unknown> = Promise.resolve();
 const verifiedSupportIdentities = new Set<string>();
 const bafuBatchStageContract = {
   remote_write_mode: "explicit-commit-only",
@@ -1071,14 +1016,6 @@ function findOneFile(rootDir: unknown, pattern: RegExp): string | null {
   return matches.length ? path.join(resolved!, matches[0]) : null;
 }
 
-function defaultContext(runDir: string, type: string): ContextPaths {
-  return {
-    schemaFile: path.join(runDir, "context", type, "outputs", "schema.json"),
-    yamlFile: path.join(runDir, "context", type, "outputs", "methodology.yaml"),
-    rulesetFile: path.join(runDir, "context", type, "outputs", "runtime-ruleset.json"),
-  };
-}
-
 function defaultSchemaFiles(options: JsonRecord): SchemaPaths {
   const schemaRoot = resolveRepoPath(
     options.tidasSchemaDir || resolveInstalledTiangongLcaCliPackage().schemaDir,
@@ -1213,264 +1150,30 @@ const identityPatchStage = createIdentityPatchStageService({
 
 const runIdentityAndPatch = identityPatchStage.runIdentityAndPatch;
 
-async function maybeCommitSupportThenRerunFinalize({
-  type,
-  finalizeReport,
-  finalizeReportPath,
-  finalizeArgs,
-  ledgerDir,
-  scopeDir,
-  logDir,
-  stages,
-  supportIdentityCacheFile,
-}: SupportFinalizeInput): Promise<JsonRecord> {
-  const supportPlan = resolveRepoPath(
-    jsonRecord(finalizeReport.files).source_contact_support_commit_handoff_plan,
-  );
-  if (!fileExists(supportPlan)) return finalizeReport;
-  const handoffPlan = readJson(supportPlan!);
-  const supportIdentityKeys = supportIdentityKeysFromHandoffPlan(handoffPlan);
-  const previousSupportCommit = supportCommitQueue;
-  let releaseSupportCommit: () => void = () => {};
-  supportCommitQueue = new Promise<void>((resolve) => {
-    releaseSupportCommit = resolve;
-  });
-  await previousSupportCommit;
-  let supportResult: HandoffResult | null = null;
-  try {
-    if (
-      supportIdentityKeys.length > 0 &&
-      supportIdentityKeys.every((identityKey) => verifiedSupportIdentities.has(identityKey))
-    ) {
-      const reuseDir = path.join(scopeDir, `${type}-source-contact-support-handoff`);
-      const reuseReportPath = path.join(reuseDir, "reused-support-identities.json");
-      writeJson(reuseReportPath, {
-        schema_version: 1,
-        generated_at_utc: nowIso(),
-        status: "reused_verified_support_identities",
-        handoff_plan: repoRelative(supportPlan),
-        support_identity_cache: repoRelative(supportIdentityCacheFile),
-        support_identities: supportIdentityKeys,
-      });
-      stages.push({
-        stage: `${type}.support.reuse_verified`,
-        status: "skipped",
-        report: repoRelative(reuseReportPath),
-        support_identities: supportIdentityKeys,
-      });
-      const rerun = await runFinalizeStage({
-        stage: `${type}.finalize_after_support_reuse`,
-        args: finalizeArgs,
-        reportPath: finalizeReportPath,
-        logDir,
-      });
-      stages.push(rerun);
-      const staleKeys = staleReusedSupportIdentityKeys(rerun.json!, supportIdentityKeys);
-      if (staleKeys.length === 0) return rerun.json!;
-      for (const identityKey of staleKeys) verifiedSupportIdentities.delete(identityKey);
-      appendSupportIdentityInvalidationRows({
-        cacheFile: supportIdentityCacheFile,
-        identityKeys: staleKeys,
-        source: `${type}.support.reuse_invalidated`,
-        report: finalizeReportPath,
-      });
-      stages.push({
-        stage: `${type}.support.reuse_invalidated`,
-        status: "invalidated_stale_support_identities",
-        support_identities: staleKeys,
-        report: repoRelative(finalizeReportPath),
-      });
-    }
-    supportResult = await executeHandoff({
-      handoffPlanPath: supportPlan!,
-      ledgerDir,
-      outDir: path.join(scopeDir, `${type}-source-contact-support-handoff`),
-      logDir,
-      label: `${type}.support`,
-    });
-  } finally {
-    releaseSupportCommit();
-  }
-  if (!supportResult) return finalizeReport;
-  stages.push(...supportResult.stages);
-  if (supportResult.status !== "completed") {
-    return {
-      ...finalizeReport,
-      status: "blocked",
-      blockers: [...supportResult.blockers, ...recordArray(finalizeReport.blockers)],
-    };
-  }
-  for (const identityKey of supportIdentityKeys) verifiedSupportIdentities.add(identityKey);
-  appendSupportIdentityCacheRows({
-    cacheFile: supportIdentityCacheFile,
-    identityKeys: supportIdentityKeys,
-    source: `${type}.support_handoff`,
-    report: supportResult.closeoutReportPath ?? null,
-  });
-  const rerun = await runFinalizeStage({
-    stage: `${type}.finalize_after_support`,
-    args: finalizeArgs,
-    reportPath: finalizeReportPath,
-    logDir,
-  });
-  stages.push(rerun);
-  return rerun.json!;
-}
+const batchScopeFinalizeCommit = createBatchScopeFinalizeCommitService({
+  joinPath: (...parts: string[]) => path.join(...parts),
+  nowIso,
+  repoRelative,
+  resolveRepoPath,
+  fileExists,
+  readJson,
+  writeJson,
+  buildFinalizeArgs,
+  runFinalizeStage,
+  executeHandoff,
+  runIdentityAndPatch,
+  supportIdentityKeysFromHandoffPlan,
+  verifiedSupportIdentities,
+  staleReusedSupportIdentityKeys,
+  appendSupportIdentityInvalidationRows,
+  appendSupportIdentityCacheRows,
+  firstBlocker,
+});
 
-async function finalizeAndCommitDataset({
-  type,
-  rowsFile,
-  scopeDir,
-  runDir,
-  materialized,
-  classificationApplyReport,
-  locationApplyReport,
-  identityApplyReports,
-  patchCollectReport,
-  patchApplyReport,
-  targetUserId,
-  stateCode,
-  logDir,
-  ledgerDir,
-  stages,
-  supportIdentityCacheFile,
-}: FinalizeAndCommitInput): Promise<DatasetCommitResult> {
-  const context = defaultContext(runDir, type);
-  const finalizeDir = path.join(scopeDir, `finalize-${type}-ready`);
-  const finalizeReportPath = path.join(finalizeDir, "dataset-post-authoring-finalize-report.json");
-  let currentRowsFile = rowsFile;
-  const currentIdentityApplyReports = [...(identityApplyReports ?? [])];
-  let currentPatchCollectReport = patchCollectReport;
-  let currentPatchApplyReport = patchApplyReport;
-  let finalizeReport = null;
-  let finalizeArgs = null;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    finalizeArgs = buildFinalizeArgs({
-      type,
-      rowsFile: currentRowsFile,
-      outDir: finalizeDir,
-      ledgerDir,
-      sourceSupportRowsFile: materialized.supportRowsFile,
-      sourceRowsFile: materialized.sourceRowsFile,
-      flowpropertyRowsFile: materialized.flowpropertyRowsFile,
-      unitgroupRowsFile: materialized.unitgroupRowsFile,
-      identityPreflightIndex: materialized.identityPreflightIndex,
-      context,
-      classificationQueue: materialized.classificationQueue,
-      locationQueue: materialized.locationQueue,
-      classificationApplyReport,
-      locationApplyReport,
-      identityApplyReports: currentIdentityApplyReports,
-      patchCollectReport: currentPatchCollectReport,
-      patchApplyReport: currentPatchApplyReport,
-      targetUserId,
-      stateCode,
-    });
-    const finalize = await runFinalizeStage({
-      stage:
-        attempt === 0
-          ? `${type}.finalize_ready`
-          : `${type}.finalize_ready_after_authoring_${attempt}`,
-      args: finalizeArgs,
-      reportPath: finalizeReportPath,
-      logDir,
-    });
-    stages.push(finalize);
-    if (finalize.finalize_report_missing) {
-      finalizeReport = finalize.json!;
-      return {
-        status: "failed",
-        blocker: firstBlocker(
-          finalizeReport,
-          "finalize_report_missing",
-          `${type} finalize did not write the expected report.`,
-        ),
-        report: finalizeReportPath,
-        finalizeReport,
-      };
-    }
-    finalizeReport = await maybeCommitSupportThenRerunFinalize({
-      type,
-      finalizeReport: finalize.json!,
-      finalizeReportPath,
-      finalizeArgs,
-      ledgerDir,
-      scopeDir,
-      logDir,
-      stages,
-      supportIdentityCacheFile,
-    });
-    if (finalizeReport?.status === "ready_for_remote_write") break;
-    const gateReport = resolveRepoPath(jsonRecord(finalizeReport.files).curation_gate_report);
-    if (!fileExists(gateReport)) break;
-    const recovery = await runIdentityAndPatch({
-      type,
-      inputRowsFile: currentRowsFile,
-      preFinalizeReport: finalizeReport,
-      scopeDir,
-      runDir,
-      logDir,
-      stages,
-      label: `${type}-post-finalize-${attempt + 1}`,
-      stagePrefix: `${type}.post_finalize_${attempt + 1}`,
-    });
-    if (recovery.status !== "completed") {
-      return {
-        status: "blocked",
-        blocker: recovery.blocker,
-        report: recovery.report ?? finalizeReportPath,
-        finalizeReport,
-      };
-    }
-    const producedEvidence =
-      recovery.identityApplyReport || recovery.patchCollectReport || recovery.patchApplyReport;
-    if (!producedEvidence) break;
-    currentRowsFile = recovery.rowsFile;
-    if (recovery.identityApplyReport)
-      currentIdentityApplyReports.push(recovery.identityApplyReport);
-    if (recovery.patchCollectReport) currentPatchCollectReport = recovery.patchCollectReport;
-    if (recovery.patchApplyReport) currentPatchApplyReport = recovery.patchApplyReport;
-  }
-  if (finalizeReport?.status !== "ready_for_remote_write") {
-    return {
-      status: "blocked",
-      blocker: firstBlocker(
-        finalizeReport,
-        `${type}_finalize_not_ready`,
-        `${type} finalize status is ${finalizeReport?.status || "missing"}.`,
-      ),
-      report: finalizeReportPath,
-      finalizeReport,
-    };
-  }
-  const handoffPlan = resolveRepoPath(jsonRecord(finalizeReport.files).commit_handoff_plan);
-  const handoff = await executeHandoff({
-    handoffPlanPath: handoffPlan!,
-    ledgerDir,
-    outDir: path.join(scopeDir, `${type}-handoff`),
-    logDir,
-    label: type,
-  });
-  stages.push(...handoff.stages);
-  if (handoff.status !== "completed") {
-    return {
-      status: "failed",
-      blocker: handoff.blockers?.[0] ?? {
-        code: `${type}_handoff_failed`,
-        message: `${type} commit/verify handoff failed.`,
-      },
-      report: finalizeReportPath,
-      finalizeReport,
-      handoff,
-    };
-  }
-  return {
-    status: "completed",
-    report: finalizeReportPath,
-    finalizeReport,
-    handoff,
-  };
-}
+const defaultContext = batchScopeFinalizeCommit.defaultContext;
+const maybeCommitSupportThenRerunFinalize =
+  batchScopeFinalizeCommit.maybeCommitSupportThenRerunFinalize;
+const finalizeAndCommitDataset = batchScopeFinalizeCommit.finalizeAndCommit;
 
 // --- Post-commit disk reclamation -----------------------------------------
 // A committed scope's heavy per-scope scratch (flow-pre-finalize — which holds the

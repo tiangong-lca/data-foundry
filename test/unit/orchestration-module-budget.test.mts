@@ -147,6 +147,7 @@ test("orchestration owners have an explicit shrink-only line budget", () => {
     "scripts/lib/batch-orchestration/post-write-handoff.ts",
     "scripts/lib/batch-orchestration/scope-execution-contract.ts",
     "scripts/lib/batch-orchestration/scope-execution.ts",
+    "scripts/lib/batch-orchestration/scope-finalize-commit.ts",
     "scripts/lib/batch-orchestration/scope-preparation.ts",
     "scripts/lib/batch-orchestration/scope-selection.ts",
     "scripts/lib/batch-orchestration/support-identity-cache.ts",
