@@ -16,12 +16,14 @@ interface ScopeBatchIdentity extends BatchJsonObject {
   schema: string;
   scope_file: string | null;
   library_resolution: string;
+  cli_package: string;
 }
 
 export interface ReadyScopeScheduleOptions<TItem extends ReadyScopeScheduleItem, TResult> {
   runPath: string;
   scopeFile: string | null;
   libraryResolution: string;
+  cliPackage: string;
   commit: boolean;
   parallel: number;
   items: TItem[];
@@ -34,6 +36,7 @@ export function scheduleReadyScopes<TItem extends ReadyScopeScheduleItem, TResul
   runPath,
   scopeFile,
   libraryResolution,
+  cliPackage,
   commit,
   parallel,
   items,
@@ -50,6 +53,7 @@ export function scheduleReadyScopes<TItem extends ReadyScopeScheduleItem, TResul
       schema: "tiangong-foundry.process-scope-batch.v1",
       scope_file: scopeFile,
       library_resolution: libraryResolution,
+      cli_package: cliPackage,
     },
     content: items.map((scope) => ({
       process_id: scope.process_id,

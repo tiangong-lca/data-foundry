@@ -15,6 +15,7 @@ import {
 import { createLibraryIndexBuild } from "../lib/library-orchestration/index-build.ts";
 import { createLibraryIdentityPreflightRunner } from "../lib/library-orchestration/identity-preflight-runner.ts";
 import { createReadyProcessScopeRunner } from "../lib/library-orchestration/ready-process-scope-runner.ts";
+import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.ts";
 import {
   createLibraryDecisionApply,
   type ScopeRewriteResult,
@@ -104,7 +105,6 @@ export function createLibraryScopeWorkflowCommands({
       ...libraryScopeStageContract,
     };
   }
-
   function listJsonFiles(dir: string): string[] {
     if (!directoryExists(dir)) return [];
     return fs
@@ -113,7 +113,6 @@ export function createLibraryScopeWorkflowCommands({
       .map((entry) => path.join(dir, entry.name))
       .sort();
   }
-
   function listDirectoryNames(dir: string): string[] {
     if (!directoryExists(dir)) return [];
     return fs
@@ -474,6 +473,7 @@ export function createLibraryScopeWorkflowCommands({
       dryRun,
       commandCwd: process.cwd(),
       commandEnvironment: process.env,
+      cliPackage: resolveInstalledTiangongLcaCliPackage().packageSpec,
     });
   }
 

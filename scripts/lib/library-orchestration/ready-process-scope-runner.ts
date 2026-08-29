@@ -56,6 +56,7 @@ export interface ReadyProcessScopeRunInput {
   dryRun: boolean;
   commandCwd: string;
   commandEnvironment: NodeJS.ProcessEnv;
+  cliPackage: string;
 }
 
 function isJsonRecord(value: unknown): value is JsonRecord {
@@ -119,6 +120,7 @@ export function createReadyProcessScopeRunner({
     dryRun,
     commandCwd,
     commandEnvironment,
+    cliPackage,
   }: ReadyProcessScopeRunInput): Promise<JsonRecord> {
     const scopeRows = scopeRowsFromFile(scopeFile);
     const readyIds = new Set(ensureArray(resolution.ready_scope_ids).map(asText));
@@ -213,6 +215,7 @@ export function createReadyProcessScopeRunner({
       runPath: outDir,
       scopeFile: repoRelativeMaybe(scopeFile),
       libraryResolution: repoRelativePath(libraryResolutionPath),
+      cliPackage,
       commit,
       parallel,
       items: selectedScopes,

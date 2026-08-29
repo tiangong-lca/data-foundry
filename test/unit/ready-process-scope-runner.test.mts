@@ -203,6 +203,7 @@ test("ready process runner executes artifact-bound specs concurrently with input
       dryRun: false,
       commandCwd: "/controlled-cwd",
       commandEnvironment: fixedEnvironment,
+      cliPackage: "@tiangong-lca/cli@0.1.3",
     }),
   );
 
@@ -285,6 +286,7 @@ test("ready process runner executes artifact-bound specs concurrently with input
     dryRun: false,
     commandCwd: "/controlled-cwd",
     commandEnvironment: fixedEnvironment,
+    cliPackage: "@tiangong-lca/cli@0.1.3",
   });
   assert.equal(driftReport.status, "failed");
   assert.equal(
@@ -320,6 +322,7 @@ test("ready process runner executes artifact-bound specs concurrently with input
     dryRun: false,
     commandCwd: "/controlled-cwd",
     commandEnvironment: fixedEnvironment,
+    cliPackage: "@tiangong-lca/cli@0.1.3",
   });
   assert.equal(rawReport.status, "failed");
   assert.deepEqual(spawnCalls, []);
