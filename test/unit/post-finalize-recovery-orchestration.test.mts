@@ -190,6 +190,9 @@ test("post-finalize recovery is a bounded typed adapter leaf reused by the proce
     /--(?:commit|remote-commit|execute-commit|allow-remote-commit)/u,
   );
   assert.match(moduleSource, /export interface PostFinalizeRecoveryAdapter\s*\{/u);
+  assert.equal(moduleSource.match(/adapter\.runArgvStage\(/gu)?.length, 1);
+  assert.equal(moduleSource.match(/adapter\.projectCommandStage\(/gu)?.length, 1);
+  assert.equal(moduleSource.match(/adapter\.commandString\(/gu)?.length, 1);
   assert.match(ownerSource, /from "\.\.\/lib\/bafu-orchestration\/post-finalize-recovery\.ts"/u);
   assert.doesNotMatch(ownerSource, /function runPostFinalizeIdentityRecovery\s*\(/u);
   assert.doesNotMatch(ownerSource, /function runPostFinalizeSemanticRecovery\s*\(/u);
@@ -304,8 +307,8 @@ test("post-finalize identity recovery preserves task, autofill, and apply argv p
     ],
   );
   assertFrozen("identity recovery result", result, {
-    bytes: 1847,
-    sha256: "0f3eb7174c0b08445bb3291b82f9629ffffc7c45d65d7b653152df49dca8dc86",
+    bytes: 2789,
+    sha256: "5017d130a26200a8c8715d0d4c8298e17fbc109d6cb468f4b0b8f166cae952d9",
   });
 });
 
@@ -510,8 +513,8 @@ test("post-finalize semantic recovery preserves task, autofill, collect, and app
     ],
   );
   assertFrozen("semantic recovery result", result, {
-    bytes: 2505,
-    sha256: "fd7608883ffedc2571589962255aa49a0d3ff6d0ea6afd07610c78e1e7b772ae",
+    bytes: 3656,
+    sha256: "0fee15a233f454521e3ee26a8144bef75191b39a42253dffecbc083eb3d8dc59",
   });
 });
 
@@ -559,8 +562,8 @@ test("post-finalize recovery stops on missing gate and missing stage evidence", 
   assert.equal(missingIdentityTask.stages?.[0]?.exit_code, 9);
   assertProjectedAuthorities(missingIdentityTask, missingIdentityTaskHarness.invocations);
   assertFrozen("missing identity task result", missingIdentityTask, {
-    bytes: 535,
-    sha256: "4e0a13cf7b80e70b27ce97b0ea0ac7c1a785287d7cd7bfd8852e7e1ada8cd922",
+    bytes: 1017,
+    sha256: "b77a5339e3684f7604f577730d952d62cfd762f5b5230fc4148a5789cf554478",
   });
 
   const missingCollectHarness = makeHarness({
@@ -608,7 +611,7 @@ test("post-finalize recovery stops on missing gate and missing stage evidence", 
   assert.equal(missingCollect.stages?.[2]?.exit_code, 7);
   assertProjectedAuthorities(missingCollect, missingCollectHarness.invocations);
   assertFrozen("missing semantic collect result", missingCollect, {
-    bytes: 1638,
-    sha256: "39a69cc838734b824d92949a45d802d1fb2fd48aead285cb1c82f420cf8eb61b",
+    bytes: 2316,
+    sha256: "a46b70f9f4457af14b3895ad5a8424dcf390313d636963941de887ec9fd0deff",
   });
 });
