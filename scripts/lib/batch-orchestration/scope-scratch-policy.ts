@@ -1,16 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { createScopeControlRetentionService } from "./scope-control-retention.ts";
+
 type JsonRecord = Record<string, unknown>;
 
 export interface ScopeScratchPolicyAdapter {
   booleanOption: (value: unknown) => boolean;
+  nowIso: () => string;
   processEnv: NodeJS.ProcessEnv;
+  repoRelative: (filePath: string) => string;
+  resolveRepoPath: (value: unknown) => string | null;
 }
 
-const VERIFIED_SCOPE_KEEP = new Set(["import-ledger", "scope-run-report.json"]);
-
 export function createScopeScratchPolicy(adapter: ScopeScratchPolicyAdapter) {
+  const retention = createScopeControlRetentionService(adapter);
   function keepScratchRequested(options: JsonRecord): boolean {
     return (
       adapter.booleanOption(options.keepScratch) ||
@@ -18,22 +22,18 @@ export function createScopeScratchPolicy(adapter: ScopeScratchPolicyAdapter) {
     );
   }
 
-  function trimVerifiedScopeScratch(scopeDir: string, options: JsonRecord): void {
+  function trimVerifiedScopeScratch(
+    scopeDir: string,
+    options: JsonRecord,
+    runDir = path.resolve(scopeDir, "..", "..", ".."),
+  ) {
     if (!adapter.booleanOption(options.commit) || keepScratchRequested(options)) return;
-    let entries: fs.Dirent[];
-    try {
-      entries = fs.readdirSync(scopeDir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      if (VERIFIED_SCOPE_KEEP.has(entry.name)) continue;
-      try {
-        fs.rmSync(path.join(scopeDir, entry.name), { recursive: true, force: true });
-      } catch {
-        // Verified-scope reclamation is best-effort and never changes ledger authority.
-      }
-    }
+    if (!fs.existsSync(scopeDir)) return;
+    const configuredStore = adapter.resolveRepoPath(options.controlArtifactStoreDir);
+    retention.retainAndPrune({
+      scopeDir,
+      storeDir: configuredStore || path.join(runDir, "control-artifact-store"),
+    });
   }
 
   const configuredCacheMaxEntries = (() => {
@@ -64,5 +64,9 @@ export function createScopeScratchPolicy(adapter: ScopeScratchPolicyAdapter) {
     }
   }
 
-  return { enforceSharedContextCacheCap, trimVerifiedScopeScratch };
+  return {
+    enforceSharedContextCacheCap,
+    trimVerifiedScopeScratch,
+    verifyControlReceipt: retention.verifyReceipt,
+  };
 }

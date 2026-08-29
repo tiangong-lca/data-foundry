@@ -287,12 +287,9 @@ function bafuAutofillEnabled(): boolean {
 function familySignaturesEnabled(): boolean {
   return bafuBatchConfig.enableFamilySignatures !== false;
 }
-// When true, the dependency-flow finalize commits its source/contact support
-// (the shared library contact) inline right after pre-finalize — mirroring the
-// process path — so the first scope of a never-before-imported library can prove
-// reference closure for its own flows. BAFU leaves this false: its FOEN library
-// contact already exists remotely, so flow pre-finalize is closure-clean and the
-// inline support commit would be redundant.
+// New libraries may commit dependency support before their own Flow closure.
+// BAFU leaves this false because its FOEN contact makes pre-finalize closure-clean.
+// Inline support is therefore redundant.
 function commitFlowSupportInline(): boolean {
   return Boolean(bafuBatchConfig.commitFlowSupportInline);
 }
@@ -938,7 +935,10 @@ const finalizeAndCommitDataset = batchScopeFinalizeCommit.finalizeAndCommit;
 
 const { enforceSharedContextCacheCap, trimVerifiedScopeScratch } = createScopeScratchPolicy({
   booleanOption,
+  nowIso,
   processEnv: process.env,
+  repoRelative,
+  resolveRepoPath,
 });
 
 export function createBafuBatchImportRunCommands(

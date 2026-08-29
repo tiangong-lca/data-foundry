@@ -2239,15 +2239,16 @@ test("trimVerifiedScopeScratch keeps audit artifacts and removes heavy scratch o
   assert.equal(fs.existsSync(controlReport), false);
   assert.equal(fs.existsSync(payloadRows), false);
   assert.equal(
-    readJson(path.join(scopeDir, "scope-prune-report.json")).counts
-      .dangling_required_references,
+    readJson(path.join(scopeDir, "scope-prune-report.json")).counts.dangling_required_references,
     0,
   );
   assert.equal(
     fs.existsSync(
       path.join(
         repoRoot,
-        readJson(path.join(scopeDir, "scope-control-receipt.json")).artifacts[0].store_locator,
+        String(
+          readJson(path.join(scopeDir, "scope-control-receipt.json")).artifacts[0].store_locator,
+        ),
       ),
     ),
     true,

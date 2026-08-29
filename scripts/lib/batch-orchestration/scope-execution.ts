@@ -610,7 +610,7 @@ export function createBatchScopeExecutionService(
         process_closeout_report: io.repoRelative(processCloseoutReport),
       },
     });
-    operations.trimVerifiedScopeScratch(scopeDir, options);
+    operations.trimVerifiedScopeScratch(scopeDir, options, paths.runDir);
     return { status: "verified", stages };
   }
 
