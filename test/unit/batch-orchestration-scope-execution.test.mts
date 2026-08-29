@@ -581,13 +581,13 @@ test("verified resume keeps exact report and ledger bytes across the single-scop
     const byteContracts = [
       [
         "dataset-bafu-batch-import-run-report.json",
-        5103,
-        "bcfcaeb9b7d87c5cf6ee5e0cb8afbdba4620fe952f3de877973f57017e461744",
+        5216,
+        "e71f2d56243a962c132b8f6d47f04b3f47c6873f8f015675b4e14e3b7c36101b",
       ],
       [
         "import-ledger/run-manifest.json",
-        7316,
-        "8ae8ca4531eb6c639bad22027d05fb9fbfa9ab44f1c30fd79e49ca4e106f687f",
+        7639,
+        "33ca169a9fbd52d1e354a64ca5bd991f99b8aaa7227ffbb91ef65676029620e5",
       ],
       [
         "scope-checkpoints.jsonl",

@@ -287,12 +287,9 @@ function bafuAutofillEnabled(): boolean {
 function familySignaturesEnabled(): boolean {
   return bafuBatchConfig.enableFamilySignatures !== false;
 }
-// When true, the dependency-flow finalize commits its source/contact support
-// (the shared library contact) inline right after pre-finalize — mirroring the
-// process path — so the first scope of a never-before-imported library can prove
-// reference closure for its own flows. BAFU leaves this false: its FOEN library
-// contact already exists remotely, so flow pre-finalize is closure-clean and the
-// inline support commit would be redundant.
+// New libraries may commit dependency support before their own Flow closure.
+// BAFU leaves this false because its FOEN contact makes pre-finalize closure-clean.
+// Inline support is therefore redundant.
 function commitFlowSupportInline(): boolean {
   return Boolean(bafuBatchConfig.commitFlowSupportInline);
 }
@@ -368,9 +365,8 @@ const classificationSchemaRepair = createClassificationSchemaRepairService({
   normalizeSearchText,
   pathJoin: (...parts: string[]) => path.join(...parts),
 });
-// When true (USLCI only), the flow-identity step applies the authoritative
-// library-resolution exchange-reference-rewrites deterministically: every flow the
-// resolution proved reusable becomes a canonical reference, only flows with NO
+// USLCI flow identity applies authoritative library-resolution rewrites deterministically.
+// Every proven reusable Flow becomes canonical; only unmatched flows mint.
 // rewrite mint. This replaces the brittle decisions-* carry-forward whose additions
 // frequently came out empty (apply skipped -> dependency flows wrongly minted even
 // when the offline resolution already matched them to canonical). BAFU keeps this
@@ -938,7 +934,10 @@ const finalizeAndCommitDataset = batchScopeFinalizeCommit.finalizeAndCommit;
 
 const { enforceSharedContextCacheCap, trimVerifiedScopeScratch } = createScopeScratchPolicy({
   booleanOption,
+  nowIso,
   processEnv: process.env,
+  repoRelative,
+  resolveRepoPath,
 });
 
 export function createBafuBatchImportRunCommands(
@@ -1126,9 +1125,6 @@ export function createBafuBatchImportRunCommands(
     const requireLeafClassification = booleanOption(
       options.requireLeafClassification || options.leafClassificationOnly,
     );
-    // FIX A: optional authoritative library-resolution directory holding the proven
-    // per-process per-exchange elementary reuses (exchange-reference-rewrites.jsonl).
-    // Only consumed when the profile config enables applyResolutionRewrites (USLCI).
     const libraryResolutionDir = asText(options.libraryResolution || options.libraryResolutionDir)
       ? resolveRepoPath(options.libraryResolution || options.libraryResolutionDir)
       : null;
@@ -1190,6 +1186,9 @@ export function createBafuBatchImportRunCommands(
       )!,
       preflightPlan: path.join(outDir, "import-ledger", "preflight.plan.jsonl"),
       bafuFamilySignatures: path.join(outDir, "import-ledger", "bafu-family-signatures.json"),
+      controlArtifactStore:
+        resolveRepoPath(options.controlArtifactStoreDir) ||
+        path.join(runDir, "control-artifact-store"),
       resumeInvalidated: path.join(outDir, "import-ledger", "resume.invalidated.jsonl"),
       attemptEvents: path.join(outDir, "import-ledger", "scope-attempt-events.jsonl"),
       attemptState: path.join(outDir, "import-ledger", "scope-attempt-state.jsonl"),
@@ -1199,9 +1198,6 @@ export function createBafuBatchImportRunCommands(
         "failed.scopes.ambiguous-no-replay.jsonl",
       ),
       resumeContractsByScopeKey: new Map(),
-      // FIX A: run-level resolution rewrite index (process_id -> rewrite rows) plus the
-      // mode flag, threaded into runOneScope -> flow runIdentityAndPatch. Empty map when
-      // the flag is off or --library-resolution is not provided (BAFU defaults).
       resolutionRewritesByProcess,
       applyResolutionRewritesMode: applyResolutionRewrites(),
     };
@@ -1425,6 +1421,10 @@ export function createBafuBatchImportRunCommands(
         retryable_remote_failures_are_separate_from_human_review: true,
         bafu_family_reuse_is_dataset_specific: true,
         bafu_family_variants_still_require_per_scope_schema_qa_remote_verify: true,
+        control_artifacts_are_content_addressed: true,
+        verified_scope_receipt_precedes_prune: true,
+        failed_or_ambiguous_scope_scratch_is_retained: true,
+        pruned_payloads_keep_fact_not_bytes: true,
         ledger_source_dirs_are_read_only_carry_forward_inputs: true,
         require_leaf_classification_filters_only_library_decision_readiness:
           requireLeafClassification,
@@ -1489,6 +1489,7 @@ export function createBafuBatchImportRunCommands(
           preflight_plan: repoRelative(paths.preflightPlan),
           resume_invalidated: repoRelative(paths.resumeInvalidated),
           bafu_family_signatures: repoRelative(paths.bafuFamilySignatures),
+          control_artifact_store: repoRelative(paths.controlArtifactStore),
           support_identity_cache: repoRelative(paths.supportIdentityCache),
         },
         ledger_sources: ledgerSourceSummary,
@@ -1653,6 +1654,7 @@ export function createBafuBatchImportRunCommands(
         attempt_state: repoRelative(paths.attemptState),
         attempt_events: repoRelative(paths.attemptEvents),
         bafu_family_signatures: repoRelative(paths.bafuFamilySignatures),
+        control_artifact_store: repoRelative(paths.controlArtifactStore),
         support_identity_cache: repoRelative(paths.supportIdentityCache),
       },
       results,
@@ -1692,8 +1694,6 @@ export const bafuBatchImportRunTestHooks = {
   supportIdentityTypes,
   trimVerifiedScopeScratch,
   writeScopeCarriedForwardVerifiedFlowRows,
-  // Test-only: drive the profile-config flags (e.g. mintUnmatchedFpUgSupport) that
-  // gate the FP/UG support-identity behavior without standing up a full run.
   setBafuBatchConfigForTest: (config: BafuBatchConfig): void => {
     bafuBatchConfig = config || {};
   },

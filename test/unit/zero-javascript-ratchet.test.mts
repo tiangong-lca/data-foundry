@@ -15,6 +15,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // Issue #70's orchestration stages and post-write handoff cases remain native TypeScript.
 // Issue #74's public CommandSpec and real scope-scheduler cases remain native TypeScript too.
 // Issue #75's scope/process/Flow resume and compact-attempt cases remain native TypeScript too.
+// Issue #76's content-addressed receipt and safe-pruning cases remain native TypeScript too.
 // Issue #77's identity-equivalence RED/GREEN cases remain native TypeScript too.
 // Issue #78's multilingual rewrite-evidence cases remain native TypeScript too.
 // Issue #79's category-map closure and nonzero-exit cases remain native TypeScript too.

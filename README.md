@@ -149,8 +149,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 10893c0
-lastReviewedNote: "Reviewed for Issue #75: verified/blocked resume now binds exact scope/process/Flow authority and consumed attempts require readback."
+lastReviewedCommit: 24c9a1f
+lastReviewedNote: "Reviewed for Issue #76: content-addressed control receipts remain verifiable after explicit ownership-safe payload/scratch pruning."
 ---
 
 # TianGong LCA Data Foundry
@@ -242,6 +242,8 @@ Issue #70 decomposes that stable typed layer by semantic stage. `scripts/lib/bat
 Issue #74 removes the generic library scope runner's raw-argv and fake-parallel contracts. The retained `commit_command` and `verify_command` scope fields now contain published artifact-bound CommandSpecs; arrays, malformed specs, empty bindings, SHA/byte drift, and display drift cannot execute. The installed CLI package fingerprint, full scope bytes, spec SHAs, policy, exclusivity, and concurrency enter the public locked batch contract. Independent scopes execute concurrently, failed mutations run once, pause/stop remain CLI-engine policy, and checkpoint/report output stays in input order. `foundry-command-spec.ts` is now a one-line public CLI re-export, eliminating 367 duplicated lines.
 
 Issue #75 makes every batch resume decision content-bound. Verified/blocked scope rows require matching bundle/shared bytes, options, stage/CommandSpec policy, and installed CLI identity; legacy or drifting rows are invalidated, and repaired blocker contracts re-enter pending selection. Consumed incomplete mutation attempts compact to one active row and can only run exact readback recovery. Process checkpoints also bind the current finalize report SHA, while shared Flow carry-forward requires the same canonical payload SHA. The sanitized USLCI-scale outage fixture uses 1,358 scopes and proves state/event growth remains bounded without reading production payloads.
+
+Issue #76 makes verified-scope cleanup evidence-preserving. Before scratch removal, Foundry projects every scope-report control reference into an immutable SHA-256 store, deduplicates identical bytes through hardlink or verified copy fallback, writes a self-hashed receipt that separates artifact identity from original/store locators, and adds explicit fact-only dispositions for pruned payloads. It then verifies all required blobs, seals retained blobs read-only where supported, and writes a prune report. Missing control files, receipt/blob drift, path escape, or symlinks block deletion; failed/ambiguous scopes retain scratch. The replay fixture covers 34 Worldsteel pilots and six rounds of 1,358 USLCI references with one stored blob for identical control bytes.
 
 Issue #77 closes the exact-name product-flow reuse bypass exposed during that move-only decomposition. `identity-equivalence.ts` may select an exact normalized name only after the ordered physical review produces zero non-equivalence reasons. A same-name candidate with conflicting flow property, reference unit, geography/market, category/route, technology, or physical meaning remains reviewed evidence for `create_new`; it is never emitted as `reuse_existing_reference`. Matching physical evidence, elementary land-use special cases, and process exact-name explicit review retain their existing branches.
 

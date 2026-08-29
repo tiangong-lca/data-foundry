@@ -86,8 +86,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 10893c088ef56083b0b0ecf2af71779f0eb61d21
-lastReviewedNote: "Reviewed for Issue #75: Foundry owns exact scope/process/Flow resume evidence and blocker projection; CLI still owns generic attempts, recovery protocol, scheduling, and locking."
+lastReviewedCommit: 24c9a1f1564787c83af7fe7270876c33c5724e46
+lastReviewedNote: "Reviewed for Issue #76: Foundry owns local control-receipt/CAS/prune evidence; CLI, database, and publication ownership remain unchanged."
 ---
 
 # Capability Ownership Policy

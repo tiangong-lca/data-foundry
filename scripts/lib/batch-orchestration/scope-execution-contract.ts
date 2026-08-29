@@ -37,6 +37,7 @@ export interface BatchScopeExecutionPaths {
   supportIdentityCache: string;
   preflightPlan: string;
   bafuFamilySignatures: string;
+  controlArtifactStore: string;
   resumeInvalidated: string;
   attemptEvents: string;
   attemptState: string;
@@ -90,27 +91,23 @@ interface IdentityPatchBlocked extends BatchScopeJsonRecord {
   report?: string | null;
 }
 type IdentityPatchResult = IdentityPatchCompleted | IdentityPatchBlocked;
-
 interface HandoffResult extends BatchScopeJsonRecord {
   status: string;
   blockers: BatchScopeJsonRecord[];
   stages: BatchScopeJsonRecord[];
   closeoutReportPath?: string | null;
 }
-
 interface DatasetCommitCompleted extends BatchScopeJsonRecord {
   status: "completed";
   report: string;
   finalizeReport: BatchScopeJsonRecord;
   handoff: HandoffResult;
 }
-
 interface DatasetCommitBlocked extends BatchScopeJsonRecord {
   status: "failed" | "blocked";
   blocker: BatchScopeJsonRecord;
   report: string;
 }
-
 type DatasetCommitResult = DatasetCommitCompleted | DatasetCommitBlocked;
 
 export interface BatchScopeExecutionIoAdapter {
@@ -236,14 +233,16 @@ export interface BatchScopeExecutionOperationAdapter {
     logDir: string;
     label: string;
   }) => Promise<HandoffResult>;
-  trimVerifiedScopeScratch: (scopeDir: string, options: BatchScopeJsonRecord) => void;
+  trimVerifiedScopeScratch: (
+    scopeDir: string,
+    options: BatchScopeJsonRecord,
+    runDir: string,
+  ) => void;
 }
-
 export interface BatchScopeExecutionAdapter {
   io: BatchScopeExecutionIoAdapter;
   operations: BatchScopeExecutionOperationAdapter;
 }
-
 export interface BatchScopeExecutionService {
   runOneScope: (input: RunBatchScopeInput) => Promise<BatchScopeJsonRecord>;
 }

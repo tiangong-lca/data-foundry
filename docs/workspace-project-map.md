@@ -84,8 +84,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 10893c088ef56083b0b0ecf2af71779f0eb61d21
-lastReviewedNote: "Reviewed for Issue #75: content-bound resume and readback recovery stay within existing Foundry/CLI ownership and add no workspace project boundary."
+lastReviewedCommit: 24c9a1f1564787c83af7fe7270876c33c5724e46
+lastReviewedNote: "Reviewed for Issue #76: content-addressed Foundry control retention adds no workspace repository or cross-project ownership boundary."
 ---
 
 # Workspace Project Map
