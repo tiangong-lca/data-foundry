@@ -112,7 +112,10 @@ test("BAFU carry-forward keeps duplicate-source precedence, exact package projec
       table: "flows",
       refObjectId: canonicalA,
       ref_version: "03.00.004",
-      shortDescription: "first canonical flow",
+      shortDescription: [
+        { "@xml:lang": "en", "#text": "First canonical flow" },
+        { "@xml:lang": "zh", "#text": "首个标准流" },
+      ],
     },
     reason: "The lexically first decision source is authoritative for equal canonical reuse.",
     used_context_kinds: ["library_index", "identity_preflight"],
@@ -337,6 +340,18 @@ test("BAFU carry-forward keeps duplicate-source precedence, exact package projec
       (readJsonLines(result.outputFile)[0] as JsonRecord).reason,
       firstReusableA.reason,
       "a later equal-canonical decision must not replace the lexically first source",
+    );
+    const canonicalDescription = [
+      { "@xml:lang": "en", "#text": "First canonical flow" },
+      { "@xml:lang": "zh", "#text": "首个标准流" },
+    ];
+    assert.deepEqual(
+      record(record(readJsonLines(result.outputFile)[0]).selectedReference).shortDescription,
+      canonicalDescription,
+    );
+    assert.deepEqual(
+      record(record(result.report.replacements[0]).canonical).short_description,
+      canonicalDescription,
     );
 
     const rewrites = service.loadResolutionRewritesByProcess("library-resolution");
