@@ -86,8 +86,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: b466bf1
-lastReviewedNote: "Reviewed for Issue #81: Foundry owns recovery eligibility and no-replay orchestration while CLI and database retain mutation and readback truth."
+lastReviewedCommit: 349c884
+lastReviewedNote: "Reviewed for Issue #78: Foundry owns lossless local description transport, while schema/decision owners retain content and identity choice."
 ---
 
 # Capability Ownership Policy
@@ -151,6 +151,8 @@ Foundry owns only the local eligibility classification and orchestration state f
 Candidate retrieval does not own BAFU identity equivalence. Edge Functions and database search return candidate evidence; Foundry's `identity-equivalence.ts` owns the deterministic local physical review used by BAFU auto-authoring. An exact name cannot override a recorded property, unit, geography, category/route, technology, or physical-meaning conflict, and this local decision never grants remote-write authority.
 
 Foundry also owns truthful local completion projection for BAFU category-map decisions. Taxonomy vocabularies and semantic AI choices remain schema/decision-owned; `category-map-projection.ts` retains every supplied manual-review row, `category-map-report.ts` projects closure-wide blockers/status, and `foundry-command-registry.ts` returns nonzero until that closure is empty. These guards cannot invent or apply a category choice.
+
+Foundry owns lossless local transport of a selected canonical description through its rewrite evidence. `canonical-description.ts` validates/clones the JSON value and downstream Foundry stages preserve it; it does not choose the canonical identity, translate or rewrite multilingual content, query remote state, or grant mutation authority. Schema/decision owners still determine the authoritative value, and unsupported/non-JSON evidence fails closed rather than being coerced into display text.
 
 Deterministic import/conversion/schema validation follows a separate native-tool boundary. Foundry selects the Rust `tidas` executable with `--tidas-bin`, `TIDAS_BIN`, then `PATH`, and optional config with `--tidas-config` then `TIDAS_CONFIG`. It accepts compatible 0.2.x releases only after a `tidas version` handshake proves `tidas.operation-report.v1`; it does not install a Python package, inspect a Python checkout, or pin one patch release. A script-backed test override is dispatched through Node plus an argv prefix on every platform; that portability adapter does not move Rust validation behavior into Foundry. Foundry may materialize the official validation-batch manifest and map the stable Rust report/exit result into its existing validation report, but must not reproduce schema or converter rules.
 

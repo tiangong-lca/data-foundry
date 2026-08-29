@@ -149,8 +149,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: b466bf1
-lastReviewedNote: "Reviewed for Issue #81: same-id/version recovery requires structured 23505 evidence, one commit dispatch, and exact content-bound readback."
+lastReviewedCommit: 349c884
+lastReviewedNote: "Reviewed for Issue #78: multilingual canonical descriptions retain exact JSON/order through rewrite, identity, process-reference, and carry-forward evidence."
 ---
 
 # TianGong LCA Data Foundry
@@ -240,6 +240,8 @@ Wave 26 migrates five dataset-orchestration owners in dependency order: generic 
 Issue #70 decomposes that stable typed layer by semantic stage. `scripts/lib/batch-orchestration/post-write-handoff.ts` owns asynchronous commit/report discovery, same-id/version idempotent recovery followed by mandatory readback, bounded read-only verification retry, accepted-difference delegation, and post-write closeout. `scripts/lib/batch-orchestration/scope-finalize-commit.ts` owns exact finalize reports, serialized support reuse/invalidation/commit, post-finalize identity/patch recovery, and the final dataset handoff. `scripts/lib/batch-orchestration/cli-bounded-batch-runner.ts` composes the public CLI contract/engine/run lock and owns bounded claims, family exclusive keys, pause/stop, and drain without absorbing LCA semantics. `scripts/commands/bafu-batch-import-run.ts` is a five-line public facade; `bafu-batch-command-runtime.ts` is the explicit 1,649-line composition root for adapter wiring and final report assembly, with its own 1,700-line shrink-only ceiling rather than being mislabeled as a small semantic stage. All behavior navigation should continue into the narrower modules.
 
 Issue #77 closes the exact-name product-flow reuse bypass exposed during that move-only decomposition. `identity-equivalence.ts` may select an exact normalized name only after the ordered physical review produces zero non-equivalence reasons. A same-name candidate with conflicting flow property, reference unit, geography/market, category/route, technology, or physical meaning remains reviewed evidence for `create_new`; it is never emitted as `reuse_existing_reference`. Matching physical evidence, elementary land-use special cases, and process exact-name explicit review retain their existing branches.
+
+Issue #78 removes lossy object coercion from library and identity rewrite evidence. `canonical-description.ts` validates and clones canonical description JSON before mutation; multilingual object/array order and values pass unchanged through the rewritten process reference, exchange-reference ledger, batch resolution decision, identity-apply ledger, process rewrite, and BAFU carry-forward report. Scalar strings retain their prior behavior, while functions, BigInt, cycles, sparse or otherwise non-JSON values fail before payload mutation. Canonical IDs, versions, preservation hashes, stage order, paths, and remote authority do not change.
 
 Issue #79 makes BAFU category-map completion truthful even when a conflicting, invalid, context-unbound, or incomplete decision is unrelated to the current task set. `category-map-projection.ts` retains artifact semantics, while the bounded `category-map-report.ts` leaf derives top-level `completed_with_manual_review`, compact source/reason/artifact blockers, and a nonzero command exit from the complete emitted closure. Resolved-only inputs keep their previous JSON bytes and successful exit, while existing manual-review artifact bytes/order remain authoritative.
 

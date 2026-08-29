@@ -147,8 +147,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: b466bf1
-lastReviewedNote: "Reviewed for Issue #81: a shared strict classifier and bounded process helpers keep lost-success recovery pending until exact readback."
+lastReviewedCommit: 349c884
+lastReviewedNote: "Reviewed for Issue #78: one bounded JSON validator preserves canonical multilingual evidence while leaving identity choice and mutation authority unchanged."
 ---
 
 # Architecture
@@ -245,6 +245,8 @@ The typed command-owner layer now includes filesystem task/completion aggregatio
 The typed mutation reference stack remains an offline planning boundary. Reference closure classifies local roots and externally proven dependencies without querying or mutating the database; source context admits only ordered, in-scope public-canonical proofs; mutation manifest aggregates exact evidence and writes JSON/JSONL partitions. If any item is blocked, no write-candidate payload is emitted for execution.
 
 The typed dataset-orchestration layer composes those owners without absorbing them. The generic library workflow prepares deduplicated library and scope artifacts; BAFU classification, auto-authoring and process-scope owners retain dataset-specific policy; the shared batch engine adds resumable ledgers, bounded parallelism, interruption/preflight modes and explicit handoff delegation. It owns local ordering and checkpoints, not CLI mutation, profile meaning, remote state or publication.
+
+Canonical description transport is a small shared JSON boundary under that orchestration. `scripts/lib/canonical-description.ts` accepts scalar strings or losslessly cloneable JSON objects/arrays, preserves insertion/language/value order, and rejects unsupported values or cycles before any reference mutation. Library decision apply uses that one value for authoritative multilingual process-reference and rewrite-ledger evidence; batch identity resolution, identity apply/reference rewrite, and BAFU carry-forward preserve it without display coercion. This changes evidence fidelity only—canonical selection, payload preservation hashes outside the selected description, paths, and mutation authority stay fixed.
 
 BAFU flow identity equivalence is a narrow semantic boundary inside that layer. Candidate search remains Edge/database-owned, while `scripts/lib/bafu-authoring/identity-equivalence.ts` deterministically reviews returned candidates. Exact normalized names can rank a candidate but cannot suppress an ordered non-equivalence reason; only a zero-conflict exact candidate can be reused. Physically conflicting exact-name candidates flow through local `create_new` evidence and deterministic identity apply without changing the source flow UUID.
 

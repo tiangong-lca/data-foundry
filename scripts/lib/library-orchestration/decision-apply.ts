@@ -1,3 +1,4 @@
+import { canonicalDescriptionPair } from "../canonical-description.ts";
 import type { EntityMaps, JsonRecord, ScopeProjection } from "./entity-projection.ts";
 
 export interface CanonicalTarget extends JsonRecord {
@@ -277,14 +278,12 @@ export function createLibraryDecisionApply({
       const flowVersion = asText(ref["@version"]) || "00.00.001";
       const rootFlow = rootEntityForRef(maps, "flow", flowId, flowVersion);
       if (!rootFlow) return;
-      // Reuse-by-reference is gated by an explicit reuse_existing_reference decision, not by
-      // flow type. Product/waste rows in reference imports may intentionally reuse canonical
-      // UUIDs, while rows without that explicit decision remain unchanged.
       const decision = identityByKey.get(`flow:${flowId}:${flowVersion}`);
       if (asText(decision?.decision) !== "reuse_existing_reference") return;
       if (!decision) return;
       const target = canonicalTarget(decision, "flow data set");
       if (!target.id) return;
+      const descriptions = canonicalDescriptionPair(decision.canonical_short_description, asText);
       const beforePreservationHash = exchangePreservationHash(exchange);
       const previousReference = cloneJson(ref);
       exchange.referenceToFlowDataSet = {
@@ -293,7 +292,7 @@ export function createLibraryDecisionApply({
         "@version": target.version,
         "@uri": target.uri || `../flows/${target.id}.json`,
         "common:shortDescription":
-          decision.canonical_short_description ||
+          descriptions.reference ||
           previousReference["common:shortDescription"] ||
           target.short_description ||
           undefined,
@@ -309,8 +308,7 @@ export function createLibraryDecisionApply({
         canonical_flow_id: target.id,
         canonical_flow_version: target.version,
         // Downstream deterministic identity apply consumes this display name when present.
-        canonical_short_description:
-          asText(decision.canonical_short_description) || target.short_description || null,
+        canonical_short_description: descriptions.ledger || target.short_description || null,
         changed_path: "referenceToFlowDataSet",
         preserved_exchange_fields: beforePreservationHash === afterPreservationHash,
         before_preservation_hash: beforePreservationHash,

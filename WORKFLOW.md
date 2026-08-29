@@ -276,8 +276,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: b466bf1
-lastReviewedNote: "Reviewed for Issue #81: process and batch handoffs fail closed on ambiguous conflict evidence and never replay a commit."
+lastReviewedCommit: 349c884
+lastReviewedNote: "Reviewed for Issue #78: canonical description JSON is validated before mutation and never coerced into display text across the rewrite workflow."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -355,6 +355,8 @@ The task/completion, commit-handoff/identity-task, and support-cache command own
 The mutation reference stack is native TypeScript. Preserve reference DFS and table resolution, planned-self/public-remote/proven/unresolved/foreign closure partitions, explicit-before-default source rewrite selection, public-canonical source proof filtering, write/reference/blocked item order and report/items bytes. A blocked manifest must keep write-candidates empty; rendered plans and evidence never become mutation authority.
 
 The high-level dataset orchestration layer is native TypeScript. `library-scope-workflow.ts` stays profile-agnostic; BAFU classification, auto-authoring, process-scope and batch owners retain their established BAFU defaults, while USLCI and Worldsteel wrappers delegate into the shared typed batch engine. Preserve resume ledgers, pause/stop and bounded-parallel selection, read-only preflight, exact scope/library/identity/classification gate order, local artifact bytes, shell-free argv and receipt/hash binding. Only the existing explicit `--commit` path may reach a guarded CLI handoff.
+
+Library canonical descriptions are authoritative JSON evidence. Before changing a process reference, `canonical-description.ts` must validate and clone the selected string/object/array; the exact multilingual object/array then remains identical in the process reference and rewrite ledger and through batch resolution, identity apply, later process rewrite, and BAFU carry-forward. Never call `String(...)`/`asText(...)` on object-valued canonical evidence. Scalar strings keep their existing representation; cyclic, unsupported, sparse, accessor-backed, or otherwise non-JSON values fail before payload mutation.
 
 Within BAFU auto-authoring, an exact product/waste-flow name never overrides the physical review. `identity-equivalence.ts` may return an exact reuse candidate only when its ordered non-equivalence reasons are empty; property, unit, geography/market, category/route, technology, or physical-meaning conflicts remain in decision evidence and produce `create_new` rather than `reuse_existing_reference`. Matching exact-flow evidence, elementary land-use special cases, and process exact-name explicit review remain characterized separately.
 

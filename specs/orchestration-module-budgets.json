@@ -49,6 +49,7 @@
     "scripts/lib/batch-orchestration/support-identity-cache.ts": 381,
     "scripts/lib/batch-orchestration/universe-coverage.ts": 702,
     "scripts/lib/batch-orchestration/verified-ledger-projection.ts": 377,
+    "scripts/lib/canonical-description.ts": 100,
     "scripts/lib/library-orchestration/authoring-plan.ts": 187,
     "scripts/lib/library-orchestration/command-runtime.ts": 36,
     "scripts/lib/library-orchestration/decision-apply.ts": 667,

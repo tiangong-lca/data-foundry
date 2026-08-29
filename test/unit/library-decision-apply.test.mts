@@ -57,6 +57,10 @@ function ml(text: string): JsonRecord {
   return { "@xml:lang": "en", "#text": text };
 }
 
+function canonicalMultilingualDescription(): JsonRecord[] {
+  return [ml("Canonical methane"), { "@xml:lang": "zh", "#text": "标准甲烷" }];
+}
+
 function flowEntity(id: string, flowType: string): EntityRow {
   return {
     entity_key: `flow:${id}:${version}`,
@@ -224,7 +228,7 @@ function fixture() {
         version: "03.00.004",
         uri: "../flows/canonical-elementary.json",
       },
-      canonical_short_description: ml("Canonical methane"),
+      canonical_short_description: canonicalMultilingualDescription(),
     },
     {
       source_dataset_id: "elementary-blocked",
@@ -355,6 +359,11 @@ test("library decision apply preserves last-write indexes, canonical rewrite byt
     "move-only projection retains in-place payload semantics",
   );
   assert.equal(rewritten.changed, true);
+  const rewrittenBytes = `${JSON.stringify(rewritten.payload, null, 2)}\n`;
+  assert.equal(
+    sha256Text(rewrittenBytes),
+    "bc8b2099176fe7c778ec2268d3b1984ca35be79a19a17ad96fd7158b7d9d176e",
+  );
   assert.deepEqual(rewritten.rewrite_rows, [
     {
       schema_version: 1,
@@ -365,23 +374,81 @@ test("library decision apply preserves last-write indexes, canonical rewrite byt
       source_flow_version: version,
       canonical_flow_id: "canonical-elementary",
       canonical_flow_version: "03.00.004",
-      canonical_short_description: "[object Object]",
+      canonical_short_description: canonicalMultilingualDescription(),
       changed_path: "referenceToFlowDataSet",
       preserved_exchange_fields: true,
       before_preservation_hash: "d89d0d0c59d50593e105f7a78457996d43a8975f0d64ba8e55e19f75f8a364e2",
       after_preservation_hash: "d89d0d0c59d50593e105f7a78457996d43a8975f0d64ba8e55e19f75f8a364e2",
     },
   ]);
-  const rewrittenBytes = `${JSON.stringify(rewritten.payload, null, 2)}\n`;
+  const rewriteLedgerBytes = `${rewritten.rewrite_rows.map((row) => JSON.stringify(row)).join("\n")}\n`;
   assert.equal(
-    sha256Text(rewrittenBytes),
-    "c20fd04be3b7d02f5481384cb7240995785db3210e515b453df322356aa23a33",
+    sha256Text(rewriteLedgerBytes),
+    "1b3d3bb53866948ae293812c509cbf12ef7990cd883391dd224c238e17dca9fd",
   );
   assert.deepEqual(Object.keys(record(record(rewritten.payload).processDataSet)), [
     "processInformation",
     "exchanges",
     "administrativeInformation",
   ]);
+});
+
+test("library decision apply keeps scalar descriptions scalar", () => {
+  const { maps, scopes, identityRows, classificationRows, supportRows } = fixture();
+  identityRows[1] = { ...identityRows[1], canonical_short_description: "Canonical methane" };
+  const indexes = application.decisionIndexes({ identityRows, classificationRows, supportRows });
+  const rewritten = application.rewriteProcessExchangeReferences({
+    scope: scopes[0],
+    payload: processPayload("process-ready", "product-ready", "elementary-ready"),
+    identityByKey: indexes.identityByKey,
+    maps,
+  });
+
+  assert.equal(rewritten.rewrite_rows[0]?.canonical_short_description, "Canonical methane");
+  const exchange = ensureArray(
+    record(record(record(rewritten.payload).processDataSet).exchanges).exchange,
+  )[1];
+  const reference = record(record(exchange).referenceToFlowDataSet);
+  assert.equal(reference["common:shortDescription"], "Canonical methane");
+});
+
+test("library decision apply rejects non-JSON canonical descriptions before payload mutation", () => {
+  const { maps, scopes, identityRows, classificationRows, supportRows } = fixture();
+  const circular: JsonRecord = {};
+  circular.self = circular;
+  const sparse = new Array(1);
+  const accessor: JsonRecord = {};
+  Object.defineProperty(accessor, "#text", {
+    enumerable: true,
+    get: () => "computed text",
+  });
+
+  for (const invalidDescription of [() => "not-json", 1n, circular, sparse, accessor]) {
+    const currentRows = [...identityRows];
+    currentRows[1] = {
+      ...currentRows[1],
+      canonical_short_description: invalidDescription,
+    };
+    const indexes = application.decisionIndexes({
+      identityRows: currentRows,
+      classificationRows,
+      supportRows,
+    });
+    const payload = processPayload("process-ready", "product-ready", "elementary-ready");
+    const before = cloneJson(payload);
+
+    assert.throws(
+      () =>
+        application.rewriteProcessExchangeReferences({
+          scope: scopes[0],
+          payload,
+          identityByKey: indexes.identityByKey,
+          maps,
+        }),
+      TypeError,
+    );
+    assert.deepEqual(payload, before);
+  }
 });
 
 test("library decision apply preserves blocker order, deferred projection and exact report contracts", () => {
