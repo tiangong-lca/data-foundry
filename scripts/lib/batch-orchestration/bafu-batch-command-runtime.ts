@@ -365,9 +365,8 @@ const classificationSchemaRepair = createClassificationSchemaRepairService({
   normalizeSearchText,
   pathJoin: (...parts: string[]) => path.join(...parts),
 });
-// When true (USLCI only), the flow-identity step applies the authoritative
-// library-resolution exchange-reference-rewrites deterministically: every flow the
-// resolution proved reusable becomes a canonical reference, only flows with NO
+// USLCI flow identity applies authoritative library-resolution rewrites deterministically.
+// Every proven reusable Flow becomes canonical; only unmatched flows mint.
 // rewrite mint. This replaces the brittle decisions-* carry-forward whose additions
 // frequently came out empty (apply skipped -> dependency flows wrongly minted even
 // when the offline resolution already matched them to canonical). BAFU keeps this
@@ -517,6 +516,7 @@ const identityDecisionCarryForward = createBafuIdentityDecisionCarryForwardServi
   repoRelative,
   resolveRepoPath,
   datasetIdentity: (row, datasetType) => datasetIdentity(jsonRecord(row), datasetType),
+  // Cache entries are produced by scripts/commands/identity-preflight-run.ts.
   resultCacheDirectory: () => process.env.BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE ?? null,
   fs: {
     fileExists,
