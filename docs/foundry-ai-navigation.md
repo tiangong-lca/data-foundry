@@ -137,8 +137,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 349c884
-lastReviewedNote: "Reviewed for Issue #78: canonical-description defects route from the JSON leaf through library, batch identity, process rewrite, and carry-forward consumers."
+lastReviewedCommit: 6d415a7
+lastReviewedNote: "Reviewed for Issue #80: recovery command drift routes to the sole dispatch/projection helper and its captured-invocation contract."
 ---
 
 # Foundry AI Navigation
@@ -249,6 +249,8 @@ The typed mutation reference stack starts at `workflow-reference-closure.ts` for
 The typed high-level orchestration path is `library-scope-workflow.ts` for profile-agnostic library/scope preparation, then `bafu-leaf-classification-tasks.ts` and `bafu-auto-authoring.ts`, then `bafu-process-scope-e2e.ts`. `scripts/commands/bafu-batch-import-run.ts` is only the public facade; enter `bafu-batch-command-runtime.ts` solely for composition/wiring or final aggregate reporting, not for domain-rule searches. For generic contract hashes, cross-process run locking, bounded claims, family resource FIFO, pause-before-claim, stop-after-blocked, or in-flight drain, navigate to `cli-bounded-batch-runner.ts`. For authoring task row filtering use `authoring-task-filter.ts`; for recovery report/blocker discovery use `scope-recovery-evidence.ts`; for scratch/cache retention use `scope-scratch-policy.ts`; for commit/readback/closeout use `post-write-handoff.ts`; and for finalize/support/recovery/handoff use `scope-finalize-commit.ts`. USLCI and Worldsteel adapters import the same public facade with frozen profile configuration. Start at command metadata and the orchestration budget contract, then navigate to the narrowest semantic owner.
 
 For a canonical description that becomes `"[object Object]"`, disappears, or changes language/order, start at `scripts/lib/canonical-description.ts` and `library-orchestration/decision-apply.ts`. Follow the direct consumer chain through `batch-orchestration/identity-patch-stage.ts`, `commands/identity-decisions.ts`, `identity-reference-rewrite-utils.ts`, and `bafu-orchestration/identity-decision-carry-forward.ts`. The authoritative field remains JSON; rendered text is not a fallback. Producer bytes/SHA are pinned in `unit/library-decision-apply.test.mts`, batch resolution in `unit/batch-orchestration-identity-patch.test.mts`, end-to-end process reference transport in `scenarios/flow-identity-decisions.test.mts`, and carry-forward bytes in `unit/bafu-identity-decision-carry-forward.test.mts`.
+
+For a post-finalize report whose command omits an option or differs from the invocation, go directly to `scripts/lib/bafu-orchestration/post-finalize-recovery.ts`. `runProjectedArgvStage` is the sole dispatch, authority construction, and projection verification point; `process-scope-report.ts` only retains the supplied object plus exit/log/report evidence. `unit/post-finalize-recovery-orchestration.test.mts` compares every projected command against captured invocations across identity/semantic success, nonzero, thrown, missing-report, and deliberate projector-drift cases.
 
 For BAFU flow reuse, navigate directly to `scripts/lib/bafu-authoring/identity-equivalence.ts`. If an exact-name candidate is reused despite property, reference-unit, geography/market, category/route, technology, or physical-meaning conflict evidence, the defect is in that leaf—not candidate search, the command envelope, or the batch composition root. `test/unit/bafu-identity-equivalence-contract.test.mts` freezes the pure decision and reason order; `test/commands/bafu-auto-authoring.test.mts` proves the resulting `create_new`/reuse decision and deterministic apply boundary.
 

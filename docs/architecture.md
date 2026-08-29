@@ -147,8 +147,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 349c884
-lastReviewedNote: "Reviewed for Issue #78: one bounded JSON validator preserves canonical multilingual evidence while leaving identity choice and mutation authority unchanged."
+lastReviewedCommit: 6d415a7
+lastReviewedNote: "Reviewed for Issue #80: one bounded helper constructs, dispatches, projects, and verifies exact recovery argv without adding remote authority."
 ---
 
 # Architecture
@@ -247,6 +247,8 @@ The typed mutation reference stack remains an offline planning boundary. Referen
 The typed dataset-orchestration layer composes those owners without absorbing them. The generic library workflow prepares deduplicated library and scope artifacts; BAFU classification, auto-authoring and process-scope owners retain dataset-specific policy; the shared batch engine adds resumable ledgers, bounded parallelism, interruption/preflight modes and explicit handoff delegation. It owns local ordering and checkpoints, not CLI mutation, profile meaning, remote state or publication.
 
 Canonical description transport is a small shared JSON boundary under that orchestration. `scripts/lib/canonical-description.ts` accepts scalar strings or losslessly cloneable JSON objects/arrays, preserves insertion/language/value order, and rejects unsupported values or cycles before any reference mutation. Library decision apply uses that one value for authoritative multilingual process-reference and rewrite-ledger evidence; batch identity resolution, identity apply/reference rewrite, and BAFU carry-forward preserve it without display coercion. This changes evidence fidelity only—canonical selection, payload preservation hashes outside the selected description, paths, and mutation authority stay fixed.
+
+Post-finalize recovery command evidence has one construction boundary in `scripts/lib/bafu-orchestration/post-finalize-recovery.ts`. The helper derives `{ executable, argv, display }`, dispatches a fresh copy of the same executable/argv, passes that authority to the reader projection, and verifies the projected object exactly before returning. Thus success, failure, exception, and missing-report branches cannot diverge or hide options. This is local execution/report fidelity; it adds no CommandSpec mutation authority and does not change recovery semantics or stage ordering.
 
 BAFU flow identity equivalence is a narrow semantic boundary inside that layer. Candidate search remains Edge/database-owned, while `scripts/lib/bafu-authoring/identity-equivalence.ts` deterministically reviews returned candidates. Exact normalized names can rank a candidate but cannot suppress an ordered non-equivalence reason; only a zero-conflict exact candidate can be reused. Physically conflicting exact-name candidates flow through local `create_new` evidence and deterministic identity apply without changing the source flow UUID.
 

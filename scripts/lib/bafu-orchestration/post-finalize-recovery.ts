@@ -22,9 +22,15 @@ export interface PostFinalizeRecoveryArgvStageResult {
   stderrLog: string;
 }
 
+export interface PostFinalizeRecoveryCommandAuthority {
+  executable: string;
+  argv: string[];
+  display: string;
+}
+
 export interface PostFinalizeRecoveryStageProjectionInput {
   stage: string;
-  command: unknown;
+  command: PostFinalizeRecoveryCommandAuthority;
   result: PostFinalizeRecoveryCommandResult;
   stdoutLog: string;
   stderrLog: string;
@@ -70,6 +76,54 @@ function jsonRecord(value: unknown): JsonRecord {
   return isJsonRecord(value) ? value : {};
 }
 
+type ProjectedArgvStageInput = PostFinalizeRecoveryArgvStageInput & { reportPath: string | null };
+type ProjectedArgvStageResult = PostFinalizeRecoveryArgvStageResult & { projection: JsonRecord };
+
+function commandAuthorityMatches(
+  value: unknown,
+  expected: PostFinalizeRecoveryCommandAuthority,
+): boolean {
+  const projected = jsonRecord(value);
+  const argv = Array.isArray(projected.argv) ? projected.argv : [];
+  return (
+    Object.keys(projected).join("\0") === "executable\0argv\0display" &&
+    projected.executable === expected.executable &&
+    projected.display === expected.display &&
+    argv.length === expected.argv.length &&
+    argv.every((item, index) => item === expected.argv[index])
+  );
+}
+
+function runProjectedArgvStage(
+  { stage, argv, logDir, reportPath }: ProjectedArgvStageInput,
+  adapter: PostFinalizeRecoveryAdapter,
+): ProjectedArgvStageResult {
+  const [executable, ...args] = argv;
+  if (!executable) throw new TypeError(`Recovery stage ${stage} requires an executable.`);
+  const exactArgv = [executable, ...args];
+  const command: PostFinalizeRecoveryCommandAuthority = {
+    executable,
+    argv: [...args],
+    display: adapter.commandString(exactArgv),
+  };
+  const execution = adapter.runArgvStage({ stage, argv: [...exactArgv], logDir });
+  const projection = adapter.projectCommandStage({
+    stage,
+    command,
+    result: execution.result,
+    stdoutLog: execution.stdoutLog,
+    stderrLog: execution.stderrLog,
+    reportPath,
+  });
+  if (!commandAuthorityMatches(projection.command, command)) {
+    throw new Error(`Recovery stage ${stage} projected command authority drift.`);
+  }
+  return {
+    ...execution,
+    projection,
+  };
+}
+
 export function runPostFinalizeIdentityRecovery(
   { finalizeReport, currentRowsFile, outDir, logDir, attempt }: PostFinalizeRecoveryInput,
   adapter: PostFinalizeRecoveryAdapter,
@@ -88,38 +142,30 @@ export function runPostFinalizeIdentityRecovery(
   }
   const identityTaskDir = path.join(outDir, `post-finalize-${attempt}-identity-task`);
   const identityTaskReport = path.join(identityTaskDir, "identity-decision-task-report.json");
-  const identityTask = adapter.runArgvStage({
-    stage: `post-finalize-${attempt}.identity-task`,
-    argv: [
-      adapter.processExecutable,
-      adapter.foundryEntryPath,
-      "dataset-identity-decision-task-build",
-      "--curation-gate-report",
-      adapter.repoRelative(gateReportPath),
-      "--out-dir",
-      adapter.repoRelative(identityTaskDir),
-      "--shared-context-cache-dir",
-      adapter.repoRelative(path.join(outDir, "shared-context-cache")),
-    ],
-    logDir,
-  });
+  const identityTaskArgv = [
+    adapter.processExecutable,
+    adapter.foundryEntryPath,
+    "dataset-identity-decision-task-build",
+    "--curation-gate-report",
+    adapter.repoRelative(gateReportPath),
+    "--out-dir",
+    adapter.repoRelative(identityTaskDir),
+    "--shared-context-cache-dir",
+    adapter.repoRelative(path.join(outDir, "shared-context-cache")),
+  ];
+  const identityTask = runProjectedArgvStage(
+    {
+      stage: `post-finalize-${attempt}.identity-task`,
+      argv: identityTaskArgv,
+      logDir,
+      reportPath: identityTaskReport,
+    },
+    adapter,
+  );
   if (!adapter.fileExists(identityTaskReport)) {
     return {
       status: "blocked",
-      stages: [
-        adapter.projectCommandStage({
-          stage: `post-finalize-${attempt}.identity-task`,
-          command: adapter.commandString([
-            adapter.processExecutable,
-            adapter.foundryEntryPath,
-            "dataset-identity-decision-task-build",
-          ]),
-          result: identityTask.result,
-          stdoutLog: identityTask.stdoutLog,
-          stderrLog: identityTask.stderrLog,
-          reportPath: identityTaskReport,
-        }),
-      ],
+      stages: [identityTask.projection],
       blocker: {
         code: "post_finalize_identity_task_report_missing",
         message: "Post-finalize identity task did not emit its report.",
@@ -127,24 +173,7 @@ export function runPostFinalizeIdentityRecovery(
     };
   }
   const identityTaskJson = adapter.readJson(identityTaskReport);
-  const stages: JsonRecord[] = [
-    adapter.projectCommandStage({
-      stage: `post-finalize-${attempt}.identity-task`,
-      command: adapter.commandString([
-        adapter.processExecutable,
-        adapter.foundryEntryPath,
-        "dataset-identity-decision-task-build",
-        "--curation-gate-report",
-        adapter.repoRelative(gateReportPath),
-        "--out-dir",
-        adapter.repoRelative(identityTaskDir),
-      ]),
-      result: identityTask.result,
-      stdoutLog: identityTask.stdoutLog,
-      stderrLog: identityTask.stderrLog,
-      reportPath: identityTaskReport,
-    }),
-  ];
+  const stages: JsonRecord[] = [identityTask.projection];
   if (identityTaskJson.status === "ready_no_identity_actions") {
     return {
       status: "completed_noop",
@@ -177,21 +206,16 @@ export function runPostFinalizeIdentityRecovery(
     "--identity-decision-task",
     adapter.repoRelative(path.join(identityTaskDir, "identity-decision-task.json")),
   ];
-  const identityAutofill = adapter.runArgvStage({
-    stage: `post-finalize-${attempt}.identity-autofill`,
-    argv: identityAutofillArgv,
-    logDir,
-  });
-  stages.push(
-    adapter.projectCommandStage({
+  const identityAutofill = runProjectedArgvStage(
+    {
       stage: `post-finalize-${attempt}.identity-autofill`,
-      command: adapter.commandString(identityAutofillArgv),
-      result: identityAutofill.result,
-      stdoutLog: identityAutofill.stdoutLog,
-      stderrLog: identityAutofill.stderrLog,
+      argv: identityAutofillArgv,
+      logDir,
       reportPath: identityAutofillReport,
-    }),
+    },
+    adapter,
   );
+  stages.push(identityAutofill.projection);
   if (!adapter.fileExists(identityAutofillReport)) {
     return {
       status: "blocked",
@@ -236,21 +260,16 @@ export function runPostFinalizeIdentityRecovery(
     "--authoring-package-dir",
     adapter.repoRelative(path.join(identityTaskDir, "authoring-package-snapshots")),
   ];
-  const identityApply = adapter.runArgvStage({
-    stage: `post-finalize-${attempt}.identity-apply`,
-    argv: identityApplyArgv,
-    logDir,
-  });
-  stages.push(
-    adapter.projectCommandStage({
+  const identityApply = runProjectedArgvStage(
+    {
       stage: `post-finalize-${attempt}.identity-apply`,
-      command: adapter.commandString(identityApplyArgv),
-      result: identityApply.result,
-      stdoutLog: identityApply.stdoutLog,
-      stderrLog: identityApply.stderrLog,
+      argv: identityApplyArgv,
+      logDir,
       reportPath: identityApplyReport,
-    }),
+    },
+    adapter,
   );
+  stages.push(identityApply.projection);
   if (!adapter.fileExists(identityApplyReport)) {
     return {
       status: "blocked",
@@ -312,21 +331,16 @@ export function runPostFinalizeSemanticRecovery(
     "--shared-context-cache-dir",
     adapter.repoRelative(path.join(outDir, "shared-context-cache")),
   ];
-  const taskBuild = adapter.runArgvStage({
-    stage: `post-finalize-${attempt}.semantic-task`,
-    argv: taskBuildArgv,
-    logDir,
-  });
-  const stages: JsonRecord[] = [
-    adapter.projectCommandStage({
+  const taskBuild = runProjectedArgvStage(
+    {
       stage: `post-finalize-${attempt}.semantic-task`,
-      command: adapter.commandString(taskBuildArgv),
-      result: taskBuild.result,
-      stdoutLog: taskBuild.stdoutLog,
-      stderrLog: taskBuild.stderrLog,
+      argv: taskBuildArgv,
+      logDir,
       reportPath: taskManifest,
-    }),
-  ];
+    },
+    adapter,
+  );
+  const stages: JsonRecord[] = [taskBuild.projection];
   if (!adapter.fileExists(taskManifest)) {
     return {
       status: "blocked",
@@ -371,21 +385,16 @@ export function runPostFinalizeSemanticRecovery(
     "--task-manifest",
     adapter.repoRelative(taskManifest),
   ];
-  const patchAutofill = adapter.runArgvStage({
-    stage: `post-finalize-${attempt}.patch-autofill`,
-    argv: patchAutofillArgv,
-    logDir,
-  });
-  stages.push(
-    adapter.projectCommandStage({
+  const patchAutofill = runProjectedArgvStage(
+    {
       stage: `post-finalize-${attempt}.patch-autofill`,
-      command: adapter.commandString(patchAutofillArgv),
-      result: patchAutofill.result,
-      stdoutLog: patchAutofill.stdoutLog,
-      stderrLog: patchAutofill.stderrLog,
+      argv: patchAutofillArgv,
+      logDir,
       reportPath: patchAutofillReport,
-    }),
+    },
+    adapter,
   );
+  stages.push(patchAutofill.projection);
   if (!adapter.fileExists(patchAutofillReport)) {
     return {
       status: "blocked",
@@ -421,21 +430,16 @@ export function runPostFinalizeSemanticRecovery(
     "--task-manifest",
     adapter.repoRelative(taskManifest),
   ];
-  const patchCollect = adapter.runArgvStage({
-    stage: `post-finalize-${attempt}.patch-collect`,
-    argv: patchCollectArgv,
-    logDir,
-  });
-  stages.push(
-    adapter.projectCommandStage({
+  const patchCollect = runProjectedArgvStage(
+    {
       stage: `post-finalize-${attempt}.patch-collect`,
-      command: adapter.commandString(patchCollectArgv),
-      result: patchCollect.result,
-      stdoutLog: patchCollect.stdoutLog,
-      stderrLog: patchCollect.stderrLog,
+      argv: patchCollectArgv,
+      logDir,
       reportPath: patchCollectReport,
-    }),
+    },
+    adapter,
   );
+  stages.push(patchCollect.projection);
   if (!adapter.fileExists(patchCollectReport)) {
     return {
       status: "blocked",
@@ -490,22 +494,17 @@ export function runPostFinalizeSemanticRecovery(
     "--require-authoring-package",
     "--require-action-item-closure",
   ];
-  const patchApply = adapter.runArgvStage({
-    stage: `post-finalize-${attempt}.patch-apply`,
-    argv: patchApplyArgv,
-    logDir,
-  });
   const patchApplyReport = path.join(patchApplyDir, "outputs", "dataset-patch-apply-report.json");
-  stages.push(
-    adapter.projectCommandStage({
+  const patchApply = runProjectedArgvStage(
+    {
       stage: `post-finalize-${attempt}.patch-apply`,
-      command: adapter.commandString(patchApplyArgv),
-      result: patchApply.result,
-      stdoutLog: patchApply.stdoutLog,
-      stderrLog: patchApply.stderrLog,
+      argv: patchApplyArgv,
+      logDir,
       reportPath: patchApplyReport,
-    }),
+    },
+    adapter,
   );
+  stages.push(patchApply.projection);
   if (!adapter.fileExists(patchApplyReport)) {
     return {
       status: "blocked",

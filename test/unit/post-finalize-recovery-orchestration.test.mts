@@ -17,7 +17,9 @@ import { compactCommandStage } from "../../scripts/lib/bafu-orchestration/proces
 type JsonRecord = Record<string, unknown>;
 
 interface StageFixture {
-  status?: number;
+  status?: number | null;
+  error?: Error;
+  signal?: string | null;
   reports?: Array<{ path: string; value: JsonRecord }>;
 }
 
@@ -99,10 +101,11 @@ function makeHarness({
     }
     return {
       result: {
-        status: fixture.status ?? 0,
-        signal: null,
+        status: fixture.status === undefined ? 0 : fixture.status,
+        signal: fixture.signal ?? null,
+        error: fixture.error,
         stdout: `${input.stage}:stdout\n`,
-        stderr: fixture.status ? `${input.stage}:stderr\n` : "",
+        stderr: fixture.status || fixture.error ? `${input.stage}:stderr\n` : "",
       },
       stdoutLog: path.posix.join(input.logDir, `${input.stage}.stdout.log`),
       stderrLog: path.posix.join(input.logDir, `${input.stage}.stderr.log`),
@@ -147,6 +150,29 @@ function assertFrozen(
   );
 }
 
+function commandAuthority(argv: string[]): JsonRecord {
+  return {
+    executable: argv[0],
+    argv: argv.slice(1),
+    display: argv.map(shellQuote).join(" "),
+  };
+}
+
+function assertProjectedAuthorities(
+  result: JsonRecord,
+  invocations: PostFinalizeRecoveryArgvStageInput[],
+): void {
+  const stages = Array.isArray(result.stages)
+    ? result.stages.map((stage) => stage as JsonRecord)
+    : [];
+  assert.equal(stages.length, invocations.length);
+  for (const invocation of invocations) {
+    const projection = stages.find((stage) => stage.stage === invocation.stage);
+    assert.ok(projection, invocation.stage);
+    assert.deepEqual(projection.command, commandAuthority(invocation.argv), invocation.stage);
+  }
+}
+
 test("post-finalize recovery is a bounded typed adapter leaf reused by the process owner", () => {
   const moduleSource = fs.readFileSync(
     path.join(repoRoot, "scripts", "lib", "bafu-orchestration", "post-finalize-recovery.ts"),
@@ -164,6 +190,9 @@ test("post-finalize recovery is a bounded typed adapter leaf reused by the proce
     /--(?:commit|remote-commit|execute-commit|allow-remote-commit)/u,
   );
   assert.match(moduleSource, /export interface PostFinalizeRecoveryAdapter\s*\{/u);
+  assert.equal(moduleSource.match(/adapter\.runArgvStage\(/gu)?.length, 1);
+  assert.equal(moduleSource.match(/adapter\.projectCommandStage\(/gu)?.length, 1);
+  assert.equal(moduleSource.match(/adapter\.commandString\(/gu)?.length, 1);
   assert.match(ownerSource, /from "\.\.\/lib\/bafu-orchestration\/post-finalize-recovery\.ts"/u);
   assert.doesNotMatch(ownerSource, /function runPostFinalizeIdentityRecovery\s*\(/u);
   assert.doesNotMatch(ownerSource, /function runPostFinalizeSemanticRecovery\s*\(/u);
@@ -263,6 +292,7 @@ test("post-finalize identity recovery preserves task, autofill, and apply argv p
       },
     ],
   );
+  assertProjectedAuthorities(result, invocations);
   assert.equal(result.status, "completed");
   assert.equal(
     result.rowsFile,
@@ -277,9 +307,116 @@ test("post-finalize identity recovery preserves task, autofill, and apply argv p
     ],
   );
   assertFrozen("identity recovery result", result, {
-    bytes: 1847,
-    sha256: "0f3eb7174c0b08445bb3291b82f9629ffffc7c45d65d7b653152df49dca8dc86",
+    bytes: 2789,
+    sha256: "5017d130a26200a8c8715d0d4c8298e17fbc109d6cb468f4b0b8f166cae952d9",
   });
+});
+
+test("post-finalize identity recovery projects exact authority for nonzero thrown and missing reports", () => {
+  const gateReport = "run/finalize/curation-gate/dataset-curation-gate-report.json";
+  const reportPath = "run/post-finalize-6-identity-task/identity-decision-task-report.json";
+  const cases: Array<{
+    name: string;
+    fixture: StageFixture;
+    blocker: string;
+    exitCode: number;
+    error: string | null;
+  }> = [
+    {
+      name: "missing-report",
+      fixture: {},
+      blocker: "post_finalize_identity_task_report_missing",
+      exitCode: 0,
+      error: null,
+    },
+    {
+      name: "nonzero-exit",
+      fixture: {
+        status: 9,
+        reports: [{ path: reportPath, value: { status: "execution_failed" } }],
+      },
+      blocker: "post_finalize_identity_task_not_ready",
+      exitCode: 9,
+      error: null,
+    },
+    {
+      name: "thrown-execution",
+      fixture: {
+        status: null,
+        error: new Error("identity task spawn failed"),
+        reports: [{ path: reportPath, value: { status: "execution_failed" } }],
+      },
+      blocker: "post_finalize_identity_task_not_ready",
+      exitCode: 1,
+      error: "identity task spawn failed",
+    },
+  ];
+
+  for (const current of cases) {
+    const harness = makeHarness({
+      initialReports: [
+        { path: gateReport, value: { status: "blocked_needs_foundry_ai_authoring" } },
+      ],
+      stages: { "post-finalize-6.identity-task": current.fixture },
+    });
+    const result = runPostFinalizeIdentityRecovery(
+      {
+        finalizeReport: { files: { curation_gate_report: gateReport } },
+        currentRowsFile: repoPath("run", "processes.cleaned.jsonl"),
+        outDir: repoPath("run"),
+        logDir: repoPath("run", "logs"),
+        attempt: 6,
+      },
+      harness.adapter,
+    );
+
+    assert.equal(result.status, "blocked", current.name);
+    assert.equal(result.blocker?.code, current.blocker, current.name);
+    assertProjectedAuthorities(result, harness.invocations);
+    assert.equal(result.stages?.[0]?.exit_code, current.exitCode, current.name);
+    assert.equal(result.stages?.[0]?.error, current.error, current.name);
+  }
+});
+
+test("post-finalize recovery rejects projected argv drift before the next stage", () => {
+  const gateReport = "run/finalize/curation-gate/dataset-curation-gate-report.json";
+  const harness = makeHarness({
+    initialReports: [{ path: gateReport, value: { status: "blocked_needs_foundry_ai_authoring" } }],
+    stages: {
+      "post-finalize-7.identity-task": {
+        reports: [
+          {
+            path: "run/post-finalize-7-identity-task/identity-decision-task-report.json",
+            value: { status: "ready_for_ai_identity_decisions" },
+          },
+        ],
+      },
+    },
+  });
+  const projectCommandStage = harness.adapter.projectCommandStage;
+  harness.adapter.projectCommandStage = (input) => ({
+    ...projectCommandStage(input),
+    command: { ...input.command, argv: input.command.argv.slice(0, -2) },
+  });
+
+  assert.throws(
+    () =>
+      runPostFinalizeIdentityRecovery(
+        {
+          finalizeReport: { files: { curation_gate_report: gateReport } },
+          currentRowsFile: repoPath("run", "processes.cleaned.jsonl"),
+          outDir: repoPath("run"),
+          logDir: repoPath("run", "logs"),
+          attempt: 7,
+        },
+        harness.adapter,
+      ),
+    /projected command authority drift/u,
+  );
+  assert.deepEqual(
+    harness.invocations.map((invocation) => invocation.stage),
+    ["post-finalize-7.identity-task"],
+  );
 });
 
 test("post-finalize semantic recovery preserves task, autofill, collect, and apply argv plus report bytes", () => {
@@ -401,6 +538,7 @@ test("post-finalize semantic recovery preserves task, autofill, collect, and app
       },
     ],
   );
+  assertProjectedAuthorities(result, invocations);
   assert.equal(result.status, "completed");
   assert.equal(
     result.rowsFile,
@@ -416,8 +554,8 @@ test("post-finalize semantic recovery preserves task, autofill, collect, and app
     ],
   );
   assertFrozen("semantic recovery result", result, {
-    bytes: 2505,
-    sha256: "fd7608883ffedc2571589962255aa49a0d3ff6d0ea6afd07610c78e1e7b772ae",
+    bytes: 3656,
+    sha256: "0fee15a233f454521e3ee26a8144bef75191b39a42253dffecbc083eb3d8dc59",
   });
 });
 
@@ -463,9 +601,10 @@ test("post-finalize recovery stops on missing gate and missing stage evidence", 
   assert.equal(missingIdentityTask.status, "blocked");
   assert.equal(missingIdentityTask.blocker?.code, "post_finalize_identity_task_report_missing");
   assert.equal(missingIdentityTask.stages?.[0]?.exit_code, 9);
+  assertProjectedAuthorities(missingIdentityTask, missingIdentityTaskHarness.invocations);
   assertFrozen("missing identity task result", missingIdentityTask, {
-    bytes: 535,
-    sha256: "4e0a13cf7b80e70b27ce97b0ea0ac7c1a785287d7cd7bfd8852e7e1ada8cd922",
+    bytes: 1017,
+    sha256: "b77a5339e3684f7604f577730d952d62cfd762f5b5230fc4148a5789cf554478",
   });
 
   const missingCollectHarness = makeHarness({
@@ -511,8 +650,9 @@ test("post-finalize recovery stops on missing gate and missing stage evidence", 
   assert.equal(missingCollect.status, "blocked");
   assert.equal(missingCollect.blocker?.code, "post_finalize_semantic_patch_collect_report_missing");
   assert.equal(missingCollect.stages?.[2]?.exit_code, 7);
+  assertProjectedAuthorities(missingCollect, missingCollectHarness.invocations);
   assertFrozen("missing semantic collect result", missingCollect, {
-    bytes: 1638,
-    sha256: "39a69cc838734b824d92949a45d802d1fb2fd48aead285cb1c82f420cf8eb61b",
+    bytes: 2316,
+    sha256: "a46b70f9f4457af14b3895ad5a8424dcf390313d636963941de887ec9fd0deff",
   });
 });

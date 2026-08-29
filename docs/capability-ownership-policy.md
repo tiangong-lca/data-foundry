@@ -86,8 +86,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 349c884
-lastReviewedNote: "Reviewed for Issue #78: Foundry owns lossless local description transport, while schema/decision owners retain content and identity choice."
+lastReviewedCommit: 6d415a7
+lastReviewedNote: "Reviewed for Issue #80: Foundry owns truthful local recovery command projection while CLI/database retain mutation and readback semantics."
 ---
 
 # Capability Ownership Policy
@@ -153,6 +153,8 @@ Candidate retrieval does not own BAFU identity equivalence. Edge Functions and d
 Foundry also owns truthful local completion projection for BAFU category-map decisions. Taxonomy vocabularies and semantic AI choices remain schema/decision-owned; `category-map-projection.ts` retains every supplied manual-review row, `category-map-report.ts` projects closure-wide blockers/status, and `foundry-command-registry.ts` returns nonzero until that closure is empty. These guards cannot invent or apply a category choice.
 
 Foundry owns lossless local transport of a selected canonical description through its rewrite evidence. `canonical-description.ts` validates/clones the JSON value and downstream Foundry stages preserve it; it does not choose the canonical identity, translate or rewrite multilingual content, query remote state, or grant mutation authority. Schema/decision owners still determine the authoritative value, and unsupported/non-JSON evidence fails closed rather than being coerced into display text.
+
+Foundry also owns truthful projection of its local post-finalize recovery invocations. It may record the exact executable/argv it dispatches, derive display text, bind logs/report paths, and reject projection drift before continuing. That report contract does not convert a local recovery command into CommandSpec or remote-write authority; CLI/database owners retain mutation, transaction, and readback semantics.
 
 Deterministic import/conversion/schema validation follows a separate native-tool boundary. Foundry selects the Rust `tidas` executable with `--tidas-bin`, `TIDAS_BIN`, then `PATH`, and optional config with `--tidas-config` then `TIDAS_CONFIG`. It accepts compatible 0.2.x releases only after a `tidas version` handshake proves `tidas.operation-report.v1`; it does not install a Python package, inspect a Python checkout, or pin one patch release. A script-backed test override is dispatched through Node plus an argv prefix on every platform; that portability adapter does not move Rust validation behavior into Foundry. Foundry may materialize the official validation-batch manifest and map the stable Rust report/exit result into its existing validation report, but must not reproduce schema or converter rules.
 
