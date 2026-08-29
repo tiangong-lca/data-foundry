@@ -13,6 +13,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // Issue #68's Worldsteel profile-truth contract is native .mts and adds no compatibility path.
 // Issue #69's strict datetime cleanup and fail-closed scenarios remain native TypeScript too.
 // Issue #70's orchestration stages and post-write handoff cases remain native TypeScript.
+// Issue #74's public CommandSpec and real scope-scheduler cases remain native TypeScript too.
 // Issue #77's identity-equivalence RED/GREEN cases remain native TypeScript too.
 // Issue #78's multilingual rewrite-evidence cases remain native TypeScript too.
 // Issue #79's category-map closure and nonzero-exit cases remain native TypeScript too.

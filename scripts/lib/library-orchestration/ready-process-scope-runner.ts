@@ -1,38 +1,29 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { sha256BatchBytes } from "@tiangong-lca/cli/batch";
+import type {
+  ExecuteFoundryCommandSpecOptions,
+  FoundryCommandSpec,
+  FoundryCommandSpecSpawnResult,
+} from "@tiangong-lca/cli/command-spec";
+
 import type { BlockedScopeReportInput, LibraryDecisionApply } from "./decision-apply.ts";
 import type { JsonRecord } from "./entity-projection.ts";
+import { createReadyScopeCommandExecutor } from "./ready-scope-command.ts";
+import { scheduleReadyScopes, type ReadyScopeScheduleItem } from "./ready-scope-scheduler.ts";
 
-interface SelectedScope extends JsonRecord {
-  process_id: string;
-  process_version: string;
-  state: string;
+interface SelectedScope extends ReadyScopeScheduleItem {
   bundle_dir: unknown;
   rewritten_process_file: unknown;
-  commit_command: string[];
-  verify_command: string[];
+  commit_command: unknown;
+  verify_command: unknown;
 }
 
-export interface ScopeCommandSpawnOptions extends JsonRecord {
-  cwd: string;
-  env: NodeJS.ProcessEnv;
-  encoding: "utf8";
+interface SelectedScopeResult {
+  checkpoint: JsonRecord;
+  blocked: JsonRecord | null;
 }
-
-export interface ScopeCommandSpawnResult {
-  status: number | null;
-  stdout: string | null;
-  stderr: string | null;
-  error?: Error;
-}
-
-export type ScopeCommandSpawn = (
-  executable: string,
-  argv: readonly string[],
-  options: ScopeCommandSpawnOptions,
-) => ScopeCommandSpawnResult;
 
 interface ReadyProcessScopeRunnerDependencies {
   asText: (value: unknown) => string;
@@ -43,11 +34,15 @@ interface ReadyProcessScopeRunnerDependencies {
   readJsonLines: (filePath: string) => JsonRecord[];
   repoRelativeMaybe: (filePath: string | null | undefined) => string | null;
   repoRelativePath: (filePath: string) => string;
+  resolveArtifactPath: (artifactPath: string) => string | null;
   writeJson: (filePath: string, value: unknown) => void;
   writeJsonLines: (filePath: string, rows: readonly unknown[]) => void;
   blockRow: LibraryDecisionApply["blockRow"];
   buildBlockedScopeReport: (input: BlockedScopeReportInput) => JsonRecord;
-  spawnCommand?: ScopeCommandSpawn;
+  executeCommandSpec?: (
+    value: FoundryCommandSpec,
+    options: ExecuteFoundryCommandSpecOptions,
+  ) => Promise<FoundryCommandSpecSpawnResult>;
 }
 
 export interface ReadyProcessScopeRunInput {
@@ -61,6 +56,7 @@ export interface ReadyProcessScopeRunInput {
   dryRun: boolean;
   commandCwd: string;
   commandEnvironment: NodeJS.ProcessEnv;
+  cliPackage: string;
 }
 
 function isJsonRecord(value: unknown): value is JsonRecord {
@@ -80,12 +76,18 @@ export function createReadyProcessScopeRunner({
   readJsonLines,
   repoRelativeMaybe,
   repoRelativePath,
+  resolveArtifactPath,
   writeJson,
   writeJsonLines,
   blockRow,
   buildBlockedScopeReport,
-  spawnCommand = (executable, argv, options) => spawnSync(executable, [...argv], options),
+  executeCommandSpec,
 }: ReadyProcessScopeRunnerDependencies) {
+  const commandExecutor = createReadyScopeCommandExecutor({
+    resolveArtifactPath,
+    repoRelativePath,
+    ...(executeCommandSpec ? { executeCommandSpec } : {}),
+  });
   function scopeRowsFromFile(scopeFile: string | null): JsonRecord[] {
     if (!scopeFile || !fileExists(scopeFile)) return [];
     if (scopeFile.toLowerCase().endsWith(".jsonl")) return readJsonLines(scopeFile);
@@ -97,64 +99,17 @@ export function createReadyProcessScopeRunner({
     return [record];
   }
 
-  function commandArrayFromScope(scope: JsonRecord, key: string): string[] {
-    const value =
+  function commandValueFromScope(scope: JsonRecord, key: string): unknown {
+    return (
       scope[key] ||
       jsonRecord(scope.checkpoint)[key] ||
       jsonRecord(scope.handoff)[key] ||
-      jsonRecord(scope.commit_handoff)[key];
-    if (Array.isArray(value)) return value.map(String).filter(Boolean);
-    return [];
+      jsonRecord(scope.commit_handoff)[key] ||
+      null
+    );
   }
 
-  function runScopeHandoffCommand(
-    argv: string[],
-    {
-      cwd,
-      logDir,
-      token,
-      stage,
-      environment,
-    }: {
-      cwd: string;
-      logDir: string;
-      token: string;
-      stage: string;
-      environment: NodeJS.ProcessEnv;
-    },
-  ): JsonRecord | null {
-    if (!Array.isArray(argv) || argv.length === 0) return null;
-    const stdoutLog = path.join(logDir, `${token}.${stage}.stdout.log`);
-    const stderrLog = path.join(logDir, `${token}.${stage}.stderr.log`);
-    const result = spawnCommand(argv[0], argv.slice(1), {
-      cwd,
-      env: environment,
-      encoding: "utf8",
-    });
-    fs.mkdirSync(logDir, { recursive: true });
-    fs.writeFileSync(stdoutLog, result.stdout || "");
-    fs.writeFileSync(stderrLog, result.stderr || "");
-    const exitCode = typeof result.status === "number" ? result.status : 1;
-    if (result.error) {
-      return {
-        stage,
-        command: argv,
-        exit_code: exitCode,
-        error: String(result.error?.message || result.error),
-        stdout_log: repoRelativePath(stdoutLog),
-        stderr_log: repoRelativePath(stderrLog),
-      };
-    }
-    return {
-      stage,
-      command: argv,
-      exit_code: exitCode,
-      stdout_log: repoRelativePath(stdoutLog),
-      stderr_log: repoRelativePath(stderrLog),
-    };
-  }
-
-  function run({
+  async function run({
     processBundlesDir,
     libraryResolutionPath,
     resolution,
@@ -165,23 +120,30 @@ export function createReadyProcessScopeRunner({
     dryRun,
     commandCwd,
     commandEnvironment,
-  }: ReadyProcessScopeRunInput): JsonRecord {
+    cliPackage,
+  }: ReadyProcessScopeRunInput): Promise<JsonRecord> {
     const scopeRows = scopeRowsFromFile(scopeFile);
     const readyIds = new Set(ensureArray(resolution.ready_scope_ids).map(asText));
-    const checkpoints: JsonRecord[] = [];
-    const blocked: JsonRecord[] = [];
-    const selectedScopes: SelectedScope[] = scopeRows.map((scope) => ({
-      process_id: asText(scope.process_id || scope.id),
-      process_version: asText(scope.process_version || scope.version) || "00.00.001",
-      state: asText(scope.state || scope.closure_status || jsonRecord(scope.checkpoint).state),
-      bundle_dir: scope.bundle_dir,
-      rewritten_process_file:
-        scope.rewritten_process_file || jsonRecord(scope.checkpoint).rewritten_process_file,
-      commit_command: commandArrayFromScope(scope, "commit_command"),
-      verify_command: commandArrayFromScope(scope, "verify_command"),
-    }));
+    const selectedScopes: SelectedScope[] = scopeRows.map((scope, inputIndex) => {
+      const commitCommand = commandValueFromScope(scope, "commit_command");
+      const verifyCommand = commandValueFromScope(scope, "verify_command");
+      return {
+        process_id: asText(scope.process_id || scope.id),
+        process_version: asText(scope.process_version || scope.version) || "00.00.001",
+        state: asText(scope.state || scope.closure_status || jsonRecord(scope.checkpoint).state),
+        bundle_dir: scope.bundle_dir,
+        rewritten_process_file:
+          scope.rewritten_process_file || jsonRecord(scope.checkpoint).rewritten_process_file,
+        commit_command: commitCommand,
+        verify_command: verifyCommand,
+        input_index: inputIndex,
+        content_sha256: sha256BatchBytes(JSON.stringify(scope)),
+        commit_spec_sha256: asText(jsonRecord(commitCommand).sha256) || null,
+        verify_spec_sha256: asText(jsonRecord(verifyCommand).sha256) || null,
+      };
+    });
     const logDir = path.join(outDir, "logs");
-    for (const scope of selectedScopes) {
+    async function executeScope(scope: SelectedScope): Promise<SelectedScopeResult> {
       const isReady =
         readyIds.has(scope.process_id) || scope.state === "ready" || scope.state === "";
       if (!isReady) {
@@ -192,24 +154,25 @@ export function createReadyProcessScopeRunner({
           "Only dependency-closed ready scopes can enter dry-run/write/verify queues.",
           "Resolve this scope in dataset-library-decisions-apply and rerun with the ready scope file.",
         );
-        blocked.push(row);
-        checkpoints.push({
-          schema_version: 1,
-          process_id: scope.process_id,
-          process_version: scope.process_version,
-          state: "blocked_deferred",
-          reason: "scope_not_ready",
-        });
-        continue;
+        return {
+          checkpoint: {
+            schema_version: 1,
+            process_id: scope.process_id,
+            process_version: scope.process_version,
+            state: "blocked_deferred",
+            reason: "scope_not_ready",
+          },
+          blocked: row,
+        };
       }
-      const commandStages: Array<JsonRecord | null> = [];
+      const commandStages: JsonRecord[] = [];
       let state = dryRun ? "dry_run_planned" : "commit_handoff_planned";
-      if (commit && scope.commit_command.length > 0) {
+      if (commit && scope.commit_command) {
         const token = `${scope.process_id}-${scope.process_version}`.replace(
           /[^A-Za-z0-9_.-]+/gu,
           "-",
         );
-        const commitStage = runScopeHandoffCommand(scope.commit_command, {
+        const commitStage = await commandExecutor.run(scope.commit_command, {
           cwd: commandCwd,
           logDir,
           token,
@@ -217,8 +180,8 @@ export function createReadyProcessScopeRunner({
           environment: commandEnvironment,
         });
         commandStages.push(commitStage);
-        if (commitStage?.exit_code === 0 && scope.verify_command.length > 0) {
-          const verifyStage = runScopeHandoffCommand(scope.verify_command, {
+        if (commitStage.exit_code === 0 && scope.verify_command) {
+          const verifyStage = await commandExecutor.run(scope.verify_command, {
             cwd: commandCwd,
             logDir,
             token,
@@ -226,24 +189,57 @@ export function createReadyProcessScopeRunner({
             environment: commandEnvironment,
           });
           commandStages.push(verifyStage);
-          state = verifyStage?.exit_code === 0 ? "verified" : "verify_failed";
+          state = verifyStage.exit_code === 0 ? "verified" : "verify_failed";
         } else {
-          state = commitStage?.exit_code === 0 ? "committed" : "commit_failed";
+          state = commitStage.exit_code === 0 ? "committed" : "commit_failed";
         }
       }
-      checkpoints.push({
-        schema_version: 1,
-        process_id: scope.process_id,
-        process_version: scope.process_version,
-        state,
-        scope_lock: `process:${scope.process_id}:${scope.process_version}`,
-        parallel,
-        bundle_dir: scope.bundle_dir,
-        rewritten_process_file: scope.rewritten_process_file,
-        remote_write_mode: commit ? "commit_handoff_required" : "read-only",
-        command_stages: commandStages.filter(Boolean),
-      });
+      return {
+        checkpoint: {
+          schema_version: 1,
+          process_id: scope.process_id,
+          process_version: scope.process_version,
+          state,
+          scope_lock: `process:${scope.process_id}:${scope.process_version}`,
+          parallel,
+          bundle_dir: scope.bundle_dir,
+          rewritten_process_file: scope.rewritten_process_file,
+          remote_write_mode: commit ? "commit_handoff_required" : "read-only",
+          command_stages: commandStages,
+        },
+        blocked: null,
+      };
     }
+    fs.mkdirSync(outDir, { recursive: true });
+    const batch = await scheduleReadyScopes<SelectedScope, SelectedScopeResult>({
+      runPath: outDir,
+      scopeFile: repoRelativeMaybe(scopeFile),
+      libraryResolution: repoRelativePath(libraryResolutionPath),
+      cliPackage,
+      commit,
+      parallel,
+      items: selectedScopes,
+      execute: executeScope,
+    });
+    const scopeResults = batch.results_input_order.map((entry) =>
+      entry.status === "failed"
+        ? {
+            checkpoint: {
+              schema_version: 1,
+              process_id: entry.item.process_id,
+              process_version: entry.item.process_version,
+              state: "commit_failed",
+              reason: "scope_execution_exception",
+              command_stages: [{ stage: "commit", exit_code: 1, error: String(entry.error) }],
+            },
+            blocked: null,
+          }
+        : entry.value,
+    );
+    const checkpoints = scopeResults.map((result) => result.checkpoint);
+    const blocked = scopeResults
+      .map((result) => result.blocked)
+      .filter((row): row is JsonRecord => Boolean(row));
     const checkpointPath = path.join(outDir, "scope-checkpoints.jsonl");
     const blockedPath = path.join(outDir, "blocked-scope-ledger.jsonl");
     const blockedReportPath = path.join(outDir, "blocked-scope-report.json");
@@ -296,7 +292,7 @@ export function createReadyProcessScopeRunner({
         blocked_scopes_do_not_enter_write_queue: true,
         process_scope_locking: true,
         commit_mode_requires_existing_finalize_mutation_handoff_verify_chain:
-          "This command executes scope-provided commit/verify handoff commands only after the existing finalize/mutation-manifest/commit-handoff/post-write-verify chain has produced them. Without handoff commands, it creates scope-locked commit_handoff_planned checkpoints.",
+          "This command executes scope-provided artifact-bound commit/verify CommandSpecs only after the existing finalize/mutation-manifest/commit-handoff/post-write-verify chain has produced them. Without CommandSpecs, it creates scope-locked commit_handoff_planned checkpoints.",
       },
       blockers: commandFailures.map((row) => ({
         code: row.state,

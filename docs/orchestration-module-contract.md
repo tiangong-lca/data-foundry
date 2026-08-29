@@ -44,8 +44,8 @@ checkPaths:
   - package.json
   - pnpm-lock.yaml
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 405b7d2
-lastReviewedNote: "Reviewed for Issue #83: location queue discovery/fact verification is single-source, byte-pinned on stable input, bounded, and cycle-free."
+lastReviewedCommit: 2504a80
+lastReviewedNote: "Reviewed for Issue #74: public CommandSpec identity, real bounded scheduling, no-replay policy, input ordering, budgets, and cycle freedom are pinned."
 related:
   - https://github.com/tiangong-lca/data-foundry/issues/70
   - https://github.com/tiangong-lca/tiangong-cli/issues/232
@@ -95,6 +95,9 @@ Navigate directly to the narrowest owner:
 | BAFU category-map closure-wide status and blocker report | `scripts/lib/bafu-classification/category-map-report.ts` | decision/task file I/O and artifact writes |
 | Canonical description JSON validation and cloning | `scripts/lib/canonical-description.ts` | canonical selection, file I/O, stage orchestration, or remote authority |
 | Library entity index and process-bundle scope projection | `scripts/lib/library-orchestration/entity-projection.ts` | directory enumeration and artifact writes |
+| Ready process-scope input-order report/checkpoint projection | `scripts/lib/library-orchestration/ready-process-scope-runner.ts` | CommandSpec execution, generic scheduling, and CLI contract semantics |
+| Artifact-bound ready-scope command execution and logs | `scripts/lib/library-orchestration/ready-scope-command.ts` | scope readiness, ordering, batch claims, and report aggregation |
+| Ready-scope content/policy/CLI contract and scheduling adapter | `scripts/lib/library-orchestration/ready-scope-scheduler.ts` | LCA readiness, blockers, command results, and artifacts |
 | Ready-scope filtering, classification preflight, family ordering, and preflight rows | `scripts/lib/batch-orchestration/scope-selection.ts` | ledger reads, profile adapters, worker execution |
 | Location task-queue path/bytes/SHA binding and post-suggest verification | `scripts/lib/batch-orchestration/location-task-queue.ts` | task build, semantic suggestion/apply, taxonomy choice, and report aggregation |
 | Universe and ledger coverage | `scripts/lib/batch-orchestration/universe-coverage.ts` | command help/options and report destination |
@@ -128,11 +131,13 @@ Foundry injects profile and report projection. The generic engine must not know 
 
 The local ignored-runtime audit intentionally excluded credentials, receipt bodies, and data payloads. It found approximately 252 GiB of historical state, including about 173 GiB of Worldsteel batch/pilot copies. One USLCI run produced 10,830 checkpoints for 1,358 scopes over six resume rounds; a scope reached 50 snapshots. Of 75,400 historical artifact locators, only 326 still existed after scratch cleanup. Identity preflight consumed about 39.4 cumulative hours, and one outage produced 129 retryable finalize timeouts that later cleared.
 
-These observations are design inputs, not fixtures to commit. Replay tests use sanitized synthetic cases with the same counts/state transitions. Content-addressed artifact retention is Foundry #76; content/policy-bound resume is #75; raw-argv/fake parallel behavior is #74. Issue #77 separately makes exact names subordinate to the ordered physical-equivalence reasons. Issue #78 preserves multilingual canonical description JSON through every rewrite-ledger consumer and rejects lossy/non-JSON values before mutation. Issue #79 makes every emitted category-map manual-review row closure-blocking even when no current task references it, while preserving resolved report bytes. Issue #80 binds every post-finalize recovery projection to the full executed executable/argv and rejects projector drift. Issue #81 requires structured `23505` plus exact same-id/version semantics, one commit dispatch, and exact readback before closeout. Issue #83 binds suggestion/apply to one location queue artifact fact and rejects TOCTOU drift. Move-only #70 did not silently resolve any of them.
+These observations are design inputs, not fixtures to commit. Replay tests use sanitized synthetic cases with the same counts/state transitions. Content-addressed artifact retention is Foundry #76 and content/policy-bound resume is #75. Issue #74 replaces raw argv/fake parallel execution with public CommandSpec and locked CLI batch contracts. Issue #77 separately makes exact names subordinate to the ordered physical-equivalence reasons. Issue #78 preserves multilingual canonical description JSON through every rewrite-ledger consumer and rejects lossy/non-JSON values before mutation. Issue #79 makes every emitted category-map manual-review row closure-blocking even when no current task references it, while preserving resolved report bytes. Issue #80 binds every post-finalize recovery projection to the full executed executable/argv and rejects projector drift. Issue #81 requires structured `23505` plus exact same-id/version semantics, one commit dispatch, and exact readback before closeout. Issue #83 binds suggestion/apply to one location queue artifact fact and rejects TOCTOU drift. Move-only #70 did not silently resolve any of them.
 
 ## 6. TDD and equivalence
 
 Every extraction begins with a failing contract that imports the intended semantic owner. GREEN first moves existing logic without changing regexes, precedence, option defaults, stage order, object insertion order, stdout, exit status, report paths, hashes, retry classification, or write authority.
+
+Issue #74 freezes public CommandSpec function identity, artifact drift before spawn, raw-array rejection, real max concurrency, exclusive process identity, input-ordered checkpoints/reports, one-attempt mutation failure, pause-before-claim, stop closure, exception isolation and exact CLI package identity. The explicit command-stage/report migration changes only raw array fields to full CommandSpec objects and updates their byte hashes. The command owner stays 494/494 lines, runner 310/314, command leaf 79/140 and scheduler below 140, with no new cycle; the 367-line local CommandSpec implementation is removed.
 
 Issue #78 freezes a real two-language description at four boundaries: library process-reference plus exchange-ledger JSONL bytes/SHA, batch resolution decision bytes/SHA, identity-apply to process-reference transport, and BAFU carry-forward output/report bytes. Scalar strings remain scalar; functions, BigInt, cycles, sparse arrays, and other lossy values fail before payload mutation. The shared validator stays below its 100-line ceiling, `decision-apply.ts` shrinks under 667 lines, identity-patch and carry-forward remain at their prior 618/586 ceilings, and cycle analysis remains unchanged.
 

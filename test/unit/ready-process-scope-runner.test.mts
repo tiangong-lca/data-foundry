@@ -4,6 +4,13 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
+import {
+  createFoundryCommandSpec,
+  executeFoundryCommandSpec,
+  type ExecuteFoundryCommandSpecOptions,
+  type FoundryCommandSpec,
+} from "@tiangong-lca/cli/command-spec";
+
 import { createReadyProcessScopeRunner } from "../../scripts/lib/library-orchestration/ready-process-scope-runner.ts";
 import type { JsonRecord } from "../../scripts/lib/library-orchestration/entity-projection.ts";
 import { testTmpRoot } from "../fixtures/foundry-core.ts";
@@ -41,13 +48,35 @@ function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-test("ready process runner preserves scope order, argv execution, logs and exact reports", () => {
+function commandSpec(executable: string, argv: string[], artifactPath: string): FoundryCommandSpec {
+  const bytes = fs.readFileSync(path.join(fixtureRoot, artifactPath));
+  return createFoundryCommandSpec({
+    executable,
+    argv,
+    binding: {
+      artifacts: [
+        {
+          role: "scope_rows",
+          path: artifactPath.replaceAll("\\", "/"),
+          bytes: bytes.byteLength,
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+        },
+      ],
+    },
+  });
+}
+
+test("ready process runner executes artifact-bound specs concurrently with input-ordered reports", async () => {
   fs.rmSync(fixtureRoot, { recursive: true, force: true });
   const processBundlesDir = path.join(fixtureRoot, "input", "process-bundles");
   const libraryResolutionPath = path.join(fixtureRoot, "input", "library-resolution.json");
   const scopeFile = path.join(fixtureRoot, "input", "scopes.jsonl");
   const outDir = path.join(fixtureRoot, "run");
   fs.mkdirSync(processBundlesDir, { recursive: true });
+  const readyOkRows = path.join("input", "ready-ok.jsonl");
+  const readyFailRows = path.join("input", "ready-fail.jsonl");
+  fs.writeFileSync(path.join(fixtureRoot, readyOkRows), '{"scope":"ready-ok"}\n');
+  fs.writeFileSync(path.join(fixtureRoot, readyFailRows), '{"scope":"ready-fail"}\n');
   const resolution = {
     schema_version: 1,
     status: "completed",
@@ -62,8 +91,8 @@ test("ready process runner preserves scope order, argv execution, logs and exact
       state: "ready",
       bundle_dir: "bundles/ready-ok",
       rewritten_process_file: "rewritten/ready-ok.json",
-      commit_command: ["commit-tool", "--scope", "ready-ok"],
-      verify_command: ["verify-tool", "--scope", "ready-ok"],
+      commit_command: commandSpec("commit-tool", ["--scope", "ready-ok"], readyOkRows),
+      verify_command: commandSpec("verify-tool", ["--scope", "ready-ok"], readyOkRows),
     },
     {
       process_id: "blocked-one",
@@ -76,8 +105,8 @@ test("ready process runner preserves scope order, argv execution, logs and exact
       bundle_dir: "bundles/ready-fail",
       checkpoint: { state: "ready", rewritten_process_file: null },
       commit_handoff: {
-        commit_command: ["commit-tool", "--scope", "ready-fail"],
-        verify_command: ["verify-tool", "--scope", "ready-fail"],
+        commit_command: commandSpec("commit-tool", ["--scope", "ready-fail"], readyFailRows),
+        verify_command: commandSpec("verify-tool", ["--scope", "ready-fail"], readyFailRows),
       },
     },
   ]);
@@ -87,7 +116,14 @@ test("ready process runner preserves scope order, argv execution, logs and exact
     argv: readonly string[];
     options: JsonRecord;
   }> = [];
-  const runner = createReadyProcessScopeRunner({
+  let inFlight = 0;
+  let maxInFlight = 0;
+  const dependencies: Parameters<typeof createReadyProcessScopeRunner>[0] & {
+    executeCommandSpec: (
+      spec: FoundryCommandSpec,
+      options: ExecuteFoundryCommandSpecOptions,
+    ) => ReturnType<typeof executeFoundryCommandSpec>;
+  } = {
     asText: (value: unknown) => (value == null ? "" : String(value).trim()),
     ensureArray: <T,>(value: T | readonly T[] | null | undefined): T[] =>
       Array.isArray(value) ? ([...value] as T[]) : value == null ? [] : [value as T],
@@ -98,6 +134,7 @@ test("ready process runner preserves scope order, argv execution, logs and exact
     readJsonLines,
     repoRelativeMaybe: relative,
     repoRelativePath: (filePath: string) => relative(filePath)!,
+    resolveArtifactPath: (artifactPath: string) => path.join(fixtureRoot, artifactPath),
     writeJson,
     writeJsonLines,
     blockRow: (scope, dependency, code, message, requiredHumanAction) => ({
@@ -122,46 +159,75 @@ test("ready process runner preserves scope order, argv execution, logs and exact
         blocked_scope_report: relative(reportPath),
       },
     }),
-    spawnCommand: (executable, argv, options) => {
-      spawnCalls.push({ executable, argv: [...argv], options });
-      const scopeId = argv.at(-1);
-      if (executable === "commit-tool" && scopeId === "ready-fail") {
-        return { status: 7, stdout: "partial\n", stderr: "boom\n" };
-      }
-      return {
-        status: 0,
-        stdout: executable === "verify-tool" ? "verify ok\n" : "commit ok\n",
-        stderr: "",
-      };
-    },
-  });
+    executeCommandSpec: async (
+      spec: FoundryCommandSpec,
+      options: ExecuteFoundryCommandSpecOptions,
+    ) =>
+      executeFoundryCommandSpec(spec, {
+        ...options,
+        spawnImpl: async (executable, argv, spawnOptions) => {
+          inFlight += 1;
+          maxInFlight = Math.max(maxInFlight, inFlight);
+          spawnCalls.push({ executable, argv: [...argv], options: spawnOptions });
+          await new Promise<void>((resolve) => setImmediate(resolve));
+          inFlight -= 1;
+          const scopeId = argv.at(-1);
+          if (executable === "commit-tool" && scopeId === "ready-fail") {
+            return {
+              status: 7,
+              signal: null,
+              stdout: "partial\n",
+              stderr: "boom\n",
+            };
+          }
+          return {
+            status: 0,
+            signal: null,
+            stdout: executable === "verify-tool" ? "verify ok\n" : "commit ok\n",
+            stderr: "",
+          };
+        },
+      }),
+  };
+  const runner = createReadyProcessScopeRunner(dependencies);
 
-  const report = runner.run({
-    processBundlesDir,
-    libraryResolutionPath,
-    resolution,
-    scopeFile,
-    outDir,
-    parallel: 3,
-    commit: true,
-    dryRun: false,
-    commandCwd: "/controlled-cwd",
-    commandEnvironment: fixedEnvironment,
-  });
+  const report = await Promise.resolve(
+    runner.run({
+      processBundlesDir,
+      libraryResolutionPath,
+      resolution,
+      scopeFile,
+      outDir,
+      parallel: 3,
+      commit: true,
+      dryRun: false,
+      commandCwd: "/controlled-cwd",
+      commandEnvironment: fixedEnvironment,
+      cliPackage: "@tiangong-lca/cli@0.1.3",
+    }),
+  );
 
+  assert.equal(maxInFlight, 2);
   assert.deepEqual(
     spawnCalls.map(({ executable, argv }) => [executable, argv]),
     [
       ["commit-tool", ["--scope", "ready-ok"]],
-      ["verify-tool", ["--scope", "ready-ok"]],
       ["commit-tool", ["--scope", "ready-fail"]],
+      ["verify-tool", ["--scope", "ready-ok"]],
     ],
+  );
+  assert.equal(
+    spawnCalls.filter(
+      ({ executable, argv }) => executable === "commit-tool" && argv.at(-1) === "ready-fail",
+    ).length,
+    1,
+    "a failed mutation spec must never replay",
   );
   for (const call of spawnCalls) {
     assert.equal(call.options.cwd, "/controlled-cwd");
     assert.deepEqual(call.options.env, fixedEnvironment);
     assert.equal(call.options.encoding, "utf8");
-    assert.notEqual(call.options.shell, true, "argv execution must never enable a shell");
+    assert.equal(call.options.shell, false);
   }
 
   const checkpointPath = path.join(outDir, "scope-checkpoints.jsonl");
@@ -170,7 +236,7 @@ test("ready process runner preserves scope order, argv execution, logs and exact
   const reportPath = path.join(outDir, "dataset-process-scope-run-report.json");
   assert.equal(
     sha256(fs.readFileSync(checkpointPath, "utf8")),
-    "4eed63dd28e94f4412dfb5e57614a1b8dabaa904705597c3b516d34d6325fb4f",
+    "63399faadeebed93047f88b8a5ed9a2ab73060979f0d97c4d4f1419931eb4a57",
   );
   assert.equal(
     sha256(fs.readFileSync(blockedPath, "utf8")),
@@ -182,7 +248,7 @@ test("ready process runner preserves scope order, argv execution, logs and exact
   );
   assert.equal(
     sha256(fs.readFileSync(reportPath, "utf8")),
-    "c6ce06249f122855b606bd8d82fd7e4a2b20dcd3a83661e05e9097f4a1a32882",
+    "74e1f3b4dce5d474c2f10afdb8b790c8ee30cb5861968cae30aabbb142c013bc",
   );
   assert.deepEqual(
     readJsonLines(checkpointPath).map((row) => [row.process_id, row.state]),
@@ -204,5 +270,66 @@ test("ready process runner preserves scope order, argv execution, logs and exact
   assert.equal(
     fs.readFileSync(path.join(outDir, "logs", "ready-fail-00.00.001.commit.stderr.log"), "utf8"),
     "boom\n",
+  );
+
+  spawnCalls.length = 0;
+  fs.writeFileSync(path.join(fixtureRoot, readyOkRows), '{"scope":"drifted"}\n');
+  const driftOutDir = path.join(fixtureRoot, "drift-run");
+  const driftReport = await runner.run({
+    processBundlesDir,
+    libraryResolutionPath,
+    resolution,
+    scopeFile,
+    outDir: driftOutDir,
+    parallel: 3,
+    commit: true,
+    dryRun: false,
+    commandCwd: "/controlled-cwd",
+    commandEnvironment: fixedEnvironment,
+    cliPackage: "@tiangong-lca/cli@0.1.3",
+  });
+  assert.equal(driftReport.status, "failed");
+  assert.equal(
+    spawnCalls.filter(({ argv }) => argv.at(-1) === "ready-ok").length,
+    0,
+    "artifact drift must fail before spawn",
+  );
+  const driftCheckpoints = readJsonLines(path.join(driftOutDir, "scope-checkpoints.jsonl"));
+  assert.match(
+    String((driftCheckpoints[0].command_stages as JsonRecord[])[0].error),
+    /artifact drift/u,
+  );
+
+  spawnCalls.length = 0;
+  const rawScopeFile = path.join(fixtureRoot, "input", "raw-scopes.jsonl");
+  writeJsonLines(rawScopeFile, [
+    {
+      process_id: "raw-scope",
+      process_version: "00.00.001",
+      state: "ready",
+      commit_command: ["commit-tool", "--scope", "raw-scope"],
+    },
+  ]);
+  const rawOutDir = path.join(fixtureRoot, "raw-run");
+  const rawReport = await runner.run({
+    processBundlesDir,
+    libraryResolutionPath,
+    resolution,
+    scopeFile: rawScopeFile,
+    outDir: rawOutDir,
+    parallel: 2,
+    commit: true,
+    dryRun: false,
+    commandCwd: "/controlled-cwd",
+    commandEnvironment: fixedEnvironment,
+    cliPackage: "@tiangong-lca/cli@0.1.3",
+  });
+  assert.equal(rawReport.status, "failed");
+  assert.deepEqual(spawnCalls, []);
+  const rawCheckpoint = readJsonLines(path.join(rawOutDir, "scope-checkpoints.jsonl"))[0];
+  assert.equal(rawCheckpoint.state, "commit_failed");
+  assert.match(
+    String((rawCheckpoint.command_stages as JsonRecord[])[0].error),
+    /CommandSpec must contain exact keys/u,
   );
 });

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
 
 import {
   assertFoundryCommandSpecArtifactsCurrent,
@@ -191,5 +192,25 @@ test("handoff runners contain no shell-string parser or shell:true execution pat
     assert.doesNotMatch(source, /function commandOptionValue\s*\(/u, file);
     assert.doesNotMatch(source, /shell:\s*true/u, file);
     assert.match(source, /assertFoundryCommandSpecBindsArtifact/u, file);
+  }
+});
+
+test("Foundry CommandSpec facade is the published CLI subpath without a local implementation", async () => {
+  const facadePath = path.resolve("scripts/lib/foundry-command-spec.ts");
+  const source = fs.readFileSync(facadePath, "utf8");
+  assert.match(source, /from\s+["']@tiangong-lca\/cli\/command-spec["']/u);
+  assert.doesNotMatch(source, /node:(?:child_process|crypto|fs)/u);
+  assert.ok(source.split(/\r?\n/u).length - 1 <= 5);
+
+  const facade = (await import(pathToFileURL(facadePath).href)) as Record<string, unknown>;
+  const published = (await import("@tiangong-lca/cli/command-spec")) as Record<string, unknown>;
+  for (const name of [
+    "createFoundryCommandSpec",
+    "parseFoundryCommandSpec",
+    "executeFoundryCommandSpec",
+    "executeFoundryCommandSpecSync",
+    "assertFoundryCommandSpecArtifactsCurrent",
+  ]) {
+    assert.equal(facade[name], published[name], name);
   }
 });

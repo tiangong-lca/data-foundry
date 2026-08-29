@@ -60,6 +60,8 @@
     "scripts/lib/library-orchestration/identity-preflight-runner.ts": 198,
     "scripts/lib/library-orchestration/index-build.ts": 194,
     "scripts/lib/library-orchestration/ready-process-scope-runner.ts": 314,
+    "scripts/lib/library-orchestration/ready-scope-command.ts": 140,
+    "scripts/lib/library-orchestration/ready-scope-scheduler.ts": 140,
     "scripts/lib/same-identity-commit-recovery.ts": 100
   },
   "allowed_upward_imports": {

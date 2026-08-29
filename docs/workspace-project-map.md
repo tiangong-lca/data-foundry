@@ -84,8 +84,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 405b7d2
-lastReviewedNote: "Reviewed for Issue #83: Foundry queue continuity remains separate from TIDAS location taxonomy and decision/apply semantic ownership."
+lastReviewedCommit: 2504a80
+lastReviewedNote: "Reviewed for Issue #74: CLI owns generic CommandSpec/batch mechanics while Foundry retains scope readiness, blockers, reports, and logs."
 ---
 
 # Workspace Project Map
@@ -110,6 +110,7 @@ The Wave 26 library, classification, authoring, process-scope and batch modules 
 | Canonical multilingual description transport | `tiangong-lca-data-foundry` for lossless local rewrite/reference/ledger projection; schema and semantic decision owners retain value/identity choice | `canonical-description.ts` validation/clone → library rewrite ledger → identity resolution/apply/carry-forward without display coercion |
 | Post-finalize recovery command evidence | `tiangong-lca-data-foundry` for exact local executable/argv dispatch and reader projection; CLI/database retain remote mutation/readback authority | one recovery helper → exact `{ executable, argv, display }` → logs/report path → fail before downstream stage on drift |
 | Location task-queue continuity | `tiangong-lca-data-foundry` for local path/bytes/SHA binding; TIDAS schema and location decision/apply tooling retain taxonomy/value semantics | task build → one queue discovery/fact → suggest → exact fact verify → apply only if unchanged |
+| Generic ready-scope CommandSpec and bounded scheduling | `tiangong-lca-cli` for public contract, artifact checks, locked claims/pause/stop/no-retry; Foundry for LCA readiness, input-order reports and logs | scope CommandSpecs + full scope/spec/policy/CLI fingerprints → public CLI batch → Foundry checkpoints/blockers |
 | Same-id/version lost-success recovery | Foundry for strict structured-evidence eligibility and no-replay orchestration; `tiangong-lca-cli`, Edge Functions, and database for mutation outcome and readback truth | explicit `23505` plus exact conflict semantics → one commit dispatch → content-bound verify of owner/state/id/version/payload/root → closeout only on exact proof |
 | Remote commit, readback, and publish prep | `tiangong-lca-cli`, Edge Functions, database | `dataset-post-authoring-finalize` and source/contact support handoff artifacts, installed CLI commit commands, `pnpm exec tiangong-lca dataset verify-remote`, `publish run`, Edge verification; Foundry does not override foreign/RLS-hidden `missing_dataset` readback |
 | Credential-scoped identity proof and process guard | `tiangong-lca-cli` for live session/receipt; `tiangong-lca-data-foundry` for profile/thread intent and child isolation | `pnpm account:run -- <profile> -- <executable> [args...]` → installed CLI 0.1.3 `auth identity-receipt` |
