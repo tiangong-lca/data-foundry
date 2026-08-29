@@ -185,6 +185,8 @@ test("scope preparation resolves one location task queue for both suggest and ap
       repoRelative: (filePath) => filePath ?? "",
       resolveRepoPath: (value) => (typeof value === "string" ? value : null),
       fileExists: (filePath) => Boolean(filePath),
+      fileBytes: () => Buffer.byteLength('{"queue":"stable"}\n'),
+      sha256File: () => createHash("sha256").update('{"queue":"stable"}\n').digest("hex"),
       readJsonLines: (filePath) =>
         filePath === "/queues/location.jsonl" ? [{ queue: "location" }] : [],
     },
@@ -392,6 +394,21 @@ test("scope preparation blocks missing replaced and path-drifted queues before l
     if (result.status !== "deferred") continue;
     assert.equal(result.stage, "location.queue.verify", mode);
     assert.equal(result.blocker.code, "location_task_queue_drift", mode);
+    const expectedFact = {
+      path: taskQueue,
+      bytes: originalBytes.byteLength,
+      sha256: createHash("sha256").update(originalBytes).digest("hex"),
+    };
+    assert.deepEqual(result.blocker.expected, expectedFact, mode);
+    if (mode === "missing") {
+      assert.deepEqual(result.blocker.observed, { path: taskQueue, missing: true }, mode);
+    } else {
+      assert.deepEqual(result.blocker.observed, {
+        path: mode === "path-drift" ? `${taskQueue}.replacement` : taskQueue,
+        bytes: queueBytes.byteLength,
+        sha256: createHash("sha256").update(queueBytes).digest("hex"),
+      });
+    }
     assert.deepEqual(locationTaskQueueLookups, ["/scope/location-task"], mode);
     assert.deepEqual(
       stageInputs.map((input) => input.stage),
