@@ -213,6 +213,7 @@ export function createLibraryScopeWorkflowCommands({
     readJsonLines,
     repoRelativeMaybe,
     repoRelativePath,
+    resolveArtifactPath: resolveRepoPath,
     writeJson,
     writeJsonLines,
     blockRow: decisionApply.blockRow,
@@ -432,8 +433,7 @@ export function createLibraryScopeWorkflowCommands({
     writeJson(resolutionPath, resolution);
     return resolution;
   }
-
-  function runDatasetProcessScopeRun(options: JsonRecord): JsonRecord {
+  async function runDatasetProcessScopeRun(options: JsonRecord): Promise<JsonRecord> {
     if (options.help) {
       return help(
         "dataset-process-scope-run",

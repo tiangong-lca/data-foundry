@@ -172,6 +172,8 @@ test("orchestration owners have an explicit shrink-only line budget", () => {
     "scripts/lib/library-orchestration/identity-preflight-runner.ts",
     "scripts/lib/library-orchestration/index-build.ts",
     "scripts/lib/library-orchestration/ready-process-scope-runner.ts",
+    "scripts/lib/library-orchestration/ready-scope-command.ts",
+    "scripts/lib/library-orchestration/ready-scope-scheduler.ts",
     "scripts/lib/same-identity-commit-recovery.ts",
   ]);
   for (const [relativePath, ceiling] of Object.entries(contract.semantic_module_ceiling_lines)) {

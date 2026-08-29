@@ -4,6 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+
+import { createFileArtifactFact, createFoundryCommandSpec } from "@tiangong-lca/cli/command-spec";
 import {
   createFoundryRuntimeUtils,
   resolveInstalledTiangongLcaCliPackage,
@@ -743,11 +745,22 @@ test("process scope runner plans only ready scopes and keeps blocked scopes out 
   ]);
 });
 
-test("process scope runner executes scope-provided handoff commands in commit mode", () => {
+test("process scope runner executes scope-provided artifact-bound specs in commit mode", () => {
   const { processBundlesDir } = createLibraryFixture();
   const runRoot = path.join(fixtureRoot, "run", "scope-commit");
   const resolutionPath = path.join(runRoot, "library-resolution.json");
   const scopeFile = path.join(runRoot, "ready-scope-with-commands.jsonl");
+  const scopeRowsArtifact = path.join(runRoot, "scope-rows.jsonl");
+  writeJsonLines(scopeRowsArtifact, [{ process_id: ids.p1, status: "ready" }]);
+  const binding = {
+    artifacts: [
+      createFileArtifactFact({
+        role: "scope_rows",
+        path: rel(scopeRowsArtifact),
+        filePath: scopeRowsArtifact,
+      }),
+    ],
+  };
   writeJson(resolutionPath, {
     schema_version: 1,
     status: "completed",
@@ -759,8 +772,16 @@ test("process scope runner executes scope-provided handoff commands in commit mo
       process_id: ids.p1,
       process_version: "00.00.001",
       state: "ready",
-      commit_command: [process.execPath, "-e", "console.log('commit ok')"],
-      verify_command: [process.execPath, "-e", "console.log('verify ok')"],
+      commit_command: createFoundryCommandSpec({
+        executable: process.execPath,
+        argv: ["-e", "console.log('commit ok')"],
+        binding,
+      }),
+      verify_command: createFoundryCommandSpec({
+        executable: process.execPath,
+        argv: ["-e", "console.log('verify ok')"],
+        binding,
+      }),
     },
   ]);
   const report = runFoundry([

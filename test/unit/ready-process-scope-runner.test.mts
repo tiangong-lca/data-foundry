@@ -11,10 +11,7 @@ import {
   type FoundryCommandSpec,
 } from "@tiangong-lca/cli/command-spec";
 
-import {
-  createReadyProcessScopeRunner,
-  type ScopeCommandSpawnOptions,
-} from "../../scripts/lib/library-orchestration/ready-process-scope-runner.ts";
+import { createReadyProcessScopeRunner } from "../../scripts/lib/library-orchestration/ready-process-scope-runner.ts";
 import type { JsonRecord } from "../../scripts/lib/library-orchestration/entity-projection.ts";
 import { testTmpRoot } from "../fixtures/foundry-core.ts";
 
@@ -125,12 +122,7 @@ test("ready process runner executes artifact-bound specs concurrently with input
     executeCommandSpec: (
       spec: FoundryCommandSpec,
       options: ExecuteFoundryCommandSpecOptions,
-    ) => Promise<unknown>;
-    spawnCommand: (
-      executable: string,
-      argv: readonly string[],
-      options: ScopeCommandSpawnOptions,
-    ) => never;
+    ) => ReturnType<typeof executeFoundryCommandSpec>;
   } = {
     asText: (value: unknown) => (value == null ? "" : String(value).trim()),
     ensureArray: <T,>(value: T | readonly T[] | null | undefined): T[] =>
@@ -142,6 +134,7 @@ test("ready process runner executes artifact-bound specs concurrently with input
     readJsonLines,
     repoRelativeMaybe: relative,
     repoRelativePath: (filePath: string) => relative(filePath)!,
+    resolveArtifactPath: (artifactPath: string) => path.join(fixtureRoot, artifactPath),
     writeJson,
     writeJsonLines,
     blockRow: (scope, dependency, code, message, requiredHumanAction) => ({
@@ -166,9 +159,6 @@ test("ready process runner executes artifact-bound specs concurrently with input
         blocked_scope_report: relative(reportPath),
       },
     }),
-    spawnCommand: (executable, argv, options) => {
-      throw new Error(`raw spawn must not execute: ${executable} ${argv.join(" ")} ${options.cwd}`);
-    },
     executeCommandSpec: async (
       spec: FoundryCommandSpec,
       options: ExecuteFoundryCommandSpecOptions,
@@ -245,7 +235,7 @@ test("ready process runner executes artifact-bound specs concurrently with input
   const reportPath = path.join(outDir, "dataset-process-scope-run-report.json");
   assert.equal(
     sha256(fs.readFileSync(checkpointPath, "utf8")),
-    "4eed63dd28e94f4412dfb5e57614a1b8dabaa904705597c3b516d34d6325fb4f",
+    "63399faadeebed93047f88b8a5ed9a2ab73060979f0d97c4d4f1419931eb4a57",
   );
   assert.equal(
     sha256(fs.readFileSync(blockedPath, "utf8")),
@@ -257,7 +247,7 @@ test("ready process runner executes artifact-bound specs concurrently with input
   );
   assert.equal(
     sha256(fs.readFileSync(reportPath, "utf8")),
-    "c6ce06249f122855b606bd8d82fd7e4a2b20dcd3a83661e05e9097f4a1a32882",
+    "bfa6a32d8c2436611119db485b0b9d3f6386ad8c3a58a7f7460fc066ed25e887",
   );
   assert.deepEqual(
     readJsonLines(checkpointPath).map((row) => [row.process_id, row.state]),
