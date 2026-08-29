@@ -1,5 +1,10 @@
 import path from "node:path";
 
+import {
+  canonicalDescriptionPair,
+  type CanonicalDescription,
+} from "../lib/canonical-description.ts";
+
 interface LooseRecord {
   [key: string]: LooseRecord | undefined;
 }
@@ -8,7 +13,7 @@ interface IdentityCanonical {
   table: string;
   ref_object_id: string;
   version: string;
-  short_description: string;
+  short_description: CanonicalDescription;
 }
 
 interface IdentityProfile {
@@ -146,17 +151,17 @@ export function createIdentityDecisionCommands({
       canonical.ref_object_id ?? canonical.refObjectId ?? canonical.id ?? canonical["@refObjectId"],
     );
     if (!id) return null;
+    const explicitDescription = canonicalDescriptionPair(
+      canonical.short_description ?? canonical.shortDescription,
+      asText,
+    ).ledger;
     return {
       table: asText(canonical.table) || "flows",
       ref_object_id: id,
       version:
         asText(canonical.version ?? canonical.ref_version ?? canonical["@version"]) || "00.00.001",
       short_description:
-        asText(
-          canonical.short_description ??
-            canonical.shortDescription ??
-            canonical["common:shortDescription"]?.["#text"],
-        ) || id,
+        explicitDescription || asText(canonical["common:shortDescription"]?.["#text"]) || id,
     };
   }
 

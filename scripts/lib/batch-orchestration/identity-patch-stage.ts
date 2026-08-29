@@ -1,5 +1,6 @@
 import path from "node:path";
 
+import { canonicalDescriptionPair as descriptionPair } from "../canonical-description.ts";
 import type {
   CarryForwardResult,
   MergeCompletedReusableIdentityDecisionsInput,
@@ -7,7 +8,6 @@ import type {
 
 export type IdentityPatchJsonRecord = Record<string, unknown>;
 export type IdentityPatchCarryForwardResult = CarryForwardResult;
-
 export interface IdentityPatchStageResult extends IdentityPatchJsonRecord {
   readonly stage: string;
   readonly json: IdentityPatchJsonRecord | null;
@@ -103,7 +103,6 @@ export interface IdentityPatchStageService {
 function isJsonRecord(value: unknown): value is IdentityPatchJsonRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
-
 function jsonRecord(value: unknown): IdentityPatchJsonRecord {
   return isJsonRecord(value) ? value : {};
 }
@@ -283,6 +282,7 @@ export function createIdentityPatchStageService(
         const sourceFlowVersion = asText(rewrite.source_flow_version) || "00.00.001";
         const key = `${sourceFlowId}@@${sourceFlowVersion}`;
         if (distinctBySourceFlow.has(key)) continue;
+        const description = descriptionPair(rewrite.canonical_short_description, asText).ledger;
         distinctBySourceFlow.set(key, {
           schema_version: 1,
           dataset_type: "flow",
@@ -295,11 +295,11 @@ export function createIdentityPatchStageService(
             table: "flows",
             ref_object_id: asText(rewrite.canonical_flow_id),
             version: asText(rewrite.canonical_flow_version) || "00.00.001",
-            short_description: asText(rewrite.canonical_short_description) || undefined,
+            short_description: description || undefined,
           },
           canonical_flow_id: asText(rewrite.canonical_flow_id),
           canonical_flow_version: asText(rewrite.canonical_flow_version) || "00.00.001",
-          canonical_short_description: asText(rewrite.canonical_short_description) || undefined,
+          canonical_short_description: description || undefined,
           basis:
             "Applied from library-resolution exchange-reference-rewrites (deterministic physical-equivalence reuse).",
           evidence: {

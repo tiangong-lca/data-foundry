@@ -1,6 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import {
+  canonicalDescriptionPair,
+  cloneCanonicalDescription,
+  type CanonicalDescription,
+} from "./canonical-description.ts";
+
 type UnknownRecord = Record<string, unknown>;
 type PathSegment = string | number;
 type DatasetIdentity = { id: string | null; version: string | null };
@@ -78,7 +84,7 @@ type IdentityMapping = {
     table: string;
     ref_object_id: string;
     version: string;
-    short_description: string;
+    short_description: CanonicalDescription;
   };
   identity_preflight: unknown;
   identity_decision?: unknown;
@@ -163,15 +169,18 @@ export function createIdentityReferenceRewriteUtils({
   }: {
     id: string;
     version?: string | null;
-    shortDescription?: string | null;
+    shortDescription?: unknown;
   }) {
-    const description = shortDescription || id;
+    const description = cloneCanonicalDescription(shortDescription) || id;
     return {
       "@type": "flow data set",
       "@refObjectId": id,
       "@version": version || "00.00.001",
       "@uri": `../flows/${id}.json`,
-      "common:shortDescription": multiLang(description, languageForText(description)),
+      "common:shortDescription":
+        typeof description === "string"
+          ? multiLang(description, languageForText(description))
+          : description,
     };
   }
 
@@ -345,6 +354,10 @@ export function createIdentityReferenceRewriteUtils({
           canonical.ref_object_id ?? canonical.refObjectId ?? canonical.id,
         );
         if (!sourceId || !canonicalId) continue;
+        const canonicalDescription = canonicalDescriptionPair(
+          canonical.short_description ?? canonical.shortDescription,
+          asText,
+        ).ledger;
         const mapping = {
           source: {
             ref_object_id: sourceId,
@@ -356,8 +369,7 @@ export function createIdentityReferenceRewriteUtils({
             version:
               asText(canonical.version ?? canonical.ref_version ?? canonical["@version"]) ||
               "00.00.001",
-            short_description:
-              asText(canonical.short_description ?? canonical.shortDescription) || canonicalId,
+            short_description: canonicalDescription || canonicalId,
           },
           identity_preflight: row.identity_preflight ?? null,
           identity_decision: row.identity_decision ?? null,
@@ -782,7 +794,10 @@ export function createIdentityReferenceRewriteUtils({
               table: "flows",
               ref_object_id: next["@refObjectId"],
               version: next["@version"],
-              short_description: next["common:shortDescription"]?.["#text"] ?? null,
+              short_description:
+                typeof mapping.canonical.short_description === "string"
+                  ? referenceShortDescription(next) || null
+                  : cloneCanonicalDescription(next["common:shortDescription"]),
               short_description_source: preservesExistingShortDescription
                 ? "existing_reference_display_text"
                 : "canonical_reference",
