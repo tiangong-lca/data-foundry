@@ -2198,13 +2198,24 @@ test("BAFU batch import runner rejects a missing --process-id-file with the path
 });
 
 function buildScopeScratchDir(label: string) {
-  const scopeDir = path.join(fixtureRoot, label, "scopes", processId);
+  const runDir = path.join(fixtureRoot, label);
+  const scopeDir = path.join(runDir, "scopes", processId);
   fs.mkdirSync(path.join(scopeDir, "import-ledger"), { recursive: true });
   fs.writeFileSync(
     path.join(scopeDir, "import-ledger", "ok.processes.verified.jsonl"),
     '{"process_id":"x"}\n',
   );
-  fs.writeFileSync(path.join(scopeDir, "scope-run-report.json"), '{"status":"verified"}\n');
+  const controlReport = path.join(scopeDir, "flow-pre-finalize", "finalize-report.json");
+  const payloadRows = path.join(scopeDir, "flow-pre-finalize", "rows.jsonl");
+  writeJson(controlReport, { status: "completed" });
+  writeJsonLines(payloadRows, [{ payload: "heavy" }]);
+  writeJson(path.join(scopeDir, "scope-run-report.json"), {
+    status: "verified",
+    files: {
+      process_finalize_report: rel(controlReport),
+      final_rows: rel(payloadRows),
+    },
+  });
   fs.mkdirSync(path.join(scopeDir, "flow-pre-finalize", "mutation-manifest"), { recursive: true });
   fs.writeFileSync(
     path.join(scopeDir, "flow-pre-finalize", "mutation-manifest", "items.jsonl"),
@@ -2212,17 +2223,35 @@ function buildScopeScratchDir(label: string) {
   );
   fs.mkdirSync(path.join(scopeDir, "flow-identity-task"), { recursive: true });
   fs.mkdirSync(path.join(scopeDir, "logs"), { recursive: true });
-  return scopeDir;
+  return { scopeDir, runDir, controlReport, payloadRows };
 }
 
 test("trimVerifiedScopeScratch keeps audit artifacts and removes heavy scratch on commit", () => {
-  const scopeDir = buildScopeScratchDir("trim-commit");
-  bafuBatchImportRunTestHooks.trimVerifiedScopeScratch(scopeDir, { commit: true });
+  const { scopeDir, runDir, controlReport, payloadRows } = buildScopeScratchDir("trim-commit");
+  bafuBatchImportRunTestHooks.trimVerifiedScopeScratch(scopeDir, { commit: true }, runDir);
   assert.equal(
     fs.existsSync(path.join(scopeDir, "import-ledger", "ok.processes.verified.jsonl")),
     true,
   );
   assert.equal(fs.existsSync(path.join(scopeDir, "scope-run-report.json")), true);
+  assert.equal(fs.existsSync(path.join(scopeDir, "scope-control-receipt.json")), true);
+  assert.equal(fs.existsSync(path.join(scopeDir, "scope-prune-report.json")), true);
+  assert.equal(fs.existsSync(controlReport), false);
+  assert.equal(fs.existsSync(payloadRows), false);
+  assert.equal(
+    readJson(path.join(scopeDir, "scope-prune-report.json")).counts
+      .dangling_required_references,
+    0,
+  );
+  assert.equal(
+    fs.existsSync(
+      path.join(
+        repoRoot,
+        readJson(path.join(scopeDir, "scope-control-receipt.json")).artifacts[0].store_locator,
+      ),
+    ),
+    true,
+  );
   assert.equal(fs.existsSync(path.join(scopeDir, "flow-pre-finalize")), false);
   assert.equal(fs.existsSync(path.join(scopeDir, "flow-identity-task")), false);
   assert.equal(fs.existsSync(path.join(scopeDir, "logs")), false);
@@ -2230,12 +2259,16 @@ test("trimVerifiedScopeScratch keeps audit artifacts and removes heavy scratch o
 
 test("trimVerifiedScopeScratch is a no-op without commit and with keep-scratch", () => {
   const noCommit = buildScopeScratchDir("trim-no-commit");
-  bafuBatchImportRunTestHooks.trimVerifiedScopeScratch(noCommit, { commit: false });
-  assert.equal(fs.existsSync(path.join(noCommit, "flow-pre-finalize")), true);
+  bafuBatchImportRunTestHooks.trimVerifiedScopeScratch(noCommit.scopeDir, { commit: false });
+  assert.equal(fs.existsSync(path.join(noCommit.scopeDir, "flow-pre-finalize")), true);
 
   const kept = buildScopeScratchDir("trim-keep-scratch");
-  bafuBatchImportRunTestHooks.trimVerifiedScopeScratch(kept, { commit: true, keepScratch: true });
-  assert.equal(fs.existsSync(path.join(kept, "flow-pre-finalize")), true);
+  bafuBatchImportRunTestHooks.trimVerifiedScopeScratch(
+    kept.scopeDir,
+    { commit: true, keepScratch: true },
+    kept.runDir,
+  );
+  assert.equal(fs.existsSync(path.join(kept.scopeDir, "flow-pre-finalize")), true);
 });
 
 test("trimVerifiedScopeScratch never throws on a missing scope dir", () => {
