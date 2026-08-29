@@ -16,6 +16,7 @@ import {
   compactCommandStage,
   projectBafuProcessScopeFinalizeReport,
 } from "../../scripts/lib/bafu-orchestration/process-scope-report.ts";
+import { createProcessScopeResumeContract } from "../../scripts/lib/bafu-orchestration/process-scope-resume.ts";
 import type { JsonRecord } from "../../scripts/lib/bafu-orchestration/finalize-recovery-policy.ts";
 
 const fixedNow = "2026-08-26T12:00:00.000Z";
@@ -226,8 +227,11 @@ function makeFixture(): {
         if (filePath === rowsFile) return inputHashes.rows_file_sha256;
         if (filePath === supportRowsFile) return inputHashes.source_support_rows_file_sha256;
         if (filePath === sourceRowsFile) return inputHashes.source_rows_file_sha256;
+        if (state.bytes.has(filePath)) return sha256(state.bytes.get(filePath)!);
+        if (state.json.has(filePath)) return sha256(prettyBytes(state.json.get(filePath)));
         throw new Error(`unexpected hash input: ${filePath}`);
       },
+      cliPackage: "@tiangong-lca/cli@0.1.3",
     },
     options: {
       boolean: (value) => value === true || value === "true",
@@ -474,7 +478,7 @@ test("new scope plan freezes all input hashes, finalize argv, report and ledger 
 });
 
 test("matching ledger checkpoint wins over a newer mismatched row and explicit finalize report", () => {
-  const { run, state } = makeFixture();
+  const { adapter, run, state } = makeFixture();
   const matchingReportPath = "/fixture/checkpoints/matching/finalize.json";
   const mismatchedReportPath = "/fixture/checkpoints/mismatched/finalize.json";
   const explicitReportPath = "/fixture/explicit/finalize.json";
@@ -499,24 +503,43 @@ test("matching ledger checkpoint wins over a newer mismatched row and explicit f
   state.json.set(mismatched.gatePath, { schema_version: 2, status: "ready", counts: {} });
   state.json.set(explicitReportPath, explicit.report);
   state.json.set(explicit.gatePath, { schema_version: 2, status: "ready", counts: {} });
+  const options = commonOptions({ finalizeReport: explicitReportPath });
+  const finalizeCommand = adapter.finalize.build({
+    options,
+    rowsFile,
+    outDir,
+    importLedgerDir: path.posix.join(outDir, "import-ledger"),
+  }).argv;
+  const resumeContract = createProcessScopeResumeContract({
+    commandName: "dataset-bafu-process-scope-e2e",
+    processScope,
+    inputHashes,
+    options,
+    finalizeCommand,
+    cliPackage: "@tiangong-lca/cli@0.1.3",
+  });
   const checkpointRows: JsonRecord[] = [
     {
       schema_version: 1,
       stage: "post_authoring_finalize",
       input_hashes: inputHashes,
+      resume_contract: resumeContract,
+      finalize_report_sha256: sha256(prettyBytes(matching.report)),
       files: { finalize_report: relative(matchingReportPath) },
     },
     {
       schema_version: 1,
       stage: "post_authoring_finalize",
       input_hashes: { ...inputHashes, rows_file_sha256: "different-rows" },
+      resume_contract: { ...resumeContract, content_sha256: "different-rows" },
+      finalize_report_sha256: sha256(prettyBytes(mismatched.report)),
       files: { finalize_report: relative(mismatchedReportPath) },
     },
   ];
   state.ledgers.set(ledgerPath, checkpointRows);
   state.bytes.set(ledgerPath, ledgerBytes(checkpointRows));
 
-  const report = run(commonOptions({ finalizeReport: explicitReportPath }));
+  const report = run(options);
   assert.equal(report.status, "blocked_unresolved_ai_curation");
   assert.equal((report.files as JsonRecord).finalize_report, relative(matchingReportPath));
   assert.equal((report.resume as JsonRecord).reused_existing_finalize_report, true);
@@ -536,7 +559,7 @@ test("matching ledger checkpoint wins over a newer mismatched row and explicit f
     state,
     ledgerPath,
     appended,
-    "c07426d408c857ea92fa8afddb4127004de11e3770f44b09ffdad2d226bf5074",
+    "01a011848bb26cbe29d20558c6c4b40a8c81da7d6e2b7d92ce86da8dd40cc4f7",
   );
 });
 
@@ -645,7 +668,7 @@ test("finalize-ready execute with commit=false keeps the exact handoff ready rep
     state,
     ledgerPath,
     ledgerRows,
-    "82c9700021bf58334799a953a499761743c2b15954513f647d91e08882df3660",
+    "41ba08bff664f2eb4ce4fb19738e67229be11b4cfd245515ec1cfc6aaa3ec8e4",
   );
 });
 
@@ -712,7 +735,7 @@ test("handoff-ready commit preserves finalize then handoff stage order and termi
     state,
     ledgerPath,
     ledgerRows,
-    "28b48ee6a642786c7c2ae29fd52bb5e4eb3b7afbeb9031560eb441ef87fea230",
+    "b5d243985aabd1ffd96e25d682b494148f6eb45c97bda8da444350f6b3ee56eb",
   );
 });
 

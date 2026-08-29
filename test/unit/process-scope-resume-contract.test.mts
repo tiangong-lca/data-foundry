@@ -63,7 +63,7 @@ test("process checkpoint requires exact contract and exact finalize report bytes
     },
   ];
   const adapter = {
-    exists: (filePath: string | null) => filePath === reportPath,
+    exists: (filePath: string | null) => filePath === "ledger" || filePath === reportPath,
     readJsonLines: () => [...rows],
     resolve: (value: unknown) => (value ? `/repo/${String(value)}` : null),
     fileSha256: () => reportSha,

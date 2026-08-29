@@ -144,6 +144,7 @@ test("orchestration owners have an explicit shrink-only line budget", () => {
     "scripts/lib/bafu-orchestration/process-handoff-plan.ts",
     "scripts/lib/bafu-orchestration/process-handoff.ts",
     "scripts/lib/bafu-orchestration/process-scope-run.ts",
+    "scripts/lib/bafu-orchestration/process-scope-resume.ts",
     "scripts/lib/bafu-orchestration/process-scope-runtime.ts",
     "scripts/lib/bafu-orchestration/process-scope-report.ts",
     "scripts/lib/batch-orchestration/authoring-task-filter.ts",
