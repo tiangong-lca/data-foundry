@@ -1441,6 +1441,7 @@ test("BAFU batch import runner applies pending-only before limit and honors paus
       stage: "flow.authoring",
       code: "bafu_name_split_unsupported",
       status: "blocked",
+      resume_contract: exactBafuResumeContract(scopes[1], { runDir, schemaDir, bundlesDir }),
     },
   ]);
 
@@ -1565,6 +1566,16 @@ test("BAFU batch import runner carries forward prior ledgers into fresh batch se
       stage: "flow.authoring",
       code: "bafu_name_split_unsupported",
       status: "blocked",
+      resume_contract: exactBafuResumeContract(
+        scopes[1],
+        { runDir, schemaDir, bundlesDir },
+        {
+          commit: false,
+          parallel: 5,
+          targetUserId: "",
+          selectionOrder: "estimated-weight-asc",
+        },
+      ),
     },
   ]);
   writeJsonLines(path.join(sourceOutDir, "import-ledger", "verified-support-identities.jsonl"), [

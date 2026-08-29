@@ -51,6 +51,7 @@
     "scripts/lib/batch-orchestration/scope-recovery-evidence.ts": 160,
     "scripts/lib/batch-orchestration/scope-resume-contract.ts": 160,
     "scripts/lib/batch-orchestration/scope-resume-ledger.ts": 120,
+    "scripts/lib/batch-orchestration/scope-resume-projection.ts": 60,
     "scripts/lib/batch-orchestration/scope-source-content.ts": 100,
     "scripts/lib/batch-orchestration/scope-attempt-ledger.ts": 150,
     "scripts/lib/batch-orchestration/scope-execution-exception.ts": 140,

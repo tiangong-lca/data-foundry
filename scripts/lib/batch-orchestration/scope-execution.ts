@@ -32,6 +32,7 @@ export function createBatchScopeExecutionService(
   }: RunBatchScopeInput): Promise<JsonRecord> {
     const processId = io.asText(scope.process_id || scope.id);
     const processVersion = io.asText(scope.process_version || scope.version) || "00.00.001";
+    const resumeContract = paths.resumeContractsByScopeKey.get(`${processId}@${processVersion}`);
     const targetUserId = io.asText(options.targetUserId);
     const stateCode = io.integerOption(options.stateCode, 0) ?? 0;
     const scopeDir = io.joinPath(paths.outDir, "scopes", processId);
@@ -85,7 +86,10 @@ export function createBatchScopeExecutionService(
     io.appendJsonLine(paths.scopeCheckpoints, { ...checkpointBase, state: "started" });
 
     const block = ({ stage, blocker, report }: ScopeActionInput): JsonRecord => {
-      const row = operations.blockRow({ scope, stage, blocker, report, rerunCommand });
+      const row: JsonRecord = {
+        ...operations.blockRow({ scope, stage, blocker, report, rerunCommand }),
+        resume_contract: resumeContract ?? null,
+      };
       io.appendJsonLine(paths.blockedHumanReview, row);
       const categoryPath =
         paths[`blocked_${operations.categoryForBlocker(row.code).replace(/-/gu, "_")}`];
@@ -105,7 +109,10 @@ export function createBatchScopeExecutionService(
     };
 
     const fail = ({ stage, blocker, report }: ScopeActionInput): JsonRecord => {
-      const row = operations.blockRow({ scope, stage, blocker, report, rerunCommand });
+      const row: JsonRecord = {
+        ...operations.blockRow({ scope, stage, blocker, report, rerunCommand }),
+        resume_contract: resumeContract ?? null,
+      };
       io.appendJsonLine(paths.failedRetry, row);
       io.appendJsonLine(paths.blocked_remote_write, row);
       io.appendJsonLine(paths.scopeCheckpoints, {
@@ -554,7 +561,6 @@ export function createBatchScopeExecutionService(
       processScopeReport = processCommit.report;
       processCloseoutReport = processCommit.handoff.closeoutReportPath ?? null;
     }
-    const resumeContract = paths.resumeContractsByScopeKey.get(`${processId}@${processVersion}`);
     verifiedScopes.add(`${processId}@${processVersion}`);
     io.appendJsonLine(paths.okProcesses, {
       ...operations.okDatasetRow({

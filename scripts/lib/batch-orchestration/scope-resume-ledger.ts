@@ -13,6 +13,11 @@ export interface MatchingVerifiedScopes {
   invalidatedRows: JsonRecord[];
 }
 
+export interface MatchingBlockedScopes {
+  blockedScopes: Set<string>;
+  invalidatedRows: JsonRecord[];
+}
+
 function record(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
 }
@@ -23,11 +28,10 @@ function scopeKey(row: JsonRecord): string | null {
   return id ? `${id}@${version}` : null;
 }
 
-export function loadMatchingVerifiedScopes(
+function latestRows(
   filePaths: readonly string[],
-  contracts: ReadonlyMap<string, ScopeResumeContract>,
   adapter: ScopeResumeLedgerAdapter,
-): MatchingVerifiedScopes {
+): Map<string, JsonRecord> {
   const latest = new Map<string, JsonRecord>();
   for (const filePath of filePaths) {
     for (const value of adapter.readJsonLines(filePath)) {
@@ -36,6 +40,15 @@ export function loadMatchingVerifiedScopes(
       if (key) latest.set(key, { ...row, source_ledger_file: adapter.repoRelative(filePath) });
     }
   }
+  return latest;
+}
+
+export function loadMatchingVerifiedScopes(
+  filePaths: readonly string[],
+  contracts: ReadonlyMap<string, ScopeResumeContract>,
+  adapter: ScopeResumeLedgerAdapter,
+): MatchingVerifiedScopes {
+  const latest = latestRows(filePaths, adapter);
   const verifiedScopes = new Set<string>();
   const invalidatedRows: JsonRecord[] = [];
   for (const [key, contract] of contracts) {
@@ -50,6 +63,7 @@ export function loadMatchingVerifiedScopes(
       schema_version: 1,
       generated_at_utc: adapter.nowIso(),
       status: "invalidated",
+      kind: "verified_scope",
       scope_key: key,
       reason,
       expected_resume_contract: contract,
@@ -58,4 +72,37 @@ export function loadMatchingVerifiedScopes(
     });
   }
   return { verifiedScopes, invalidatedRows };
+}
+
+export function loadMatchingBlockedScopes(
+  filePaths: readonly string[],
+  contracts: ReadonlyMap<string, ScopeResumeContract>,
+  verifiedScopes: ReadonlySet<string>,
+  adapter: ScopeResumeLedgerAdapter,
+): MatchingBlockedScopes {
+  const latest = latestRows(filePaths, adapter);
+  const blockedScopes = new Set<string>();
+  const invalidatedRows: JsonRecord[] = [];
+  for (const [key, row] of latest) {
+    if (verifiedScopes.has(key)) continue;
+    const contract = contracts.get(key);
+    if (!contract) continue;
+    const reason = scopeResumeMismatchReason(row.resume_contract, contract);
+    if (!reason) {
+      blockedScopes.add(key);
+      continue;
+    }
+    invalidatedRows.push({
+      schema_version: 1,
+      generated_at_utc: adapter.nowIso(),
+      status: "invalidated",
+      kind: "blocked_scope",
+      scope_key: key,
+      reason,
+      expected_resume_contract: contract,
+      observed_resume_contract: row.resume_contract ?? null,
+      source_ledger_file: row.source_ledger_file,
+    });
+  }
+  return { blockedScopes, invalidatedRows };
 }

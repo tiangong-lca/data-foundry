@@ -31,7 +31,7 @@ import {
   createBafuScopeResumeContract,
   type BafuScopeResumeContext,
 } from "./scope-resume-contract.ts";
-import { loadMatchingVerifiedScopes } from "./scope-resume-ledger.ts";
+import { loadScopeResumeProjection } from "./scope-resume-projection.ts";
 import { createBafuScopeSourceContent } from "./scope-source-content.ts";
 import { createScopeAttemptLedgerService } from "./scope-attempt-ledger.ts";
 import { createScopeExecutionExceptionRecorder } from "./scope-execution-exception.ts";
@@ -275,7 +275,6 @@ function runtime(): BafuBatchRuntime {
   return bafuBatchRuntime;
 }
 
-// Profile-config accessors. Defaults == BAFU, so BAFU is byte-for-byte unchanged.
 function activeProfile(): string {
   return bafuBatchConfig.profile || "bafu";
 }
@@ -558,7 +557,6 @@ const {
   batchRunStatus,
   blockRow,
   datasetIdentityKey,
-  loadActiveBlockedScopeSetFromFiles,
   loadVerifiedSetFromFiles,
   okDatasetRow,
   writeBlockedScopeViews,
@@ -1284,16 +1282,19 @@ export function createBafuBatchImportRunCommands(
       }),
     );
     paths.resumeContractsByScopeKey = resumeContractsByScopeKey;
-    const resumeMatches = loadMatchingVerifiedScopes(okScopeFiles, resumeContractsByScopeKey, {
-      nowIso,
-      readJsonLines,
-      repoRelative,
+    const {
+      verifiedScopes,
+      blockedScopes,
+      invalidatedRows: resumeInvalidatedRows,
+    } = loadScopeResumeProjection({
+      verifiedFiles: okScopeFiles,
+      blockedFiles: blockedScopeFiles,
+      contracts: resumeContractsByScopeKey,
+      adapter: { nowIso, readJsonLines, repoRelative },
     });
-    writeJsonLines(paths.resumeInvalidated, resumeMatches.invalidatedRows);
-    const verifiedScopes = resumeMatches.verifiedScopes;
+    writeJsonLines(paths.resumeInvalidated, resumeInvalidatedRows);
     const verifiedFlows = loadVerifiedSetFromFiles(okFlowFiles, "flow");
     const verifiedFlowRowsByKey = loadVerifiedFlowRowsByKey(okFlowFiles);
-    const blockedScopes = loadActiveBlockedScopeSetFromFiles(blockedScopeFiles, verifiedScopes);
     const supportIdentityCache = primeVerifiedSupportIdentityCache({
       outDir,
       cacheFile: paths.supportIdentityCache,
@@ -1374,7 +1375,7 @@ export function createBafuBatchImportRunCommands(
         pending_candidate_scopes: selection.stats.candidate_scopes_before_limit,
         selected_scopes: scopes.length,
         filtered_already_verified_scopes: selection.stats.filtered_already_verified,
-        invalidated_verified_scopes: resumeMatches.invalidatedRows.length,
+        invalidated_verified_scopes: resumeInvalidatedRows.length,
         filtered_already_blocked_scopes: selection.stats.filtered_already_blocked,
         filtered_classification_missing_scopes: selection.stats.filtered_classification_missing,
         filtered_classification_not_leaf_scopes: selection.stats.filtered_classification_not_leaf,
@@ -1461,7 +1462,7 @@ export function createBafuBatchImportRunCommands(
           processed_scopes: 0,
           pending_candidate_scopes: selection.stats.candidate_scopes_before_limit,
           filtered_already_verified_scopes: selection.stats.filtered_already_verified,
-          invalidated_verified_scopes: resumeMatches.invalidatedRows.length,
+          invalidated_verified_scopes: resumeInvalidatedRows.length,
           filtered_already_blocked_scopes: selection.stats.filtered_already_blocked,
           filtered_classification_missing_scopes: selection.stats.filtered_classification_missing,
           filtered_classification_not_leaf_scopes: selection.stats.filtered_classification_not_leaf,
@@ -1599,7 +1600,7 @@ export function createBafuBatchImportRunCommands(
         selected_scopes: scopes.length,
         pending_candidate_scopes: selection.stats.candidate_scopes_before_limit,
         filtered_already_verified_scopes: selection.stats.filtered_already_verified,
-        invalidated_verified_scopes: resumeMatches.invalidatedRows.length,
+        invalidated_verified_scopes: resumeInvalidatedRows.length,
         filtered_already_blocked_scopes: selection.stats.filtered_already_blocked,
         filtered_classification_missing_scopes: selection.stats.filtered_classification_missing,
         filtered_classification_not_leaf_scopes: selection.stats.filtered_classification_not_leaf,
