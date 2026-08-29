@@ -274,8 +274,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: b466bf1
-lastReviewedNote: "Reviewed for Issue #81: tests pin strict conflict evidence, no replay, exact readback rejection, retry exhaustion, budgets, and cycle freedom."
+lastReviewedCommit: 8a6e7af
+lastReviewedNote: "Reviewed for Issue #78: tests pin multilingual JSON bytes/SHA through producer, batch, identity, process rewrite, carry-forward, budgets, and invalid values."
 ---
 
 # Test Layout
@@ -372,6 +372,8 @@ Issue #70's `unit/batch-post-write-handoff.test.mts` isolates the asynchronous b
 Issue #81 strengthens that boundary in `unit/process-handoff-orchestration.test.mts`, `unit/batch-post-write-handoff.test.mts`, and the command-level `commands/bafu-batch-import-run.test.mts` hook contract. Process lost-success recovery verifies without a second commit; owner, state, payload, unexpected-row, and repeated missing-readback findings fail before closeout. Batch and process both reject text-only, mixed, malformed, and incomplete conflict evidence unless structured code `23505` and exact same-id/version semantics agree. The orchestration budget and cycle contract tracks the shared classifier plus bounded process plan/closeout helpers.
 
 Issue #77 is pinned at two layers. `unit/bafu-identity-equivalence-contract.test.mts` proves an exact product-flow name with property/unit/geography/category conflicts cannot become a reuse candidate, freezes the ordered reasons, and retains exact-name reuse when the physical evidence matches. `commands/bafu-auto-authoring.test.mts` drives a real task/package through autofill and deterministic identity apply, proving the conflicting candidate becomes `create_new` evidence and the source flow UUID survives.
+
+Issue #78 is pinned across the full description transport. `unit/library-decision-apply.test.mts` freezes two-language process-reference and exchange-ledger bytes/SHA, scalar stability, and pre-mutation rejection of function/BigInt/cyclic values. `unit/batch-orchestration-identity-patch.test.mts` freezes resolution-decision bytes/SHA; `scenarios/flow-identity-decisions.test.mts` runs identity apply and the later process rewrite; `unit/bafu-identity-decision-carry-forward.test.mts` freezes carry-forward output/report bytes. `unit/orchestration-module-budget.test.mts` tracks the sub-100-line validator and unchanged 667/618/586 ceilings plus cycle freedom.
 
 Issue #79 is pinned across artifact, report, and CLI boundaries. `unit/bafu-leaf-category-map-projection.test.mts` supplies unreferenced conflict, invalid-code, missing-context, and incomplete decisions to the bounded `category-map-report.ts` leaf; each must produce manual status plus a source/reason/artifact blocker, while resolved-only report bytes remain frozen. `unit/orchestration-module-budget.test.mts` keeps projection/report at 656/140-line shrink-only ceilings and cycle-free. `unit/foundry-cli-spine.test.mts` requires manual status to exit nonzero, and `commands/bafu-leaf-classification-tasks.test.mts` proves the real command still writes its complete JSON/manual-review/candidate artifacts on that nonzero exit.
 

@@ -44,8 +44,8 @@ checkPaths:
   - package.json
   - pnpm-lock.yaml
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: b466bf1
-lastReviewedNote: "Reviewed for Issue #81: strict conflict classification, one mutation attempt, and exact owner/state/id/version/payload/root readback are explicit module boundaries."
+lastReviewedCommit: 8a6e7af
+lastReviewedNote: "Reviewed for Issue #78: multilingual description validation is a bounded pure leaf with byte-pinned producer, consumer, and carry-forward contracts."
 related:
   - https://github.com/tiangong-lca/data-foundry/issues/70
   - https://github.com/tiangong-lca/tiangong-cli/issues/232
@@ -93,6 +93,7 @@ Navigate directly to the narrowest owner:
 | BAFU patch and source-trace projection | `scripts/lib/bafu-authoring/patch-projection.ts` | input/output files and report emission |
 | BAFU process/product leaf repair | `scripts/lib/bafu-classification/leaf-repair.ts` | schema loading, sharding, task/report files |
 | BAFU category-map closure-wide status and blocker report | `scripts/lib/bafu-classification/category-map-report.ts` | decision/task file I/O and artifact writes |
+| Canonical description JSON validation and cloning | `scripts/lib/canonical-description.ts` | canonical selection, file I/O, stage orchestration, or remote authority |
 | Library entity index and process-bundle scope projection | `scripts/lib/library-orchestration/entity-projection.ts` | directory enumeration and artifact writes |
 | Ready-scope filtering, classification preflight, family ordering, and preflight rows | `scripts/lib/batch-orchestration/scope-selection.ts` | ledger reads, profile adapters, worker execution |
 | Universe and ledger coverage | `scripts/lib/batch-orchestration/universe-coverage.ts` | command help/options and report destination |
@@ -125,11 +126,13 @@ Foundry injects profile and report projection. The generic engine must not know 
 
 The local ignored-runtime audit intentionally excluded credentials, receipt bodies, and data payloads. It found approximately 252 GiB of historical state, including about 173 GiB of Worldsteel batch/pilot copies. One USLCI run produced 10,830 checkpoints for 1,358 scopes over six resume rounds; a scope reached 50 snapshots. Of 75,400 historical artifact locators, only 326 still existed after scratch cleanup. Identity preflight consumed about 39.4 cumulative hours, and one outage produced 129 retryable finalize timeouts that later cleared.
 
-These observations are design inputs, not fixtures to commit. Replay tests use sanitized synthetic cases with the same counts/state transitions. Content-addressed artifact retention is Foundry #76; content/policy-bound resume is #75; raw-argv/fake parallel behavior is #74. Issue #77 separately makes exact names subordinate to the ordered physical-equivalence reasons. Issue #79 makes every emitted category-map manual-review row closure-blocking even when no current task references it, while preserving resolved report bytes. Issue #81 requires structured `23505` plus exact same-id/version semantics, one commit dispatch, and exact readback before closeout. Move-only #70 did not silently resolve any of them.
+These observations are design inputs, not fixtures to commit. Replay tests use sanitized synthetic cases with the same counts/state transitions. Content-addressed artifact retention is Foundry #76; content/policy-bound resume is #75; raw-argv/fake parallel behavior is #74. Issue #77 separately makes exact names subordinate to the ordered physical-equivalence reasons. Issue #78 preserves multilingual canonical description JSON through every rewrite-ledger consumer and rejects lossy/non-JSON values before mutation. Issue #79 makes every emitted category-map manual-review row closure-blocking even when no current task references it, while preserving resolved report bytes. Issue #81 requires structured `23505` plus exact same-id/version semantics, one commit dispatch, and exact readback before closeout. Move-only #70 did not silently resolve any of them.
 
 ## 6. TDD and equivalence
 
 Every extraction begins with a failing contract that imports the intended semantic owner. GREEN first moves existing logic without changing regexes, precedence, option defaults, stage order, object insertion order, stdout, exit status, report paths, hashes, retry classification, or write authority.
+
+Issue #78 freezes a real two-language description at four boundaries: library process-reference plus exchange-ledger JSONL bytes/SHA, batch resolution decision bytes/SHA, identity-apply to process-reference transport, and BAFU carry-forward output/report bytes. Scalar strings remain scalar; functions, BigInt, cycles, sparse arrays, and other lossy values fail before payload mutation. The shared validator stays below its 100-line ceiling, `decision-apply.ts` shrinks under 667 lines, identity-patch and carry-forward remain at their prior 618/586 ceilings, and cycle analysis remains unchanged.
 
 The process and batch post-write handoff slices characterize strict lost-success recovery: explicit `23505` plus exact same-id/version semantics may proceed to verification, while text-only, mixed, malformed, or incomplete evidence fails without replay. Exact readback must prove owner, state, identity, version, payload, and root closure; mismatch, unexpected, missing, or exhausted reports never close out. Retryable readback failures preserve attempts and exponential delay, and ordinary commit failures stop before verification. The finalize/commit slice adds five cases for missing reports, verified support reuse, stale support invalidation plus fresh commit/cache, exact recovered-row evidence, and support-failure short-circuiting. The CLI boundary adds four focused cases for public contract/run-lock release, pause/stop closure, family serialization with independent progress, and command delegation. The public batch owner is now 5 lines (ceiling 20); the 1,649-line composition root is visible under a separate 1,700-line shrink-only ceiling, while the 166-line CLI adapter, 136-line authoring filter, 149-line recovery evidence, 68-line scratch policy, 534-line batch handoff, 478-line process handoff, and 425-line finalize/commit modules remain independently budgeted.
 
