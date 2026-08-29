@@ -248,7 +248,7 @@ test("ready process runner executes artifact-bound specs concurrently with input
   );
   assert.equal(
     sha256(fs.readFileSync(reportPath, "utf8")),
-    "bfa6a32d8c2436611119db485b0b9d3f6386ad8c3a58a7f7460fc066ed25e887",
+    "74e1f3b4dce5d474c2f10afdb8b790c8ee30cb5861968cae30aabbb142c013bc",
   );
   assert.deepEqual(
     readJsonLines(checkpointPath).map((row) => [row.process_id, row.state]),

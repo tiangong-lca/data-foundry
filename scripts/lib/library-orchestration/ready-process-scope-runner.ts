@@ -292,7 +292,7 @@ export function createReadyProcessScopeRunner({
         blocked_scopes_do_not_enter_write_queue: true,
         process_scope_locking: true,
         commit_mode_requires_existing_finalize_mutation_handoff_verify_chain:
-          "This command executes scope-provided commit/verify handoff commands only after the existing finalize/mutation-manifest/commit-handoff/post-write-verify chain has produced them. Without handoff commands, it creates scope-locked commit_handoff_planned checkpoints.",
+          "This command executes scope-provided artifact-bound commit/verify CommandSpecs only after the existing finalize/mutation-manifest/commit-handoff/post-write-verify chain has produced them. Without CommandSpecs, it creates scope-locked commit_handoff_planned checkpoints.",
       },
       blockers: commandFailures.map((row) => ({
         code: row.state,
