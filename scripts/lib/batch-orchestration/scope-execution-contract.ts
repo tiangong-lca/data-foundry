@@ -10,6 +10,7 @@ import type {
   BatchScopePreparationInput,
   BatchScopePreparationResult,
 } from "./scope-preparation.ts";
+import type { ScopeResumeContract } from "./scope-resume-contract.ts";
 
 export type BatchScopeJsonRecord = Record<string, unknown>;
 
@@ -35,10 +36,11 @@ export interface BatchScopeExecutionPaths {
   supportIdentityCache: string;
   preflightPlan: string;
   bafuFamilySignatures: string;
+  resumeInvalidated: string;
+  resumeContractsByScopeKey: Map<string, ScopeResumeContract>;
   resolutionRewritesByProcess: Map<string, BatchScopeJsonRecord[]>;
   applyResolutionRewritesMode: boolean;
 }
-
 export interface RunBatchScopeInput {
   scope: BatchScopeJsonRecord;
   familySignature: unknown;
@@ -51,12 +53,10 @@ export interface RunBatchScopeInput {
   blockedScopes: Set<string>;
   workerIndex?: number;
 }
-
 interface DatasetIdentity {
   id: string | null;
   version: string;
 }
-
 export interface BatchScopeActionInput {
   stage: string;
   blocker: BatchScopeJsonRecord;

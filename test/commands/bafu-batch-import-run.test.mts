@@ -9,6 +9,8 @@ import {
   createFileArtifactFact,
   createFoundryCommandSpec,
 } from "../../scripts/lib/foundry-command-spec.ts";
+import { createBafuScopeResumeContract } from "../../scripts/lib/batch-orchestration/scope-resume-contract.ts";
+import { createBafuScopeSourceContent } from "../../scripts/lib/batch-orchestration/scope-source-content.ts";
 import {
   fs,
   path,
@@ -141,6 +143,28 @@ function writeRequiredContext(runDir: string, schemaDir: string): void {
     path.join(runDir, "decisions-v4-leaf-category-map", "classification-decisions.jsonl"),
     [],
   );
+}
+
+function requiredContextFiles(runDir: string, schemaDir: string): string[] {
+  return [
+    path.join(runDir, "decisions-v4-leaf-category-map", "classification-decisions.jsonl"),
+    ...["flow", "process"].flatMap((type) =>
+      ["schema.json", "runtime-ruleset.json", "methodology.yaml"].map((name) =>
+        path.join(runDir, "context", type, "outputs", name),
+      ),
+    ),
+    ...[
+      "tidas_contacts_category.json",
+      "tidas_flowproperties_category.json",
+      "tidas_flows_elementary_category.json",
+      "tidas_flows_product_category.json",
+      "tidas_lciamethods_category.json",
+      "tidas_processes_category.json",
+      "tidas_sources_category.json",
+      "tidas_unitgroups_category.json",
+      "tidas_locations_category.json",
+    ].map((name) => path.join(schemaDir, name)),
+  ];
 }
 
 function bafuFamilyProcessPayload({
@@ -299,14 +323,35 @@ test("BAFU batch import runner skips already verified scopes through resumable l
   fs.mkdirSync(bundlesDir, { recursive: true });
   writeRequiredContext(runDir, schemaDir);
   const scopeFile = path.join(root, "ready-scopes.jsonl");
-  writeJsonLines(scopeFile, [
-    {
-      schema_version: 1,
-      process_id: processId,
-      process_version: "00.00.001",
-      closure_status: "ready",
-    },
-  ]);
+  const scope = {
+    schema_version: 1,
+    process_id: processId,
+    process_version: "00.00.001",
+    closure_status: "ready",
+    source_bundle_sha256: "a".repeat(64),
+  };
+  writeJsonLines(scopeFile, [scope]);
+  const resumeContract = createBafuScopeResumeContract(scope, {
+    command: "dataset-bafu-batch-import-run",
+    profile: "bafu",
+    targetUserId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+    stateCode: 0,
+    commit: true,
+    parallel: 2,
+    requireLeafClassification: false,
+    selectionOrder: "input",
+    applyResolutionRewrites: false,
+    familySignatures: true,
+    mintUnmatchedFpUgSupport: false,
+    cliPackage: "@tiangong-lca/cli@0.1.3",
+    sourceContent: createBafuScopeSourceContent({
+      scope,
+      processBundlesDir: bundlesDir,
+      sharedFiles: requiredContextFiles(runDir, schemaDir),
+      resolutionRewriteRows: [],
+      repoRelative: rel,
+    }),
+  });
   writeJsonLines(path.join(outDir, "import-ledger", "ok.scopes.verified.jsonl"), [
     {
       schema_version: 1,
@@ -316,6 +361,7 @@ test("BAFU batch import runner skips already verified scopes through resumable l
       process_id: processId,
       process_version: "00.00.001",
       status: "verified",
+      resume_contract: resumeContract,
     },
   ]);
 

@@ -501,7 +501,6 @@ export function createBatchScopeExecutionService(
         });
       }
     }
-
     let processScopeReport = processPreReportPath;
     let processCloseoutReport: string | null = null;
     if (processPreReport.status === "ready_for_remote_write" && !processPatchApplyReport) {
@@ -569,8 +568,8 @@ export function createBatchScopeExecutionService(
       processScopeReport = processCommit.report;
       processCloseoutReport = processCommit.handoff.closeoutReportPath ?? null;
     }
-
     verifiedScopes.add(`${processId}@${processVersion}`);
+    const resumeContract = paths.resumeContractsByScopeKey.get(`${processId}@${processVersion}`);
     io.appendJsonLine(
       paths.okProcesses,
       operations.okDatasetRow({
@@ -593,6 +592,7 @@ export function createBatchScopeExecutionService(
       status: "verified",
       report: io.repoRelative(processScopeReport),
       rows: { flows: flowIds.length, processes: 1 },
+      resume_contract: resumeContract ?? null,
     });
     io.appendJsonLine(paths.scopeCheckpoints, {
       ...checkpointBase,

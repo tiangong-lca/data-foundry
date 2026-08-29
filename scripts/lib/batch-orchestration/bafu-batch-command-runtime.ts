@@ -27,6 +27,12 @@ import {
   selectionOrderOption,
   scopeKey,
 } from "./scope-selection.ts";
+import {
+  createBafuScopeResumeContract,
+  type BafuScopeResumeContext,
+} from "./scope-resume-contract.ts";
+import { loadMatchingVerifiedScopes } from "./scope-resume-ledger.ts";
+import { createBafuScopeSourceContent } from "./scope-source-content.ts";
 import { runFoundryScopeBatch } from "./cli-bounded-batch-runner.ts";
 import { createAuthoringTaskFilterService } from "./authoring-task-filter.ts";
 import { createScopeRecoveryEvidenceService } from "./scope-recovery-evidence.ts";
@@ -202,9 +208,6 @@ const bafuBatchRuntimeKeys = [
 ] as const satisfies readonly (keyof BafuBatchRuntime)[];
 
 let bafuBatchRuntime: BafuBatchRuntime | null = null;
-// Profile config lets the same engine drive other profiles (e.g. USLCI) without
-// changing BAFU behavior: every default below reproduces the BAFU runner exactly,
-// so an empty config == the historical BAFU runner.
 let bafuBatchConfig: BafuBatchConfig = {};
 
 function installBafuBatchRuntime(deps: BafuBatchRuntime, config: BafuBatchConfig = {}): void {
@@ -1225,6 +1228,8 @@ export function createBafuBatchImportRunCommands(
       )!,
       preflightPlan: path.join(outDir, "import-ledger", "preflight.plan.jsonl"),
       bafuFamilySignatures: path.join(outDir, "import-ledger", "bafu-family-signatures.json"),
+      resumeInvalidated: path.join(outDir, "import-ledger", "resume.invalidated.jsonl"),
+      resumeContractsByScopeKey: new Map(),
       // FIX A: run-level resolution rewrite index (process_id -> rewrite rows) plus the
       // mode flag, threaded into runOneScope -> flow runIdentityAndPatch. Empty map when
       // the flag is off or --library-resolution is not provided (BAFU defaults).
@@ -1258,7 +1263,7 @@ export function createBafuBatchImportRunCommands(
         (directoryExists(defaultProcessesDir) ? defaultProcessesDir : null),
     );
     const schemas = defaultSchemaFiles(options);
-    const missingInputs = [
+    const resumeSharedFiles = [
       paths.libraryClassificationDecisions,
       defaultContext(runDir, "process").schemaFile,
       defaultContext(runDir, "process").yamlFile,
@@ -1269,13 +1274,52 @@ export function createBafuBatchImportRunCommands(
       schemas.processCategory,
       schemas.flowProductCategory,
       schemas.location,
-    ].filter((filePath) => !fileExists(filePath));
+      ...schemas.allClassification,
+    ].filter((filePath): filePath is string => Boolean(filePath));
+    const missingInputs = resumeSharedFiles.filter((filePath) => !fileExists(filePath));
     if (missingInputs.length > 0) {
       throw new Error(
         `Missing required batch import inputs:\n${missingInputs.map(repoRelative).join("\n")}`,
       );
     }
-    const verifiedScopes = loadVerifiedSetFromFiles(okScopeFiles, "scope");
+    const resumeContext: BafuScopeResumeContext = {
+      command: activeCommandName(),
+      profile: activeProfile(),
+      targetUserId,
+      stateCode,
+      commit,
+      parallel,
+      requireLeafClassification,
+      selectionOrder,
+      applyResolutionRewrites: applyResolutionRewrites(),
+      familySignatures: familySignaturesEnabled(),
+      mintUnmatchedFpUgSupport: mintUnmatchedFpUgSupport(),
+      cliPackage: resolveInstalledTiangongLcaCliPackage().packageSpec,
+    };
+    const resumeContractsByScopeKey = new Map(
+      allScopes.map((scope) => {
+        const processId = asText(scope.process_id || scope.id);
+        const contract = createBafuScopeResumeContract(scope, {
+          ...resumeContext,
+          sourceContent: createBafuScopeSourceContent({
+            scope,
+            processBundlesDir,
+            sharedFiles: resumeSharedFiles,
+            resolutionRewriteRows: resolutionRewritesByProcess.get(processId) ?? [],
+            repoRelative,
+          }),
+        });
+        return [contract.identity_key, contract] as const;
+      }),
+    );
+    paths.resumeContractsByScopeKey = resumeContractsByScopeKey;
+    const resumeMatches = loadMatchingVerifiedScopes(okScopeFiles, resumeContractsByScopeKey, {
+      nowIso,
+      readJsonLines,
+      repoRelative,
+    });
+    writeJsonLines(paths.resumeInvalidated, resumeMatches.invalidatedRows);
+    const verifiedScopes = resumeMatches.verifiedScopes;
     const verifiedFlows = loadVerifiedSetFromFiles(okFlowFiles, "flow");
     const verifiedFlowRowsByKey = loadVerifiedRowsByKeyFromFiles(okFlowFiles, "flow");
     const blockedScopes = loadActiveBlockedScopeSetFromFiles(blockedScopeFiles, verifiedScopes);
@@ -1359,6 +1403,7 @@ export function createBafuBatchImportRunCommands(
         pending_candidate_scopes: selection.stats.candidate_scopes_before_limit,
         selected_scopes: scopes.length,
         filtered_already_verified_scopes: selection.stats.filtered_already_verified,
+        invalidated_verified_scopes: resumeMatches.invalidatedRows.length,
         filtered_already_blocked_scopes: selection.stats.filtered_already_blocked,
         filtered_classification_missing_scopes: selection.stats.filtered_classification_missing,
         filtered_classification_not_leaf_scopes: selection.stats.filtered_classification_not_leaf,
@@ -1445,6 +1490,7 @@ export function createBafuBatchImportRunCommands(
           processed_scopes: 0,
           pending_candidate_scopes: selection.stats.candidate_scopes_before_limit,
           filtered_already_verified_scopes: selection.stats.filtered_already_verified,
+          invalidated_verified_scopes: resumeMatches.invalidatedRows.length,
           filtered_already_blocked_scopes: selection.stats.filtered_already_blocked,
           filtered_classification_missing_scopes: selection.stats.filtered_classification_missing,
           filtered_classification_not_leaf_scopes: selection.stats.filtered_classification_not_leaf,
@@ -1469,6 +1515,7 @@ export function createBafuBatchImportRunCommands(
           report: repoRelative(path.join(outDir, "dataset-bafu-batch-import-run-report.json")),
           run_manifest: repoRelative(path.join(outDir, "import-ledger", "run-manifest.json")),
           preflight_plan: repoRelative(paths.preflightPlan),
+          resume_invalidated: repoRelative(paths.resumeInvalidated),
           bafu_family_signatures: repoRelative(paths.bafuFamilySignatures),
           support_identity_cache: repoRelative(paths.supportIdentityCache),
         },
@@ -1559,6 +1606,7 @@ export function createBafuBatchImportRunCommands(
         selected_scopes: scopes.length,
         pending_candidate_scopes: selection.stats.candidate_scopes_before_limit,
         filtered_already_verified_scopes: selection.stats.filtered_already_verified,
+        invalidated_verified_scopes: resumeMatches.invalidatedRows.length,
         filtered_already_blocked_scopes: selection.stats.filtered_already_blocked,
         filtered_classification_missing_scopes: selection.stats.filtered_classification_missing,
         filtered_classification_not_leaf_scopes: selection.stats.filtered_classification_not_leaf,
@@ -1598,6 +1646,7 @@ export function createBafuBatchImportRunCommands(
         run_manifest: repoRelative(path.join(outDir, "import-ledger", "run-manifest.json")),
         scope_checkpoints: repoRelative(paths.scopeCheckpoints),
         ok_scopes: repoRelative(paths.okScopes),
+        resume_invalidated: repoRelative(paths.resumeInvalidated),
         ok_flows: repoRelative(paths.okFlows),
         ok_processes: repoRelative(paths.okProcesses),
         blocked_human_review: repoRelative(paths.blockedHumanReview),
