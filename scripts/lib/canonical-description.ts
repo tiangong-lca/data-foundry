@@ -44,8 +44,11 @@ function cloneJsonValue(
       }
       const output: CanonicalDescriptionJsonValue[] = [];
       for (let index = 0; index < value.length; index += 1) {
-        if (!Object.hasOwn(value, index)) return invalidDescription(`${path}[${index}]`);
-        output.push(cloneJsonValue(value[index], `${path}[${index}]`, ancestors));
+        const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+        if (!descriptor?.enumerable || !("value" in descriptor)) {
+          return invalidDescription(`${path}[${index}]`);
+        }
+        output.push(cloneJsonValue(descriptor.value, `${path}[${index}]`, ancestors));
       }
       return output;
     }
@@ -60,7 +63,12 @@ function cloneJsonValue(
       if (!descriptor?.enumerable || !("value" in descriptor)) {
         return invalidDescription(`${path}.${key}`);
       }
-      output[key] = cloneJsonValue(descriptor.value, `${path}.${key}`, ancestors);
+      Object.defineProperty(output, key, {
+        value: cloneJsonValue(descriptor.value, `${path}.${key}`, ancestors),
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
     }
     return output;
   } finally {

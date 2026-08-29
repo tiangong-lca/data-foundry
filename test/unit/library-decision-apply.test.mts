@@ -416,8 +416,14 @@ test("library decision apply rejects non-JSON canonical descriptions before payl
   const { maps, scopes, identityRows, classificationRows, supportRows } = fixture();
   const circular: JsonRecord = {};
   circular.self = circular;
+  const sparse = new Array(1);
+  const accessor: JsonRecord = {};
+  Object.defineProperty(accessor, "#text", {
+    enumerable: true,
+    get: () => "computed text",
+  });
 
-  for (const invalidDescription of [() => "not-json", 1n, circular]) {
+  for (const invalidDescription of [() => "not-json", 1n, circular, sparse, accessor]) {
     const currentRows = [...identityRows];
     currentRows[1] = {
       ...currentRows[1],
