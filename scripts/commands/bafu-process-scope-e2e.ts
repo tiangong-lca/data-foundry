@@ -43,6 +43,7 @@ import {
   type FoundryCommandSpec,
 } from "../lib/foundry-command-spec.ts";
 import { resolveFoundryRuntimePaths } from "../lib/foundry-runtime-paths.ts";
+import { resolveInstalledTiangongLcaCliPackage } from "../lib/foundry-runtime-utils.ts";
 import {
   assertReceiptBoundHandoffAccount,
   traceHashNormalizationAllowed,
@@ -62,14 +63,12 @@ interface BafuProcessScopeE2eRuntime {
   booleanOption: (value: unknown) => boolean;
   shellQuote: (value: string) => string;
 }
-
 interface CommandSpecStageInput {
   stage: string;
   commandSpec: FoundryCommandSpec;
   cwd: string;
   logDir: string;
 }
-
 interface ArgvStageInput {
   stage: string;
   argv: string[];
@@ -379,6 +378,7 @@ function createRunAdapter(): BafuProcessScopeRunAdapter {
     hash: {
       fileSha256: (filePath) =>
         crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex"),
+      cliPackage: resolveInstalledTiangongLcaCliPackage().packageSpec,
     },
     options: {
       boolean: booleanOption,

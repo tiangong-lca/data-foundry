@@ -86,8 +86,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 2504a80
-lastReviewedNote: "Reviewed for Issue #74: Foundry retains LCA readiness/report semantics while published CLI owns CommandSpec execution and generic scheduling."
+lastReviewedCommit: 10893c088ef56083b0b0ecf2af71779f0eb61d21
+lastReviewedNote: "Reviewed for Issue #75: Foundry owns exact scope/process/Flow resume evidence and blocker projection; CLI still owns generic attempts, recovery protocol, scheduling, and locking."
 ---
 
 # Capability Ownership Policy

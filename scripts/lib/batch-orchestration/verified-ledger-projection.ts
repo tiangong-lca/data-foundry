@@ -287,7 +287,6 @@ export function createVerifiedLedgerProjectionService(
       resolved: resolved.length,
     };
   }
-
   function loadActiveBlockedScopeSetFromFiles(
     filePaths: readonly string[],
     verifiedScopes: Set<string>,
@@ -301,27 +300,28 @@ export function createVerifiedLedgerProjectionService(
     }
     return set;
   }
-
   function batchRunStatus(
     results: JsonRecord[],
     { paused = false, stoppedAfterBlocked = false }: BatchStatusOptions = {},
   ): string {
     const failed = results.some((row) => row.status === "failed");
+    const ambiguous = results.some((row) => row.status === "ambiguous");
     const blocked = results.some((row) => row.status === "blocked");
     if (stoppedAfterBlocked) {
       if (failed) return "stopped_after_blocked_with_retryable_failures";
       return "stopped_after_blocked";
     }
     if (paused) {
+      if (ambiguous) return "paused_with_ambiguous_mutations";
       if (failed) return "paused_with_retryable_failures";
       if (blocked) return "paused_with_deferred_scopes";
       return "paused";
     }
+    if (ambiguous) return "completed_with_ambiguous_mutations";
     if (failed) return "completed_with_retryable_failures";
     if (blocked) return "completed_with_deferred_scopes";
     return "completed";
   }
-
   function okDatasetRow({
     type,
     id,

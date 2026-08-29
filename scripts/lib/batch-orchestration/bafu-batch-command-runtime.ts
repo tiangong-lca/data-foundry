@@ -27,7 +27,18 @@ import {
   selectionOrderOption,
   scopeKey,
 } from "./scope-selection.ts";
-import { runFoundryScopeBatch } from "./cli-bounded-batch-runner.ts";
+import {
+  createBafuScopeResumeContract,
+  type BafuScopeResumeContext,
+} from "./scope-resume-contract.ts";
+import { loadScopeResumeProjection } from "./scope-resume-projection.ts";
+import { createBafuScopeSourceContent } from "./scope-source-content.ts";
+import { createScopeAttemptLedgerService } from "./scope-attempt-ledger.ts";
+import { createScopeExecutionExceptionRecorder } from "./scope-execution-exception.ts";
+import { createScopeMutationRecoveryService } from "./scope-mutation-recovery.ts";
+import { runFoundryScopeBatch } from "./foundry-scope-batch-runner.ts";
+import { createFlowResumeLedgerService } from "./flow-resume-ledger.ts";
+import { createVerifiedFlowWriteService } from "./verified-flow-write.ts";
 import { createAuthoringTaskFilterService } from "./authoring-task-filter.ts";
 import { createScopeRecoveryEvidenceService } from "./scope-recovery-evidence.ts";
 import { createScopeScratchPolicy } from "./scope-scratch-policy.ts";
@@ -202,9 +213,6 @@ const bafuBatchRuntimeKeys = [
 ] as const satisfies readonly (keyof BafuBatchRuntime)[];
 
 let bafuBatchRuntime: BafuBatchRuntime | null = null;
-// Profile config lets the same engine drive other profiles (e.g. USLCI) without
-// changing BAFU behavior: every default below reproduces the BAFU runner exactly,
-// so an empty config == the historical BAFU runner.
 let bafuBatchConfig: BafuBatchConfig = {};
 
 function installBafuBatchRuntime(deps: BafuBatchRuntime, config: BafuBatchConfig = {}): void {
@@ -267,7 +275,6 @@ function runtime(): BafuBatchRuntime {
   return bafuBatchRuntime;
 }
 
-// Profile-config accessors. Defaults == BAFU, so BAFU is byte-for-byte unchanged.
 function activeProfile(): string {
   return bafuBatchConfig.profile || "bafu";
 }
@@ -550,9 +557,6 @@ const {
   batchRunStatus,
   blockRow,
   datasetIdentityKey,
-  flowRowsPendingVerification,
-  loadActiveBlockedScopeSetFromFiles,
-  loadVerifiedRowsByKeyFromFiles,
   loadVerifiedSetFromFiles,
   okDatasetRow,
   writeBlockedScopeViews,
@@ -566,6 +570,21 @@ const {
   appendJsonLine,
   repoRelative,
   pathJoin: (...parts: string[]) => path.join(...parts),
+});
+const {
+  loadRowsByKey: loadVerifiedFlowRowsByKey,
+  partitionRows: flowRowsPendingVerification,
+  payloadSha256: flowPayloadSha256,
+} = createFlowResumeLedgerService({ asText, datasetIdentity, readJsonLines, repoRelative });
+const { record: recordVerifiedFlowRows } = createVerifiedFlowWriteService({
+  asText,
+  datasetIdentity,
+  datasetIdentityKey,
+  payloadSha256: flowPayloadSha256,
+  repoRelative,
+  invalidateIdentityPreflightResultCacheEntry,
+  okDatasetRow,
+  appendJsonLine,
 });
 
 function readRows(filePath: string | null | undefined): JsonRecord[] {
@@ -852,73 +871,6 @@ function defaultSchemaFiles(options: JsonRecord): SchemaPaths {
 
 const repairClassificationDecisionCodes = classificationSchemaRepair.repair;
 
-// Convert uncaught scope failures to retryable ledger rows; the CLI scheduler drains
-// independent claims and leaves the failed scope resumable.
-function recordScopeExecutionException({
-  scope,
-  familySignature,
-  error,
-  paths,
-}: {
-  scope: JsonRecord;
-  familySignature: BafuFamilySignature;
-  error: unknown;
-  paths: JsonRecord;
-}): JsonRecord {
-  const processId = asText(scope.process_id || scope.id);
-  const processVersion = asText(scope.process_version || scope.version) || "00.00.001";
-  const row = blockRow({
-    scope,
-    stage: "scope_execution",
-    blocker: {
-      code: "scope_execution_exception",
-      message: `Uncaught error during scope execution: ${error instanceof Error ? error.message : String(error)}`,
-      retryable: true,
-      retryable_reason_code: "scope_execution_exception",
-      required_human_action:
-        "Transient runtime error during scope execution (often a concurrent shared-cache fs race at higher --parallel). Rerun the exact scope command; if it persists, retry with --parallel 1.",
-    },
-    report: null,
-    rerunCommand: commandString([
-      process.execPath,
-      foundryEntryPath,
-      commandName,
-      "--scope-file",
-      repoRelative(asText(paths.scopeFile)),
-      "--process-bundles-dir",
-      repoRelative(asText(paths.processBundlesDir)),
-      "--run-dir",
-      repoRelative(asText(paths.runDir)),
-      "--out-dir",
-      repoRelative(asText(paths.outDir)),
-      "--process-id",
-      processId,
-      "--commit",
-      "--parallel",
-      "1",
-    ]),
-  });
-  appendJsonLine(asText(paths.failedRetry), row);
-  appendJsonLine(asText(paths.blocked_remote_write), row);
-  appendJsonLine(asText(paths.scopeCheckpoints), {
-    schema_version: 1,
-    generated_at_utc: nowIso(),
-    process_id: processId,
-    process_version: processVersion,
-    scope_lock: `process:${processId}:${processVersion}`,
-    ...bafuFamilyPlanFields(familySignature),
-    state: "failed_retryable",
-    stage: "scope_execution",
-    code: row.code,
-  });
-  return {
-    status: "failed",
-    checkpoint: { state: "failed_retryable" },
-    block: row,
-    stages: [],
-  };
-}
-
 const batchFinalizeStage = createBatchFinalizeStageService({
   processExecPath: process.execPath,
   foundryEntryPath,
@@ -997,6 +949,19 @@ export function createBafuBatchImportRunCommands(
   runDatasetBafuUniverseCoverageReport: (options?: JsonRecord) => JsonRecord;
 } {
   installBafuBatchRuntime(deps, config);
+  const recordScopeExecutionException = createScopeExecutionExceptionRecorder({
+    processExecPath: process.execPath,
+    foundryEntryPath,
+    commandName: activeCommandName,
+    nowIso,
+    asText,
+    repoRelative,
+    commandString,
+    familyPlanFields: (signature) =>
+      bafuFamilyPlanFields(signature as BafuFamilySignature | null | undefined),
+    blockRow,
+    appendJsonLine,
+  });
   const universeCoverage = createUniverseCoverageService(
     createUniverseCoverageRuntimeAdapter(deps),
   );
@@ -1061,6 +1026,7 @@ export function createBafuBatchImportRunCommands(
       datasetIdentity,
       datasetIdentityKey,
       flowRowsPendingVerification,
+      recordVerifiedFlowRows,
       writeScopeCarriedForwardVerifiedFlowRows,
       existingIdentityApplyReportsWithReferenceRewrites,
       uniqueExistingPaths,
@@ -1072,7 +1038,6 @@ export function createBafuBatchImportRunCommands(
       runIdentityAndPatch,
       preFinalizeRecoveryBlocker,
       finalizeAndCommitDataset,
-      invalidateIdentityPreflightResultCacheEntry,
       okDatasetRow,
       executeHandoff,
       trimVerifiedScopeScratch,
@@ -1225,6 +1190,15 @@ export function createBafuBatchImportRunCommands(
       )!,
       preflightPlan: path.join(outDir, "import-ledger", "preflight.plan.jsonl"),
       bafuFamilySignatures: path.join(outDir, "import-ledger", "bafu-family-signatures.json"),
+      resumeInvalidated: path.join(outDir, "import-ledger", "resume.invalidated.jsonl"),
+      attemptEvents: path.join(outDir, "import-ledger", "scope-attempt-events.jsonl"),
+      attemptState: path.join(outDir, "import-ledger", "scope-attempt-state.jsonl"),
+      ambiguousNoReplay: path.join(
+        outDir,
+        "import-ledger",
+        "failed.scopes.ambiguous-no-replay.jsonl",
+      ),
+      resumeContractsByScopeKey: new Map(),
       // FIX A: run-level resolution rewrite index (process_id -> rewrite rows) plus the
       // mode flag, threaded into runOneScope -> flow runIdentityAndPatch. Empty map when
       // the flag is off or --library-resolution is not provided (BAFU defaults).
@@ -1258,7 +1232,7 @@ export function createBafuBatchImportRunCommands(
         (directoryExists(defaultProcessesDir) ? defaultProcessesDir : null),
     );
     const schemas = defaultSchemaFiles(options);
-    const missingInputs = [
+    const resumeSharedFiles = [
       paths.libraryClassificationDecisions,
       defaultContext(runDir, "process").schemaFile,
       defaultContext(runDir, "process").yamlFile,
@@ -1269,16 +1243,58 @@ export function createBafuBatchImportRunCommands(
       schemas.processCategory,
       schemas.flowProductCategory,
       schemas.location,
-    ].filter((filePath) => !fileExists(filePath));
+      ...schemas.allClassification,
+    ].filter((filePath): filePath is string => Boolean(filePath));
+    const missingInputs = resumeSharedFiles.filter((filePath) => !fileExists(filePath));
     if (missingInputs.length > 0) {
       throw new Error(
         `Missing required batch import inputs:\n${missingInputs.map(repoRelative).join("\n")}`,
       );
     }
-    const verifiedScopes = loadVerifiedSetFromFiles(okScopeFiles, "scope");
+    const resumeContext: BafuScopeResumeContext = {
+      command: activeCommandName(),
+      profile: activeProfile(),
+      targetUserId,
+      stateCode,
+      commit,
+      parallel,
+      requireLeafClassification,
+      selectionOrder,
+      applyResolutionRewrites: applyResolutionRewrites(),
+      familySignatures: familySignaturesEnabled(),
+      mintUnmatchedFpUgSupport: mintUnmatchedFpUgSupport(),
+      cliPackage: resolveInstalledTiangongLcaCliPackage().packageSpec,
+    };
+    const resumeContractsByScopeKey = new Map(
+      allScopes.map((scope) => {
+        const processId = asText(scope.process_id || scope.id);
+        const contract = createBafuScopeResumeContract(scope, {
+          ...resumeContext,
+          sourceContent: createBafuScopeSourceContent({
+            scope,
+            processBundlesDir,
+            sharedFiles: resumeSharedFiles,
+            resolutionRewriteRows: resolutionRewritesByProcess.get(processId) ?? [],
+            repoRelative,
+          }),
+        });
+        return [contract.identity_key, contract] as const;
+      }),
+    );
+    paths.resumeContractsByScopeKey = resumeContractsByScopeKey;
+    const {
+      verifiedScopes,
+      blockedScopes,
+      invalidatedRows: resumeInvalidatedRows,
+    } = loadScopeResumeProjection({
+      verifiedFiles: okScopeFiles,
+      blockedFiles: blockedScopeFiles,
+      contracts: resumeContractsByScopeKey,
+      adapter: { nowIso, readJsonLines, repoRelative },
+    });
+    writeJsonLines(paths.resumeInvalidated, resumeInvalidatedRows);
     const verifiedFlows = loadVerifiedSetFromFiles(okFlowFiles, "flow");
-    const verifiedFlowRowsByKey = loadVerifiedRowsByKeyFromFiles(okFlowFiles, "flow");
-    const blockedScopes = loadActiveBlockedScopeSetFromFiles(blockedScopeFiles, verifiedScopes);
+    const verifiedFlowRowsByKey = loadVerifiedFlowRowsByKey(okFlowFiles);
     const supportIdentityCache = primeVerifiedSupportIdentityCache({
       outDir,
       cacheFile: paths.supportIdentityCache,
@@ -1359,6 +1375,7 @@ export function createBafuBatchImportRunCommands(
         pending_candidate_scopes: selection.stats.candidate_scopes_before_limit,
         selected_scopes: scopes.length,
         filtered_already_verified_scopes: selection.stats.filtered_already_verified,
+        invalidated_verified_scopes: resumeInvalidatedRows.length,
         filtered_already_blocked_scopes: selection.stats.filtered_already_blocked,
         filtered_classification_missing_scopes: selection.stats.filtered_classification_missing,
         filtered_classification_not_leaf_scopes: selection.stats.filtered_classification_not_leaf,
@@ -1445,6 +1462,7 @@ export function createBafuBatchImportRunCommands(
           processed_scopes: 0,
           pending_candidate_scopes: selection.stats.candidate_scopes_before_limit,
           filtered_already_verified_scopes: selection.stats.filtered_already_verified,
+          invalidated_verified_scopes: resumeInvalidatedRows.length,
           filtered_already_blocked_scopes: selection.stats.filtered_already_blocked,
           filtered_classification_missing_scopes: selection.stats.filtered_classification_missing,
           filtered_classification_not_leaf_scopes: selection.stats.filtered_classification_not_leaf,
@@ -1469,6 +1487,7 @@ export function createBafuBatchImportRunCommands(
           report: repoRelative(path.join(outDir, "dataset-bafu-batch-import-run-report.json")),
           run_manifest: repoRelative(path.join(outDir, "import-ledger", "run-manifest.json")),
           preflight_plan: repoRelative(paths.preflightPlan),
+          resume_invalidated: repoRelative(paths.resumeInvalidated),
           bafu_family_signatures: repoRelative(paths.bafuFamilySignatures),
           support_identity_cache: repoRelative(paths.supportIdentityCache),
         },
@@ -1484,6 +1503,23 @@ export function createBafuBatchImportRunCommands(
       return report;
     }
 
+    const attemptLedger = createScopeAttemptLedgerService({
+      paths: { state: paths.attemptState, events: paths.attemptEvents },
+      adapter: { nowIso, readJsonLines, appendJsonLine, writeJsonLines },
+    });
+    const mutationRecovery = createScopeMutationRecoveryService({
+      paths,
+      adapter: {
+        nowIso,
+        asText,
+        readJson,
+        readJsonLines,
+        fileExists,
+        resolveRepoPath,
+        repoRelative,
+        appendJsonLine,
+      },
+    });
     const batchResult = await runFoundryScopeBatch({
       runPath: outDir,
       outDirIdentity: repoRelative(outDir),
@@ -1498,6 +1534,7 @@ export function createBafuBatchImportRunCommands(
       maxConcurrency: parallel,
       items: scopes,
       getScopeKey: scopeKey,
+      getScopeResumeContract: (scope) => paths.resumeContractsByScopeKey.get(scopeKey(scope))!,
       getFamilyPolicy: (scope) => {
         const familySignature = bafuFamilySignatureForScope(familySignatureIndex, scope);
         return {
@@ -1520,6 +1557,7 @@ export function createBafuBatchImportRunCommands(
           workerIndex: inputIndex % parallel,
         });
       },
+      recoverScopeMutation: (scope, _error, source) => mutationRecovery.recover(scope, source),
       recoverScopeFailure: (scope, error) => {
         const familySignature = bafuFamilySignatureForScope(familySignatureIndex, scope);
         return recordScopeExecutionException({ scope, familySignature, error, paths });
@@ -1534,7 +1572,10 @@ export function createBafuBatchImportRunCommands(
       },
       afterScope: () => enforceSharedContextCacheCap(paths.runDir, options),
       pauseRequested: () => Boolean(pauseFile && fileExists(pauseFile)),
+      resumeItems: attemptLedger.loadResumeItems(new Set(scopes.map(scopeKey))),
+      onEvent: attemptLedger.record,
     });
+    attemptLedger.compact();
     const results: JsonRecord[] = batchResult.results;
     const pauseObserved = batchResult.paused;
     const stoppedAfterBlocked = batchResult.stoppedAfterBlocked;
@@ -1559,6 +1600,7 @@ export function createBafuBatchImportRunCommands(
         selected_scopes: scopes.length,
         pending_candidate_scopes: selection.stats.candidate_scopes_before_limit,
         filtered_already_verified_scopes: selection.stats.filtered_already_verified,
+        invalidated_verified_scopes: resumeInvalidatedRows.length,
         filtered_already_blocked_scopes: selection.stats.filtered_already_blocked,
         filtered_classification_missing_scopes: selection.stats.filtered_classification_missing,
         filtered_classification_not_leaf_scopes: selection.stats.filtered_classification_not_leaf,
@@ -1569,6 +1611,7 @@ export function createBafuBatchImportRunCommands(
         skipped: results.filter((row) => row.status === "skipped").length,
         skipped_blocked: results.filter((row) => row.status === "skipped_blocked").length,
         blocked: results.filter((row) => row.status === "blocked").length,
+        ambiguous: results.filter((row) => row.status === "ambiguous").length,
         failed_retryable: results.filter((row) => row.status === "failed").length,
         ok_scope_ledger_rows: readJsonLines(paths.okScopes).length,
         ok_flow_ledger_rows: readJsonLines(paths.okFlows).length,
@@ -1576,6 +1619,7 @@ export function createBafuBatchImportRunCommands(
         historical_human_review_rows: blockedScopeViews.historical,
         resolved_human_review_rows: blockedScopeViews.resolved,
         retry_rows: readJsonLines(paths.failedRetry).length,
+        ambiguous_no_replay: readJsonLines(paths.ambiguousNoReplay).length,
         already_verified_scopes: verifiedScopes.size,
         already_verified_flows: verifiedFlows.size,
         already_blocked_scopes: blockedScopes.size,
@@ -1598,12 +1642,16 @@ export function createBafuBatchImportRunCommands(
         run_manifest: repoRelative(path.join(outDir, "import-ledger", "run-manifest.json")),
         scope_checkpoints: repoRelative(paths.scopeCheckpoints),
         ok_scopes: repoRelative(paths.okScopes),
+        resume_invalidated: repoRelative(paths.resumeInvalidated),
         ok_flows: repoRelative(paths.okFlows),
         ok_processes: repoRelative(paths.okProcesses),
         blocked_human_review: repoRelative(paths.blockedHumanReview),
         blocked_human_review_active: repoRelative(paths.blockedHumanReviewActive),
         blocked_human_review_resolved: repoRelative(paths.blockedHumanReviewResolved),
         failed_retry: repoRelative(paths.failedRetry),
+        ambiguous_no_replay: repoRelative(paths.ambiguousNoReplay),
+        attempt_state: repoRelative(paths.attemptState),
+        attempt_events: repoRelative(paths.attemptEvents),
         bafu_family_signatures: repoRelative(paths.bafuFamilySignatures),
         support_identity_cache: repoRelative(paths.supportIdentityCache),
       },
@@ -1628,6 +1676,7 @@ export function createBafuBatchImportRunCommands(
 export const bafuBatchImportRunTestHooks = {
   commitFailuresAllAlreadyExist,
   enforceSharedContextCacheCap,
+  flowPayloadSha256,
   flowRowsPendingVerification,
   foundryCommand,
   identityUnresolvedReferenceBlocker,

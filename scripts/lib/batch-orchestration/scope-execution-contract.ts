@@ -10,6 +10,8 @@ import type {
   BatchScopePreparationInput,
   BatchScopePreparationResult,
 } from "./scope-preparation.ts";
+import type { ScopeResumeContract } from "./scope-resume-contract.ts";
+import type { VerifiedFlowWriteInput } from "./verified-flow-write.ts";
 
 export type BatchScopeJsonRecord = Record<string, unknown>;
 
@@ -35,10 +37,14 @@ export interface BatchScopeExecutionPaths {
   supportIdentityCache: string;
   preflightPlan: string;
   bafuFamilySignatures: string;
+  resumeInvalidated: string;
+  attemptEvents: string;
+  attemptState: string;
+  ambiguousNoReplay: string;
+  resumeContractsByScopeKey: Map<string, ScopeResumeContract>;
   resolutionRewritesByProcess: Map<string, BatchScopeJsonRecord[]>;
   applyResolutionRewritesMode: boolean;
 }
-
 export interface RunBatchScopeInput {
   scope: BatchScopeJsonRecord;
   familySignature: unknown;
@@ -51,31 +57,26 @@ export interface RunBatchScopeInput {
   blockedScopes: Set<string>;
   workerIndex?: number;
 }
-
 interface DatasetIdentity {
   id: string | null;
   version: string;
 }
-
 export interface BatchScopeActionInput {
   stage: string;
   blocker: BatchScopeJsonRecord;
   report: string | null;
 }
-
 interface FlowVerificationPlan {
   pendingRows: BatchScopeJsonRecord[];
   verifiedRows: BatchScopeJsonRecord[];
   pendingIdentities: BatchScopeJsonRecord[];
   verifiedIdentities: BatchScopeJsonRecord[];
 }
-
 interface CarriedForwardFlowRows {
   count: number;
   rows: BatchScopeJsonRecord[];
   ledger: string;
 }
-
 interface IdentityPatchCompleted extends BatchScopeJsonRecord {
   status: "completed";
   rowsFile: string;
@@ -83,13 +84,11 @@ interface IdentityPatchCompleted extends BatchScopeJsonRecord {
   patchCollectReport: string | null;
   patchApplyReport: string | null;
 }
-
 interface IdentityPatchBlocked extends BatchScopeJsonRecord {
   status: "blocked";
   blocker: BatchScopeJsonRecord;
   report?: string | null;
 }
-
 type IdentityPatchResult = IdentityPatchCompleted | IdentityPatchBlocked;
 
 interface HandoffResult extends BatchScopeJsonRecord {
@@ -162,7 +161,9 @@ export interface BatchScopeExecutionOperationAdapter {
   flowRowsPendingVerification: (
     rows: BatchScopeJsonRecord[],
     verified: Set<string>,
+    verifiedRowsByKey: ReadonlyMap<string, BatchScopeJsonRecord>,
   ) => FlowVerificationPlan;
+  recordVerifiedFlowRows: (input: VerifiedFlowWriteInput) => void;
   writeScopeCarriedForwardVerifiedFlowRows: (input: {
     ledgerDir: string;
     processId: string;
@@ -220,7 +221,6 @@ export interface BatchScopeExecutionOperationAdapter {
     stages: BatchScopeJsonRecord[];
     supportIdentityCacheFile: string;
   }) => Promise<DatasetCommitResult>;
-  invalidateIdentityPreflightResultCacheEntry: (identityKey: string) => void;
   okDatasetRow: (input: {
     type: string;
     id: string | null;

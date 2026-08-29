@@ -6,6 +6,7 @@ import type {
   CompactCommandStageInput,
   CompactCommandStageResult,
 } from "./process-scope-report.ts";
+import { resolveProcessScopeResume } from "./process-scope-resume.ts";
 
 export interface ProcessScopeFinalizePlan {
   argv: string[];
@@ -111,6 +112,7 @@ export interface BafuProcessScopeRunAdapter {
   };
   hash: {
     fileSha256: (filePath: string) => string;
+    cliPackage: string;
   };
   options: {
     boolean: (value: unknown) => boolean;
@@ -163,29 +165,6 @@ export interface BafuProcessScopeRunFactoryInput {
 
 function jsonRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
-}
-
-function latestFinalizeCheckpoint(
-  ledgerPath: string,
-  inputHashes: JsonRecord,
-  adapter: BafuProcessScopeRunAdapter,
-): JsonRecord | null {
-  if (!adapter.fs.exists(ledgerPath)) return null;
-  return (
-    adapter.fs
-      .readJsonLines(ledgerPath)
-      .reverse()
-      .find(
-        (row) =>
-          row.stage === "post_authoring_finalize" &&
-          jsonRecord(row.input_hashes).rows_file_sha256 === inputHashes.rows_file_sha256 &&
-          jsonRecord(row.input_hashes).source_support_rows_file_sha256 ===
-            inputHashes.source_support_rows_file_sha256 &&
-          jsonRecord(row.input_hashes).source_rows_file_sha256 ===
-            inputHashes.source_rows_file_sha256 &&
-          adapter.fs.exists(adapter.path.resolve(jsonRecord(row.files).finalize_report)),
-      ) ?? null
-  );
 }
 
 function failedFinalizeReport({
@@ -308,12 +287,27 @@ export function createBafuProcessScopeRun({
     let finalizeReportPath = explicitFinalizeReportPath || finalizePlan.finalizeReportPath;
     let finalizeCommand = finalizePlan.argv;
     const resume = !Object.hasOwn(options, "resume") || adapter.options.boolean(options.resume);
-    const previous = resume ? latestFinalizeCheckpoint(ledgerPath, inputHashes, adapter) : null;
+    const { contract: resumeContract, checkpoint: previous } = resolveProcessScopeResume({
+      enabled: resume,
+      ledgerPath,
+      contractInput: {
+        commandName,
+        processScope,
+        inputHashes,
+        options,
+        finalizeCommand,
+        cliPackage: adapter.hash.cliPackage,
+      },
+      adapter: {
+        exists: adapter.fs.exists,
+        readJsonLines: adapter.fs.readJsonLines,
+        resolve: adapter.path.resolve,
+        fileSha256: adapter.hash.fileSha256,
+      },
+    });
     const existingFinalizeReportPath = previous
       ? adapter.path.resolve(jsonRecord(previous.files).finalize_report)
-      : adapter.fs.exists(finalizeReportPath)
-        ? finalizeReportPath
-        : null;
+      : null;
 
     if (existingFinalizeReportPath && !adapter.options.boolean(options.force)) {
       const finalizeReport = adapter.fs.readJson(existingFinalizeReportPath);
@@ -337,6 +331,8 @@ export function createBafuProcessScopeRun({
         state: report.status,
         process_scope: processScope,
         input_hashes: inputHashes,
+        resume_contract: resumeContract,
+        finalize_report_sha256: adapter.hash.fileSha256(existingFinalizeReportPath),
         files: {
           report: adapter.path.relative(reportPath),
           finalize_report: adapter.path.relative(existingFinalizeReportPath),
@@ -661,6 +657,8 @@ export function createBafuProcessScopeRun({
       state: report.status,
       process_scope: processScope,
       input_hashes: inputHashes,
+      resume_contract: resumeContract,
+      finalize_report_sha256: adapter.hash.fileSha256(finalizeReportPath),
       exit_code: finalizeStage.result.status ?? 0,
       files: {
         report: adapter.path.relative(reportPath),

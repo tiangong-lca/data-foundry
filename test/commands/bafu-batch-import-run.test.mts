@@ -9,6 +9,8 @@ import {
   createFileArtifactFact,
   createFoundryCommandSpec,
 } from "../../scripts/lib/foundry-command-spec.ts";
+import { createBafuScopeResumeContract } from "../../scripts/lib/batch-orchestration/scope-resume-contract.ts";
+import { createBafuScopeSourceContent } from "../../scripts/lib/batch-orchestration/scope-source-content.ts";
 import {
   fs,
   path,
@@ -141,6 +143,57 @@ function writeRequiredContext(runDir: string, schemaDir: string): void {
     path.join(runDir, "decisions-v4-leaf-category-map", "classification-decisions.jsonl"),
     [],
   );
+}
+
+function requiredContextFiles(runDir: string, schemaDir: string): string[] {
+  return [
+    path.join(runDir, "decisions-v4-leaf-category-map", "classification-decisions.jsonl"),
+    ...["flow", "process"].flatMap((type) =>
+      ["schema.json", "runtime-ruleset.json", "methodology.yaml"].map((name) =>
+        path.join(runDir, "context", type, "outputs", name),
+      ),
+    ),
+    ...[
+      "tidas_contacts_category.json",
+      "tidas_flowproperties_category.json",
+      "tidas_flows_elementary_category.json",
+      "tidas_flows_product_category.json",
+      "tidas_lciamethods_category.json",
+      "tidas_processes_category.json",
+      "tidas_sources_category.json",
+      "tidas_unitgroups_category.json",
+      "tidas_locations_category.json",
+    ].map((name) => path.join(schemaDir, name)),
+  ];
+}
+
+function exactBafuResumeContract(
+  scope: JsonRecord,
+  { runDir, schemaDir, bundlesDir }: { runDir: string; schemaDir: string; bundlesDir: string },
+  overrides: JsonRecord = {},
+) {
+  return createBafuScopeResumeContract(scope, {
+    command: "dataset-bafu-batch-import-run",
+    profile: "bafu",
+    targetUserId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+    stateCode: 0,
+    commit: true,
+    parallel: 2,
+    requireLeafClassification: false,
+    selectionOrder: "input",
+    applyResolutionRewrites: false,
+    familySignatures: true,
+    mintUnmatchedFpUgSupport: false,
+    cliPackage: "@tiangong-lca/cli@0.1.3",
+    sourceContent: createBafuScopeSourceContent({
+      scope,
+      processBundlesDir: bundlesDir,
+      sharedFiles: requiredContextFiles(runDir, schemaDir),
+      resolutionRewriteRows: [],
+      repoRelative: rel,
+    }),
+    ...overrides,
+  });
 }
 
 function bafuFamilyProcessPayload({
@@ -299,14 +352,15 @@ test("BAFU batch import runner skips already verified scopes through resumable l
   fs.mkdirSync(bundlesDir, { recursive: true });
   writeRequiredContext(runDir, schemaDir);
   const scopeFile = path.join(root, "ready-scopes.jsonl");
-  writeJsonLines(scopeFile, [
-    {
-      schema_version: 1,
-      process_id: processId,
-      process_version: "00.00.001",
-      closure_status: "ready",
-    },
-  ]);
+  const scope = {
+    schema_version: 1,
+    process_id: processId,
+    process_version: "00.00.001",
+    closure_status: "ready",
+    source_bundle_sha256: "a".repeat(64),
+  };
+  writeJsonLines(scopeFile, [scope]);
+  const resumeContract = exactBafuResumeContract(scope, { runDir, schemaDir, bundlesDir });
   writeJsonLines(path.join(outDir, "import-ledger", "ok.scopes.verified.jsonl"), [
     {
       schema_version: 1,
@@ -316,6 +370,7 @@ test("BAFU batch import runner skips already verified scopes through resumable l
       process_id: processId,
       process_version: "00.00.001",
       status: "verified",
+      resume_contract: resumeContract,
     },
   ]);
 
@@ -354,6 +409,72 @@ test("BAFU batch import runner skips already verified scopes through resumable l
   }
 });
 
+test("BAFU preflight invalidates legacy id-version-only verified ledgers", () => {
+  const root = path.join(fixtureRoot, "legacy-resume-invalidated");
+  fs.rmSync(root, { recursive: true, force: true });
+  const runDir = path.join(root, "run");
+  const schemaDir = path.join(root, "schemas");
+  const bundlesDir = path.join(root, "process-bundles");
+  const outDir = path.join(root, "batch");
+  fs.mkdirSync(bundlesDir, { recursive: true });
+  writeRequiredContext(runDir, schemaDir);
+  const scopeFile = path.join(root, "ready-scopes.jsonl");
+  const scopes = [
+    {
+      schema_version: 1,
+      process_id: processId,
+      process_version: "00.00.001",
+      closure_status: "ready",
+      source_bundle_sha256: "a".repeat(64),
+    },
+  ];
+  writeJsonLines(scopeFile, scopes);
+  writeJsonLines(path.join(outDir, "import-ledger", "ok.scopes.verified.jsonl"), [
+    {
+      schema_version: 1,
+      process_id: processId,
+      process_version: "00.00.001",
+      status: "verified",
+    },
+  ]);
+
+  try {
+    const result = runFoundry([
+      "dataset-bafu-batch-import-run",
+      "--scope-file",
+      rel(scopeFile),
+      "--process-bundles-dir",
+      rel(bundlesDir),
+      "--run-dir",
+      rel(runDir),
+      "--out-dir",
+      rel(outDir),
+      "--tidas-schema-dir",
+      rel(schemaDir),
+      "--target-user-id",
+      "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+      "--commit",
+      "--parallel",
+      "2",
+      "--preflight-only",
+    ]);
+
+    assert.equal(result.code, 0);
+    assert.equal(result.json.status, "preflight_completed");
+    assert.equal(result.json.counts.selected_scopes, 1);
+    assert.equal(result.json.counts.filtered_already_verified_scopes, 0);
+    assert.equal(result.json.counts.invalidated_verified_scopes, 1);
+    const invalidated = readJsonLines(
+      path.join(outDir, "import-ledger", "resume.invalidated.jsonl"),
+    );
+    assert.equal(invalidated.length, 1);
+    assert.equal(invalidated[0].reason, "legacy_resume_contract_missing");
+    assert.equal(invalidated[0].scope_key, `${processId}@00.00.001`);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("BAFU batch import runner skips already blocked scopes during normal resume", () => {
   const root = path.join(fixtureRoot, "skip-blocked");
   fs.rmSync(root, { recursive: true, force: true });
@@ -364,14 +485,15 @@ test("BAFU batch import runner skips already blocked scopes during normal resume
   fs.mkdirSync(bundlesDir, { recursive: true });
   writeRequiredContext(runDir, schemaDir);
   const scopeFile = path.join(root, "ready-scopes.jsonl");
-  writeJsonLines(scopeFile, [
+  const scopes = [
     {
       schema_version: 1,
       process_id: processId,
       process_version: "00.00.001",
       closure_status: "ready",
     },
-  ]);
+  ];
+  writeJsonLines(scopeFile, scopes);
   writeJsonLines(path.join(outDir, "import-ledger", "blocked.scopes.human-review.jsonl"), [
     {
       schema_version: 1,
@@ -380,6 +502,7 @@ test("BAFU batch import runner skips already blocked scopes during normal resume
       stage: "flow.authoring",
       code: "bafu_name_split_unsupported",
       status: "blocked",
+      resume_contract: exactBafuResumeContract(scopes[0], { runDir, schemaDir, bundlesDir }),
     },
   ]);
 
@@ -415,6 +538,39 @@ test("BAFU batch import runner skips already blocked scopes during normal resume
       path.join(outDir, "import-ledger", "blocked.scopes.human-review.jsonl"),
     );
     assert.equal(blockers.length, 1);
+
+    writeJsonLines(
+      path.join(runDir, "decisions-v4-leaf-category-map", "classification-decisions.jsonl"),
+      [{ repaired: true }],
+    );
+    const repaired = runFoundry([
+      "dataset-bafu-batch-import-run",
+      "--scope-file",
+      rel(scopeFile),
+      "--process-bundles-dir",
+      rel(bundlesDir),
+      "--run-dir",
+      rel(runDir),
+      "--out-dir",
+      rel(outDir),
+      "--tidas-schema-dir",
+      rel(schemaDir),
+      "--target-user-id",
+      "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+      "--commit",
+      "--parallel",
+      "2",
+      "--pending-only",
+      "--preflight-only",
+    ]);
+    assert.equal(repaired.code, 0);
+    assert.equal(repaired.json.counts.selected_scopes, 1);
+    assert.equal(repaired.json.counts.filtered_already_blocked_scopes, 0);
+    const invalidated = readJsonLines(
+      path.join(outDir, "import-ledger", "resume.invalidated.jsonl"),
+    );
+    assert.equal(invalidated.at(-1).kind, "blocked_scope");
+    assert.equal(invalidated.at(-1).reason, "resume_content_drift");
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -435,7 +591,7 @@ test("BAFU batch import runner can order selected scopes by estimated weight", (
     "11111111-2222-4333-8444-555555555552",
     "11111111-2222-4333-8444-555555555553",
   ];
-  writeJsonLines(scopeFile, [
+  const scopes = [
     {
       schema_version: 1,
       process_id: processIds[0],
@@ -457,10 +613,11 @@ test("BAFU batch import runner can order selected scopes by estimated weight", (
       closure_status: "ready",
       estimated_weight: 10,
     },
-  ]);
+  ];
+  writeJsonLines(scopeFile, scopes);
   writeJsonLines(
     path.join(outDir, "import-ledger", "ok.scopes.verified.jsonl"),
-    processIds.map((id) => ({
+    processIds.map((id, index) => ({
       schema_version: 1,
       dataset_type: "process",
       dataset_id: id,
@@ -468,6 +625,11 @@ test("BAFU batch import runner can order selected scopes by estimated weight", (
       process_id: id,
       process_version: "00.00.001",
       status: "verified",
+      resume_contract: exactBafuResumeContract(
+        scopes[index],
+        { runDir, schemaDir, bundlesDir },
+        { parallel: 1, selectionOrder: "estimated-weight-asc" },
+      ),
     })),
   );
 
@@ -1235,7 +1397,7 @@ test("BAFU batch import runner applies pending-only before limit and honors paus
   const verifiedId = "11111111-2222-4333-8444-555555555561";
   const blockedId = "11111111-2222-4333-8444-555555555562";
   const pendingId = "11111111-2222-4333-8444-555555555563";
-  writeJsonLines(scopeFile, [
+  const scopes = [
     {
       schema_version: 1,
       process_id: verifiedId,
@@ -1257,7 +1419,8 @@ test("BAFU batch import runner applies pending-only before limit and honors paus
       closure_status: "ready",
       estimated_weight: 3,
     },
-  ]);
+  ];
+  writeJsonLines(scopeFile, scopes);
   writeJsonLines(path.join(outDir, "import-ledger", "ok.scopes.verified.jsonl"), [
     {
       schema_version: 1,
@@ -1267,6 +1430,7 @@ test("BAFU batch import runner applies pending-only before limit and honors paus
       process_id: verifiedId,
       process_version: "00.00.001",
       status: "verified",
+      resume_contract: exactBafuResumeContract(scopes[0], { runDir, schemaDir, bundlesDir }),
     },
   ]);
   writeJsonLines(path.join(outDir, "import-ledger", "blocked.scopes.human-review.jsonl"), [
@@ -1277,6 +1441,7 @@ test("BAFU batch import runner applies pending-only before limit and honors paus
       stage: "flow.authoring",
       code: "bafu_name_split_unsupported",
       status: "blocked",
+      resume_contract: exactBafuResumeContract(scopes[1], { runDir, schemaDir, bundlesDir }),
     },
   ]);
 
@@ -1339,7 +1504,7 @@ test("BAFU batch import runner carries forward prior ledgers into fresh batch se
   const blockedId = "11111111-2222-4333-8444-555555555582";
   const pendingId = "11111111-2222-4333-8444-555555555583";
   const verifiedFlowId = "22222222-3333-4444-8555-666666666681";
-  writeJsonLines(scopeFile, [
+  const scopes = [
     {
       schema_version: 1,
       process_id: verifiedId,
@@ -1361,7 +1526,8 @@ test("BAFU batch import runner carries forward prior ledgers into fresh batch se
       closure_status: "ready",
       estimated_weight: 3,
     },
-  ]);
+  ];
+  writeJsonLines(scopeFile, scopes);
   writeJsonLines(path.join(sourceOutDir, "import-ledger", "ok.scopes.verified.jsonl"), [
     {
       schema_version: 1,
@@ -1371,6 +1537,16 @@ test("BAFU batch import runner carries forward prior ledgers into fresh batch se
       process_id: verifiedId,
       process_version: "00.00.001",
       status: "verified",
+      resume_contract: exactBafuResumeContract(
+        scopes[0],
+        { runDir, schemaDir, bundlesDir },
+        {
+          commit: false,
+          parallel: 5,
+          targetUserId: "",
+          selectionOrder: "estimated-weight-asc",
+        },
+      ),
     },
   ]);
   writeJsonLines(path.join(sourceOutDir, "import-ledger", "ok.flows.verified.jsonl"), [
@@ -1390,6 +1566,16 @@ test("BAFU batch import runner carries forward prior ledgers into fresh batch se
       stage: "flow.authoring",
       code: "bafu_name_split_unsupported",
       status: "blocked",
+      resume_contract: exactBafuResumeContract(
+        scopes[1],
+        { runDir, schemaDir, bundlesDir },
+        {
+          commit: false,
+          parallel: 5,
+          targetUserId: "",
+          selectionOrder: "estimated-weight-asc",
+        },
+      ),
     },
   ]);
   writeJsonLines(path.join(sourceOutDir, "import-ledger", "verified-support-identities.jsonl"), [
@@ -1825,6 +2011,12 @@ test("BAFU batch flow verification filter keeps only flows not in ok flow ledger
   const plan = bafuBatchImportRunTestHooks.flowRowsPendingVerification(
     rows,
     new Set([`${verifiedId}@00.00.001`]),
+    new Map([
+      [
+        `${verifiedId}@00.00.001`,
+        { payload_sha256: bafuBatchImportRunTestHooks.flowPayloadSha256(rows[0]) },
+      ],
+    ]),
   );
 
   assert.equal(plan.pendingRows.length, 1);

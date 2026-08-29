@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import test from "node:test";
 import {
   bafuProcessScopeE2eTestHooks,
@@ -8,6 +9,7 @@ import {
   createFileArtifactFact,
   createFoundryCommandSpec,
 } from "../../scripts/lib/foundry-command-spec.ts";
+import { createProcessScopeResumeContract } from "../../scripts/lib/bafu-orchestration/process-scope-resume.ts";
 import {
   fs,
   path,
@@ -125,6 +127,66 @@ function writeRows(root: string) {
   return { rowsFile, sourceSupportRowsFile };
 }
 
+function fileSha256(filePath: string): string {
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+function seedExactFinalizeCheckpoint({
+  rowsFile,
+  outDir,
+  finalizeReport,
+  sourceSupportRowsFile = null,
+}: {
+  rowsFile: string;
+  outDir: string;
+  finalizeReport: string;
+  sourceSupportRowsFile?: string | null;
+}): void {
+  const options: Record<string, unknown> = { _: [], rowsFile: rel(rowsFile), outDir: rel(outDir) };
+  const finalizeCommand = [
+    process.execPath,
+    bafuProcessScopeE2eTestHooks.foundryEntryPath,
+    "dataset-post-authoring-finalize",
+    "--type",
+    "process",
+    "--profile",
+    "bafu",
+    "--rows-file",
+    rel(rowsFile),
+    "--out-dir",
+    rel(path.join(outDir, "finalize")),
+    "--ledger-dir",
+    rel(path.join(outDir, "import-ledger")),
+  ];
+  if (sourceSupportRowsFile) {
+    options.sourceSupportRowsFile = rel(sourceSupportRowsFile);
+    finalizeCommand.push("--source-support-rows-file", rel(sourceSupportRowsFile));
+  }
+  const resumeContract = createProcessScopeResumeContract({
+    commandName: "dataset-bafu-process-scope-e2e",
+    processScope: { id: processId, version: "00.00.001" },
+    inputHashes: {
+      rows_file_sha256: fileSha256(rowsFile),
+      source_support_rows_file_sha256: sourceSupportRowsFile
+        ? fileSha256(sourceSupportRowsFile)
+        : null,
+      source_rows_file_sha256: null,
+    },
+    options,
+    finalizeCommand,
+    cliPackage: "@tiangong-lca/cli@0.1.3",
+  });
+  writeJsonLines(path.join(outDir, "bafu-process-scope-e2e-ledger.jsonl"), [
+    {
+      schema_version: 1,
+      stage: "post_authoring_finalize",
+      resume_contract: resumeContract,
+      finalize_report_sha256: fileSha256(finalizeReport),
+      files: { finalize_report: rel(finalizeReport) },
+    },
+  ]);
+}
+
 test("BAFU process scope helper treats lookup_failed post-write verify as retryable", () => {
   const root = path.join(fixtureRoot, "verify-retry-reason");
   fs.rmSync(root, { recursive: true, force: true });
@@ -237,6 +299,7 @@ test("BAFU process scope helper hard-blocks unresolved AI curation items on resu
     },
     blockers: [{ code: "post_authoring_curation_gate_not_ready" }],
   });
+  seedExactFinalizeCheckpoint({ rowsFile, outDir, finalizeReport });
 
   try {
     const result = runHelper(["--rows-file", rel(rowsFile), "--out-dir", rel(outDir)]);
@@ -460,6 +523,7 @@ test("BAFU process scope helper resumes ready handoff without executing remote c
     },
     blockers: [],
   });
+  seedExactFinalizeCheckpoint({ rowsFile, outDir, finalizeReport });
 
   try {
     const result = runHelper(["--rows-file", rel(rowsFile), "--out-dir", rel(outDir)]);

@@ -44,8 +44,8 @@ checkPaths:
   - package.json
   - pnpm-lock.yaml
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 2504a80
-lastReviewedNote: "Reviewed for Issue #74: public CommandSpec identity, real bounded scheduling, no-replay policy, input ordering, budgets, and cycle freedom are pinned."
+lastReviewedCommit: 10893c0
+lastReviewedNote: "Reviewed for Issue #75: exact scope/process/flow resume authority, durable attempt recovery, blocker re-admission, and bounded USLCI-scale state are pinned."
 related:
   - https://github.com/tiangong-lca/data-foundry/issues/70
   - https://github.com/tiangong-lca/tiangong-cli/issues/232
@@ -64,7 +64,7 @@ The high-level orchestration layer must be easy for an Agent to navigate without
 
 Foundry now pins the published `@tiangong-lca/cli@0.1.3` release. CommandSpec, batch/run-lock, and strict identity receipt parsing are consumed only through the package's public `./command-spec`, `./batch`, and `./auth-identity-receipt` exports; Foundry must not deep-import `dist/src/**`, expose CLI test internals, invent a compatibility wrapper, or copy the CLI scheduler/parser into semantic modules. LCA/profile semantics, Foundry reports, test-only receipt fixture bytes, and remote-write gates remain Foundry-owned adapters around those public primitives.
 
-`cli-bounded-batch-runner.ts` is the executable delegation boundary: it creates the run/item contracts, acquires `withBatchRunLock`, and calls `runBoundedBatch` with family-group exclusive keys, bounded concurrency, pause-before-claim, stop-after-blocked, and drain. The callback remains Foundry-owned and returns the same scope status projection after semantic execution or retryable exception recording. The five-line command facade contains no implementation; `bafu-batch-command-runtime.ts` is the explicit composition root and contains no alternate worker counter or `Promise.all` claim loop.
+`cli-bounded-batch-runner.ts` is the generic executable delegation boundary: it creates the public run contract, acquires `withBatchRunLock`, and calls `runBoundedBatch`. `foundry-scope-batch-runner.ts` projects Foundry scope content/policy/executable authority, family-group exclusive keys, bounded concurrency, pause/stop, events, and readback-only mutation recovery. The callback remains Foundry-owned and returns the same scope status projection after semantic execution or explicit ambiguous/no-replay recording. The five-line command facade contains no implementation; `bafu-batch-command-runtime.ts` is the explicit composition root and contains no alternate worker counter or `Promise.all` claim loop.
 
 ## 2. Baseline and ratchet
 
@@ -107,6 +107,11 @@ Navigate directly to the narrowest owner:
 | Process verify and closeout argv planning | `scripts/lib/bafu-orchestration/process-handoff-plan.ts`, `scripts/lib/bafu-orchestration/process-handoff-closeout.ts` | stage execution, report parsing, retry, and semantic acceptance |
 | Batch commit, post-write verify/retry, and closeout | `scripts/lib/batch-orchestration/post-write-handoff.ts` | stage runner, timeouts, profile/scope labels, and report aggregation |
 | Per-dataset finalize, support reuse/commit, recovery, and handoff | `scripts/lib/batch-orchestration/scope-finalize-commit.ts` | injected finalize/identity/handoff services, paths, and profile context |
+| Scope content/policy/executable resume authority and source-byte facts | `scripts/lib/batch-orchestration/scope-resume-contract.ts`, `scope-source-content.ts` | profile options, input discovery, and report aggregation |
+| Verified/blocked contract matching and blocker re-admission | `scripts/lib/batch-orchestration/scope-resume-ledger.ts`, `scope-resume-projection.ts` | ledger locations and selected-scope policy |
+| Durable consumed-attempt state and CLI event compaction | `scripts/lib/batch-orchestration/scope-attempt-ledger.ts` | command-owned files and reader counts |
+| Exact flow payload carry-forward and verified-row writing | `scripts/lib/batch-orchestration/flow-resume-ledger.ts`, `verified-flow-write.ts` | flow finalize/commit and identity semantics |
+| Process finalize checkpoint and report-byte authority | `scripts/lib/bafu-orchestration/process-scope-resume.ts` | process workflow options, execution, and report projection |
 
 Some paths may be introduced later in the same Issue #70 branch. A path named here is not executable authority until its code, tests, metadata, and review evidence are merged.
 
@@ -123,6 +128,9 @@ The CLI batch contract must provide:
 - read-only retry classification with injected delay, and mutation no-auto-retry;
 - explicit idempotency/readback recovery for an ambiguous mutation;
 - exact resume matching and rejection of incomplete or drifting authority;
+- source bundle/shared context bytes, profile options, stage policy, CommandSpec projection, and exact installed CLI package in the current authority;
+- one compact active state per consumed incomplete mutation attempt, with no replay until exact readback recovery succeeds;
+- canonical payload SHA matching before a verified Flow row can be carried forward;
 - an exclusive run-root lock before multiple processes can share output/ledger state.
 
 Foundry injects profile and report projection. The generic engine must not know BAFU, USLCI, Worldsteel, dataset blocker codes, or Foundry filenames.
@@ -131,13 +139,15 @@ Foundry injects profile and report projection. The generic engine must not know 
 
 The local ignored-runtime audit intentionally excluded credentials, receipt bodies, and data payloads. It found approximately 252 GiB of historical state, including about 173 GiB of Worldsteel batch/pilot copies. One USLCI run produced 10,830 checkpoints for 1,358 scopes over six resume rounds; a scope reached 50 snapshots. Of 75,400 historical artifact locators, only 326 still existed after scratch cleanup. Identity preflight consumed about 39.4 cumulative hours, and one outage produced 129 retryable finalize timeouts that later cleared.
 
-These observations are design inputs, not fixtures to commit. Replay tests use sanitized synthetic cases with the same counts/state transitions. Content-addressed artifact retention is Foundry #76 and content/policy-bound resume is #75. Issue #74 replaces raw argv/fake parallel execution with public CommandSpec and locked CLI batch contracts. Issue #77 separately makes exact names subordinate to the ordered physical-equivalence reasons. Issue #78 preserves multilingual canonical description JSON through every rewrite-ledger consumer and rejects lossy/non-JSON values before mutation. Issue #79 makes every emitted category-map manual-review row closure-blocking even when no current task references it, while preserving resolved report bytes. Issue #80 binds every post-finalize recovery projection to the full executed executable/argv and rejects projector drift. Issue #81 requires structured `23505` plus exact same-id/version semantics, one commit dispatch, and exact readback before closeout. Issue #83 binds suggestion/apply to one location queue artifact fact and rejects TOCTOU drift. Move-only #70 did not silently resolve any of them.
+These observations are design inputs, not payload fixtures to commit. Sanitized Issue #75 tests retain the real 1,358-scope cardinality and outage transitions: active attempt state compacts to at most one row per affected scope and the transient event file returns to zero after a completed run. Content-addressed artifact retention remains Foundry #76. Issue #75 now binds scope source/shared bytes, options, stage/CommandSpec/CLI fingerprints, process checkpoint output bytes, and canonical Flow payloads; legacy ledgers are explicitly distrusted, repaired blocker authority is re-admitted, and consumed ambiguous mutations require readback rather than replay. Issue #74 replaces raw argv/fake parallel execution with public CommandSpec and locked CLI batch contracts. Issue #77 separately makes exact names subordinate to the ordered physical-equivalence reasons. Issue #78 preserves multilingual canonical description JSON through every rewrite-ledger consumer and rejects lossy/non-JSON values before mutation. Issue #79 makes every emitted category-map manual-review row closure-blocking even when no current task references it, while preserving resolved report bytes. Issue #80 binds every post-finalize recovery projection to the full executed executable/argv and rejects projector drift. Issue #81 requires structured `23505` plus exact same-id/version semantics, one commit dispatch, and exact readback before closeout. Issue #83 binds suggestion/apply to one location queue artifact fact and rejects TOCTOU drift. Move-only #70 did not silently resolve any of them.
 
 ## 6. TDD and equivalence
 
 Every extraction begins with a failing contract that imports the intended semantic owner. GREEN first moves existing logic without changing regexes, precedence, option defaults, stage order, object insertion order, stdout, exit status, report paths, hashes, retry classification, or write authority.
 
 Issue #74 freezes public CommandSpec function identity, artifact drift before spawn, raw-array rejection, real max concurrency, exclusive process identity, input-ordered checkpoints/reports, one-attempt mutation failure, pause-before-claim, stop closure, exception isolation and exact CLI package identity. The explicit command-stage/report migration changes only raw array fields to full CommandSpec objects and updates their byte hashes. The command owner stays 494/494 lines, runner 310/314, command leaf 79/140 and scheduler below 140, with no new cycle; the 367-line local CommandSpec implementation is removed.
+
+Issue #75 freezes scope authority and recovery at four layers. `scope-resume-contract.test.mts` changes real bundle/shared bytes, options, CommandSpec, CLI version, and stage policy; `scope-attempt-ledger.test.mts` preserves 1,358 consumed outage attempts in one compact row each and proves rejected drift cannot replace the old attempt contract; `process-scope-resume-contract.test.mts` rejects legacy/tampered checkpoints and output reports; `flow-resume-ledger.test.mts` rejects identity-only or changed-payload Flow reuse. Command tests prove exact verified skip, legacy invalidation, repaired-blocker re-admission, pending/limit behavior, and reader artifacts. The composition root remains exactly 1,700 lines, generic CLI boundary 45, Foundry scope adapter 189, and every new resume/write leaf stays below its shrink-only ceiling with no new SCC.
 
 Issue #78 freezes a real two-language description at four boundaries: library process-reference plus exchange-ledger JSONL bytes/SHA, batch resolution decision bytes/SHA, identity-apply to process-reference transport, and BAFU carry-forward output/report bytes. Scalar strings remain scalar; functions, BigInt, cycles, sparse arrays, and other lossy values fail before payload mutation. The shared validator stays below its 100-line ceiling, `decision-apply.ts` shrinks under 667 lines, identity-patch and carry-forward remain at their prior 618/586 ceilings, and cycle analysis remains unchanged.
 

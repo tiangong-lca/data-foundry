@@ -32,6 +32,7 @@ export function createBatchScopeExecutionService(
   }: RunBatchScopeInput): Promise<JsonRecord> {
     const processId = io.asText(scope.process_id || scope.id);
     const processVersion = io.asText(scope.process_version || scope.version) || "00.00.001";
+    const resumeContract = paths.resumeContractsByScopeKey.get(`${processId}@${processVersion}`);
     const targetUserId = io.asText(options.targetUserId);
     const stateCode = io.integerOption(options.stateCode, 0) ?? 0;
     const scopeDir = io.joinPath(paths.outDir, "scopes", processId);
@@ -85,7 +86,10 @@ export function createBatchScopeExecutionService(
     io.appendJsonLine(paths.scopeCheckpoints, { ...checkpointBase, state: "started" });
 
     const block = ({ stage, blocker, report }: ScopeActionInput): JsonRecord => {
-      const row = operations.blockRow({ scope, stage, blocker, report, rerunCommand });
+      const row: JsonRecord = {
+        ...operations.blockRow({ scope, stage, blocker, report, rerunCommand }),
+        resume_contract: resumeContract ?? null,
+      };
       io.appendJsonLine(paths.blockedHumanReview, row);
       const categoryPath =
         paths[`blocked_${operations.categoryForBlocker(row.code).replace(/-/gu, "_")}`];
@@ -105,7 +109,10 @@ export function createBatchScopeExecutionService(
     };
 
     const fail = ({ stage, blocker, report }: ScopeActionInput): JsonRecord => {
-      const row = operations.blockRow({ scope, stage, blocker, report, rerunCommand });
+      const row: JsonRecord = {
+        ...operations.blockRow({ scope, stage, blocker, report, rerunCommand }),
+        resume_contract: resumeContract ?? null,
+      };
       io.appendJsonLine(paths.failedRetry, row);
       io.appendJsonLine(paths.blocked_remote_write, row);
       io.appendJsonLine(paths.scopeCheckpoints, {
@@ -158,7 +165,11 @@ export function createBatchScopeExecutionService(
     const flowIds = flowRows
       .map((row) => operations.datasetIdentity(row, "flow"))
       .filter((identity) => identity.id);
-    const flowVerificationPlan = operations.flowRowsPendingVerification(flowRows, verifiedFlows);
+    const flowVerificationPlan = operations.flowRowsPendingVerification(
+      flowRows,
+      verifiedFlows,
+      verifiedFlowRowsByKey,
+    );
     const unverifiedFlowIds = flowVerificationPlan.pendingIdentities;
     const carriedForwardFlows = operations.writeScopeCarriedForwardVerifiedFlowRows({
       ledgerDir,
@@ -379,33 +390,15 @@ export function createBatchScopeExecutionService(
         );
         const finalRows = io.readRows(committedFinalRows);
         const committedFlowRows = finalRows.length > 0 ? finalRows : io.readRows(flowReadyRows);
-        for (const identity of committedFlowRows
-          .map((row) => operations.datasetIdentity(row, "flow"))
-          .filter((entry) => entry.id)) {
-          const identityKey = operations.datasetIdentityKey(identity);
-          if (!identityKey) continue;
-          const alreadyVerified = verifiedFlows.has(identityKey);
-          verifiedFlows.add(identityKey);
-          operations.invalidateIdentityPreflightResultCacheEntry(
-            `flow:${identity.id}@${identity.version || "00.00.001"}`,
-          );
-          const okFlowRow = operations.okDatasetRow({
-            type: "flow",
-            id: identity.id,
-            version: identity.version,
-            processId,
-            report: flowCommit.report,
-            files: {
-              finalize_report: io.repoRelative(flowCommit.report),
-              closeout_report: io.repoRelative(flowCommit.handoff.closeoutReportPath),
-            },
-          });
-          verifiedFlowRowsByKey.set(identityKey, {
-            ...okFlowRow,
-            source_ledger_file: io.repoRelative(paths.okFlows),
-          });
-          if (!alreadyVerified) io.appendJsonLine(paths.okFlows, okFlowRow);
-        }
+        operations.recordVerifiedFlowRows({
+          rows: committedFlowRows,
+          processId,
+          report: flowCommit.report,
+          closeoutReportPath: flowCommit.handoff.closeoutReportPath,
+          ledgerPath: paths.okFlows,
+          verifiedFlows,
+          verifiedRowsByKey: verifiedFlowRowsByKey,
+        });
       }
     }
 
@@ -501,7 +494,6 @@ export function createBatchScopeExecutionService(
         });
       }
     }
-
     let processScopeReport = processPreReportPath;
     let processCloseoutReport: string | null = null;
     if (processPreReport.status === "ready_for_remote_write" && !processPatchApplyReport) {
@@ -569,11 +561,9 @@ export function createBatchScopeExecutionService(
       processScopeReport = processCommit.report;
       processCloseoutReport = processCommit.handoff.closeoutReportPath ?? null;
     }
-
     verifiedScopes.add(`${processId}@${processVersion}`);
-    io.appendJsonLine(
-      paths.okProcesses,
-      operations.okDatasetRow({
+    io.appendJsonLine(paths.okProcesses, {
+      ...operations.okDatasetRow({
         type: "process",
         id: processId,
         version: processVersion,
@@ -584,7 +574,8 @@ export function createBatchScopeExecutionService(
           process_closeout_report: io.repoRelative(processCloseoutReport),
         },
       }),
-    );
+      resume_contract: resumeContract ?? null,
+    });
     io.appendJsonLine(paths.okScopes, {
       schema_version: 1,
       generated_at_utc: io.nowIso(),
@@ -593,6 +584,7 @@ export function createBatchScopeExecutionService(
       status: "verified",
       report: io.repoRelative(processScopeReport),
       rows: { flows: flowIds.length, processes: 1 },
+      resume_contract: resumeContract ?? null,
     });
     io.appendJsonLine(paths.scopeCheckpoints, {
       ...checkpointBase,

@@ -274,8 +274,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 2504a80
-lastReviewedNote: "Reviewed for Issue #74: tests pin public CommandSpec ownership, artifact drift, real parallelism, pause/stop, no-replay, input order, and budgets."
+lastReviewedCommit: 10893c0
+lastReviewedNote: "Reviewed for Issue #75: tests pin exact resume authority, compact attempt state, blocker repair, process report bytes, and Flow payload reuse."
 ---
 
 # Test Layout
@@ -368,6 +368,8 @@ Wave 25 covers two re-export families. `unit/import-curation-leaf-barrels-migrat
 Wave 26 covers five dependency-ordered orchestration families. The five `unit/wave26-*-command-migration.test.mts` contracts require one native zero-escape owner, every dispatcher/metadata/wrapper consumer and exact serialized help bytes. Existing command and scenario fixtures remain the behavior authority for generic-versus-BAFU configuration, library/scope/classification/identity blocker and artifact order, resume ledgers, pause/stop, bounded parallel selection, read-only preflight, guarded commit delegation, native errors and deterministic report/JSONL bytes. All fixtures are local and read neither `.env` nor production.
 
 Issue #74 is pinned across three owners. `unit/foundry-command-spec.test.mts` requires the local facade to be a direct public CLI re-export with identical function identity. `unit/ready-process-scope-runner.test.mts` freezes two-way real concurrency, input-order report/checkpoint bytes, shell-free artifact-bound execution, raw-array and byte/SHA drift rejection, independent failure progress and one mutation attempt. `unit/ready-scope-scheduler.test.mts` freezes pause, stop, unclaimed order and exception isolation through the locked CLI engine; `scenarios/library-scope-workflow.test.mts` proves the public command path. Budget/cycle tests track the 494/310/79/below-140 boundaries.
+
+Issue #75 is pinned across resume authority and realistic replay scale. `unit/scope-resume-contract.test.mts` changes real bundle/shared bytes, options, CommandSpec, CLI package, and stage policy. `unit/scope-attempt-ledger.test.mts` uses 1,358 USLCI-shaped scopes to prove one compact active row per consumed outage attempt, zero retained transient events after compaction, and no drifted-contract replacement. `unit/cli-bounded-batch-runner.test.mts` proves a resumed mutation performs zero second executions before readback recovery. `unit/process-scope-resume-contract.test.mts`, `unit/process-scope-run-orchestration.test.mts`, and `commands/bafu-process-scope-e2e.test.mts` bind checkpoint inputs, options, argv, CLI/stage policy, and current finalize-report bytes. `unit/flow-resume-ledger.test.mts` and the scope-execution/BAFU command cases bind canonical Flow payload SHA, exact skip, legacy distrust, blocked-contract repair/re-admission, and deterministic reader bytes. All fixtures are sanitized/local and read no `.env` or production payload.
 
 Issue #70's `unit/batch-post-write-handoff.test.mts` isolates the asynchronous batch closure stage. It proves process, support, and Flow same-id/version conflicts require successful readback before closeout, retryable verification failures preserve attempt/delay evidence, missing reports exhaust the bounded retry plan without closeout, and other commit failures stop before verification. `unit/orchestration-module-budget.test.mts` keeps the command owner and semantic module ceilings shrink-only and includes the new module in cycle analysis once tracked.
 

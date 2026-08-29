@@ -19,8 +19,8 @@ checkPaths:
   - package.json
   - scripts/commands/core.ts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
-lastReviewedNote: "Reviewed for Issue #70: orchestration decomposition, pnpm 11.24, and CLI 0.1.3 public consumption do not change Stop-hook registration, recursion guard, output, or authority."
+lastReviewedCommit: 10893c088ef56083b0b0ecf2af71779f0eb61d21
+lastReviewedNote: "Reviewed for Issue #75: resume contracts, attempt compaction, and production-case evidence do not change Stop-hook registration, recursion guard, output, or authority."
 ---
 
 # Codex Stop Hook
