@@ -37,6 +37,8 @@ import { createScopeAttemptLedgerService } from "./scope-attempt-ledger.ts";
 import { createScopeExecutionExceptionRecorder } from "./scope-execution-exception.ts";
 import { createScopeMutationRecoveryService } from "./scope-mutation-recovery.ts";
 import { runFoundryScopeBatch } from "./foundry-scope-batch-runner.ts";
+import { createFlowResumeLedgerService } from "./flow-resume-ledger.ts";
+import { createVerifiedFlowWriteService } from "./verified-flow-write.ts";
 import { createAuthoringTaskFilterService } from "./authoring-task-filter.ts";
 import { createScopeRecoveryEvidenceService } from "./scope-recovery-evidence.ts";
 import { createScopeScratchPolicy } from "./scope-scratch-policy.ts";
@@ -556,9 +558,7 @@ const {
   batchRunStatus,
   blockRow,
   datasetIdentityKey,
-  flowRowsPendingVerification,
   loadActiveBlockedScopeSetFromFiles,
-  loadVerifiedRowsByKeyFromFiles,
   loadVerifiedSetFromFiles,
   okDatasetRow,
   writeBlockedScopeViews,
@@ -572,6 +572,21 @@ const {
   appendJsonLine,
   repoRelative,
   pathJoin: (...parts: string[]) => path.join(...parts),
+});
+const {
+  loadRowsByKey: loadVerifiedFlowRowsByKey,
+  partitionRows: flowRowsPendingVerification,
+  payloadSha256: flowPayloadSha256,
+} = createFlowResumeLedgerService({ asText, datasetIdentity, readJsonLines, repoRelative });
+const { record: recordVerifiedFlowRows } = createVerifiedFlowWriteService({
+  asText,
+  datasetIdentity,
+  datasetIdentityKey,
+  payloadSha256: flowPayloadSha256,
+  repoRelative,
+  invalidateIdentityPreflightResultCacheEntry,
+  okDatasetRow,
+  appendJsonLine,
 });
 
 function readRows(filePath: string | null | undefined): JsonRecord[] {
@@ -1013,6 +1028,7 @@ export function createBafuBatchImportRunCommands(
       datasetIdentity,
       datasetIdentityKey,
       flowRowsPendingVerification,
+      recordVerifiedFlowRows,
       writeScopeCarriedForwardVerifiedFlowRows,
       existingIdentityApplyReportsWithReferenceRewrites,
       uniqueExistingPaths,
@@ -1024,7 +1040,6 @@ export function createBafuBatchImportRunCommands(
       runIdentityAndPatch,
       preFinalizeRecoveryBlocker,
       finalizeAndCommitDataset,
-      invalidateIdentityPreflightResultCacheEntry,
       okDatasetRow,
       executeHandoff,
       trimVerifiedScopeScratch,
@@ -1277,7 +1292,7 @@ export function createBafuBatchImportRunCommands(
     writeJsonLines(paths.resumeInvalidated, resumeMatches.invalidatedRows);
     const verifiedScopes = resumeMatches.verifiedScopes;
     const verifiedFlows = loadVerifiedSetFromFiles(okFlowFiles, "flow");
-    const verifiedFlowRowsByKey = loadVerifiedRowsByKeyFromFiles(okFlowFiles, "flow");
+    const verifiedFlowRowsByKey = loadVerifiedFlowRowsByKey(okFlowFiles);
     const blockedScopes = loadActiveBlockedScopeSetFromFiles(blockedScopeFiles, verifiedScopes);
     const supportIdentityCache = primeVerifiedSupportIdentityCache({
       outDir,
@@ -1660,6 +1675,7 @@ export function createBafuBatchImportRunCommands(
 export const bafuBatchImportRunTestHooks = {
   commitFailuresAllAlreadyExist,
   enforceSharedContextCacheCap,
+  flowPayloadSha256,
   flowRowsPendingVerification,
   foundryCommand,
   identityUnresolvedReferenceBlocker,

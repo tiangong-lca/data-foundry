@@ -39,6 +39,8 @@
     "scripts/lib/batch-orchestration/bafu-batch-command-runtime.ts": 1700,
     "scripts/lib/batch-orchestration/cli-bounded-batch-runner.ts": 180,
     "scripts/lib/batch-orchestration/foundry-scope-batch-runner.ts": 220,
+    "scripts/lib/batch-orchestration/flow-resume-ledger.ts": 120,
+    "scripts/lib/batch-orchestration/verified-flow-write.ts": 110,
     "scripts/lib/batch-orchestration/identity-patch-stage.ts": 618,
     "scripts/lib/batch-orchestration/location-task-queue.ts": 120,
     "scripts/lib/batch-orchestration/post-write-handoff.ts": 559,

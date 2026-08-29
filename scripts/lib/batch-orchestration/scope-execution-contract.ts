@@ -11,6 +11,7 @@ import type {
   BatchScopePreparationResult,
 } from "./scope-preparation.ts";
 import type { ScopeResumeContract } from "./scope-resume-contract.ts";
+import type { VerifiedFlowWriteInput } from "./verified-flow-write.ts";
 
 export type BatchScopeJsonRecord = Record<string, unknown>;
 
@@ -83,13 +84,11 @@ interface IdentityPatchCompleted extends BatchScopeJsonRecord {
   patchCollectReport: string | null;
   patchApplyReport: string | null;
 }
-
 interface IdentityPatchBlocked extends BatchScopeJsonRecord {
   status: "blocked";
   blocker: BatchScopeJsonRecord;
   report?: string | null;
 }
-
 type IdentityPatchResult = IdentityPatchCompleted | IdentityPatchBlocked;
 
 interface HandoffResult extends BatchScopeJsonRecord {
@@ -162,7 +161,9 @@ export interface BatchScopeExecutionOperationAdapter {
   flowRowsPendingVerification: (
     rows: BatchScopeJsonRecord[],
     verified: Set<string>,
+    verifiedRowsByKey: ReadonlyMap<string, BatchScopeJsonRecord>,
   ) => FlowVerificationPlan;
+  recordVerifiedFlowRows: (input: VerifiedFlowWriteInput) => void;
   writeScopeCarriedForwardVerifiedFlowRows: (input: {
     ledgerDir: string;
     processId: string;
@@ -220,7 +221,6 @@ export interface BatchScopeExecutionOperationAdapter {
     stages: BatchScopeJsonRecord[];
     supportIdentityCacheFile: string;
   }) => Promise<DatasetCommitResult>;
-  invalidateIdentityPreflightResultCacheEntry: (identityKey: string) => void;
   okDatasetRow: (input: {
     type: string;
     id: string | null;

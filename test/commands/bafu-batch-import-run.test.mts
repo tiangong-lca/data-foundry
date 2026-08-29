@@ -1966,6 +1966,12 @@ test("BAFU batch flow verification filter keeps only flows not in ok flow ledger
   const plan = bafuBatchImportRunTestHooks.flowRowsPendingVerification(
     rows,
     new Set([`${verifiedId}@00.00.001`]),
+    new Map([
+      [
+        `${verifiedId}@00.00.001`,
+        { payload_sha256: bafuBatchImportRunTestHooks.flowPayloadSha256(rows[0]) },
+      ],
+    ]),
   );
 
   assert.equal(plan.pendingRows.length, 1);

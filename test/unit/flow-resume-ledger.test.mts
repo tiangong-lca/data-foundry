@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createFlowResumeLedgerService } from "../../scripts/lib/batch-orchestration/flow-resume-ledger.ts";
+import { createVerifiedFlowWriteService } from "../../scripts/lib/batch-orchestration/verified-flow-write.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -30,11 +31,7 @@ test("flow resume requires exact canonical payload SHA and distrusts legacy rows
   assert.equal(exact.invalidatedIdentities[0].reason, "legacy_flow_payload_digest_missing");
 
   const changedA = { ...flowA, value: { amount: 3 } };
-  const drift = service.partitionRows(
-    [changedA],
-    new Set(["flow-a@00.00.001"]),
-    verifiedRows,
-  );
+  const drift = service.partitionRows([changedA], new Set(["flow-a@00.00.001"]), verifiedRows);
   assert.deepEqual(drift.verifiedRows, []);
   assert.deepEqual(drift.pendingRows, [changedA]);
   assert.equal(drift.invalidatedIdentities[0].reason, "flow_payload_drift");
@@ -53,4 +50,35 @@ test("flow resume loader gives the latest ledger row precedence", () => {
   const rows = service.loadRowsByKey(["prior", "local"]);
   assert.equal(rows.get("flow-a@00.00.001")?.payload_sha256, "local");
   assert.equal(rows.get("flow-a@00.00.001")?.source_ledger_file, "ledger/local");
+});
+
+test("verified flow writer records payload authority once per exact payload", () => {
+  const appended: JsonRecord[] = [];
+  const verifiedRowsByKey = new Map<string, JsonRecord>();
+  const verifiedFlows = new Set<string>();
+  const payloadSha256 = (row: JsonRecord) => JSON.stringify(row);
+  const service = createVerifiedFlowWriteService({
+    asText: (value) => String(value ?? ""),
+    datasetIdentity: (row) => ({ id: String(row.id), version: String(row.version) }),
+    datasetIdentityKey: (identity) => `${identity.id}@${identity.version}`,
+    payloadSha256,
+    repoRelative: (filePath) => String(filePath ?? ""),
+    invalidateIdentityPreflightResultCacheEntry: () => undefined,
+    okDatasetRow: (input) => ({ dataset_id: input.id, dataset_version: input.version }),
+    appendJsonLine: (_filePath, row) => appended.push(row),
+  });
+  const input = {
+    rows: [flowA],
+    processId: "process-a",
+    report: "finalize.json",
+    closeoutReportPath: "closeout.json",
+    ledgerPath: "ok.flows.jsonl",
+    verifiedFlows,
+    verifiedRowsByKey,
+  };
+  service.record(input);
+  service.record(input);
+  assert.equal(appended.length, 1);
+  assert.equal(appended[0].payload_sha256, payloadSha256(flowA));
+  assert.equal(verifiedRowsByKey.get("flow-a@00.00.001")?.payload_sha256, payloadSha256(flowA));
 });

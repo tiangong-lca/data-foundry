@@ -7,6 +7,8 @@ import { pathToFileURL } from "node:url";
 
 import { createBafuBatchImportRunCommands } from "../../scripts/commands/bafu-batch-import-run.ts";
 import { createBatchScopePreparationService } from "../../scripts/lib/batch-orchestration/scope-preparation.ts";
+import { createBafuScopeResumeContract } from "../../scripts/lib/batch-orchestration/scope-resume-contract.ts";
+import { createBafuScopeSourceContent } from "../../scripts/lib/batch-orchestration/scope-source-content.ts";
 import {
   readJson,
   readJsonLines,
@@ -91,6 +93,18 @@ function writeRequiredBatchInputs(runDir: string, schemaDir: string): void {
     path.join(runDir, "decisions-v4-leaf-category-map", "classification-decisions.jsonl"),
     [],
   );
+}
+
+function requiredBatchInputFiles(runDir: string, schemaDir: string): string[] {
+  return [
+    path.join(runDir, "decisions-v4-leaf-category-map", "classification-decisions.jsonl"),
+    ...["flow", "process"].flatMap((type) =>
+      ["schema.json", "runtime-ruleset.json", "methodology.yaml"].map((name) =>
+        path.join(runDir, "context", type, "outputs", name),
+      ),
+    ),
+    ...fs.readdirSync(schemaDir).map((name) => path.join(schemaDir, name)),
+  ];
 }
 
 test("single-scope execution has coherent typed owners and shrinks the command owner by 700 lines", async () => {
@@ -433,14 +447,13 @@ test("verified resume keeps exact report and ledger bytes across the single-scop
   const scopeFile = path.join(fixtureRoot, "ready-scopes.jsonl");
   fs.mkdirSync(processBundlesDir, { recursive: true });
   writeRequiredBatchInputs(runDir, schemaDir);
-  writeJsonLines(scopeFile, [
-    {
-      schema_version: 1,
-      process_id: processId,
-      process_version: "00.00.001",
-      closure_status: "ready",
-    },
-  ]);
+  const scope = {
+    schema_version: 1,
+    process_id: processId,
+    process_version: "00.00.001",
+    closure_status: "ready",
+  };
+  writeJsonLines(scopeFile, [scope]);
   writeJsonLines(path.join(outDir, "import-ledger", "ok.scopes.verified.jsonl"), [
     {
       schema_version: 1,
@@ -450,6 +463,27 @@ test("verified resume keeps exact report and ledger bytes across the single-scop
       process_id: processId,
       process_version: "00.00.001",
       status: "verified",
+      resume_contract: createBafuScopeResumeContract(scope, {
+        command: "dataset-bafu-batch-import-run",
+        profile: "bafu",
+        targetUserId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        stateCode: 0,
+        commit: true,
+        parallel: 1,
+        requireLeafClassification: false,
+        selectionOrder: "input",
+        applyResolutionRewrites: false,
+        familySignatures: false,
+        mintUnmatchedFpUgSupport: false,
+        cliPackage: "@tiangong-lca/cli@0.1.3",
+        sourceContent: createBafuScopeSourceContent({
+          scope,
+          processBundlesDir,
+          sharedFiles: requiredBatchInputFiles(runDir, schemaDir),
+          resolutionRewriteRows: [],
+          repoRelative: rel,
+        }),
+      }),
     },
   ]);
 
@@ -505,6 +539,7 @@ test("verified resume keeps exact report and ledger bytes across the single-scop
       selected_scopes: 1,
       pending_candidate_scopes: 1,
       filtered_already_verified_scopes: 0,
+      invalidated_verified_scopes: 0,
       filtered_already_blocked_scopes: 0,
       filtered_classification_missing_scopes: 0,
       filtered_classification_not_leaf_scopes: 0,
@@ -515,6 +550,7 @@ test("verified resume keeps exact report and ledger bytes across the single-scop
       skipped: 1,
       skipped_blocked: 0,
       blocked: 0,
+      ambiguous: 0,
       failed_retryable: 0,
       ok_scope_ledger_rows: 1,
       ok_flow_ledger_rows: 0,
@@ -522,6 +558,7 @@ test("verified resume keeps exact report and ledger bytes across the single-scop
       historical_human_review_rows: 0,
       resolved_human_review_rows: 0,
       retry_rows: 0,
+      ambiguous_no_replay: 0,
       already_verified_scopes: 1,
       already_verified_flows: 0,
       already_blocked_scopes: 0,
@@ -544,13 +581,13 @@ test("verified resume keeps exact report and ledger bytes across the single-scop
     const byteContracts = [
       [
         "dataset-bafu-batch-import-run-report.json",
-        4497,
-        "15c6f1f19b8df36fe1c8abfe2152b7dfd5716ea36db328470697130540d2a0ff",
+        5103,
+        "bcfcaeb9b7d87c5cf6ee5e0cb8afbdba4620fe952f3de877973f57017e461744",
       ],
       [
         "import-ledger/run-manifest.json",
-        6677,
-        "ffb7e70a5d6505a52ee53666812afd4164ea0f6d8c109f6c100267bbbf876bc4",
+        7316,
+        "8ae8ca4531eb6c639bad22027d05fb9fbfa9ab44f1c30fd79e49ca4e106f687f",
       ],
       [
         "scope-checkpoints.jsonl",

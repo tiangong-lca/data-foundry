@@ -158,7 +158,11 @@ export function createBatchScopeExecutionService(
     const flowIds = flowRows
       .map((row) => operations.datasetIdentity(row, "flow"))
       .filter((identity) => identity.id);
-    const flowVerificationPlan = operations.flowRowsPendingVerification(flowRows, verifiedFlows);
+    const flowVerificationPlan = operations.flowRowsPendingVerification(
+      flowRows,
+      verifiedFlows,
+      verifiedFlowRowsByKey,
+    );
     const unverifiedFlowIds = flowVerificationPlan.pendingIdentities;
     const carriedForwardFlows = operations.writeScopeCarriedForwardVerifiedFlowRows({
       ledgerDir,
@@ -379,33 +383,15 @@ export function createBatchScopeExecutionService(
         );
         const finalRows = io.readRows(committedFinalRows);
         const committedFlowRows = finalRows.length > 0 ? finalRows : io.readRows(flowReadyRows);
-        for (const identity of committedFlowRows
-          .map((row) => operations.datasetIdentity(row, "flow"))
-          .filter((entry) => entry.id)) {
-          const identityKey = operations.datasetIdentityKey(identity);
-          if (!identityKey) continue;
-          const alreadyVerified = verifiedFlows.has(identityKey);
-          verifiedFlows.add(identityKey);
-          operations.invalidateIdentityPreflightResultCacheEntry(
-            `flow:${identity.id}@${identity.version || "00.00.001"}`,
-          );
-          const okFlowRow = operations.okDatasetRow({
-            type: "flow",
-            id: identity.id,
-            version: identity.version,
-            processId,
-            report: flowCommit.report,
-            files: {
-              finalize_report: io.repoRelative(flowCommit.report),
-              closeout_report: io.repoRelative(flowCommit.handoff.closeoutReportPath),
-            },
-          });
-          verifiedFlowRowsByKey.set(identityKey, {
-            ...okFlowRow,
-            source_ledger_file: io.repoRelative(paths.okFlows),
-          });
-          if (!alreadyVerified) io.appendJsonLine(paths.okFlows, okFlowRow);
-        }
+        operations.recordVerifiedFlowRows({
+          rows: committedFlowRows,
+          processId,
+          report: flowCommit.report,
+          closeoutReportPath: flowCommit.handoff.closeoutReportPath,
+          ledgerPath: paths.okFlows,
+          verifiedFlows,
+          verifiedRowsByKey: verifiedFlowRowsByKey,
+        });
       }
     }
 
