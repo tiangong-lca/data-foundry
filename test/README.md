@@ -274,8 +274,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 6d415a7
-lastReviewedNote: "Reviewed for Issue #80: tests pin exact recovery argv for success/nonzero/throw/missing cases, projection drift, bytes, budgets, and cycles."
+lastReviewedCommit: 405b7d2
+lastReviewedNote: "Reviewed for Issue #83: tests pin one queue lookup, exact facts, four drift modes, stable report bytes, budgets, and cycles."
 ---
 
 # Test Layout
@@ -378,6 +378,8 @@ Issue #78 is pinned across the full description transport. `unit/library-decisio
 Issue #79 is pinned across artifact, report, and CLI boundaries. `unit/bafu-leaf-category-map-projection.test.mts` supplies unreferenced conflict, invalid-code, missing-context, and incomplete decisions to the bounded `category-map-report.ts` leaf; each must produce manual status plus a source/reason/artifact blocker, while resolved-only report bytes remain frozen. `unit/orchestration-module-budget.test.mts` keeps projection/report at 656/140-line shrink-only ceilings and cycle-free. `unit/foundry-cli-spine.test.mts` requires manual status to exit nonzero, and `commands/bafu-leaf-classification-tasks.test.mts` proves the real command still writes its complete JSON/manual-review/candidate artifacts on that nonzero exit.
 
 Issue #80 is pinned in `unit/post-finalize-recovery-orchestration.test.mts`. Captured invocations for every identity/semantic stage must equal the projected command's executable plus argv, with derived display, across success, nonzero, thrown execution, and missing-report paths. A deliberately corrupt projector must throw before the next stage. Exact result bytes/SHA and source-level single-call assertions prevent a later reintroduction of reconstructed or partial command strings; budget/cycle tests keep the owner at 539/540 lines with no new SCC.
+
+Issue #83 is pinned in `unit/batch-orchestration-scope-execution.test.mts`. The stable case requires one task-queue lookup and identical suggest/apply paths; four drift cases freeze expected/observed path/bytes/SHA and prove apply is never invoked after missing, changed-length, same-length changed-hash, or relative-path replacement. The pre-existing verified-resume fixture keeps stable report/ledger bytes exact. Budget/cycle tests track the 89/120 binding leaf and unchanged 532-line preparation ceiling.
 
 `fixtures/auth-identity-receipt.ts` is the only test-only receipt materializer. It recreates the frozen public wire fingerprints and scope hash, then every consumer still passes the bytes through `@tiangong-lca/cli/auth-identity-receipt`. `unit/public-cli-batch-runtime.test.mts` loads exact installed CLI 0.1.3, exercises public batch/run-lock plus strict receipt parsing, and proves the former private deep path stays unexported. `unit/toolchain-contract.test.mts` rejects any tracked `@tiangong-lca/cli/dist/src/**` import and binds the exact provenance-verified 0.1.3 maturity exception.
 

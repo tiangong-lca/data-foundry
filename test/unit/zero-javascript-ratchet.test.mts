@@ -19,6 +19,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // Issue #80's exact recovery-argv projection cases remain native TypeScript too.
 // Issue #81's strict no-replay handoff recovery and helper leaves remain native TypeScript too.
 // Issue #82 keeps the pnpm 11.24 package-manager edge exact and adds no compatibility runner.
+// Issue #83's immutable location-queue binding cases remain native TypeScript too.
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");

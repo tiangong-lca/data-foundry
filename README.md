@@ -149,8 +149,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 6d415a7
-lastReviewedNote: "Reviewed for Issue #80: recovery reports retain complete executed argv across success and failure, with display derived and projection drift rejected."
+lastReviewedCommit: 405b7d2
+lastReviewedNote: "Reviewed for Issue #83: location queue discovery is single-shot and missing/content/path drift is blocked with exact artifact facts."
 ---
 
 # TianGong LCA Data Foundry
@@ -248,6 +248,8 @@ Issue #79 makes BAFU category-map completion truthful even when a conflicting, i
 Issue #80 makes post-finalize recovery reports truthful to executed authority. All identity and semantic recovery stages now dispatch and project through one helper; `command.executable` plus `command.argv` are the exact shell-free execution array and `command.display` is derived diagnostic text. Success, nonzero, thrown, and missing-report paths retain every option, including shared-context cache binding. A projector that omits, changes, reorders, or adds authority fields fails before downstream recovery. Stage order, blocker behavior, report/artifact paths, and the prohibition on remote commit remain unchanged.
 
 Issue #81 aligns process and batch lost-success recovery through `same-identity-commit-recovery.ts`. Recovery requires explicit database code `23505` plus exact same-id/version conflict semantics; text-only, mixed, malformed, or incomplete evidence fails closed. Neither orchestration path replays a commit. The outcome remains `readback_recovery_pending` until the existing content-bound verifier proves exact owner, state, identity, version, payload, and root closure; every mismatch, unexpected row, missing report, or exhausted readback blocks closeout.
+
+Issue #83 removes the location queue TOCTOU inside batch scope preparation. The task-produced queue is resolved once and bound as `{ path, bytes, sha256 }`; both suggestion and apply use that path. A missing queue, length change, same-length content replacement, or relative-path drift after suggestion yields an expected/observed blocker before apply. Stable-input stage order, report/ledger/help/Golden bytes, classification/location outcomes, and remote authority remain unchanged.
 
 Wave 26 migrates four adapter/tool boundaries. `tidas-adapter.ts` retains executable/config precedence, controlled script argv/env, operation/version/asset reports, batch document hashes and atomic rollback. `post-authoring-finalize-utils.ts` retains rewrite discovery, identity reuse, payload-freshness hashes, external-reference and finalize order. `check-tidas-cutover.ts` retains authoritative Git inventory and JSON/exit behavior; `foundry-golden-diff.ts` retains non-HEAD merge-base selection, cross-platform path/argv normalization and Node-native comparison. Inventory moves 89→85 without changing help, profiles, Worldsteel, Date.parse or remote-write authority.
 

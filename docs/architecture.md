@@ -147,8 +147,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 6d415a7
-lastReviewedNote: "Reviewed for Issue #80: one bounded helper constructs, dispatches, projects, and verifies exact recovery argv without adding remote authority."
+lastReviewedCommit: 405b7d2
+lastReviewedNote: "Reviewed for Issue #83: a bounded location-queue fact leaf prevents suggest/apply TOCTOU without changing stable report bytes or taxonomy authority."
 ---
 
 # Architecture
@@ -249,6 +249,8 @@ The typed dataset-orchestration layer composes those owners without absorbing th
 Canonical description transport is a small shared JSON boundary under that orchestration. `scripts/lib/canonical-description.ts` accepts scalar strings or losslessly cloneable JSON objects/arrays, preserves insertion/language/value order, and rejects unsupported values or cycles before any reference mutation. Library decision apply uses that one value for authoritative multilingual process-reference and rewrite-ledger evidence; batch identity resolution, identity apply/reference rewrite, and BAFU carry-forward preserve it without display coercion. This changes evidence fidelity only—canonical selection, payload preservation hashes outside the selected description, paths, and mutation authority stay fixed.
 
 Post-finalize recovery command evidence has one construction boundary in `scripts/lib/bafu-orchestration/post-finalize-recovery.ts`. The helper derives `{ executable, argv, display }`, dispatches a fresh copy of the same executable/argv, passes that authority to the reader projection, and verifies the projected object exactly before returning. Thus success, failure, exception, and missing-report branches cannot diverge or hide options. This is local execution/report fidelity; it adds no CommandSpec mutation authority and does not change recovery semantics or stage ordering.
+
+Location decision queue identity is a bounded artifact boundary in `scripts/lib/batch-orchestration/location-task-queue.ts`. Scope preparation discovers the generated queue once, stores relative path/bytes/SHA, drives suggestion from that fact, and verifies the same resolved file and relative path before apply. The drift path emits exact expected/observed facts; the stable path adds no report stage or byte change. Taxonomy choice stays with location decision tooling, while this leaf owns only local artifact continuity.
 
 BAFU flow identity equivalence is a narrow semantic boundary inside that layer. Candidate search remains Edge/database-owned, while `scripts/lib/bafu-authoring/identity-equivalence.ts` deterministically reviews returned candidates. Exact normalized names can rank a candidate but cannot suppress an ordered non-equivalence reason; only a zero-conflict exact candidate can be reused. Physically conflicting exact-name candidates flow through local `create_new` evidence and deterministic identity apply without changing the source flow UUID.
 
