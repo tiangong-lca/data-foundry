@@ -321,7 +321,10 @@ test("AI identity decisions apply split flow rows into writes and reference reus
         table: "flows",
         ref_object_id: existingFlowId,
         version: "03.00.004",
-        short_description: "Natural gas",
+        short_description: [
+          { "@xml:lang": "en", "#text": "Natural gas" },
+          { "@xml:lang": "zh", "#text": "天然气" },
+        ],
       },
       basis:
         "The selected database flow matches the source-language base name and identity preflight candidate fields, so this row should reuse the existing reference.",
@@ -409,6 +412,10 @@ test("AI identity decisions apply split flow rows into writes and reference reus
       reuseFlowId,
     );
     assert.equal(rewriteRows[0].canonical.ref_object_id, existingFlowId);
+    assert.deepEqual(rewriteRows[0].canonical.short_description, [
+      { "@xml:lang": "en", "#text": "Natural gas" },
+      { "@xml:lang": "zh", "#text": "天然气" },
+    ]);
 
     const schemaReport = path.join(root, "schema", "validation-report.json");
     writeJson(schemaReport, {
@@ -474,6 +481,15 @@ test("AI identity decisions apply split flow rows into writes and reference reus
     assert.equal(
       rewrittenProcess.processDataSet.exchanges.exchange[0].referenceToFlowDataSet["@refObjectId"],
       existingFlowId,
+    );
+    assert.deepEqual(
+      rewrittenProcess.processDataSet.exchanges.exchange[0].referenceToFlowDataSet[
+        "common:shortDescription"
+      ],
+      [
+        { "@xml:lang": "en", "#text": "Natural gas" },
+        { "@xml:lang": "zh", "#text": "天然气" },
+      ],
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

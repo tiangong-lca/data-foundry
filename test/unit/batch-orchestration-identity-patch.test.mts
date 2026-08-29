@@ -387,7 +387,10 @@ test("USLCI deterministic resolution rewrites preserve decision order and fail c
           source_flow_version: "01.00.000",
           canonical_flow_id: "canonical-flow-a",
           canonical_flow_version: "02.00.000",
-          canonical_short_description: "Canonical electricity flow",
+          canonical_short_description: [
+            { "@xml:lang": "en", "#text": "Canonical electricity flow" },
+            { "@xml:lang": "zh", "#text": "标准电力流" },
+          ],
           process_id: "process-a",
           exchange_index: 4,
         },
@@ -453,12 +456,19 @@ test("USLCI deterministic resolution rewrites preserve decision order and fail c
         ["source-flow-b", "canonical-flow-b"],
       ],
     );
-    assert.equal(decisionRows[0].canonical.short_description, "Canonical electricity flow");
+    assert.deepEqual(decisionRows[0].canonical.short_description, [
+      { "@xml:lang": "en", "#text": "Canonical electricity flow" },
+      { "@xml:lang": "zh", "#text": "标准电力流" },
+    ]);
+    assert.deepEqual(decisionRows[0].canonical_short_description, [
+      { "@xml:lang": "en", "#text": "Canonical electricity flow" },
+      { "@xml:lang": "zh", "#text": "标准电力流" },
+    ]);
     assert.equal(decisionRows[0].evidence.exchange_index, 4);
     assert.equal(decisionRows[1].dataset_version, "00.00.001");
     assert.equal(
       sha256Text(decisionBytes),
-      "175fc53f259dc1c92af0bfc4e8188781bc6c61e63c495d26995aa6574f9bd7a2",
+      "3920b8385c124ae89bea4d8ce92cf7b8ca25403cf6b2d86a70332c8c5a296e4d",
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
