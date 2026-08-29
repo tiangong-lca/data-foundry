@@ -138,7 +138,7 @@ test("single-scope execution has coherent typed owners and shrinks the command o
   assert.deepEqual(Object.keys(preparationModule), ["createBatchScopePreparationService"]);
 });
 
-test("scope preparation preserves decision stage order and re-reads the location task queue before apply", async () => {
+test("scope preparation resolves one location task queue for both suggest and apply", async () => {
   const stageInputs: Array<{ stage: string; argv: string[] }> = [];
   const stageReports: Record<string, JsonRecord> = {
     materialize: {
@@ -263,11 +263,11 @@ test("scope preparation preserves decision stage order and re-reads the location
   );
   assert.equal(result.processClassifiedRows, "/rows/processes.classified.jsonl");
   assert.equal(result.flowRowsForFinalize, "/rows/flows.located.jsonl");
-  assert.deepEqual(locationTaskQueueLookups, ["/scope/location-task", "/scope/location-task"]);
+  assert.deepEqual(locationTaskQueueLookups, ["/scope/location-task"]);
   const suggestArgv = stageInputs.find((entry) => entry.stage === "location.suggest")?.argv ?? [];
   const applyArgv = stageInputs.find((entry) => entry.stage === "location.apply")?.argv ?? [];
   assert.equal(suggestArgv[suggestArgv.indexOf("--location-queue") + 1], locationTaskQueues[0]);
-  assert.equal(applyArgv[applyArgv.indexOf("--location-queue") + 1], locationTaskQueues[1]);
+  assert.equal(applyArgv[applyArgv.indexOf("--location-queue") + 1], locationTaskQueues[0]);
 });
 
 test("verified resume keeps exact report and ledger bytes across the single-scope extraction", async () => {
