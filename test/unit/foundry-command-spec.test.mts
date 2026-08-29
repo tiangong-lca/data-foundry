@@ -193,3 +193,23 @@ test("handoff runners contain no shell-string parser or shell:true execution pat
     assert.match(source, /assertFoundryCommandSpecBindsArtifact/u, file);
   }
 });
+
+test("Foundry CommandSpec facade is the published CLI subpath without a local implementation", async () => {
+  const facadePath = path.resolve("scripts/lib/foundry-command-spec.ts");
+  const source = fs.readFileSync(facadePath, "utf8");
+  assert.match(source, /from\s+["']@tiangong-lca\/cli\/command-spec["']/u);
+  assert.doesNotMatch(source, /node:(?:child_process|crypto|fs)/u);
+  assert.ok(source.split(/\r?\n/u).length - 1 <= 5);
+
+  const facade = await import(facadePath);
+  const published = await import("@tiangong-lca/cli/command-spec");
+  for (const name of [
+    "createFoundryCommandSpec",
+    "parseFoundryCommandSpec",
+    "executeFoundryCommandSpec",
+    "executeFoundryCommandSpecSync",
+    "assertFoundryCommandSpecArtifactsCurrent",
+  ]) {
+    assert.equal(facade[name], published[name], name);
+  }
+});
