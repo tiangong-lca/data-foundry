@@ -2405,6 +2405,22 @@ test("enforceSharedContextCacheCap clears the cache only when over the cap", () 
   // over cap -> cleared
   bafuBatchImportRunTestHooks.enforceSharedContextCacheCap(runDir, {}, 2);
   assert.equal(fs.readdirSync(cacheDir).length, 0);
+  const pruneReport = readJson(path.join(runDir, "shared-context-cache-prune-report.json"));
+  assert.equal(pruneReport.status, "completed");
+  assert.equal(pruneReport.counts.removed_entries, 3);
+
+  const unsafeRunDir = path.join(fixtureRoot, "context-cache-cap-symlink");
+  const outside = path.join(fixtureRoot, "context-cache-cap-outside");
+  fs.mkdirSync(unsafeRunDir, { recursive: true });
+  fs.mkdirSync(outside, { recursive: true });
+  fs.writeFileSync(path.join(outside, "keep.json"), "ctx");
+  fs.symlinkSync(outside, path.join(unsafeRunDir, "shared-context-cache"));
+  bafuBatchImportRunTestHooks.enforceSharedContextCacheCap(unsafeRunDir, {}, 0);
+  assert.equal(fs.readFileSync(path.join(outside, "keep.json"), "utf8"), "ctx");
+  assert.equal(
+    readJson(path.join(unsafeRunDir, "shared-context-cache-prune-report.json")).status,
+    "blocked_unsafe_cache_path",
+  );
 });
 
 test("minted flow invalidation removes every content-bound preflight cache entry", () => {
