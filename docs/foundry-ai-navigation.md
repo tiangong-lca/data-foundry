@@ -137,7 +137,7 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 8a6e7af
+lastReviewedCommit: 349c884
 lastReviewedNote: "Reviewed for Issue #78: canonical-description defects route from the JSON leaf through library, batch identity, process rewrite, and carry-forward consumers."
 ---
 

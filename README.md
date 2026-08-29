@@ -149,7 +149,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 8a6e7af
+lastReviewedCommit: 349c884
 lastReviewedNote: "Reviewed for Issue #78: multilingual canonical descriptions retain exact JSON/order through rewrite, identity, process-reference, and carry-forward evidence."
 ---
 

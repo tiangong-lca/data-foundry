@@ -276,7 +276,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 8a6e7af
+lastReviewedCommit: 349c884
 lastReviewedNote: "Reviewed for Issue #78: canonical description JSON is validated before mutation and never coerced into display text across the rewrite workflow."
 tracker:
   kind: filesystem

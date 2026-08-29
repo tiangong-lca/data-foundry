@@ -233,7 +233,7 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 8a6e7af
+lastReviewedCommit: 349c884
 lastReviewedNote: "Reviewed for Issue #78: canonical multilingual JSON now remains lossless through library/identity rewrite ledgers and every downstream consumer."
 ---
 

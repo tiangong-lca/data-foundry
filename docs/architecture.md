@@ -147,7 +147,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 8a6e7af
+lastReviewedCommit: 349c884
 lastReviewedNote: "Reviewed for Issue #78: one bounded JSON validator preserves canonical multilingual evidence while leaving identity choice and mutation authority unchanged."
 ---
 
