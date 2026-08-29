@@ -26,6 +26,8 @@ export interface ReadyScopeScheduleOptions<TItem extends ReadyScopeScheduleItem,
   parallel: number;
   items: TItem[];
   execute: (item: TItem) => Promise<TResult>;
+  pauseRequested?: () => boolean;
+  shouldStop?: (completedResults: readonly TResult[]) => boolean;
 }
 
 export function scheduleReadyScopes<TItem extends ReadyScopeScheduleItem, TResult>({
@@ -36,6 +38,8 @@ export function scheduleReadyScopes<TItem extends ReadyScopeScheduleItem, TResul
   parallel,
   items,
   execute,
+  pauseRequested,
+  shouldStop: stopRequested,
 }: ReadyScopeScheduleOptions<TItem, TResult>): Promise<
   BatchRunResult<TItem, TResult, ScopeBatchIdentity>
 > {
@@ -65,5 +69,17 @@ export function scheduleReadyScopes<TItem extends ReadyScopeScheduleItem, TResul
     mode: commit ? "mutation" : "read",
     maxConcurrency: parallel,
     execute: ({ item }) => execute(item),
+    ...(pauseRequested ? { shouldPauseBeforeClaim: pauseRequested } : {}),
+    ...(stopRequested
+      ? {
+          shouldStop: ({ results_completion_order: results }) =>
+            stopRequested(
+              results.reduce<TResult[]>((values, result) => {
+                if (result.status === "succeeded") values.push(result.value);
+                return values;
+              }, []),
+            ),
+        }
+      : {}),
   });
 }
