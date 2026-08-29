@@ -64,13 +64,16 @@ checkPaths:
   - scripts/lib/import-curation/patch-collect.ts
   - scripts/lib/import-curation/curation-gate.ts
   - scripts/lib/import-curation/curation-cleanup.ts
+  - scripts/lib/batch-orchestration/control-artifact-store.ts
+  - scripts/lib/batch-orchestration/scope-control-retention.ts
+  - scripts/lib/batch-orchestration/scope-safe-prune.ts
   - scripts/lib/import-curation/internal/workflow-reference-closure.ts
   - scripts/lib/import-curation/internal/workflow-source-reference-context.ts
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
 lastReviewedAt: 2026-08-25
-lastReviewedCommit: c700a3786b2f152957c9edc8b7be4732a8d543dd
-lastReviewedNote: "Reviewed for Issue #67 Wave 26 integration: typed orchestration, adapters/tools and final core/preflight/finalize owners preserve blockers/artifacts, shell-free receipt-bound argv, request/cache/report hashes, ordered mutation/handoff proof and native fail-close without broadening authority."
+lastReviewedCommit: 24c9a1f
+lastReviewedNote: "Reviewed for Issue #76: verified-scope pruning requires immutable control receipts, zero dangling required references, and symlink-safe ownership checks."
 ---
 
 # Safety Policy
@@ -109,6 +112,7 @@ Remote database writes are blocked unless:
 - blocked write scopes must append machine-readable import-ledger rows under `blocked.scopes.human-review.jsonl` and categorized `blocked.dependencies.*.jsonl` files with concrete blocker reasons, required human action, and the rerun path; successful readback-verified scopes must append `ok.*.verified.jsonl` rows so later batch reruns can skip already imported rows
 - curation cleanup has run and cleaned rows were revalidated
 - deterministic cleanup may externalize import-only source trace only after hashing it into a safe summary; circular/unserializable trace evidence fails before deletion. Retained Foundry trace evidence must carry its namespace, local machine locators must be deleted or SHA-redacted, and source-only-output proof remains bound to exact ordered non-flow-reference exchange signatures.
+- verified-scope scratch may be deleted only after every required report/plan/log/ledger reference is stored and reverified by SHA-256 in the run-level control store. The scope report must separate immutable artifact identity, original locator, store locator, and payload-pruned disposition. Missing evidence, invalid receipts, blob drift, repository/store path escape, or any scope/store/cache symlink blocks deletion. Failed or ambiguous scopes retain scratch; shared-context cache is recomputable-only and emits an explicit prune report.
 - post-authoring Foundry curation gate passes on the exact final rows and references a deterministic QA report for those rows
 - state-code-aware mutation plan exists
 - Foundry `dataset-mutation-manifest` is `ready_for_remote_write` for the exact write scope

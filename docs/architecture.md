@@ -147,8 +147,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 10893c0
-lastReviewedNote: "Reviewed for Issue #75: resume authority and recovery are split into bounded scope, attempt, process, blocker, and Flow owners."
+lastReviewedCommit: 24c9a1f
+lastReviewedNote: "Reviewed for Issue #76: control artifact identity, receipt verification, and ownership-safe pruning are bounded independent owners."
 ---
 
 # Architecture
@@ -249,6 +249,8 @@ The typed dataset-orchestration layer composes those owners without absorbing th
 The generic ready-scope execution path is split into three bounded owners. `ready-process-scope-runner.ts` retains ready/block/report semantics and input ordering; `ready-scope-command.ts` delegates artifact-bound specs to `@tiangong-lca/cli/command-spec`; `ready-scope-scheduler.ts` projects full scope/spec/policy and exact CLI package identity into the locked public batch engine. This replaces the former synchronous raw-argv loop with real independent concurrency, exclusive process keys, pause/stop closure and mutation no-retry. `foundry-command-spec.ts` contains no implementation—only the public re-export.
 
 The shared BAFU/USLCI/Worldsteel batch path splits resume by evidence. `cli-bounded-batch-runner.ts` owns only the generic run contract/lock; `foundry-scope-batch-runner.ts` owns item projections and CLI event/recovery adaptation. `scope-resume-contract.ts` plus `scope-source-content.ts` bind source/shared bytes, options, stage/CommandSpec and CLI identity. `scope-resume-ledger.ts` plus `scope-resume-projection.ts` admit only exact verified/blocked rows and re-admit repaired contracts. `scope-attempt-ledger.ts` compacts consumed incomplete attempts, while `scope-mutation-recovery.ts` accepts only exact process closeout readback. `process-scope-resume.ts` binds finalize checkpoint and current report bytes; `flow-resume-ledger.ts` plus `verified-flow-write.ts` bind canonical Flow payload SHA. These local contracts can prevent replay or require reprocessing, but they cannot authorize a new remote mutation.
+
+Verified-scope retention is split again by evidence meaning. `control-artifact-store.ts` owns immutable SHA-256 blobs and hardlink/copy/reuse verification; `control-receipt-contract.ts` owns the self-hashed receipt shape; `control-reference-projection.ts` separates required control locators from disposable payload locators; `control-receipt-verification.ts` rechecks every required blob after pruning; `scope-safe-prune.ts` owns symlink-free scope deletion; `scope-control-retention.ts` orders receipt → report binding → prune → verification; and `shared-context-cache-prune.ts` owns explicit recomputable-cache eviction. The store is run-level, while each scope report retains its own artifact identities, original/store locators, receipt SHA, and prune outcome. This is filesystem evidence/retention only and grants no mutation authority.
 
 Canonical description transport is a small shared JSON boundary under that orchestration. `scripts/lib/canonical-description.ts` accepts scalar strings or losslessly cloneable JSON objects/arrays, preserves insertion/language/value order, and rejects unsupported values or cycles before any reference mutation. Library decision apply uses that one value for authoritative multilingual process-reference and rewrite-ledger evidence; batch identity resolution, identity apply/reference rewrite, and BAFU carry-forward preserve it without display coercion. This changes evidence fidelity only—canonical selection, payload preservation hashes outside the selected description, paths, and mutation authority stay fixed.
 

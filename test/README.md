@@ -274,8 +274,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 10893c0
-lastReviewedNote: "Reviewed for Issue #75: tests pin exact resume authority, compact attempt state, blocker repair, process report bytes, and Flow payload reuse."
+lastReviewedCommit: 24c9a1f
+lastReviewedNote: "Reviewed for Issue #76: tests pin CAS dedupe, receipt verification, payload dispositions, and safe scope/cache pruning."
 ---
 
 # Test Layout
@@ -370,6 +370,8 @@ Wave 26 covers five dependency-ordered orchestration families. The five `unit/wa
 Issue #74 is pinned across three owners. `unit/foundry-command-spec.test.mts` requires the local facade to be a direct public CLI re-export with identical function identity. `unit/ready-process-scope-runner.test.mts` freezes two-way real concurrency, input-order report/checkpoint bytes, shell-free artifact-bound execution, raw-array and byte/SHA drift rejection, independent failure progress and one mutation attempt. `unit/ready-scope-scheduler.test.mts` freezes pause, stop, unclaimed order and exception isolation through the locked CLI engine; `scenarios/library-scope-workflow.test.mts` proves the public command path. Budget/cycle tests track the 494/310/79/below-140 boundaries.
 
 Issue #75 is pinned across resume authority and realistic replay scale. `unit/scope-resume-contract.test.mts` changes real bundle/shared bytes, options, CommandSpec, CLI package, and stage policy. `unit/scope-attempt-ledger.test.mts` uses 1,358 USLCI-shaped scopes to prove one compact active row per consumed outage attempt, zero retained transient events after compaction, and no drifted-contract replacement. `unit/cli-bounded-batch-runner.test.mts` proves a resumed mutation performs zero second executions before readback recovery. `unit/process-scope-resume-contract.test.mts`, `unit/process-scope-run-orchestration.test.mts`, and `commands/bafu-process-scope-e2e.test.mts` bind checkpoint inputs, options, argv, CLI/stage policy, and current finalize-report bytes. `unit/flow-resume-ledger.test.mts` and the scope-execution/BAFU command cases bind canonical Flow payload SHA, exact skip, legacy distrust, blocked-contract repair/re-admission, and deterministic reader bytes. All fixtures are sanitized/local and read no `.env` or production payload.
+
+Issue #76 is pinned by `unit/control-artifact-retention.test.mts` and the BAFU command scratch/cache cases. The unit fixture models 34 repeated Worldsteel pilots and six USLCI rounds over 1,358 scopes, requiring one blob for identical control bytes; it also covers exact receipt self-hash, original/store locator separation, payload fact-only pruning, idempotent reuse, POSIX read-only sealing, hardlink/copy fallback, missing evidence, CAS failure, and scope/store symlinks. The command fixture proves current scope reports expose receipt/prune/store paths before actual deletion and that recomputable cache eviction writes a safe report. `unit/orchestration-module-budget.test.mts` keeps every new module bounded and cycle-free. Fixtures are local and contain no production payload or credential.
 
 Issue #70's `unit/batch-post-write-handoff.test.mts` isolates the asynchronous batch closure stage. It proves process, support, and Flow same-id/version conflicts require successful readback before closeout, retryable verification failures preserve attempt/delay evidence, missing reports exhaust the bounded retry plan without closeout, and other commit failures stop before verification. `unit/orchestration-module-budget.test.mts` keeps the command owner and semantic module ceilings shrink-only and includes the new module in cycle analysis once tracked.
 
