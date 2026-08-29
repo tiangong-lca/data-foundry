@@ -270,6 +270,137 @@ test("scope preparation resolves one location task queue for both suggest and ap
   assert.equal(applyArgv[applyArgv.indexOf("--location-queue") + 1], locationTaskQueues[0]);
 });
 
+test("scope preparation blocks missing replaced and path-drifted queues before location apply", async () => {
+  const taskQueue = "/scope/location-task/location-authoring-queue.bound.jsonl";
+  const originalBytes = Buffer.from('{"queue":"bound-1"}\n');
+  const cases = ["missing", "byte-drift", "hash-drift", "path-drift"] as const;
+
+  for (const mode of cases) {
+    let queueExists = true;
+    let queueBytes = Buffer.from(originalBytes);
+    let relativePath = taskQueue;
+    const stageInputs: Array<{ stage: string; argv: string[] }> = [];
+    const locationTaskQueueLookups: string[] = [];
+    const io = {
+      processExecPath: "/node",
+      foundryEntryPath: "scripts/foundry.ts",
+      joinPath: (...parts: string[]) => path.posix.join(...parts),
+      repoRelative: (filePath: string | null | undefined) =>
+        filePath === taskQueue ? relativePath : (filePath ?? ""),
+      resolveRepoPath: (value: unknown) => (typeof value === "string" ? value : null),
+      fileExists: (filePath: string | null | undefined) =>
+        filePath === taskQueue ? queueExists : Boolean(filePath),
+      readJsonLines: (filePath: string | null | undefined) =>
+        filePath === "/queues/location.jsonl" ? [{ queue: "location" }] : [],
+      fileBytes: (filePath: string) => {
+        assert.equal(filePath, taskQueue);
+        return queueBytes.byteLength;
+      },
+      sha256File: (filePath: string) => {
+        assert.equal(filePath, taskQueue);
+        return createHash("sha256").update(queueBytes).digest("hex");
+      },
+    };
+    const stageReports: Record<string, JsonRecord> = {
+      materialize: {
+        status: "completed",
+        files: {
+          rows: {
+            flow: "/rows/flows.materialized.jsonl",
+            process: "/rows/processes.materialized.jsonl",
+          },
+          classification_authoring_queue: "/queues/classification.jsonl",
+          location_authoring_queue: "/queues/location.jsonl",
+        },
+      },
+      "classification.task": { status: "ready_no_classification_actions" },
+      "location.task": { status: "ready_for_ai_location_decisions" },
+      "location.suggest": { status: "completed" },
+      "location.apply": {
+        status: "completed",
+        files: { output_rows: ["/rows/flows.located.jsonl"] },
+      },
+    };
+    const service = createBatchScopePreparationService({
+      io,
+      operations: {
+        runArgvStage: async (input) => {
+          stageInputs.push({ stage: input.stage, argv: input.argv });
+          if (input.stage === "location.suggest") {
+            if (mode === "missing") queueExists = false;
+            if (mode === "byte-drift") queueBytes = Buffer.from('{"queue":"replacement"}\n');
+            if (mode === "hash-drift") queueBytes = Buffer.from('{"queue":"bound-2"}\n');
+            if (mode === "path-drift") relativePath = `${taskQueue}.replacement`;
+          }
+          return { stage: input.stage, json: stageReports[input.stage] ?? null };
+        },
+        foundryCommand: (command, options = {}) => {
+          const argv = ["/node", "scripts/foundry.ts", command];
+          for (const [key, value] of Object.entries(options)) {
+            argv.push(`--${key.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`)}`);
+            argv.push(String(value));
+          }
+          return argv;
+        },
+        activeProfile: () => "worldsteel",
+        libraryContact: () => ({}),
+        firstBlocker: (_report, code, message) => ({ code, message }),
+        repairClassificationDecisionCodes: () => ({
+          unresolved: [],
+          unresolvedPath: "/classification/unresolved.jsonl",
+        }),
+        defaultContext: (runDir, type) => ({
+          schemaFile: `${runDir}/context/${type}/schema.json`,
+          yamlFile: `${runDir}/context/${type}/methodology.yaml`,
+          rulesetFile: `${runDir}/context/${type}/runtime-ruleset.json`,
+        }),
+        reportFile: (_report, fallback) => fallback,
+        outputRowsByStem: (report, stem) => {
+          const rows = record(report?.files).output_rows;
+          return Array.isArray(rows)
+            ? ((rows.find((row) => path.posix.basename(String(row)).startsWith(stem)) as
+                string | undefined) ?? null)
+            : null;
+        },
+        findOneFile: (rootDir) => {
+          locationTaskQueueLookups.push(String(rootDir));
+          return taskQueue;
+        },
+      },
+    });
+    const stages: JsonRecord[] = [];
+    const result = await service.prepareScope({
+      processId,
+      scopeDir: "/scope",
+      logDir: "/scope/logs",
+      stages,
+      paths: {
+        runDir: "/run",
+        processBundlesDir: "/bundles",
+        libraryClassificationDecisions: null,
+      },
+      schemas: {
+        processCategory: "/schemas/process.json",
+        flowProductCategory: "/schemas/flow-product.json",
+        flowElementaryCategory: "/schemas/flow-elementary.json",
+        location: "/schemas/location.json",
+        allClassification: ["/schemas/process.json", "/schemas/flow-product.json"],
+      },
+    });
+
+    assert.equal(result.status, "deferred", mode);
+    if (result.status !== "deferred") continue;
+    assert.equal(result.stage, "location.queue.verify", mode);
+    assert.equal(result.blocker.code, "location_task_queue_drift", mode);
+    assert.deepEqual(locationTaskQueueLookups, ["/scope/location-task"], mode);
+    assert.deepEqual(
+      stageInputs.map((input) => input.stage),
+      ["materialize", "classification.task", "location.task", "location.suggest"],
+      mode,
+    );
+  }
+});
+
 test("verified resume keeps exact report and ledger bytes across the single-scope extraction", async () => {
   const fixtureRoot = path.join(
     repoRoot,
