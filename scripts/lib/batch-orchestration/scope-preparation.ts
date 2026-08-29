@@ -1,5 +1,6 @@
 import type { SchemaPaths } from "../bafu-classification/schema-repair.ts";
 import type { BatchFinalizeContextPaths } from "../bafu-orchestration/batch-finalize-stage.ts";
+import { bindLocationTaskQueue, verifyLocationTaskQueue } from "./location-task-queue.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -65,6 +66,8 @@ export interface BatchScopePreparationIoAdapter {
   repoRelative: (filePath: string | null | undefined) => string;
   resolveRepoPath: (value: unknown) => string | null;
   fileExists: (filePath: string | null | undefined) => boolean;
+  fileBytes: (filePath: string) => number;
+  sha256File: (filePath: string) => string;
   readJsonLines: (filePath: string | null | undefined) => JsonRecord[];
 }
 
@@ -98,19 +101,15 @@ export interface BatchScopePreparationAdapter {
   io: BatchScopePreparationIoAdapter;
   operations: BatchScopePreparationOperationAdapter;
 }
-
 export interface BatchScopePreparationService {
   prepareScope: (input: BatchScopePreparationInput) => Promise<BatchScopePreparationResult>;
 }
-
 function isJsonRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
-
 function jsonRecord(value: unknown): JsonRecord {
   return isJsonRecord(value) ? value : {};
 }
-
 function recordArray(value: unknown): JsonRecord[] {
   return Array.isArray(value) ? value.map(jsonRecord) : [];
 }
@@ -430,13 +429,15 @@ export function createBatchScopePreparationService(
           locationDecisionDir,
           "dataset-location-decisions-suggest-report.json",
         );
-        const suggestTaskQueue =
+        const taskQueue =
           operations.findOneFile(locationTaskDir, /^location-authoring-queue\..*\.jsonl$/u) ||
           materialized.locationQueue;
+        const boundTaskQueue = bindLocationTaskQueue(taskQueue, locationTaskReportPath, io);
+        if ("status" in boundTaskQueue) return boundTaskQueue;
         const locationSuggest = await operations.runArgvStage({
           stage: "location.suggest",
           argv: operations.foundryCommand("dataset-location-decisions-suggest", {
-            locationQueue: io.repoRelative(suggestTaskQueue),
+            locationQueue: boundTaskQueue.fact.path,
             decisionTask: io.repoRelative(
               io.joinPath(locationTaskDir, "location-decision-task.json"),
             ),
@@ -476,9 +477,8 @@ export function createBatchScopePreparationService(
             report: suggestReportPath,
           };
         }
-        const taskQueue =
-          operations.findOneFile(locationTaskDir, /^location-authoring-queue\..*\.jsonl$/u) ||
-          materialized.locationQueue;
+        const taskQueueDrift = verifyLocationTaskQueue(boundTaskQueue, suggestReportPath, io);
+        if (taskQueueDrift) return taskQueueDrift;
         const locationApplyDir = io.joinPath(scopeDir, "location-apply");
         const locationApplyReportPath = io.joinPath(
           locationApplyDir,
@@ -487,7 +487,7 @@ export function createBatchScopePreparationService(
         const locationApply = await operations.runArgvStage({
           stage: "location.apply",
           argv: operations.foundryCommand("dataset-location-decisions-apply", {
-            locationQueue: io.repoRelative(taskQueue),
+            locationQueue: boundTaskQueue.fact.path,
             decisions: io.repoRelative(
               io.joinPath(locationDecisionDir, "location-decisions.jsonl"),
             ),

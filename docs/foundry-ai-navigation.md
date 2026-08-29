@@ -137,8 +137,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 6d415a7
-lastReviewedNote: "Reviewed for Issue #80: recovery command drift routes to the sole dispatch/projection helper and its captured-invocation contract."
+lastReviewedCommit: 405b7d2
+lastReviewedNote: "Reviewed for Issue #83: location queue drift routes to the artifact-fact leaf and its sole scope-preparation caller."
 ---
 
 # Foundry AI Navigation
@@ -251,6 +251,8 @@ The typed high-level orchestration path is `library-scope-workflow.ts` for profi
 For a canonical description that becomes `"[object Object]"`, disappears, or changes language/order, start at `scripts/lib/canonical-description.ts` and `library-orchestration/decision-apply.ts`. Follow the direct consumer chain through `batch-orchestration/identity-patch-stage.ts`, `commands/identity-decisions.ts`, `identity-reference-rewrite-utils.ts`, and `bafu-orchestration/identity-decision-carry-forward.ts`. The authoritative field remains JSON; rendered text is not a fallback. Producer bytes/SHA are pinned in `unit/library-decision-apply.test.mts`, batch resolution in `unit/batch-orchestration-identity-patch.test.mts`, end-to-end process reference transport in `scenarios/flow-identity-decisions.test.mts`, and carry-forward bytes in `unit/bafu-identity-decision-carry-forward.test.mts`.
 
 For a post-finalize report whose command omits an option or differs from the invocation, go directly to `scripts/lib/bafu-orchestration/post-finalize-recovery.ts`. `runProjectedArgvStage` is the sole dispatch, authority construction, and projection verification point; `process-scope-report.ts` only retains the supplied object plus exit/log/report evidence. `unit/post-finalize-recovery-orchestration.test.mts` compares every projected command against captured invocations across identity/semantic success, nonzero, thrown, missing-report, and deliberate projector-drift cases.
+
+For location suggestion/apply using different queues or applying after a queue replacement, start at `scripts/lib/batch-orchestration/location-task-queue.ts`, then its sole caller in `scope-preparation.ts`. The task queue is discovered once, and only its bound fact is re-read. `unit/batch-orchestration-scope-execution.test.mts` covers stable single lookup plus missing, byte-length, same-length SHA, and relative-path drift; the unchanged verified-resume fixture pins stable report/ledger bytes.
 
 For BAFU flow reuse, navigate directly to `scripts/lib/bafu-authoring/identity-equivalence.ts`. If an exact-name candidate is reused despite property, reference-unit, geography/market, category/route, technology, or physical-meaning conflict evidence, the defect is in that leaf—not candidate search, the command envelope, or the batch composition root. `test/unit/bafu-identity-equivalence-contract.test.mts` freezes the pure decision and reason order; `test/commands/bafu-auto-authoring.test.mts` proves the resulting `create_new`/reuse decision and deterministic apply boundary.
 

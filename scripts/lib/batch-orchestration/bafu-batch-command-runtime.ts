@@ -1010,6 +1010,8 @@ export function createBafuBatchImportRunCommands(
       repoRelative,
       resolveRepoPath,
       fileExists,
+      fileBytes: (filePath) => fs.statSync(filePath).size,
+      sha256File,
       readJsonLines,
     },
     operations: {
