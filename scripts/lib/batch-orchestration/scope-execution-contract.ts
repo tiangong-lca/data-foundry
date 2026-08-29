@@ -37,6 +37,7 @@ export interface BatchScopeExecutionPaths {
   supportIdentityCache: string;
   preflightPlan: string;
   bafuFamilySignatures: string;
+  controlArtifactStore: string;
   resumeInvalidated: string;
   attemptEvents: string;
   attemptState: string;

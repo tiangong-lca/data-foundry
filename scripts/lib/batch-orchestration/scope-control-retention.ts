@@ -5,6 +5,12 @@ import path from "node:path";
 import { sha256BatchJson, type BatchJsonValue } from "@tiangong-lca/cli/batch";
 
 import { createControlArtifactStore, type ControlArtifactFact } from "./control-artifact-store.ts";
+import {
+  SCOPE_CONTROL_RECEIPT_SCHEMA,
+  type ScopeControlArtifactEntry,
+  type ScopeControlReceipt,
+  type ScopeControlReceiptAuthority,
+} from "./control-receipt-contract.ts";
 import { verifyScopeControlReceipt } from "./control-receipt-verification.ts";
 import { projectScopeControlReferences } from "./control-reference-projection.ts";
 import {
@@ -16,37 +22,11 @@ import {
 
 type JsonRecord = Record<string, unknown>;
 
-export const SCOPE_CONTROL_RECEIPT_SCHEMA = "tiangong-foundry.scope-control-receipt.v1" as const;
 export interface ScopeControlRetentionAdapter {
   nowIso: () => string;
   repoRelative: (filePath: string) => string;
   resolveRepoPath: (value: unknown) => string | null;
   linkFile?: (source: string, destination: string) => void;
-}
-export interface ScopeControlArtifactEntry extends JsonRecord {
-  role: string;
-  roles: string[];
-  artifact_id: string | null;
-  bytes: number | null;
-  sha256: string | null;
-  original_locator: string;
-  store_locator: string | null;
-  storage_mode: string | null;
-  retention:
-    "external_unmanaged" | "missing_before_retention" | "pruned_payload" | "retained_control";
-  required_for_control: boolean;
-}
-export interface ScopeControlReceiptAuthority extends JsonRecord {
-  schema: typeof SCOPE_CONTROL_RECEIPT_SCHEMA;
-  generated_at_utc: string;
-  status: "completed";
-  scope_id: string;
-  store_root: string;
-  artifacts: ScopeControlArtifactEntry[];
-  counts: JsonRecord;
-}
-export interface ScopeControlReceipt extends ScopeControlReceiptAuthority {
-  receipt_sha256: string;
 }
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);

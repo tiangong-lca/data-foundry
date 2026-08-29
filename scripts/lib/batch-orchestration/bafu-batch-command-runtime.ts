@@ -517,7 +517,6 @@ const identityDecisionCarryForward = createBafuIdentityDecisionCarryForwardServi
   repoRelative,
   resolveRepoPath,
   datasetIdentity: (row, datasetType) => datasetIdentity(jsonRecord(row), datasetType),
-  // Cache entries are produced by scripts/commands/identity-preflight-run.ts.
   resultCacheDirectory: () => process.env.BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE ?? null,
   fs: {
     fileExists,
@@ -1126,9 +1125,6 @@ export function createBafuBatchImportRunCommands(
     const requireLeafClassification = booleanOption(
       options.requireLeafClassification || options.leafClassificationOnly,
     );
-    // FIX A: optional authoritative library-resolution directory holding the proven
-    // per-process per-exchange elementary reuses (exchange-reference-rewrites.jsonl).
-    // Only consumed when the profile config enables applyResolutionRewrites (USLCI).
     const libraryResolutionDir = asText(options.libraryResolution || options.libraryResolutionDir)
       ? resolveRepoPath(options.libraryResolution || options.libraryResolutionDir)
       : null;
@@ -1190,6 +1186,9 @@ export function createBafuBatchImportRunCommands(
       )!,
       preflightPlan: path.join(outDir, "import-ledger", "preflight.plan.jsonl"),
       bafuFamilySignatures: path.join(outDir, "import-ledger", "bafu-family-signatures.json"),
+      controlArtifactStore:
+        resolveRepoPath(options.controlArtifactStoreDir) ||
+        path.join(runDir, "control-artifact-store"),
       resumeInvalidated: path.join(outDir, "import-ledger", "resume.invalidated.jsonl"),
       attemptEvents: path.join(outDir, "import-ledger", "scope-attempt-events.jsonl"),
       attemptState: path.join(outDir, "import-ledger", "scope-attempt-state.jsonl"),
@@ -1489,6 +1488,7 @@ export function createBafuBatchImportRunCommands(
           preflight_plan: repoRelative(paths.preflightPlan),
           resume_invalidated: repoRelative(paths.resumeInvalidated),
           bafu_family_signatures: repoRelative(paths.bafuFamilySignatures),
+          control_artifact_store: repoRelative(paths.controlArtifactStore),
           support_identity_cache: repoRelative(paths.supportIdentityCache),
         },
         ledger_sources: ledgerSourceSummary,
@@ -1653,6 +1653,7 @@ export function createBafuBatchImportRunCommands(
         attempt_state: repoRelative(paths.attemptState),
         attempt_events: repoRelative(paths.attemptEvents),
         bafu_family_signatures: repoRelative(paths.bafuFamilySignatures),
+        control_artifact_store: repoRelative(paths.controlArtifactStore),
         support_identity_cache: repoRelative(paths.supportIdentityCache),
       },
       results,
@@ -1692,7 +1693,6 @@ export const bafuBatchImportRunTestHooks = {
   supportIdentityTypes,
   trimVerifiedScopeScratch,
   writeScopeCarriedForwardVerifiedFlowRows,
-  // Test-only: drive the profile-config flags (e.g. mintUnmatchedFpUgSupport) that
   // gate the FP/UG support-identity behavior without standing up a full run.
   setBafuBatchConfigForTest: (config: BafuBatchConfig): void => {
     bafuBatchConfig = config || {};

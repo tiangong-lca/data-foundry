@@ -151,6 +151,7 @@ test("orchestration owners have an explicit shrink-only line budget", () => {
     "scripts/lib/batch-orchestration/bafu-batch-command-runtime.ts",
     "scripts/lib/batch-orchestration/cli-bounded-batch-runner.ts",
     "scripts/lib/batch-orchestration/control-artifact-store.ts",
+    "scripts/lib/batch-orchestration/control-receipt-contract.ts",
     "scripts/lib/batch-orchestration/control-reference-projection.ts",
     "scripts/lib/batch-orchestration/control-receipt-verification.ts",
     "scripts/lib/batch-orchestration/foundry-scope-batch-runner.ts",

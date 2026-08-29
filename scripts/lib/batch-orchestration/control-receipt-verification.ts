@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { sha256BatchJson, type BatchJsonValue } from "@tiangong-lca/cli/batch";
 
-import type { ScopeControlReceipt } from "./scope-control-retention.ts";
+import type { ScopeControlReceipt } from "./control-receipt-contract.ts";
 
 export interface ControlReceiptVerificationAdapter {
   resolveRepoPath: (value: unknown) => string | null;
