@@ -44,7 +44,7 @@ checkPaths:
   - package.json
   - pnpm-lock.yaml
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: a4aaf55
+lastReviewedCommit: 2504a80
 lastReviewedNote: "Reviewed for Issue #74: public CommandSpec identity, real bounded scheduling, no-replay policy, input ordering, budgets, and cycle freedom are pinned."
 related:
   - https://github.com/tiangong-lca/data-foundry/issues/70

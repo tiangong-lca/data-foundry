@@ -84,7 +84,7 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: a4aaf55
+lastReviewedCommit: 2504a80
 lastReviewedNote: "Reviewed for Issue #74: CLI owns generic CommandSpec/batch mechanics while Foundry retains scope readiness, blockers, reports, and logs."
 ---
 

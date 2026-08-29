@@ -149,7 +149,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: a4aaf55
+lastReviewedCommit: 2504a80
 lastReviewedNote: "Reviewed for Issue #74: raw argv/fake parallel execution is replaced by public CommandSpec and content/policy/CLI-bound batch contracts."
 ---
 

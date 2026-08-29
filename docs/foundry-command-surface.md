@@ -84,7 +84,7 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: a4aaf55
+lastReviewedCommit: 2504a80
 lastReviewedNote: "Reviewed for Issue #74: dataset-process-scope-run retains its command/help surface while scope command values explicitly migrate from argv arrays to CommandSpecs."
 ---
 

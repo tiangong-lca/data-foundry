@@ -274,7 +274,7 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: a4aaf55
+lastReviewedCommit: 2504a80
 lastReviewedNote: "Reviewed for Issue #74: tests pin public CommandSpec ownership, artifact drift, real parallelism, pause/stop, no-replay, input order, and budgets."
 ---
 

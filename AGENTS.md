@@ -233,7 +233,7 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: a4aaf55
+lastReviewedCommit: 2504a80
 lastReviewedNote: "Reviewed for Issue #74: ready scopes use public artifact-bound CommandSpecs and real locked CLI scheduling with input-order reports and no mutation replay."
 ---
 

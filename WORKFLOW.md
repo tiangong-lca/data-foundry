@@ -276,7 +276,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: a4aaf55
+lastReviewedCommit: 2504a80
 lastReviewedNote: "Reviewed for Issue #74: ready-scope commit/verify requires artifact-bound specs and real bounded CLI claims with no automatic mutation retry."
 tracker:
   kind: filesystem
