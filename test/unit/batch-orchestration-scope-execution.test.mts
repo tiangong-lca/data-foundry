@@ -586,8 +586,8 @@ test("verified resume keeps exact report and ledger bytes across the single-scop
       ],
       [
         "import-ledger/run-manifest.json",
-        7427,
-        "3df5dcfc0473b9864b54022a7f166bcc9dda64cb529c5c15afc7ac504b4ec856",
+        7639,
+        "33ca169a9fbd52d1e354a64ca5bd991f99b8aaa7227ffbb91ef65676029620e5",
       ],
       [
         "scope-checkpoints.jsonl",

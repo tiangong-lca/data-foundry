@@ -63,6 +63,7 @@
     "scripts/lib/batch-orchestration/scope-mutation-recovery.ts": 150,
     "scripts/lib/batch-orchestration/scope-scratch-policy.ts": 80,
     "scripts/lib/batch-orchestration/scope-safe-prune.ts": 100,
+    "scripts/lib/batch-orchestration/shared-context-cache-prune.ts": 120,
     "scripts/lib/batch-orchestration/scope-selection.ts": 484,
     "scripts/lib/batch-orchestration/support-identity-cache.ts": 381,
     "scripts/lib/batch-orchestration/universe-coverage.ts": 702,

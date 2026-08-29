@@ -21,7 +21,6 @@ import {
 } from "./scope-safe-prune.ts";
 
 type JsonRecord = Record<string, unknown>;
-
 export interface ScopeControlRetentionAdapter {
   nowIso: () => string;
   repoRelative: (filePath: string) => string;
@@ -31,18 +30,15 @@ export interface ScopeControlRetentionAdapter {
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
-
 function readJson(filePath: string): JsonRecord {
   const value: unknown = JSON.parse(fs.readFileSync(filePath, "utf8"));
   if (!isRecord(value)) throw new Error(`Expected a JSON object: ${filePath}`);
   return value;
 }
-
 function writeJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true, mode: 0o700 });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
 }
-
 function fileFact(filePath: string): { bytes: number; sha256: string } {
   const stat = fs.lstatSync(filePath);
   if (!stat.isFile() || stat.isSymbolicLink()) {
@@ -54,7 +50,6 @@ function fileFact(filePath: string): { bytes: number; sha256: string } {
     sha256: crypto.createHash("sha256").update(bytes).digest("hex"),
   };
 }
-
 function batchJson(value: unknown): BatchJsonValue {
   return JSON.parse(JSON.stringify(value)) as BatchJsonValue;
 }
@@ -72,6 +67,7 @@ function blockedResult(
     | "blocked_unsafe_scope_entry",
   findings: JsonRecord[],
 ) {
+  const pruneReportPath = path.join(scopeDir, "scope-prune-report.json");
   const report = {
     schema: "tiangong-foundry.scope-prune-report.v1",
     generated_at_utc: adapter.nowIso(),
@@ -81,7 +77,23 @@ function blockedResult(
     findings,
     automatic_prune_performed: false,
   };
-  writeJson(path.join(scopeDir, "scope-prune-report.json"), report);
+  writeJson(pruneReportPath, report);
+  const scopeReportPath = path.join(scopeDir, "scope-run-report.json");
+  if (fs.existsSync(scopeReportPath)) {
+    const scopeReport = readJson(scopeReportPath);
+    writeJson(scopeReportPath, {
+      ...scopeReport,
+      control_evidence: {
+        status,
+        prune_report: adapter.repoRelative(pruneReportPath),
+        findings: findings.length,
+      },
+      files: {
+        ...(isRecord(scopeReport.files) ? scopeReport.files : {}),
+        scope_prune_report: adapter.repoRelative(pruneReportPath),
+      },
+    });
+  }
   return { ...report, artifacts: [] as ScopeControlArtifactEntry[] };
 }
 
@@ -229,11 +241,19 @@ export function createScopeControlRetentionService(adapter: ScopeControlRetentio
       ...report,
       control_evidence: {
         schema: receipt.schema,
+        status: "retained_and_pruned",
         receipt: adapter.repoRelative(receiptPath),
+        prune_report: adapter.repoRelative(path.join(absoluteScope, "scope-prune-report.json")),
         receipt_sha256: receipt.receipt_sha256,
         counts: receipt.counts,
       },
-      files: { ...reportFiles, control_receipt: adapter.repoRelative(receiptPath) },
+      files: {
+        ...reportFiles,
+        control_receipt: adapter.repoRelative(receiptPath),
+        scope_prune_report: adapter.repoRelative(
+          path.join(absoluteScope, "scope-prune-report.json"),
+        ),
+      },
     });
     const prune = pruneScopeScratch(absoluteScope);
     const sealFailures: string[] = [];

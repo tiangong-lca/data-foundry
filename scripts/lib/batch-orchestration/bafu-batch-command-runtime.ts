@@ -1198,9 +1198,6 @@ export function createBafuBatchImportRunCommands(
         "failed.scopes.ambiguous-no-replay.jsonl",
       ),
       resumeContractsByScopeKey: new Map(),
-      // FIX A: run-level resolution rewrite index (process_id -> rewrite rows) plus the
-      // mode flag, threaded into runOneScope -> flow runIdentityAndPatch. Empty map when
-      // the flag is off or --library-resolution is not provided (BAFU defaults).
       resolutionRewritesByProcess,
       applyResolutionRewritesMode: applyResolutionRewrites(),
     };
@@ -1424,6 +1421,10 @@ export function createBafuBatchImportRunCommands(
         retryable_remote_failures_are_separate_from_human_review: true,
         bafu_family_reuse_is_dataset_specific: true,
         bafu_family_variants_still_require_per_scope_schema_qa_remote_verify: true,
+        control_artifacts_are_content_addressed: true,
+        verified_scope_receipt_precedes_prune: true,
+        failed_or_ambiguous_scope_scratch_is_retained: true,
+        pruned_payloads_keep_fact_not_bytes: true,
         ledger_source_dirs_are_read_only_carry_forward_inputs: true,
         require_leaf_classification_filters_only_library_decision_readiness:
           requireLeafClassification,
@@ -1693,7 +1694,6 @@ export const bafuBatchImportRunTestHooks = {
   supportIdentityTypes,
   trimVerifiedScopeScratch,
   writeScopeCarriedForwardVerifiedFlowRows,
-  // gate the FP/UG support-identity behavior without standing up a full run.
   setBafuBatchConfigForTest: (config: BafuBatchConfig): void => {
     bafuBatchConfig = config || {};
   },

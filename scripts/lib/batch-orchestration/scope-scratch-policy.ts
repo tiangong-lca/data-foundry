@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { createScopeControlRetentionService } from "./scope-control-retention.ts";
+import { createSharedContextCachePruner } from "./shared-context-cache-prune.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -15,6 +16,7 @@ export interface ScopeScratchPolicyAdapter {
 
 export function createScopeScratchPolicy(adapter: ScopeScratchPolicyAdapter) {
   const retention = createScopeControlRetentionService(adapter);
+  const cachePruner = createSharedContextCachePruner(adapter);
   function keepScratchRequested(options: JsonRecord): boolean {
     return (
       adapter.booleanOption(options.keepScratch) ||
@@ -47,21 +49,7 @@ export function createScopeScratchPolicy(adapter: ScopeScratchPolicyAdapter) {
     maxEntries = configuredCacheMaxEntries,
   ): void {
     if (keepScratchRequested(options)) return;
-    const cacheDir = path.join(runDir, "shared-context-cache");
-    let names: string[];
-    try {
-      names = fs.readdirSync(cacheDir);
-    } catch {
-      return;
-    }
-    if (names.length <= maxEntries) return;
-    for (const name of names) {
-      try {
-        fs.rmSync(path.join(cacheDir, name), { recursive: true, force: true });
-      } catch {
-        // Cache eviction is best-effort; a miss only recomputes immutable context.
-      }
-    }
+    cachePruner.prune({ runDir, maxEntries });
   }
 
   return {
