@@ -19,6 +19,19 @@ export function pathIsInside(directory: string, candidate: string): boolean {
   return relative === "" || (!relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
 }
 
+export function firstSymlinkOnPath(root: string, candidate: string): string | null {
+  if (!pathIsInside(root, candidate)) return candidate;
+  let current = path.resolve(root);
+  if (fs.existsSync(current) && fs.lstatSync(current).isSymbolicLink()) return current;
+  const relative = path.relative(current, path.resolve(candidate));
+  for (const segment of relative.split(path.sep).filter(Boolean)) {
+    current = path.join(current, segment);
+    if (!fs.existsSync(current)) break;
+    if (fs.lstatSync(current).isSymbolicLink()) return current;
+  }
+  return null;
+}
+
 export function firstUnsafeScopeEntry(scopeDir: string): string | null {
   const root = fs.lstatSync(scopeDir);
   if (!root.isDirectory() || root.isSymbolicLink()) return scopeDir;

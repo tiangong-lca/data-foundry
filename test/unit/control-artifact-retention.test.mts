@@ -74,6 +74,7 @@ test("two scope receipts deduplicate control bytes and explicitly prune payload 
     const receiptARepeated = retention.retainAndPrune({ scopeDir: first.scopeDir, storeDir });
     assert.equal(receiptA.status, "completed");
     assert.equal(receiptB.status, "completed");
+    assert.ok("receipt_sha256" in receiptARepeated);
     assert.equal(receiptA.counts.dangling_required_references, 0);
     assert.equal(receiptB.counts.dangling_required_references, 0);
     assert.equal(receiptARepeated.receipt_sha256, receiptA.receipt_sha256);

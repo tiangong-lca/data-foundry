@@ -40,6 +40,7 @@
     "scripts/lib/batch-orchestration/cli-bounded-batch-runner.ts": 180,
     "scripts/lib/batch-orchestration/control-artifact-store.ts": 160,
     "scripts/lib/batch-orchestration/control-reference-projection.ts": 160,
+    "scripts/lib/batch-orchestration/control-receipt-verification.ts": 100,
     "scripts/lib/batch-orchestration/foundry-scope-batch-runner.ts": 220,
     "scripts/lib/batch-orchestration/flow-resume-ledger.ts": 120,
     "scripts/lib/batch-orchestration/verified-flow-write.ts": 110,

@@ -5,20 +5,24 @@ import path from "node:path";
 import { sha256BatchJson, type BatchJsonValue } from "@tiangong-lca/cli/batch";
 
 import { createControlArtifactStore, type ControlArtifactFact } from "./control-artifact-store.ts";
+import { verifyScopeControlReceipt } from "./control-receipt-verification.ts";
 import { projectScopeControlReferences } from "./control-reference-projection.ts";
-import { firstUnsafeScopeEntry, pathIsInside, pruneScopeScratch } from "./scope-safe-prune.ts";
+import {
+  firstSymlinkOnPath,
+  firstUnsafeScopeEntry,
+  pathIsInside,
+  pruneScopeScratch,
+} from "./scope-safe-prune.ts";
 
 type JsonRecord = Record<string, unknown>;
 
 export const SCOPE_CONTROL_RECEIPT_SCHEMA = "tiangong-foundry.scope-control-receipt.v1" as const;
-
 export interface ScopeControlRetentionAdapter {
   nowIso: () => string;
   repoRelative: (filePath: string) => string;
   resolveRepoPath: (value: unknown) => string | null;
   linkFile?: (source: string, destination: string) => void;
 }
-
 export interface ScopeControlArtifactEntry extends JsonRecord {
   role: string;
   roles: string[];
@@ -32,7 +36,6 @@ export interface ScopeControlArtifactEntry extends JsonRecord {
     "external_unmanaged" | "missing_before_retention" | "pruned_payload" | "retained_control";
   required_for_control: boolean;
 }
-
 export interface ScopeControlReceiptAuthority extends JsonRecord {
   schema: typeof SCOPE_CONTROL_RECEIPT_SCHEMA;
   generated_at_utc: string;
@@ -42,11 +45,9 @@ export interface ScopeControlReceiptAuthority extends JsonRecord {
   artifacts: ScopeControlArtifactEntry[];
   counts: JsonRecord;
 }
-
 export interface ScopeControlReceipt extends ScopeControlReceiptAuthority {
   receipt_sha256: string;
 }
-
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -85,7 +86,10 @@ function receiptAuthority(receipt: ScopeControlReceiptAuthority): JsonRecord {
 function blockedResult(
   scopeDir: string,
   adapter: ScopeControlRetentionAdapter,
-  status: "blocked_missing_control_evidence" | "blocked_unsafe_scope_entry",
+  status:
+    | "blocked_control_retention_error"
+    | "blocked_missing_control_evidence"
+    | "blocked_unsafe_scope_entry",
   findings: JsonRecord[],
 ) {
   const report = {
@@ -102,39 +106,9 @@ function blockedResult(
 }
 
 export function createScopeControlRetentionService(adapter: ScopeControlRetentionAdapter) {
-  function verifyReceipt(scopeDir: string) {
-    const receiptPath = path.join(scopeDir, "scope-control-receipt.json");
-    if (!fs.existsSync(receiptPath)) {
-      return { status: "failed", dangling_required_references: 1, findings: ["receipt_missing"] };
-    }
-    const receipt = readJson(receiptPath) as ScopeControlReceipt;
-    const { receipt_sha256: observedReceiptSha, ...authority } = receipt;
-    const findings: string[] = [];
-    if (sha256BatchJson(batchJson(authority)) !== observedReceiptSha) {
-      findings.push("receipt_sha256_mismatch");
-    }
-    for (const artifact of receipt.artifacts) {
-      if (!artifact.required_for_control) continue;
-      const stored = adapter.resolveRepoPath(artifact.store_locator);
-      if (!stored || !fs.existsSync(stored)) {
-        findings.push(`required_blob_missing:${artifact.original_locator}`);
-        continue;
-      }
-      const observed = fileFact(stored);
-      if (observed.bytes !== artifact.bytes || observed.sha256 !== artifact.sha256) {
-        findings.push(`required_blob_drift:${artifact.original_locator}`);
-      }
-    }
-    return {
-      status: findings.length === 0 ? "passed" : "failed",
-      dangling_required_references: findings.filter((finding) =>
-        finding.startsWith("required_blob_"),
-      ).length,
-      findings,
-    };
-  }
+  const verifyReceipt = (scopeDir: string) => verifyScopeControlReceipt(scopeDir, adapter);
 
-  function retainAndPrune({ scopeDir, storeDir }: { scopeDir: string; storeDir: string }) {
+  function retainAndPruneExact({ scopeDir, storeDir }: { scopeDir: string; storeDir: string }) {
     const absoluteScope = path.resolve(scopeDir);
     const absoluteStore = path.resolve(storeDir);
     const repoRoot = adapter.resolveRepoPath(".");
@@ -143,10 +117,20 @@ export function createScopeControlRetentionService(adapter: ScopeControlRetentio
       !pathIsInside(repoRoot, absoluteScope) ||
       !pathIsInside(repoRoot, absoluteStore) ||
       pathIsInside(absoluteScope, absoluteStore) ||
+      firstSymlinkOnPath(repoRoot, absoluteScope) ||
+      firstSymlinkOnPath(repoRoot, absoluteStore) ||
       firstUnsafeScopeEntry(absoluteScope);
     if (unsafe) {
       return blockedResult(absoluteScope, adapter, "blocked_unsafe_scope_entry", [
         { code: "unsafe_scope_or_store_path", path: String(unsafe || absoluteStore) },
+      ]);
+    }
+    const receiptPath = path.join(absoluteScope, "scope-control-receipt.json");
+    if (fs.existsSync(receiptPath)) {
+      const verification = verifyReceipt(absoluteScope);
+      if (verification.status === "passed") return readJson(receiptPath) as ScopeControlReceipt;
+      return blockedResult(absoluteScope, adapter, "blocked_control_retention_error", [
+        { code: "existing_control_receipt_invalid", verification },
       ]);
     }
     const reportPath = path.join(absoluteScope, "scope-run-report.json");
@@ -259,7 +243,6 @@ export function createScopeControlRetentionService(adapter: ScopeControlRetentio
       ...authority,
       receipt_sha256: sha256BatchJson(batchJson(receiptAuthority(authority))),
     };
-    const receiptPath = path.join(absoluteScope, "scope-control-receipt.json");
     writeJson(receiptPath, receipt);
     const reportFiles = isRecord(report.files) ? report.files : {};
     writeJson(reportPath, {
@@ -273,12 +256,25 @@ export function createScopeControlRetentionService(adapter: ScopeControlRetentio
       files: { ...reportFiles, control_receipt: adapter.repoRelative(receiptPath) },
     });
     const prune = pruneScopeScratch(absoluteScope);
+    const sealFailures: string[] = [];
+    for (const artifact of artifacts.filter(
+      (entry) => entry.retention === "retained_control" && entry.store_locator,
+    )) {
+      const stored = adapter.resolveRepoPath(artifact.store_locator);
+      try {
+        if (stored) fs.chmodSync(stored, 0o400);
+      } catch {
+        sealFailures.push(artifact.store_locator!);
+      }
+    }
     const verification = verifyReceipt(absoluteScope);
     writeJson(path.join(absoluteScope, "scope-prune-report.json"), {
       schema: "tiangong-foundry.scope-prune-report.v1",
       generated_at_utc: adapter.nowIso(),
       status:
-        verification.status === "passed" && prune.failed_entries.length === 0
+        verification.status === "passed" &&
+        prune.failed_entries.length === 0 &&
+        sealFailures.length === 0
           ? "completed"
           : "completed_with_findings",
       scope_id: receipt.scope_id,
@@ -287,15 +283,35 @@ export function createScopeControlRetentionService(adapter: ScopeControlRetentio
       counts: {
         pruned_entries: prune.removed_entries.length,
         pruned_bytes: prune.removed_bytes,
-        prune_failures: prune.failed_entries.length,
+        prune_failures: prune.failed_entries.length + sealFailures.length,
         dangling_required_references: verification.dangling_required_references,
       },
       removed_entries: prune.removed_entries,
       failed_entries: prune.failed_entries,
+      failed_store_seals: sealFailures,
       verification,
       automatic_prune_performed: true,
     });
     return receipt;
+  }
+
+  function retainAndPrune(input: { scopeDir: string; storeDir: string }) {
+    try {
+      return retainAndPruneExact(input);
+    } catch (error) {
+      return blockedResult(
+        path.resolve(input.scopeDir),
+        adapter,
+        "blocked_control_retention_error",
+        [
+          {
+            code: "control_retention_failed",
+            error_name: error instanceof Error ? error.name : "unknown",
+            error_code: (error as NodeJS.ErrnoException | null)?.code ?? null,
+          },
+        ],
+      );
+    }
   }
 
   return Object.freeze({ retainAndPrune, verifyReceipt });
