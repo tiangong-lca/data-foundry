@@ -149,8 +149,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 349c884
-lastReviewedNote: "Reviewed for Issue #78: multilingual canonical descriptions retain exact JSON/order through rewrite, identity, process-reference, and carry-forward evidence."
+lastReviewedCommit: 6d415a7
+lastReviewedNote: "Reviewed for Issue #80: recovery reports retain complete executed argv across success and failure, with display derived and projection drift rejected."
 ---
 
 # TianGong LCA Data Foundry
@@ -244,6 +244,8 @@ Issue #77 closes the exact-name product-flow reuse bypass exposed during that mo
 Issue #78 removes lossy object coercion from library and identity rewrite evidence. `canonical-description.ts` validates and clones canonical description JSON before mutation; multilingual object/array order and values pass unchanged through the rewritten process reference, exchange-reference ledger, batch resolution decision, identity-apply ledger, process rewrite, and BAFU carry-forward report. Scalar strings retain their prior behavior, while functions, BigInt, cycles, sparse or otherwise non-JSON values fail before payload mutation. Canonical IDs, versions, preservation hashes, stage order, paths, and remote authority do not change.
 
 Issue #79 makes BAFU category-map completion truthful even when a conflicting, invalid, context-unbound, or incomplete decision is unrelated to the current task set. `category-map-projection.ts` retains artifact semantics, while the bounded `category-map-report.ts` leaf derives top-level `completed_with_manual_review`, compact source/reason/artifact blockers, and a nonzero command exit from the complete emitted closure. Resolved-only inputs keep their previous JSON bytes and successful exit, while existing manual-review artifact bytes/order remain authoritative.
+
+Issue #80 makes post-finalize recovery reports truthful to executed authority. All identity and semantic recovery stages now dispatch and project through one helper; `command.executable` plus `command.argv` are the exact shell-free execution array and `command.display` is derived diagnostic text. Success, nonzero, thrown, and missing-report paths retain every option, including shared-context cache binding. A projector that omits, changes, reorders, or adds authority fields fails before downstream recovery. Stage order, blocker behavior, report/artifact paths, and the prohibition on remote commit remain unchanged.
 
 Issue #81 aligns process and batch lost-success recovery through `same-identity-commit-recovery.ts`. Recovery requires explicit database code `23505` plus exact same-id/version conflict semantics; text-only, mixed, malformed, or incomplete evidence fails closed. Neither orchestration path replays a commit. The outcome remains `readback_recovery_pending` until the existing content-bound verifier proves exact owner, state, identity, version, payload, and root closure; every mismatch, unexpected row, missing report, or exhausted readback blocks closeout.
 

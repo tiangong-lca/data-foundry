@@ -276,8 +276,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 349c884
-lastReviewedNote: "Reviewed for Issue #78: canonical description JSON is validated before mutation and never coerced into display text across the rewrite workflow."
+lastReviewedCommit: 6d415a7
+lastReviewedNote: "Reviewed for Issue #80: post-finalize recovery uses one dispatch/projection path and exact executable/argv authority on every outcome."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -361,6 +361,8 @@ Library canonical descriptions are authoritative JSON evidence. Before changing 
 Within BAFU auto-authoring, an exact product/waste-flow name never overrides the physical review. `identity-equivalence.ts` may return an exact reuse candidate only when its ordered non-equivalence reasons are empty; property, unit, geography/market, category/route, technology, or physical-meaning conflicts remain in decision evidence and produce `create_new` rather than `reuse_existing_reference`. Matching exact-flow evidence, elementary land-use special cases, and process exact-name explicit review remain characterized separately.
 
 BAFU category-map projection must evaluate every supplied decision row, not only categories referenced by the current task set. `category-map-report.ts` owns closure-wide status and blocker projection. A non-empty emitted category-map/process/flow-product manual-review closure requires `completed_with_manual_review`, a blocker naming the exact source/reason/artifact, and a nonzero CLI exit. Do not continue library decisions apply from shell success alone; resolve the referenced manual-review rows and rerun. A blocker-free report remains byte-identical to the prior `completed` contract.
+
+Post-finalize identity and semantic recovery reports must expose the exact executed command authority. Each stage records a `command` object with authoritative `executable` and complete `argv` plus derived non-authoritative `display`; no option may be reconstructed after execution or omitted on error/missing-report paths. `runProjectedArgvStage` is the only dispatch/projection path. If the returned projection differs by executable, argv value/order, display, field set, or key order, stop before the next recovery stage.
 
 Within the process and shared batch owners, same-id/version lost-success recovery is governed by `scripts/lib/same-identity-commit-recovery.ts`. A failure may enter recovery only when its structured evidence contains explicit code `23505` and exact same-id/version conflict semantics; display text alone, mixed or malformed failures, and missing detail remain blocking. The commit mutation is dispatched at most once and never replayed. Its status remains `readback_recovery_pending` until the existing content-bound verifier proves exact owner, state, identity, version, payload, and root closure; missing, unexpected, foreign, mismatched, or exhausted readback cannot reach closeout.
 
