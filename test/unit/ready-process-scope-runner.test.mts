@@ -270,4 +270,63 @@ test("ready process runner executes artifact-bound specs concurrently with input
     fs.readFileSync(path.join(outDir, "logs", "ready-fail-00.00.001.commit.stderr.log"), "utf8"),
     "boom\n",
   );
+
+  spawnCalls.length = 0;
+  fs.writeFileSync(path.join(fixtureRoot, readyOkRows), '{"scope":"drifted"}\n');
+  const driftOutDir = path.join(fixtureRoot, "drift-run");
+  const driftReport = await runner.run({
+    processBundlesDir,
+    libraryResolutionPath,
+    resolution,
+    scopeFile,
+    outDir: driftOutDir,
+    parallel: 3,
+    commit: true,
+    dryRun: false,
+    commandCwd: "/controlled-cwd",
+    commandEnvironment: fixedEnvironment,
+  });
+  assert.equal(driftReport.status, "failed");
+  assert.equal(
+    spawnCalls.filter(({ argv }) => argv.at(-1) === "ready-ok").length,
+    0,
+    "artifact drift must fail before spawn",
+  );
+  const driftCheckpoints = readJsonLines(path.join(driftOutDir, "scope-checkpoints.jsonl"));
+  assert.match(
+    String((driftCheckpoints[0].command_stages as JsonRecord[])[0].error),
+    /artifact drift/u,
+  );
+
+  spawnCalls.length = 0;
+  const rawScopeFile = path.join(fixtureRoot, "input", "raw-scopes.jsonl");
+  writeJsonLines(rawScopeFile, [
+    {
+      process_id: "raw-scope",
+      process_version: "00.00.001",
+      state: "ready",
+      commit_command: ["commit-tool", "--scope", "raw-scope"],
+    },
+  ]);
+  const rawOutDir = path.join(fixtureRoot, "raw-run");
+  const rawReport = await runner.run({
+    processBundlesDir,
+    libraryResolutionPath,
+    resolution,
+    scopeFile: rawScopeFile,
+    outDir: rawOutDir,
+    parallel: 2,
+    commit: true,
+    dryRun: false,
+    commandCwd: "/controlled-cwd",
+    commandEnvironment: fixedEnvironment,
+  });
+  assert.equal(rawReport.status, "failed");
+  assert.deepEqual(spawnCalls, []);
+  const rawCheckpoint = readJsonLines(path.join(rawOutDir, "scope-checkpoints.jsonl"))[0];
+  assert.equal(rawCheckpoint.state, "commit_failed");
+  assert.match(
+    String((rawCheckpoint.command_stages as JsonRecord[])[0].error),
+    /CommandSpec must contain exact keys/u,
+  );
 });
