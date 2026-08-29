@@ -37,6 +37,9 @@ export interface BatchScopeExecutionPaths {
   preflightPlan: string;
   bafuFamilySignatures: string;
   resumeInvalidated: string;
+  attemptEvents: string;
+  attemptState: string;
+  ambiguousNoReplay: string;
   resumeContractsByScopeKey: Map<string, ScopeResumeContract>;
   resolutionRewritesByProcess: Map<string, BatchScopeJsonRecord[]>;
   applyResolutionRewritesMode: boolean;
@@ -62,20 +65,17 @@ export interface BatchScopeActionInput {
   blocker: BatchScopeJsonRecord;
   report: string | null;
 }
-
 interface FlowVerificationPlan {
   pendingRows: BatchScopeJsonRecord[];
   verifiedRows: BatchScopeJsonRecord[];
   pendingIdentities: BatchScopeJsonRecord[];
   verifiedIdentities: BatchScopeJsonRecord[];
 }
-
 interface CarriedForwardFlowRows {
   count: number;
   rows: BatchScopeJsonRecord[];
   ledger: string;
 }
-
 interface IdentityPatchCompleted extends BatchScopeJsonRecord {
   status: "completed";
   rowsFile: string;

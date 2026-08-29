@@ -6,10 +6,9 @@ import test from "node:test";
 
 import { batchRunLockPath } from "@tiangong-lca/cli/batch";
 
-import {
-  runFoundryScopeBatch,
-  runLockedCliBatch,
-} from "../../scripts/lib/batch-orchestration/cli-bounded-batch-runner.ts";
+import { runLockedCliBatch } from "../../scripts/lib/batch-orchestration/cli-bounded-batch-runner.ts";
+import { runFoundryScopeBatch } from "../../scripts/lib/batch-orchestration/foundry-scope-batch-runner.ts";
+import { createScopeResumeContract } from "../../scripts/lib/batch-orchestration/scope-resume-contract.ts";
 
 test("BAFU command delegates claims to the locked CLI batch boundary", () => {
   const facadeSource = fs.readFileSync(
@@ -195,6 +194,13 @@ test("Foundry scope adapter serializes one family while independent scope work c
         { id: "independent", family: "independent", role: "standard" },
       ],
       getScopeKey: (scope) => scope.id,
+      getScopeResumeContract: (scope) =>
+        createScopeResumeContract({
+          identityKey: scope.id,
+          content: scope,
+          policy: { profile: "bafu" },
+          executable: { cli: "0.1.3" },
+        }),
       getFamilyPolicy: (scope) => ({
         familyGroupKey: scope.family,
         optimizationRole: scope.role,
@@ -210,6 +216,7 @@ test("Foundry scope adapter serializes one family while independent scope work c
         return { process_id: scope.id, status: "verified" };
       },
       recoverScopeFailure: (scope) => ({ process_id: scope.id, status: "failed" }),
+      recoverScopeMutation: () => null,
       summarizeScope: (_scope, result) => result,
       afterScope: () => undefined,
       pauseRequested: () => false,

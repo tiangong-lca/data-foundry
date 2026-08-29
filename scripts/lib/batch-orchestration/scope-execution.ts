@@ -568,11 +568,10 @@ export function createBatchScopeExecutionService(
       processScopeReport = processCommit.report;
       processCloseoutReport = processCommit.handoff.closeoutReportPath ?? null;
     }
-    verifiedScopes.add(`${processId}@${processVersion}`);
     const resumeContract = paths.resumeContractsByScopeKey.get(`${processId}@${processVersion}`);
-    io.appendJsonLine(
-      paths.okProcesses,
-      operations.okDatasetRow({
+    verifiedScopes.add(`${processId}@${processVersion}`);
+    io.appendJsonLine(paths.okProcesses, {
+      ...operations.okDatasetRow({
         type: "process",
         id: processId,
         version: processVersion,
@@ -583,7 +582,8 @@ export function createBatchScopeExecutionService(
           process_closeout_report: io.repoRelative(processCloseoutReport),
         },
       }),
-    );
+      resume_contract: resumeContract ?? null,
+    });
     io.appendJsonLine(paths.okScopes, {
       schema_version: 1,
       generated_at_utc: io.nowIso(),
