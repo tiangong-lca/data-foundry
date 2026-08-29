@@ -84,8 +84,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: b4c9b777929ac27694fbebd748f0c4bec968fab2
-lastReviewedNote: "Reviewed for Issue #70: the batch command is a five-line re-export facade over the same three runtime exports; 63-command help/stdout/exit and metadata remain exact."
+lastReviewedCommit: a4aaf55
+lastReviewedNote: "Reviewed for Issue #74: dataset-process-scope-run retains its command/help surface while scope command values explicitly migrate from argv arrays to CommandSpecs."
 ---
 
 # Foundry Command Surface
@@ -116,6 +116,8 @@ Wave 25 moves `cli-wrappers`, `execution-capsule`, and `post-write-closeout` to 
 Wave 25 moves the import-curation leaf, index, and public barrels to TypeScript while command metadata continues to identify semantic owner modules. Metadata links the entry namespace contract as navigation evidence for profile listing, authoring, curation, cleanup, and mutation commands; the runtime command surface and handler injection remain unchanged.
 
 Wave 26 moves the generic library-scope owner and four BAFU orchestration owners to TypeScript. Registered names, metadata categories/exports, serialized help, option aliases/defaults, blocker and artifact order, exit mapping, resumable preflight/batch behavior and explicit-commit-only modes remain unchanged. The USLCI and Worldsteel wrappers now point directly at the typed batch owner but retain their existing frozen profile configuration.
+
+Issue #74 explicitly migrates `dataset-process-scope-run` execution input without changing its command name, help examples, flags, exit families, or output paths. The retained scope keys `commit_command` and `verify_command` now require full artifact-bound CommandSpec objects rather than argv arrays. Command-stage/report JSON therefore records those exact spec objects; raw arrays fail before spawn. `--parallel` now drives the public CLI bounded scheduler while final checkpoints and reports remain input-ordered.
 
 Wave 26 moves TIDAS/finalize adapters and the cutover/Golden entrypoints to native TypeScript. Public Foundry command names and help remain unchanged; package scripts now call the typed audit and Golden entrypoints while retaining the same JSON, exit, merge-base and normalized-diff contracts.
 

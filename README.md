@@ -149,8 +149,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 405b7d2
-lastReviewedNote: "Reviewed for Issue #83: location queue discovery is single-shot and missing/content/path drift is blocked with exact artifact facts."
+lastReviewedCommit: a4aaf55
+lastReviewedNote: "Reviewed for Issue #74: raw argv/fake parallel execution is replaced by public CommandSpec and content/policy/CLI-bound batch contracts."
 ---
 
 # TianGong LCA Data Foundry
@@ -238,6 +238,8 @@ Wave 25 migrates the import-curation re-export topology without wrappers. `profi
 Wave 26 migrates five dataset-orchestration owners in dependency order: generic `library-scope-workflow.ts`, then BAFU leaf classification and auto-authoring, process-scope E2E, and the shared BAFU batch engine used by the USLCI and Worldsteel adapters. Characterization preserves profile-agnostic versus BAFU configuration, library/scope/identity/classification blocker and artifact order, resume/pause/parallel/preflight/commit delegation, authoritative executable-plus-argv and receipt/hash checks, exact help/report bytes, native errors, and explicit-commit-only authority. Inventory moves 79→74 without changing command names, profile defaults, Golden artifacts, Worldsteel semantics, Date.parse behavior, or production authority; every case is local and reads neither `.env` nor production.
 
 Issue #70 decomposes that stable typed layer by semantic stage. `scripts/lib/batch-orchestration/post-write-handoff.ts` owns asynchronous commit/report discovery, same-id/version idempotent recovery followed by mandatory readback, bounded read-only verification retry, accepted-difference delegation, and post-write closeout. `scripts/lib/batch-orchestration/scope-finalize-commit.ts` owns exact finalize reports, serialized support reuse/invalidation/commit, post-finalize identity/patch recovery, and the final dataset handoff. `scripts/lib/batch-orchestration/cli-bounded-batch-runner.ts` composes the public CLI contract/engine/run lock and owns bounded claims, family exclusive keys, pause/stop, and drain without absorbing LCA semantics. `scripts/commands/bafu-batch-import-run.ts` is a five-line public facade; `bafu-batch-command-runtime.ts` is the explicit 1,649-line composition root for adapter wiring and final report assembly, with its own 1,700-line shrink-only ceiling rather than being mislabeled as a small semantic stage. All behavior navigation should continue into the narrower modules.
+
+Issue #74 removes the generic library scope runner's raw-argv and fake-parallel contracts. The retained `commit_command` and `verify_command` scope fields now contain published artifact-bound CommandSpecs; arrays, malformed specs, empty bindings, SHA/byte drift, and display drift cannot execute. The installed CLI package fingerprint, full scope bytes, spec SHAs, policy, exclusivity, and concurrency enter the public locked batch contract. Independent scopes execute concurrently, failed mutations run once, pause/stop remain CLI-engine policy, and checkpoint/report output stays in input order. `foundry-command-spec.ts` is now a one-line public CLI re-export, eliminating 367 duplicated lines.
 
 Issue #77 closes the exact-name product-flow reuse bypass exposed during that move-only decomposition. `identity-equivalence.ts` may select an exact normalized name only after the ordered physical review produces zero non-equivalence reasons. A same-name candidate with conflicting flow property, reference unit, geography/market, category/route, technology, or physical meaning remains reviewed evidence for `create_new`; it is never emitted as `reuse_existing_reference`. Matching physical evidence, elementary land-use special cases, and process exact-name explicit review retain their existing branches.
 
