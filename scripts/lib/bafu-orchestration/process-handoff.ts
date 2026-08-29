@@ -1,4 +1,6 @@
 import type { FoundryArtifactFact, FoundryCommandSpec } from "../foundry-command-spec.ts";
+import { summarizeSameIdentityCommitFailures } from "../same-identity-commit-recovery.ts";
+import { closeoutCommand } from "./process-handoff-closeout.ts";
 
 export interface JsonRecord {
   [key: string]: unknown;
@@ -114,14 +116,6 @@ export interface ProcessHandoffResult extends JsonRecord {
   closeoutReportPath?: string;
 }
 
-export interface CloseoutCommandInput {
-  handoffPlanPath: string;
-  commitReportPath: string;
-  verifyReportPath: string;
-  outDir: string;
-  ledgerDir: string;
-}
-
 function isJsonRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -223,39 +217,6 @@ export function verifyReportForHandoffPlan(
   );
 }
 
-export function readHandoffPlan(
-  finalizeReport: JsonRecord,
-  key: string,
-  adapter: ProcessHandoffAdapter,
-): { path: string | null; value: JsonRecord | null } {
-  const handoffPath = adapter.resolveRepoPath(jsonRecord(finalizeReport.files)[key]);
-  if (!adapter.fileExists(handoffPath)) {
-    return { path: null, value: null };
-  }
-  return { path: handoffPath, value: adapter.readJson(handoffPath!) };
-}
-
-export function closeoutCommand(
-  { handoffPlanPath, commitReportPath, verifyReportPath, outDir, ledgerDir }: CloseoutCommandInput,
-  adapter: ProcessHandoffAdapter,
-): string[] {
-  return [
-    adapter.processExecutable,
-    adapter.foundryEntryPath,
-    "dataset-post-write-closeout",
-    "--handoff-plan",
-    adapter.repoRelative(handoffPlanPath),
-    "--commit-report",
-    adapter.repoRelative(commitReportPath),
-    "--post-write-verify-report",
-    adapter.repoRelative(verifyReportPath),
-    "--out-dir",
-    adapter.repoRelative(outDir),
-    "--ledger-dir",
-    adapter.repoRelative(ledgerDir),
-  ];
-}
-
 export function executeHandoff(
   { handoffPlanPath, ledgerDir, outDir, logDir, label }: ProcessHandoffInput,
   adapter: ProcessHandoffAdapter,
@@ -335,13 +296,41 @@ export function executeHandoff(
       reportPath: commitReportPath,
     }),
   );
+  let recoveryStage: JsonRecord | null = null;
   if (commitStage.result.status !== 0 || !commitReportPath) {
-    blockers.push({
-      code: "commit_handoff_command_failed",
-      message: "CLI commit handoff failed or did not emit the expected commit report.",
-      handoff_plan: adapter.repoRelative(handoffPlanPath),
-      exit_code: commitStage.result.status ?? 1,
+    let recovery = null;
+    try {
+      recovery = commitReportPath
+        ? summarizeSameIdentityCommitFailures([adapter.readJson(commitReportPath)])
+        : null;
+    } catch {
+      recovery = null;
+    }
+    if (!recovery?.accepted) {
+      blockers.push({
+        code: "commit_handoff_command_failed",
+        message: "CLI commit handoff failed or did not emit strict same-id/version evidence.",
+        handoff_plan: adapter.repoRelative(handoffPlanPath),
+        exit_code: commitStage.result.status ?? 1,
+        commit_report: adapter.repoRelative(commitReportPath),
+      });
+      return { status: "failed", blockers, stages, handoffPlan };
+    }
+    recoveryStage = {
+      stage: `${label}.commit.readback_recovery_pending`,
+      status: "pending_exact_readback",
       commit_report: adapter.repoRelative(commitReportPath),
+      same_identity_conflicts: recovery.alreadyExists,
+      message:
+        "Commit returned explicit 23505 same-id/version evidence; the mutation is not replayed and remains unaccepted until exact post-write readback succeeds.",
+    };
+    stages.push(recoveryStage);
+  }
+  if (!commitReportPath) {
+    blockers.push({
+      code: "commit_handoff_report_missing",
+      message: "Commit recovery cannot continue without an exact commit report.",
+      handoff_plan: adapter.repoRelative(handoffPlanPath),
     });
     return { status: "failed", blockers, stages, handoffPlan };
   }
@@ -427,6 +416,10 @@ export function executeHandoff(
       retry_reason: verifyRetryReason,
     });
     return { status: "failed", blockers, stages, handoffPlan };
+  }
+  if (recoveryStage) {
+    recoveryStage.status = "confirmed_by_exact_readback";
+    recoveryStage.post_write_verify_report = adapter.repoRelative(verifyReportPath);
   }
 
   const closeoutDir = adapter.joinPath(outDir, "closeout");

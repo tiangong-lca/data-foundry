@@ -44,8 +44,8 @@ checkPaths:
   - package.json
   - pnpm-lock.yaml
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: f8f0633
-lastReviewedNote: "Reviewed for Issue #70: all five command owners are thin; the batch facade exposes a separately budgeted composition root plus focused semantic/CLI boundaries."
+lastReviewedCommit: b466bf1
+lastReviewedNote: "Reviewed for Issue #81: strict conflict classification, one mutation attempt, and exact owner/state/id/version/payload/root readback are explicit module boundaries."
 related:
   - https://github.com/tiangong-lca/data-foundry/issues/70
   - https://github.com/tiangong-lca/tiangong-cli/issues/232
@@ -97,6 +97,8 @@ Navigate directly to the narrowest owner:
 | Ready-scope filtering, classification preflight, family ordering, and preflight rows | `scripts/lib/batch-orchestration/scope-selection.ts` | ledger reads, profile adapters, worker execution |
 | Universe and ledger coverage | `scripts/lib/batch-orchestration/universe-coverage.ts` | command help/options and report destination |
 | Finalize blocker/recovery eligibility | `scripts/lib/bafu-orchestration/finalize-recovery-policy.ts` | subprocess, CommandSpec, retries, file reads |
+| Same-id/version lost-success eligibility | `scripts/lib/same-identity-commit-recovery.ts` | commit dispatch, report discovery, verification, or closeout |
+| Process verify and closeout argv planning | `scripts/lib/bafu-orchestration/process-handoff-plan.ts`, `scripts/lib/bafu-orchestration/process-handoff-closeout.ts` | stage execution, report parsing, retry, and semantic acceptance |
 | Batch commit, post-write verify/retry, and closeout | `scripts/lib/batch-orchestration/post-write-handoff.ts` | stage runner, timeouts, profile/scope labels, and report aggregation |
 | Per-dataset finalize, support reuse/commit, recovery, and handoff | `scripts/lib/batch-orchestration/scope-finalize-commit.ts` | injected finalize/identity/handoff services, paths, and profile context |
 
@@ -123,13 +125,13 @@ Foundry injects profile and report projection. The generic engine must not know 
 
 The local ignored-runtime audit intentionally excluded credentials, receipt bodies, and data payloads. It found approximately 252 GiB of historical state, including about 173 GiB of Worldsteel batch/pilot copies. One USLCI run produced 10,830 checkpoints for 1,358 scopes over six resume rounds; a scope reached 50 snapshots. Of 75,400 historical artifact locators, only 326 still existed after scratch cleanup. Identity preflight consumed about 39.4 cumulative hours, and one outage produced 129 retryable finalize timeouts that later cleared.
 
-These observations are design inputs, not fixtures to commit. Replay tests use sanitized synthetic cases with the same counts/state transitions. Content-addressed artifact retention is Foundry #76; content/policy-bound resume is #75; raw-argv/fake parallel behavior is #74. Issue #77 separately makes exact names subordinate to the ordered physical-equivalence reasons. Issue #79 makes every emitted category-map manual-review row closure-blocking even when no current task references it, while preserving resolved report bytes. Move-only #70 did not silently resolve any of them.
+These observations are design inputs, not fixtures to commit. Replay tests use sanitized synthetic cases with the same counts/state transitions. Content-addressed artifact retention is Foundry #76; content/policy-bound resume is #75; raw-argv/fake parallel behavior is #74. Issue #77 separately makes exact names subordinate to the ordered physical-equivalence reasons. Issue #79 makes every emitted category-map manual-review row closure-blocking even when no current task references it, while preserving resolved report bytes. Issue #81 requires structured `23505` plus exact same-id/version semantics, one commit dispatch, and exact readback before closeout. Move-only #70 did not silently resolve any of them.
 
 ## 6. TDD and equivalence
 
 Every extraction begins with a failing contract that imports the intended semantic owner. GREEN first moves existing logic without changing regexes, precedence, option defaults, stage order, object insertion order, stdout, exit status, report paths, hashes, retry classification, or write authority.
 
-The batch post-write handoff slice is characterized by six focused cases: process, support, and Flow same-id/version conflicts proceed only through successful readback and closeout; retryable readback failures preserve attempts and exponential delay; missing verification reports exhaust the bounded retry count without closeout; and non-idempotent commit failures stop before verification. The finalize/commit slice adds five cases for missing reports, verified support reuse, stale support invalidation plus fresh commit/cache, exact recovered-row evidence, and support-failure short-circuiting. The CLI boundary adds four focused cases for public contract/run-lock release, pause/stop closure, family serialization with independent progress, and command delegation. The public batch owner is now 5 lines (ceiling 20); the 1,649-line composition root is visible under a separate 1,700-line shrink-only ceiling, while the 166-line CLI adapter, 136-line authoring filter, 149-line recovery evidence, 68-line scratch policy, 559-line handoff, and 425-line finalize/commit modules remain independently budgeted.
+The process and batch post-write handoff slices characterize strict lost-success recovery: explicit `23505` plus exact same-id/version semantics may proceed to verification, while text-only, mixed, malformed, or incomplete evidence fails without replay. Exact readback must prove owner, state, identity, version, payload, and root closure; mismatch, unexpected, missing, or exhausted reports never close out. Retryable readback failures preserve attempts and exponential delay, and ordinary commit failures stop before verification. The finalize/commit slice adds five cases for missing reports, verified support reuse, stale support invalidation plus fresh commit/cache, exact recovered-row evidence, and support-failure short-circuiting. The CLI boundary adds four focused cases for public contract/run-lock release, pause/stop closure, family serialization with independent progress, and command delegation. The public batch owner is now 5 lines (ceiling 20); the 1,649-line composition root is visible under a separate 1,700-line shrink-only ceiling, while the 166-line CLI adapter, 136-line authoring filter, 149-line recovery evidence, 68-line scratch policy, 534-line batch handoff, 478-line process handoff, and 425-line finalize/commit modules remain independently budgeted.
 
 Required evidence grows with the boundary:
 

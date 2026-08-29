@@ -147,8 +147,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: f8f0633
-lastReviewedNote: "Reviewed for Issue #70: the batch public owner is a five-line facade; a separately budgeted composition root wires focused Foundry stages to CLI scheduling."
+lastReviewedCommit: b466bf1
+lastReviewedNote: "Reviewed for Issue #81: a shared strict classifier and bounded process helpers keep lost-success recovery pending until exact readback."
 ---
 
 # Architecture
@@ -250,7 +250,9 @@ BAFU flow identity equivalence is a narrow semantic boundary inside that layer. 
 
 BAFU category-map handling is split into two bounded leaves. `category-map-projection.ts` retains every supplied decision and manual-review artifact independent of task reachability; `category-map-report.ts` derives reader status/counts/blockers from that complete closure. Manual rows add compact source/reason/artifact blockers, produce `completed_with_manual_review`, and force a nonzero command exit; fully resolved inputs preserve the historical report bytes/status. This is local evidence control and does not move taxonomy choice or remote authority.
 
-The batch engine delegates its asynchronous post-write closure to `scripts/lib/batch-orchestration/post-write-handoff.ts`. That stage discovers the exact commit and verification reports, permits only the characterized same-id/version idempotent commit recovery, retries only classified read-only verification failures, delegates ordinary trace-hash normalization policy, and invokes Foundry closeout after successful readback. The command owner continues to supply process isolation, timeouts, paths, and profile context.
+Process and batch commit handoffs share `scripts/lib/same-identity-commit-recovery.ts` as the sole same-id/version lost-success classifier. It admits only structured `23505` evidence with exact same-id/version semantics; text-only, mixed, malformed, and incomplete failures reject. `process-handoff-plan.ts` and `process-handoff-closeout.ts` keep process verification and closeout argv construction bounded, while the main process handoff preserves one mutation dispatch and carries recovery as pending until exact readback succeeds.
+
+The batch engine delegates its asynchronous post-write closure to `scripts/lib/batch-orchestration/post-write-handoff.ts`. That stage discovers the exact commit and verification reports, uses the shared strict recovery classifier without replaying a mutation, retries only classified read-only verification failures, delegates ordinary trace-hash normalization policy, and invokes Foundry closeout only after exact owner/state/id/version/payload/root readback. The command owner continues to supply process isolation, timeouts, paths, and profile context.
 
 `scripts/lib/batch-orchestration/scope-finalize-commit.ts` composes finalize and handoff without absorbing their owners. It holds the support-commit serialization queue and verified identity set adapter, invalidates stale support reuse, reruns finalize after support or evidence recovery, and preserves the exact three-attempt post-finalize recovery ceiling before delegating the content-bound main handoff.
 

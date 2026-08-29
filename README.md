@@ -149,8 +149,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: f8f0633
-lastReviewedNote: "Reviewed for Issue #70: the final 1,898-line batch command is now a five-line facade over an explicit composition root, semantic stages, and CLI 0.1.3 scheduling."
+lastReviewedCommit: b466bf1
+lastReviewedNote: "Reviewed for Issue #81: same-id/version recovery requires structured 23505 evidence, one commit dispatch, and exact content-bound readback."
 ---
 
 # TianGong LCA Data Foundry
@@ -242,6 +242,8 @@ Issue #70 decomposes that stable typed layer by semantic stage. `scripts/lib/bat
 Issue #77 closes the exact-name product-flow reuse bypass exposed during that move-only decomposition. `identity-equivalence.ts` may select an exact normalized name only after the ordered physical review produces zero non-equivalence reasons. A same-name candidate with conflicting flow property, reference unit, geography/market, category/route, technology, or physical meaning remains reviewed evidence for `create_new`; it is never emitted as `reuse_existing_reference`. Matching physical evidence, elementary land-use special cases, and process exact-name explicit review retain their existing branches.
 
 Issue #79 makes BAFU category-map completion truthful even when a conflicting, invalid, context-unbound, or incomplete decision is unrelated to the current task set. `category-map-projection.ts` retains artifact semantics, while the bounded `category-map-report.ts` leaf derives top-level `completed_with_manual_review`, compact source/reason/artifact blockers, and a nonzero command exit from the complete emitted closure. Resolved-only inputs keep their previous JSON bytes and successful exit, while existing manual-review artifact bytes/order remain authoritative.
+
+Issue #81 aligns process and batch lost-success recovery through `same-identity-commit-recovery.ts`. Recovery requires explicit database code `23505` plus exact same-id/version conflict semantics; text-only, mixed, malformed, or incomplete evidence fails closed. Neither orchestration path replays a commit. The outcome remains `readback_recovery_pending` until the existing content-bound verifier proves exact owner, state, identity, version, payload, and root closure; every mismatch, unexpected row, missing report, or exhausted readback blocks closeout.
 
 Wave 26 migrates four adapter/tool boundaries. `tidas-adapter.ts` retains executable/config precedence, controlled script argv/env, operation/version/asset reports, batch document hashes and atomic rollback. `post-authoring-finalize-utils.ts` retains rewrite discovery, identity reuse, payload-freshness hashes, external-reference and finalize order. `check-tidas-cutover.ts` retains authoritative Git inventory and JSON/exit behavior; `foundry-golden-diff.ts` retains non-HEAD merge-base selection, cross-platform path/argv normalization and Node-native comparison. Inventory moves 89→85 without changing help, profiles, Worldsteel, Date.parse or remote-write authority.
 

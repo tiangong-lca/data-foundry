@@ -140,6 +140,8 @@ test("orchestration owners have an explicit shrink-only line budget", () => {
     "scripts/lib/bafu-orchestration/finalize-recovery-policy.ts",
     "scripts/lib/bafu-orchestration/identity-decision-carry-forward.ts",
     "scripts/lib/bafu-orchestration/post-finalize-recovery.ts",
+    "scripts/lib/bafu-orchestration/process-handoff-closeout.ts",
+    "scripts/lib/bafu-orchestration/process-handoff-plan.ts",
     "scripts/lib/bafu-orchestration/process-handoff.ts",
     "scripts/lib/bafu-orchestration/process-scope-run.ts",
     "scripts/lib/bafu-orchestration/process-scope-runtime.ts",
@@ -168,6 +170,7 @@ test("orchestration owners have an explicit shrink-only line budget", () => {
     "scripts/lib/library-orchestration/identity-preflight-runner.ts",
     "scripts/lib/library-orchestration/index-build.ts",
     "scripts/lib/library-orchestration/ready-process-scope-runner.ts",
+    "scripts/lib/same-identity-commit-recovery.ts",
   ]);
   for (const [relativePath, ceiling] of Object.entries(contract.semantic_module_ceiling_lines)) {
     assert.ok(fs.existsSync(path.join(repoRoot, relativePath)), relativePath);

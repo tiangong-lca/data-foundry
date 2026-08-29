@@ -86,8 +86,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: f8f0633
-lastReviewedNote: "Reviewed for Issue #70: the thin Foundry command facade, visible composition root, semantic modules, and CLI scheduler retain explicit ownership boundaries."
+lastReviewedCommit: b466bf1
+lastReviewedNote: "Reviewed for Issue #81: Foundry owns recovery eligibility and no-replay orchestration while CLI and database retain mutation and readback truth."
 ---
 
 # Capability Ownership Policy
@@ -145,6 +145,8 @@ The supported library boundary is `@tiangong-lca/cli/command-spec`, `@tiangong-l
 The real commit-mode batch owner now calls `runFoundryScopeBatch`, whose only scheduler implementation is public CLI `runBoundedBatch` under `withBatchRunLock`. Foundry provides content/family projections, scope execution, retryable ledger mapping, cache-cap callback, and report aggregation. This is delegation, not a copy of CLI scheduling semantics.
 
 High-level library and BAFU orchestration is Foundry-owned composition, not a transfer of sibling behavior. Foundry may order classification, authoring, scope-finalize, ledger, pause/preflight and bounded-parallel stages and may delegate an already-authorized handoff as executable plus argv. The CLI still owns mutation and readback semantics, profiles own dataset-specific policy, and USLCI/Worldsteel wrappers may configure the shared engine only within those existing boundaries.
+
+Foundry owns only the local eligibility classification and orchestration state for a same-id/version lost-success observation. It requires structured `23505` evidence with exact conflict semantics, dispatches no replay, and keeps recovery pending until the CLI/database-owned readback proves exact owner, state, identity, version, payload, and root closure. Classifier acceptance is not mutation success, database truth, or closeout authority.
 
 Candidate retrieval does not own BAFU identity equivalence. Edge Functions and database search return candidate evidence; Foundry's `identity-equivalence.ts` owns the deterministic local physical review used by BAFU auto-authoring. An exact name cannot override a recorded property, unit, geography, category/route, technology, or physical-meaning conflict, and this local decision never grants remote-write authority.
 
