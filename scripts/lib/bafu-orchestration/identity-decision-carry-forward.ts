@@ -1,3 +1,5 @@
+import { canonicalDescriptionPair as descriptionPair } from "../canonical-description.ts";
+
 export type JsonRecord = Record<string, unknown>;
 
 export interface IdentityDecisionDirectoryEntry {
@@ -231,17 +233,15 @@ export function createBafuIdentityDecisionCarryForwardService(
       canonical.ref_object_id ?? canonical.refObjectId ?? canonical.id ?? canonical["@refObjectId"],
     );
     if (!id) return null;
+    const sourceDescription = canonical.short_description ?? canonical.shortDescription;
+    const description = descriptionPair(sourceDescription, asText).ledger;
     return {
       table: asText(canonical.table) || "flows",
       ref_object_id: id,
       version:
         asText(canonical.version ?? canonical.ref_version ?? canonical["@version"]) || "00.00.001",
       short_description:
-        asText(
-          canonical.short_description ??
-            canonical.shortDescription ??
-            jsonRecord(canonical["common:shortDescription"])["#text"],
-        ) || id,
+        description || asText(jsonRecord(canonical["common:shortDescription"])["#text"]) || id,
     };
   }
 

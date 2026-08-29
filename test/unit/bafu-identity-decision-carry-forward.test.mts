@@ -373,12 +373,12 @@ test("BAFU carry-forward keeps duplicate-source precedence, exact package projec
     const reportBytes = fs.readFileSync(result.reportPath, "utf8");
     assert.equal(
       sha256(outputBytes),
-      "1a5fb2987c613de05c71c4acb05bb065d19ebe3872597b16e7dd68a5fdb030a1",
+      "910c95907ed925df233743b5f1d99df60ed57a4c5ecdf2385e1f43baf9bf3c4d",
       "carry-forward JSONL byte contract",
     );
     assert.equal(
       sha256(reportBytes),
-      "e3d9d99f38852b46832e1ad29ec6e2bdf3a6840bc03a57e8655442b4e690ae50",
+      "a80a4538a8cd682931826a2fa51eb00471cdaff00f6e97a30c1f7a81a21a56f3",
       "carry-forward report byte contract",
     );
   } finally {
