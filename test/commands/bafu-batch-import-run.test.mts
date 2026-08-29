@@ -354,6 +354,71 @@ test("BAFU batch import runner skips already verified scopes through resumable l
   }
 });
 
+test("BAFU preflight invalidates legacy id-version-only verified ledgers", () => {
+  const root = path.join(fixtureRoot, "legacy-resume-invalidated");
+  fs.rmSync(root, { recursive: true, force: true });
+  const runDir = path.join(root, "run");
+  const schemaDir = path.join(root, "schemas");
+  const bundlesDir = path.join(root, "process-bundles");
+  const outDir = path.join(root, "batch");
+  fs.mkdirSync(bundlesDir, { recursive: true });
+  writeRequiredContext(runDir, schemaDir);
+  const scopeFile = path.join(root, "ready-scopes.jsonl");
+  writeJsonLines(scopeFile, [
+    {
+      schema_version: 1,
+      process_id: processId,
+      process_version: "00.00.001",
+      closure_status: "ready",
+      source_bundle_sha256: "a".repeat(64),
+    },
+  ]);
+  writeJsonLines(path.join(outDir, "import-ledger", "ok.scopes.verified.jsonl"), [
+    {
+      schema_version: 1,
+      process_id: processId,
+      process_version: "00.00.001",
+      status: "verified",
+    },
+  ]);
+
+  try {
+    const result = runFoundry([
+      "dataset-bafu-batch-import-run",
+      "--scope-file",
+      rel(scopeFile),
+      "--process-bundles-dir",
+      rel(bundlesDir),
+      "--run-dir",
+      rel(runDir),
+      "--out-dir",
+      rel(outDir),
+      "--tidas-schema-dir",
+      rel(schemaDir),
+      "--target-user-id",
+      "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+      "--commit",
+      "--parallel",
+      "2",
+      "--preflight-only",
+    ]);
+
+    assert.equal(result.code, 0);
+    assert.equal(result.json.status, "preflight_completed");
+    assert.equal(result.json.counts.selected_scopes, 1);
+    assert.equal(result.json.counts.filtered_already_verified_scopes, 0);
+    assert.equal(result.json.counts.invalidated_verified_scopes, 1);
+    const invalidated = readJsonLines(
+      path.join(outDir, "import-ledger", "resume.invalidated.jsonl"),
+    );
+    assert.equal(invalidated.length, 1);
+    assert.equal(invalidated[0].reason, "legacy_resume_contract_missing");
+    assert.equal(invalidated[0].scope_key, `${processId}@00.00.001`);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("BAFU batch import runner skips already blocked scopes during normal resume", () => {
   const root = path.join(fixtureRoot, "skip-blocked");
   fs.rmSync(root, { recursive: true, force: true });
