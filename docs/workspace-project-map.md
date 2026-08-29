@@ -84,8 +84,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-08-29
-lastReviewedCommit: 2504a80
-lastReviewedNote: "Reviewed for Issue #74: CLI owns generic CommandSpec/batch mechanics while Foundry retains scope readiness, blockers, reports, and logs."
+lastReviewedCommit: 10893c088ef56083b0b0ecf2af71779f0eb61d21
+lastReviewedNote: "Reviewed for Issue #75: content-bound resume and readback recovery stay within existing Foundry/CLI ownership and add no workspace project boundary."
 ---
 
 # Workspace Project Map
