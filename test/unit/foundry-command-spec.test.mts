@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
 
 import {
   assertFoundryCommandSpecArtifactsCurrent,
@@ -201,7 +202,7 @@ test("Foundry CommandSpec facade is the published CLI subpath without a local im
   assert.doesNotMatch(source, /node:(?:child_process|crypto|fs)/u);
   assert.ok(source.split(/\r?\n/u).length - 1 <= 5);
 
-  const facade = (await import(facadePath)) as Record<string, unknown>;
+  const facade = (await import(pathToFileURL(facadePath).href)) as Record<string, unknown>;
   const published = (await import("@tiangong-lca/cli/command-spec")) as Record<string, unknown>;
   for (const name of [
     "createFoundryCommandSpec",
