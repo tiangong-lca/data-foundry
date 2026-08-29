@@ -430,13 +430,13 @@ export function createBatchScopePreparationService(
           locationDecisionDir,
           "dataset-location-decisions-suggest-report.json",
         );
-        const suggestTaskQueue =
+        const taskQueue =
           operations.findOneFile(locationTaskDir, /^location-authoring-queue\..*\.jsonl$/u) ||
           materialized.locationQueue;
         const locationSuggest = await operations.runArgvStage({
           stage: "location.suggest",
           argv: operations.foundryCommand("dataset-location-decisions-suggest", {
-            locationQueue: io.repoRelative(suggestTaskQueue),
+            locationQueue: io.repoRelative(taskQueue),
             decisionTask: io.repoRelative(
               io.joinPath(locationTaskDir, "location-decision-task.json"),
             ),
@@ -476,9 +476,6 @@ export function createBatchScopePreparationService(
             report: suggestReportPath,
           };
         }
-        const taskQueue =
-          operations.findOneFile(locationTaskDir, /^location-authoring-queue\..*\.jsonl$/u) ||
-          materialized.locationQueue;
         const locationApplyDir = io.joinPath(scopeDir, "location-apply");
         const locationApplyReportPath = io.joinPath(
           locationApplyDir,
