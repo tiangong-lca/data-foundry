@@ -88,6 +88,12 @@ test("two scope receipts deduplicate control bytes and explicitly prune payload 
     assert.equal(payload?.store_locator, null);
     assert.equal(retention.verifyReceipt(first.scopeDir).status, "passed");
     assert.equal(retention.verifyReceipt(second.scopeDir).status, "passed");
+    const currentReport = JSON.parse(
+      fs.readFileSync(path.join(first.scopeDir, "scope-run-report.json"), "utf8"),
+    );
+    assert.equal(currentReport.control_evidence.status, "retained_and_pruned");
+    assert.match(currentReport.files.control_receipt, /scope-control-receipt\.json$/u);
+    assert.match(currentReport.files.scope_prune_report, /scope-prune-report\.json$/u);
     if (process.platform !== "win32") {
       const blob = filesBelow(path.join(storeDir, "sha256"))[0];
       assert.equal(fs.statSync(blob).mode & 0o222, 0);
@@ -198,6 +204,11 @@ test("unrecoverable CAS failure writes a blocker and preserves every scratch byt
     );
     assert.equal(report.automatic_prune_performed, false);
     assert.equal(report.findings[0].code, "control_retention_failed");
+    const currentReport = JSON.parse(
+      fs.readFileSync(path.join(fixture.scopeDir, "scope-run-report.json"), "utf8"),
+    );
+    assert.equal(currentReport.control_evidence.status, "blocked_control_retention_error");
+    assert.match(currentReport.files.scope_prune_report, /scope-prune-report\.json$/u);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
