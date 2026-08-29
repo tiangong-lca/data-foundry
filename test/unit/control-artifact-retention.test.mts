@@ -36,7 +36,6 @@ function scopeFixture(root: string, scopeId: string, reportValue = "shared-contr
   writeJson(controlReport, {
     status: "completed",
     marker: reportValue,
-    files: { final_rows: path.relative(root, payloadRows) },
   });
   fs.writeFileSync(payloadRows, `${JSON.stringify({ payload: "x".repeat(8_192) })}\n`);
   writeJson(path.join(scopeDir, "scope-run-report.json"), {
@@ -54,7 +53,11 @@ function service(root: string, linkFile?: (source: string, destination: string) 
     nowIso: () => "2026-08-29T00:00:00.000Z",
     repoRelative: (filePath) => path.relative(root, filePath).split(path.sep).join("/"),
     resolveRepoPath: (value) =>
-      value ? (path.isAbsolute(String(value)) ? String(value) : path.join(root, String(value))) : null,
+      value
+        ? path.isAbsolute(String(value))
+          ? String(value)
+          : path.join(root, String(value))
+        : null,
     linkFile,
   });
 }
@@ -75,7 +78,9 @@ test("two scope receipts deduplicate control bytes and explicitly prune payload 
     assert.equal(filesBelow(path.join(storeDir, "sha256")).length, 1);
     assert.equal(fs.existsSync(first.controlReport), false);
     assert.equal(fs.existsSync(first.payloadRows), false);
-    const payload = receiptA.artifacts.find((artifact: JsonRecord) => artifact.role === "final_rows");
+    const payload = receiptA.artifacts.find(
+      (artifact: JsonRecord) => artifact.role === "final_rows",
+    );
     assert.equal(payload?.retention, "pruned_payload");
     assert.equal(payload?.store_locator, null);
     assert.equal(retention.verifyReceipt(first.scopeDir).status, "passed");
