@@ -71,10 +71,12 @@ test("two scope receipts deduplicate control bytes and explicitly prune payload 
     const retention = service(root);
     const receiptA = retention.retainAndPrune({ scopeDir: first.scopeDir, storeDir });
     const receiptB = retention.retainAndPrune({ scopeDir: second.scopeDir, storeDir });
+    const receiptARepeated = retention.retainAndPrune({ scopeDir: first.scopeDir, storeDir });
     assert.equal(receiptA.status, "completed");
     assert.equal(receiptB.status, "completed");
     assert.equal(receiptA.counts.dangling_required_references, 0);
     assert.equal(receiptB.counts.dangling_required_references, 0);
+    assert.equal(receiptARepeated.receipt_sha256, receiptA.receipt_sha256);
     assert.equal(filesBelow(path.join(storeDir, "sha256")).length, 1);
     assert.equal(fs.existsSync(first.controlReport), false);
     assert.equal(fs.existsSync(first.payloadRows), false);
@@ -85,6 +87,10 @@ test("two scope receipts deduplicate control bytes and explicitly prune payload 
     assert.equal(payload?.store_locator, null);
     assert.equal(retention.verifyReceipt(first.scopeDir).status, "passed");
     assert.equal(retention.verifyReceipt(second.scopeDir).status, "passed");
+    if (process.platform !== "win32") {
+      const blob = filesBelow(path.join(storeDir, "sha256"))[0];
+      assert.equal(fs.statSync(blob).mode & 0o222, 0);
+    }
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -155,6 +161,42 @@ test("missing control evidence and symlinked scratch fail closed without pruning
     });
     assert.equal(unsafe.status, "blocked_unsafe_scope_entry");
     assert.equal(fs.readFileSync(path.join(outside, "keep.txt"), "utf8"), "outside\n");
+
+    fs.rmSync(path.join(fixture.scopeDir, "unsafe-link"));
+    const storeLink = path.join(root, "linked-store");
+    fs.symlinkSync(outside, storeLink);
+    const unsafeStore = retention.retainAndPrune({
+      scopeDir: fixture.scopeDir,
+      storeDir: storeLink,
+    });
+    assert.equal(unsafeStore.status, "blocked_unsafe_scope_entry");
+    assert.deepEqual(fs.readdirSync(outside), ["keep.txt"]);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("unrecoverable CAS failure writes a blocker and preserves every scratch byte", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-retention-failure-"));
+  const fixture = scopeFixture(root, "scope-a");
+  try {
+    const retention = service(root, () => {
+      const error = new Error("device failure") as NodeJS.ErrnoException;
+      error.code = "EIO";
+      throw error;
+    });
+    const result = retention.retainAndPrune({
+      scopeDir: fixture.scopeDir,
+      storeDir: path.join(root, "store"),
+    });
+    assert.equal(result.status, "blocked_control_retention_error");
+    assert.equal(fs.existsSync(fixture.controlReport), true);
+    assert.equal(fs.existsSync(fixture.payloadRows), true);
+    const report = JSON.parse(
+      fs.readFileSync(path.join(fixture.scopeDir, "scope-prune-report.json"), "utf8"),
+    );
+    assert.equal(report.automatic_prune_performed, false);
+    assert.equal(report.findings[0].code, "control_retention_failed");
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
