@@ -76,12 +76,22 @@ function jsonRecord(value: unknown): JsonRecord {
   return isJsonRecord(value) ? value : {};
 }
 
-interface ProjectedArgvStageInput extends PostFinalizeRecoveryArgvStageInput {
-  reportPath: string | null;
-}
+type ProjectedArgvStageInput = PostFinalizeRecoveryArgvStageInput & { reportPath: string | null };
+type ProjectedArgvStageResult = PostFinalizeRecoveryArgvStageResult & { projection: JsonRecord };
 
-interface ProjectedArgvStageResult extends PostFinalizeRecoveryArgvStageResult {
-  projection: JsonRecord;
+function commandAuthorityMatches(
+  value: unknown,
+  expected: PostFinalizeRecoveryCommandAuthority,
+): boolean {
+  const projected = jsonRecord(value);
+  const argv = Array.isArray(projected.argv) ? projected.argv : [];
+  return (
+    Object.keys(projected).join("\0") === "executable\0argv\0display" &&
+    projected.executable === expected.executable &&
+    projected.display === expected.display &&
+    argv.length === expected.argv.length &&
+    argv.every((item, index) => item === expected.argv[index])
+  );
 }
 
 function runProjectedArgvStage(
@@ -97,16 +107,20 @@ function runProjectedArgvStage(
     display: adapter.commandString(exactArgv),
   };
   const execution = adapter.runArgvStage({ stage, argv: [...exactArgv], logDir });
+  const projection = adapter.projectCommandStage({
+    stage,
+    command,
+    result: execution.result,
+    stdoutLog: execution.stdoutLog,
+    stderrLog: execution.stderrLog,
+    reportPath,
+  });
+  if (!commandAuthorityMatches(projection.command, command)) {
+    throw new Error(`Recovery stage ${stage} projected command authority drift.`);
+  }
   return {
     ...execution,
-    projection: adapter.projectCommandStage({
-      stage,
-      command,
-      result: execution.result,
-      stdoutLog: execution.stdoutLog,
-      stderrLog: execution.stderrLog,
-      reportPath,
-    }),
+    projection,
   };
 }
 
