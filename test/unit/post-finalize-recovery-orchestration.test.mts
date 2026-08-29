@@ -378,6 +378,47 @@ test("post-finalize identity recovery projects exact authority for nonzero throw
   }
 });
 
+test("post-finalize recovery rejects projected argv drift before the next stage", () => {
+  const gateReport = "run/finalize/curation-gate/dataset-curation-gate-report.json";
+  const harness = makeHarness({
+    initialReports: [{ path: gateReport, value: { status: "blocked_needs_foundry_ai_authoring" } }],
+    stages: {
+      "post-finalize-7.identity-task": {
+        reports: [
+          {
+            path: "run/post-finalize-7-identity-task/identity-decision-task-report.json",
+            value: { status: "ready_for_ai_identity_decisions" },
+          },
+        ],
+      },
+    },
+  });
+  const projectCommandStage = harness.adapter.projectCommandStage;
+  harness.adapter.projectCommandStage = (input) => ({
+    ...projectCommandStage(input),
+    command: { ...input.command, argv: input.command.argv.slice(0, -2) },
+  });
+
+  assert.throws(
+    () =>
+      runPostFinalizeIdentityRecovery(
+        {
+          finalizeReport: { files: { curation_gate_report: gateReport } },
+          currentRowsFile: repoPath("run", "processes.cleaned.jsonl"),
+          outDir: repoPath("run"),
+          logDir: repoPath("run", "logs"),
+          attempt: 7,
+        },
+        harness.adapter,
+      ),
+    /projected command authority drift/u,
+  );
+  assert.deepEqual(
+    harness.invocations.map((invocation) => invocation.stage),
+    ["post-finalize-7.identity-task"],
+  );
+});
+
 test("post-finalize semantic recovery preserves task, autofill, collect, and apply argv plus report bytes", () => {
   const gateReport = "run/finalize/curation-gate/dataset-curation-gate-report.json";
   const { adapter, invocations } = makeHarness({
