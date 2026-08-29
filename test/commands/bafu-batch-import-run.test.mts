@@ -502,6 +502,7 @@ test("BAFU batch import runner skips already blocked scopes during normal resume
       stage: "flow.authoring",
       code: "bafu_name_split_unsupported",
       status: "blocked",
+      resume_contract: exactBafuResumeContract(scopes[0], { runDir, schemaDir, bundlesDir }),
     },
   ]);
 
@@ -537,6 +538,39 @@ test("BAFU batch import runner skips already blocked scopes during normal resume
       path.join(outDir, "import-ledger", "blocked.scopes.human-review.jsonl"),
     );
     assert.equal(blockers.length, 1);
+
+    writeJsonLines(
+      path.join(runDir, "decisions-v4-leaf-category-map", "classification-decisions.jsonl"),
+      [{ repaired: true }],
+    );
+    const repaired = runFoundry([
+      "dataset-bafu-batch-import-run",
+      "--scope-file",
+      rel(scopeFile),
+      "--process-bundles-dir",
+      rel(bundlesDir),
+      "--run-dir",
+      rel(runDir),
+      "--out-dir",
+      rel(outDir),
+      "--tidas-schema-dir",
+      rel(schemaDir),
+      "--target-user-id",
+      "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+      "--commit",
+      "--parallel",
+      "2",
+      "--pending-only",
+      "--preflight-only",
+    ]);
+    assert.equal(repaired.code, 0);
+    assert.equal(repaired.json.counts.selected_scopes, 1);
+    assert.equal(repaired.json.counts.filtered_already_blocked_scopes, 0);
+    const invalidated = readJsonLines(
+      path.join(outDir, "import-ledger", "resume.invalidated.jsonl"),
+    );
+    assert.equal(invalidated.at(-1).kind, "blocked_scope");
+    assert.equal(invalidated.at(-1).reason, "resume_content_drift");
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
