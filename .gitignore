@@ -33,6 +33,9 @@ inputs/*
 !/inputs/source-packages/
 inputs/source-packages/*
 !/inputs/source-packages/*.md
+!/inputs/source-documents/
+inputs/source-documents/*
+!/inputs/source-documents/march-2026-stage-flow-self-provider-cohort.md
 *.local
 tasks/*
 !tasks/README.md

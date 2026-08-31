@@ -1,7 +1,7 @@
 {
   "$schema": "../specs/schemas/file-location-registry.schema.json",
   "schema_version": 1,
-  "updated_at_utc": "2026-08-25T00:00:00Z",
+  "updated_at_utc": "2026-08-31T00:00:00Z",
   "policy_doc": "docs/file-organization.md",
   "entries": [
     {
@@ -319,6 +319,18 @@
       "sensitivity": "non-sensitive schema; no credentials or private payloads",
       "tracked": true,
       "notes": "Machine-readable request, candidate index, audited classification, conversion event, report, and manifest shapes for topology convergence."
+    },
+    {
+      "id": "march-2026-stage-flow-self-provider-source-brief",
+      "status": "active",
+      "classification": "utilities-source-evidence-handoff",
+      "current_path": "inputs/source-documents/march-2026-stage-flow-self-provider-cohort.md",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [".gitignore"],
+      "sensitivity": "non-sensitive process identities and content hashes; no credentials or private row payloads",
+      "tracked": true,
+      "notes": "Binds data-foundry Issue #95 to the 214-process Utilities handoff, repair decision vocabulary, P0 wave, evidence requirements, and no-write authority boundary for the March stage-flow cohort."
     },
     {
       "id": "uslci-source-package",
