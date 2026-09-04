@@ -273,4 +273,23 @@ test("an already-aborted host returns exit 130 without creating workspace state"
   assert.equal(exit, 130);
   assert.equal(JSON.parse(stdout).blockers[0].code, "operation_interrupted");
   assert.equal(fs.existsSync(workspace), false);
+
+  const signalCounts = [process.listenerCount("SIGINT"), process.listenerCount("SIGTERM")];
+  const initializedWorkspace = path.join(root, "initialized");
+  await runFoundryRuntimeCommand(
+    [
+      process.execPath,
+      "runtime-entry",
+      "workspace",
+      "init",
+      "--workspace",
+      initializedWorkspace,
+      "--json",
+    ],
+    { writeStdout: () => undefined, setExitCode: () => undefined },
+  );
+  assert.deepEqual(
+    [process.listenerCount("SIGINT"), process.listenerCount("SIGTERM")],
+    signalCounts,
+  );
 });

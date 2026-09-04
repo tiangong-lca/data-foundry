@@ -269,13 +269,29 @@ export async function runFoundryRuntimeCommand(
   argv: string[] = process.argv,
   host: FoundryRuntimeCommandHost = {},
 ): Promise<void> {
+  const controller = host.signal ? null : new AbortController();
+  const abort = () => controller?.abort("host-signal");
+  if (controller) {
+    process.once("SIGINT", abort);
+    process.once("SIGTERM", abort);
+  }
+  const effectiveHost: FoundryRuntimeCommandHost = {
+    ...host,
+    signal: host.signal ?? controller?.signal,
+  };
   const parsed = publicCommand(argv);
-  if (!parsed) return runLegacyWorkspaceRuntimeCommand(argv);
+  if (!parsed) {
+    if (controller) {
+      process.removeListener("SIGINT", abort);
+      process.removeListener("SIGTERM", abort);
+    }
+    return runLegacyWorkspaceRuntimeCommand(argv);
+  }
   const writeStdout = host.writeStdout ?? ((text: string) => process.stdout.write(text));
   const setExitCode = host.setExitCode ?? ((code: number) => (process.exitCode = code));
   let result: FoundryOperationResult;
   try {
-    result = await runPublicCommand(parsed, host);
+    result = await runPublicCommand(parsed, effectiveHost);
   } catch (error) {
     result = invalidResult(
       parsed.operation,
@@ -286,17 +302,15 @@ export async function runFoundryRuntimeCommand(
         : "Foundry public operation failed before changing task state.",
     );
   }
-  writeStdout(`${JSON.stringify(result)}\n`);
-  setExitCode(exitCodeForFoundryOperationResult(result));
+  try {
+    writeStdout(`${JSON.stringify(result)}\n`);
+    setExitCode(exitCodeForFoundryOperationResult(result));
+  } finally {
+    if (controller) {
+      process.removeListener("SIGINT", abort);
+      process.removeListener("SIGTERM", abort);
+    }
+  }
 }
 
-if (import.meta.main) {
-  const controller = new AbortController();
-  const abort = () => controller.abort("host-signal");
-  process.once("SIGINT", abort);
-  process.once("SIGTERM", abort);
-  void runFoundryRuntimeCommand(process.argv, { signal: controller.signal }).finally(() => {
-    process.removeListener("SIGINT", abort);
-    process.removeListener("SIGTERM", abort);
-  });
-}
+if (import.meta.main) void runFoundryRuntimeCommand();
