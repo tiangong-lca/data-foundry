@@ -153,6 +153,8 @@ lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session refer
 
 # Architecture
 
+The entry module initializes command factories only inside the explicit `main(argv)` function. Node 24's `import.meta.main` guard invokes it for a CLI launch; importing the module does not load operator `.env`/workspace state, write files, print a result or exit the embedding process. Normal CLI execution retains its existing behavior while the explicit RuntimeContext path families are being introduced in #100.
+
 Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel account overrides, QA waivers and the Worldsteel full-context relaxation grant no permission to a new task. `docs/task-authorization-contract.md` owns the separate workspace/task/actor/account/profile/input binding and exact action evidence. Local candidate preparation and checked public-reference proofs remain available; current final-row hashes, task permissions and all content/closure/no-replay gates are required before a restricted write handoff.
 
 ## OAuth identity boundary
