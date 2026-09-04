@@ -79,15 +79,15 @@ export function runFoundryCli({
   });
 }
 
-async function runFoundryCliMain({
-  argv,
+/** One owner registry for both process adapters and in-process orchestration. */
+export function createFoundryCommandDispatcher({
   commandDeps: rawCommandDeps,
   decisionDeps,
   runtime: rawRuntime,
-}: Required<FoundryCliInput>): Promise<void> {
+}: Omit<FoundryCliInput, "argv">) {
   const commandDeps = rawCommandDeps as unknown as CommandDependencies;
   const runtime = rawRuntime as unknown as CliRuntime;
-  const { exitCodeForCommand, parseArgs, printJson, usage } = runtime;
+  const { usage } = runtime;
   const {
     authoringPlanCommands,
     uslciBatchImportRunCommands,
@@ -248,15 +248,37 @@ async function runFoundryCliMain({
     "dataset-mutation-manifest": (options) => runDatasetMutationManifest({ repoRoot, options }),
   };
 
+  return Object.freeze({
+    commands: Object.freeze(Object.keys(commandHandlers)),
+    async execute(command: string, options: JsonRecord = {}): Promise<unknown> {
+      if (!Object.hasOwn(commandHandlers, command))
+        throw new Error(`Unknown Foundry command: ${command}`);
+      return commandHandlers[command](options);
+    },
+  });
+}
+
+async function runFoundryCliMain({
+  argv,
+  commandDeps,
+  decisionDeps,
+  runtime: rawRuntime,
+}: Required<FoundryCliInput>): Promise<void> {
+  const runtime = rawRuntime as unknown as CliRuntime;
+  const { exitCodeForCommand, parseArgs, printJson, usage } = runtime;
+  const dispatcher = createFoundryCommandDispatcher({
+    commandDeps,
+    decisionDeps,
+    runtime: rawRuntime,
+  });
   const [command = "help", ...rest] = argv.slice(2);
   const options = parseArgs(rest);
-  const handler = commandHandlers[command];
-  if (!handler) {
+  if (!dispatcher.commands.includes(command)) {
     console.error(`Unknown Foundry command: ${command}`);
     console.error(`Known commands: ${usage().commands.join(", ")}`);
     process.exit(2);
   }
-  const result = await handler(options);
+  const result = await dispatcher.execute(command, options);
   const exitCode = exitCodeForCommand(command, result);
   printJson(result);
   process.exit(exitCode);

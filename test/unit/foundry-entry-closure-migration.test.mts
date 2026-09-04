@@ -128,7 +128,7 @@ test("Foundry entry closure exists atomically only as zero-escape native TypeScr
   }
 
   const cliModule = (await import(pathToFileURL(cliPath).href)) as Record<string, unknown>;
-  assert.deepEqual(Object.keys(cliModule), ["runFoundryCli"]);
+  assert.deepEqual(Object.keys(cliModule), ["createFoundryCommandDispatcher", "runFoundryCli"]);
 });
 
 test("runtime path resolution rejects unsupported entry mirrors", () => {

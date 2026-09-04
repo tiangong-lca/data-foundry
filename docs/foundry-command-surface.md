@@ -90,7 +90,9 @@ lastReviewedNote: "Reviewed for Issue #74: dataset-process-scope-run retains its
 
 # Foundry Command Surface
 
-Foundry CLI-spine and command governance has three checked contracts:
+The internal `createFoundryApplication`/`createFoundryCommandDispatcher` APIs share the existing owner registry with the developer CLI. Programmatic dispatch returns results and rejects unknown or inherited object-property names; only the CLI adapter prints the result and applies process exit semantics. Consumer admission remains the explicit workspace runtime's responsibility. No new operator command or permission is introduced by exposing this composition boundary.
+
+Foundry CLI-spine and command governance has these checked contracts:
 
 - `scripts/lib/foundry-args.ts` is the typed positional/option/scalar parsing contract.
 - `scripts/lib/foundry-command-registry.ts` is the typed runtime command list, help JSON, and exit-code policy.

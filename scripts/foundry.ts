@@ -30,7 +30,7 @@ import { createBundleSampleUtils } from "./lib/bundle-sample-utils.ts";
 import { createCanonicalSupportRewriteUtils } from "./lib/canonical-support-rewrites.ts";
 import { createDecisionTaskUtils } from "./lib/decision-task-utils.ts";
 import { parseArgs, parseScalar } from "./lib/foundry-args.ts";
-import { runFoundryCli } from "./lib/foundry-cli.ts";
+import { createFoundryCommandDispatcher, runFoundryCli } from "./lib/foundry-cli.ts";
 import { exitCodeForCommand, usage } from "./lib/foundry-command-registry.ts";
 import { createFoundryRuntimeUtils } from "./lib/foundry-runtime-utils.ts";
 import { resolveFoundryRuntimePaths } from "./lib/foundry-runtime-paths.ts";
@@ -62,12 +62,13 @@ import { createTidasRowUtils } from "./lib/tidas-row-utils.ts";
 import { createTraceCoverageUtils } from "./lib/trace-coverage.ts";
 import { runFoundryRuntimeCommand } from "./runtime-entry.ts";
 
-export function main(argv: string[] = process.argv): void {
-  if (Object.hasOwn(parseArgs(argv.slice(3)), "workspace")) {
-    void runFoundryRuntimeCommand(argv);
-    return;
-  }
-  const { repoRoot } = resolveFoundryRuntimePaths(import.meta.url);
+export interface FoundryApplicationOptions {
+  repoRoot: string;
+  utilities?: ReturnType<typeof createFoundryRuntimeUtils>;
+}
+
+/** Internal command composition. The consumer runtime admits each command with its own task/I/O guards. */
+export function createFoundryApplication({ repoRoot, utilities }: FoundryApplicationOptions) {
   const foundryTraceNamespace = "https://tiangong-lca.dev/foundry/import-curation/1";
 
   type DependencyFactory = (dependencies: never) => unknown;
@@ -98,7 +99,6 @@ export function main(argv: string[] = process.argv): void {
     integerOption,
     isPlaceholderEnvValue,
     jsonSha256,
-    loadRuntimeEnv,
     normalizedList,
     nowIso,
     positiveIntegerOption,
@@ -128,9 +128,7 @@ export function main(argv: string[] = process.argv): void {
     unique,
     writeJson,
     writeText,
-  } = bindFactory(createFoundryRuntimeUtils, { parseScalar, repoRoot });
-
-  loadRuntimeEnv();
+  } = utilities ?? createFoundryRuntimeUtils({ parseScalar, repoRoot });
 
   const {
     bundleClassificationPath,
@@ -915,8 +913,7 @@ export function main(argv: string[] = process.argv): void {
     writeJsonLines,
   });
 
-  runFoundryCli({
-    argv,
+  const bindings = {
     commandDeps: {
       authoringPlanCommands,
       uslciBatchImportRunCommands,
@@ -999,7 +996,23 @@ export function main(argv: string[] = process.argv): void {
       writeJsonLines,
     },
     runtime: { exitCodeForCommand, parseArgs, printJson, usage },
+  };
+  const dispatcher = createFoundryCommandDispatcher(bindings);
+  return Object.freeze({
+    ...dispatcher,
+    runCli: (argv: string[]) => runFoundryCli({ argv, ...bindings }),
   });
+}
+
+export function main(argv: string[] = process.argv): void {
+  if (Object.hasOwn(parseArgs(argv.slice(3)), "workspace")) {
+    void runFoundryRuntimeCommand(argv);
+    return;
+  }
+  const { repoRoot } = resolveFoundryRuntimePaths(import.meta.url);
+  const utilities = createFoundryRuntimeUtils({ parseScalar, repoRoot });
+  utilities.loadRuntimeEnv();
+  createFoundryApplication({ repoRoot, utilities }).runCli(argv);
 }
 
 if (import.meta.main) main();

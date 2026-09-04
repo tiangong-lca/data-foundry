@@ -233,7 +233,7 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-04
-lastReviewedCommit: 46e359bc3d5d4055db034e7ec04e7989d8eb3680
+lastReviewedCommit: 1686720817ea0bde98fb0a55059b027796b2d422
 lastReviewedNote: "Reviewed for #97: pre-push clears repository-local Git bindings before the complete gate, and fixture tests preserve the outer checkout; OAuth and no-replay boundaries remain unchanged."
 ---
 

@@ -84,7 +84,7 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-04
-lastReviewedCommit: 46e359bc3d5d4055db034e7ec04e7989d8eb3680
+lastReviewedCommit: 1686720817ea0bde98fb0a55059b027796b2d422
 lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session references and credential-free candidate Golden snapshots; transport ownership and no-replay gates remain unchanged. Support-cache CLI extraction is a tracked prerequisite in tiangong-cli #270."
 ---
 

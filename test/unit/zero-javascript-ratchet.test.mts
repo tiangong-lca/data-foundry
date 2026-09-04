@@ -30,6 +30,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // Issue #100's import-isolation probe and explicit Node 24 entry remain native TypeScript.
 // Runtime layout/context and off-repository cleanup adapters also stay native TypeScript.
 // Registered task storage, identity and persisted-authorization boundaries remain native TypeScript.
+// The shared application/CLI dispatcher and host-isolation regression stay native TypeScript.
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
