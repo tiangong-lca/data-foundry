@@ -10,7 +10,9 @@ import {
   resolveFoundryAsset,
   type FoundryRuntimeContext,
 } from "./lib/foundry-runtime-context.ts";
-import { runFoundryTaskOperation } from "./lib/foundry-task-store.ts";
+import { runFoundryTaskOperation, withFoundryTaskMetadata } from "./lib/foundry-task-store.ts";
+import { bindAccountIntent, createTask, loadTask } from "./lib/foundry-task-registration.ts";
+import type { FoundryTaskOptions } from "./lib/foundry-task-types.ts";
 import {
   assertVerifiedFoundryIdentity,
   verifyFoundryRuntimeIdentity,
@@ -70,6 +72,36 @@ export function createFoundryRuntime(
     context,
     qualification: qualification ?? null,
     initializeWorkspace: () => initializeFoundryWorkspace(context),
+    startTask: (options: FoundryTaskOptions = {}) => {
+      const task =
+        context.taskRoot && fs.existsSync(context.taskRoot)
+          ? loadTask(context, options)
+          : createTask(context, options);
+      bindAccountIntent(context);
+      return task;
+    },
+    inspectTask: () =>
+      withFoundryTaskMetadata(context, (task, index) => {
+        const attempts = path.join(context.taskRoot!, "attempts");
+        let attemptsPresent = false;
+        if (fs.existsSync(attempts)) {
+          const stat = fs.lstatSync(attempts);
+          if (!stat.isDirectory() || stat.isSymbolicLink())
+            throw new FoundryContextError(
+              "task_attempt_state_invalid",
+              "Task attempt state must remain a contained directory.",
+            );
+          attemptsPresent = fs.readdirSync(attempts).length > 0;
+        }
+        return Object.freeze({
+          job: Object.freeze({ ...task.job }),
+          job_sha256: task.jobSha256,
+          sources: Object.freeze(task.sources.map((source) => Object.freeze({ ...source }))),
+          artifacts: Object.freeze(index.map((entry) => Object.freeze({ ...entry }))),
+          authorization_present: fs.existsSync(path.join(context.taskRoot!, "authorization.json")),
+          attempts_present: attemptsPresent,
+        });
+      }),
     verifyIdentity: (authentication?: FoundryAuthentication) =>
       verifyFoundryRuntimeIdentity(context, authentication, process.env, qualification),
     registerAuthorization: (

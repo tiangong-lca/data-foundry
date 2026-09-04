@@ -20,7 +20,13 @@ export const foundryOperationPermissionStates = Object.freeze([
 export type FoundryOperationStatus = (typeof foundryOperationStatuses)[number];
 export type FoundryOperationPermissionState = (typeof foundryOperationPermissionStates)[number];
 export type FoundryPublicOperation =
-  "workspace.init" | "doctor" | "task.start" | "task.status" | "task.resume" | "workspace.migrate";
+  | "unknown"
+  | "workspace.init"
+  | "doctor"
+  | "task.start"
+  | "task.status"
+  | "task.resume"
+  | "workspace.migrate";
 
 export interface FoundryOperationBlocker {
   readonly code: string;
@@ -86,6 +92,7 @@ interface CreateFoundryOperationResultOptions {
 }
 
 const operations = new Set<FoundryPublicOperation>([
+  "unknown",
   "workspace.init",
   "doctor",
   "task.start",
@@ -290,13 +297,19 @@ export function assertFoundryOperationResult(value: unknown): FoundryOperationRe
     item.next_actions.length > 1_000
   )
     fail("Operation result has an unsupported identity, status or collection shape.");
+  const blockers = item.blockers.map(blocker);
+  if (
+    (["ready", "running", "completed"].includes(item.status) && blockers.length > 0) ||
+    (!["ready", "running", "completed"].includes(item.status) && blockers.length === 0)
+  )
+    fail("Successful results cannot carry blockers and non-success results require one blocker.");
   const result: FoundryOperationResult = {
     schema: FOUNDRY_OPERATION_RESULT_SCHEMA,
     operation: item.operation as FoundryPublicOperation,
     status: item.status as FoundryOperationStatus,
     task_id: item.task_id,
     artifacts: item.artifacts.map(artifact),
-    blockers: item.blockers.map(blocker),
+    blockers,
     next_actions: item.next_actions.map(nextAction),
     runtime_identity: safeJson(item.runtime_identity),
     permissions: permissions(item.permissions),

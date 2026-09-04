@@ -6,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { CLI_RUNTIME_EXPECTATION_SCHEMA, describeCliRuntime } from "@tiangong-lca/cli/runtime";
 import { createFoundryRuntime } from "../../scripts/foundry-runtime.ts";
+import { createFoundryFacade } from "../../scripts/foundry-facade.ts";
 import {
   createFoundryRuntimeContext,
   initializeFoundryWorkspace,
@@ -88,6 +89,30 @@ test("runtime qualification binds exact public CLI and isolated TIDAS observatio
       status: "required",
       identity: null,
     });
+    const facade = createFoundryFacade({
+      moduleUrl,
+      workspace,
+      cacheBase: path.join(root, "cache"),
+      runtimeSelection: { cliExpectation, tidasExpectation, tidasExecutable: tidas },
+    });
+    assert.equal(facade.doctor().status, "ready");
+    assert.equal(
+      (facade.doctor().runtime_identity as { qualification: { status: string } }).qualification
+        .status,
+      "ready",
+    );
+    const badDoctor = createFoundryFacade({
+      moduleUrl,
+      workspace,
+      cacheBase: path.join(root, "cache"),
+      runtimeSelection: {
+        cliExpectation: { ...cliExpectation, content_sha256: "0".repeat(64) },
+        tidasExpectation,
+        tidasExecutable: tidas,
+      },
+    }).doctor();
+    assert.equal(badDoctor.status, "blocked");
+    assert.equal(badDoctor.blockers[0]?.code, "runtime_cli_unqualified");
     assert.throws(
       () => assertQualifiedFoundryRuntime(context, JSON.parse(JSON.stringify(qualification))),
       hasCode("runtime_qualification_unverified"),
@@ -99,7 +124,7 @@ test("runtime qualification binds exact public CLI and isolated TIDAS observatio
           tidasExpectation,
           tidasExecutable: tidas,
         }),
-      /does not match/u,
+      hasCode("runtime_cli_unqualified"),
     );
     assert.throws(
       () =>

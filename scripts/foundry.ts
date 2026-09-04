@@ -1005,7 +1005,10 @@ export function createFoundryApplication({ repoRoot, utilities }: FoundryApplica
 }
 
 export function main(argv: string[] = process.argv): void {
-  if (Object.hasOwn(parseArgs(argv.slice(3)), "workspace")) {
+  if (
+    ["workspace", "task"].includes(argv[2] ?? "") ||
+    Object.hasOwn(parseArgs(argv.slice(3)), "workspace")
+  ) {
     void runFoundryRuntimeCommand(argv);
     return;
   }

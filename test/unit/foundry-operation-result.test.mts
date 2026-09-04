@@ -67,7 +67,9 @@ test("public operation results have one exact immutable envelope and exit table"
       status,
       taskId: "task",
       artifacts: [],
-      blockers: status === "ready" ? [] : [{ code: "fixture", message: "fixture", scope: null }],
+      blockers: ["ready", "running", "completed"].includes(status)
+        ? []
+        : [{ code: "fixture", message: "fixture", scope: null }],
       nextActions: [],
       runtimeIdentity: null,
       permissions: { state: "not_required", requested_actions: [], approval_reference: null },

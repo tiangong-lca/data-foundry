@@ -180,10 +180,9 @@ export function parseFoundryTaskStartSpec(value: unknown): FoundryTaskStartSpec 
   if (new Set(sources.map((source) => source.path)).size !== sources.length)
     fail("task_spec_source_duplicate", "Task source selections must be unique.");
   const seed = item.seed === null ? null : selection(item.seed, "Seed");
-  if (
-    item.lane === "source-evidence-dataset-development" &&
-    (!seed || !sources.some((source) => source.path === seed.path))
-  )
+  if (seed && !sources.some((source) => source.path === seed.path))
+    fail("task_seed_invalid", "Task seed must be one of the independently selected sources.");
+  if (item.lane === "source-evidence-dataset-development" && !seed)
     fail("task_seed_required", "Source-evidence authoring requires one selected JSON seed file.");
   const spec: FoundryTaskStartSpec = {
     schema: FOUNDRY_TASK_START_SPEC_SCHEMA,

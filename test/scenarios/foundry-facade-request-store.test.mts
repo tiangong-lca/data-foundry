@@ -52,7 +52,11 @@ test("facade request revisions are deterministic, idempotent and preserve predec
   const facade = createFoundryFacade({ moduleUrl, workspace, cacheBase });
   assert.equal(facade.initialize().status, "ready");
 
-  const first = await facade.start({ specFile: spec });
+  const [first, concurrent] = await Promise.all([
+    facade.start({ specFile: spec }),
+    facade.start({ specFile: spec }),
+  ]);
+  assert.deepEqual(concurrent, first);
   assert.equal(first.operation, "task.start");
   assert.equal(first.status, "ready");
   assert.match(first.task_id ?? "", /^task-[0-9a-f]{16}-r0001$/u);
@@ -92,6 +96,23 @@ test("facade request revisions are deterministic, idempotent and preserve predec
   );
   assert.deepEqual(fs.readFileSync(artifactIndex), artifactsBefore);
 
+  const attempt = path.join(
+    workspace,
+    ".foundry/workspaces",
+    firstTaskId,
+    "attempts",
+    "unknown.json",
+  );
+  fs.mkdirSync(path.dirname(attempt), { recursive: true });
+  fs.writeFileSync(attempt, '{"status":"UNKNOWN_DO_NOT_REPLAY"}\n');
+  const readbackOnly = await facade.resume({
+    taskId: firstTaskId,
+    actorId: "agent/session-001",
+  });
+  assert.equal(readbackOnly.status, "blocked");
+  assert.equal(readbackOnly.blockers[0]?.code, "mutation_readback_required");
+  assert.deepEqual(fs.readFileSync(artifactIndex), artifactsBefore);
+
   fs.appendFileSync(input, '{"flowDataSet":{}}\n');
   const second = await facade.start({ specFile: spec });
   assert.equal(second.status, "ready");
@@ -103,6 +124,17 @@ test("facade request revisions are deterministic, idempotent and preserve predec
   assert.equal(request.revisions[1].predecessor_task_id, first.task_id);
   assert.equal(fs.existsSync(path.join(workspace, ".foundry/workspaces", firstTaskId)), true);
   assert.equal(fs.existsSync(path.join(workspace, ".foundry/workspaces", secondTaskId)), true);
+
+  const movedInput = path.join(root, "moved-flow.jsonl");
+  fs.copyFileSync(input, movedInput);
+  writeSpec(spec, movedInput);
+  const third = await facade.start({ specFile: spec });
+  assert.match(third.task_id ?? "", /^task-[0-9a-f]{16}-r0003$/u);
+  assert.notEqual(third.task_id, second.task_id);
+  assert.equal(
+    JSON.parse(fs.readFileSync(requestIndex, "utf8")).revisions[2].predecessor_task_id,
+    second.task_id,
+  );
 
   const wrongActor = await facade.status({
     taskId: secondTaskId,
