@@ -166,8 +166,7 @@ function hash(value: unknown): string {
   return sha256Json(value);
 }
 
-function observeTidas(
-  context: FoundryRuntimeContext,
+function captureExpectedTidas(
   expectation: FoundryTidasRuntimeExpectation,
   executablePath: string,
 ): ReturnType<typeof captureFoundryInput> {
@@ -182,6 +181,15 @@ function observeTidas(
       "runtime_tidas_unqualified",
       "TIDAS executable bytes do not match the independent expectation.",
     );
+  return executable;
+}
+
+function observeTidas(
+  context: FoundryRuntimeContext,
+  expectation: FoundryTidasRuntimeExpectation,
+  executablePath: string,
+): ReturnType<typeof captureFoundryInput> {
+  const executable = captureExpectedTidas(expectation, executablePath);
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-runtime-qualification-"));
   fs.chmodSync(temp, 0o700);
   try {
@@ -319,7 +327,7 @@ export function assertQualifiedFoundryRuntime(
     );
   }
   const expected = parseTidasExpectation(qualification.tidas.expectation, context.platform);
-  observeTidas(context, expected, qualification.tidas.executable_path);
+  captureExpectedTidas(expected, qualification.tidas.executable_path);
   const portable = portableIdentity(context, cli, qualification.cli.expectation, expected);
   if (
     hash(portable) !== qualification.qualification_sha256 ||

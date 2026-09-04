@@ -168,3 +168,57 @@ test("runtime qualification binds exact public CLI and isolated TIDAS observatio
     else process.env.FAKE_TIDAS_VERSION = previous;
   }
 });
+
+test("qualification rechecks immutable TIDAS bytes without replaying its handshake", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-runtime-recheck-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const workspace = path.join(root, "workspace");
+  initializeFoundryWorkspace(createFoundryRuntimeContext({ moduleUrl, workspace }));
+  const context = createFoundryRuntimeContext({ moduleUrl, workspace });
+  const cli = describeCliRuntime();
+  const counter = path.join(root, "handshake-count.txt");
+  const source = fs
+    .readFileSync(path.resolve(import.meta.dirname, "../fixtures/fake-tidas.ts"), "utf8")
+    .replace(
+      "const args = process.argv.slice(2);",
+      `const args = process.argv.slice(2);\nconst counterFile = ${JSON.stringify(counter)};\nconst count = fs.existsSync(counterFile) ? Number(fs.readFileSync(counterFile, "utf8")) + 1 : 1;\nfs.writeFileSync(counterFile, String(count));\nif (count > 2) process.exit(70);`,
+    );
+  const tidas = path.join(root, "stateful-tidas.ts");
+  fs.writeFileSync(tidas, source, { mode: 0o755 });
+  const qualification = qualifyFoundryRuntime(context, {
+    cliExpectation: {
+      schema: CLI_RUNTIME_EXPECTATION_SCHEMA,
+      package_version: cli.package.version,
+      platform: cli.platform,
+      content_sha256: cli.content_sha256,
+      node_version: cli.node.version,
+      node_sha256: cli.node.sha256,
+    },
+    tidasExpectation: {
+      schema: FOUNDRY_TIDAS_EXPECTATION_SCHEMA,
+      platform: context.platform,
+      binary_version: "0.2.7",
+      executable: { bytes: fs.statSync(tidas).size, sha256: sha(tidas) },
+      validation: {
+        schema_version: "tidas.validation-describe.v1",
+        asset_fingerprint: "1".repeat(64),
+        protocols: ["document-validation-batch.v1"],
+        event_schema_versions: [
+          "tidas.validation-final-event.v1",
+          "tidas.validation-issue-event.v1",
+        ],
+      },
+    },
+    tidasExecutable: tidas,
+  });
+  assert.equal(fs.readFileSync(counter, "utf8"), "2");
+  assertQualifiedFoundryRuntime(context, qualification);
+  foundryRuntimeQualificationIdentity(context, qualification);
+  createFoundryRuntime(context, qualification).describe();
+  assert.equal(fs.readFileSync(counter, "utf8"), "2");
+  fs.appendFileSync(tidas, "\n");
+  assert.throws(
+    () => assertQualifiedFoundryRuntime(context, qualification),
+    hasCode("runtime_tidas_unqualified"),
+  );
+});
