@@ -293,7 +293,7 @@ test("serialized child context rehydrates only through fresh runtime, identity, 
   });
   await assert.rejects(
     () =>
-      runtime.createExecutionCapsule(identity, {
+      runtime.createExecutionCapsule(runtime.verifyIdentity({ mode: "oauth" }), {
         ...executionOptions,
         commandSpec: unrelatedSpec,
       }),
@@ -319,7 +319,7 @@ test("serialized child context rehydrates only through fresh runtime, identity, 
   });
   await assert.rejects(
     () =>
-      runtime.createExecutionCapsule(identity, {
+      runtime.createExecutionCapsule(runtime.verifyIdentity({ mode: "oauth" }), {
         ...executionOptions,
         commandSpec: wrongTypeSpec,
       }),
@@ -327,7 +327,7 @@ test("serialized child context rehydrates only through fresh runtime, identity, 
   );
   await assert.rejects(
     () =>
-      runtime.createExecutionCapsule(identity, {
+      runtime.createExecutionCapsule(runtime.verifyIdentity({ mode: "oauth" }), {
         command: "dataset-commit-handoff-plan",
         approvedInputFile: source,
         finalRowsFile: finalRows,
@@ -338,7 +338,7 @@ test("serialized child context rehydrates only through fresh runtime, identity, 
   );
   await assert.rejects(
     () =>
-      runtime.createExecutionCapsule(identity, {
+      runtime.createExecutionCapsule(runtime.verifyIdentity({ mode: "oauth" }), {
         command: "dataset-commit-handoff-plan",
         approvedInputFile: source,
         finalRowsFile: finalRows,
@@ -349,9 +349,10 @@ test("serialized child context rehydrates only through fresh runtime, identity, 
     hasCode("execution_qa_waiver_required"),
   );
   fs.appendFileSync(finalRows, " ");
+  const finalIdentity = childRuntime.verifyIdentity({ mode: "oauth" });
   await assert.rejects(
     () =>
-      assertFoundryExecutionAdmission(childContext, childQualification, childIdentity, admission),
+      assertFoundryExecutionAdmission(childContext, childQualification, finalIdentity, admission),
     hasCode("execution_input_changed"),
   );
   assert.equal(sha(source), createHash("sha256").update(originalSource).digest("hex"));
