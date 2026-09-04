@@ -9,73 +9,44 @@ import {
 } from "../../scripts/lib/import-curation/internal/workflow-identity-preflight.ts";
 import { assert } from "../fixtures/foundry-core.ts";
 
-// The override authorization flag must surface true ONLY for a profile that declares
-// allow_account_local_support_and_elementary.enabled, and false otherwise.
-test("normalizeProfile surfaces the account-local override flag per profile", () => {
+test("legacy profile override evidence is not fresh task authorization", () => {
   const bafu = normalizeProfile(
     {
       id: "bafu",
-      allow_account_local_support_and_elementary: {
-        enabled: true,
-        report_policy:
-          "Reports must not emit an unconditional reference-only or no-My-Data policy.",
-      },
+      allow_account_local_support_and_elementary: { enabled: true, authorized_by: "legacy task" },
     },
     "bafu",
   );
-  assert.equal(bafu.allowAccountLocalSupportAndElementary, true);
-  assert.ok(bafu.accountLocalSupportOverride, "raw override object preserved for audit");
-  const accountLocalOverride = bafu.accountLocalSupportOverride as { report_policy: string };
-  assert.match(
-    accountLocalOverride.report_policy,
-    /must not emit an unconditional reference-only or no-My-Data policy/u,
+  assert.equal(Object.hasOwn(bafu, "allowAccountLocalSupportAndElementary"), false);
+  assert.equal(Object.hasOwn(bafu, "accountLocalSupportOverride"), false);
+  const legacyWorldsteel = normalizeProfile(
+    {
+      id: "worldsteel",
+      full_context_ai_completion: {
+        required: false,
+        scoped_relaxation: "historical decision",
+        dataset_types: ["flow", "process"],
+      },
+    },
+    "worldsteel",
   );
-
-  const generic = normalizeProfile({ id: "generic" }, "generic");
-  assert.equal(generic.allowAccountLocalSupportAndElementary, false);
-  assert.equal(generic.accountLocalSupportOverride, null);
-
-  const disabled = normalizeProfile(
-    { id: "x", allow_account_local_support_and_elementary: { enabled: false } },
-    "x",
-  );
-  assert.equal(disabled.allowAccountLocalSupportAndElementary, false);
+  assert.equal(legacyWorldsteel.fullContextAiCompletion.required, true);
 });
 
-// The worldsteel profile must be registered with the capped account-local override
-// (for the <=17 GaBi/Sphera pseudo-elementary flows) and full-context AI proof on for
-// authored flow/process/lifecyclemodel. The ~1,315 reference flows are reused by UUID.
-test("worldsteel profile registers the capped override and full-context proof", () => {
+test("Worldsteel rules require full-context proof and carry no historical approval", () => {
   const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
   const { profiles } = JSON.parse(
     readFileSync(path.join(repoRoot, "specs/import-profiles.json"), "utf8"),
   );
-  assert.match(
-    profiles.bafu.allow_account_local_support_and_elementary.report_policy,
-    /must not emit an unconditional reference-only or no-My-Data policy/u,
-  );
-  assert.ok(profiles.worldsteel, "worldsteel profile is registered");
+  for (const id of ["generic", "bafu", "uslci", "worldsteel"]) {
+    assert.equal(profiles[id].allow_account_local_support_and_elementary, undefined);
+    assert.equal(profiles[id].waived_qa_codes_by_type, undefined);
+  }
   const ws = normalizeProfile(profiles.worldsteel, "worldsteel");
-  assert.equal(ws.allowAccountLocalSupportAndElementary, true);
-  assert.ok(ws.accountLocalSupportOverride, "raw override object preserved for audit");
-  // 2026-06-30 user decision: R3's full-context requirement is the reuse-vs-mint IDENTITY
-  // decision, satisfied off-line by the adversarially-verified elementary-match + capped-mint
-  // workflows plus full-context field authoring. worldsteel new entities are account-local
-  // My Data (state_code=0), not published canonical, so the strict per-mint identity
-  // authoring-package proof is relaxed (required=false) with a scoped_relaxation rationale.
-  assert.equal(profiles.worldsteel.full_context_ai_completion.required, false);
-  assert.ok(
-    profiles.worldsteel.full_context_ai_completion.scoped_relaxation,
-    "scoped_relaxation rationale recorded for the relaxed full-context gate",
-  );
-  assert.deepEqual(profiles.worldsteel.full_context_ai_completion.dataset_types, [
-    "flow",
-    "process",
-    "lifecyclemodel",
-  ]);
-  assert.deepEqual(profiles.worldsteel.waived_qa_codes_by_type, {
-    process: ["process_material_balance_deviation"],
-  });
+  assert.equal(Object.hasOwn(ws, "allowAccountLocalSupportAndElementary"), false);
+  assert.equal(ws.fullContextAiCompletion.required, true);
+  assert.equal(profiles.worldsteel.full_context_ai_completion.scoped_relaxation, undefined);
+  assert.deepEqual(ws.fullContextAiCompletion.datasetTypes, ["flow", "process", "lifecyclemodel"]);
 });
 
 function elementaryFlowPayload() {

@@ -1347,24 +1347,12 @@ export function prewriteContentQualityBlockers({
   if (!["flow", "process", "lifecyclemodel"].includes(datasetType)) return [];
   const policy = readPrewriteContentPolicy(repoRoot);
   if (!policy) return [];
-  // Per-profile content-policy waivers (e.g. worldsteel waives source_locator_in_dataset_name
-  // for process names, where "<Geography> <data-year>" is a false positive of the
-  // latin-author-year marker, not a citation locator). A waiver matches either the rule code
-  // or the rule id. Absent a profile (or waiver), every rule applies — BAFU/USLCI unchanged.
-  const waivedRuleCodes = new Set(
-    ensureArray(asRecord(asRecord(profile).waivedContentPolicyRulesByType)[datasetType]).map(
-      asText,
-    ),
-  );
   const leaves = payloadTextLeaves(payload);
   const blockers: JsonRecord[] = [];
   for (const rule of ensureArray(policy.value.rules)) {
     const typedRule = asRecord(rule);
     const allowedTypes = ensureArray(typedRule.dataset_types).map(asText);
     if (allowedTypes.length > 0 && !allowedTypes.includes(datasetType)) continue;
-    if (waivedRuleCodes.has(asText(typedRule.code)) || waivedRuleCodes.has(asText(typedRule.id))) {
-      continue;
-    }
     const entries = policyLexiconEntries(policy.value, rule);
     for (const leaf of leaves) {
       if (!pathScopeMatches(leaf.path_segments, typedRule.path_scope)) continue;
@@ -1372,6 +1360,33 @@ export function prewriteContentQualityBlockers({
         const typedEntry = asRecord(entry);
         const pattern = compilePolicyPattern(entry);
         if (!pattern || !pattern.test(leaf.text)) continue;
+        // A source naming convention classifies only its trailing metadata match.
+        // Other matches, markers and fields still take the normal blocker path.
+        const namingRule = asRecord(
+          asRecord(asRecord(profile).domainRules).process_name_geography_year,
+        );
+        const geographySuffix = /\b(Global|EU)\s+(?:19|20)\d{2}(?:\s+v\d+)?$/iu.exec(leaf.text);
+        if (
+          datasetType === "process" &&
+          asRecord(profile).id === "worldsteel" &&
+          typedRule.code === "source_locator_in_dataset_name" &&
+          typedEntry.id === "latin-author-year" &&
+          namingRule.marker === "latin-author-year" &&
+          namingRule.field === "baseName" &&
+          leaf.path_segments.includes("baseName") &&
+          geographySuffix &&
+          geographySuffix.index > 0 &&
+          ensureArray(namingRule.geographies).some(
+            (geo) => asText(geo).toLowerCase() === geographySuffix[1].toLowerCase(),
+          )
+        ) {
+          const matches = [
+            ...leaf.text.matchAll(
+              new RegExp(pattern.source, `${pattern.flags.replace(/g/gu, "")}g`),
+            ),
+          ];
+          if (matches.length === 1 && matches[0].index === geographySuffix.index) continue;
+        }
         blockers.push({
           code: asText(typedRule.code) || "prewrite_content_quality_blocked",
           stage: asText(typedRule.stage) || "prewrite_content_quality",

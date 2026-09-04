@@ -315,18 +315,16 @@ export function createLibraryScopeWorkflowCommands({
         ],
       );
     }
-    const allowAccountLocalSupportAndElementary =
+    const taskAuthorization =
       typeof profileFor === "function"
-        ? Boolean(
-            profileFor(
-              repoRoot,
-              asText(options.profile || "generic")
-                .trim()
-                .toLowerCase(),
-              options,
-            )?.allowAccountLocalSupportAndElementary,
-          )
-        : false;
+        ? profileFor(
+            repoRoot,
+            asText(options.profile || "generic")
+              .trim()
+              .toLowerCase(),
+            options,
+          )?.authorization
+        : null;
     const indexDir = libraryIndexDirOption(options);
     if (!indexDir) throw new Error("--library-index is required.");
     const entityIndexPath = path.join(indexDir, "library-entity-index.jsonl");
@@ -392,7 +390,7 @@ export function createLibraryScopeWorkflowCommands({
       scopeRows,
       maps,
       indexes,
-      allowAccountLocalSupportAndElementary,
+      taskAuthorization,
       rewriteScope,
     });
 

@@ -33,16 +33,18 @@ related:
 
 # worldsteel Import Constraints
 
+Current task authorization is defined by `docs/task-authorization-contract.md`. Distributed profiles grant no mint/write action or QA waiver. The dated R1–R5 decisions and inventories below are historical case evidence; new tasks require their own exact binding and action evidence. Local candidate preparation remains available, and old locks/seals/attempts are not rewritten or replayed.
+
 ## Reference-by-UUID first (the dominant policy)
 
 The ~1,315 EF3.1 reference elementary flows + every FP/UG present in the canonical-support cache are **reused by their original canonical UUID** through the offline library-resolution `exchange-reference-rewrites.jsonl` (applied by the runner's `applyResolutionRewrites`). A canonical row is **never minted**. Each rewrite row must carry `canonical_short_description` so committed exchanges show the flow name, not the UUID.
 
 ## Authorized account-local exceptions (2026-06-29 and 2026-07-01)
 
-`allow_account_local_support_and_elementary` is enabled for the worldsteel profile (`specs/import-profiles.json`). The 2026-06-29 decision authorizes the small residual of **GaBi/Sphera pseudo-elementary flows** (dataSetVersion 20.25.x) that have no canonical match — **expected at most 17** — as account-local My Data (`state_code=0`). The 2026-07-01 delivery decision separately supersedes the earlier FP/UG reference-only statement: `mintUnmatchedFpUgSupport=true` admits materialized FP/UG whose UUID is absent from the canonical-support cache into the same profile-gated support path.
+The distributed Worldsteel profile grants no account-local exception. The historical 2026-06-29 decision authorized the small residual of **GaBi/Sphera pseudo-elementary flows** (dataSetVersion 20.25.x) that have no canonical match — **expected at most 17** — as account-local My Data (`state_code=0`). The 2026-07-01 delivery decision separately supersedes the earlier FP/UG reference-only statement: `mintUnmatchedFpUgSupport=true` admits materialized FP/UG whose UUID is absent from the canonical-support cache into the same task-gated support path.
 
 - These residual flows are **NOT** matched by UUID; the AI judges reuse-vs-mint from **full context**.
-- The final elementary mint count is reviewed **after** the UUID-reuse pass. Set `enabled=false` only when both the R3 elementary residual and the R5 unmatched FP/UG support path are no longer required.
+- The final elementary mint count is reviewed **after** the UUID-reuse pass. New tasks start with no elementary or support write actions; select each required action through task authorization.
 - Canonical FP/UG are always reused. For cache misses, Unit Groups are ordered before Flow Properties and candidates are normalized to same-owner My Data version `00.00.001`; they never enter the public canonical cache.
 - The retained 10+10 EF3.1 LANCA gap explains why the support flag was enabled, and the historical delivery inventory records 11+11 owner rows. The runtime has no LANCA name whitelist or numeric hard cap: its enforceable candidate boundary is the canonical-cache miss inside the materialized ready-scope closure.
 - Support preparation/commit/readback failure blocks and defers the dependent flow/process scope. Independent ready scopes may continue, but no failed support scope may be treated as complete.
@@ -50,7 +52,7 @@ The ~1,315 EF3.1 reference elementary flows + every FP/UG present in the canonic
 ## Gates that REMAIN blocking (NOT relaxed)
 
 - both unit-scale safety blockers: `canonical_support_amount_scaling_required` and `canonical_support_amount_scale_unresolved`;
-- schema validation through Rust tidas against its locked corrected eILCD schemas (not raw EF3.1), deterministic QA (except the waived `process_material_balance_deviation`), curation, and full-context AI proof for `flow`/`process`/`lifecyclemodel`;
+- schema validation through Rust tidas against its locked corrected eILCD schemas (not raw EF3.1), deterministic QA (a process material-balance observation requires current approval and source-model evidence), curation, and full-context AI proof for `flow`/`process`/`lifecyclemodel`;
 - remote write requires dry-run, queue verify, commit handoff, closeout, and readback verification, **and account/write-policy approval before any remote commit** — `allow_remote_commit` stays false until then.
 
 ## worldsteel-specific identity & attribution
@@ -65,7 +67,8 @@ The ~1,315 EF3.1 reference elementary flows + every FP/UG present in the canonic
 
 Landed while committing the first worldsteel processes; all are gated to the worldsteel profile so BAFU/USLCI are byte-for-byte unchanged.
 
-- **Process-name content-policy waiver.** worldsteel source process names follow `"<product> <route> <geography> <data-year>"` (e.g. `Steel rebar Global 2022`, `Steel sections EU 2019`, `Steel ECCS Global 2021 v2`). The trailing `<Geography> <Year>` is reference metadata, not a citation, but it matches the prewrite-content-policy `latin-author-year` marker. The worldsteel profile therefore waives rule `source_locator_in_dataset_name` for `process` names via `waived_content_policy_rules_by_type` (a new per-profile mechanism parallel to `waived_qa_codes_by_type`). All 33 baseNames carry the pattern and are preserved verbatim. The waiver is scoped to processes only — worldsteel flows/lifecyclemodels and every other content-policy rule stay enforced.
+- **Process-name source metadata.** Source names such as `Steel rebar Global 2022`, `Steel sections EU 2019` and `Steel ECCS Global 2021 v2` retain their trailing geography/year metadata. Only that single `latin-author-year` match in a process `baseName` is classified as source naming metadata. Additional author/year matches, table/figure markers, other name fields and all flow/lifecyclemodel names remain checked. There is no `waived_content_policy_rules_by_type` permission.
+
 - **Foreign/RLS-hidden drafts are not references.** The historical process exchange pointing at `3c4b0e5d "Slag (deposited)" @00.00.001` resolved only under a different account at `state_code=0` and is invisible to `data@worldsteel.org`. That cross-account observation is not valid readback evidence. Current runs must keep `missing_dataset` blocking and replace the exchange with an allowed public or same-owner visible reference; no trusted-key list may convert it to passed. Production-test account runs are unconditionally fail-closed.
 - **Canonical reuse pinned to latest published version.** Reuse-by-UUID decisions are swept to the latest `state_code=100` version before commit (the post-write readback rejects references below a flow's latest published version). Only flows that drifted are updated.
 

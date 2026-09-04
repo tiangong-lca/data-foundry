@@ -90,6 +90,8 @@ lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session refer
 
 # Workspace Project Map
 
+Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel account overrides, QA waivers and the Worldsteel full-context relaxation grant no permission to a new task. `docs/task-authorization-contract.md` owns the separate workspace/task/actor/account/profile/input binding and exact action evidence. Local candidate preparation and checked public-reference proofs remain available; current final-row hashes, task permissions and all content/closure/no-replay gates are required before a restricted write handoff.
+
 Foundry should route reusable work to the owning repository instead of copying implementation locally.
 
 The Wave 26 library, classification, authoring, process-scope and batch modules are Foundry-local orchestrators. Their TypeScript migration changes navigation and static ownership only: shared CLI commands, profile policy, database behavior and sibling-project semantics remain with the owners listed below.

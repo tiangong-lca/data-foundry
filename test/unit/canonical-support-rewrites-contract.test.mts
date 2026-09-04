@@ -469,7 +469,7 @@ test("account-local override bumps stale canonical versions but suppresses pendi
       outDir: path.join(root, "out"),
       options: {
         canonicalSupportCache: cacheFile,
-        allowAccountLocalSupportAndElementary: true,
+        prepareAccountLocalSupportCandidates: true,
       },
     });
 
@@ -515,7 +515,7 @@ test("unproven canonical Unit Group remains fail-closed unless the account-local
       outDir: path.join(root, "allowed"),
       options: {
         canonicalSupportCache: cacheFile,
-        allowAccountLocalSupportAndElementary: true,
+        prepareAccountLocalSupportCandidates: true,
       },
     });
     assert.equal(allowed.status, "completed_no_rewrites");
@@ -536,7 +536,7 @@ test("account-local override leaves an already-canonical stale version unchanged
       outDir: path.join(root, "out"),
       options: {
         canonicalSupportCache: cacheFile,
-        allowAccountLocalSupportAndElementary: true,
+        prepareAccountLocalSupportCandidates: true,
       },
     });
 
@@ -641,7 +641,7 @@ test("canonical rewrite fails closed on missing, non-finite, zero, and negative 
           options: {
             canonicalSupportCache: cacheFile,
             blockOnUnscaledCanonicalSupport: true,
-            allowAccountLocalSupportAndElementary: label === "missing",
+            prepareAccountLocalSupportCandidates: label === "missing",
           },
         });
         assert.equal(blocked.status, "blocked");

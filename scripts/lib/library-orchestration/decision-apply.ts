@@ -1,4 +1,5 @@
 import { canonicalDescriptionPair } from "../canonical-description.ts";
+import { taskAuthorizationAllows } from "../task-authorization.ts";
 import type { EntityMaps, JsonRecord, ScopeProjection } from "./entity-projection.ts";
 
 export interface CanonicalTarget extends JsonRecord {
@@ -50,7 +51,7 @@ export interface ProjectDecisionApplicationInput {
   scopeRows: ScopeProjection[];
   maps: EntityMaps;
   indexes: DecisionIndexes;
-  allowAccountLocalSupportAndElementary: boolean;
+  taskAuthorization?: unknown;
   rewriteScope: (
     scope: ScopeProjection,
     identityByKey: Map<string, JsonRecord>,
@@ -342,7 +343,7 @@ export function createLibraryDecisionApply({
     scopeRows,
     maps,
     indexes,
-    allowAccountLocalSupportAndElementary,
+    taskAuthorization,
     rewriteScope,
   }: ProjectDecisionApplicationInput): DecisionApplicationProjection {
     const checkpoints: JsonRecord[] = [];
@@ -378,7 +379,7 @@ export function createLibraryDecisionApply({
           );
           const target = canonicalTarget(decision, "flow data set");
           if (
-            !allowAccountLocalSupportAndElementary &&
+            !taskAuthorizationAllows(taskAuthorization, "elementary_flow_create_new") &&
             (asText(decision?.decision) !== "reuse_existing_reference" || !target.id)
           ) {
             blockers.push(
@@ -410,36 +411,29 @@ export function createLibraryDecisionApply({
           }
         }
       }
-      for (const dep of scope.dependency_ids.flowproperties) {
-        const mapping = indexes.supportByKey.get(
-          `flowproperty:${dep.id}:${dep.version || "00.00.001"}`,
-        );
-        const target = canonicalTarget(mapping, "flow property data set");
-        if (!target.id && !allowAccountLocalSupportAndElementary) {
-          blockers.push(
-            blockRow(
-              scope,
-              { dataset_type: "flowproperty", id: dep.id, version: dep.version },
-              "canonical_flow_property_reference_unresolved",
-              "Generated Flow Property support is reference-only and must map to public canonical support before this scope can write.",
-              "Add canonical-support-mappings.jsonl with physical-dimension evidence or manually add canonical support to the database and rerun.",
-            ),
+      // Preserve Flow Property before Unit Group blocker order.
+      for (const datasetType of ["flowproperty", "unitgroup"] as const) {
+        const isFlowProperty = datasetType === "flowproperty";
+        const dependencies = isFlowProperty
+          ? scope.dependency_ids.flowproperties
+          : scope.dependency_ids.unitgroups;
+        const label = isFlowProperty ? "Flow Property" : "Unit Group";
+        for (const dep of dependencies) {
+          const mapping = indexes.supportByKey.get(
+            `${datasetType}:${dep.id}:${dep.version || "00.00.001"}`,
           );
-        }
-      }
-      for (const dep of scope.dependency_ids.unitgroups) {
-        const mapping = indexes.supportByKey.get(
-          `unitgroup:${dep.id}:${dep.version || "00.00.001"}`,
-        );
-        const target = canonicalTarget(mapping, "unit group data set");
-        if (!target.id && !allowAccountLocalSupportAndElementary) {
+          const target = canonicalTarget(mapping, `${label.toLowerCase()} data set`);
+          const permitted =
+            taskAuthorizationAllows(taskAuthorization, `${datasetType}_write`) &&
+            taskAuthorizationAllows(taskAuthorization, "canonical_support_local_mint");
+          if (target.id || permitted) continue;
           blockers.push(
             blockRow(
               scope,
-              { dataset_type: "unitgroup", id: dep.id, version: dep.version },
-              "canonical_unit_group_reference_unresolved",
-              "Generated Unit Group support is reference-only and must map to public canonical support before this scope can write.",
-              "Add canonical-support-mappings.jsonl with unit evidence or manually add canonical support to the database and rerun.",
+              { dataset_type: datasetType, id: dep.id, version: dep.version },
+              `canonical_${isFlowProperty ? "flow_property" : "unit_group"}_reference_unresolved`,
+              `Generated ${label} support is reference-only and must map to public canonical support before this scope can write.`,
+              `Add canonical-support-mappings.jsonl with ${isFlowProperty ? "physical-dimension" : "unit"} evidence or manually add canonical support to the database and rerun.`,
             ),
           );
         }

@@ -14,6 +14,8 @@ related:
 
 # USLCI Import Profile
 
+Task authorization follows `docs/task-authorization-contract.md`. Historical account overrides and material-balance observations are evidence for their original task only. New tasks inherit source rules and preparation behavior, with no mint/write action or automatic QA waiver; all required account, unit-scale, context and closure gates remain active.
+
 This profile is the placeholder for USLCI package imports. It exists to keep USLCI as data/profile configuration, not as a Foundry code path.
 
 ## Lane

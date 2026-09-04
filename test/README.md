@@ -280,6 +280,8 @@ lastReviewedNote: "Reviewed for Issue #76: tests pin CAS dedupe, receipt verific
 
 # Test Layout
 
+W03 task authorization is covered by `unit/task-authorization.test.mts` (immutable grants, exact binding, expiry, actions and evidence), `unit/task-profile-authority.test.mts` (no inherited legacy permission and scoped Worldsteel naming), and the mixed-support handoff case in `unit/handoff-identity-task-command-factories.test.mts` (actual row types, input-byte drift and account mismatch). `fixtures/task-authorizations.ts` is explicit test-only approval data; tests must opt in and never derive permission from a profile flag. Local candidate/closure regressions remain in the existing command/scenario suites. Real CLI identity plus the frozen private Flow case is exercised outside public CI, without business writes or committed private payloads.
+
 Foundry tests are organized by responsibility, not by the date a regression was added.
 
 ## Directories

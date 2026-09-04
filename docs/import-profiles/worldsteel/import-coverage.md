@@ -27,6 +27,8 @@ checkPaths:
 
 # worldsteel EF3.1 import — coverage report
 
+Current task authorization is defined by `docs/task-authorization-contract.md`. Distributed profiles grant no mint/write action or QA waiver. The dated R1–R5 decisions and inventories below are historical case evidence; new tasks require their own exact binding and action evidence. Local candidate preparation remains available, and old locks/seals/attempts are not rewritten or replayed.
+
 Imported under account **data@worldsteel.org** (uid 7d6d550a). Generated 2026-07-01.
 
 > Historical pre-hardening report. It records the 2026-07-01 run, but its accepted foreign `state_code=0` reference is no longer valid verification evidence. Current runs must remain blocked until that dependency resolves to an allowed public or same-owner visible row.

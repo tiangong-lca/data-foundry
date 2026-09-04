@@ -1,4 +1,5 @@
 import { fullContextAiCompletionRequirement } from "./context-inputs.ts";
+import { taskAuthorizationWaivesQa } from "../../task-authorization.ts";
 import { datasetIdentity, identityKey } from "./dataset-payload.ts";
 import {
   datasetTypePlural,
@@ -166,6 +167,7 @@ interface WriteCandidateOptions {
   rowIndex: number;
   schemaRow?: JsonRecord | null;
   curationEntity?: JsonRecord | null;
+  curationWaivedQaCodes?: unknown[];
   curationGateProvided: boolean;
   dryRun: DryRunContexts;
   remoteVerifyBlockers: Set<string>;
@@ -874,6 +876,7 @@ export function buildWriteCandidateItem({
   rowIndex,
   schemaRow,
   curationEntity,
+  curationWaivedQaCodes = [],
   curationGateProvided,
   dryRun,
   remoteVerifyBlockers,
@@ -925,6 +928,21 @@ export function buildWriteCandidateItem({
   );
 
   const curationStatus = curationEntity?.status ?? null;
+  if (
+    (curationStatus === "ready_with_profile_waivers" ||
+      Number(curationEntity?.waived_finding_count ?? 0) > 0) &&
+    (curationWaivedQaCodes.length === 0 ||
+      !curationWaivedQaCodes.every((code) =>
+        taskAuthorizationWaivesQa(asRecord(profile).authorization, datasetType, asText(code)),
+      ))
+  ) {
+    blockers.push({
+      code: "task_authorization_qa_waiver_required",
+      stage: "foundry_curation",
+      message:
+        "Retained curation waivers require current task approval for every exact QA code and input scope.",
+    });
+  }
   if (curationGateProvided && !curationEntity) {
     blockers.push({
       code: "curation_gate_entity_missing",

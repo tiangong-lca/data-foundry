@@ -153,6 +153,8 @@ lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session refer
 
 # Architecture
 
+Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel account overrides, QA waivers and the Worldsteel full-context relaxation grant no permission to a new task. `docs/task-authorization-contract.md` owns the separate workspace/task/actor/account/profile/input binding and exact action evidence. Local candidate preparation and checked public-reference proofs remain available; current final-row hashes, task permissions and all content/closure/no-replay gates are required before a restricted write handoff.
+
 ## OAuth identity boundary
 
 Foundry selects a private session reference and exact project/user intent, then calls the published CLI for a fresh server-verified identity receipt. It validates TTL, canonical hash, expected identity and current OAuth session metadata without owning login, password decoding, token exchange or refresh. Candidate Golden execution uses an isolated Git-visible source snapshot so ignored operator state cannot change qualification. Support-cache transport is owned by the public CLI export. Foundry validates the fresh identity, project, public-state scope, completion marker, artifact paths and hashes, then summarizes rows and atomically replaces only the requested local cache. The CLI runs in a private temporary cwd with an allowlisted OAuth environment; the operator checkout .env and unrelated secrets cannot enter that child. Public dependency adoption still waits for the qualified CLI release.

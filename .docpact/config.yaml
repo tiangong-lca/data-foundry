@@ -379,6 +379,32 @@ rules:
       - path: docs/import-profiles/worldsteel/import-coverage.md
         mode: review_or_update
     reason: Changes from the Worldsteel wrapper, truth test, or profile-doc subtree must review the frozen adapter policy, profile authorization, current constraints and plan, and retained coverage evidence together; the monolithic profile index keeps its generic trigger to avoid unrelated fan-out.
+  - id: foundry-task-authorization-contract
+    scope: repo
+    repo: data-foundry
+    triggers:
+      - path: docs/task-authorization-contract.md
+        kind: task-authorization-contract
+      - path: scripts/lib/task-authorization.ts
+        kind: task-authorization-validator
+      - path: scripts/lib/import-curation/internal/profiles-config.ts
+        kind: rule-and-authorization-admission
+      - path: scripts/lib/import-curation/mutation-manifest.ts
+        kind: task-write-admission
+      - path: scripts/commands/commit-handoff.ts
+        kind: final-row-task-admission
+      - path: scripts/commands/identity-decisions.ts
+        kind: elementary-action-admission
+      - path: specs/schemas/task-authorization.schema.json
+        kind: task-authorization-schema
+      - path: test/unit/task-authorization.test.mts
+        kind: task-authorization-contract-test
+      - path: test/unit/task-profile-authority.test.mts
+        kind: profile-authority-contract-test
+    requiredDocs:
+      - path: docs/task-authorization-contract.md
+        mode: review_or_update
+    reason: Task exceptions need their own binding, action, evidence and legacy no-replay contract beyond the existing general control-plane and source-profile documentation.
   - id: foundry-prewrite-datetime-contract
     scope: repo
     repo: data-foundry

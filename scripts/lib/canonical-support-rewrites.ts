@@ -573,7 +573,7 @@ export function createCanonicalSupportRewriteUtils({
       options.blockOnUnscaledCanonicalSupport || options.blockUnscaledCanonicalSupport,
     );
     const allowAccountLocalSupportAndElementary = booleanOption(
-      options.allowAccountLocalSupportAndElementary,
+      options.prepareAccountLocalSupportCandidates,
     );
     const outputRows = rows.map((row, rowIndex) => {
       const next = cloneJson(row);
@@ -648,7 +648,7 @@ export function createCanonicalSupportRewriteUtils({
             public_canonical_first:
               "Flow Properties and Unit Groups must reuse defensible public canonical rows when available.",
             account_local_support_rows:
-              "When the frozen profile authorizes the exception and no defensible public canonical row exists, same-owner state_code=0 FP/UG candidates may remain in a separate account-local registry and proceed only through the guarded owner-draft CLI/database plan, audit, and readback path.",
+              "Prepare local FP/UG candidates for a canonical gap, targeting same-owner state_code=0 only. This preparation option grants no write permission; current task authorization must admit each action before a guarded owner-draft CLI plan, audit and readback.",
             rewrite_command_boundary:
               "This rewrite command does not mint or publish support rows and must not place account-local candidates in the public canonical cache or generic support writer.",
           }

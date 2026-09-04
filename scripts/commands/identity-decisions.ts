@@ -1,4 +1,5 @@
 import path from "node:path";
+import { taskAuthorizationAllows } from "../lib/task-authorization.ts";
 
 import {
   canonicalDescriptionPair,
@@ -17,7 +18,7 @@ interface IdentityCanonical {
 }
 
 interface IdentityProfile {
-  allowAccountLocalSupportAndElementary?: boolean;
+  authorization?: unknown;
 }
 
 interface IdentityDecisionDependencies {
@@ -362,7 +363,7 @@ export function createIdentityDecisionCommands({
               .toLowerCase(),
             options,
           )
-        : { allowAccountLocalSupportAndElementary: false };
+        : { authorization: null };
     const rowsFile = resolveRepoPath(options.rowsFile || options.input || options.rows);
     const decisionsFile = resolveRepoPath(
       options.decisions || options.identityDecisions || options.decisionFile,
@@ -426,7 +427,7 @@ export function createIdentityDecisionCommands({
         datasetType === "flow" &&
         decision.decision === "create_new" &&
         isElementaryFlowIdentityRow(row) &&
-        !applyProfile.allowAccountLocalSupportAndElementary
+        !taskAuthorizationAllows(applyProfile.authorization, "elementary_flow_create_new")
       ) {
         blockers.push({
           code: "elementary_flow_identity_create_new_blocked",

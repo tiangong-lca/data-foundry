@@ -155,6 +155,8 @@ lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session refer
 
 # TianGong LCA Data Foundry
 
+Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel account overrides, QA waivers and the Worldsteel full-context relaxation grant no permission to a new task. `docs/task-authorization-contract.md` owns the separate workspace/task/actor/account/profile/input binding and exact action evidence. Local candidate preparation and checked public-reference proofs remain available; current final-row hashes, task permissions and all content/closure/no-replay gates are required before a restricted write handoff.
+
 Control plane for turning external source material into validated, import-ready TIDAS data.
 
 Foundry is intentionally thin. It owns task routing, local workspaces, import profiles, curation packages, cleanup reports, stable owner-command adapters, and policy checks. Deterministic package import/conversion/schema validation belongs to unified Rust `tidas`; contract context, QA, curation, skills, and database behavior belongs in `tiangong-lca-cli`, `tidas-sdk`, `tiangong-lca-skills`, Edge Functions, or database projects.
@@ -215,7 +217,7 @@ The internal full-context wave migrates `import-curation/internal/full-context-p
 
 The decision-apply context wave migrates `import-curation/internal/workflow-decision-apply-context.ts`, the evidence adapter shared by curation, mutation and full-context gates. Characterization pins missing/empty envelopes, snake/camel decision and task aliases, decision/task/path order, flow-before-process fallback selection, exact input/output payload hashes with duplicate last-write behavior, applied-count coercion, and native JSON/path errors. It remains zero-any and read-only; inventory moves from 123 to 122.
 
-The profile-config wave migrates `import-curation/internal/profiles-config.ts`, the shared profile loading/lookup/listing boundary. Characterization pins camel/snake precedence, normalized full-context fields, raw account-local overrides, configured key order, requested/default/generic fallback, base-before-extra docs and waivers, conditional dataset-type validation, fallback object identity, profile-list output, and native JSON/argument errors. Existing generic/BAFU/USLCI/worldsteel defaults remain unchanged; inventory moves from 122 to 121.
+The typed profile selector now applies the W03 task-authorization contract: rule/doc lookup remains deterministic, while legacy profile defaults and command waiver flags grant no permission. Task grants and their input/profile/actor/account binding are explicit; old locks are retained as evidence.
 
 The patch-collect wave migrates `import-curation/internal/workflow-patch-collect.ts`, the admission/helper boundary shared by nine workflow modules. Characterization pins early invalid returns, deterministic blocker and operation order, action closure, annual-supply defer rejection, full-context/trace evidence, circular-input failure, JSON/JSONL delimiters and parse errors, artifact-option alias order and duplicates, source-rewrite discovery priority and normalized evidence envelopes. It remains zero-any and fail-closed; inventory moves from 121 to 120.
 
