@@ -80,6 +80,12 @@ checkPaths:
   - scripts/lib/foundry-runtime-qualification.ts
   - scripts/lib/foundry-runtime-identity.ts
   - scripts/lib/foundry-execution-admission.ts
+  - scripts/foundry-facade.ts
+  - scripts/runtime-entry.ts
+  - scripts/lib/foundry-operation-result.ts
+  - scripts/lib/foundry-task-start-spec.ts
+  - scripts/lib/foundry-facade-store.ts
+  - scripts/lib/foundry-migration-inventory.ts
   - scripts/lib/foundry-task-store.ts
   - scripts/lib/foundry-task-authorization.ts
   - scripts/lib/task-authorization.ts
@@ -240,18 +246,21 @@ checkPaths:
   - test/unit/foundry-runtime-qualification.test.mts
   - test/unit/foundry-runtime-authority-schemas.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
+  - test/scenarios/foundry-public-facade.test.mts
+  - test/scenarios/foundry-facade-request-store.test.mts
+  - test/unit/foundry-facade-schemas.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
-lastReviewedNote: "Reviewed for #100 W04: qualified C1/TIDAS runtime, explicit command ownership, derived authorization and child execution admission are complete; W05/W06 remain separate."
+lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
+lastReviewedNote: "Reviewed for #104 W05: the hierarchical facade now owns deterministic request revisions and public envelopes; W06 package/F1 remain separate."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
 
-The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` exposes initialization, diagnostics, profile listing and deterministic cleanup. Every other owner command now has an explicit public/internal/excluded, input/output, child-process, qualification and authorization disposition; a later facade may reach internal stages only through the qualified context and cannot fall back to the developer runner. The final facade names and envelope remain fixed in `docs/public-runtime-contract.md` for W05.
+The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` now implements workspace init/migration, consumer doctor and task start/status/resume as the separate hierarchical facade. All 63 flat owner commands retain explicit public/internal/excluded, path, child, qualification and authorization dispositions; the facade reaches them only through registered task state and never falls back to the developer runner.
 
 Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel account overrides, QA waivers and the Worldsteel full-context relaxation grant no permission to a new task. `docs/task-authorization-contract.md` owns the separate workspace/task/actor/account/profile/input binding and exact action evidence. Local candidate preparation and checked public-reference proofs remain available; current final-row hashes, task permissions and all content/closure/no-replay gates are required before a restricted write handoff.
 
@@ -272,8 +281,10 @@ Receive external LCA packages or source documents, choose the correct import lan
 - External source-evidence and document-extraction skills, including `tiangong-kb-sci-search` and `document-granular-decompose`, are installed or read from the `skills` registry package through `pnpm dlx skills@latest ...` at runtime before use. Do not copy their retrieval or extraction logic into Foundry.
 - Raw converted rows may preserve source-language text only, but final import/write-ready rows must include `en` for TIDAS-required multilingual fields. When source data is not English, preserve the original language variant and add an evidence-backed English translation from full task context before write planning.
 - Do not implement direct database writes in Foundry.
+- For consumer work, enter through the six hierarchical operations in `docs/public-runtime-contract.md`. Keep the returned request/task id and actor stable; execute only a structured next-action argv with its bound CWD. Never reconstruct a command from display text or enumerate task directories as authority.
+- Task start is credential-free. A changed selected path/content or task intent creates a retained predecessor revision. Do not reuse the old task id, copy a completion file, clear attempts or pass runtime expectations through task input/env/ordinary argv.
 - Never rewrite `missing_dataset` for a foreign or RLS-hidden `state_code=0` reference to passed, even when another account previously observed that row. Production-test account cases reject every accepted remote difference; ordinary runs may retain only the separately proven root-payload `importTraceSummary.traceHash` normalization.
-- Runtime `.env` files may provide account credentials and command defaults, but they do not replace the task-local `source-manifest.json`, `profile-lock.json`, account/write guard evidence, checkpoints, or artifact ledger. Durable import facts must live in the task workspace.
+- The legacy developer runner may load its repository `.env` for existing commands. The consumer facade never does. Neither path lets environment values replace the task-local `source-manifest.json`, `profile-lock.json`, account/write guard evidence, checkpoints, request revision or artifact ledger.
 - Legacy repository credential-scoped commands use `pnpm account:run -- <profile> -- <executable> [args...]`. The consumer runtime uses `verifyFoundryRuntimeIdentity` plus registered task authorization and final execution guards. Both paths obtain a fresh, server-verified, intent-bound receipt from the exact installed CLI; project/user/workspace/task/actor checks and executable-plus-argv dispatch remain mandatory. Headless use follows only the CLI explicit-target, process-only token path; no authentication bypass or new credential store is allowed.
 
 ## Toolchain And TypeScript Migration Contract

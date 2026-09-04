@@ -429,6 +429,12 @@ rules:
         kind: package-layout-resolution
       - path: scripts/foundry-runtime.ts
         kind: consumer-command-adapter
+      - path: scripts/foundry-facade.ts
+        kind: public-facade-composition
+      - path: scripts/lib/foundry-facade-store.ts
+        kind: facade-request-revision-state
+      - path: scripts/lib/foundry-migration-inventory.ts
+        kind: read-only-migration-inventory
       - path: scripts/lib/foundry-runtime-command-policy.ts
         kind: all-command-runtime-disposition
       - path: scripts/lib/foundry-runtime-qualification.ts
@@ -455,6 +461,10 @@ rules:
         kind: cli-runtime-consumer-contract-test
       - path: test/scenarios/runtime-workspace.test.mts
         kind: workspace-isolation-scenario
+      - path: test/scenarios/foundry-public-facade.test.mts
+        kind: public-facade-cli-scenario
+      - path: test/scenarios/foundry-facade-request-store.test.mts
+        kind: facade-request-revision-scenario
       - path: test/scenarios/foundry-execution-admission.test.mts
         kind: qualified-child-execution-scenario
       - path: docs/runtime-context-contract.md
@@ -471,6 +481,34 @@ rules:
     triggers:
       - path: scripts/runtime-entry.ts
         kind: runtime-entry-adapter
+      - path: scripts/foundry-facade.ts
+        kind: public-facade-composition
+      - path: scripts/lib/foundry-operation-result.ts
+        kind: public-result-envelope
+      - path: scripts/lib/foundry-task-start-spec.ts
+        kind: public-task-intent
+      - path: scripts/lib/foundry-facade-store.ts
+        kind: public-request-revision-store
+      - path: scripts/lib/foundry-migration-inventory.ts
+        kind: public-migration-dry-run
+      - path: specs/schemas/foundry-operation-result.schema.json
+        kind: public-result-schema
+      - path: specs/schemas/foundry-task-start.schema.json
+        kind: public-task-spec-schema
+      - path: specs/schemas/foundry-facade-request-index.schema.json
+        kind: public-request-index-schema
+      - path: specs/schemas/foundry-workspace-migration-plan.schema.json
+        kind: public-migration-plan-schema
+      - path: test/unit/foundry-operation-result.test.mts
+        kind: public-result-contract-test
+      - path: test/unit/foundry-task-start-spec.test.mts
+        kind: public-task-spec-contract-test
+      - path: test/unit/foundry-facade-schemas.test.mts
+        kind: public-facade-schema-test
+      - path: test/scenarios/foundry-public-facade.test.mts
+        kind: public-facade-scenario
+      - path: test/scenarios/foundry-facade-request-store.test.mts
+        kind: public-request-state-scenario
       - path: docs/public-runtime-contract.md
         kind: public-runtime-protocol
     requiredDocs:
@@ -491,12 +529,18 @@ rules:
         kind: task-runtime-qualification
       - path: scripts/lib/foundry-execution-admission.ts
         kind: task-child-execution-admission
+      - path: scripts/lib/foundry-facade-store.ts
+        kind: facade-task-pointer-and-revisions
+      - path: scripts/lib/foundry-task-start-spec.ts
+        kind: facade-task-intent
       - path: test/scenarios/task-runtime-binding.test.mts
         kind: task-recovery-contract-test
       - path: test/scenarios/task-authorization-persistence.test.mts
         kind: persisted-authorization-contract-test
       - path: test/scenarios/foundry-execution-admission.test.mts
         kind: derived-authorization-and-child-admission-test
+      - path: test/scenarios/foundry-facade-request-store.test.mts
+        kind: facade-task-revision-and-no-replay-test
     requiredDocs:
       - path: docs/foundry-task-contracts.md
         mode: review_or_update

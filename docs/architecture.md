@@ -147,15 +147,15 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
-lastReviewedNote: "Reviewed for #100 W04: explicit qualification and child admission are implemented; facade, package closure and F1 component trust remain pending."
+lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
+lastReviewedNote: "Reviewed for #104 W05: request/revision facade composition is implemented; package closure and F1 component trust remain pending."
 ---
 
 # Architecture
 
-The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS runtime qualification, explicit disposition for all 63 owner commands, derived-input authorization and content-addressed child execution admission complete the W04 authority boundary. These are internal runtime APIs; the W05 public task facade and W06 package closure remain separate. See `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
+The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade now adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 still owns the published package. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 
-The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` exposes initialization, diagnostics, profile listing and deterministic cleanup. Every other owner command now has an explicit public/internal/excluded, input/output, child-process, qualification and authorization disposition; a later facade may reach internal stages only through the qualified context and cannot fall back to the developer runner. The final facade names and envelope remain fixed in `docs/public-runtime-contract.md` for W05.
+The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` now implements workspace init/migration, consumer doctor and task start/status/resume as the separate hierarchical facade. All 63 flat owner commands retain explicit public/internal/excluded, path, child, qualification and authorization dispositions; the facade reaches them only through registered task state and never falls back to the developer runner.
 
 `createFoundryApplication` constructs the existing command factories for one explicit root and optional injected runtime utilities. Its `execute` method uses the same `createFoundryCommandDispatcher` registry as the CLI and returns a promise without the dispatcher printing or exiting the host. Construction does not load `.env` or discover operator state; independent applications retain independent root bindings. The developer `main(argv)` alone loads its environment and chooses the process adapter under `import.meta.main`. Consumer commands still require individual task/I/O admission through `runtime-entry.ts`; this internal composition API does not make every legacy owner safe for an installed consumer or authorize a write.
 
@@ -170,6 +170,14 @@ Foundry selects a private session reference and exact project/user intent, then 
 `foundry-runtime-command-policy.ts` explicitly classifies all 63 existing commands. Package assets, workspace selections, task-lineage inputs, state/artifact outputs, native/CLI child ownership and restricted authorization are separate fields. Adding a command without a disposition fails module initialization. Repository maintenance is excluded from the consumer surface; local preparation does not acquire task permission merely because it is a task stage.
 
 `foundry-runtime-qualification.ts` binds current Foundry package identity to exact public CLI and independently selected native TIDAS bytes/protocols. `foundry-execution-admission.ts` then binds the current source lineage, derived final rows, active grant/actions/QA evidence and owner CLI CommandSpec. Rehydration in a new process reconstructs every process-local proof and checks the exact owner-draft argv shape before returning the spec. Mutation dispatch, attempt transitions and readback remain with the existing CLI/orchestration owners.
+
+## Public facade composition
+
+`foundry-facade.ts` is the public orchestration boundary. `foundry-operation-result.ts` owns the strict single-result envelope and exits; `foundry-task-start-spec.ts` owns bounded user intent; `foundry-facade-store.ts` owns deterministic request/revision indexes and task pointers; `foundry-migration-inventory.ts` owns the read-only W10 input plan. The facade calls `createFoundryRuntime` for task creation, inspection and deterministic cleanup. It does not instantiate the legacy command graph for public requests.
+
+Request and task records form a two-level index: one request retains monotonic revisions, while each revision points to one immutable v2 task. The latest identical fingerprint is reused; a changed canonical path or byte hash produces a new task with a predecessor. This preserves old attempts and avoids using user-visible filenames or current directories as identity. Status resolves through the task pointer and requires actor intent before loading task content.
+
+Runtime selection is an injected host capability. Direct/unqualified use can initialize, diagnose, create, inspect and locally prepare tasks; child-required stages need a CLI-manager selection that W06/W08 will derive from an immutable product manifest. No environment variable or task document can choose the CLI/TIDAS trust anchor.
 
 ## Current Shape
 

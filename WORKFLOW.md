@@ -276,8 +276,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
-lastReviewedNote: "Reviewed for #100 W04: qualified child execution now joins the existing task and no-replay workflow without owning mutation dispatch."
+lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
+lastReviewedNote: "Reviewed for #104 W05: start/status/resume and migration dry-run preserve the task and no-replay owners."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -309,9 +309,9 @@ Body: {{ issue.description }}
 
 ## Classify
 
-The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS runtime qualification, explicit disposition for all 63 owner commands, derived-input authorization and content-addressed child execution admission complete the W04 authority boundary. These are internal runtime APIs; the W05 public task facade and W06 package closure remain separate. See `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
+The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 still owns the published package. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 
-For consumer workspace execution, follow `docs/runtime-context-contract.md`. The context owns separate package assets, workspace/task state and content cache roots; `.env` is not loaded and an emitted package needs no source TypeScript or Git. `scripts/runtime-entry.ts` exposes initialization, diagnostics, profiles and cleanup. Other command families are internal or excluded under `foundry-runtime-command-policy.ts`; child execution requires fresh qualification, identity, authorization, lineage and an exact CommandSpec. The final user facade is governed by `docs/public-runtime-contract.md` and W05.
+For consumer workspace execution, follow `docs/public-runtime-contract.md`. Use `workspace init`, `doctor`, `task start`, `task status`, `task resume` and `workspace migrate --dry-run` with `--json`. Task specs own request/actor/lane/profile/source/seed/account/preparation intent; status and resume require the same explicit actor. Start and local preparation require no login. Execute only returned structured argv actions with their recorded CWD/binding; never run display text. A nonempty attempt state is readback-only, and W10 alone may apply a migration plan.
 
 Choose one lane:
 

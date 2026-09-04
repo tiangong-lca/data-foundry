@@ -27,8 +27,8 @@ checkPaths:
   - test/unit/task-profile-authority.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
-lastReviewedNote: "Reviewed for #100 W04: derived grants retain the exact parent authority and current child admission rechecks actions, evidence, final rows, qualification and CommandSpec semantics."
+lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
+lastReviewedNote: "Reviewed for #104 W05: facade start/local resume remain permission-free; restricted next actions still require W04 rehydration."
 related:
   - docs/architecture.md
   - docs/safety-policy.md
@@ -44,6 +44,8 @@ Import profiles describe source formats and domain constraints. They do not iden
 The task host owns the current workspace/task/actor intent, frozen inputs and fresh CLI identity. It validates a separate `tiangong-foundry.task-authorization.v1` record against those independently assembled facts. `validateTaskAuthorization` returns an immutable, process-local authorization. `profileFor` accepts it only with the same current binding and the digest of the selected rule profile. A serialized report, copied profile object or boolean is never that validated authorization.
 
 The runtime host revalidates persisted authorization through its explicit loader; every new process must obtain current identity and the same stored task/input binding. When qualification is present, registration and loading require an identity bound to that exact qualification. The profile API itself has no ambient file search or environment flag granting permission. Native validation and other public preparation remain available without a restricted action grant; only commands that select or hand off restricted scopes declare the authorization boundary.
+
+The public facade does not authenticate during workspace initialization or task start. A request revision may retain non-secret account intent, but login/session readiness and task permission remain separate. W05 automatically resumes only deterministic local cleanup and reports `permissions.not_required`. Any future restricted action must first register its requested actions and approval reference, then rehydrate current qualification, identity and this authorization before exposing a child CommandSpec.
 
 ## Required binding and evidence
 

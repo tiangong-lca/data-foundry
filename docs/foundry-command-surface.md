@@ -85,15 +85,17 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-04
-lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
-lastReviewedNote: "Reviewed for #100 W04: the 63 command names and owners are unchanged; each now has an explicit consumer runtime disposition and path/child authority."
+lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
+lastReviewedNote: "Reviewed for #104 W05: six hierarchical facade operations compose the unchanged 63 owner commands without publishing them directly."
 ---
 
 # Foundry Command Surface
 
 The internal `createFoundryApplication`/`createFoundryCommandDispatcher` APIs share the existing owner registry with the developer CLI. Programmatic dispatch returns results and rejects unknown or inherited object-property names; only the CLI adapter prints the result and applies process exit semantics. Consumer admission remains the explicit workspace runtime's responsibility. No new operator command or permission is introduced by exposing this composition boundary.
 
-`scripts/lib/foundry-runtime-command-policy.ts` is the exhaustive consumer-runtime disposition table for the same 63 commands. It identifies the two current facade adapters, developer-only maintenance, internal task control, native stages and task stages, along with asset/input/output roots, child owner, qualification and restricted-action requirements. A registry command without an explicit classification fails initialization. This table does not rename commands or make an internal owner directly public.
+`scripts/lib/foundry-runtime-command-policy.ts` is the exhaustive consumer-runtime disposition table for the same 63 flat owner commands. Its `init` and `doctor` rows are the direct adapters available when W04 froze the table; developer maintenance, internal task control, native stages and task stages retain their asset/input/output, child, qualification and authorization fields. A registry command without an explicit classification fails initialization.
+
+The user surface is a separate six-operation list in `foundry-operation-result.ts`: `workspace.init`, `doctor`, `task.start`, `task.status`, `task.resume` and `workspace.migrate`. The facade composes registered task/runtime owners and does not add these hierarchical names to the 63-command developer help output. `runtime.describe().command_policy` reports both lists explicitly. Unknown hierarchical operations still return the public envelope; unknown flat developer commands preserve their prior stderr/exit contract.
 
 Foundry CLI-spine and command governance has these checked contracts:
 

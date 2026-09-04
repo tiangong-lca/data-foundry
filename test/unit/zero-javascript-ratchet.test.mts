@@ -32,6 +32,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // Registered task storage, identity and persisted-authorization boundaries remain native TypeScript.
 // The shared application/CLI dispatcher and host-isolation regression stay native TypeScript.
 // Qualified runtime, command-policy, authority-schema and child-admission cases stay native TS.
+// Public facade, request-revision, migration and protocol-schema owners also stay native TS.
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");

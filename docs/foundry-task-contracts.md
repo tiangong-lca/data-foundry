@@ -19,13 +19,16 @@ checkPaths:
   - scripts/lib/foundry-task-store.ts
   - scripts/lib/foundry-task-authorization.ts
   - scripts/lib/foundry-execution-admission.ts
+  - scripts/foundry-facade.ts
+  - scripts/lib/foundry-facade-store.ts
+  - scripts/lib/foundry-task-start-spec.ts
   - specs/schemas/authorization-derivation.schema.json
   - specs/schemas/execution-context.schema.json
   - specs/import-profiles.json
   - tasks/**
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
-lastReviewedNote: "Reviewed for #100 W04: verified multi-producer lineage, derived authorization evidence and qualified child execution admission extend the v2 task store without changing old attempts."
+lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
+lastReviewedNote: "Reviewed for #104 W05: facade request indexes add deterministic retained revisions and task pointers over the unchanged v2 task/attempt authority."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -49,6 +52,9 @@ The earlier v1 examples at commit `ad9c885dde64b22f6e0a8e17f9da46bdba5345ef` rem
   task-accounts/<task-id>.json
   task-authorizations/<task-id>/<authorization-sha256>.json
   task-initialization/<owned-staging-id>/
+  facade-requests/<request-sha256>.json
+  facade-tasks/<task-id>.json
+  facade-request-locks/<request-sha256>.*
 <workspace>/.foundry/workspaces/<task-id>/
   foundry-job.json
   source-manifest.json
@@ -66,6 +72,8 @@ The earlier v1 examples at commit `ad9c885dde64b22f6e0a8e17f9da46bdba5345ef` rem
 
 Workspace registration retains the complete intended job/source/profile/seed metadata and a content digest. The task-local copies must match it. Account intent and approved grants also have separate immutable workspace registrations. These records contain no passwords, access tokens or session contents.
 
+Facade request indexes map one explicit request id to retained task revisions. The request key binds workspace id plus request id; a revision fingerprint binds the strict task-start spec and ordered canonical source path/bytes/SHA facts. Task ids derive from the request key and revision ordinal. A changed source path or content, actor/account, lane/profile/entity scope, seed or preparation creates a predecessor-bound task rather than editing the prior job. Same-fingerprint concurrent starts serialize through the CLI-owned lock and return the same task bytes. The immutable task pointer names one exact revision record; status never locates authority by scanning task directories.
+
 ## Task creation and recovery
 
 `foundry-job.json` uses `tiangong-foundry.job.v2`. It binds workspace/task/actor/request identity, lane, target profile/entity types, source/profile/optional seed content references, current runtime manifest/entry identity, UTC creation time, and the default `write_policy` of `dry-run` with remote state 0. Task metadata cannot enable a remote write by changing that policy object. Actual permission requires the separate reviewed authorization/execution boundary.
@@ -80,7 +88,7 @@ Changed actor, task, workspace, request, profile or target entity intent is reje
 
 `profile-lock.json` uses `tiangong-foundry.profile-lock.v2` and preserves the selected raw profile and its digest. The lock bytes must match both the registered job reference and the current package's profile. Historical profile authorization flags are not current permission.
 
-The source-evidence lane additionally requires a retained `seed-manifest.json`. W05 intake owns semantic seed completeness and routing; storing a seed alone does not prove it is ready for authoring.
+The source-evidence lane additionally requires a retained `seed-manifest.json`. The W05 `task-start.v1` spec requires the JSON seed to be one of the independently selected source files. Intake freezes it but does not claim semantic completeness; storing a seed alone does not prove it is ready for authoring.
 
 ## Local operation plans and receipts
 
@@ -106,4 +114,6 @@ An expected account may be selected after local preparation. The first selection
 
 `loadFoundryTaskAuthorization` rechecks live identity, task registration, input lineage, active pointer/registration, grant expiry/scope and both evidence snapshots and originals. A previous grant cannot be relabeled for changed or derived inputs. Reusing its approval requires a qualified, process-local derivation that proves ancestry, changes only the input digest, retains authority bounds and records `authorization-derivation.v1` evidence. The active parent pointer is checked around preparation and captured for later compare-and-swap. A separately reviewed approval may instead register the exact derived bytes directly. Login, task creation, local preparation and an empty grant never grant publication, deletion or restricted write actions.
 
-Before a restricted child handoff, the runtime stores a content-addressed `execution-context.v1` under task evidence. A new process must reconstruct the context, qualification and identity, then recheck source ancestry, final bytes, current authorization/QA exceptions, owner CLI path and CommandSpec operation semantics. Only the verified spec is returned to the existing no-replay executor. The execution context never carries credentials and never clears or retries an attempt. The public W05 facade still needs to orchestrate these APIs and expose the normative result envelope.
+Before a restricted child handoff, the runtime stores a content-addressed `execution-context.v1` under task evidence. A new process must reconstruct the context, qualification and identity, then recheck source ancestry, final bytes, current authorization/QA exceptions, owner CLI path and CommandSpec operation semantics. Only the verified spec is returned to the existing no-replay executor. The execution context never carries credentials and never clears or retries an attempt.
+
+The W05 facade now projects these records through the public result envelope. It automatically resumes only deterministic local cleanup. A nonempty attempt directory returns readback-only recovery; an unindexed copied completion report does not change task status. `completed` requires a current indexed completion report for the same task after source and artifact verification. Other stages remain explicit next actions until their owner evidence is registered; the facade never invents a child command or treats a directory name as task state.
