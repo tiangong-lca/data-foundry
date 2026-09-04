@@ -8,12 +8,15 @@ import { fileURLToPath } from "node:url";
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
+const isolatedGitEnv = Object.fromEntries(
+  Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
+);
 
 function runAuditScript(cwd = repoRoot): { status: number | null; stdout: string; stderr: string } {
   const result = spawnSync(process.execPath, ["scripts/check-tidas-cutover.ts"], {
     cwd,
     encoding: "utf8",
-    env: process.env,
+    env: isolatedGitEnv,
   });
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
@@ -30,7 +33,10 @@ function createNegativeFixtureRepository(): string {
     path.join(fixtureScripts, "tidas-cutover-negative.ts"),
     ["export const safe = true;", 'export const retired = "python -m tidas_tools";', ""].join("\n"),
   );
-  const initialized = spawnSync("git", ["init", "--quiet", fixtureRoot], { encoding: "utf8" });
+  const initialized = spawnSync("git", ["init", "--quiet", fixtureRoot], {
+    encoding: "utf8",
+    env: isolatedGitEnv,
+  });
   assert.equal(initialized.status, 0, initialized.stderr);
   return fixtureRoot;
 }

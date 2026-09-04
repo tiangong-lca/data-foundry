@@ -1,6 +1,13 @@
 #!/bin/sh
 set -e
 
+# Git exports repository-local bindings to hooks. Test fixtures create their own
+# repositories, so those bindings must not redirect a fixture into this checkout.
+foundry_git_local_names="$(git rev-parse --local-env-vars)"
+for foundry_git_local_name in $foundry_git_local_names; do
+  unset "$foundry_git_local_name"
+done
+
 export NVM_DIR="$HOME/.nvm"
 if [ -s "$NVM_DIR/nvm.sh" ]; then
   . "$NVM_DIR/nvm.sh"

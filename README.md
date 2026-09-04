@@ -149,7 +149,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
 lastReviewedAt: 2026-09-04
-lastReviewedCommit: 42ae8e94055ba7f912fdbd38fe16479409338033
+lastReviewedCommit: 2434a90fec3117c1dd278c84fa3a49b9b3c87811
 lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session references and credential-free candidate Golden snapshots; transport ownership and no-replay gates remain unchanged. Support-cache CLI extraction is a tracked prerequisite in tiangong-cli #270."
 ---
 
