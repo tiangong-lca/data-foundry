@@ -9,6 +9,7 @@ import {
   createFoundryRuntimeContext,
   initializeFoundryWorkspace,
 } from "../../scripts/lib/foundry-runtime-context.ts";
+import { assertFoundryTaskInputLineage } from "../../scripts/lib/foundry-task-store.ts";
 
 const moduleUrl = new URL("../../scripts/runtime-entry.ts", import.meta.url).href;
 const hasCode = (code: string) => (error: unknown) =>
@@ -257,6 +258,36 @@ test("preparation persists source/profile facts and records output lineage", asy
     outputDirectory: "outputs/second",
   });
   assert.equal(next.status, "completed");
+  const secondOutput = path.join(context.workspaceRoot, String(next.cleaned_rows_file));
+  const lineageContext = createFoundryRuntimeContext({
+    ...options,
+    taskId: "task",
+    actorId: "agent",
+    inputs: [
+      captureFoundryInput(input),
+      captureFoundryInput(output),
+      captureFoundryInput(secondOutput),
+    ],
+  });
+  const lineage = await assertFoundryTaskInputLineage(lineageContext, input, secondOutput);
+  assert.equal(lineage.ancestor.path, fs.realpathSync(input));
+  assert.equal(lineage.derived.path, secondOutput);
+  const siblingResult = await createFoundryRuntime(lineageContext).cleanup({
+    input,
+    type: "flow",
+    outputDirectory: "outputs/sibling",
+  });
+  const sibling = path.join(context.workspaceRoot, String(siblingResult.cleaned_rows_file));
+  const unrelatedContext = createFoundryRuntimeContext({
+    ...options,
+    taskId: "task",
+    actorId: "agent",
+    inputs: [captureFoundryInput(sibling), captureFoundryInput(secondOutput)],
+  });
+  await assert.rejects(
+    () => assertFoundryTaskInputLineage(unrelatedContext, sibling, secondOutput),
+    hasCode("task_lineage_scope_mismatch"),
+  );
   assert.deepEqual(fs.readFileSync(path.join(context.taskRoot!, "foundry-job.json")), marker);
   const unindexed = path.join(context.taskRoot!, "outputs/unindexed.jsonl");
   fs.writeFileSync(unindexed, '{"flowDataSet":{}}\n');

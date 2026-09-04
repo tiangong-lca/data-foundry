@@ -7,6 +7,10 @@ import {
   FoundryContextError,
   type FoundryRuntimeContext,
 } from "./foundry-runtime-context.ts";
+import {
+  assertQualifiedFoundryRuntime,
+  type QualifiedFoundryRuntime,
+} from "./foundry-runtime-qualification.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "./foundry-runtime-utils.ts";
 import {
   parseFreshIntentBoundAuthReceipt,
@@ -31,6 +35,7 @@ export interface VerifiedFoundryIdentity {
   readonly actorId: string;
   readonly runtimeManifestSha256: string;
   readonly runtimeEntrySha256: string;
+  readonly runtimeQualificationSha256: string | null;
   readonly mode: "oauth" | "headless";
 }
 const verifiedIdentities = new WeakSet<object>();
@@ -68,8 +73,10 @@ export function verifyFoundryRuntimeIdentity(
   context: FoundryRuntimeContext,
   authentication: FoundryAuthentication = { mode: "oauth" },
   systemEnvironment: NodeJS.ProcessEnv = process.env,
+  qualification?: QualifiedFoundryRuntime,
 ): VerifiedFoundryIdentity {
   assertFoundryRuntimeContext(context);
+  if (qualification) assertQualifiedFoundryRuntime(context, qualification);
   if (!["oauth", "headless"].includes(authentication.mode))
     reject("authentication_mode_invalid", "Select the CLI OAuth or explicit headless mode.");
   const account = context.accountIntent;
@@ -172,6 +179,7 @@ export function verifyFoundryRuntimeIdentity(
       actorId: context.actorId,
       runtimeManifestSha256: context.runtime.packageManifestSha256,
       runtimeEntrySha256: context.runtime.entrySha256,
+      runtimeQualificationSha256: qualification?.qualification_sha256 ?? null,
       mode: authentication.mode,
     });
     verifiedIdentities.add(identity);
@@ -185,8 +193,10 @@ export function verifyFoundryRuntimeIdentity(
 export function assertVerifiedFoundryIdentity(
   context: FoundryRuntimeContext,
   identity: VerifiedFoundryIdentity,
+  qualification?: QualifiedFoundryRuntime,
 ): void {
   assertFoundryRuntimeContext(context);
+  if (qualification) assertQualifiedFoundryRuntime(context, qualification);
   if (
     !identity ||
     !verifiedIdentities.has(identity) ||
@@ -195,6 +205,8 @@ export function assertVerifiedFoundryIdentity(
     identity.actorId !== context.actorId ||
     identity.runtimeManifestSha256 !== context.runtime.packageManifestSha256 ||
     identity.runtimeEntrySha256 !== context.runtime.entrySha256 ||
+    (qualification !== undefined &&
+      identity.runtimeQualificationSha256 !== qualification.qualification_sha256) ||
     !context.accountIntent
   )
     reject("identity_context_mismatch", "Identity proof is not bound to the current task context.");

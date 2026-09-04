@@ -10,6 +10,7 @@ import {
   runTidasImport,
   runTidasRowsValidation,
 } from "../../scripts/lib/tidas-adapter.ts";
+import { createFoundryIsolatedChildEnvironment } from "../../scripts/lib/foundry-runtime-environment.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 const fixture = path.join(repoRoot, "test", "fixtures", "fake-tidas.ts");
@@ -126,6 +127,33 @@ test("handshake forwards public environment performance budgets", () => {
       "--queue-capacity",
       "384",
     ]);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("handshake can use one explicit isolated environment without ambient TIDAS state", () => {
+  const { root, bin } = isolatedFixture();
+  try {
+    const environment = createFoundryIsolatedChildEnvironment({
+      tempRoot: path.join(root, "isolated-environment"),
+      sourceEnv: process.env,
+      overrides: { TIDAS_BIN: bin },
+    });
+    environment.FAKE_TIDAS_VERSION = "0.2.88";
+    environment.TIDAS_MEMORY_BUDGET_MIB = "256";
+    const result = withEnvironment(
+      {
+        TIDAS_BIN: path.join(root, "ambient-missing"),
+        FAKE_TIDAS_VERSION: "0.1.0",
+        TIDAS_MEMORY_BUDGET_MIB: "999",
+      },
+      () => runTidasHandshake({ repoRoot: root, environment }),
+    );
+    assert.equal(result.binary_version, "0.2.88");
+    assert.equal(result.validation_describe_stderr, "");
+    assert.equal(result.invocation.executable, bin);
+    assert.deepEqual(result.args.slice(-2), ["--memory-budget-mib", "256"]);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

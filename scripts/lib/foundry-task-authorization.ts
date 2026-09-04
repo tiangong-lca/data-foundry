@@ -13,7 +13,8 @@ import {
   assertVerifiedFoundryIdentity,
   type VerifiedFoundryIdentity,
 } from "./foundry-runtime-identity.ts";
-import { withFoundryTaskMetadata } from "./foundry-task-store.ts";
+import type { QualifiedFoundryRuntime } from "./foundry-runtime-qualification.ts";
+import { assertFoundryTaskInputLineage, withFoundryTaskMetadata } from "./foundry-task-store.ts";
 import {
   bytes,
   digest,
@@ -27,6 +28,7 @@ import {
 } from "./foundry-task-io.ts";
 import {
   validateTaskAuthorization,
+  deriveTaskAuthorizationGrant,
   type TaskAuthorizationBinding,
   type ValidatedTaskAuthorization,
 } from "./task-authorization.ts";
@@ -37,6 +39,10 @@ export interface TaskApprovalEvidence {
   id: string;
   kind: "user-decision" | "source-model";
   file: FoundryInputFact;
+}
+export interface PrepareDerivedFoundryTaskAuthorizationOptions {
+  approvedInputFile: string;
+  derivedInputFile: string;
 }
 interface EvidenceRegistration extends TaskApprovalEvidence {
   snapshot: { path: string; sha256: string };
@@ -197,10 +203,11 @@ export async function registerFoundryTaskAuthorization(
     evidence: readonly TaskApprovalEvidence[];
     expectedPreviousSha256?: string | null;
   },
+  qualification?: QualifiedFoundryRuntime,
 ): Promise<{ authorization_sha256: string; pointer_sha256: string }> {
-  assertVerifiedFoundryIdentity(context, identity);
+  assertVerifiedFoundryIdentity(context, identity, qualification);
   return withFoundryTaskMetadata(context, (task) => {
-    assertVerifiedFoundryIdentity(context, identity);
+    assertVerifiedFoundryIdentity(context, identity, qualification);
     const input = inputFact(context, options.inputFile);
     const result = validateTaskAuthorization(options.grant, binding(context, task, input));
     if (result.status !== "authorized")
@@ -260,7 +267,7 @@ export async function registerFoundryTaskAuthorization(
         user_id: identity.receipt.identity.user_id,
       },
     };
-    assertVerifiedFoundryIdentity(context, identity);
+    assertVerifiedFoundryIdentity(context, identity, qualification);
     if (
       validateTaskAuthorization(options.grant, binding(context, task, input)).status !==
       "authorized"
@@ -287,10 +294,11 @@ export async function loadFoundryTaskAuthorization(
   context: FoundryRuntimeContext,
   identity: VerifiedFoundryIdentity,
   inputFile: string,
+  qualification?: QualifiedFoundryRuntime,
 ): Promise<ValidatedTaskAuthorization> {
-  assertVerifiedFoundryIdentity(context, identity);
+  assertVerifiedFoundryIdentity(context, identity, qualification);
   return withFoundryTaskMetadata(context, (task) => {
-    assertVerifiedFoundryIdentity(context, identity);
+    assertVerifiedFoundryIdentity(context, identity, qualification);
     const input = inputFact(context, inputFile);
     if (!fs.existsSync(taskPath(context, "authorization.json")))
       fail("task_authorization_required", "This task has no active registered authorization.");
@@ -405,7 +413,7 @@ export async function loadFoundryTaskAuthorization(
       )
         fail("authorization_evidence_invalid", "Grant and selected evidence no longer agree.");
     }
-    assertVerifiedFoundryIdentity(context, identity);
+    assertVerifiedFoundryIdentity(context, identity, qualification);
     const refreshed = validateTaskAuthorization(
       JSON.parse(grantBytes.toString("utf8")),
       binding(context, task, input),
@@ -416,5 +424,78 @@ export async function loadFoundryTaskAuthorization(
         "Task authorization expired during evidence verification.",
       );
     return refreshed.authorization;
+  });
+}
+
+/** Prepare, but do not activate, an exact successor grant for a verified derived task artifact. */
+export async function prepareDerivedFoundryTaskAuthorization(
+  context: FoundryRuntimeContext,
+  qualification: QualifiedFoundryRuntime,
+  identity: VerifiedFoundryIdentity,
+  options: PrepareDerivedFoundryTaskAuthorizationOptions,
+) {
+  assertVerifiedFoundryIdentity(context, identity, qualification);
+  const parent = await loadFoundryTaskAuthorization(
+    context,
+    identity,
+    options.approvedInputFile,
+    qualification,
+  );
+  const parentPointer = readTaskBytes(context, "authorization.json");
+  const pointer = object(JSON.parse(parentPointer.toString("utf8")));
+  exact(pointer, ["schema", "authorization_sha256", "registration_sha256"]);
+  if (
+    pointer.schema !== "tiangong-foundry.authorization-pointer.v1" ||
+    pointer.authorization_sha256 !== parent.authorization_sha256 ||
+    typeof pointer.registration_sha256 !== "string" ||
+    !shaPattern.test(pointer.registration_sha256)
+  )
+    fail(
+      "authorization_update_conflict",
+      "Active authorization changed before its derived-input successor could be prepared.",
+    );
+  const lineage = await assertFoundryTaskInputLineage(
+    context,
+    options.approvedInputFile,
+    options.derivedInputFile,
+  );
+  const grant = deriveTaskAuthorizationGrant(parent, {
+    ...parent.binding,
+    input_scope_sha256: lineage.derived.sha256,
+  });
+  const evidence = parent.evidence.map((entry) => {
+    const filePath = path.isAbsolute(entry.reference)
+      ? path.resolve(entry.reference)
+      : taskPath(context, entry.reference);
+    return Object.freeze({
+      id: entry.id,
+      kind: entry.kind,
+      file: captureFoundryInput(filePath),
+    });
+  });
+  const plan = Object.freeze({
+    schema: "tiangong-foundry.authorization-derivation.v1" as const,
+    parent_authorization_sha256: parent.authorization_sha256,
+    derived_authorization_sha256: sha256Json(grant),
+    approved_input: Object.freeze({ ...lineage.ancestor }),
+    derived_input: Object.freeze({ ...lineage.derived }),
+  });
+  const relativePath = `evidence/authorizations/${plan.derived_authorization_sha256}/derivation.json`;
+  const planBytes = bytes(plan);
+  writeFoundryArtifact(context, relativePath, planBytes);
+  if (!readTaskBytes(context, "authorization.json").equals(parentPointer))
+    fail(
+      "authorization_update_conflict",
+      "Active authorization changed while its derived-input successor was prepared.",
+    );
+  return Object.freeze({
+    grant,
+    evidence: Object.freeze(evidence),
+    expected_previous_sha256: digest(parentPointer),
+    derivation: Object.freeze({
+      path: relativePath,
+      bytes: planBytes.length,
+      sha256: digest(planBytes),
+    }),
   });
 }

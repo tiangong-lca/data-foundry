@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { withBatchRunLock } from "@tiangong-lca/cli/batch";
 import {
   captureFoundryInput,
+  resolveFoundryInputPath,
   resolveFoundryOutput,
   writeFoundryArtifact,
   type FoundryRuntimeContext,
@@ -52,7 +53,7 @@ export type {
 
 export async function withFoundryTaskMetadata<T>(
   context: FoundryRuntimeContext,
-  inspect: (task: LoadedTask) => T,
+  inspect: (task: LoadedTask, index: readonly ArtifactEntry[]) => T,
 ): Promise<T> {
   requiredTask(context);
   const runPath = resolveFoundryOutput(context, `task-locks/${context.taskId}.json`, "state");
@@ -69,10 +70,107 @@ export async function withFoundryTaskMetadata<T>(
     () => {
       const task = loadTask(context, {});
       bindAccountIntent(context);
-      verifyInputs(context, task, readIndex(context));
-      return inspect(task);
+      const index = readIndex(context);
+      verifyInputs(context, task, index);
+      return inspect(task, index);
     },
   );
+}
+
+function selectedInput(context: FoundryRuntimeContext, file: string): FoundryInputFact {
+  const resolved = resolveFoundryInputPath(context, file);
+  return context.inputs.find((fact) => fact.path === resolved)!;
+}
+
+/** Prove a selected derived input descends from a selected approved input in the same verified index. */
+export async function assertFoundryTaskInputLineage(
+  context: FoundryRuntimeContext,
+  ancestorFile: string,
+  derivedFile: string,
+): Promise<Readonly<{ ancestor: FoundryInputFact; derived: FoundryInputFact }>> {
+  const ancestor = selectedInput(context, ancestorFile);
+  const derived = selectedInput(context, derivedFile);
+  if (sameFact(ancestor, derived))
+    fail("task_lineage_not_derived", "A derived authorization requires a distinct indexed output.");
+  return withFoundryTaskMetadata(context, (task, index) => {
+    const findProducers = (fact: FoundryInputFact, before = Number.POSITIVE_INFINITY) =>
+      index.filter(
+        (entry) =>
+          entry.sequence < before &&
+          taskPath(context, entry.path) === fact.path &&
+          entry.sha256 === fact.sha256 &&
+          entry.bytes === fact.bytes,
+      );
+    const first = findProducers(derived);
+    if (!first.length) fail("task_lineage_invalid", "Derived input has no indexed producer.");
+    const pending = [...first];
+    const visited = new Set<string>();
+    while (pending.length) {
+      const entry = pending.pop()!;
+      if (visited.has(entry.record_sha256)) continue;
+      visited.add(entry.record_sha256);
+      const receiptBytes = readTaskBytes(context, entry.receipt.path);
+      if (digest(receiptBytes) !== entry.receipt.sha256)
+        fail("task_lineage_invalid", "Derived input producer receipt changed.");
+      const receipt = object(JSON.parse(receiptBytes.toString("utf8")));
+      exact(receipt, ["schema", "mode", "status", "plan", "job_sha256", "outputs", "result"]);
+      const outputs = facts(receipt.outputs);
+      if (
+        receipt.schema !== "tiangong-foundry.operation-receipt.v1" ||
+        receipt.mode !== "deterministic-local" ||
+        receipt.status !== "completed" ||
+        receipt.job_sha256 !== task.jobSha256 ||
+        !outputs.some(
+          (output) =>
+            output.path === entry.path &&
+            output.bytes === entry.bytes &&
+            output.sha256 === entry.sha256,
+        )
+      )
+        fail("task_lineage_invalid", "Derived input has no valid same-task producer receipt.");
+      const planRef = reference(receipt.plan);
+      const planBytes = readTaskBytes(context, planRef.path);
+      if (digest(planBytes) !== planRef.sha256)
+        fail("task_lineage_invalid", "Derived input producer plan changed.");
+      const plan = object(JSON.parse(planBytes.toString("utf8")));
+      exact(plan, [
+        "schema",
+        "operation_id",
+        "job_sha256",
+        "command",
+        "options_sha256",
+        "input_scope_sha256",
+        "inputs",
+        "created_at_utc",
+      ]);
+      const parents = facts(plan.inputs);
+      const computedOperation = sha256Json({
+        job: task.jobSha256,
+        command: plan.command,
+        input_scope: sha256Json(parents),
+        options: plan.options_sha256,
+      });
+      if (
+        plan.schema !== "tiangong-foundry.operation-plan.v1" ||
+        plan.operation_id !== entry.operation_id ||
+        computedOperation !== entry.operation_id ||
+        plan.job_sha256 !== task.jobSha256 ||
+        plan.command !== entry.command ||
+        plan.input_scope_sha256 !== entry.input_scope_sha256 ||
+        sha256Json(parents) !== entry.input_scope_sha256 ||
+        !timestamp(plan.created_at_utc)
+      )
+        fail("task_lineage_invalid", "Derived input producer binding changed.");
+      for (const parent of parents) {
+        if (sameFact(parent, ancestor)) return Object.freeze({ ancestor, derived });
+        pending.push(...findProducers(parent, entry.sequence));
+      }
+    }
+    return fail(
+      "task_lineage_scope_mismatch",
+      "Derived input is valid task output but does not descend from the approved input scope.",
+    );
+  });
 }
 
 function readIndex(context: FoundryRuntimeContext): ArtifactEntry[] {

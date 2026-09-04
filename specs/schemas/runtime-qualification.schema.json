@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tiangong-lca.local/foundry/runtime-qualification.schema.json",
+  "title": "Foundry portable runtime qualification identity v1",
+  "description": "Diagnostic identity only. A serialized document is never process-local execution authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "qualification_sha256", "cli", "tidas"],
+  "properties": {
+    "schema": { "const": "tiangong-foundry.runtime-qualification.v1" },
+    "qualification_sha256": { "$ref": "#/$defs/sha256" },
+    "cli": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package_version", "platform", "content_sha256", "node_version", "node_sha256"],
+      "properties": {
+        "package_version": { "const": "0.1.10" },
+        "platform": {
+          "enum": ["linux-x64", "linux-arm64", "darwin-arm64", "win32-x64"]
+        },
+        "content_sha256": { "$ref": "#/$defs/sha256" },
+        "node_version": { "type": "string", "minLength": 1 },
+        "node_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "tidas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "binary_version",
+        "executable",
+        "asset_fingerprint",
+        "protocols",
+        "event_schema_versions"
+      ],
+      "properties": {
+        "binary_version": { "type": "string", "pattern": "^0\\.2\\.(0|[1-9][0-9]*)$" },
+        "executable": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["bytes", "sha256"],
+          "properties": {
+            "bytes": { "type": "integer", "minimum": 1, "maximum": 536870912 },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "asset_fingerprint": { "$ref": "#/$defs/sha256" },
+        "protocols": { "$ref": "#/$defs/stringSet" },
+        "event_schema_versions": { "$ref": "#/$defs/stringSet" }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "stringSet": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 128 }
+    }
+  }
+}

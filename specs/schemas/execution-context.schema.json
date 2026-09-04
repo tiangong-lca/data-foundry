@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tiangong-lca.local/foundry/execution-context.schema.json",
+  "title": "Foundry child execution context v1",
+  "description": "Content-addressed handoff evidence. Rehydration and process-local checks are still required before execution.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "workspace_id",
+    "task_id",
+    "actor_id",
+    "command",
+    "qualification_sha256",
+    "authorization_sha256",
+    "approved_input",
+    "final_rows",
+    "required_actions",
+    "required_qa_waivers",
+    "command_spec_sha256"
+  ],
+  "properties": {
+    "schema": { "const": "tiangong-foundry.execution-context.v1" },
+    "workspace_id": { "$ref": "#/$defs/id" },
+    "task_id": { "$ref": "#/$defs/id" },
+    "actor_id": { "$ref": "#/$defs/id" },
+    "command": { "$ref": "#/$defs/id" },
+    "qualification_sha256": { "$ref": "#/$defs/sha256" },
+    "authorization_sha256": { "$ref": "#/$defs/sha256" },
+    "approved_input": { "$ref": "#/$defs/inputFact" },
+    "final_rows": { "$ref": "#/$defs/inputFact" },
+    "required_actions": {
+      "type": "array",
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "elementary_flow_write",
+          "elementary_flow_create_new",
+          "flowproperty_write",
+          "unitgroup_write",
+          "canonical_support_local_mint"
+        ]
+      }
+    },
+    "required_qa_waivers": {
+      "type": "array",
+      "maxItems": 1,
+      "uniqueItems": true,
+      "items": { "const": "process_material_balance_deviation" }
+    },
+    "command_spec_sha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "inputFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "bytes", "sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}
