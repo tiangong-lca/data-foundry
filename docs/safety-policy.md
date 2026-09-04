@@ -73,9 +73,11 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - scripts/lib/foundry-execution-admission.ts
   - specs/schemas/execution-context.schema.json
+  - scripts/foundry-facade.ts
+  - scripts/lib/foundry-facade-store.ts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
-lastReviewedNote: "Reviewed for #100 W04: final child admission rechecks qualification, lineage, active actions/QA and owner CLI semantics without changing mutation attempts."
+lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
+lastReviewedNote: "Reviewed for #104 W05: request revisions preserve old tasks, resume stops at attempt evidence, and completion requires an indexed same-task report."
 ---
 
 # Safety Policy
@@ -124,6 +126,8 @@ Remote database writes are blocked unless:
 - `dataset-commit-handoff-plan` reports `ready_for_explicit_commit` for the exact finalize report, mutation manifest, final rows file, target user id, and expected state_code
 - commit and post-write verify are authoritative `tiangong-foundry.command-spec.v1` objects; their SHA-256 binds executable, argv, and the same final-row path/bytes/SHA-256, while display is never executed and every runner rechecks artifact bytes before `shell=false` spawn
 - a new process may receive a restricted commit CommandSpec only after `tiangong-foundry.execution-context.v1` is rehydrated from task evidence with current process-local runtime qualification and identity, approved-input ancestry, active exact actions/QA waivers, unchanged final rows, task-contained output path and reviewed owner CLI argv semantics; this admission returns the spec but never dispatches or retries it
+- facade task start performs no authentication and creates a new predecessor-bound task revision whenever selected path/content or task intent changes; it never resets or reuses an earlier task's attempt authority
+- facade task resume may automatically run only its registered deterministic local preparation; a nonempty, malformed or ambiguous attempt area blocks with readback-only recovery, and copied/unindexed completion files never yield `completed`
 - insert/versioned writes have explicit reasons
 - state_code=100 rows have source-review records instead of direct overwrite
 - a dry-run artifact exists

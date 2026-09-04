@@ -10,7 +10,9 @@ import {
   resolveFoundryAsset,
   type FoundryRuntimeContext,
 } from "./lib/foundry-runtime-context.ts";
-import { runFoundryTaskOperation } from "./lib/foundry-task-store.ts";
+import { runFoundryTaskOperation, withFoundryTaskMetadata } from "./lib/foundry-task-store.ts";
+import { bindAccountIntent, createTask, loadTask } from "./lib/foundry-task-registration.ts";
+import type { FoundryTaskOptions } from "./lib/foundry-task-types.ts";
 import {
   assertVerifiedFoundryIdentity,
   verifyFoundryRuntimeIdentity,
@@ -38,6 +40,7 @@ import {
   type RehydrateFoundryExecutionAdmissionOptions,
 } from "./lib/foundry-execution-admission.ts";
 import { foundryRuntimeCommandPolicies } from "./lib/foundry-runtime-command-policy.ts";
+import { foundryPublicOperations } from "./lib/foundry-operation-result.ts";
 import { listImportProfiles } from "./lib/import-curation/profiles.ts";
 import { runDatasetCurationCleanup } from "./lib/import-curation/curation-cleanup.ts";
 import { readRows } from "./lib/import-curation/internal/runtime-io.ts";
@@ -70,6 +73,47 @@ export function createFoundryRuntime(
     context,
     qualification: qualification ?? null,
     initializeWorkspace: () => initializeFoundryWorkspace(context),
+    startTask: (options: FoundryTaskOptions = {}) => {
+      const task =
+        context.taskRoot && fs.existsSync(context.taskRoot)
+          ? loadTask(context, options)
+          : createTask(context, options);
+      bindAccountIntent(context);
+      return task;
+    },
+    inspectTask: () =>
+      withFoundryTaskMetadata(context, (task, index) => {
+        const attempts = path.join(context.taskRoot!, "attempts");
+        let attemptsPresent = false;
+        if (fs.existsSync(attempts)) {
+          const stat = fs.lstatSync(attempts);
+          if (!stat.isDirectory() || stat.isSymbolicLink())
+            throw new FoundryContextError(
+              "task_attempt_state_invalid",
+              "Task attempt state must remain a contained directory.",
+            );
+          attemptsPresent = fs.readdirSync(attempts).length > 0;
+        }
+        const authorization = path.join(context.taskRoot!, "authorization.json");
+        let authorizationPresent = false;
+        if (fs.existsSync(authorization)) {
+          const stat = fs.lstatSync(authorization);
+          if (!stat.isFile() || stat.isSymbolicLink())
+            throw new FoundryContextError(
+              "task_authorization_state_invalid",
+              "Task authorization state must remain a contained regular file.",
+            );
+          authorizationPresent = true;
+        }
+        return Object.freeze({
+          job: Object.freeze({ ...task.job }),
+          job_sha256: task.jobSha256,
+          sources: Object.freeze(task.sources.map((source) => Object.freeze({ ...source }))),
+          artifacts: Object.freeze(index.map((entry) => Object.freeze({ ...entry }))),
+          authorization_present: authorizationPresent,
+          attempts_present: attemptsPresent,
+        });
+      }),
     verifyIdentity: (authentication?: FoundryAuthentication) =>
       verifyFoundryRuntimeIdentity(context, authentication, process.env, qualification),
     registerAuthorization: (
@@ -135,6 +179,7 @@ export function createFoundryRuntime(
         : { status: "required", identity: null },
       command_policy: {
         total: foundryRuntimeCommandPolicies.length,
+        public_operations: foundryPublicOperations,
         public_facade: foundryRuntimeCommandPolicies
           .filter((policy) => policy.distribution === "public-facade")
           .map((policy) => policy.command),

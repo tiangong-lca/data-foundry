@@ -102,6 +102,17 @@ function assertHelpAndUnknown(entry: string, cwd = repoRoot): void {
   assert.equal(sha256(unknown.stderr), unknownSha256);
 }
 
+function assertFacadeInit(entry: string, workspace: string, cwd: string): void {
+  const result = runEntry(entry, ["workspace", "init", "--workspace", workspace, "--json"], cwd);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(result.stderr, "");
+  assert.equal(result.stdout.trimEnd().split("\n").length, 1);
+  const envelope = JSON.parse(result.stdout) as Record<string, unknown>;
+  assert.equal(envelope.schema, "tiangong-foundry.operation-result.v1");
+  assert.equal(envelope.operation, "workspace.init");
+  assert.equal(envelope.status, "ready");
+}
+
 function assertProfilesList(entry: string, cwd: string): string {
   const result = runEntry(entry, ["profiles-list"], cwd);
   assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -193,7 +204,13 @@ test("entry composition preserves all typed owners, registry metadata, and produ
 test("Node 24 source and emitted entries preserve repository-backed commands and nested entry identity", async () => {
   const fixtureRoot = path.join(repoRoot, "tmp", `foundry-entry-runtime-${process.pid}`);
   const buildRoot = path.join(fixtureRoot, "dist");
+  const facadeWorkspaceRoot = path.join(
+    repoRoot,
+    "tmp",
+    `foundry-entry-facade-workspaces-${process.pid}`,
+  );
   fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  fs.rmSync(facadeWorkspaceRoot, { recursive: true, force: true });
   try {
     fs.mkdirSync(path.join(fixtureRoot, "specs"), { recursive: true });
     fs.copyFileSync(path.join(repoRoot, "package.json"), path.join(fixtureRoot, "package.json"));
@@ -210,6 +227,11 @@ test("Node 24 source and emitted entries preserve repository-backed commands and
     const sourceEntry = path.join(fixtureRoot, "scripts", "foundry.ts");
     assertHelpAndUnknown(sourceEntry, executionCwd);
     const sourceProfiles = assertProfilesList(sourceEntry, executionCwd);
+    assertFacadeInit(
+      sourceEntry,
+      path.join(facadeWorkspaceRoot, "source facade workspace"),
+      executionCwd,
+    );
 
     execFileSync(
       process.execPath,
@@ -236,6 +258,11 @@ test("Node 24 source and emitted entries preserve repository-backed commands and
     assert.equal(fs.existsSync(path.join(fixtureRoot, ".env")), false);
     assertHelpAndUnknown(emittedEntry, executionCwd);
     assert.equal(assertProfilesList(emittedEntry, executionCwd), sourceProfiles);
+    assertFacadeInit(
+      emittedEntry,
+      path.join(facadeWorkspaceRoot, "emitted facade workspace"),
+      executionCwd,
+    );
 
     const emittedBatchModule = (await import(
       pathToFileURL(path.join(buildRoot, "scripts", "commands", "bafu-batch-import-run.js")).href
@@ -273,6 +300,7 @@ test("Node 24 source and emitted entries preserve repository-backed commands and
     assert.equal(path.resolve(fixtureRoot, processScopeEntry!), emittedEntry);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(facadeWorkspaceRoot, { recursive: true, force: true });
   }
 });
 

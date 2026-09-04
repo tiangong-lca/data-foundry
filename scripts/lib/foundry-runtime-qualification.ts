@@ -166,8 +166,7 @@ function hash(value: unknown): string {
   return sha256Json(value);
 }
 
-function observeTidas(
-  context: FoundryRuntimeContext,
+function captureExpectedTidas(
   expectation: FoundryTidasRuntimeExpectation,
   executablePath: string,
 ): ReturnType<typeof captureFoundryInput> {
@@ -182,6 +181,15 @@ function observeTidas(
       "runtime_tidas_unqualified",
       "TIDAS executable bytes do not match the independent expectation.",
     );
+  return executable;
+}
+
+function observeTidas(
+  context: FoundryRuntimeContext,
+  expectation: FoundryTidasRuntimeExpectation,
+  executablePath: string,
+): ReturnType<typeof captureFoundryInput> {
+  const executable = captureExpectedTidas(expectation, executablePath);
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-runtime-qualification-"));
   fs.chmodSync(temp, 0o700);
   try {
@@ -262,7 +270,15 @@ export function qualifyFoundryRuntime(
   },
 ): QualifiedFoundryRuntime {
   assertFoundryRuntimeContext(context);
-  const cli = assertCliRuntimeMatches(options.cliExpectation);
+  let cli: CliRuntimeDescriptor;
+  try {
+    cli = assertCliRuntimeMatches(options.cliExpectation);
+  } catch {
+    return fail(
+      "runtime_cli_unqualified",
+      "CLI runtime bytes do not match the independently selected C1 expectation.",
+    );
+  }
   if (cli.package.version !== "0.1.10" || cli.platform !== context.platform)
     fail(
       "runtime_cli_unqualified",
@@ -301,9 +317,17 @@ export function assertQualifiedFoundryRuntime(
       "runtime_qualification_unverified",
       "Serialized or copied runtime qualification is not execution authority.",
     );
-  const cli = assertCliRuntimeMatches(qualification.cli.expectation);
+  let cli: CliRuntimeDescriptor;
+  try {
+    cli = assertCliRuntimeMatches(qualification.cli.expectation);
+  } catch {
+    return fail(
+      "runtime_cli_unqualified",
+      "CLI runtime changed after its qualification was established.",
+    );
+  }
   const expected = parseTidasExpectation(qualification.tidas.expectation, context.platform);
-  observeTidas(context, expected, qualification.tidas.executable_path);
+  captureExpectedTidas(expected, qualification.tidas.executable_path);
   const portable = portableIdentity(context, cli, qualification.cli.expectation, expected);
   if (
     hash(portable) !== qualification.qualification_sha256 ||

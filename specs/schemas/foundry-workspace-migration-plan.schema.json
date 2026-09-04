@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tiangong-lca.local/foundry/workspace-migration-plan.schema.json",
+  "title": "Foundry workspace migration dry-run plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "workspace_root",
+    "foundry_root_exists",
+    "marker_schema",
+    "disposition",
+    "write_allowed",
+    "entries",
+    "tree_sha256"
+  ],
+  "properties": {
+    "schema": { "const": "tiangong-foundry.workspace-migration-plan.v1" },
+    "workspace_root": { "type": "string", "minLength": 1, "maxLength": 4096 },
+    "foundry_root_exists": { "type": "boolean" },
+    "marker_schema": {
+      "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 256 }, { "type": "null" }]
+    },
+    "disposition": {
+      "enum": ["no_state", "current_layout", "explicit_migration_required"]
+    },
+    "write_allowed": { "const": false },
+    "entries": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": { "$ref": "#/$defs/entry" }
+    },
+    "tree_sha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "kind", "bytes", "sha256", "state_class"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "kind": { "enum": ["directory", "file"] },
+        "bytes": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] },
+        "sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "state_class": {
+          "enum": [
+            "workspace-control",
+            "local-preparation",
+            "terminal-success",
+            "attempted-or-unknown",
+            "authorization-or-account",
+            "unclassified"
+          ]
+        }
+      }
+    }
+  }
+}

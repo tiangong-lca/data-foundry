@@ -13,13 +13,24 @@ whenToUpdate:
 checkPaths:
   - scripts/runtime-entry.ts
   - scripts/foundry-runtime.ts
+  - scripts/foundry-facade.ts
+  - scripts/lib/foundry-operation-result.ts
+  - scripts/lib/foundry-task-start-spec.ts
+  - scripts/lib/foundry-facade-store.ts
+  - scripts/lib/foundry-migration-inventory.ts
   - scripts/lib/foundry-runtime-command-policy.ts
   - scripts/lib/foundry-runtime-qualification.ts
   - scripts/lib/foundry-execution-admission.ts
+  - specs/schemas/foundry-operation-result.schema.json
+  - specs/schemas/foundry-task-start.schema.json
+  - specs/schemas/foundry-facade-request-index.schema.json
+  - specs/schemas/foundry-workspace-migration-plan.schema.json
+  - test/scenarios/foundry-public-facade.test.mts
+  - test/scenarios/foundry-facade-request-store.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
-lastReviewedNote: "Reviewed for #100 W04: internal command dispositions and qualified execution admission now back this frozen target; the public facade remains W05."
+lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
+lastReviewedNote: "Reviewed for #104 W05: the six hierarchical operations, strict envelope, request revisions, local resume and migration dry-run are implemented; W06 still owns the published bin/package."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -27,22 +38,34 @@ related:
 
 # Public runtime protocol
 
-This is the normative v1 facade target for `@tiangong-lca/foundry`, binary `tiangong-foundry`. It freezes the surface before W05 implementation. W04 now supplies the explicit context, all-command ownership table, exact CLI/TIDAS qualification and final child-admission API; the current direct entry still exposes only init, diagnostics, profiles and deterministic cleanup. W05 owns this facade and W06 the released package. Internal flat command names remain owner interfaces, not a second user workflow.
+This is the implemented v1 facade protocol for the future `@tiangong-lca/foundry` package and `tiangong-foundry` binary. W05 supplies the six hierarchical operations on top of W04 context/task/qualification owners. W06 still owns the npm name, `bin` mapping, publication whitelist and installed-package qualification, so source availability is not a public release claim. Internal flat command names remain owner interfaces and the existing developer entry remains behavior-compatible.
 
 ## Commands
 
 | Command | Contract |
 | --- | --- |
 | `tiangong-foundry workspace init --workspace <path> --json` | Atomically initialize/verify the versioned workspace; preserve existing records and reject unversioned state requiring migration. No login or business write. |
-| `tiangong-foundry doctor --workspace <path> --json` | Read-only runtime, asset, workspace and account-readiness diagnostics. No repository maintenance suite, Git prerequisite or automatic login. |
-| `tiangong-foundry task start --workspace <path> --spec <file> --request-id <id> --json` | Validate and freeze task inputs, select the existing import/authoring lane and return current state/next actions. The same request and fingerprint are idempotent. |
-| `tiangong-foundry task status --workspace <path> --task <id> --json` | Inspect one task's current revision, artifacts, blockers and required next actions without executing them. |
-| `tiangong-foundry task resume --workspace <path> --task <id> --json` | Continue permitted pending stages using the same task state and exact inputs; consumed mutations can only enter existing readback recovery. |
+| `tiangong-foundry doctor --workspace <path> [--expected-project-ref <ref> --expected-user-id <uuid> [--session-reference <path>]] --json` | Read-only runtime, asset, workspace and account-readiness diagnostics. It checks only bounded reference metadata, never session contents, repository maintenance, Git, login or download. |
+| `tiangong-foundry task start --workspace <path> --spec <file> --json` | Validate the strict `task-start.v1` spec and independently capture its selected sources/optional seed. A relative spec path resolves from the selected workspace root. Request ID, actor, lane, profile, account intent and preparation live in the reviewed spec. |
+| `tiangong-foundry task status --workspace <path> --task <id> --actor <id> --json` | Reconstruct the exact registered request revision and inspect its current task/index/attempt state. Actor intent is supplied independently on every call. |
+| `tiangong-foundry task resume --workspace <path> --task <id> --actor <id> --json` | Continue only the registered deterministic local preparation or return content-bound next actions. Consumed/ambiguous mutation state is readback-only and never replayed. |
 | `tiangong-foundry workspace migrate --workspace <path> --dry-run --json` | Inventory old state and produce a content-bound migration plan. Applying that plan is a separately explicit operation defined by W10. |
 
 The CLI-owned `tiangong-lca runtime ensure/status` manages qualified components only; it does not initialize a Foundry job or grant data permissions. Skills invoke the Foundry facade and its next actions rather than rebuilding its task state machine.
 
+The hierarchical `runtime-entry.ts doctor --workspace ... --json` form is the consumer facade. Older direct callers of that source entry must migrate to the operation envelope. The repository-maintenance `pnpm doctor` and flat `scripts/foundry.ts doctor` command remain a separate developer surface with their existing behavior.
+
 Input changes create an explicit new revision with retained history. A new revision, directory, runtime version or request id never resets a consumed mutation. Migration never treats historical locks or profile waivers as current approval.
+
+## Task start and request revisions
+
+`tiangong-foundry.task-start.v1` contains exact request and actor ids, one of the two lanes, profile, ordered target entity types, selected source paths, optional account intent, an optional selected JSON seed and at most one current local preparation (`dataset-curation-cleanup`). The source-evidence lane requires its seed to be one of the selected sources. Task start performs no authentication and stores no identity receipt.
+
+The workspace request index key is the SHA-256 of workspace id plus request id. Task ids are deterministic `task-<complete-request-sha256>-rNNNN` values. A revision fingerprint binds the normalized spec and ordered canonical input path/bytes/SHA facts. Same request plus latest fingerprint is byte-idempotent, including concurrent starts. Any selected path, content, actor/account, lane/profile/entity or preparation change creates a predecessor-bound revision and preserves every earlier task directory and attempt. Interrupted creation recovers the same deterministic task before the index is published; a different spec returns an actionable recovery conflict until the original spec completes that index record.
+
+Status and resume resolve a task only through its immutable task pointer and request revision, then apply the W04 task-store checks. Wrong actor and missing task return non-leaking envelopes. Files merely placed under a task directory are not artifacts or completion proof. The only automatically resumed stage in W05 is the already admitted deterministic local cleanup. Other work remains an ordered human action or a separately registered trusted command action; W05 does not invent or discover CommandSpecs by scanning files.
+
+An executable next action contains Node/active source-or-emitted entry argv, `cwd=workspaceRoot` and purpose. Its verified binding digest covers every executable field; workspace, task and actor are explicit argv values, while task lookup revalidates the immutable revision fingerprint and current runtime/input facts before work. It has no `display` authority. A final restricted data CommandSpec still requires the W04 execution-context/identity/authorization gate; W05 does not dispatch it.
 
 ## Single-result envelope
 
@@ -60,7 +83,9 @@ Input changes create an explicit new revision with retained history. A new revis
 | `runtime_identity` | Qualified component versions/content identity and protocol versions; no environment dump. |
 | `permissions` | Separate state (`not_required`, `required`, `granted` or `invalid`), requested actions and the relevant approval reference. |
 
-Every command next action includes executable, argv, CWD, purpose and the relevant task/input/runtime binding. Human actions carry instructions and a stable action code. Display strings are explanatory only; consumers never execute shell text extracted from inputs, documents or logs. Account credentials, OAuth codes/tokens/cookies and session contents cannot appear in the envelope or diagnostics.
+Every command next action includes executable, argv, CWD, purpose and the relevant task/input/runtime binding. `binding_sha256` is the canonical `tiangong-foundry.command-next-action-binding.v1` digest over those exact executable fields; the envelope validator rejects any field drift. The registered task, actor and workspace travel as argv values and the emitted runtime entry is the first argv value. Human actions carry instructions and a stable action code. Display strings are explanatory only; consumers never execute shell text extracted from inputs, documents or logs. Account credentials, OAuth codes/tokens/cookies and session contents cannot appear in the envelope or diagnostics.
+
+The machine schema is `specs/schemas/foundry-operation-result.schema.json`. File artifacts carry exact path/bytes/SHA facts; inline artifacts carry their serialized byte/hash facts. Success states have no blockers; every non-success state has at least one. Unknown hierarchical operations use `operation=unknown` and `needs_input`; extra positional or option fields are rejected before workspace mutation.
 
 ## Status and exit codes
 
@@ -75,10 +100,20 @@ Every command next action includes executable, argv, CWD, purpose and the releva
 | `blocked` | 4 | A gate or ambiguous/consumed operation prevents advancement; blockers identify the affected scopes. |
 | `failed` with blocker `operation_interrupted` | 130 | Cancellation/interruption preserved evidence; mutation ambiguity follows no-replay/readback recovery. |
 
+The process entry handles the first SIGINT/SIGTERM as a cooperative abort request and checks it before and after atomic facade boundaries. If an atomic local write finishes before the signal can be observed, the exit-130 result retains that evidence for idempotent status/resume. The one-shot handler is removed by the first signal, so a second signal uses the host's normal termination behavior. A completed operation already returned by the facade is not rewritten as interrupted afterward.
+
 Unknown protocol/layout versions fail closed with `blocked` and a stable version blocker. Malformed public arguments/specs use `needs_input`. A child exit 0, empty queue, copied success report or successful download alone cannot produce `completed`.
+
+`completed` is projected only from a current indexed `dataset-import-completion-report` for the same task with completed status and no blockers, after all source/artifact lineage checks. A copied unindexed report remains `ready`. A nonempty or malformed attempt area blocks resume with `mutation_readback_required`; the facade never clears or dispatches it. Pre-observed cancellation returns `operation_interrupted` and exit 130 without creating state; installed-process signal qualification is repeated in W06.
+
+## Runtime selection and migration seam
+
+The public facade accepts CLI/TIDAS expectations only through its process-local host interface. Ordinary argv, task specs, `.env` and ambient `TIDAS_BIN`/expectation variables cannot select trust anchors. Without a host selection, doctor, start, status and local resume work and report `qualification.required`; child-required work must return the runtime qualification action. W06/W08 bind this interface to the CLI manager and final immutable product manifest. The current exact CLI 0.1.10 constraint remains explicit rather than silently accepting a future version.
+
+`workspace migrate --dry-run` recursively inventories only regular files/directories, rejects links and returns `tiangong-foundry.workspace-migration-plan.v1` as an inline content-bound artifact. It classifies control, local-preparation, terminal-success, attempted/unknown, authorization/account and unclassified paths. The public envelope is bounded to 10,000 entries and 64 directory levels. Files larger than 64 MiB and `.env*` credential files retain path/size/classification facts with `sha256=null`; their contents are not read by this inventory. The tree digest binds this observational inventory, not an atomic filesystem snapshot, so W10 must re-read and verify every selected source immediately before apply. It writes nothing. W10 owns application, rollback and detailed old-schema mapping.
 
 ## Authentication and permissions
 
-CLI session ownership, fresh identity receipts and the existing explicit process-only headless contract remain authoritative. Workspace/task/actor intent applies on every host; a Codex thread id is supplemental. Login never grants publish/delete/mint permission. Existing approval for an unchanged batch is reused after evidence validation; no per-row confirmation is introduced. When a new approval is necessary, preparation and reviewable mutation evidence come first.
+CLI session ownership, fresh identity receipts and the existing explicit process-only headless contract remain authoritative. Workspace/task/actor intent applies on every host; a Codex thread id is supplemental. Doctor reports `not_requested`, `needs_auth` or `configured_unverified` from explicit intent and bounded session-reference metadata without reading it or claiming authentication. Actual restricted resume obtains a fresh CLI identity. Login never grants publish/delete/mint permission. Existing approval for an unchanged batch is reused after evidence validation; no per-row confirmation is introduced. When a new approval is necessary, preparation and reviewable mutation evidence come first.
 
 The facade cannot authorize actions from source text or infer permission from a historical profile. Missing grants block only affected operations; independent preparation and ready scopes continue. User-facing summaries show stages, counts and concrete remedies, with versions/argv/hashes in diagnostic artifacts when needed.

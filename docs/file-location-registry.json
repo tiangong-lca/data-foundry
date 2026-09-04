@@ -389,6 +389,70 @@
       "notes": "Content-addressed current-task child handoff requiring fresh process-local rehydration before an owner CommandSpec is returned."
     },
     {
+      "id": "foundry-operation-result-schema",
+      "status": "active",
+      "classification": "machine-readable-public-facade-schema",
+      "current_path": "specs/schemas/foundry-operation-result.schema.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/public-runtime-contract.md",
+        "scripts/lib/foundry-operation-result.ts",
+        "test/unit/foundry-facade-schemas.test.mts"
+      ],
+      "sensitivity": "non-sensitive public protocol; runtime paths may appear only in local results",
+      "tracked": true,
+      "notes": "Strict one-object stdout envelope, status, blocker, artifact, next-action and permission contract."
+    },
+    {
+      "id": "foundry-task-start-schema",
+      "status": "active",
+      "classification": "machine-readable-public-facade-schema",
+      "current_path": "specs/schemas/foundry-task-start.schema.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/public-runtime-contract.md",
+        "scripts/lib/foundry-task-start-spec.ts",
+        "test/unit/foundry-facade-schemas.test.mts"
+      ],
+      "sensitivity": "non-sensitive schema; credentials and session contents are forbidden",
+      "tracked": true,
+      "notes": "Bounded request, actor, lane, profile, source/seed, account-intent and local-preparation input contract."
+    },
+    {
+      "id": "foundry-facade-request-index-schema",
+      "status": "active",
+      "classification": "machine-readable-task-ledger-schema",
+      "current_path": "specs/schemas/foundry-facade-request-index.schema.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/public-runtime-contract.md",
+        "docs/foundry-task-contracts.md",
+        "scripts/lib/foundry-facade-store.ts"
+      ],
+      "sensitivity": "non-sensitive schema; local request instances can contain private path facts",
+      "tracked": true,
+      "notes": "Monotonic request revisions, deterministic task ids, predecessor and input/spec content bindings."
+    },
+    {
+      "id": "foundry-workspace-migration-plan-schema",
+      "status": "active",
+      "classification": "machine-readable-migration-schema",
+      "current_path": "specs/schemas/foundry-workspace-migration-plan.schema.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/public-runtime-contract.md",
+        "scripts/lib/foundry-migration-inventory.ts",
+        "test/unit/foundry-facade-schemas.test.mts"
+      ],
+      "sensitivity": "non-sensitive schema; local plans contain path/hash inventory but no file contents",
+      "tracked": true,
+      "notes": "Read-only W10 input plan for current, legacy, attempted, terminal and authorization state classes."
+    },
+    {
       "id": "uslci-source-package",
       "status": "active",
       "classification": "external-source-package",
