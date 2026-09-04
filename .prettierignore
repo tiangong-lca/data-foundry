@@ -12,3 +12,6 @@ inputs/
 .agents/skills/dataset-rls-maintenance/
 .agents/skills/document-granular-decompose/
 .agents/skills/tiangong-kb-*/
+
+# Local Supabase CLI runtime metadata.
+supabase/.temp/

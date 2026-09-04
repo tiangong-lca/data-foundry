@@ -112,7 +112,6 @@ export function parseFreshIntentBoundAuthReceipt(
     maxAgeMs: number;
     expectedProjectRef: string;
     expectedUserId: string;
-    requireFreshSignin: boolean;
   },
 ): AuthIdentityReceipt {
   if (
@@ -139,12 +138,14 @@ export function parseFreshIntentBoundAuthReceipt(
     throw new Error("Auth identity receipt is not bound to the expected project and user.");
   }
   if (
-    options.requireFreshSignin &&
-    (receipt.session.source !== "signin" ||
-      receipt.session.cache_mode !== "disabled" ||
-      !receipt.session.force_reauth)
+    !["memory", "cache", "refresh", "oauth_login"].includes(receipt.session.source) ||
+    receipt.session.cache_mode === "disabled" ||
+    receipt.session.expires_at_utc === null ||
+    Date.parse(receipt.session.expires_at_utc) <= options.nowMs
   ) {
-    throw new Error("Production auth receipt must be a cache-disabled forced fresh signin.");
+    throw new Error(
+      "Auth identity receipt requires a current OAuth session and fresh server verification.",
+    );
   }
   return receipt;
 }

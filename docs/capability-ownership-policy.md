@@ -85,9 +85,9 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-08-29
-lastReviewedCommit: 24c9a1f1564787c83af7fe7270876c33c5724e46
-lastReviewedNote: "Reviewed for Issue #76: Foundry owns local control-receipt/CAS/prune evidence; CLI, database, and publication ownership remain unchanged."
+lastReviewedAt: 2026-09-04
+lastReviewedCommit: 42ae8e94055ba7f912fdbd38fe16479409338033
+lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session references and credential-free candidate Golden snapshots; transport ownership and no-replay gates remain unchanged. Support-cache CLI extraction is a tracked prerequisite in tiangong-cli #270."
 ---
 
 # Capability Ownership Policy

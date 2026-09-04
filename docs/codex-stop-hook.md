@@ -18,9 +18,9 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - package.json
   - scripts/commands/core.ts
-lastReviewedAt: 2026-08-29
-lastReviewedCommit: 10893c088ef56083b0b0ecf2af71779f0eb61d21
-lastReviewedNote: "Reviewed for Issue #75: resume contracts, attempt compaction, and production-case evidence do not change Stop-hook registration, recursion guard, output, or authority."
+lastReviewedAt: 2026-09-04
+lastReviewedCommit: 42ae8e94055ba7f912fdbd38fe16479409338033
+lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session references and credential-free candidate Golden snapshots; transport ownership and no-replay gates remain unchanged. Support-cache CLI extraction is a tracked prerequisite in tiangong-cli #270."
 ---
 
 # Codex Stop Hook

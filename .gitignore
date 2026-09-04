@@ -36,3 +36,6 @@ inputs/source-packages/*
 *.local
 tasks/*
 !tasks/README.md
+
+# Local Supabase CLI runtime metadata.
+supabase/.temp/

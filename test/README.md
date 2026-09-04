@@ -273,8 +273,8 @@ checkPaths:
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
-lastReviewedAt: 2026-08-29
-lastReviewedCommit: 24c9a1f
+lastReviewedAt: 2026-09-04
+lastReviewedCommit: 42ae8e94055ba7f912fdbd38fe16479409338033
 lastReviewedNote: "Reviewed for Issue #76: tests pin CAS dedupe, receipt verification, payload dispositions, and safe scope/cache pruning."
 ---
 
@@ -292,6 +292,10 @@ Foundry tests are organized by responsibility, not by the date a regression was 
 ## Naming
 
 Test files should name the behavior surface they cover, for example `post-authoring-finalize-gates.test.mts` or `mutation-manifest-reference-closure.test.mts`. Do not add numbered files such as `full-context-gate-07.test.mts`.
+
+## OAuth and private qualification
+
+`unit/oauth-identity-contract.test.mts` preserves the real RC01 failure shape with synthetic identities: persisted OAuth sessions pass fresh live identity admission, while wrong project/user, stale/future/tampered receipts and non-OAuth sessions fail. Account wrapper tests protect session references and exact child dispatch. Historical attempt/resume fixtures keep their original CLI fingerprints and hashes. Golden compares isolated baseline and Git-visible candidate snapshots; the only #97 metadata normalization is the two SHA-bound public env-surface reports for the deliberate 42-to-44-variable OAuth migration.
 
 ## TDD And TypeScript Migration
 

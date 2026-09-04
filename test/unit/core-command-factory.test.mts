@@ -113,7 +113,7 @@ function writeFixtureRepository(root: string): void {
   );
   fs.writeFileSync(
     path.join(root, ".env.example"),
-    ["FOUNDRY_ENABLE_REMOTE_COMMIT=false", "TIANGONG_LCA_API_KEY=", ""].join("\n"),
+    ["FOUNDRY_ENABLE_REMOTE_COMMIT=false", "TIANGONG_LCA_AUTH_MODE=oauth", ""].join("\n"),
   );
   fs.writeFileSync(
     path.join(root, "docs/file-location-registry.json"),
@@ -202,7 +202,7 @@ test("core runtime, workflow, storage, environment, and route artifacts preserve
         FOUNDRY_SINGLE_RECORD_COMMIT: "false",
         FOUNDRY_REMOTE_COMMIT_LIMIT: "3",
         TIANGONG_LCA_API_BASE_URL: undefined,
-        TIANGONG_LCA_API_KEY: undefined,
+        TIANGONG_LCA_SESSION_FILE: undefined,
         TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY: undefined,
       },
       () => {
@@ -213,9 +213,7 @@ test("core runtime, workflow, storage, environment, and route artifacts preserve
           limit: 3,
         });
         assert.deepEqual(env.required_remote_env, {
-          TIANGONG_LCA_API_BASE_URL: false,
-          TIANGONG_LCA_API_KEY: false,
-          TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY: false,
+          TIANGONG_LCA_SESSION_FILE: false,
         });
         assert.equal(env.repo_env_exists, false);
         assert.equal(env.dry_run_allowed, true);

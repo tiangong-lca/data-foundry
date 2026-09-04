@@ -70,7 +70,7 @@ test("Foundry declares one exact pnpm workspace and lockfile", () => {
   const workspace = readText("pnpm-workspace.yaml");
   assert.match(workspace, /^packages:\s*\[\]\s*$/mu);
   assert.match(workspace, /strictDepBuilds:\s*true/u);
-  assert.match(workspace, /fast-uri:\s*3\.1\.5/u);
+  assert.match(workspace, /fast-uri:\s*3\.1\.7/u);
 });
 
 test("Foundry has one direct and recursive TypeScript 7 compiler graph", () => {
@@ -333,15 +333,15 @@ test("tracked first-party JavaScript remains permanently at zero", () => {
 });
 
 test("Foundry pins the published CLI runtime and high-risk audit closure", () => {
-  assert.equal(packageJson.dependencies?.["@tiangong-lca/cli"], "0.1.3");
+  assert.equal(packageJson.dependencies?.["@tiangong-lca/cli"], "0.1.8");
   const runtimeSource = readText("scripts/lib/foundry-runtime-utils.ts");
-  assert.match(runtimeSource, /tiangongLcaCliPackageVersion\s*=\s*"0\.1\.3"/u);
+  assert.match(runtimeSource, /tiangongLcaCliPackageVersion\s*=\s*"0\.1\.8"/u);
   assert.doesNotMatch(runtimeSource, /tiangongLcaCliPackageVersion\s*=\s*"0\.1\.[0-2]"/u);
   assert.equal(packageJson.dependencies?.ajv, "8.20.0");
   const workspace = readText("pnpm-workspace.yaml");
-  assert.match(workspace, /fast-uri:\s*3\.1\.5/u);
+  assert.match(workspace, /fast-uri:\s*3\.1\.7/u);
   assert.match(workspace, /minimumReleaseAge:\s*1440/u);
-  assert.match(workspace, /-\s+["']?@tiangong-lca\/cli@0\.1\.3["']?/u);
+  assert.doesNotMatch(workspace, /-\s+["']?@tiangong-lca\/cli@/u);
   assert.doesNotMatch(workspace, /-\s+["']?@tiangong-lca\/cli@0\.1\.[0-2]["']?/u);
   for (const file of trackedFiles().filter((value) => /\.(?:cts|mts|ts)$/u.test(value))) {
     assert.doesNotMatch(readText(file), /@tiangong-lca\/cli\/dist\/src\//u, file);
@@ -379,7 +379,8 @@ test("golden comparison is portable and cannot collapse into HEAD self-compariso
     "Golden must execute dependency-bound adapters from the baseline commit, not copy them from HEAD",
   );
   assert.doesNotMatch(source, /spawnSync\(\s*["']diff["']/u);
-  assert.doesNotMatch(source, /worktree["'],\s*["']add["'].*["']HEAD["']/su);
+  assert.match(source, /beforeRoot,\s*goldenBase\.commit/u);
+  assert.doesNotMatch(source, /beforeRoot,\s*["']HEAD["']/u);
 });
 
 function trackedFiles(): string[] {

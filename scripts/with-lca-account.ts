@@ -12,6 +12,7 @@ import {
   type AuthIdentityReceipt,
 } from "./lib/identity-preflight-proof.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "./lib/foundry-runtime-utils.ts";
+import { requirePrivateOAuthSessionFile } from "./lib/oauth-session-reference.ts";
 import { accountModeForVerifiedIdentity } from "./lib/production-case-policy.ts";
 
 const DEFAULT_RECEIPT_TIMEOUT_MS = 10_000;
@@ -19,7 +20,7 @@ const RECEIPT_PROCESS_TIMEOUT_MS = 20_000;
 const RECEIPT_MAX_AGE_MS = 60_000;
 const MAX_RECEIPT_OUTPUT_BYTES = 256 * 1024;
 const EXPECTED_CLI_PACKAGE = "@tiangong-lca/cli";
-const EXPECTED_CLI_VERSION = "0.1.3";
+const EXPECTED_CLI_VERSION = "0.1.8";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 const PROJECT_REF_PATTERN = /^[a-z0-9]+$/u;
 const SAFE_FILE_STEM_PATTERN = /^[A-Za-z0-9._-]+$/u;
@@ -45,9 +46,11 @@ type InstalledCli = {
 };
 
 type AccountProfile = {
-  apiBaseUrl: string;
-  apiKey: string;
-  publishableKey: string;
+  apiBaseUrl: string | null;
+  publishableKey: string | null;
+  oauthClientId: string | null;
+  oauthRedirectUri: string | null;
+  sessionFile: string;
   region: string | null;
   label: string | null;
   expectedProjectRef: string;
@@ -95,16 +98,16 @@ function usage(): string {
   node scripts/with-lca-account.ts <profile> -- <executable> [args...]
 
 Account profile requirements:
-  TIANGONG_LCA_API_BASE_URL
-  TIANGONG_LCA_API_KEY
-  TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY
+  TIANGONG_LCA_SESSION_FILE (absolute private CLI OAuth session)
   FOUNDRY_EXPECTED_PROJECT_REF
   FOUNDRY_EXPECTED_USER_ID
 
-The wrapper always obtains a fresh, intent-bound CLI 0.1.3 identity receipt before it
+The wrapper always obtains a fresh, intent-bound CLI ${EXPECTED_CLI_VERSION} identity receipt before it
 executes the requested executable and argv without a shell. Authentication bypass flags
-are not supported. The requested executable receives the account credential and inherits
+are not supported. The requested executable receives the private session reference and inherits
 terminal stdio, so invoke only trusted project CLI or Foundry entrypoints.
+Public project/client settings are optional for official Production. Custom projects require
+the complete CLI OAuth public configuration; the CLI owns profile validation and defaults.
 `;
 }
 
@@ -174,6 +177,18 @@ function readProfile(profilePath: string): AccountProfile {
   } catch {
     throw new AccountWrapperError("Account profile could not be parsed.", 2);
   }
+  for (const key of [
+    "TIANGONG_LCA_API_KEY",
+    "TIANGONG_LCA_USERNAME",
+    "TIANGONG_LCA_PASSWORD",
+    "TIANGONG_LCA_ACCESS_TOKEN",
+  ]) {
+    if (token(values[key]))
+      throw new AccountWrapperError(
+        "Account profile must migrate legacy credentials to a private CLI OAuth session reference.",
+        2,
+      );
+  }
   const required = (key: string): string => {
     const value = token(values[key]);
     if (!value) throw new AccountWrapperError(`Account profile requires ${key}.`, 2);
@@ -194,9 +209,11 @@ function readProfile(profilePath: string): AccountProfile {
     );
   }
   return {
-    apiBaseUrl: required("TIANGONG_LCA_API_BASE_URL"),
-    apiKey: required("TIANGONG_LCA_API_KEY"),
-    publishableKey: required("TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY"),
+    apiBaseUrl: token(values.TIANGONG_LCA_API_BASE_URL),
+    publishableKey: token(values.TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY),
+    oauthClientId: token(values.TIANGONG_LCA_OAUTH_CLIENT_ID),
+    oauthRedirectUri: token(values.TIANGONG_LCA_OAUTH_REDIRECT_URI),
+    sessionFile: requirePrivateOAuthSessionFile(required("TIANGONG_LCA_SESSION_FILE")),
     region: token(values.TIANGONG_LCA_REGION),
     label: token(values.FOUNDRY_ACCOUNT_LABEL),
     expectedProjectRef,
@@ -263,12 +280,17 @@ function buildRestrictedEnvironment(input: {
   for (const key of SYSTEM_ENV_ALLOWLIST) {
     if (typeof input.processEnv[key] === "string") env[key] = input.processEnv[key];
   }
-  env.TIANGONG_LCA_API_BASE_URL = input.profile.apiBaseUrl;
-  env.TIANGONG_LCA_API_KEY = input.profile.apiKey;
-  env.TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY = input.profile.publishableKey;
+  env.TIANGONG_LCA_API_BASE_URL = input.profile.apiBaseUrl ?? "";
+  env.TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY = input.profile.publishableKey ?? "";
+  env.TIANGONG_LCA_OAUTH_CLIENT_ID = input.profile.oauthClientId ?? "";
+  env.TIANGONG_LCA_OAUTH_REDIRECT_URI = input.profile.oauthRedirectUri ?? "";
+  env.TIANGONG_LCA_AUTH_MODE = "oauth";
+  env.TIANGONG_LCA_ACCESS_TOKEN = "";
+  env.TIANGONG_LCA_SESSION_FILE = input.profile.sessionFile;
+  env.FOUNDRY_RUNTIME_ENV_FILE_POLICY = "disabled";
   if (input.profile.region) env.TIANGONG_LCA_REGION = input.profile.region;
-  env.TIANGONG_LCA_DISABLE_SESSION_CACHE = "true";
-  env.TIANGONG_LCA_FORCE_REAUTH = "true";
+  env.TIANGONG_LCA_DISABLE_SESSION_CACHE = "false";
+  env.TIANGONG_LCA_FORCE_REAUTH = "false";
   env.FOUNDRY_ACCOUNT_PROFILE = input.profileName;
   env.FOUNDRY_EXPECTED_PROJECT_REF = input.profile.expectedProjectRef;
   env.FOUNDRY_EXPECTED_USER_ID = input.profile.expectedUserId;
@@ -416,7 +438,6 @@ export function runWithLcaAccount(
       maxAgeMs: RECEIPT_MAX_AGE_MS,
       expectedProjectRef: profile.expectedProjectRef,
       expectedUserId: profile.expectedUserId,
-      requireFreshSignin: true,
     });
   } catch {
     throw new AccountWrapperError(

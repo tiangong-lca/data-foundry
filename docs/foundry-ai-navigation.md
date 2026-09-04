@@ -136,8 +136,8 @@ checkPaths:
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-08-29
-lastReviewedCommit: 24c9a1f
+lastReviewedAt: 2026-09-04
+lastReviewedCommit: 42ae8e94055ba7f912fdbd38fe16479409338033
 lastReviewedNote: "Reviewed for Issue #76: retention navigation separates CAS storage, reference projection, receipt verification, and safe pruning."
 ---
 

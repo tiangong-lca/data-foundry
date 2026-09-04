@@ -30,7 +30,6 @@ function parsedReceipt() {
     maxAgeMs: 60_000,
     expectedProjectRef: PROJECT_REF,
     expectedUserId: USER_ID,
-    requireFreshSignin: true,
   });
 }
 
@@ -44,7 +43,7 @@ function binding() {
     semanticArgv: ["flow", "identity-preflight", "--json", "--timeout-ms", "60000"],
     cli: {
       packageName: "@tiangong-lca/cli",
-      packageVersion: "0.1.3",
+      packageVersion: "0.1.8",
       packageIntegrity: "sha512-test",
     },
     authReceipt: parsedReceipt(),
@@ -52,7 +51,7 @@ function binding() {
   });
 }
 
-test("production auth receipts must be fresh, exact, intent-bound signins", () => {
+test("production auth receipts must be fresh, exact, intent-bound OAuth sessions", () => {
   const parsed = parsedReceipt();
   assert.equal(parsed.project.project_ref, PROJECT_REF);
   assert.equal(parsed.identity.user_id, USER_ID);
@@ -64,13 +63,12 @@ test("production auth receipts must be fresh, exact, intent-bound signins", () =
       maxAgeMs: 60_000,
       expectedProjectRef: PROJECT_REF,
       expectedUserId: USER_ID,
-      requireFreshSignin: true,
     }),
   );
   for (const changed of [
     { assertions: { ...authReceipt().assertions, mode: "partial" } },
-    { session: { ...authReceipt().session, cache_mode: "platform-default" } },
-    { session: { ...authReceipt().session, force_reauth: false } },
+    { session: { ...authReceipt().session, cache_mode: "disabled" } },
+    { session: { ...authReceipt().session, source: "access_token" } },
   ]) {
     const value = authReceipt(changed);
     assert.throws(() =>
@@ -79,7 +77,6 @@ test("production auth receipts must be fresh, exact, intent-bound signins", () =
         maxAgeMs: 60_000,
         expectedProjectRef: PROJECT_REF,
         expectedUserId: USER_ID,
-        requireFreshSignin: true,
       }),
     );
   }
