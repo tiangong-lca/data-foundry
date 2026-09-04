@@ -86,7 +86,7 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-04
-lastReviewedCommit: 2434a90fec3117c1dd278c84fa3a49b9b3c87811
+lastReviewedCommit: 1078b2b2c515cb06b66d19f3ce572e3fdc5f15e5
 lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session references and credential-free candidate Golden snapshots; transport ownership and no-replay gates remain unchanged. Support-cache CLI extraction is a tracked prerequisite in tiangong-cli #270."
 ---
 
@@ -214,3 +214,5 @@ Every missing shared capability follow-up must include:
 - `done_criteria`
 
 The machine-readable rules live in `specs/capability-ownership-rules.json`.
+
+Canonical support reads and complete pagination belong to CLI `dataset support-cache export`. Foundry consumes its report/artifacts, validates provenance and public scope, and owns only cache summarization/mapping policy and atomic local replacement. It contains no password-grant or REST implementation for this path.

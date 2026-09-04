@@ -5,6 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import type { CliSupportExport } from "../../scripts/lib/cli-support-export.ts";
 import { createSupportCacheCommands } from "../../scripts/commands/support-cache.ts";
 
 type JsonObject = Record<string, unknown>;
@@ -74,9 +75,22 @@ function supportText(value: unknown): string {
   return "";
 }
 
-function supportHarness(root: string) {
+function supportHarness(root: string, exported?: CliSupportExport) {
   const resolveRepoPath = (value: unknown) => resolveFrom(root, value);
   return createSupportCacheCommands({
+    resolveTiangongLcaCliCommand: () => ({
+      command: process.execPath,
+      args: ["/trusted/cli.js"],
+      display: "CLI",
+      source: "installed_package",
+      package: "@tiangong-lca/cli@0.1.9",
+      package_version: "0.1.9",
+      bin_path: "/trusted/cli.js",
+    }),
+    readSupportExport: () => {
+      if (!exported) throw new Error("CLI support export fixture unavailable.");
+      return exported;
+    },
     asText,
     ensureArray,
     fileExists(filePath: string | null) {
@@ -111,159 +125,83 @@ function withEnv<T>(values: Record<string, string | undefined>, run: () => T): T
   }
 }
 
-test("support refresh preserves auth/read request order, row order, summaries, and exact cache bytes", async () => {
+test("support refresh preserves exported row order, summaries and mappings through the owner CLI", async () => {
   await withTempRoot("support-refresh", async (root) => {
     const cachePath = path.join(root, "cache.json");
-    const existingMappings = [
-      {
-        canonical_flow_property_id: "fp-1",
-        source_units: ["kg"],
-        reason: "mass",
-      },
-    ];
-    writeJson(cachePath, { flow_property_mappings: existingMappings });
-    const credentials = Buffer.from(
-      JSON.stringify({ email: "fixture@example.test", password: "fixture-password" }),
-    ).toString("base64");
-    const calls: Array<{ url: string; init?: RequestInit }> = [];
-    const previousFetch = globalThis.fetch;
-    globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => {
-      const url = String(input);
-      calls.push({ url, init });
-      if (url.includes("/auth/v1/token")) {
-        return new Response(
-          JSON.stringify({ access_token: "fixture-token", user: { id: "u-1" } }),
-          {
-            status: 200,
-            statusText: "OK",
-          },
-        );
-      }
-      if (url.includes("/rest/v1/flowproperties")) {
-        return new Response(
-          JSON.stringify([
-            {
-              id: "fp-b",
-              version: "03.00.003",
-              state_code: 100,
-              json: {
-                flowPropertyDataSet: {
-                  flowPropertiesInformation: {
-                    dataSetInformation: { "common:name": { "#text": "Property B" } },
-                    quantitativeReference: {
-                      referenceToReferenceUnitGroup: {
-                        "@refObjectId": "ug-b",
-                        "@version": "03.00.003",
-                        "common:shortDescription": { "#text": "Unit B" },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            {
-              id: "fp-a",
-              version: "03.00.003",
-              state_code: 100,
-              json: {
-                flowPropertyDataSet: {
-                  flowPropertiesInformation: {
-                    dataSetInformation: { "common:shortName": "Property A" },
-                  },
-                },
-              },
-            },
-          ]),
-          { status: 200, statusText: "OK" },
-        );
-      }
-      if (url.includes("/rest/v1/unitgroups")) {
-        return new Response(
-          JSON.stringify([
-            {
-              id: "ug-b",
-              version: "03.00.003",
-              state_code: 100,
-              json: {
-                unitGroupDataSet: {
-                  unitGroupInformation: {
-                    dataSetInformation: { "common:name": "Units B" },
-                    quantitativeReference: { referenceToReferenceUnit: "0" },
-                  },
-                  units: {
-                    unit: [
-                      { "@dataSetInternalID": "0", name: "kg", meanValue: "1" },
-                      { "@dataSetInternalID": "1", name: "g", meanValue: "0.001" },
-                    ],
-                  },
-                },
-              },
-            },
-          ]),
-          { status: 200, statusText: "OK" },
-        );
-      }
-      throw new Error(`unexpected fixture request ${url}`);
-    };
-
-    try {
-      const commands = supportHarness(root);
-      const report = (await withEnv(
-        {
-          TIANGONG_LCA_API_BASE_URL: "https://fixture.supabase.co/functions/v1/",
-          TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY: "fixture-publishable",
-          TIANGONG_LCA_API_KEY: credentials,
-        },
-        () => commands.runDatasetSupportCacheRefresh({ out: "cache.json", stateCode: 100 }),
-      )) as SupportReport;
-      assert.equal(report.status, "completed");
-      assert.deepEqual(report.counts, {
-        flow_properties: 2,
-        unit_groups: 1,
-        flow_property_mappings: 1,
-      });
-      assert.deepEqual(
-        calls.map((call) => new URL(call.url).pathname),
-        ["/auth/v1/token", "/rest/v1/flowproperties", "/rest/v1/unitgroups"],
-      );
-      assert.equal(calls[0].init?.method, "POST");
-      assert.deepEqual(JSON.parse(String(calls[0].init?.body)), {
-        email: "fixture@example.test",
-        password: "fixture-password",
-      });
-      for (const call of calls.slice(1)) {
-        const url = new URL(call.url);
-        assert.equal(url.searchParams.get("select"), "id,version,state_code,json");
-        assert.equal(url.searchParams.get("state_code"), "eq.100");
-        assert.equal(url.searchParams.get("order"), "id.asc,version.asc");
-        assert.equal(url.searchParams.get("limit"), "1000");
-        assert.equal(url.searchParams.get("offset"), "0");
-        assert.equal(
-          ((call.init?.headers ?? {}) as Record<string, string>).authorization,
-          "Bearer fixture-token",
-        );
-      }
-
-      const cache = JSON.parse(fs.readFileSync(cachePath, "utf8")) as JsonObject;
-      assert.deepEqual(
-        (cache.flow_properties as JsonObject[]).map((row) => row.id),
-        ["fp-b", "fp-a"],
-      );
-      assert.deepEqual((cache.flow_properties as JsonObject[])[0].reference_unit_group, {
-        id: "ug-b",
+    const mappings = [{ canonical_flow_property_id: "fp-1", source_units: ["kg"], reason: "mass" }];
+    writeJson(cachePath, { flow_property_mappings: mappings });
+    const exported: CliSupportExport = {
+      projectRef: "fixture",
+      cliVersion: "0.1.9",
+      flowproperties: ["fp-b", "fp-a"].map((id) => ({
+        id,
         version: "03.00.003",
-        short_description: "Unit B",
-      });
-      assert.deepEqual((cache.unit_groups as JsonObject[])[0].units, [
-        { internal_id: "0", name: "kg", mean_value: "1" },
-        { internal_id: "1", name: "g", mean_value: "0.001" },
-      ]);
-      assert.deepEqual(cache.flow_property_mappings, existingMappings);
-      assert.equal(cache.generated_at_utc, fixedNow);
-      assert.equal(fs.readFileSync(cachePath, "utf8"), `${JSON.stringify(cache, null, 2)}\n`);
-    } finally {
-      globalThis.fetch = previousFetch;
-    }
+        state_code: 100,
+        json: {
+          flowPropertyDataSet: {
+            flowPropertiesInformation: {
+              dataSetInformation: { "common:name": "Mass" },
+              quantitativeReference: {
+                referenceToReferenceUnitGroup: {
+                  "@refObjectId": "ug-b",
+                  "@version": "03.00.003",
+                  "common:shortDescription": "Unit B",
+                },
+              },
+            },
+          },
+        },
+      })),
+      unitgroups: [
+        {
+          id: "ug-b",
+          version: "03.00.003",
+          state_code: 100,
+          json: {
+            unitGroupDataSet: {
+              unitGroupInformation: {
+                dataSetInformation: { "common:name": "Units B" },
+                quantitativeReference: { referenceToReferenceUnit: "0" },
+              },
+              units: {
+                unit: [
+                  { "@dataSetInternalID": "0", name: "kg", meanValue: "1" },
+                  { "@dataSetInternalID": "1", name: "g", meanValue: "0.001" },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    };
+    const commands = supportHarness(root, exported);
+    const report = await commands.runDatasetSupportCacheRefresh({
+      out: "cache.json",
+      stateCode: 100,
+    });
+    assert.equal(report.status, "completed");
+    const cache = JSON.parse(fs.readFileSync(cachePath, "utf8"));
+    assert.deepEqual(
+      cache.flow_properties.map((row: JsonObject) => row.id),
+      ["fp-b", "fp-a"],
+    );
+    assert.deepEqual(cache.flow_properties[0].reference_unit_group, {
+      id: "ug-b",
+      version: "03.00.003",
+      short_description: "Unit B",
+    });
+    assert.deepEqual(cache.unit_groups[0].units, [
+      { internal_id: "0", name: "kg", mean_value: "1" },
+      { internal_id: "1", name: "g", mean_value: "0.001" },
+    ]);
+    assert.deepEqual(cache.flow_property_mappings, mappings);
+    assert.equal(cache.source.project_ref, "fixture");
+    const before = fs.readFileSync(cachePath, "utf8");
+    await assert.rejects(
+      commands.runDatasetSupportCacheRefresh({ out: "cache.json", stateCode: 0 }),
+      /public state_code/u,
+    );
+    assert.equal(fs.readFileSync(cachePath, "utf8"), before);
   });
 });
 
@@ -380,7 +318,7 @@ test("support cache factory preserves native JSON/credential errors before write
         },
         () => commands.runDatasetSupportCacheRefresh({ out: "never.json" }),
       ),
-      /Invalid TIANGONG_LCA_API_KEY user credentials/u,
+      /CLI support export fixture unavailable/u,
     );
     assert.equal(fs.existsSync(path.join(root, "never.json")), false);
   });

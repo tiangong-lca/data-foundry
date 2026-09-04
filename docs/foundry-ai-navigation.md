@@ -137,7 +137,7 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-04
-lastReviewedCommit: 42ae8e94055ba7f912fdbd38fe16479409338033
+lastReviewedCommit: 1078b2b2c515cb06b66d19f3ce572e3fdc5f15e5
 lastReviewedNote: "Reviewed for Issue #76: retention navigation separates CAS storage, reference projection, receipt verification, and safe pruning."
 ---
 

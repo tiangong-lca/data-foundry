@@ -62,7 +62,7 @@ export function writeIdentityPreflightExecutionFixture({
     semanticArgv: [datasetType, "identity-preflight", "--json", "--timeout-ms", "60000"],
     cli: {
       packageName: "@tiangong-lca/cli",
-      packageVersion: "0.1.8",
+      packageVersion: "0.1.9",
       packageIntegrity: null,
     },
     authReceipt: testAuthIdentityReceipt({ capturedAtUtc: "2026-08-25T00:00:00.000Z" }),

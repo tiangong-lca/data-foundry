@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { readCliSupportExport, type CliSupportExport } from "../lib/cli-support-export.ts";
+import type { TiangongLcaCliRuntimeCommand } from "../lib/foundry-runtime-utils.ts";
 import { defaultCanonicalFlowPropertyMappings } from "../lib/canonical-support-mappings.ts";
 
 type JsonRecord = Record<string, unknown>;
@@ -75,6 +77,8 @@ export type SupportCacheOptions = Record<string, unknown> & {
 };
 
 export type SupportCacheFactoryDependencies = {
+  resolveTiangongLcaCliCommand: () => TiangongLcaCliRuntimeCommand;
+  readSupportExport?: typeof readCliSupportExport;
   asText: (value: unknown) => string;
   ensureArray: <T>(value: T | T[] | null | undefined) => T[];
   fileExists: (filePath: string) => boolean;
@@ -92,6 +96,8 @@ const defaultBlockedFileName = "canonical-support-blocked.manual-review.jsonl";
 const defaultAutofillReportFileName = "canonical-support-mappings-report.json";
 
 export function createSupportCacheCommands({
+  resolveTiangongLcaCliCommand,
+  readSupportExport = readCliSupportExport,
   asText,
   ensureArray,
   fileExists,
@@ -119,133 +125,6 @@ export function createSupportCacheCommands({
       filePath,
       rows.map((row) => JSON.stringify(row)).join("\n") + (rows.length ? "\n" : ""),
     );
-  }
-
-  function deriveSupabaseProjectBaseUrl(apiBaseUrl: unknown): string {
-    const normalized = asText(apiBaseUrl).replace(/\/+$/u, "");
-    if (normalized.endsWith("/functions/v1")) return normalized.replace(/\/functions\/v1$/u, "");
-    if (normalized.endsWith("/rest/v1")) return normalized.replace(/\/rest\/v1$/u, "");
-    if (/^https?:\/\/[^/]+$/u.test(normalized)) return normalized;
-    throw new Error("Cannot derive Supabase project URL from TIANGONG_LCA_API_BASE_URL.");
-  }
-
-  function decodeUserApiKey(userApiKey: unknown): { email: string; password: string } {
-    try {
-      const decoded = JSON.parse(Buffer.from(asText(userApiKey), "base64").toString("utf8"));
-      const email = asText(decoded.email);
-      const password = asText(decoded.password);
-      if (!email || !password) throw new Error("missing email/password");
-      return { email, password };
-    } catch (error) {
-      throw new Error(`Invalid TIANGONG_LCA_API_KEY user credentials: ${error}`);
-    }
-  }
-
-  async function supabaseJsonRequest(
-    url: string | URL,
-    init?: RequestInit,
-  ): Promise<{ response: Response; payload: unknown }> {
-    const response = await fetch(url, init);
-    const text = await response.text();
-    let payload: unknown = null;
-    if (text) {
-      try {
-        payload = JSON.parse(text);
-      } catch {
-        throw new Error(
-          `Supabase request returned non-JSON ${response.status} ${response.statusText}: ${text.slice(
-            0,
-            300,
-          )}`,
-        );
-      }
-    }
-    if (!response.ok) {
-      throw new Error(`Supabase request failed ${response.status} ${response.statusText}: ${text}`);
-    }
-    return { response, payload };
-  }
-
-  async function signInSupabaseUser({
-    projectUrl,
-    publishableKey,
-    credentials,
-  }: {
-    projectUrl: string;
-    publishableKey: string;
-    credentials: { email: string; password: string };
-  }): Promise<{ accessToken: string; userId: string; email: string }> {
-    const { payload } = await supabaseJsonRequest(
-      `${projectUrl}/auth/v1/token?grant_type=password`,
-      {
-        method: "POST",
-        headers: {
-          apikey: publishableKey,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          email: credentials.email,
-          password: credentials.password,
-        }),
-      },
-    );
-    const payloadRecord = record(payload);
-    const accessToken = asText(payloadRecord.access_token);
-    const userId = asText(record(payloadRecord.user).id);
-    if (!accessToken || !userId) {
-      throw new Error("Supabase auth did not return access_token and user.id.");
-    }
-    return { accessToken, userId, email: credentials.email };
-  }
-
-  function supabaseRestHeaders({
-    publishableKey,
-    accessToken,
-    prefer = null,
-  }: {
-    publishableKey: string;
-    accessToken: string;
-    prefer?: string | null;
-  }): Record<string, string> {
-    return {
-      apikey: publishableKey,
-      authorization: `Bearer ${accessToken}`,
-      ...(prefer ? { prefer } : {}),
-    };
-  }
-
-  async function fetchSupportCacheRows({
-    projectUrl,
-    publishableKey,
-    accessToken,
-    table,
-    stateCode,
-  }: {
-    projectUrl: string;
-    publishableKey: string;
-    accessToken: string;
-    table: string;
-    stateCode: number;
-  }): Promise<SupportDatabaseRow[]> {
-    const rows: SupportDatabaseRow[] = [];
-    const pageSize = 1000;
-    for (let offset = 0; ; offset += pageSize) {
-      const url = new URL(`${projectUrl}/rest/v1/${table}`);
-      url.searchParams.set("select", "id,version,state_code,json");
-      url.searchParams.set("state_code", `eq.${stateCode}`);
-      url.searchParams.set("order", "id.asc,version.asc");
-      url.searchParams.set("limit", String(pageSize));
-      url.searchParams.set("offset", String(offset));
-      const { payload } = await supabaseJsonRequest(url, {
-        headers: supabaseRestHeaders({ publishableKey, accessToken }),
-      });
-      if (!Array.isArray(payload)) {
-        throw new Error(`List rows failed for ${table}: response is not an array.`);
-      }
-      rows.push(...(payload as SupportDatabaseRow[]));
-      if (payload.length < pageSize) break;
-    }
-    return rows;
   }
 
   function summarizeFlowPropertySupportRow(row: SupportDatabaseRow): JsonRecord {
@@ -484,38 +363,19 @@ export function createSupportCacheCommands({
       };
     }
 
-    const projectUrl = deriveSupabaseProjectBaseUrl(process.env.TIANGONG_LCA_API_BASE_URL);
-    const publishableKey = asText(process.env.TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY);
-    const credentials = decodeUserApiKey(process.env.TIANGONG_LCA_API_KEY);
-    if (!publishableKey) {
-      throw new Error("TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY is required.");
-    }
-    const session = await signInSupabaseUser({
-      projectUrl,
-      publishableKey,
-      credentials,
-    });
     const stateCode = Number(options.stateCode ?? 100);
+    if (stateCode !== 100)
+      throw new Error("Canonical support cache accepts public state_code=100 only.");
     const outPath = resolveRepoPath(
       options.out || options.output || options.cacheFile || defaultCanonicalSupportCacheFile,
     )!;
     const existing = fileExists(outPath) ? readJson(outPath) : {};
-    const [flowPropertyRows, unitGroupRows] = await Promise.all([
-      fetchSupportCacheRows({
-        projectUrl,
-        publishableKey,
-        accessToken: session.accessToken,
-        table: "flowproperties",
-        stateCode,
-      }),
-      fetchSupportCacheRows({
-        projectUrl,
-        publishableKey,
-        accessToken: session.accessToken,
-        table: "unitgroups",
-        stateCode,
-      }),
-    ]);
+    const exported: CliSupportExport = readSupportExport({
+      cli: resolveTiangongLcaCliCommand(),
+      env: process.env,
+    });
+    const flowPropertyRows = exported.flowproperties;
+    const unitGroupRows = exported.unitgroups;
     const existingMappings = ensureArray<JsonRecord>(
       existing.flow_property_mappings as JsonRecord | JsonRecord[] | null | undefined,
     );
@@ -526,6 +386,8 @@ export function createSupportCacheCommands({
       generated_at_utc: nowIso(),
       source: {
         table_state_code: stateCode,
+        project_ref: exported.projectRef,
+        cli_package: `@tiangong-lca/cli@${exported.cliVersion}`,
         policy:
           "Flow Properties and Unit Groups are read-only support choices for Foundry imports; import rows must reference existing canonical DB rows instead of creating My Data support rows.",
       },
@@ -533,7 +395,15 @@ export function createSupportCacheCommands({
       unit_groups: unitGroupRows.map(summarizeUnitGroupSupportRow),
       flow_property_mappings: flowPropertyMappings,
     };
-    writeJson(outPath, cache);
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
+    const staging = fs.mkdtempSync(path.join(path.dirname(outPath), ".support-cache-"));
+    try {
+      const pending = path.join(staging, "cache.json");
+      writeJson(pending, cache);
+      fs.renameSync(pending, outPath);
+    } finally {
+      fs.rmSync(staging, { recursive: true, force: true });
+    }
     return {
       schema_version: 1,
       generated_at_utc: cache.generated_at_utc,

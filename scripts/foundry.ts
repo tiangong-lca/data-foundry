@@ -391,6 +391,7 @@ const importCompletionCommands = bindFactory(createImportCompletionCommands, {
 });
 
 const supportCacheCommands = bindFactory(createSupportCacheCommands, {
+  resolveTiangongLcaCliCommand,
   asText,
   ensureArray,
   fileExists,
