@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { bundleRowTypeOrder, bundleRowTypes, type BundleRowType } from "../lib/bundle-row-types.ts";
 import { readOnlyStageContract } from "../lib/stage-contract.ts";
+import { taskAuthorizationAllows } from "../lib/task-authorization.ts";
 
 interface LooseRecord {
   [key: string]: unknown;
@@ -852,18 +853,20 @@ export function createBundleSampleRowsCommands({
     // The override only applies to an EXPLICITLY selected profile (e.g. --profile bafu,
     // which the orchestrator passes). An unspecified profile defaults to generic so the
     // reference-only governance stays the safe default for ad-hoc runs.
-    const allowAccountLocalSupportAndElementary =
+    const selectedProfile =
       typeof profileFor === "function"
-        ? Boolean(
-            profileFor(
-              repoRoot,
-              asText(options.profile || "generic")
-                .trim()
-                .toLowerCase(),
-              options,
-            )?.allowAccountLocalSupportAndElementary,
+        ? profileFor(
+            repoRoot,
+            asText(options.profile || "generic")
+              .trim()
+              .toLowerCase(),
+            options,
           )
-        : false;
+        : null;
+    const allowAccountLocalSupportAndElementary = booleanOption(
+      options.prepareAccountLocalSupportCandidates,
+    );
+    const domainRules = selectedProfile?.domainRules as Record<string, unknown> | undefined;
     const blockOnUnscaledCanonicalSupport = booleanOption(
       options.blockOnUnscaledCanonicalSupport || options.blockUnscaledCanonicalSupport,
     );
@@ -1071,7 +1074,10 @@ export function createBundleSampleRowsCommands({
             blockers,
             stats: sanitizeStats,
             elementaryFlowReuseRows,
-            allowAccountLocalSupportAndElementary,
+            allowAccountLocalSupportAndElementary: taskAuthorizationAllows(
+              selectedProfile?.authorization,
+              "elementary_flow_create_new",
+            ),
           });
           collectLocationQualityFindings({
             payload,
@@ -1232,6 +1238,14 @@ export function createBundleSampleRowsCommands({
         .filter((row) => row.ref_object_id)
         .map((row) => `${row.ref_object_id}::${row.version || "00.00.001"}`),
     );
+    const referencedReviewSourceKeys = new Set(
+      allProcessSourceReferenceRows
+        .filter(
+          (row) =>
+            row.ref_object_id && asText(row.path).includes("referenceToCompleteReviewReport"),
+        )
+        .map((row) => `${row.ref_object_id}::${row.version || "00.00.001"}`),
+    );
     const unreferencedTrueSourceRows = sourceSemanticsRows.filter(
       (row) =>
         row.kind === "true_source" &&
@@ -1263,9 +1277,9 @@ export function createBundleSampleRowsCommands({
     const omittedSourceSemanticsRows = sourceSemanticsRows.filter((row) => {
       if (row.kind === "true_source") return false;
       if (
-        allowAccountLocalSupportAndElementary &&
+        domainRules?.preserve_referenced_review_sources === true &&
         row.dataset_id &&
-        referencedProcessSourceKeys.has(`${row.dataset_id}::${row.dataset_version || "00.00.001"}`)
+        referencedReviewSourceKeys.has(`${row.dataset_id}::${row.dataset_version || "00.00.001"}`)
       ) {
         // Retain (do NOT add to the omitted set): the process keeps a hard reference to
         // this source, so it must travel as account-local support and commit first.

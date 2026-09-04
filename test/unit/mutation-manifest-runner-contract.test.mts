@@ -214,10 +214,13 @@ test("mutation manifest preserves partition, proof, item, byte, and fail-closed 
     referenceRows.map(record),
   );
 
-  const normalizedReport = reportText.replace(
-    /"generated_at_utc": "[^"]+"/u,
-    '"generated_at_utc": "<timestamp>"',
+  assert.equal(
+    result.profile_rules_sha256,
+    "2047748a9ee209d82e81fd1f8144a96b875c40c827c8c8513f029eca9b886ffc",
   );
+  const normalizedReport = reportText
+    .replace(/  "profile_rules_sha256": "[0-9a-f]{64}",\n/u, "")
+    .replace(/"generated_at_utc": "[^"]+"/u, '"generated_at_utc": "<timestamp>"');
   assert.equal(
     createHash("sha256").update(normalizedReport).digest("hex"),
     "64567990953ca1cf1d32b5561a7d0d360909d6dded09d5a8c05cb4b56a230804",

@@ -1,6 +1,17 @@
 import path from "node:path";
 import process from "node:process";
 import { createFileArtifactFact, createFoundryCommandSpec } from "../lib/foundry-command-spec.ts";
+import {
+  taskAuthorizationAllows,
+  taskAuthorizationMatches,
+  taskAuthorizationWaivesQa,
+} from "../lib/task-authorization.ts";
+import {
+  datasetIdentity,
+  detectDatasetType,
+} from "../lib/import-curation/internal/dataset-payload.ts";
+import { readRows } from "../lib/import-curation/internal/runtime-io.ts";
+import { flowPrewriteIdentityBlockers } from "../lib/import-curation/internal/workflow-identity-preflight.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -82,7 +93,7 @@ export type CommitHandoffFactoryDependencies = {
     repoRoot: string,
     profileId: string,
     overrides: JsonRecord,
-  ) => { allowAccountLocalSupportAndElementary?: unknown } | null;
+  ) => { authorization?: unknown; rulesSha256?: string } | null;
   readJsonArtifactOption: (value: unknown) => JsonArtifact | null;
   repoRelativePath: (filePath: string) => string;
   repoRoot: string;
@@ -429,10 +440,103 @@ export function createCommitHandoffCommands({
     )
       .trim()
       .toLowerCase();
-    const allowAccountLocalSupportAndElementary =
+    const handoffProfile =
       typeof profileFor === "function"
-        ? Boolean(profileFor(repoRoot, handoffProfileId, {})?.allowAccountLocalSupportAndElementary)
-        : false;
+        ? profileFor(repoRoot, handoffProfileId, { ...options, rowsFile: finalRowsFile })
+        : null;
+    const authorization = handoffProfile?.authorization;
+    if (
+      mutationArtifact?.value.profile &&
+      asText(mutationArtifact.value.profile).trim().toLowerCase() !== handoffProfileId
+    ) {
+      blockers.push({
+        code: "task_profile_mismatch",
+        message: "Finalize and mutation reports must name the same task profile.",
+      });
+    }
+    const requiredQaWaivers = mutationArtifact?.value.required_qa_waiver_codes;
+    if (
+      requiredQaWaivers !== undefined &&
+      (!Array.isArray(requiredQaWaivers) ||
+        requiredQaWaivers.length === 0 ||
+        !requiredQaWaivers.every(
+          (code) =>
+            typeof code === "string" && taskAuthorizationWaivesQa(authorization, datasetType, code),
+        ))
+    ) {
+      blockers.push({
+        code: "task_authorization_qa_waiver_required",
+        message:
+          "Mutation-manifest QA exceptions require current task authorization for the exact final rows.",
+      });
+    }
+    if (
+      (handoffProfileId !== "generic" ||
+        mutationArtifact?.value.profile_rules_sha256 !== undefined) &&
+      (!handoffProfile?.rulesSha256 ||
+        mutationArtifact?.value.profile_rules_sha256 !== handoffProfile.rulesSha256)
+    ) {
+      blockers.push({
+        code: "task_profile_rules_evidence_required",
+        message:
+          "Rebuild the mutation manifest against the current profile rules; a legacy ready report cannot carry historical task exceptions.",
+      });
+    }
+    if (
+      taskAuthorizationMatches(authorization, options.taskAuthorizationBinding) &&
+      (authorization.binding.user_id !== targetUserId ||
+        (verifiedProjectRef && authorization.binding.project_ref !== verifiedProjectRef))
+    ) {
+      blockers.push({
+        code: "task_authorization_account_mismatch",
+        message:
+          "Task authorization must match the handoff target account and current verified project.",
+      });
+    }
+    const requiredSupportActions = new Set<"flowproperty_write" | "unitgroup_write">();
+    if (finalRowsFile && fileExists(finalRowsFile)) {
+      for (const [index, row] of readRows(finalRowsFile).entries()) {
+        const actualType = detectDatasetType(row, datasetType) ?? datasetType;
+        if (actualType === "flowproperty" || actualType === "unitgroup") {
+          const action = actualType === "flowproperty" ? "flowproperty_write" : "unitgroup_write";
+          requiredSupportActions.add(action);
+          if (!taskAuthorizationAllows(authorization, action)) {
+            blockers.push({
+              code: "task_authorization_action_required",
+              action,
+              row_index: index,
+              message:
+                "This account-local support row requires current task authorization for its exact action.",
+            });
+          }
+        }
+        if (actualType === "flow") {
+          blockers.push(
+            ...flowPrewriteIdentityBlockers(
+              datasetIdentity(row, index, actualType).payload,
+              actualType,
+              taskAuthorizationAllows(handoffProfile?.authorization, "elementary_flow_write"),
+            ),
+          );
+        }
+      }
+    }
+    if (
+      requiredSupportActions.size > 0 &&
+      !taskAuthorizationAllows(authorization, "canonical_support_local_mint")
+    ) {
+      blockers.push({
+        code: "task_authorization_action_required",
+        action: "canonical_support_local_mint",
+        message:
+          "The canonical-gap support route requires current task mint authorization in addition to each support write action.",
+      });
+    }
+    const allowAccountLocalSupportAndElementary =
+      requiredSupportActions.size > 0 &&
+      [...requiredSupportActions].every((action) =>
+        taskAuthorizationAllows(handoffProfile?.authorization, action),
+      );
     const commitArgs = finalRowsFile
       ? commitCommandForDatasetType(datasetType, finalRowsFile, outDir, {
           appendOption,
@@ -477,6 +581,17 @@ export function createCommitHandoffCommands({
             filePath: finalRowsFile,
           })
         : null;
+    const requestedAuthorization = options.taskAuthorization;
+    if (
+      taskAuthorizationMatches(requestedAuthorization, options.taskAuthorizationBinding) &&
+      requestedAuthorization.binding.input_scope_sha256 !== finalRowsArtifact?.sha256
+    ) {
+      blockers.push({
+        code: "task_authorization_input_mismatch",
+        message:
+          "Task authorization must bind the exact current final-row bytes before emitting a write command.",
+      });
+    }
 
     const traceFiles = {
       unresolved_traces:

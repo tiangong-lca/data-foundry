@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { taskAuthorizationAllows } from "../lib/task-authorization.ts";
 import { readOnlyStageContract } from "../lib/stage-contract.ts";
 
 type JsonRecord = Record<string, unknown>;
@@ -171,7 +172,7 @@ interface FinalizeDependencies {
     repoRoot: string,
     profile: string,
     options: FinalizeOptions,
-  ) => { allowAccountLocalSupportAndElementary?: boolean };
+  ) => { authorization?: unknown };
   blockersFromLocationAuditStage: (stage: FinalizeStage) => JsonRecord[];
   buildLibraryContactPayload: (
     options: FinalizeOptions,
@@ -654,13 +655,6 @@ export function createPostAuthoringFinalizeCommands({
     // worldsteel attribution contact carried in its runner config.
     const supportedForProfile =
       profile === "bafu" || profile === "uslci" || profile === "worldsteel";
-    // Gate account-local closure evidence on the frozen profile. BAFU, USLCI, and
-    // worldsteel may enable this policy for different scoped candidate paths; this flag
-    // alone does not authorize the generic support-mint writer.
-    const allowAccountLocalSupportAndElementary =
-      typeof profileFor === "function"
-        ? Boolean(profileFor(repoRoot, profile, options)?.allowAccountLocalSupportAndElementary)
-        : false;
     const outputRowsFile = path.join(
       outDir,
       `${datasetRowsFileStem(datasetType)}.source-contact-rewritten.jsonl`,
@@ -681,10 +675,9 @@ export function createPostAuthoringFinalizeCommands({
       // sub-finalize proves its own reused canonical UGs through the same channel the
       // dependent finalize uses. This proof is gated on the account-local profile
       // override and remains read-only; it does not mint or publish FP/UG rows.
-      const skippedCanonicalUnitGroupProofKeys =
-        allowAccountLocalSupportAndElementary && fileExists(rowsFile)
-          ? deriveCanonicalUnitGroupProofKeysFromSupportRows(readRowsFile(rowsFile), options)
-          : [];
+      const skippedCanonicalUnitGroupProofKeys = fileExists(rowsFile)
+        ? deriveCanonicalUnitGroupProofKeysFromSupportRows(readRowsFile(rowsFile), options)
+        : [];
       const report = {
         schema_version: 1,
         status: "skipped",
@@ -816,8 +809,7 @@ export function createPostAuthoringFinalizeCommands({
         // referenced source's semantic kind. Without the lookup the rewrite only fires on
         // path-relations, leaving the review-report ref stale and unprovable. Passing the
         // lookup only under the override keeps default public-only profiles unchanged.
-        sourceLookup:
-          allowAccountLocalSupportAndElementary && sourceLookup.size > 0 ? sourceLookup : null,
+        sourceLookup: sourceLookup.size > 0 ? sourceLookup : null,
       });
       if (type === "process" && sourceLookup.size > 0) {
         rewriteTrueSourceReferenceDescriptions(payload.processDataSet!, {
@@ -996,18 +988,16 @@ export function createPostAuthoringFinalizeCommands({
     const datasetType = String(options.type || options.datasetType || "process")
       .trim()
       .toLowerCase();
-    const allowAccountLocalSupportAndElementary =
+    const taskAuthorization =
       typeof profileFor === "function"
-        ? Boolean(
-            profileFor(
-              repoRoot,
-              String(options.profile || "generic")
-                .trim()
-                .toLowerCase(),
-              options,
-            )?.allowAccountLocalSupportAndElementary,
-          )
-        : false;
+        ? profileFor(
+            repoRoot,
+            String(options.profile || "generic")
+              .trim()
+              .toLowerCase(),
+            options,
+          )?.authorization
+        : null;
     const supportTypes = ["contact", "source"];
     const mixedSupportTypes = ["support"];
     const authoredTypes = ["process", "flow", "lifecyclemodel"];
@@ -1179,7 +1169,10 @@ export function createPostAuthoringFinalizeCommands({
           `${datasetRowsFileStem(datasetType)}.canonical-support-rewritten.jsonl`,
         ),
         outDir: path.join(outDir, "canonical-support-rewrites"),
-        options: { ...options, allowAccountLocalSupportAndElementary },
+        options: {
+          ...options,
+          prepareAccountLocalSupportCandidates: booleanOption(options.mintUnmatchedFpUgSupport),
+        },
       }),
     );
     const canonicalSupportRowsFile = resolveRepoPath(
@@ -1653,7 +1646,11 @@ export function createPostAuthoringFinalizeCommands({
         // and need the override to clear the save-draft governance gate. No-op for
         // contact/source-only support sets (e.g. BAFU), so it is gated on the
         // profile override rather than a USLCI-specific flag.
-        if (allowAccountLocalSupportAndElementary) {
+        if (
+          booleanOption(options.mintUnmatchedFpUgSupport) ||
+          taskAuthorizationAllows(taskAuthorization, "flowproperty_write") ||
+          taskAuthorizationAllows(taskAuthorization, "unitgroup_write")
+        ) {
           supportDryRunArgs.push("--allow-account-local-support");
         }
         return supportDryRunArgs;

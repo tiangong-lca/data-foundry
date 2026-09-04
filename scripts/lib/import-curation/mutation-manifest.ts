@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { taskAuthorizationAllows } from "../task-authorization.ts";
 import * as mutationManifestWorkflow from "./internal/mutation-manifest-workflow.ts";
 
 const {
@@ -492,9 +493,9 @@ export function runDatasetMutationManifest({
       unresolvedReferenceKeys: identityDecisionUnresolvedReferenceKeys(
         identityDecisionApplyContext,
       ),
-      allowAccountLocalSupportAndElementary: Boolean(
-        profile?.allowAccountLocalSupportAndElementary,
-      ),
+      allowAccountLocalSupportAndElementary:
+        taskAuthorizationAllows(profile.authorization, "flowproperty_write") &&
+        taskAuthorizationAllows(profile.authorization, "unitgroup_write"),
     }),
   );
   if (
@@ -547,6 +548,9 @@ export function runDatasetMutationManifest({
       rowIndex: index,
       schemaRow: schemaRows.get(key) ?? schemaRows.get(identity.id) ?? null,
       curationEntity: curationEntities.get(key) ?? curationEntities.get(identity.id) ?? null,
+      curationWaivedQaCodes: ensureArray(
+        asRecord(curationGateArtifact?.value?.policy).waived_qa_codes,
+      ),
       curationGateProvided: Boolean(curationGateArtifact),
       dryRun,
       remoteVerifyBlockers,
@@ -558,9 +562,16 @@ export function runDatasetMutationManifest({
       identityDecisionApplyContext,
       cleanupContext: cleanupContext as unknown as WriteCandidateOptions["cleanupContext"],
       evidenceScopeBlockers,
-      allowAccountLocalSupportAndElementary: Boolean(
-        profile?.allowAccountLocalSupportAndElementary,
-      ),
+      allowAccountLocalSupportAndElementary:
+        itemDatasetType === "flow"
+          ? taskAuthorizationAllows(profile.authorization, "elementary_flow_write")
+          : itemDatasetType === "flowproperty"
+            ? taskAuthorizationAllows(profile.authorization, "flowproperty_write") &&
+              taskAuthorizationAllows(profile.authorization, "canonical_support_local_mint")
+            : itemDatasetType === "unitgroup"
+              ? taskAuthorizationAllows(profile.authorization, "unitgroup_write") &&
+                taskAuthorizationAllows(profile.authorization, "canonical_support_local_mint")
+              : false,
       profile,
     });
   });
@@ -602,11 +613,26 @@ export function runDatasetMutationManifest({
   const blockedWriteRows = writeEntries
     .filter((entry, index) => writeItems[index]?.blockers.length > 0)
     .map((entry) => entry.row);
+  const usesQaWaivers = writeEntries.some(({ identity }) => {
+    const entity = curationEntities.get(identityKey(identity)) ?? curationEntities.get(identity.id);
+    return (
+      entity?.status === "ready_with_profile_waivers" ||
+      Number(entity?.waived_finding_count ?? 0) > 0
+    );
+  });
   const report = {
     schema_version: 1,
     generated_at_utc: nowIso(),
     status,
     profile: profile.id,
+    profile_rules_sha256: profile.rulesSha256,
+    ...(usesQaWaivers
+      ? {
+          required_qa_waiver_codes: ensureArray(
+            asRecord(curationGateArtifact?.value?.policy).waived_qa_codes,
+          ),
+        }
+      : {}),
     dataset_type: datasetType,
     rows_file: repoRelativePath(root, rowsFile),
     reference_rows_file:

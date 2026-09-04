@@ -13,12 +13,8 @@ type WorldsteelProfileFile = {
   profiles: {
     worldsteel: {
       docs: string[];
-      allow_account_local_support_and_elementary: {
-        enabled: boolean;
-        scope: string[];
-        authorized_by: string;
-        note: string;
-      };
+      allow_account_local_support_and_elementary?: unknown;
+      full_context_ai_completion: { required: boolean };
     };
   };
 };
@@ -37,7 +33,7 @@ function documentedRuntimeValues(source: string): boolean[] {
   );
 }
 
-test("Worldsteel runtime, profile authorization, and every active document expose one support-mint truth", () => {
+test("Worldsteel keeps the support candidate route but requires task approval in every active document", () => {
   let runtimeConfig: Record<string, unknown> | undefined;
   const runner = () => undefined;
   createWorldsteelBatchImportRunCommands(
@@ -61,30 +57,8 @@ test("Worldsteel runtime, profile authorization, and every active document expos
     fs.readFileSync(path.join(repoRoot, "specs", "import-profiles.json"), "utf8"),
   ) as WorldsteelProfileFile;
   const worldsteel = profile.profiles.worldsteel;
-  assert.equal(worldsteel.allow_account_local_support_and_elementary.enabled, true);
-  assert.deepEqual(
-    new Set(worldsteel.allow_account_local_support_and_elementary.scope),
-    new Set([
-      "elementary_flow_write",
-      "elementary_flow_create_new",
-      "flowproperty_write",
-      "unitgroup_write",
-      "canonical_support_local_mint",
-    ]),
-  );
-  assert.deepEqual(
-    [
-      ...new Set(
-        documentedRuntimeValues(worldsteel.allow_account_local_support_and_elementary.note),
-      ),
-    ],
-    [runtimeValue],
-    "The structured profile authorization must document the frozen executable value",
-  );
-  assert.match(
-    worldsteel.allow_account_local_support_and_elementary.note,
-    /enabled=false only when both the R3 elementary residual and R5 FP\/UG support/iu,
-  );
+  assert.equal(worldsteel.allow_account_local_support_and_elementary, undefined);
+  assert.equal(worldsteel.full_context_ai_completion.required, true);
   assert.doesNotMatch(JSON.stringify(worldsteel), /(?:reuse[^.]*d5710976|d5710976[^.]*reus)/iu);
 
   const activeDocs = activeWorldsteelDocs();
@@ -116,9 +90,7 @@ test("Worldsteel runtime, profile authorization, and every active document expos
     );
     assert.match(source, /00\.00\.001/u, relativePath);
     assert.doesNotMatch(source, /(?:reuse[^.\n]*d5710976|d5710976[^.\n]*reus)/iu, relativePath);
-    for (const line of source.split("\n").filter((value) => value.includes("enabled=false"))) {
-      assert.match(line, /both .*R3.*R5 .*FP\/UG/iu, relativePath);
-    }
+    assert.match(source, /task.authorization/iu, relativePath);
   }
 
   const retainedEvidence = fs.readFileSync(
@@ -128,6 +100,5 @@ test("Worldsteel runtime, profile authorization, and every active document expos
   assert.match(retainedEvidence, /10\+10 EF3\.1 LANCA/iu);
   assert.match(retainedEvidence, /Flow properties[^\n]*\|\s*11\s*\|/iu);
   assert.match(retainedEvidence, /Unit groups[^\n]*\|\s*11\s*\|/iu);
-  assert.match(worldsteel.allow_account_local_support_and_elementary.authorized_by, /2026-07-01/u);
-  assert.match(worldsteel.allow_account_local_support_and_elementary.note, /LANCA/u);
+  assert.match(retainedEvidence, /2026-07-01/u);
 });

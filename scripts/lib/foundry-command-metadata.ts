@@ -199,7 +199,15 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ownerExport: "listImportProfiles",
     inputs: ["specs/import-profiles.json"],
     outputs: ["import profile JSON report"],
-    keyTests: [goldenDiff, commandSmoke("profiles-list"), importCurationEntryContract],
+    keyTests: [
+      goldenDiff,
+      commandSmoke("profiles-list"),
+      importCurationEntryContract,
+      nodeTest(
+        "test/unit/task-profile-authority.test.mts",
+        "a new task inherits rules but no historical account-local or QA authority",
+      ),
+    ],
   }),
   "route-task": metadata({
     category: "public",
@@ -1174,13 +1182,22 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     category: "workflow-internal",
     ownerModule: "scripts/commands/commit-handoff.ts",
     ownerExport: "createCommitHandoffCommands().runDatasetCommitHandoffPlan",
-    inputs: ["mutation manifest", "finalize report", "location audit evidence"],
+    inputs: [
+      "mutation manifest",
+      "finalize report",
+      "location audit evidence",
+      "current task authorization for restricted final rows or QA exceptions",
+    ],
     outputs: [
       "commit handoff plan JSON report",
       "authoritative commit and post-write verify CommandSpecs with executable, argv, display, binding, and SHA-256",
       "final rows artifact facts with exact path, bytes, and SHA-256",
     ],
     keyTests: [
+      nodeTest(
+        "test/unit/handoff-identity-task-command-factories.test.mts",
+        "mixed support handoff rechecks exact task actions against actual final rows",
+      ),
       nodeTest(
         "test/unit/foundry-command-spec.test.mts",
         "CommandSpec blocks artifact byte drift before spawn and never executes display",
@@ -1249,6 +1266,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       "dry-run report",
       "decision/patch evidence",
       "remote verify reports",
+      "current task rules and explicit exception evidence",
     ],
     outputs: [
       "dataset-mutation-manifest.json",

@@ -57,7 +57,7 @@ const customProfiles = {
   },
 };
 
-test("profile normalization preserves snake/camel precedence, scalar envelopes, aliases, and raw overrides", () => {
+test("profile normalization preserves rule fields and refuses historical authorization aliases", () => {
   const snakeWaivers = { process: ["snake"] };
   const camelWaivers = { process: ["camel"] };
   const snakeContent = { process: ["snake-content"] };
@@ -92,8 +92,8 @@ test("profile normalization preserves snake/camel precedence, scalar envelopes, 
   assert.equal(normalized.id, "42");
   assert.deepEqual(normalized.description, { localized: true });
   assert.deepEqual(normalized.docs, ["docs/one.md"]);
-  assert.equal(normalized.waivedQaCodesByType, camelWaivers);
-  assert.equal(normalized.waivedContentPolicyRulesByType, camelContent);
+  assert.deepEqual(normalized.waivedQaCodesByType, {});
+  assert.equal(Object.hasOwn(normalized, "waivedContentPolicyRulesByType"), false);
   assert.equal(normalized.waiverReasons, camelReasons);
   assert.deepEqual(normalized.fullContextAiCompletion, {
     required: false,
@@ -103,16 +103,16 @@ test("profile normalization preserves snake/camel precedence, scalar envelopes, 
     proof:
       "dataset-authoring-patch-collect plus dataset-patch-apply with authoring package closure",
   });
-  assert.equal(normalized.allowAccountLocalSupportAndElementary, false);
-  assert.equal(normalized.accountLocalSupportOverride, snakeOverride);
+  assert.equal(Object.hasOwn(normalized, "allowAccountLocalSupportAndElementary"), false);
+  assert.equal(Object.hasOwn(normalized, "accountLocalSupportOverride"), false);
 
   const camelOverride = { enabled: true, reason: "camel-only" };
   const camel = profilesConfig.normalizeProfile(
     { allowAccountLocalSupportAndElementary: camelOverride },
     "camel",
   );
-  assert.equal(camel.allowAccountLocalSupportAndElementary, true);
-  assert.equal(camel.accountLocalSupportOverride, camelOverride);
+  assert.equal(Object.hasOwn(camel, "allowAccountLocalSupportAndElementary"), false);
+  assert.equal(Object.hasOwn(camel, "accountLocalSupportOverride"), false);
 
   const array = profilesConfig.normalizeProfile([], "array-fallback");
   assert.equal(array.id, "array-fallback");
@@ -121,7 +121,7 @@ test("profile normalization preserves snake/camel precedence, scalar envelopes, 
   assert.equal(invalid.id, "generic");
   assert.equal(invalid.description, "");
   assert.deepEqual(invalid.waivedQaCodesByType, {});
-  assert.equal(invalid.accountLocalSupportOverride, null);
+  assert.equal(Object.hasOwn(invalid, "accountLocalSupportOverride"), false);
 });
 
 test("profile config loading preserves exact files, fallback identity, and native JSON errors", () => {
@@ -147,7 +147,7 @@ test("profile config loading preserves exact files, fallback identity, and nativ
   });
 });
 
-test("profile lookup preserves requested/default/generic fallbacks plus docs and waiver encounter order", () => {
+test("profile lookup preserves requested/default/generic fallback and docs without importing waiver authority", () => {
   withTempRoot("profiles-config-lookup", (root) => {
     writeJson(path.join(root, "profiles.json"), customProfiles);
     const selected = profilesConfig.profileFor(root, " ZETA ", {
@@ -165,10 +165,8 @@ test("profile lookup preserves requested/default/generic fallbacks plus docs and
       "docs/extra-a.md",
       "docs/extra-b.md",
     ]);
-    assert.deepEqual(selected.waivedQaCodesByType, {
-      process: ["base-waiver", "extra-one", "extra-two", "extra-three"],
-    });
-    assert.equal(selected.allowAccountLocalSupportAndElementary, true);
+    assert.deepEqual(selected.waivedQaCodesByType, {});
+    assert.equal(Object.hasOwn(selected, "allowAccountLocalSupportAndElementary"), false);
 
     const defaulted = profilesConfig.profileFor(root, "", { profilesFile: "profiles.json" });
     assert.equal(defaulted.id, "ZETA");
@@ -189,7 +187,7 @@ test("profile lookup preserves requested/default/generic fallbacks plus docs and
       waiveQaCode: "suppressed-by-empty-primary",
       type: "unsupported-but-unused",
     });
-    assert.deepEqual(noExtraWaiver.waivedQaCodesByType, { flow: ["camel-waiver"] });
+    assert.deepEqual(noExtraWaiver.waivedQaCodesByType, {});
     assert.throws(
       () =>
         profilesConfig.profileFor(root, "alpha", {
@@ -219,7 +217,7 @@ test("profile listing preserves config key order, normalized public fields, defa
       id: "ZETA",
       description: "Zeta profile",
       docs: ["docs/zeta.md", "docs/shared.md"],
-      waived_qa_codes_by_type: { process: ["base-waiver"] },
+      waived_qa_codes_by_type: {},
       full_context_ai_completion: {
         required: true,
         datasetTypes: ["process", "flow", "process"],

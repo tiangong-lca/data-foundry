@@ -7,7 +7,7 @@ const fixtureRoot = testTmpRoot("canonical-support-rewrites-test");
 type FlowRow = ReturnType<typeof flowRow>;
 type RunOptions = {
   pending?: boolean;
-  allowAccountLocalSupportAndElementary?: boolean;
+  prepareAccountLocalSupportCandidates?: boolean;
   blockOnUnscaledCanonicalSupport?: boolean;
 };
 
@@ -217,13 +217,13 @@ test("canonical support rewrite emits a pending-upstream blocker for not-yet-cre
   assert.match(String(blocker.pending_upstream_note), /PENDING UPSTREAM/);
 });
 
-test("override suppresses the pending-upstream blocker (mint account-local My Data FP/UG)", () => {
+test("explicit local preparation retains canonical-gap FP/UG candidates without write authority", () => {
   const dir = path.join(fixtureRoot, "override-pending");
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
   const report = run(dir, [flowRow("55555555-5555-4555-8555-555555555555", "personkm")], {
     pending: true,
-    allowAccountLocalSupportAndElementary: true,
+    prepareAccountLocalSupportCandidates: true,
   });
   assert.equal(
     report.blockers.find((b) => b.code === "canonical_support_pending_upstream"),
@@ -263,12 +263,12 @@ function flowRowCanonicalStaleVersion(uuid: string) {
   };
 }
 
-test("override bumps an already-canonical FP reference from a stale version to the cached version", () => {
+test("local preparation refreshes an already-canonical FP reference to its proven version", () => {
   const dir = path.join(fixtureRoot, "override-version-bump");
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
   const report = run(dir, [flowRowCanonicalStaleVersion("77777777-7777-4777-8777-777777777777")], {
-    allowAccountLocalSupportAndElementary: true,
+    prepareAccountLocalSupportCandidates: true,
   });
   assert.match(report.status, /^completed/u);
   assert.equal(report.counts.canonical_flow_property_reference_rewrites, 1);
@@ -299,7 +299,7 @@ test("override does NOT relax the unit-scale safety blocker (kept blocking)", ()
   fs.mkdirSync(dir, { recursive: true });
   const report = run(dir, [flowRow("66666666-6666-4666-8666-666666666666", "tkm")], {
     blockOnUnscaledCanonicalSupport: true,
-    allowAccountLocalSupportAndElementary: true,
+    prepareAccountLocalSupportCandidates: true,
   });
   const blocker = report.blockers.find(
     (b) => b.code === "canonical_support_amount_scaling_required",

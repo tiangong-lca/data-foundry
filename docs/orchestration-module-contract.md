@@ -58,6 +58,8 @@ related:
 
 # Foundry Orchestration Module Contract
 
+Task exception validation is owned by `scripts/lib/task-authorization.ts` and `docs/task-authorization-contract.md`. Library projection checks elementary, Flow Property and Unit Group actions separately, keeping FP-before-UG blocker order. Local canonical candidate preparation and public reference proof grant no write permission. Mutation manifests bind current profile rules; handoff rechecks final-row bytes, account and any used QA exception. Existing attempt/no-replay ownership and line ceilings remain unchanged.
+
 ## 1. Outcome and ownership
 
 The high-level orchestration layer must be easy for an Agent to navigate without moving LCA semantics into generic execution code. Public command owners converge toward help, option validation, stage-contract wiring, and calls into typed semantic modules. Foundry retains profile policy, scope selection, classification and identity meaning, blocker taxonomy, artifact projection, and import-ledger interpretation. The published CLI owns reusable executable-plus-argv validation, bounded scheduling, attempt/recovery mechanics, and mutation no-replay guarantees.

@@ -1,5 +1,6 @@
 import test from "node:test";
 import { canonicalPayloadSha256 } from "../../scripts/lib/post-write-root-proof.ts";
+import { profileFor } from "../../scripts/lib/import-curation/internal/profiles-config.ts";
 import { fixtureRoot } from "../fixtures/fixture-roots.ts";
 import {
   assert,
@@ -471,6 +472,7 @@ test("post-write closeout requires common:other trace queues to match final rows
     status: "ready_for_remote_write",
     dataset_type: "process",
     profile: "bafu",
+    profile_rules_sha256: profileFor(repoRoot, "bafu").rulesSha256,
     rows_file: rel(rowsFile),
     target_user_id: targetUserId,
     evidence: {

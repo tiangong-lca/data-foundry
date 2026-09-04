@@ -8,6 +8,12 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { createCommitHandoffCommands } from "../../scripts/commands/commit-handoff.ts";
 import { createIdentityDecisionTaskCommands } from "../../scripts/commands/identity-decision-task.ts";
+import { profileFor } from "../../scripts/lib/import-curation/internal/profiles-config.ts";
+import {
+  authorizedProfileOptions,
+  taskAuthorizationFixture,
+} from "../fixtures/task-authorizations.ts";
+import { validateTaskAuthorization } from "../../scripts/lib/task-authorization.ts";
 
 type JsonObject = Record<string, unknown>;
 
@@ -133,9 +139,7 @@ function handoffHarness(root: string) {
       return { required: true, blockers: [] };
     },
     nowIso: () => fixedNow,
-    profileFor() {
-      return { allowAccountLocalSupportAndElementary: false };
-    },
+    profileFor,
     readJsonArtifactOption(value: unknown) {
       const artifactPath = resolveRepoPath(value);
       if (!artifactPath || !fs.existsSync(artifactPath)) return null;
@@ -193,6 +197,183 @@ function writeHandoffFixture(root: string): { finalize: string; rows: string; ro
   });
   return { finalize: relativeTo(root, finalize), rows, rowsText };
 }
+
+test("mixed support handoff rechecks exact task actions against actual final rows", () => {
+  withTempRoot("handoff-task-authorization", (root) =>
+    withoutAccountEnvironment(() => {
+      const fixture = writeHandoffFixture(root);
+      writeJson(path.join(root, "specs/import-profiles.json"), {
+        profiles: { generic: { id: "generic" } },
+      });
+      const owner = "11111111-1111-4111-8111-111111111111";
+      const fp = {
+        flowPropertyDataSet: {
+          flowPropertiesInformation: { dataSetInformation: { "common:UUID": "fp" } },
+        },
+      };
+      const ug = {
+        unitGroupDataSet: { unitGroupInformation: { dataSetInformation: { "common:UUID": "ug" } } },
+      };
+      writeText(fixture.rows, `${JSON.stringify(fp)}\n`);
+      const { commands } = handoffHarness(root);
+      const options = {
+        finalizeReport: fixture.finalize,
+        type: "support",
+        targetUserId: owner,
+        outDir: "handoff",
+      };
+      const denied = commands.runDatasetCommitHandoffPlan(options) as HandoffReport;
+      assert.equal(denied.status, "blocked");
+      assert.equal(denied.commands.commit, null);
+      assert.deepEqual(
+        denied.blockers
+          .filter((row) => row.code === "task_authorization_action_required")
+          .map((row) => row.action),
+        ["flowproperty_write", "canonical_support_local_mint"],
+      );
+      const fpGrant = authorizedProfileOptions(
+        root,
+        "generic",
+        ["flowproperty_write", "canonical_support_local_mint"],
+        sha256(fs.readFileSync(fixture.rows, "utf8")),
+      );
+      const fpReady = commands.runDatasetCommitHandoffPlan({
+        ...options,
+        ...fpGrant,
+      }) as HandoffReport;
+      assert.equal(fpReady.status, "ready_for_explicit_commit");
+      assert.ok(fpReady.commands.commit?.argv.includes("--allow-account-local-support"));
+      writeText(fixture.rows, `${JSON.stringify(fp)}\n${JSON.stringify(ug)}\n`);
+      const widened = commands.runDatasetCommitHandoffPlan({
+        ...options,
+        ...fpGrant,
+      }) as HandoffReport;
+      assert.equal(widened.status, "blocked");
+      assert.ok(widened.blockers.some((row) => row.action === "unitgroup_write"));
+      assert.ok(widened.blockers.some((row) => row.code === "task_authorization_input_mismatch"));
+      const mixedGrant = authorizedProfileOptions(
+        root,
+        "generic",
+        ["flowproperty_write", "unitgroup_write", "canonical_support_local_mint"],
+        sha256(fs.readFileSync(fixture.rows, "utf8")),
+      );
+      assert.equal(
+        (commands.runDatasetCommitHandoffPlan({ ...options, ...mixedGrant }) as HandoffReport)
+          .status,
+        "ready_for_explicit_commit",
+      );
+      const wrongOwner = commands.runDatasetCommitHandoffPlan({
+        ...options,
+        ...mixedGrant,
+        targetUserId: "different-owner",
+      }) as HandoffReport;
+      assert.equal(wrongOwner.commands.commit, null);
+      assert.ok(
+        wrongOwner.blockers.some((row) => row.code === "task_authorization_account_mismatch"),
+      );
+    }),
+  );
+});
+
+test("old non-generic ready reports require current rule evidence before handoff", () => {
+  withTempRoot("handoff-legacy-rules", (root) =>
+    withoutAccountEnvironment(() => {
+      const fixture = writeHandoffFixture(root);
+      writeJson(path.join(root, "specs/import-profiles.json"), {
+        profiles: { bafu: { id: "bafu" } },
+      });
+      const finalizePath = path.join(root, fixture.finalize);
+      const finalize = JSON.parse(fs.readFileSync(finalizePath, "utf8"));
+      writeJson(finalizePath, { ...finalize, profile: "bafu" });
+      const mutationPath = path.join(root, "scope/mutation.json");
+      const mutation = JSON.parse(fs.readFileSync(mutationPath, "utf8"));
+      writeJson(mutationPath, { ...mutation, profile: "bafu" });
+      const options = { finalizeReport: fixture.finalize, outDir: "handoff" };
+      const { commands } = handoffHarness(root);
+      const legacy = commands.runDatasetCommitHandoffPlan(options) as HandoffReport;
+      assert.equal(legacy.commands.commit, null);
+      assert.ok(legacy.blockers.some((row) => row.code === "task_profile_rules_evidence_required"));
+      writeJson(mutationPath, {
+        ...mutation,
+        profile: "bafu",
+        profile_rules_sha256: profileFor(root, "bafu").rulesSha256,
+      });
+      assert.equal(
+        (commands.runDatasetCommitHandoffPlan(options) as HandoffReport).status,
+        "ready_for_explicit_commit",
+      );
+      writeJson(finalizePath, { ...finalize, profile: "generic" });
+      writeJson(mutationPath, { ...mutation, profile: "bafu" });
+      const mixedProfile = commands.runDatasetCommitHandoffPlan(options) as HandoffReport;
+      assert.equal(mixedProfile.commands.commit, null);
+      assert.ok(mixedProfile.blockers.some((row) => row.code === "task_profile_mismatch"));
+    }),
+  );
+});
+
+test("retained QA exceptions require a live task grant at the final handoff", () => {
+  withTempRoot("handoff-qa-approval", (root) =>
+    withoutAccountEnvironment(() => {
+      const fixture = writeHandoffFixture(root);
+      const rules = { id: "generic" };
+      writeJson(path.join(root, "specs/import-profiles.json"), { profiles: { generic: rules } });
+      const mutationPath = path.join(root, "scope/mutation.json");
+      const mutation = JSON.parse(fs.readFileSync(mutationPath, "utf8"));
+      writeJson(mutationPath, {
+        ...mutation,
+        required_qa_waiver_codes: ["process_material_balance_deviation"],
+      });
+      const grant = taskAuthorizationFixture("generic", rules);
+      grant.binding.input_scope_sha256 = sha256(fs.readFileSync(fixture.rows, "utf8"));
+      grant.authorization.binding = { ...grant.binding };
+      grant.authorization.allowed_actions = [];
+      grant.authorization.evidence.push({
+        id: "source-model",
+        kind: "source-model",
+        reference: "fixture/source-model.json",
+        sha256: "b".repeat(64),
+      });
+      grant.authorization.qa_waivers = [
+        {
+          dataset_type: "process",
+          code: "process_material_balance_deviation",
+          evidence_ids: ["source-model"],
+        },
+      ];
+      const result = validateTaskAuthorization(grant.authorization, grant.binding);
+      assert.equal(result.status, "authorized");
+      const options = {
+        finalizeReport: fixture.finalize,
+        outDir: "handoff",
+        targetUserId: grant.binding.user_id,
+        taskAuthorizationBinding: grant.binding,
+      };
+      const { commands } = handoffHarness(root);
+      const absent = commands.runDatasetCommitHandoffPlan(options) as HandoffReport;
+      assert.equal(absent.commands.commit, null);
+      assert.ok(
+        absent.blockers.some((row) => row.code === "task_authorization_qa_waiver_required"),
+      );
+      assert.equal(
+        (
+          commands.runDatasetCommitHandoffPlan({
+            ...options,
+            taskAuthorization: result.authorization,
+          }) as HandoffReport
+        ).status,
+        "ready_for_explicit_commit",
+      );
+      const serialized = commands.runDatasetCommitHandoffPlan({
+        ...options,
+        taskAuthorization: JSON.parse(JSON.stringify(result.authorization)),
+      }) as HandoffReport;
+      assert.equal(serialized.commands.commit, null);
+      assert.ok(
+        serialized.blockers.some((row) => row.code === "task_authorization_qa_waiver_required"),
+      );
+    }),
+  );
+});
 
 test("commit handoff binds exact final-row bytes, argv order, hashes, and report bytes", () => {
   withTempRoot("handoff-ready", (root) => {

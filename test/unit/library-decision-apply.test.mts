@@ -488,7 +488,7 @@ test("library decision apply preserves blocker order, deferred projection and ex
     scopeRows: scopes,
     maps,
     indexes,
-    allowAccountLocalSupportAndElementary: false,
+    taskAuthorization: null,
     rewriteScope,
   });
   assert.deepEqual(projection.checkpoints, [

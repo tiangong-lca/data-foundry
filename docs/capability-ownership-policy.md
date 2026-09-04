@@ -92,6 +92,8 @@ lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session refer
 
 # Capability Ownership Policy
 
+Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel account overrides, QA waivers and the Worldsteel full-context relaxation grant no permission to a new task. `docs/task-authorization-contract.md` owns the separate workspace/task/actor/account/profile/input binding and exact action evidence. Local candidate preparation and checked public-reference proofs remain available; current final-row hashes, task permissions and all content/closure/no-replay gates are required before a restricted write handoff.
+
 Foundry must distinguish project-specific orchestration from shared TianGong capabilities before implementing new logic.
 
 ## Boundary

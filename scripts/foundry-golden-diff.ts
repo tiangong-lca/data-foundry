@@ -749,6 +749,41 @@ function normalizeWorldsteelProfileContract(value: JsonRecord): JsonRecord | nul
 }
 
 function normalizeKnownContractMigration(value: JsonRecord): JsonRecord {
+  // #98 adds current profile-rule evidence to the fixed generic support fixture.
+  // Only this exact reviewed rule digest may be omitted for the old/new comparison.
+  if (
+    value.profile === "generic" &&
+    value.dataset_type === "support" &&
+    value.target_user_id === "00000000-0000-4000-8000-000000000000" &&
+    value.profile_rules_sha256 ===
+      "6f0186da749ee4be26717071c4294b2fc7adf8eada2d37013c326324497e4bf4"
+  ) {
+    const { profile_rules_sha256: _profileRules, ...priorEnvelope } = value;
+    return priorEnvelope;
+  }
+  // #98: exact reviewed rule-list transition from historical global exceptions to
+  // task-bound authority. Bind the entire four-profile public projection; any other
+  // rule, waiver, full-context, description, doc or default-profile change still fails.
+  if (value.profiles && value.default_profile) {
+    const projection = {
+      schema_version: value.schema_version,
+      default_profile: value.default_profile,
+      profiles: value.profiles,
+    };
+    const digest = createHash("sha256").update(JSON.stringify(projection)).digest("hex");
+    if (
+      [
+        "09a5eee67d148109fde4c93a9a6e50d729c803fd996a8c3f8f9cb8f5f587d210",
+        "c5e200e5f9f5926da41869ead3701655bb88eb6d13c5cacb6628e7bac461f539",
+      ].includes(digest)
+    ) {
+      return {
+        ...value,
+        schema_version: "<task-profile-rules-v2>",
+        profiles: "<task-profile-rules-v2>",
+      };
+    }
+  }
   // #97 replaces the legacy API-key example with two additional OAuth public inputs.
   // Bind the complete successful env-surface report; any new error or other change still fails.
   if (value.file === ".env.example") {

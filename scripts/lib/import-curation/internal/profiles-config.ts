@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import { createHash } from "node:crypto";
 import {
   type FullContextAiCompletion,
   normalizeFullContextAiCompletion,
@@ -9,6 +11,11 @@ import {
   fallbackProfiles,
 } from "./dataset-types.ts";
 import { ensureArray, optionList, readJsonIfExists, resolveRepoPath } from "./runtime-io.ts";
+import { sha256Json } from "../../identity-preflight-proof.ts";
+import {
+  type ValidatedTaskAuthorization,
+  taskAuthorizationMatches,
+} from "../../task-authorization.ts";
 
 interface JsonRecord {
   [key: string]: unknown;
@@ -30,10 +37,6 @@ interface RawProfile extends JsonRecord {
   allow_account_local_support_and_elementary?: unknown;
 }
 
-interface AccountLocalSupportOverride extends JsonRecord {
-  enabled?: unknown;
-}
-
 interface ProfilesConfig extends JsonRecord {
   schema_version?: unknown;
   default_profile?: unknown;
@@ -47,6 +50,8 @@ interface ProfileOptions extends DatasetTypeOptions, JsonRecord {
   waiveQa?: unknown;
   waiveQaCode?: unknown;
   waivedQaCode?: unknown;
+  taskAuthorization?: unknown;
+  taskAuthorizationBinding?: unknown;
 }
 
 interface ListProfilesInput {
@@ -59,11 +64,11 @@ export interface NormalizedProfile {
   description: unknown;
   docs: unknown[];
   waivedQaCodesByType: JsonRecord;
-  waivedContentPolicyRulesByType: JsonRecord;
   waiverReasons: JsonRecord;
   fullContextAiCompletion: FullContextAiCompletion;
-  allowAccountLocalSupportAndElementary: boolean;
-  accountLocalSupportOverride: unknown;
+  domainRules: JsonRecord;
+  authorization: ValidatedTaskAuthorization | null;
+  rulesSha256: string;
 }
 
 export interface ImportProfilesList {
@@ -75,38 +80,22 @@ export interface ImportProfilesList {
 
 export function normalizeProfile(rawProfile: unknown, profileId: unknown): NormalizedProfile {
   const profile = (rawProfile && typeof rawProfile === "object" ? rawProfile : {}) as RawProfile;
+  const fullContext = profile.fullContextAiCompletion ?? profile.full_context_ai_completion;
+  const scopedRelaxation =
+    fullContext && typeof fullContext === "object" && "scoped_relaxation" in fullContext;
   return {
     id: String(profile.id ?? profileId ?? "generic"),
     description: profile.description ?? "",
     docs: ensureArray(profile.docs),
-    waivedQaCodesByType: (profile.waivedQaCodesByType ??
-      profile.waived_qa_codes_by_type ??
-      {}) as JsonRecord,
-    // Per-profile waivers for prewrite-content-policy rule codes (e.g.
-    // source_locator_in_dataset_name), keyed by dataset type. Distinct from
-    // waivedQaCodesByType (deterministic-QA findings): these silence a content-policy
-    // marker that is a FALSE POSITIVE for a profile's legitimate naming convention.
-    // worldsteel process names are "<product> <route> <geography> <data-year>" (e.g.
-    // "Steel rebar Global 2022"); the trailing "<Geo> <Year>" trips the latin-author-year
-    // marker even though it is reference metadata, not a citation locator.
-    waivedContentPolicyRulesByType: (profile.waivedContentPolicyRulesByType ??
-      profile.waived_content_policy_rules_by_type ??
-      {}) as JsonRecord,
+    // Legacy profile files are readable rule inputs, never executable approval.
+    waivedQaCodesByType: {},
     waiverReasons: (profile.waiverReasons ?? profile.waiver_reasons ?? {}) as JsonRecord,
     fullContextAiCompletion: normalizeFullContextAiCompletion(
-      profile.fullContextAiCompletion ?? profile.full_context_ai_completion,
+      scopedRelaxation ? { ...fullContext, required: true } : fullContext,
     ),
-    allowAccountLocalSupportAndElementary: Boolean(
-      (
-        (profile.allow_account_local_support_and_elementary ??
-          profile.allowAccountLocalSupportAndElementary) as
-          AccountLocalSupportOverride | null | undefined
-      )?.enabled,
-    ),
-    accountLocalSupportOverride:
-      profile.allow_account_local_support_and_elementary ??
-      profile.allowAccountLocalSupportAndElementary ??
-      null,
+    domainRules: (profile.domain_rules ?? {}) as JsonRecord,
+    authorization: null,
+    rulesSha256: sha256Json(rawProfile ?? {}),
   };
 }
 
@@ -133,20 +122,33 @@ export function profileFor(
   const profile = normalizeProfile(selected, requestedId);
   const extraDocs = optionList(options.profileDoc ?? options.profileDocs);
   const extraWaivers = optionList(options.waiveQa ?? options.waiveQaCode ?? options.waivedQaCode);
+  if (extraWaivers.length > 0) datasetTypeFromOptions(options);
+  const approval = options.taskAuthorization;
+  let authorization =
+    taskAuthorizationMatches(approval, options.taskAuthorizationBinding) &&
+    approval.binding.profile_id === profile.id &&
+    approval.binding.profile_sha256 === sha256Json(selected)
+      ? approval
+      : null;
+  const inputPath = authorization
+    ? resolveRepoPath(
+        repoRoot,
+        (options.rowsFile || options.input || options.rows) as string | null | undefined,
+      )
+    : null;
+  if (authorization && inputPath) {
+    const currentInputSha256 = fs.existsSync(inputPath)
+      ? createHash("sha256").update(fs.readFileSync(inputPath)).digest("hex")
+      : null;
+    if (authorization.binding.input_scope_sha256 !== currentInputSha256) authorization = null;
+  }
   return {
     ...profile,
     docs: [...profile.docs, ...extraDocs],
-    waivedQaCodesByType: {
-      ...profile.waivedQaCodesByType,
-      ...(extraWaivers.length > 0
-        ? {
-            [datasetTypeFromOptions(options)]: [
-              ...ensureArray(profile.waivedQaCodesByType?.[datasetTypeFromOptions(options)]),
-              ...extraWaivers,
-            ],
-          }
-        : {}),
-    },
+    authorization,
+    waivedQaCodesByType: authorization?.qa_waivers.length
+      ? { process: authorization.qa_waivers.map((waiver) => waiver.code) }
+      : {},
   };
 }
 

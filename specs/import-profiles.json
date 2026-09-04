@@ -1,42 +1,21 @@
 {
-  "schema_version": 1,
-  "updated_at_utc": "2026-08-29T00:00:00Z",
+  "schema_version": 2,
+  "updated_at_utc": "2026-09-04T00:00:00Z",
   "default_profile": "generic",
   "profiles": {
     "generic": {
       "id": "generic",
       "description": "Default import profile for external datasets. It adds no dataset-specific waivers and relies on schema, QA, curation, cleanup, dry-run, and verification gates.",
-      "docs": [],
-      "waived_qa_codes_by_type": {},
-      "waiver_reasons": {}
+      "docs": []
     },
     "bafu": {
       "id": "bafu",
-      "description": "BAFU / FOEN import profile for BAFU 2025 ecoSpold1 converted TIDAS rows, using root TIDAS library-level entity indexing plus the converted process-bundles index for process-level closure, queue-lock parallelism, public-canonical-first support/elementary reuse with profile-authorized account-local state_code=0 candidates for defensible gaps, true-source-or-BAFU-database source attribution, one canonical FOEN/BAFU contact, deterministic source-only-output exchange proof when source rows support it, and task-policy-gated batch commit.",
+      "description": "BAFU / FOEN rules for BAFU 2025 ecoSpold1 conversion, library and process closure, canonical-first support reuse, true-source attribution, one canonical FOEN/BAFU contact, source-only-output proof and strict full-context authoring. Account-local support and elementary actions require separate task authorization.",
       "docs": [
         "docs/import-profiles/bafu/profile.md",
         "docs/import-profiles/bafu/constraints.md",
         "docs/import-profiles/bafu/leaf-process-classification-authoring.md"
       ],
-      "waived_qa_codes_by_type": {
-        "process": ["process_material_balance_deviation"]
-      },
-      "waiver_reasons": {
-        "process_material_balance_deviation": "BAFU profile treats process_material_balance_deviation as a source-data QA observation, not a remote-write blocker. Other schema, placeholder, reference, unit, required-field, and trace blockers remain blocking."
-      },
-      "allow_account_local_support_and_elementary": {
-        "enabled": true,
-        "authorized_by": "user override 2026-06-15: build all buildable BAFU data as My Data (state_code=0) first, then cross-reference within the My Data scope during preparation. Explicit, reversible override of the reference-only support and elementary-flow-reuse governance for the BAFU account.",
-        "scope": [
-          "elementary_flow_write",
-          "elementary_flow_create_new",
-          "flowproperty_write",
-          "unitgroup_write",
-          "canonical_support_local_mint"
-        ],
-        "note": "Set enabled=false to restore reference-only governance. Does NOT relax either unit-scale safety blocker (canonical_support_amount_scaling_required for a known positive non-1 factor, or canonical_support_amount_scale_unresolved for a missing/non-finite/non-positive factor) or schema/curation/full-context proof gates — only the reference-only and elementary-create_new policy walls. Account-local rows are written at state_code=0 (My Data), keep their source units so amounts stay self-consistent, and remain in an account-local candidate registry outside the public canonical support cache until separately approved for promotion.",
-        "report_policy": "Canonical support and finalize reports must state public-canonical-first plus this scoped account-local exception when enabled; they must not emit an unconditional reference-only or no-My-Data policy. Any profile-specific owner-draft alias maintenance report must bind all logical batches into one guarded database-atomic plan with whole-plan audit and readback proof; it must not treat independently committed dimension batches as complete."
-      },
       "full_context_ai_completion": {
         "required": true,
         "dataset_types": ["flow", "process", "lifecyclemodel"],
@@ -62,76 +41,44 @@
           "tidas_locations_category.json"
         ],
         "proof": "dataset-identity-decision-task-build plus dataset-identity-decisions-apply with authoring_package_sha256 and closes_action_items evidence for identity-preflight decisions, dataset-classification-decisions-apply with matching classification decision task/context_bundle_sha256 for classification queues, dataset-location-decisions-apply with matching location decision task/context_bundle_sha256 for location queues, dataset-curation-cleanup deterministic proof for source-only-output exchange completeness when an explicit source rows file proves the source and final exchange signatures, or dataset-authoring-patch-collect plus dataset-patch-apply with authoring_package_sha256 and closes_action_items evidence for other field patches"
+      },
+      "qa_observation_candidates": {
+        "process_material_balance_deviation": "May be classified as a source-model observation only with task-bound user approval and content-bound source-model evidence. All other QA, schema, unit-scale, curation and reference checks remain blocking."
       }
     },
     "uslci": {
       "id": "uslci",
-      "description": "USLCI import profile skeleton. It intentionally adds no dataset-specific code path or approved waivers until a pilot run proves them.",
+      "description": "USLCI source-format and import guidance. Generic curation applies; source aggregation/formula observations and account-local support require separate evidence-bound task authorization.",
       "docs": [
         "docs/import-profiles/uslci/profile.md",
         "docs/import-profiles/uslci/constraints.md",
         "docs/uslci-import-runbook.md"
       ],
-      "waived_qa_codes_by_type": {
-        "process": ["process_material_balance_deviation"]
-      },
-      "waiver_reasons": {
-        "process_material_balance_deviation": "User D3-QA decision 2026-06-24: treat process_material_balance_deviation as a source-data QA observation (warning), not a remote-write blocker, mirroring the BAFU profile. USLCI LCI_RESULT and amountFormula exchanges are imported in the first batch; their material balance is inherent to the source aggregation/formula model. Other schema, placeholder, reference, unit, required-field, and trace blockers remain blocking."
-      },
-      "allow_account_local_support_and_elementary": {
-        "enabled": true,
-        "authorized_by": "user override 2026-06-23 (D4-elementary): build all buildable USLCI data as account-local My Data (state_code=0) — the 1,056 lever-2 scopes whose FEDEFL elementary flows / 7 local flow-properties / 4 unit-groups have no public canonical equivalent are minted as My Data rather than left non-importable. Explicit, reversible override of the reference-only support and elementary-flow-reuse governance for the USLCI account, mirroring the BAFU 2026-06-15 override.",
-        "scope": [
-          "elementary_flow_write",
-          "elementary_flow_create_new",
-          "flowproperty_write",
-          "unitgroup_write",
-          "canonical_support_local_mint"
-        ],
-        "note": "Set enabled=false to restore reference-only governance. Does NOT relax either unit-scale safety blocker (canonical_support_amount_scaling_required for a known positive non-1 factor, or canonical_support_amount_scale_unresolved for a missing/non-finite/non-positive factor) or schema/curation/full-context proof gates — only the reference-only and elementary-create_new policy walls. Account-local rows are written at state_code=0 (My Data) and keep their source units so amounts stay self-consistent."
-      },
       "full_context_ai_completion": {
         "required": false,
         "dataset_types": [],
         "required_context_kinds": [],
         "required_context_file_patterns": [],
         "proof": "No USLCI-specific full-context AI proof override is approved yet; use generic curation and queue verification gates."
+      },
+      "qa_observation_candidates": {
+        "process_material_balance_deviation": "May be classified as a source-model observation only with task-bound user approval and content-bound source-model evidence. All other QA, schema, unit-scale, curation and reference checks remain blocking."
+      },
+      "domain_rules": {
+        "preserve_referenced_review_sources": true
       }
     },
     "worldsteel": {
       "id": "worldsteel",
-      "description": "worldsteel EF3.1-reference native ILCD 1.1 package (33 steel LCI-result processes plus ~74 new product/waste/other and GaBi/Sphera pseudo-elementary flows) sitting on a large EF3.1 reference layer (~1,315 reference elementary flows, most flowproperties/unitgroups, 25 LCIA methods, and EF/PEF/OEF/ILCD compliance boilerplate). Canonical reference rows are reused by their ORIGINAL UUID through deterministic exchange-reference-rewrites (applyResolutionRewrites), never minted. A materialized flow property or unit group absent from the canonical-support cache may enter the separately gated account-local support path. Validation uses Rust tidas' locked corrected eILCD schemas, not raw EF3.1. Source binaries referenced via referenceToDigitalFile are uploaded to the external_docs storage bucket by the tiangong-lca-cli `dataset source upload-attachments` command and the source @uri rewritten before write. One deterministic owner-draft library contact carrying the real World Steel Association identity; worldsteel database fallback source.",
+      "description": "Worldsteel EF3.1-reference ILCD rules: canonical UUID reuse, corrected eILCD validation, true source attachments and World Steel Association contact identity. Canonical cache misses remain gated task-local candidates. Account-local actions and source-model QA observations require separate task authorization; full-context proof is required.",
       "docs": [
         "docs/import-profiles/worldsteel/profile.md",
         "docs/import-profiles/worldsteel/constraints.md",
         "docs/import-profiles/worldsteel/import-plan.md",
         "docs/import-profiles/worldsteel/import-coverage.md"
       ],
-      "waived_qa_codes_by_type": {
-        "process": ["process_material_balance_deviation"]
-      },
-      "waived_content_policy_rules_by_type": {
-        "process": ["source_locator_in_dataset_name"]
-      },
-      "waiver_reasons": {
-        "process_material_balance_deviation": "worldsteel profile treats process_material_balance_deviation as a source-data QA observation (warning), not a remote-write blocker, mirroring BAFU/USLCI. The 33 datasets are aggregated LCI_RESULT processes whose material balance is inherent to the source aggregation model. Other schema, placeholder, reference, unit, required-field, and trace blockers remain blocking.",
-        "source_locator_in_dataset_name": "worldsteel source process names follow the convention '<product> <route> <geography> <data-year>' (e.g. 'Steel rebar Global 2022', 'Steel sections EU 2019', 'Steel ECCS Global 2021 v2'). The trailing '<Geography> <Year>' is reference metadata describing WHICH worldsteel LCI release the model represents, NOT a source citation locator, but it matches the prewrite-content-policy 'latin-author-year' marker ('<Word> <YYYY>'). All 33 source baseNames carry this pattern (preserved verbatim per R4). This waiver scopes ONLY the source_locator_in_dataset_name rule for process names; every other content-policy rule (foundry-workflow language, etc.) and all flow/lifecyclemodel names remain enforced."
-      },
-      "allow_account_local_support_and_elementary": {
-        "enabled": true,
-        "authorized_by": "user decisions 2026-06-29 and 2026-07-01: canonical EF3.1 reference rows are REUSED by their original canonical UUIDs (deterministic exchange-reference-rewrites + applyResolutionRewrites) and are NEVER minted. The 2026-06-29 override authorizes the residual GaBi/Sphera pseudo-elementary flows with no canonical match as account-local My Data (state_code=0). The superseding 2026-07-01 support decision also enables mintUnmatchedFpUgSupport for materialized flow properties and unit groups absent from the canonical-support cache; the retained reason was the 10+10 EF3.1 LANCA gap observed during delivery. LANCA and those counts are evidence, not a runtime whitelist or hard cap. Every candidate remains same-owner state_code=0 at 00.00.001 and must pass unit-scale, schema, QA, curation, closure, dry-run, commit-handoff, and readback gates. The shared override is reversible only when both the R3 elementary residual and R5 FP/UG support path are no longer required.",
-        "scope": [
-          "elementary_flow_write",
-          "elementary_flow_create_new",
-          "flowproperty_write",
-          "unitgroup_write",
-          "canonical_support_local_mint"
-        ],
-        "note": "Canonical-first remains the dominant policy: any elementary flow, flow property, or unit group with an acceptable canonical row is reused and never minted. For materialized FP/UG, mintUnmatchedFpUgSupport=true admits only canonical-cache misses into the profile-authorized support candidate set; it does not whitelist LANCA names or enforce the historical 10+10/11+11 counts. Unit groups precede flow properties, and dependent flows/processes wait for support closeout and readback. A support, unit-scale, schema, QA, curation, closure, dry-run, handoff, or readback failure defers that dependent scope while independent ready scopes may continue. Account-local rows remain same-owner state_code=0 (My Data) at 00.00.001 and never enter the public canonical cache. Set enabled=false only when both the R3 elementary residual and R5 FP/UG support candidates no longer require account-local authorization."
-      },
       "full_context_ai_completion": {
-        "required": false,
-        "scoped_relaxation": "2026-06-30 user decision: R3's full-context requirement is the reuse-vs-mint IDENTITY DECISION, satisfied off-line by the adversarially-verified elementary-match + capped-mint workflows (decisions-v1/ai-elementary-match-result.json + ai-mint-flows.jsonl, per-flow evidence) plus full-context field authoring of the new product/waste flows, mints, and processes (treatmentStandardsRoutes / flowProperties / functionalUnitFlowProperties). worldsteel new entities are account-local My Data (state_code=0), NOT published canonical, so canonical-grade per-entity identity authoring-package binding (authoring_package_sha256) is not required. Set required=true to re-impose the strict per-mint identity authoring-package proof.",
+        "required": true,
         "dataset_types": ["flow", "process", "lifecyclemodel"],
         "required_context_kinds": [
           "schema",
@@ -155,6 +102,16 @@
           "tidas_locations_category.json"
         ],
         "proof": "dataset-identity-decision-task-build plus dataset-identity-decisions-apply with authoring_package_sha256 and closes_action_items evidence for identity-preflight decisions, dataset-classification-decisions-apply with matching classification decision task/context_bundle_sha256 for classification queues, dataset-location-decisions-apply with matching location decision task/context_bundle_sha256 for location queues, dataset-curation-cleanup deterministic proof for source-only-output exchange completeness when an explicit source rows file proves the source and final exchange signatures, or dataset-authoring-patch-collect plus dataset-patch-apply with authoring_package_sha256 and closes_action_items evidence for other field patches"
+      },
+      "qa_observation_candidates": {
+        "process_material_balance_deviation": "May be classified as a source-model observation only with task-bound user approval and content-bound source-model evidence. All other QA, schema, unit-scale, curation and reference checks remain blocking."
+      },
+      "domain_rules": {
+        "process_name_geography_year": {
+          "geographies": ["Global", "EU"],
+          "field": "baseName",
+          "marker": "latin-author-year"
+        }
       }
     }
   }
