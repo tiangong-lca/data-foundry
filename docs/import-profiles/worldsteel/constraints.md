@@ -1,7 +1,7 @@
 ---
-lastReviewedAt: 2026-08-29
-lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
-lastReviewedNote: "Reviewed for Issue #70: exact CLI 0.1.3 public receipt/batch consumption changes no Worldsteel cache-miss, support, ordering, unit-scale, closure, or owner-draft constraint."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
+lastReviewedNote: "Reviewed for #100 CLI 0.1.10 adoption without changing Worldsteel cache-miss, support, ordering, unit-scale, closure or owner-draft constraints."
 title: worldsteel Import Constraints
 docType: constraints
 scope: import-profile

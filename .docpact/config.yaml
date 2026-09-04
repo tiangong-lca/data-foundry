@@ -1,5 +1,6 @@
 version: 1
 layout: repo
+# Review note, 2026-09-05: #100 adopts provenance-verified CLI 0.1.10 and its public runtime boundary; current dependency/test/runtime/doc routes cover the change without moving task or mutation authority.
 # Review note, 2026-09-04: #97 uses existing auth/runtime/test governance for the OAuth consumer and isolated Golden snapshots; CLI owns session/transport and #270 tracks support-cache extraction.
 # Review note, 2026-06-04: first-pass docpact onboarding for Foundry thin-control-plane refactor.
 # Review note, 2026-07-23: Issue #42 adds the generic offline incremental change-set composer, exact per-conversion event ledger, and CLI candidate contract. Strict Draft 2020-12 validation uses the exact Ajv 8.20.0 runtime dependency; evidence-bound entity/path/value rules, stable-identity array handling, snapshot receipts, terminal pairs, and non-root field allowlists add no remote access or mutation authority.
@@ -19,8 +20,8 @@ layout: repo
 # Review note, 2026-08-29: Issue #70 also re-reviews the Worldsteel profile family after its operational CLI-version update. The machine profile timestamp and all four governed documents move together; R1-R5, retained counts, cache-miss policy, support ordering, and production authority remain unchanged.
 # Review note, 2026-08-29: Issue #70 replaces the remaining manual scope claim loop with a 166-line Foundry adapter over public CLI batch/run-lock. Existing orchestration rules now cover contract projection, family resource FIFO, pause/stop/drain, the 1,898-line owner, focused boundary cases, and unchanged semantic ledger/report authority.
 # Review note, 2026-08-29: Issue #70 makes the batch public owner a five-line facade and moves the 1,649-line composition root to an explicitly named/budgeted lib path. This preserves the same three exports, help, profile adapters, semantic modules, CLI delegation, and authority while keeping residual composition density visible.
-lastReviewedAt: "2026-09-04"
-lastReviewedCommit: "1078b2b2c515cb06b66d19f3ce572e3fdc5f15e5"
+lastReviewedAt: "2026-09-05"
+lastReviewedCommit: "7867b3d9293d9435386c68a256a2498ec492f834"
 
 catalog:
   repos:
@@ -208,6 +209,9 @@ docInventory:
     - docs/runtime-skill-management.md
     - docs/env-surface-policy.md
     - docs/foundry-task-contracts.md
+    - docs/task-authorization-contract.md
+    - docs/runtime-context-contract.md
+    - docs/public-runtime-contract.md
     - docs/safety-policy.md
     - docs/foundry-ai-navigation.md
     - docs/foundry-command-surface.md
@@ -387,6 +391,10 @@ rules:
         kind: task-authorization-contract
       - path: scripts/lib/task-authorization.ts
         kind: task-authorization-validator
+      - path: scripts/lib/foundry-task-authorization.ts
+        kind: persisted-task-authorization
+      - path: scripts/lib/foundry-execution-admission.ts
+        kind: final-child-execution-admission
       - path: scripts/lib/import-curation/internal/profiles-config.ts
         kind: rule-and-authorization-admission
       - path: scripts/lib/import-curation/mutation-manifest.ts
@@ -397,14 +405,108 @@ rules:
         kind: elementary-action-admission
       - path: specs/schemas/task-authorization.schema.json
         kind: task-authorization-schema
+      - path: specs/schemas/authorization-derivation.schema.json
+        kind: authorization-derivation-schema
+      - path: specs/schemas/execution-context.schema.json
+        kind: child-execution-context-schema
       - path: test/unit/task-authorization.test.mts
         kind: task-authorization-contract-test
       - path: test/unit/task-profile-authority.test.mts
         kind: profile-authority-contract-test
+      - path: test/scenarios/foundry-execution-admission.test.mts
+        kind: child-execution-admission-scenario
     requiredDocs:
       - path: docs/task-authorization-contract.md
         mode: review_or_update
     reason: Task exceptions need their own binding, action, evidence and legacy no-replay contract beyond the existing general control-plane and source-profile documentation.
+  - id: foundry-runtime-context-contract
+    scope: repo
+    repo: data-foundry
+    triggers:
+      - path: scripts/lib/foundry-runtime-context.ts
+        kind: explicit-runtime-roots
+      - path: scripts/lib/foundry-runtime-paths.ts
+        kind: package-layout-resolution
+      - path: scripts/foundry-runtime.ts
+        kind: consumer-command-adapter
+      - path: scripts/lib/foundry-runtime-command-policy.ts
+        kind: all-command-runtime-disposition
+      - path: scripts/lib/foundry-runtime-qualification.ts
+        kind: component-runtime-qualification
+      - path: scripts/lib/foundry-execution-admission.ts
+        kind: qualified-child-execution
+      - path: scripts/lib/tidas-adapter.ts
+        kind: explicit-native-child-environment
+      - path: scripts/lib/import-curation/internal/runtime-io.ts
+        kind: scoped-runtime-io
+      - path: scripts/lib/import-curation/curation-cleanup.ts
+        kind: context-aware-command-owner
+      - path: test/unit/runtime-layout.test.mts
+        kind: runtime-layout-contract-test
+      - path: test/unit/foundry-runtime-context.test.mts
+        kind: runtime-context-contract-test
+      - path: test/unit/foundry-runtime-command-policy.test.mts
+        kind: command-disposition-contract-test
+      - path: test/unit/foundry-runtime-qualification.test.mts
+        kind: runtime-qualification-contract-test
+      - path: test/unit/foundry-runtime-authority-schemas.test.mts
+        kind: runtime-authority-schema-contract-test
+      - path: test/unit/public-cli-runtime.test.mts
+        kind: cli-runtime-consumer-contract-test
+      - path: test/scenarios/runtime-workspace.test.mts
+        kind: workspace-isolation-scenario
+      - path: test/scenarios/foundry-execution-admission.test.mts
+        kind: qualified-child-execution-scenario
+      - path: docs/runtime-context-contract.md
+        kind: runtime-context-contract
+    requiredDocs:
+      - path: docs/runtime-context-contract.md
+        mode: review_or_update
+      - path: docs/public-runtime-contract.md
+        mode: must_exist
+    reason: Explicit roots, package layout and input/output confinement form the consumer runtime boundary and must remain separate from developer maintenance.
+  - id: foundry-public-runtime-protocol
+    scope: repo
+    repo: data-foundry
+    triggers:
+      - path: scripts/runtime-entry.ts
+        kind: runtime-entry-adapter
+      - path: docs/public-runtime-contract.md
+        kind: public-runtime-protocol
+    requiredDocs:
+      - path: docs/public-runtime-contract.md
+        mode: review_or_update
+      - path: docs/runtime-context-contract.md
+        mode: review_or_update
+    reason: Entry adapters must preserve the normative public facade target while command availability is qualified separately.
+  - id: foundry-persisted-task-boundary
+    scope: repo
+    repo: data-foundry
+    triggers:
+      - path: scripts/lib/foundry-task-*.ts
+        kind: registered-task-state
+      - path: scripts/lib/foundry-runtime-identity.ts
+        kind: task-identity-verification
+      - path: scripts/lib/foundry-runtime-qualification.ts
+        kind: task-runtime-qualification
+      - path: scripts/lib/foundry-execution-admission.ts
+        kind: task-child-execution-admission
+      - path: test/scenarios/task-runtime-binding.test.mts
+        kind: task-recovery-contract-test
+      - path: test/scenarios/task-authorization-persistence.test.mts
+        kind: persisted-authorization-contract-test
+      - path: test/scenarios/foundry-execution-admission.test.mts
+        kind: derived-authorization-and-child-admission-test
+    requiredDocs:
+      - path: docs/foundry-task-contracts.md
+        mode: review_or_update
+      - path: docs/task-authorization-contract.md
+        mode: review_or_update
+      - path: docs/runtime-context-contract.md
+        mode: review_or_update
+      - path: docs/env-surface-policy.md
+        mode: review_or_update
+    reason: Task/actor/account identity, immutable source/profile records, producer lineage and explicit approval evidence must remain distinct from login, business completion and mutation replay authority.
   - id: foundry-prewrite-datetime-contract
     scope: repo
     repo: data-foundry

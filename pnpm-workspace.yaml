@@ -12,7 +12,7 @@ overrides:
 minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
-  - "@tiangong-lca/cli@0.1.9"
+  - "@tiangong-lca/cli@0.1.10"
   - "@oxlint/binding-android-arm-eabi@1.80.0"
   - "@oxlint/binding-android-arm64@1.80.0"
   - "@oxlint/binding-darwin-arm64@1.80.0"

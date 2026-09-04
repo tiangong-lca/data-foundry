@@ -112,6 +112,7 @@ export function parseFreshIntentBoundAuthReceipt(
     maxAgeMs: number;
     expectedProjectRef: string;
     expectedUserId: string;
+    sessionMode?: "oauth" | "headless";
   },
 ): AuthIdentityReceipt {
   if (
@@ -136,6 +137,17 @@ export function parseFreshIntentBoundAuthReceipt(
     receipt.identity.user_id !== options.expectedUserId
   ) {
     throw new Error("Auth identity receipt is not bound to the expected project and user.");
+  }
+  if (options.sessionMode === "headless") {
+    if (
+      receipt.session.source !== "access_token" ||
+      receipt.session.cache_mode !== "disabled" ||
+      (receipt.session.expires_at_utc !== null &&
+        Date.parse(receipt.session.expires_at_utc) <= options.nowMs)
+    ) {
+      throw new Error("Headless identity requires the CLI process-only access-token contract.");
+    }
+    return receipt;
   }
   if (
     !["memory", "cache", "refresh", "oauth_login"].includes(receipt.session.source) ||

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tiangong-lca.local/foundry/tidas-runtime-expectation.schema.json",
+  "title": "Foundry TIDAS runtime expectation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "platform", "binary_version", "executable", "validation"],
+  "properties": {
+    "schema": { "const": "tiangong-foundry.tidas-runtime-expectation.v1" },
+    "platform": {
+      "enum": ["linux-x64", "linux-arm64", "darwin-arm64", "win32-x64"]
+    },
+    "binary_version": { "type": "string", "pattern": "^0\\.2\\.(0|[1-9][0-9]*)$" },
+    "executable": { "$ref": "#/$defs/contentFact" },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "asset_fingerprint", "protocols", "event_schema_versions"],
+      "properties": {
+        "schema_version": { "const": "tidas.validation-describe.v1" },
+        "asset_fingerprint": { "$ref": "#/$defs/sha256" },
+        "protocols": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "contains": { "const": "document-validation-batch.v1" },
+          "items": { "$ref": "#/$defs/boundedString" }
+        },
+        "event_schema_versions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "contains": { "const": "tidas.validation-final-event.v1" },
+          "items": { "$ref": "#/$defs/boundedString" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "boundedString": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "contentFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bytes", "sha256"],
+      "properties": {
+        "bytes": { "type": "integer", "minimum": 1, "maximum": 536870912 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  deriveTaskAuthorizationGrant,
   taskAuthorizationAllows,
   taskAuthorizationMatches,
   taskAuthorizationWaivesQa,
@@ -167,5 +168,42 @@ test("material balance needs both approval and exact source-model evidence, with
       nowMs,
     ).status,
     "invalid",
+  );
+});
+
+test("derived grants change only an exact input scope and retain parent authority bounds", () => {
+  const { authorization, binding, nowMs } = taskAuthorizationFixture();
+  authorization.allowed_actions = ["flowproperty_write", "unitgroup_write"];
+  const result = validateTaskAuthorization(authorization, binding, nowMs);
+  assert.equal(result.status, "authorized");
+  const derivedBinding = { ...binding, input_scope_sha256: "d".repeat(64) };
+  const derived = deriveTaskAuthorizationGrant(result.authorization, derivedBinding, nowMs);
+  assert.equal(derived.binding.input_scope_sha256, "d".repeat(64));
+  assert.deepEqual(derived.allowed_actions, result.authorization.allowed_actions);
+  assert.deepEqual(derived.qa_waivers, result.authorization.qa_waivers);
+  assert.deepEqual(derived.evidence, result.authorization.evidence);
+  assert.equal(derived.expires_at_utc, result.authorization.expires_at_utc);
+  assert.equal(validateTaskAuthorization(derived, derivedBinding, nowMs).status, "authorized");
+  assert.throws(
+    () => deriveTaskAuthorizationGrant(result.authorization, binding, nowMs),
+    /distinct input scope/u,
+  );
+  assert.throws(
+    () =>
+      deriveTaskAuthorizationGrant(
+        result.authorization,
+        { ...derivedBinding, actor_id: "another-actor" },
+        nowMs,
+      ),
+    /cannot change task or account/u,
+  );
+  assert.throws(
+    () =>
+      deriveTaskAuthorizationGrant(
+        JSON.parse(JSON.stringify(result.authorization)),
+        derivedBinding,
+        nowMs,
+      ),
+    /not current process-local/u,
   );
 });

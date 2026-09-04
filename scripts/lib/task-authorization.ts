@@ -316,3 +316,38 @@ export function taskAuthorizationWaivesQa(
     item.qa_waivers.some((waiver) => waiver.dataset_type === datasetType && waiver.code === code)
   );
 }
+
+/** Build a reviewable exact-input successor without changing actions, waivers, evidence or expiry. */
+export function deriveTaskAuthorizationGrant(
+  parent: ValidatedTaskAuthorization,
+  expected: TaskAuthorizationBinding,
+  nowMs = Date.now(),
+) {
+  if (!taskAuthorizationMatches(parent, parent.binding, nowMs))
+    throw new Error("Parent task authorization is not current process-local authority.");
+  for (const key of bindingKeys) {
+    if (key === "input_scope_sha256") continue;
+    if (parent.binding[key] !== expected[key])
+      throw new Error("Derived task authorization cannot change task or account binding.");
+  }
+  if (parent.binding.input_scope_sha256 === expected.input_scope_sha256)
+    throw new Error("Derived task authorization requires a distinct input scope.");
+  const grant = Object.freeze({
+    schema: "tiangong-foundry.task-authorization.v1" as const,
+    binding: Object.freeze({ ...expected }),
+    issued_at_utc: parent.issued_at_utc,
+    expires_at_utc: parent.expires_at_utc,
+    remote_state_code: 0 as const,
+    allowed_actions: Object.freeze([...parent.allowed_actions]),
+    qa_waivers: Object.freeze(
+      parent.qa_waivers.map((waiver) =>
+        Object.freeze({ ...waiver, evidence_ids: Object.freeze([...waiver.evidence_ids]) }),
+      ),
+    ),
+    evidence: Object.freeze(parent.evidence.map((proof) => Object.freeze({ ...proof }))),
+  });
+  const result = validateTaskAuthorization(grant, expected, nowMs);
+  if (result.status !== "authorized")
+    throw new Error("Derived task authorization failed its exact successor contract.");
+  return grant;
+}

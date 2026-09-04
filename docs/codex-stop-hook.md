@@ -19,7 +19,7 @@ checkPaths:
   - package.json
   - scripts/commands/core.ts
 lastReviewedAt: 2026-09-04
-lastReviewedCommit: 42ae8e94055ba7f912fdbd38fe16479409338033
+lastReviewedCommit: 46e359bc3d5d4055db034e7ec04e7989d8eb3680
 lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session references and credential-free candidate Golden snapshots; transport ownership and no-replay gates remain unchanged. Support-cache CLI extraction is a tracked prerequisite in tiangong-cli #270."
 ---
 

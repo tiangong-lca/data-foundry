@@ -1,7 +1,7 @@
 ---
-lastReviewedAt: 2026-08-29
-lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
-lastReviewedNote: "Reviewed for Issue #70: verified CLI 0.1.3 public primitives change no frozen Worldsteel profile value, R1-R5 decision, support override, contact, row version, or write authority."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
+lastReviewedNote: "Reviewed for #100 CLI 0.1.10 adoption without changing frozen Worldsteel profile values, R1-R5 decisions, support policy or write authority."
 title: worldsteel Import Profile
 docType: profile
 scope: import-profile

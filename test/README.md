@@ -273,14 +273,20 @@ checkPaths:
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: 1078b2b2c515cb06b66d19f3ce572e3fdc5f15e5
-lastReviewedNote: "Reviewed for Issue #76: tests pin CAS dedupe, receipt verification, payload dispositions, and safe scope/cache pruning."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
+lastReviewedNote: "Reviewed for #100 W04: focused tests cover qualification, all-command policy, authority schemas, derived lineage and child execution rehydration."
 ---
 
 # Test Layout
 
+The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS runtime qualification, explicit disposition for all 63 owner commands, derived-input authorization and content-addressed child execution admission complete the W04 authority boundary. These are internal runtime APIs; the W05 public task facade and W06 package closure remain separate. See `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
+
+The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` exposes initialization, diagnostics, profile listing and deterministic cleanup. Every other owner command now has an explicit public/internal/excluded, input/output, child-process, qualification and authorization disposition; a later facade may reach internal stages only through the qualified context and cannot fall back to the developer runner. The final facade names and envelope remain fixed in `docs/public-runtime-contract.md` for W05.
+
 W03 task authorization is covered by `unit/task-authorization.test.mts` (immutable grants, exact binding, expiry, actions and evidence), `unit/task-profile-authority.test.mts` (no inherited legacy permission and scoped Worldsteel naming), and the mixed-support handoff case in `unit/handoff-identity-task-command-factories.test.mts` (actual row types, input-byte drift and account mismatch). `fixtures/task-authorizations.ts` is explicit test-only approval data; tests must opt in and never derive permission from a profile flag. Local candidate/closure regressions remain in the existing command/scenario suites. Real CLI identity plus the frozen private Flow case is exercised outside public CI, without business writes or committed private payloads.
+
+W04 authority tests are split by contract. `unit/foundry-runtime-qualification.test.mts` compares the real installed CLI descriptor and an isolated TIDAS process, including drift and diagnostic rejection. `unit/foundry-runtime-command-policy.test.mts` proves every command is classified exactly once and preparation does not inherit restricted permission. `unit/foundry-runtime-authority-schemas.test.mts` compiles the four machine schemas strictly. `scenarios/foundry-execution-admission.test.mts` reconstructs a child context from a deterministic derived artifact and rejects serialized proofs, unrelated or mislabeled CLI commands, wrong actions/QA, capsule relocation and changed final bytes. Private real-case qualification repeats the same boundary with actual published C1/TIDAS artifacts; public CI keeps only synthetic identity and data fixtures.
 
 Foundry tests are organized by responsibility, not by the date a regression was added.
 
@@ -393,7 +399,7 @@ Issue #80 is pinned in `unit/post-finalize-recovery-orchestration.test.mts`. Cap
 
 Issue #83 is pinned in `unit/batch-orchestration-scope-execution.test.mts`. The stable case requires one task-queue lookup and identical suggest/apply paths; four drift cases freeze expected/observed path/bytes/SHA and prove apply is never invoked after missing, changed-length, same-length changed-hash, or relative-path replacement. The pre-existing verified-resume fixture keeps stable report/ledger bytes exact. Budget/cycle tests track the 89/120 binding leaf and unchanged 532-line preparation ceiling.
 
-`fixtures/auth-identity-receipt.ts` is the only test-only receipt materializer. It recreates the frozen public wire fingerprints and scope hash, then every consumer still passes the bytes through `@tiangong-lca/cli/auth-identity-receipt`. `unit/public-cli-batch-runtime.test.mts` loads exact installed CLI 0.1.3, exercises public batch/run-lock plus strict receipt parsing, and proves the former private deep path stays unexported. `unit/toolchain-contract.test.mts` rejects any tracked `@tiangong-lca/cli/dist/src/**` import and binds the exact provenance-verified 0.1.3 maturity exception.
+`fixtures/auth-identity-receipt.ts` is the only test-only receipt materializer. It recreates the frozen public wire fingerprints and scope hash, then every consumer still passes the bytes through `@tiangong-lca/cli/auth-identity-receipt`. `unit/public-cli-batch-runtime.test.mts` loads exact installed CLI 0.1.10 and exercises public batch/run-lock plus strict receipt parsing. `unit/public-cli-runtime.test.mts` exercises the C1 descriptor, expectation drift rejection, manifest and manager/exec exports. `unit/toolchain-contract.test.mts` rejects every private `@tiangong-lca/cli/dist/src/**` import and binds only the exact provenance-verified current release exception.
 
 `unit/cli-bounded-batch-runner.test.mts` is the Foundry/CLI scheduling boundary: it proves the physical run lock exists only during execution, public contract claims are bounded, pause leaves items unclaimed, stop drains claimed work, one family key is FIFO-serialized while an independent key proceeds, and the composition root has no manual worker/`Promise.all` claim loop. Existing BAFU command cases preserve pending-before-limit, pause report bytes, family-master selection, ledgers, and preflight behavior. `wave26-bafu-batch-command-migration.test.mts` fixes the five-line facade's three exports and exact help bytes; `unit/orchestration-module-budget.test.mts` separately exposes the 20-line facade and 1,700-line composition-root ceilings instead of hiding the move.
 
@@ -425,3 +431,5 @@ Toolchain and migration contracts must pass in a clean arbitrary Git worktree af
 - `node --test test/unit/tidas-adapter.test.mts`: verify 0.2.x handshake, invocation precedence, stable report/exit mapping, validation-batch compatibility, cancellation, cleanup, and rollback at the Foundry boundary.
 
 `unit/cli-support-export.test.mts` protects the CLI adapter's isolated cwd/environment, exact intent, completion marker, contained regular artifacts and row hashes/public state. `unit/support-cache-command-factory.test.mts` preserves summarization/mappings independently of transport.
+
+`foundry-application-composition.test.mts` intercepts operator-state access before it occurs and verifies two independent command applications, result-returning cleanup, unchanged process environment and unknown-command rejection. The existing entry-closure test retains byte-exact source/emitted help and exit behavior.

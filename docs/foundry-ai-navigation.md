@@ -136,12 +136,16 @@ checkPaths:
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: 1078b2b2c515cb06b66d19f3ce572e3fdc5f15e5
-lastReviewedNote: "Reviewed for Issue #76: retention navigation separates CAS storage, reference projection, receipt verification, and safe pruning."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
+lastReviewedNote: "Reviewed for #100 W04: every command now has an explicit runtime disposition while owner modules and semantic navigation remain stable."
 ---
 
 # Foundry AI Navigation
+
+The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS runtime qualification, explicit disposition for all 63 owner commands, derived-input authorization and content-addressed child execution admission complete the W04 authority boundary. These are internal runtime APIs; the W05 public task facade and W06 package closure remain separate. See `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
+
+The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` exposes initialization, diagnostics, profile listing and deterministic cleanup. Every other owner command now has an explicit public/internal/excluded, input/output, child-process, qualification and authorization disposition; a later facade may reach internal stages only through the qualified context and cannot fall back to the developer runner. The final facade names and envelope remain fixed in `docs/public-runtime-contract.md` for W05.
 
 For profile/permission work, start with `docs/task-authorization-contract.md`, `scripts/lib/task-authorization.ts` and `import-curation/internal/profiles-config.ts`. A profile carries source rules; an immutable validated task grant carries exact action/QA exceptions. Source preparation, strict datetime/scale checks and public reference proofs remain separate from write admission. Handoff checks current rules and final rows again; a legacy ready report or serialized profile cannot approve an action.
 

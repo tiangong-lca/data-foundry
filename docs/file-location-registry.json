@@ -1,7 +1,7 @@
 {
   "$schema": "../specs/schemas/file-location-registry.schema.json",
   "schema_version": 1,
-  "updated_at_utc": "2026-09-04T00:00:00Z",
+  "updated_at_utc": "2026-09-05T00:00:00Z",
   "policy_doc": "docs/file-organization.md",
   "entries": [
     {
@@ -195,11 +195,14 @@
         "AGENTS.md",
         "WORKFLOW.md",
         "docs/skill-orchestration/dataset-authoring-skill-architecture.md",
-        "docs/skill-orchestration/source-evidence-top-level-skill-design.md"
+        "docs/skill-orchestration/source-evidence-top-level-skill-design.md",
+        "scripts/lib/foundry-task-registration.ts",
+        "scripts/lib/foundry-task-store.ts",
+        "scripts/lib/foundry-task-authorization.ts"
       ],
       "sensitivity": "non-sensitive task ledger schema examples; contains no credentials and no private payloads",
       "tracked": true,
-      "notes": "Defines the minimal Foundry-owned foundry-job, source-manifest, seed-manifest, checkpoint, artifact-index, blocked-scope-ledger, and blocked-scope-report contracts. Runtime artifacts stay under ignored .foundry/workspaces/<task-id>/."
+      "notes": "Owns implemented v2 registered jobs/source/profile snapshots, account intent, operation receipts and artifact-index lineage. Workspace state anchors task identity; authorization registers independent evidence. Legacy v1 files and consumed attempts require explicit migration/recovery."
     },
     {
       "id": "foundry-safety-policy",
@@ -319,6 +322,71 @@
       "sensitivity": "non-sensitive schema; no credentials or private payloads",
       "tracked": true,
       "notes": "Machine-readable request, candidate index, audited classification, conversion event, report, and manifest shapes for topology convergence."
+    },
+    {
+      "id": "foundry-tidas-runtime-expectation-schema",
+      "status": "active",
+      "classification": "machine-readable-runtime-qualification-schema",
+      "current_path": "specs/schemas/tidas-runtime-expectation.schema.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/runtime-context-contract.md",
+        "scripts/lib/foundry-runtime-qualification.ts",
+        "test/unit/foundry-runtime-authority-schemas.test.mts"
+      ],
+      "sensitivity": "non-sensitive content and protocol expectations; no executable bytes or credentials",
+      "tracked": true,
+      "notes": "Strict four-platform TIDAS executable, version, protocol, event-schema and asset-fingerprint expectation."
+    },
+    {
+      "id": "foundry-runtime-qualification-schema",
+      "status": "active",
+      "classification": "machine-readable-runtime-qualification-schema",
+      "current_path": "specs/schemas/runtime-qualification.schema.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/runtime-context-contract.md",
+        "scripts/lib/foundry-runtime-qualification.ts",
+        "test/unit/foundry-runtime-authority-schemas.test.mts"
+      ],
+      "sensitivity": "non-sensitive diagnostic component identity; no paths, credentials or private payloads",
+      "tracked": true,
+      "notes": "Portable diagnostic view of a process-local CLI/TIDAS qualification; serialized content never grants authority."
+    },
+    {
+      "id": "foundry-authorization-derivation-schema",
+      "status": "active",
+      "classification": "machine-readable-task-authorization-schema",
+      "current_path": "specs/schemas/authorization-derivation.schema.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/task-authorization-contract.md",
+        "docs/foundry-task-contracts.md",
+        "scripts/lib/foundry-task-authorization.ts"
+      ],
+      "sensitivity": "non-sensitive task content facts; private payload bytes remain outside Git",
+      "tracked": true,
+      "notes": "Binds an exact approved input, derived task artifact and unchanged parent/successor authorization identities."
+    },
+    {
+      "id": "foundry-execution-context-schema",
+      "status": "active",
+      "classification": "machine-readable-qualified-execution-schema",
+      "current_path": "specs/schemas/execution-context.schema.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/runtime-context-contract.md",
+        "docs/task-authorization-contract.md",
+        "docs/execution-capsule-contract.md",
+        "scripts/lib/foundry-execution-admission.ts"
+      ],
+      "sensitivity": "non-sensitive task/runtime digests and paths; no environment or credential material",
+      "tracked": true,
+      "notes": "Content-addressed current-task child handoff requiring fresh process-local rehydration before an owner CommandSpec is returned."
     },
     {
       "id": "uslci-source-package",

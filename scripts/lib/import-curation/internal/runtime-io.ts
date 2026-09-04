@@ -86,8 +86,8 @@ export function repoRelativeArtifactPath(repoRoot: string, value: unknown): stri
   return resolved ? repoRelativePath(repoRoot, resolved) : null;
 }
 
-export function readJsonOrJsonl(filePath: string): unknown {
-  const text = readText(filePath).trim();
+export function readJsonOrJsonl(filePath: string, reader?: (filePath: string) => string): unknown {
+  const text = (reader ?? readText)(filePath).trim();
   if (!text) return [];
   if (filePath.endsWith(".jsonl")) {
     return text
@@ -95,11 +95,11 @@ export function readJsonOrJsonl(filePath: string): unknown {
       .filter(Boolean)
       .map((line) => JSON.parse(line));
   }
-  return readJson(filePath);
+  return reader ? JSON.parse(text) : readJson(filePath);
 }
 
-export function readRows(filePath: string): unknown[] {
-  const parsed = readJsonOrJsonl(filePath);
+export function readRows(filePath: string, reader?: (filePath: string) => string): unknown[] {
+  const parsed = readJsonOrJsonl(filePath, reader);
   if (Array.isArray(parsed)) return parsed;
   const record =
     parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : undefined;

@@ -21,11 +21,14 @@ checkPaths:
   - scripts/commands/core.ts
   - scripts/with-lca-account.ts
   - scripts/lib/foundry-runtime-environment.ts
+  - scripts/lib/foundry-runtime-qualification.ts
+  - scripts/lib/foundry-execution-admission.ts
+  - scripts/lib/tidas-adapter.ts
   - scripts/lib/foundry-runtime-utils.ts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-04
-lastReviewedCommit: 1078b2b2c515cb06b66d19f3ce572e3fdc5f15e5
-lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session references and credential-free candidate Golden snapshots; transport ownership and no-replay gates remain unchanged. Support-cache CLI extraction is a tracked prerequisite in tiangong-cli #270."
+lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
+lastReviewedNote: "Reviewed for #100 W04: CLI/TIDAS qualification and child execution use explicit credential-free environments; no operator env or session contents enter runtime evidence."
 ---
 
 # Environment Surface Policy
@@ -76,7 +79,9 @@ The account wrapper reads only public OAuth configuration, an absolute private C
 
 ## Internal Credential-Free Child Policy
 
-`FOUNDRY_RUNTIME_ENV_FILE_POLICY=disabled` is an internal child-process binding, not a user-configurable `.env.example` variable. The Golden harness sets it only inside an explicit allowlisted environment shared byte-for-byte by baseline and current commands. Both sides run in isolated source snapshots: candidate files come only from Git-visible tracked/untracked source, excluding ignored operator inputs, credentials, task state and prior reports. That environment replaces HOME, temp, XDG, npm, git and Corepack state with task-local directories, preserves only required platform launcher keys, accepts only `TIANGONG_LCA_CLI_BIN` and `TIDAS_BIN` as caller overrides, and drops ambient `NODE_OPTIONS`, tokens, keys, passwords, sessions, credential URLs and other configuration injection. Ordinary Foundry execution keeps the existing default of loading the repository `.env`; tests seed only a temporary `.env` to prove the disabled and default paths.
+`FOUNDRY_RUNTIME_ENV_FILE_POLICY=disabled` is an internal child-process binding, not a user-configurable `.env.example` variable. The Golden harness sets it only inside an explicit allowlisted environment shared byte-for-byte by baseline and current commands. Both sides run in isolated source snapshots: candidate files come only from Git-visible tracked/untracked source, excluding ignored operator inputs, credentials, task state and prior reports. That environment replaces HOME, temp, XDG, npm, git and Corepack state with task-local directories, preserves only required platform launcher keys, accepts only `TIANGONG_LCA_CLI_BIN` and `TIDAS_BIN` as caller overrides, and drops ambient `NODE_OPTIONS`, tokens, keys, passwords, sessions, credential URLs and other configuration injection. The legacy developer entry keeps explicit CLI startup behavior for repository maintenance. The explicit workspace runtime never loads `.env`, and user-workspace commands do not fall back to the developer path. Tests seed only temporary environment files and intercept operator-state access before it can occur.
+
+Runtime qualification passes the same explicit isolated environment into both TIDAS handshake invocations. It copies the independently hashed TIDAS executable into a private temporary directory, rehashes the copy and invokes only that copy; ambient `TIDAS_*` settings cannot alter executable selection or resource budgets. The execution-context document stores runtime, authorization, input and CommandSpec digests only. It contains no environment map, OAuth material, session reference or credential path.
 
 ## Automatic Check
 
@@ -87,3 +92,7 @@ The same env-surface check is included in `pnpm acceptance:check`, so the Codex 
 The pre-push hook removes every repository-local Git environment binding reported by `git rev-parse --local-env-vars` before starting the full gate. Fixture repository initialization must not reuse the outer push repository or index; direct fixture runners also use an isolated Git environment. `test/unit/git-hook-isolation.test.mts` verifies the actual hook preserves the outer repository config while the nested test repository is created separately.
 
 Canonical-support refresh passes only public OAuth configuration, the CLI session reference and essential platform/home paths to its CLI child. It uses a fresh temporary cwd, so the CLI cannot load the operator checkout `.env`. Username/password, legacy API keys, unrelated secrets and shell configuration are not propagated. The caller must provide the account wrapper's expected project/user intent.
+
+The consumer identity runner uses a fresh private cwd and an explicit environment allowlist. OAuth uses CLI-owned defaults or complete public configuration and an optional private session reference. Headless mode forwards the caller-supplied actor token only in the one CLI process environment, disables the session cache, removes its temporary environment binding after verification, and never stores or serializes the token. Current CLI headless receipts have no token-expiry timestamp; Foundry enforces fresh server identity and does not invent token lifetime evidence.
+
+Constructing an internal `createFoundryApplication` does not call `loadRuntimeEnv`, discover a workspace or mutate process environment. The developer `main(argv)` explicitly performs its existing env loading before creating that application. This constructor guarantee does not qualify every legacy leaf command for consumer use; each leaf must receive the admitted runtime I/O and child-process environment before the facade exposes it.

@@ -146,18 +146,30 @@ checkPaths:
   - test/unit/foundry-runtime-environment.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: 1078b2b2c515cb06b66d19f3ce572e3fdc5f15e5
-lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session references and credential-free candidate Golden snapshots; transport ownership and no-replay gates remain unchanged. Support-cache CLI extraction is a tracked prerequisite in tiangong-cli #270."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
+lastReviewedNote: "Reviewed for #100 W04: explicit qualification and child admission are implemented; facade, package closure and F1 component trust remain pending."
 ---
 
 # Architecture
+
+The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS runtime qualification, explicit disposition for all 63 owner commands, derived-input authorization and content-addressed child execution admission complete the W04 authority boundary. These are internal runtime APIs; the W05 public task facade and W06 package closure remain separate. See `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
+
+The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` exposes initialization, diagnostics, profile listing and deterministic cleanup. Every other owner command now has an explicit public/internal/excluded, input/output, child-process, qualification and authorization disposition; a later facade may reach internal stages only through the qualified context and cannot fall back to the developer runner. The final facade names and envelope remain fixed in `docs/public-runtime-contract.md` for W05.
+
+`createFoundryApplication` constructs the existing command factories for one explicit root and optional injected runtime utilities. Its `execute` method uses the same `createFoundryCommandDispatcher` registry as the CLI and returns a promise without the dispatcher printing or exiting the host. Construction does not load `.env` or discover operator state; independent applications retain independent root bindings. The developer `main(argv)` alone loads its environment and chooses the process adapter under `import.meta.main`. Consumer commands still require individual task/I/O admission through `runtime-entry.ts`; this internal composition API does not make every legacy owner safe for an installed consumer or authorize a write.
 
 Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel account overrides, QA waivers and the Worldsteel full-context relaxation grant no permission to a new task. `docs/task-authorization-contract.md` owns the separate workspace/task/actor/account/profile/input binding and exact action evidence. Local candidate preparation and checked public-reference proofs remain available; current final-row hashes, task permissions and all content/closure/no-replay gates are required before a restricted write handoff.
 
 ## OAuth identity boundary
 
-Foundry selects a private session reference and exact project/user intent, then calls the published CLI for a fresh server-verified identity receipt. It validates TTL, canonical hash, expected identity and current OAuth session metadata without owning login, password decoding, token exchange or refresh. Candidate Golden execution uses an isolated Git-visible source snapshot so ignored operator state cannot change qualification. Support-cache transport is owned by the public CLI export. Foundry validates the fresh identity, project, public-state scope, completion marker, artifact paths and hashes, then summarizes rows and atomically replaces only the requested local cache. The CLI runs in a private temporary cwd with an allowlisted OAuth environment; the operator checkout .env and unrelated secrets cannot enter that child. Public dependency adoption still waits for the qualified CLI release.
+Foundry selects a private session reference and exact project/user intent, then calls the published CLI for a fresh server-verified identity receipt. It validates TTL, canonical hash, expected identity and current OAuth session metadata without owning login, password decoding, token exchange or refresh. Candidate Golden execution uses an isolated Git-visible source snapshot so ignored operator state cannot change qualification. Support-cache transport is owned by the public CLI export. Foundry validates the fresh identity, project, public-state scope, completion marker, artifact paths and hashes, then summarizes rows and atomically replaces only the requested local cache. The CLI runs in a private temporary cwd with an allowlisted OAuth environment; the operator checkout .env and unrelated secrets cannot enter that child. Exact public CLI 0.1.10 and TIDAS 0.2.x expectations are independently selected and re-observed through the W04 qualification boundary. F1 component provenance and package qualification remain W06/W08 gates.
+
+## Qualified execution boundary
+
+`foundry-runtime-command-policy.ts` explicitly classifies all 63 existing commands. Package assets, workspace selections, task-lineage inputs, state/artifact outputs, native/CLI child ownership and restricted authorization are separate fields. Adding a command without a disposition fails module initialization. Repository maintenance is excluded from the consumer surface; local preparation does not acquire task permission merely because it is a task stage.
+
+`foundry-runtime-qualification.ts` binds current Foundry package identity to exact public CLI and independently selected native TIDAS bytes/protocols. `foundry-execution-admission.ts` then binds the current source lineage, derived final rows, active grant/actions/QA evidence and owner CLI CommandSpec. Rehydration in a new process reconstructs every process-local proof and checks the exact owner-draft argv shape before returning the spec. Mutation dispatch, attempt transitions and readback remain with the existing CLI/orchestration owners.
 
 ## Current Shape
 
@@ -294,7 +306,7 @@ Build and test resolution must be worktree-local. A clean arbitrary Git worktree
 
 Cross-platform characterization is also explicit: the Golden harness compares normalized outputs to a non-`HEAD` merge-base, performs recursive comparison in Node rather than calling an external Unix utility, and uses full Git history in CI. Script-backed executable overrides are represented as an executable plus argv prefix and run through Node on macOS, Linux, and Windows. The root `.gitattributes` fixes text files to LF while allowing Windows launcher exceptions, preventing checkout policy from masquerading as format drift.
 
-The first credential-bearing entrypoint on that spine is `scripts/with-lca-account.ts`. It does not authenticate against Supabase itself. It resolves the exact installed CLI 0.1.9, requests `auth identity-receipt` with both expected project and user assertions, accepts only a fresh intent-bound forced signin, and then launches the requested executable plus argv with `shell:false` and a restricted environment. The CLI owns session and live identity behavior; Foundry owns the profile/thread intent checks and safe process boundary.
+The first credential-bearing entrypoint on that spine is `scripts/with-lca-account.ts`. It does not authenticate against Supabase itself. It resolves the exact installed CLI 0.1.10, requests `auth identity-receipt` with both expected project and user assertions, accepts only a fresh intent-bound forced signin, and then launches the requested executable plus argv with `shell:false` and a restricted environment. The CLI owns session and live identity behavior; Foundry owns the profile/thread intent checks and safe process boundary.
 
 `scripts/lib/identity-preflight-proof.ts` imports the strict parser from the public `@tiangong-lca/cli/auth-identity-receipt` subpath. `test/fixtures/auth-identity-receipt.ts` is the sole test-only wire-fixture owner and produces bytes that must pass that public parser. No production module or fixture may load CLI `dist/src/**`; the installed-package contract also exercises public batch scheduling/run-lock behavior and proves the private path remains closed.
 

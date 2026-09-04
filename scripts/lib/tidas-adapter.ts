@@ -216,11 +216,15 @@ export function resolveTidasProcessCommand(executable: string): TidasProcessComm
   };
 }
 
-function globalArgs(invocation: TidasInvocation, options: TidasAdapterOptions = {}): string[] {
+function globalArgs(
+  invocation: TidasInvocation,
+  options: TidasAdapterOptions = {},
+  environment: NodeJS.ProcessEnv = process.env,
+): string[] {
   const args = ["--format", "json", "--progress", "never"];
   if (invocation.config) args.push("--config", invocation.config);
-  const memoryBudgetMib = options.memoryBudgetMib ?? process.env.TIDAS_MEMORY_BUDGET_MIB;
-  const queueCapacity = options.queueCapacity ?? process.env.TIDAS_QUEUE_CAPACITY;
+  const memoryBudgetMib = options.memoryBudgetMib ?? environment.TIDAS_MEMORY_BUDGET_MIB;
+  const queueCapacity = options.queueCapacity ?? environment.TIDAS_QUEUE_CAPACITY;
   if (String(memoryBudgetMib ?? "").trim()) {
     args.push("--memory-budget-mib", String(memoryBudgetMib).trim());
   }
@@ -239,11 +243,12 @@ function runProcess(
   args: string[],
   cwd: string,
   maxBuffer = 512 * 1024 * 1024,
+  environment: NodeJS.ProcessEnv = process.env,
 ): SpawnSyncReturns<string> {
   const processCommand = resolveTidasProcessCommand(invocation.executable);
   const result = spawnSync(processCommand.command, [...processCommand.prefixArgs, ...args], {
     cwd,
-    env: process.env,
+    env: environment,
     encoding: "utf8",
     maxBuffer,
   });
@@ -254,13 +259,15 @@ function runProcess(
 export function runTidasHandshake({
   repoRoot,
   options = {},
+  environment = process.env,
 }: {
   repoRoot: string;
   options?: TidasAdapterOptions;
+  environment?: NodeJS.ProcessEnv;
 }) {
-  const invocation = resolveTidasInvocation(options);
-  const args = ["version", ...globalArgs(invocation, options)];
-  const result = runProcess(invocation, args, repoRoot);
+  const invocation = resolveTidasInvocation(options, environment);
+  const args = ["version", ...globalArgs(invocation, options, environment)];
+  const result = runProcess(invocation, args, repoRoot, undefined, environment);
   const exitCode = typeof result.status === "number" ? result.status : 70;
   const report = assertOperationReport(
     parseJsonOutput(result, "tidas version"),
@@ -271,8 +278,8 @@ export function runTidasHandshake({
   if (report.summary?.operation_report_schema !== TIDAS_OPERATION_REPORT_SCHEMA) {
     throw new Error("tidas_version_handshake_operation_schema_mismatch");
   }
-  const describeArgs = ["validate", "--describe", ...globalArgs(invocation, options)];
-  const describeResult = runProcess(invocation, describeArgs, repoRoot);
+  const describeArgs = ["validate", "--describe", ...globalArgs(invocation, options, environment)];
+  const describeResult = runProcess(invocation, describeArgs, repoRoot, undefined, environment);
   const describeExitCode = typeof describeResult.status === "number" ? describeResult.status : 70;
   const describeReport = assertOperationReport(
     parseJsonOutput(describeResult, "tidas validate --describe"),
@@ -296,6 +303,7 @@ export function runTidasHandshake({
     describe_args: describeArgs,
     exit_code: exitCode,
     stderr: result.stderr || "",
+    validation_describe_stderr: describeResult.stderr || "",
     binary_version: binaryVersion,
     report,
     validation_describe: validationDescribe,
@@ -308,15 +316,17 @@ function runTidasOperation({
   command,
   commandArgs,
   options = {},
+  environment = process.env,
 }: {
   repoRoot: string;
   command: string;
   commandArgs: string[];
   options?: TidasAdapterOptions;
+  environment?: NodeJS.ProcessEnv;
 }): TidasOperationResult {
-  const handshake = runTidasHandshake({ repoRoot, options });
-  const args = [command, ...commandArgs, ...globalArgs(handshake.invocation, options)];
-  const result = runProcess(handshake.invocation, args, repoRoot);
+  const handshake = runTidasHandshake({ repoRoot, options, environment });
+  const args = [command, ...commandArgs, ...globalArgs(handshake.invocation, options, environment)];
+  const result = runProcess(handshake.invocation, args, repoRoot, undefined, environment);
   const exitCode = typeof result.status === "number" ? result.status : 70;
   const report = assertOperationReport(
     parseJsonOutput(result, `tidas ${command}`),
@@ -342,9 +352,11 @@ function runTidasOperation({
 export function runTidasImport({
   repoRoot,
   options = {},
+  environment = process.env,
 }: {
   repoRoot: string;
   options?: TidasAdapterOptions;
+  environment?: NodeJS.ProcessEnv;
 }): TidasOperationResult {
   const input = path.resolve(repoRoot, String(options.input ?? options.source ?? ""));
   const output = path.resolve(repoRoot, String(options.output ?? options.outDir ?? ""));
@@ -367,6 +379,7 @@ export function runTidasImport({
     command: "import",
     commandArgs: args,
     options,
+    environment,
   });
   const importReport = record(operation.report?.summary?.import);
   if (importReport && importReport.schema_version !== TIDAS_IMPORT_REPORT_SCHEMA) {
@@ -381,9 +394,11 @@ export function runTidasImport({
 export function runTidasPackageValidation({
   repoRoot,
   options = {},
+  environment = process.env,
 }: {
   repoRoot: string;
   options?: TidasAdapterOptions;
+  environment?: NodeJS.ProcessEnv;
 }): TidasOperationResult {
   const input = path.resolve(repoRoot, String(options.input ?? ""));
   if (!options.input) throw new Error("--input is required.");
@@ -394,6 +409,7 @@ export function runTidasPackageValidation({
     command: "validate",
     commandArgs: args,
     options,
+    environment,
   });
   const summary = record(operation.report?.summary?.validation);
   if (summary && summary.schema_version !== TIDAS_VALIDATION_SUMMARY_SCHEMA) {
@@ -518,9 +534,11 @@ function replaceDirectoryAtomically(staging: string, output: string): void {
 export function runTidasRowsValidation({
   repoRoot,
   options = {},
+  environment = process.env,
 }: {
   repoRoot: string;
   options?: TidasAdapterOptions;
+  environment?: NodeJS.ProcessEnv;
 }): TidasOperationResult {
   const rowsFile = path.resolve(repoRoot, String(options.rowsFile ?? options.input ?? ""));
   const outDir = path.resolve(repoRoot, String(options.outDir ?? ""));
@@ -580,6 +598,7 @@ export function runTidasRowsValidation({
         eventsPath,
       ],
       options,
+      environment,
     });
     if (operation.exit_code !== 0) return operation;
     const finalEvent = record(operation.report?.summary?.validation_batch_final);

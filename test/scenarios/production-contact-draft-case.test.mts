@@ -31,7 +31,7 @@ const USER_ID = "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7";
 const CONTACT_ID = "11111111-2222-4333-8444-555555555555";
 const TEST_KEY = "fixture-production-test-key-never-persist";
 
-function receipt(capturedAtUtc: string, packageVersion = "0.1.9") {
+function receipt(capturedAtUtc: string, packageVersion = "0.1.10") {
   return testAuthIdentityReceipt({
     projectRef: PROJECT_REF,
     userId: USER_ID,
@@ -136,7 +136,7 @@ test("production contact case requires POSIX-private ignored output before runti
     return {
       entrypoint: "/never/started.js",
       cliPackageName: "@tiangong-lca/cli",
-      cliPackageVersion: "0.1.9",
+      cliPackageVersion: "0.1.10",
       cliEntrypointSha256: "a".repeat(64),
       cliRuntimeSha256: "b".repeat(64),
       runnerSha256: "c".repeat(64),
@@ -294,7 +294,7 @@ test(
     let commitDispatches = 0;
     let runtimeCleanups = 0;
     let successfulSpawn: RunProductionContactDraftCaseDeps["spawnImpl"];
-    let receiptPackageVersion = "0.1.9";
+    let receiptPackageVersion = "0.1.10";
     let authCallsThisRun = 0;
     let mutateAfterWriteReceipt = false;
     let extraPostwriteCheckStatus: string | null = null;
@@ -308,7 +308,7 @@ test(
     ) => ({
       entrypoint: "/trusted/private/cli.js",
       cliPackageName: "@tiangong-lca/cli",
-      cliPackageVersion: "0.1.9",
+      cliPackageVersion: "0.1.10",
       cliEntrypointSha256: "a".repeat(64),
       cliRuntimeSha256: "b".repeat(64),
       runnerSha256: "c".repeat(64),
@@ -732,7 +732,7 @@ test(
         ),
         /receipt CLI does not match the pinned runtime/u,
       );
-      receiptPackageVersion = "0.1.9";
+      receiptPackageVersion = "0.1.10";
       assert.equal(
         readJson(path.join(wrongReceiptOutDir, "case-failure.json")).mutation_dispatch_count,
         0,
