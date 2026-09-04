@@ -23,7 +23,7 @@ checkPaths:
   - test/unit/foundry-runtime-context.test.mts
   - test/scenarios/runtime-workspace.test.mts
 lastReviewedAt: 2026-09-04
-lastReviewedCommit: 2d2091fda9278c8ec9c920efac80b5bc8f1a1359
+lastReviewedCommit: ad9c885dde64b22f6e0a8e17f9da46bdba5345ef
 lastReviewedNote: "W04 context slice: explicit package/workspace/task/cache roots and reuse of the cleanup owner; remaining task and execution bindings stay tracked in #100."
 related:
   - docs/architecture.md
@@ -32,6 +32,8 @@ related:
 ---
 
 # Runtime context
+
+Local preparation now enters the registered v2 task store in `foundry-task-store.ts`; it binds source/profile/actor/runtime metadata and revalidates indexed producer lineage before using derived input. Fresh CLI identity and registered authorization are exposed through the runtime API. Account intent remains separate from authentication, and these additions do not admit remote write commands or complete the W05 facade.
 
 The consumer runtime receives an explicit `FoundryRuntimeContext`. Construction reads package identity and an explicitly selected/discovered workspace marker, but never loads `.env`, creates state, changes CWD or performs authentication. A process-local brand prevents serialized context data from becoming an executable context. `accountIntent` is expected identity, not proof of login or permission; `actorId` is caller intent and must also be checked against durable task state before execution.
 
@@ -76,4 +78,4 @@ The default in-memory data-read bound is 64 MiB; native/streaming stages must de
 
 ## Remaining integration obligations
 
-Every admitted command must bind its input families and output roots, reuse package assets explicitly, and pass this context through nested operations. Durable job/actor binding, persisted approval/evidence validation, transformed-input lineage, CLI/TIDAS runtime descriptors, authenticated account verification and final execution rechecks remain required before #100 can close. Local preparation does not grant restricted writes; W03 task permissions and existing no-replay controls remain mandatory. Developer maintenance entrypoints and their assets must be excluded from the final consumer artifact in W06.
+Every admitted command must bind its input families and output roots, reuse package assets explicitly, and pass this context through nested operations. Registered local jobs, actor/account intent, recorded artifact lineage, fresh CLI identity and persisted authorization are now implemented for the admitted local path. CLI/TIDAS verified runtime descriptors, the remaining command families, child-process propagation, automatic approved derived-grant handling and final execution rechecks remain required before #100 can close. Local preparation does not grant restricted writes; W03 task permissions and existing no-replay controls remain mandatory. Developer maintenance entrypoints and their assets must be excluded from the final consumer artifact in W06.

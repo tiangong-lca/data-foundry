@@ -153,6 +153,8 @@ lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session refer
 
 # Architecture
 
+The v2 task store now persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Runtime identity and persisted authorization are revalidated through the exact public CLI and independently selected approval evidence. See `docs/foundry-task-contracts.md`. This does not yet complete the public task facade, remaining command families, or final remote execution binding.
+
 The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` currently admits initialization, diagnostics, profile listing and deterministic cleanup; other business families remain tracked for context migration in #100. The final facade names and envelope are fixed in `docs/public-runtime-contract.md` before W05 implementation. Repository maintenance remains a developer surface and is not qualified for the final consumer package.
 
 The entry module initializes command factories only inside the explicit `main(argv)` function. Node 24's `import.meta.main` guard invokes it for a CLI launch; importing the module does not load operator `.env`/workspace state, write files, print a result or exit the embedding process. Normal CLI execution retains its existing behavior while the explicit RuntimeContext path families are being introduced in #100.

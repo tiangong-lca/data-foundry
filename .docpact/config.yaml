@@ -447,6 +447,28 @@ rules:
       - path: docs/runtime-context-contract.md
         mode: review_or_update
     reason: Entry adapters must preserve the normative public facade target while command availability is qualified separately.
+  - id: foundry-persisted-task-boundary
+    scope: repo
+    repo: data-foundry
+    triggers:
+      - path: scripts/lib/foundry-task-*.ts
+        kind: registered-task-state
+      - path: scripts/lib/foundry-runtime-identity.ts
+        kind: task-identity-verification
+      - path: test/scenarios/task-runtime-binding.test.mts
+        kind: task-recovery-contract-test
+      - path: test/scenarios/task-authorization-persistence.test.mts
+        kind: persisted-authorization-contract-test
+    requiredDocs:
+      - path: docs/foundry-task-contracts.md
+        mode: review_or_update
+      - path: docs/task-authorization-contract.md
+        mode: review_or_update
+      - path: docs/runtime-context-contract.md
+        mode: review_or_update
+      - path: docs/env-surface-policy.md
+        mode: review_or_update
+    reason: Task/actor/account identity, immutable source/profile records, producer lineage and explicit approval evidence must remain distinct from login, business completion and mutation replay authority.
   - id: foundry-prewrite-datetime-contract
     scope: repo
     repo: data-foundry

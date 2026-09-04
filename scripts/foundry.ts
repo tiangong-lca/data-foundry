@@ -64,7 +64,7 @@ import { runFoundryRuntimeCommand } from "./runtime-entry.ts";
 
 export function main(argv: string[] = process.argv): void {
   if (Object.hasOwn(parseArgs(argv.slice(3)), "workspace")) {
-    runFoundryRuntimeCommand(argv);
+    void runFoundryRuntimeCommand(argv);
     return;
   }
   const { repoRoot } = resolveFoundryRuntimePaths(import.meta.url);

@@ -15,7 +15,7 @@ checkPaths:
   - scripts/foundry-runtime.ts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-04
-lastReviewedCommit: 2d2091fda9278c8ec9c920efac80b5bc8f1a1359
+lastReviewedCommit: ad9c885dde64b22f6e0a8e17f9da46bdba5345ef
 lastReviewedNote: "Normative W05 target established under #100; command availability still requires implementation and release qualification."
 related:
   - docs/runtime-context-contract.md

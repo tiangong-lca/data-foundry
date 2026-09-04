@@ -16,7 +16,7 @@ function option(value: unknown, name: string): string | undefined {
   return value;
 }
 
-export function runFoundryRuntimeCommand(argv: string[] = process.argv): void {
+export async function runFoundryRuntimeCommand(argv: string[] = process.argv): Promise<void> {
   try {
     const [command = "help", ...rest] = argv.slice(2);
     if (!["init", "doctor", "profiles-list", "dataset-curation-cleanup"].includes(command)) {
@@ -56,11 +56,12 @@ export function runFoundryRuntimeCommand(argv: string[] = process.argv): void {
           ? runtime.profiles()
           : command === "doctor"
             ? runtime.describe()
-            : runtime.cleanup({
+            : await runtime.cleanup({
                 input: input ?? "",
                 sourceInput,
                 type: option(args.type, "--type") ?? "process",
                 outputDirectory: option(args.outDir, "--out-dir"),
+                profileId: option(args.profile, "--profile"),
               });
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     process.exitCode = exitCodeForCommand(command, {
@@ -77,4 +78,4 @@ export function runFoundryRuntimeCommand(argv: string[] = process.argv): void {
   }
 }
 
-if (import.meta.main) runFoundryRuntimeCommand();
+if (import.meta.main) void runFoundryRuntimeCommand();

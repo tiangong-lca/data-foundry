@@ -195,11 +195,14 @@
         "AGENTS.md",
         "WORKFLOW.md",
         "docs/skill-orchestration/dataset-authoring-skill-architecture.md",
-        "docs/skill-orchestration/source-evidence-top-level-skill-design.md"
+        "docs/skill-orchestration/source-evidence-top-level-skill-design.md",
+        "scripts/lib/foundry-task-registration.ts",
+        "scripts/lib/foundry-task-store.ts",
+        "scripts/lib/foundry-task-authorization.ts"
       ],
       "sensitivity": "non-sensitive task ledger schema examples; contains no credentials and no private payloads",
       "tracked": true,
-      "notes": "Defines the minimal Foundry-owned foundry-job, source-manifest, seed-manifest, checkpoint, artifact-index, blocked-scope-ledger, and blocked-scope-report contracts. Runtime artifacts stay under ignored .foundry/workspaces/<task-id>/."
+      "notes": "Owns implemented v2 registered jobs/source/profile snapshots, account intent, operation receipts and artifact-index lineage. Workspace state anchors task identity; authorization registers independent evidence. Legacy v1 files and consumed attempts require explicit migration/recovery."
     },
     {
       "id": "foundry-safety-policy",

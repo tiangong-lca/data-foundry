@@ -18,8 +18,8 @@ checkPaths:
   - WORKFLOW.md
   - specs/import-profiles.json
   - tasks/**
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: e94db0428e3508e68617bb1878c7e8dbec904def
+lastReviewedAt: 2026-09-04
+lastReviewedCommit: ad9c885dde64b22f6e0a8e17f9da46bdba5345ef
 lastReviewedNote: "Reviewed for Issue #65: handoff CommandSpecs and final-row artifact facts extend the remote-write evidence contract."
 related:
   - AGENTS.md
@@ -30,149 +30,74 @@ related:
 
 # Foundry Task Contracts
 
-Foundry owns a small task ledger. It records what should happen, which profile and sources are frozen, which owner command or skill produced each artifact, and whether gates agree on the same rows scope. It does not own conversion, validation, QA, queue state, database writes, or remote verification logic.
+The v2 task store is implemented by `foundry-task-registration.ts`, `foundry-task-store.ts`, `foundry-task-io.ts` and `foundry-task-types.ts`. It keeps source/profile/task identity separate from permissions and reuses the published CLI's `withBatchRunLock` for local metadata transactions. It does not perform database mutations or replace the CLI's consumed-attempt/readback recovery contract.
 
-## Workspace Layout
+The earlier v1 examples at commit `ad9c885dde64b22f6e0a8e17f9da46bdba5345ef` remain historical input for W10. Existing unregistered directories, v1 jobs, locks and attempts are never relabeled as v2 automatically. Real task #95 remains outside migration scope.
+
+## Layout and authority
 
 ```text
-.foundry/workspaces/<task-id>/
+<workspace>/.foundry/state/
+  task-locks/<task-id>.*
+  task-registrations/<task-id>.json
+  task-publications/<task-id>.json
+  task-accounts/<task-id>.json
+  task-authorizations/<task-id>/<authorization-sha256>.json
+  task-initialization/<owned-staging-id>/
+<workspace>/.foundry/workspaces/<task-id>/
   foundry-job.json
   source-manifest.json
-  seed-manifest.json
   profile-lock.json
+  seed-manifest.json                 # source-evidence lane only
+  account-intent.json                # once an expected account is selected
+  authorization.json                # current pointer; not a raw self-authorizing grant
   artifact-index.jsonl
-  runtime-skills/runtime-skill-resolution.json
-  checkpoints/<NN>-<stage-id>.json
+  checkpoints/<operation-id>.plan.json
+  checkpoints/<operation-id>.json
+  evidence/authorizations/<grant-id>/
+  outputs/<operation-revision>/
 ```
 
-`source-manifest.json` is required for both lanes. `seed-manifest.json` is required for `source-evidence-dataset-development`; packaged imports may omit it unless a source-discovery phase was used.
+Workspace registration retains the complete intended job/source/profile/seed metadata and a content digest. The task-local copies must match it. Account intent and approved grants also have separate immutable workspace registrations. These records contain no passwords, access tokens or session contents.
 
-## foundry-job.json
+## Task creation and recovery
 
-```json
-{
-  "schema_version": 1,
-  "task_id": "issue-123",
-  "lane": "external-dataset-curated-import",
-  "target_profile": "bafu",
-  "target_entities": ["support", "flow", "process"],
-  "workspace_dir": ".foundry/workspaces/issue-123",
-  "write_policy": {
-    "mode": "dry-run",
-    "remote_commit": "profile_gated_batch",
-    "requires_human_approval": false,
-    "human_approval_required_for": [
-      "policy_change",
-      "exceptional_waiver",
-      "missing_canonical_support_resolution",
-      "delete_action"
-    ]
-  },
-  "execution_policy": {
-    "max_parallelism": 4,
-    "claim_strategy": "queue_lock",
-    "blocked_item_policy": "record_and_continue_independent_scopes"
-  },
-  "owner_routes": {
-    "conversion": "tiangong-lca-cli",
-    "queue_state": "tiangong-lca-cli",
-    "semantic_authoring": "tiangong-lca-skills",
-    "gate_aggregation": "tiangong-lca-data-foundry"
-  }
-}
-```
+`foundry-job.json` uses `tiangong-foundry.job.v2`. It binds workspace/task/actor/request identity, lane, target profile/entity types, source/profile/optional seed content references, current runtime manifest/entry identity, UTC creation time, and the default `write_policy` of `dry-run` with remote state 0. Task metadata cannot enable a remote write by changing that policy object. Actual permission requires the separate reviewed authorization/execution boundary.
 
-`write_policy.mode=dry-run` remains the default until a task explicitly permits commit. When `remote_commit=profile_gated_batch`, a runner may execute generated CLI commit commands only for exact scopes whose queue verify, finalize report, mutation manifest, commit handoff, and readback closeout gates pass. `.env` values can supply credentials or command defaults, but they do not replace `source-manifest.json`, `profile-lock.json`, account/write guard reports, or checkpoint evidence.
+Creation validates selected source bytes and package profile before writing. It builds complete metadata in an owned private staging directory, saves an immutable workspace registration, and publishes the task directory by rename. A publication receipt must exist before operations proceed. A registration without a published task may complete only the same interrupted initialization. Once publication is recorded, a missing task directory is a recovery/audit condition; it must not be recreated with empty operation or attempt history. Missing publication evidence over existing outputs/attempts is ambiguous and remains blocked.
 
-Executable handoff evidence uses `tiangong-foundry.command-spec.v1`. The plan records `final_rows_artifact.path`, `bytes`, and `sha256`; both commit and verify specs bind that fact. `display` is informational only. A runner must parse exact keys, reject duplicated safety-critical flags, recheck the bound bytes, and call only `executable` plus `argv` with `shell=false`.
+Changed actor, task, workspace, request, profile or target entity intent is rejected. Runtime or profile changes require the pinned version or an explicit migration; they cannot silently invalidate earlier attempts. Same-task local metadata operations serialize under one CLI-owned lock. The lock protects metadata, not permission: acquiring it grants no data authority.
 
-`execution_policy.max_parallelism` controls queue workers. Workers must claim tasks through CLI queue locks and dependency checkpoints. Blocked entities are written to the task blocker ledger with affected dependency closures and rerun instructions; unrelated ready scopes may continue and may commit if the write policy allows it.
+## Frozen inputs and profile
 
-For process-scope batch workflows, blocker artifacts are split by audience. `blocked-scope-ledger.jsonl` is the complete row-level fact source for automation and rerun planning. `blocked-scope-report.json` is required for every closure or runner evaluation and must summarize concrete blocker reasons, affected scopes, dependency types or examples, required human actions, and the rerun command.
+`source-manifest.json` uses `tiangong-foundry.source-manifest.v2` and records the original canonical selected file paths, byte sizes and SHA-256 values, along with workspace/task identity. Current original sources must still match their frozen facts. Unavailable or changed sources require restoration or an explicit new revision. A new revision must retain previous mutation/attempt authority as required by W10; this store does not reset it.
 
-## source-manifest.json
+`profile-lock.json` uses `tiangong-foundry.profile-lock.v2` and preserves the selected raw profile and its digest. The lock bytes must match both the registered job reference and the current package's profile. Historical profile authorization flags are not current permission.
 
-```json
-{
-  "schema_version": 1,
-  "source_kind": "package",
-  "source_paths": [
-    {
-      "path": "/abs/path/source.zip",
-      "sha256": "<sha256>",
-      "access": "local-private"
-    }
-  ],
-  "source_citation": "BAFU 2025 package",
-  "captured_at_utc": "2026-06-04T00:00:00Z"
-}
-```
+The source-evidence lane additionally requires a retained `seed-manifest.json`. W05 intake owns semantic seed completeness and routing; storing a seed alone does not prove it is ready for authoring.
 
-For URL/API/database sources, replace `source_paths` with stable `retrieval_records` that include URL or API route, request id, provider, captured timestamp, and checksum/snapshot id when available.
+## Local operation plans and receipts
 
-## seed-manifest.json
+The first admitted transaction is deterministic local `dataset-curation-cleanup`. Remote mutations, network-driven work and batch execution must not be routed through its replay path.
 
-```json
-{
-  "schema_version": 1,
-  "seed_maturity": "execution_seed",
-  "seed_type": "product",
-  "target_entity": "process",
-  "name": "lithium iron phosphate battery pack",
-  "functional_intent": "production of 1 kWh battery pack capacity",
-  "geography": "CN",
-  "time_scope": "2025",
-  "source_starting_points": [
-    {
-      "kind": "sci_query",
-      "query": "lithium iron phosphate battery pack production life cycle inventory China"
-    }
-  ],
-  "intended_use": "draft dataset",
-  "quality_target": "field evidence required for critical values"
-}
-```
+An operation id binds job bytes, command, exact selected input facts and normalized options. Its immutable plan retains a fixed operation time, so interrupted deterministic preparation can reproduce its artifacts without overwriting prior bytes. A successful operation records all output facts and the exact returned report, then atomically updates `artifact-index.jsonl`. Repeating the same request reads only the matching completed local receipt and revalidates outputs; it does not rerun the command or append duplicate records.
 
-## checkpoint.json
+A completed _operation receipt_ means its local invocation produced recorded output. It does not mean the business task is completed or that a blocked cleanup report passed its gates. The facade must interpret the actual result and required completion/readback evidence.
 
-```json
-{
-  "schema_version": 1,
-  "stage_id": "curation-queue-verify",
-  "status": "passed",
-  "input_hashes": {
-    "rows/processes.final.jsonl": "<sha256>"
-  },
-  "owner_command": "tiangong-lca dataset curation-queue verify --queue-dir ./curation-queue --type process --json",
-  "artifacts": [
-    "curation-queue/outputs/curation-queue-tasks.jsonl",
-    "curation-queue-verify-report.json"
-  ],
-  "rows_scope": {
-    "type": "process",
-    "rows_file": "rows/processes.final.jsonl"
-  },
-  "decisions": [],
-  "blockers": []
-}
-```
+## Artifact lineage
 
-Allowed statuses are `pending`, `running`, `passed`, `failed`, and `waived`. A waiver must include explicit evidence and reviewer intent. A checkpoint is stale when an input hash, profile lock hash, account guard, or dependency readback hash changes.
+The v2 JSONL index records sequence, previous record digest, operation/command/input-scope identity, producer receipt reference, task-relative artifact path, byte size and SHA-256. The index points to artifacts; it does not copy payloads. It is replaced atomically under the metadata lock, with previous-byte comparison and bounded size. Truncated, malformed or changed chains are rejected.
 
-## artifact-index.jsonl
+A derived input must match an indexed output. Its completed producer receipt and plan must match the same job and content digests; every ancestor must lead through earlier index entries to frozen original source. Arbitrary files placed under `outputs/` do not become trusted inputs. Changing a parent receipt or plan invalidates continuation. Current selected input bytes are checked again, including before a local operation receipt is finalized.
 
-Each line records one durable artifact:
+## Account and authorization
 
-```json
-{
-  "schema_version": 1,
-  "artifact_id": "schema-process",
-  "kind": "schema-report",
-  "path": "schema/process/outputs/validation-report.json",
-  "owner_command": "node scripts/foundry.ts dataset-tidas-validate --type process",
-  "sha256": "<sha256>",
-  "created_at_utc": "2026-06-04T00:00:00Z"
-}
-```
+An expected account may be selected after local preparation. The first selection is registered as project/user intent; subsequent disagreement is rejected. A missing task-local account file may only be restored from its existing workspace registration. This is intent, not proof of authentication.
 
-The artifact index is the bridge between Foundry and owner commands. It should point to artifacts; it should not duplicate the artifact payload.
+`verifyFoundryRuntimeIdentity` invokes the exact installed CLI through executable/argv in a fresh private CWD with a restricted environment. The CLI owns OAuth/session refresh and server identity verification. Returned proof is immutable, process-local and bound to workspace/task/actor/runtime, with a 60-second freshness check at permission admission. Serialized proof is not reusable authority. Headless mode uses the CLI's existing explicit target and process-only access token, with cache disabled and no token persistence. CLI 0.1.9 reports no token-expiry timestamp for that mode; Foundry does not invent one or claim a separately verified token lifetime.
+
+`registerFoundryTaskAuthorization` is an explicit host approval operation. It requires fresh identity, current task/input lineage, a valid W03 grant, and independently selected evidence facts supplied by the trusted caller. The grant cannot select its own evidence paths. Each original evidence file is rechecked and copied into an immutable task snapshot; the grant and selection are registered in workspace state. Updating `authorization.json` uses compare-and-swap against its prior digest and preserves historical grants. Unknown legacy authorization files are not overwritten.
+
+`loadFoundryTaskAuthorization` rechecks live identity, task registration, input lineage, active pointer/registration, grant expiry/scope and both evidence snapshots and originals. A previous grant cannot be relabeled for changed or derived inputs; a new exact binding requires an explicit approved registration after lineage validation. Login, task creation, local preparation and an empty grant never grant publication, deletion or restricted write actions.
+
+These programmatic paths do not yet complete the public task facade, automatic approved lineage propagation, all command families or final execution guards. Those remain required by #100/W05. Remote writes continue to require current authorization, actual handoff/row bindings and the CLI's no-replay/readback controls.

@@ -24,7 +24,7 @@ checkPaths:
   - scripts/lib/foundry-runtime-utils.ts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-04
-lastReviewedCommit: 46e359bc3d5d4055db034e7ec04e7989d8eb3680
+lastReviewedCommit: ad9c885dde64b22f6e0a8e17f9da46bdba5345ef
 lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session references and credential-free candidate Golden snapshots; transport ownership and no-replay gates remain unchanged. Support-cache CLI extraction is a tracked prerequisite in tiangong-cli #270."
 ---
 
@@ -87,3 +87,5 @@ The same env-surface check is included in `pnpm acceptance:check`, so the Codex 
 The pre-push hook removes every repository-local Git environment binding reported by `git rev-parse --local-env-vars` before starting the full gate. Fixture repository initialization must not reuse the outer push repository or index; direct fixture runners also use an isolated Git environment. `test/unit/git-hook-isolation.test.mts` verifies the actual hook preserves the outer repository config while the nested test repository is created separately.
 
 Canonical-support refresh passes only public OAuth configuration, the CLI session reference and essential platform/home paths to its CLI child. It uses a fresh temporary cwd, so the CLI cannot load the operator checkout `.env`. Username/password, legacy API keys, unrelated secrets and shell configuration are not propagated. The caller must provide the account wrapper's expected project/user intent.
+
+The consumer identity runner uses a fresh private cwd and an explicit environment allowlist. OAuth uses CLI-owned defaults or complete public configuration and an optional private session reference. Headless mode forwards the caller-supplied actor token only in the one CLI process environment, disables the session cache, removes its temporary environment binding after verification, and never stores or serializes the token. Current CLI headless receipts have no token-expiry timestamp; Foundry enforces fresh server identity and does not invent token lifetime evidence.

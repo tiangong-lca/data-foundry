@@ -97,7 +97,7 @@ test("explicit workspace CLI initializes and cleans data outside the package fro
   assert.equal(fs.existsSync(path.join(root, "outside-output")), false);
 });
 
-test("runtime API reuses the cleanup owner with isolated contexts and immutable artifacts", (t) => {
+test("runtime API reuses the cleanup owner with isolated contexts and immutable artifacts", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-runtime-api-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const input = path.join(root, "input.jsonl");
@@ -114,7 +114,9 @@ test("runtime API reuses the cleanup owner with isolated contexts and immutable 
       createFoundryRuntimeContext({ ...options, taskId: "case", actorId: "agent", inputs: [fact] }),
     );
   });
-  const results = runtimes.map((runtime) => runtime.cleanup({ input, type: "flow" }));
+  const results = await Promise.all(
+    runtimes.map((runtime) => runtime.cleanup({ input, type: "flow" })),
+  );
   assert.equal(results[0].status, "completed");
   assert.equal(results[1].status, "completed");
   assert.equal(fs.readFileSync(input, "utf8"), inputBytes);
@@ -128,7 +130,7 @@ test("runtime API reuses the cleanup owner with isolated contexts and immutable 
   );
   assert.notEqual(firstPath, secondPath);
   assert.equal(fs.readFileSync(firstPath, "utf8"), fs.readFileSync(secondPath, "utf8"));
-  assert.throws(() =>
+  await assert.rejects(async () =>
     runtimes[0].cleanup({ input, type: "flow", outputDirectory: path.dirname(secondPath) }),
   );
   assert.deepEqual(fs.readdirSync(path.join(root, "first")).sort(), [".foundry"]);

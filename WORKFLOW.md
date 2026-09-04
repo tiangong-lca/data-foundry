@@ -309,6 +309,8 @@ Body: {{ issue.description }}
 
 ## Classify
 
+The v2 task store now persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Runtime identity and persisted authorization are revalidated through the exact public CLI and independently selected approval evidence. See `docs/foundry-task-contracts.md`. This does not yet complete the public task facade, remaining command families, or final remote execution binding.
+
 For consumer workspace execution, follow `docs/runtime-context-contract.md`. The context owns separate package assets, workspace/task state and content cache roots; `.env` is not loaded and an emitted package needs no source TypeScript or Git. Initialization, diagnostics, profiles and cleanup are admitted first through `scripts/runtime-entry.ts`; remaining command families and task/execution bindings stay tracked in #100. The final user facade is governed by `docs/public-runtime-contract.md` and W05, rather than the developer maintenance entry.
 
 Choose one lane:

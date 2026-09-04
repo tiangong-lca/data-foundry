@@ -22,7 +22,7 @@ checkPaths:
   - test/unit/task-authorization.test.mts
   - test/unit/task-profile-authority.test.mts
 lastReviewedAt: 2026-09-04
-lastReviewedCommit: 46f399a95755c7d11704d1b229f6071ac724f777
+lastReviewedCommit: ad9c885dde64b22f6e0a8e17f9da46bdba5345ef
 lastReviewedNote: "W03 contract: separate distributable rules, local preparation and exact task exceptions. No old lock, seal or attempt grants execution authority."
 related:
   - docs/architecture.md
@@ -32,11 +32,13 @@ related:
 
 # Task authorization
 
+The persisted host boundary is implemented in `foundry-task-authorization.ts` and `foundry-runtime-identity.ts`. See `foundry-task-contracts.md` for workspace registration, evidence snapshots, active-pointer compare-and-swap and current-identity revalidation. Registration requires independently selected host evidence; merely writing a grant file or copying a success report grants no authority. The public facade and final remote execution integration remain separate required work.
+
 Import profiles describe source formats and domain constraints. They do not identify an account or approve an action. Selecting BAFU, USLCI or Worldsteel, loading a historical profile file, passing a waiver flag, or logging in cannot grant an exception.
 
 The task host owns the current workspace/task/actor intent, frozen inputs and fresh CLI identity. It validates a separate `tiangong-foundry.task-authorization.v1` record against those independently assembled facts. `validateTaskAuthorization` returns an immutable, process-local authorization. `profileFor` accepts it only with the same current binding and the digest of the selected rule profile. A serialized report, copied profile object or boolean is never that validated authorization.
 
-The runtime-context/facade work must assemble and propagate this binding and revalidate a persisted grant in each new process. The current profile API deliberately has no automatic search for an approval file and no ambient environment flag granting permissions. Until that host boundary is wired, native commands without explicit validated task context remain preparation-only for restricted rows.
+The runtime host revalidates persisted authorization through its explicit loader; every new process must obtain current identity and the same stored task/input binding. The profile API itself has no ambient file search or environment flag granting permission. Remaining command/execution integration stays tracked in #100/W05; native commands without explicit validated task context remain preparation-only for restricted rows.
 
 ## Required binding and evidence
 

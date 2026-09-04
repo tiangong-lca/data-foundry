@@ -46,6 +46,7 @@ interface CurationCleanupArgs {
   repoRoot?: string;
   options?: CurationCleanupOptions;
   io?: {
+    nowIso?: () => string;
     fileExists: typeof fileExists;
     readRows: (filePath: string) => unknown[];
     writeJson: typeof writeJson;
@@ -74,6 +75,7 @@ export function runDatasetCurationCleanup({
   const hasFile = io?.fileExists ?? fileExists;
   const writeReport = io?.writeJson ?? writeJson;
   const writeRows = io?.writeText ?? writeText;
+  const capturedAt = io?.nowIso ?? nowIso;
   const datasetType = datasetTypeFromOptions(options);
   if (options.help) {
     return {
@@ -158,7 +160,7 @@ export function runDatasetCurationCleanup({
     const reportPath = path.join(outDir, reportFileName);
     const report: JsonRecord = {
       schema_version: 2,
-      generated_at_utc: nowIso(),
+      generated_at_utc: capturedAt(),
       command: "dataset-curation-cleanup",
       status: "blocked_invalid_datetime_metadata",
       dataset_type: datasetType,
@@ -228,7 +230,7 @@ export function runDatasetCurationCleanup({
 
   const report: JsonRecord = {
     schema_version: 2,
-    generated_at_utc: nowIso(),
+    generated_at_utc: capturedAt(),
     command: "dataset-curation-cleanup",
     status: "completed",
     dataset_type: datasetType,
