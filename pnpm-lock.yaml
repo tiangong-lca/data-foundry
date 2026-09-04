@@ -11,8 +11,8 @@ importers:
   .:
     dependencies:
       "@tiangong-lca/cli":
-        specifier: 0.1.9
-        version: 0.1.9
+        specifier: 0.1.10
+        version: 0.1.10
       ajv:
         specifier: 8.20.0
         version: 8.20.0
@@ -323,10 +323,10 @@ packages:
       "@opentelemetry/api":
         optional: true
 
-  "@tiangong-lca/cli@0.1.9":
+  "@tiangong-lca/cli@0.1.10":
     resolution:
       {
-        integrity: sha512-Phx8nxgdmxb7ldlnv7U8SwK6Jemw4L47EOtLRV07mJOy7eM0lwLJfVowKKtZwhYVZRLLzP0blXezcewZKFE4AA==,
+        integrity: sha512-+uBZBYmmOLtEF78sp1Kn2K2zeNAyhchl5Jteno6yNJ4+qsgRpIfGcozCcHT4pQNUkAR0ih3IcJ5/YDmJ/aby9Q==,
       }
     engines: { node: ">=24.19.0 <25", pnpm: 11.24.0 }
     hasBin: true
@@ -807,7 +807,7 @@ snapshots:
       "@supabase/realtime-js": 2.114.0
       "@supabase/storage-js": 2.114.0
 
-  "@tiangong-lca/cli@0.1.9":
+  "@tiangong-lca/cli@0.1.10":
     dependencies:
       "@supabase/supabase-js": 2.114.0
       "@tiangong-lca/tidas-sdk": 0.2.0

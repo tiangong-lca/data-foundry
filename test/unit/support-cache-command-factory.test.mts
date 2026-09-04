@@ -83,8 +83,8 @@ function supportHarness(root: string, exported?: CliSupportExport) {
       args: ["/trusted/cli.js"],
       display: "CLI",
       source: "installed_package",
-      package: "@tiangong-lca/cli@0.1.9",
-      package_version: "0.1.9",
+      package: "@tiangong-lca/cli@0.1.10",
+      package_version: "0.1.10",
       bin_path: "/trusted/cli.js",
     }),
     readSupportExport: () => {
@@ -132,7 +132,7 @@ test("support refresh preserves exported row order, summaries and mappings throu
     writeJson(cachePath, { flow_property_mappings: mappings });
     const exported: CliSupportExport = {
       projectRef: "fixture",
-      cliVersion: "0.1.9",
+      cliVersion: "0.1.10",
       flowproperties: ["fp-b", "fp-a"].map((id) => ({
         id,
         version: "03.00.003",

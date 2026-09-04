@@ -14,9 +14,9 @@ checkPaths:
   - scripts/runtime-entry.ts
   - scripts/foundry-runtime.ts
   - docs/public-runtime-contract.md
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: ad9c885dde64b22f6e0a8e17f9da46bdba5345ef
-lastReviewedNote: "Normative W05 target established under #100; command availability still requires implementation and release qualification."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
+lastReviewedNote: "Reviewed for #100 CLI C1 adoption: CLI manager/bootstrap is public; the Foundry v1 facade remains a later implementation gate."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md

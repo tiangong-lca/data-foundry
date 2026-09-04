@@ -273,9 +273,9 @@ checkPaths:
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: 1078b2b2c515cb06b66d19f3ce572e3fdc5f15e5
-lastReviewedNote: "Reviewed for Issue #76: tests pin CAS dedupe, receipt verification, payload dispositions, and safe scope/cache pruning."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
+lastReviewedNote: "Reviewed for #100 CLI C1 adoption: exact 0.1.10 runtime exports, descriptor drift and existing public primitive consumers are covered."
 ---
 
 # Test Layout
@@ -397,7 +397,7 @@ Issue #80 is pinned in `unit/post-finalize-recovery-orchestration.test.mts`. Cap
 
 Issue #83 is pinned in `unit/batch-orchestration-scope-execution.test.mts`. The stable case requires one task-queue lookup and identical suggest/apply paths; four drift cases freeze expected/observed path/bytes/SHA and prove apply is never invoked after missing, changed-length, same-length changed-hash, or relative-path replacement. The pre-existing verified-resume fixture keeps stable report/ledger bytes exact. Budget/cycle tests track the 89/120 binding leaf and unchanged 532-line preparation ceiling.
 
-`fixtures/auth-identity-receipt.ts` is the only test-only receipt materializer. It recreates the frozen public wire fingerprints and scope hash, then every consumer still passes the bytes through `@tiangong-lca/cli/auth-identity-receipt`. `unit/public-cli-batch-runtime.test.mts` loads exact installed CLI 0.1.3, exercises public batch/run-lock plus strict receipt parsing, and proves the former private deep path stays unexported. `unit/toolchain-contract.test.mts` rejects any tracked `@tiangong-lca/cli/dist/src/**` import and binds the exact provenance-verified 0.1.3 maturity exception.
+`fixtures/auth-identity-receipt.ts` is the only test-only receipt materializer. It recreates the frozen public wire fingerprints and scope hash, then every consumer still passes the bytes through `@tiangong-lca/cli/auth-identity-receipt`. `unit/public-cli-batch-runtime.test.mts` loads exact installed CLI 0.1.10 and exercises public batch/run-lock plus strict receipt parsing. `unit/public-cli-runtime.test.mts` exercises the C1 descriptor, expectation drift rejection, manifest and manager/exec exports. `unit/toolchain-contract.test.mts` rejects every private `@tiangong-lca/cli/dist/src/**` import and binds only the exact provenance-verified current release exception.
 
 `unit/cli-bounded-batch-runner.test.mts` is the Foundry/CLI scheduling boundary: it proves the physical run lock exists only during execution, public contract claims are bounded, pause leaves items unclaimed, stop drains claimed work, one family key is FIFO-serialized while an independent key proceeds, and the composition root has no manual worker/`Promise.all` claim loop. Existing BAFU command cases preserve pending-before-limit, pause report bytes, family-master selection, ledgers, and preflight behavior. `wave26-bafu-batch-command-migration.test.mts` fixes the five-line facade's three exports and exact help bytes; `unit/orchestration-module-budget.test.mts` separately exposes the 20-line facade and 1,700-line composition-root ceilings instead of hiding the move.
 

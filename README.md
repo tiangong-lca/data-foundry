@@ -148,9 +148,9 @@ checkPaths:
   - test/unit/foundry-runtime-environment.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: 1686720817ea0bde98fb0a55059b027796b2d422
-lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session references and credential-free candidate Golden snapshots; transport ownership and no-replay gates remain unchanged. Support-cache CLI extraction is a tracked prerequisite in tiangong-cli #270."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
+lastReviewedNote: "Reviewed for #100 CLI C1 adoption: exact public 0.1.10 is installed and consumer-tested; context qualification, Foundry facade and F1 publication remain pending."
 ---
 
 # TianGong LCA Data Foundry
@@ -309,9 +309,9 @@ pnpm case:production:contact-draft -- \
 
 The runner accepts no API key or alternate CLI path on argv. It reads only `TIANGONG_LCA_API_BASE_URL`, `TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY`, and `TIANGONG_LCA_TEST_API_KEY`; the test key exists only in the child environment. The env file must be a regular non-symlink file with POSIX mode `0600` or stricter and, when it is inside this repository, must be git-ignored. The new output directory must also be inside this repository, git-ignored, and reached without a symlinked parent.
 
-This production lane is POSIX-only. Windows execution fails closed until the runner can verify a user-exclusive ACL; Windows CI covers that refusal rather than a live case. On POSIX, the runner snapshots the exact installed CLI 0.1.9 package inside its pnpm dependency island, hashes and rechecks the full pnpm installation plus Foundry source/build/lock facts before every child boundary, executes from a clean directory with `shell=false`, fsyncs create-only private evidence, and publishes a content-addressed case manifest only after the runtime snapshot is removed. Any detected secret in stdout, a report, or a sidecar artifact fails the case and leaves only redacted failure evidence. The created contact remains isolated, unreviewed, and unpublished under the authenticated test account for later case evidence; the lane never performs review/publish transitions or mutates foreign/public/shared rows.
+This production lane is POSIX-only. Windows execution fails closed until the runner can verify a user-exclusive ACL; Windows CI covers that refusal rather than a live case. On POSIX, the runner snapshots the exact installed CLI 0.1.10 package inside its pnpm dependency island, hashes and rechecks the full pnpm installation plus Foundry source/build/lock facts before every child boundary, executes from a clean directory with `shell=false`, fsyncs create-only private evidence, and publishes a content-addressed case manifest only after the runtime snapshot is removed. Any detected secret in stdout, a report, or a sidecar artifact fails the case and leaves only redacted failure evidence. The created contact remains isolated, unreviewed, and unpublished under the authenticated test account for later case evidence; the lane never performs review/publish transitions or mutates foreign/public/shared rows.
 
-Credential-scoped commands use `pnpm account:run -- <profile> -- <executable> [args...]`. The ignored profile supplies both the expected Supabase project ref and canonical user UUID. The wrapper resolves the installed CLI 0.1.9, obtains a fresh intent-bound `auth identity-receipt`, and then executes the requested argv without a shell and without inheriting unrelated parent environment variables. Authentication bypass flags are unsupported.
+Credential-scoped commands use `pnpm account:run -- <profile> -- <executable> [args...]`. The ignored profile supplies both the expected Supabase project ref and canonical user UUID. The wrapper resolves the installed CLI 0.1.10, obtains a fresh intent-bound `auth identity-receipt`, and then executes the requested argv without a shell and without inheriting unrelated parent environment variables. Authentication bypass flags are unsupported.
 
 Issue #70 consumes CLI 0.1.3 through its supported `./batch` and `./auth-identity-receipt` subpaths. The production identity-preflight path uses the public strict parser; deterministic receipt construction exists only in a local test fixture, and the toolchain ratchet rejects every `@tiangong-lca/cli/dist/src/**` import. pnpm's 1,440-minute maturity gate remains enabled; the exact 0.1.3 exception is bound to the release already verified by tag, Sigstore/Rekor provenance, registry integrity, and clean public consumers.
 

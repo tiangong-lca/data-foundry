@@ -136,9 +136,9 @@ checkPaths:
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: 1078b2b2c515cb06b66d19f3ce572e3fdc5f15e5
-lastReviewedNote: "Reviewed for Issue #76: retention navigation separates CAS storage, reference projection, receipt verification, and safe pruning."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
+lastReviewedNote: "Reviewed for #100 CLI C1 adoption: the runtime consumer test and fourth public subpath fit existing navigation; command owners and semantic modules do not move."
 ---
 
 # Foundry AI Navigation

@@ -275,9 +275,9 @@ checkPaths:
   - test/unit/foundry-runtime-environment.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: 1686720817ea0bde98fb0a55059b027796b2d422
-lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session references and credential-free candidate Golden snapshots; transport ownership and no-replay gates remain unchanged. Support-cache CLI extraction is a tracked prerequisite in tiangong-cli #270."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
+lastReviewedNote: "Reviewed for #100 CLI C1 adoption: runtime identity joins the existing public CLI primitives without changing task, authorization or no-replay ownership."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -398,9 +398,9 @@ All scenario suites are native `.test.mts`. Preserve every multi-command artifac
 
 Do not parse or execute rendered command strings. `tiangong-foundry.command-spec.v1` makes `executable` plus `argv` authoritative and keeps `display` reader-only. Its SHA-256 binds the authoritative command and exact artifact facts; commit and verify both bind the final rows path, bytes, and SHA-256, and runners reject same-path drift before `shell=false` spawn. Artifact-to-scope matching still normalizes platform separators. Durable writers fsync writable file descriptors, not read-only reopened handles.
 
-Use the exact installed project dependency as `pnpm exec tiangong-lca ...`. Foundry runtime adapters resolve that same `@tiangong-lca/cli@0.1.9` manifest and bin directly; only the external `skills@latest` source-evidence resolver remains intentionally floating, with the resolved ref recorded in task artifacts.
+Use the exact installed project dependency as `pnpm exec tiangong-lca ...`. Foundry runtime adapters resolve that same `@tiangong-lca/cli@0.1.10` manifest and bin directly; only the external `skills@latest` source-evidence resolver remains intentionally floating, with the resolved ref recorded in task artifacts.
 
-Reusable scheduling/run-lock and receipt parsing come only from `@tiangong-lca/cli/batch` and `@tiangong-lca/cli/auth-identity-receipt`. Never restore a `dist/src/**` import or expose CLI test internals; fixture receipt construction is test-only and must pass the same public parser before it can drive a case.
+Reusable scheduling/run-lock, receipt parsing and runtime identity come only from `@tiangong-lca/cli/batch`, `@tiangong-lca/cli/auth-identity-receipt` and `@tiangong-lca/cli/runtime`. Never restore a `dist/src/**` import or expose CLI test internals; fixture receipt construction is test-only and must pass the same public parser before it can drive a case.
 
 Credential-scoped operator commands must run through `pnpm account:run -- <profile> -- <executable> [args...]`. The ignored profile must include `FOUNDRY_EXPECTED_PROJECT_REF` and `FOUNDRY_EXPECTED_USER_ID`. Before the requested argv is executed, the wrapper obtains a fresh `auth identity-receipt` from the installed CLI with both expectations, requires a fresh intent-bound server-verified OAuth receipt while the CLI owns session reuse and refresh, and uses a restricted child environment. Missing expectations, thread-guard drift, stale or partial receipts, and the retired `--no-auth-check` path all fail before the requested command starts.
 

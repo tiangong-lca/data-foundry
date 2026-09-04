@@ -9,7 +9,7 @@ import { testAuthIdentityReceipt } from "../fixtures/auth-identity-receipt.ts";
 const project = "exampleprojectref";
 const user = "11111111-1111-4111-8111-111111111111";
 const now = Date.parse("2026-09-04T12:00:00.000Z");
-const cli = { command: process.execPath, args: ["/trusted/cli.js"], package_version: "0.1.9" };
+const cli = { command: process.execPath, args: ["/trusted/cli.js"], package_version: "0.1.10" };
 const env = {
   FOUNDRY_EXPECTED_PROJECT_REF: project,
   FOUNDRY_EXPECTED_USER_ID: user,

@@ -1,7 +1,7 @@
 ---
-lastReviewedAt: 2026-08-29
-lastReviewedCommit: 05fdeaf22520efb2325ffcde44f86b925e0a7b8a
-lastReviewedNote: "Reviewed for Issue #70: CLI 0.1.3 operational binding does not alter retained 10+10 LANCA evidence, 11+11 historical inventory, or their non-cap interpretation."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
+lastReviewedNote: "Reviewed for #100 CLI 0.1.10 adoption; retained LANCA evidence and historical inventory remain non-cap, non-authorization evidence."
 title: worldsteel EF3.1 Import Coverage Evidence
 docType: report
 scope: import-profile/worldsteel

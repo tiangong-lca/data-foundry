@@ -83,9 +83,9 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: 1686720817ea0bde98fb0a55059b027796b2d422
-lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session references and credential-free candidate Golden snapshots; transport ownership and no-replay gates remain unchanged. Support-cache CLI extraction is a tracked prerequisite in tiangong-cli #270."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
+lastReviewedNote: "Reviewed for #100 CLI C1 adoption: installed identity/runtime facts advance to 0.1.10 while repository ownership and task routing remain unchanged."
 ---
 
 # Workspace Project Map
@@ -119,7 +119,7 @@ The Wave 26 library, classification, authoring, process-scope and batch modules 
 | Generic ready-scope CommandSpec and bounded scheduling | `tiangong-lca-cli` for public contract, artifact checks, locked claims/pause/stop/no-retry; Foundry for LCA readiness, input-order reports and logs | scope CommandSpecs + full scope/spec/policy/CLI fingerprints → public CLI batch → Foundry checkpoints/blockers |
 | Same-id/version lost-success recovery | Foundry for strict structured-evidence eligibility and no-replay orchestration; `tiangong-lca-cli`, Edge Functions, and database for mutation outcome and readback truth | explicit `23505` plus exact conflict semantics → one commit dispatch → content-bound verify of owner/state/id/version/payload/root → closeout only on exact proof |
 | Remote commit, readback, and publish prep | `tiangong-lca-cli`, Edge Functions, database | `dataset-post-authoring-finalize` and source/contact support handoff artifacts, installed CLI commit commands, `pnpm exec tiangong-lca dataset verify-remote`, `publish run`, Edge verification; Foundry does not override foreign/RLS-hidden `missing_dataset` readback |
-| Credential-scoped identity proof and process guard | `tiangong-lca-cli` for live session/receipt; `tiangong-lca-data-foundry` for profile/thread intent and child isolation | `pnpm account:run -- <profile> -- <executable> [args...]` → installed CLI 0.1.9 `auth identity-receipt` |
+| Credential-scoped identity proof and process guard | `tiangong-lca-cli` for live session/receipt; `tiangong-lca-data-foundry` for profile/thread intent and child isolation | `pnpm account:run -- <profile> -- <executable> [args...]` → installed CLI 0.1.10 `auth identity-receipt` |
 | Foundry task routing and manifests | `tiangong-lca-data-foundry` | `scripts/foundry.ts route-task` |
 | Write/execution policy and blocked-scope ledgers/reports | `tiangong-lca-data-foundry` | `foundry-job.json`, library entity indexes, index-relative process-scope projections, deterministic transform evidence reconciliation, source-only-output exchange proof reconciliation, checkpoints, `blocked-scope-ledger.jsonl`, `blocked-scope-report.json`, mutation manifest aggregation, closeout reports |
 | Incremental release planning and conversion logs | `tiangong-lca-data-foundry` for offline composition; `tiangong-lca-cli` for execution/readback | `dataset-incremental-change-set-compose`, per-conversion JSONL, dependency closure, CLI candidate contract, then fresh reconciliation/capsule admission and published CLI execution |

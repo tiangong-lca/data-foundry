@@ -85,9 +85,9 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: 1686720817ea0bde98fb0a55059b027796b2d422
-lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session references and credential-free candidate Golden snapshots; transport ownership and no-replay gates remain unchanged. Support-cache CLI extraction is a tracked prerequisite in tiangong-cli #270."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
+lastReviewedNote: "Reviewed for #100 CLI C1 adoption: reusable runtime identity stays CLI-owned; Foundry task/profile/gate ownership and adapter routing are unchanged."
 ---
 
 # Capability Ownership Policy

@@ -43,9 +43,9 @@ checkPaths:
   - test/commands/bafu-*.test.mts
   - package.json
   - pnpm-lock.yaml
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: 42ae8e94055ba7f912fdbd38fe16479409338033
-lastReviewedNote: "Reviewed for Issue #76: immutable control blobs, self-hashed receipts, and safe prune/cache policies are pinned."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
+lastReviewedNote: "Reviewed for #100 CLI C1 adoption: the public runtime subpath is added beside existing primitives; semantic and remote-write ownership is unchanged."
 related:
   - https://github.com/tiangong-lca/data-foundry/issues/70
   - https://github.com/tiangong-lca/tiangong-cli/issues/232
@@ -64,7 +64,7 @@ Task exception validation is owned by `scripts/lib/task-authorization.ts` and `d
 
 The high-level orchestration layer must be easy for an Agent to navigate without moving LCA semantics into generic execution code. Public command owners converge toward help, option validation, stage-contract wiring, and calls into typed semantic modules. Foundry retains profile policy, scope selection, classification and identity meaning, blocker taxonomy, artifact projection, and import-ledger interpretation. The published CLI owns reusable executable-plus-argv validation, bounded scheduling, attempt/recovery mechanics, and mutation no-replay guarantees.
 
-Foundry now pins the published `@tiangong-lca/cli@0.1.9` release. CommandSpec, batch/run-lock, and strict identity receipt parsing are consumed only through the package's public `./command-spec`, `./batch`, and `./auth-identity-receipt` exports; Foundry must not deep-import `dist/src/**`, expose CLI test internals, invent a compatibility wrapper, or copy the CLI scheduler/parser into semantic modules. LCA/profile semantics, Foundry reports, test-only receipt fixture bytes, and remote-write gates remain Foundry-owned adapters around those public primitives.
+Foundry now pins the published `@tiangong-lca/cli@0.1.10` release. CommandSpec, batch/run-lock, strict identity receipt parsing, and runtime identity are consumed only through the package's public `./command-spec`, `./batch`, `./auth-identity-receipt`, and `./runtime` exports; Foundry must not deep-import `dist/src/**`, expose CLI test internals, invent a compatibility wrapper, or copy the CLI scheduler/parser into semantic modules. LCA/profile semantics, Foundry reports, test-only receipt fixture bytes, and remote-write gates remain Foundry-owned adapters around those public primitives.
 
 `cli-bounded-batch-runner.ts` is the generic executable delegation boundary: it creates the public run contract, acquires `withBatchRunLock`, and calls `runBoundedBatch`. `foundry-scope-batch-runner.ts` projects Foundry scope content/policy/executable authority, family-group exclusive keys, bounded concurrency, pause/stop, events, and readback-only mutation recovery. The callback remains Foundry-owned and returns the same scope status projection after semantic execution or explicit ambiguous/no-replay recording. The five-line command facade contains no implementation; `bafu-batch-command-runtime.ts` is the explicit composition root and contains no alternate worker counter or `Promise.all` claim loop.
 

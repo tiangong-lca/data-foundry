@@ -22,9 +22,9 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/unit/foundry-runtime-context.test.mts
   - test/scenarios/runtime-workspace.test.mts
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: ad9c885dde64b22f6e0a8e17f9da46bdba5345ef
-lastReviewedNote: "W04 context slice: explicit package/workspace/task/cache roots and reuse of the cleanup owner; remaining task and execution bindings stay tracked in #100."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
+lastReviewedNote: "Reviewed for #100 CLI C1 adoption: public descriptors are installed and consumer-tested; context qualification and TIDAS binding remain open."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
@@ -78,4 +78,4 @@ The default in-memory data-read bound is 64 MiB; native/streaming stages must de
 
 ## Remaining integration obligations
 
-Every admitted command must bind its input families and output roots, reuse package assets explicitly, and pass this context through nested operations. Registered local jobs, actor/account intent, recorded artifact lineage, fresh CLI identity and persisted authorization are now implemented for the admitted local path. CLI/TIDAS verified runtime descriptors, the remaining command families, child-process propagation, automatic approved derived-grant handling and final execution rechecks remain required before #100 can close. Local preparation does not grant restricted writes; W03 task permissions and existing no-replay controls remain mandatory. Developer maintenance entrypoints and their assets must be excluded from the final consumer artifact in W06.
+Every admitted command must bind its input families and output roots, reuse package assets explicitly, and pass this context through nested operations. Registered local jobs, actor/account intent, recorded artifact lineage, fresh CLI identity and persisted authorization are now implemented for the admitted local path. The exact public CLI 0.1.10 descriptor/manager export is installed and consumer-tested. Independently selected CLI expectations, a TIDAS executable descriptor, remaining command-family dispositions, child-process propagation, approved derived-grant handling and final execution rechecks remain required before #100 can close. Local preparation does not grant restricted writes; W03 task permissions and existing no-replay controls remain mandatory. Developer maintenance entrypoints and their assets must be excluded from the final consumer artifact in W06.

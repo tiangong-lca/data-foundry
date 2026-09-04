@@ -333,16 +333,16 @@ test("tracked first-party JavaScript remains permanently at zero", () => {
 });
 
 test("Foundry pins the published CLI runtime and high-risk audit closure", () => {
-  assert.equal(packageJson.dependencies?.["@tiangong-lca/cli"], "0.1.9");
+  assert.equal(packageJson.dependencies?.["@tiangong-lca/cli"], "0.1.10");
   const runtimeSource = readText("scripts/lib/foundry-runtime-utils.ts");
-  assert.match(runtimeSource, /tiangongLcaCliPackageVersion\s*=\s*"0\.1\.9"/u);
+  assert.match(runtimeSource, /tiangongLcaCliPackageVersion\s*=\s*"0\.1\.10"/u);
   assert.doesNotMatch(runtimeSource, /tiangongLcaCliPackageVersion\s*=\s*"0\.1\.[0-2]"/u);
   assert.equal(packageJson.dependencies?.ajv, "8.20.0");
   const workspace = readText("pnpm-workspace.yaml");
   assert.match(workspace, /fast-uri:\s*3\.1\.7/u);
   assert.match(workspace, /minimumReleaseAge:\s*1440/u);
-  assert.match(workspace, /-\s+["']?@tiangong-lca\/cli@0\.1\.9["']?/u);
-  assert.doesNotMatch(workspace, /-\s+["']?@tiangong-lca\/cli@0\.1\.[0-2]["']?/u);
+  assert.match(workspace, /-\s+["']?@tiangong-lca\/cli@0\.1\.10["']?/u);
+  assert.doesNotMatch(workspace, /-\s+["']?@tiangong-lca\/cli@0\.1\.[0-2](?:["']|\s|$)/u);
   for (const file of trackedFiles().filter((value) => /\.(?:cts|mts|ts)$/u.test(value))) {
     assert.doesNotMatch(readText(file), /@tiangong-lca\/cli\/dist\/src\//u, file);
   }

@@ -18,9 +18,9 @@ checkPaths:
   - WORKFLOW.md
   - specs/import-profiles.json
   - tasks/**
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: ad9c885dde64b22f6e0a8e17f9da46bdba5345ef
-lastReviewedNote: "Reviewed for Issue #65: handoff CommandSpecs and final-row artifact facts extend the remote-write evidence contract."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
+lastReviewedNote: "Reviewed for #100 CLI C1 adoption: identity execution now pins 0.1.10; persisted task, grant, lineage and no-replay semantics are unchanged."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -94,7 +94,7 @@ A derived input must match an indexed output. Its completed producer receipt and
 
 An expected account may be selected after local preparation. The first selection is registered as project/user intent; subsequent disagreement is rejected. A missing task-local account file may only be restored from its existing workspace registration. This is intent, not proof of authentication.
 
-`verifyFoundryRuntimeIdentity` invokes the exact installed CLI through executable/argv in a fresh private CWD with a restricted environment. The CLI owns OAuth/session refresh and server identity verification. Returned proof is immutable, process-local and bound to workspace/task/actor/runtime, with a 60-second freshness check at permission admission. Serialized proof is not reusable authority. Headless mode uses the CLI's existing explicit target and process-only access token, with cache disabled and no token persistence. CLI 0.1.9 reports no token-expiry timestamp for that mode; Foundry does not invent one or claim a separately verified token lifetime.
+`verifyFoundryRuntimeIdentity` invokes the exact installed CLI through executable/argv in a fresh private CWD with a restricted environment. The CLI owns OAuth/session refresh and server identity verification. Returned proof is immutable, process-local and bound to workspace/task/actor/runtime, with a 60-second freshness check at permission admission. Serialized proof is not reusable authority. Headless mode uses the CLI's existing explicit target and process-only access token, with cache disabled and no token persistence. CLI 0.1.10 reports no token-expiry timestamp for that mode; Foundry does not invent one or claim a separately verified token lifetime.
 
 `registerFoundryTaskAuthorization` is an explicit host approval operation. It requires fresh identity, current task/input lineage, a valid W03 grant, and independently selected evidence facts supplied by the trusted caller. The grant cannot select its own evidence paths. Each original evidence file is rechecked and copied into an immutable task snapshot; the grant and selection are registered in workspace state. Updating `authorization.json` uses compare-and-swap against its prior digest and preserves historical grants. Unknown legacy authorization files are not overwritten.
 
