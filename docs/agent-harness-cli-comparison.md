@@ -18,8 +18,8 @@ checkPaths:
   - .codex/hooks.json
   - .codex/hooks/run-foundry-acceptance-check.sh
   - scripts/commands/core.ts
-lastReviewedAt: 2026-08-29
-lastReviewedCommit: 10893c088ef56083b0b0ecf2af71779f0eb61d21
+lastReviewedAt: 2026-09-04
+lastReviewedCommit: 42ae8e94055ba7f912fdbd38fe16479409338033
 lastReviewedNote: "Reviewed for Issue #75: resume contracts, compact attempt state, and guarded production evidence do not change Stop-hook continuation, ignored reports, environment checks, or failure-artifact contracts."
 related:
   - docs/file-organization.md

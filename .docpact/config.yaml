@@ -1,5 +1,6 @@
 version: 1
 layout: repo
+# Review note, 2026-09-04: #97 uses existing auth/runtime/test governance for the OAuth consumer and isolated Golden snapshots; CLI owns session/transport and #270 tracks support-cache extraction.
 # Review note, 2026-06-04: first-pass docpact onboarding for Foundry thin-control-plane refactor.
 # Review note, 2026-07-23: Issue #42 adds the generic offline incremental change-set composer, exact per-conversion event ledger, and CLI candidate contract. Strict Draft 2020-12 validation uses the exact Ajv 8.20.0 runtime dependency; evidence-bound entity/path/value rules, stable-identity array handling, snapshot receipts, terminal pairs, and non-root field allowlists add no remote access or mutation authority.
 # Review note, 2026-07-24: Issue #47 adds the offline topology-convergence F/P/D composer. Candidate topology, fresh owner/public/foreign census, audited classifications, occurrence-keyed multilingual preservation, fixed CLI fingerprint, zero-inbound delete candidates, and hash-chained logs remain local planning evidence with no DML authority.
@@ -18,8 +19,8 @@ layout: repo
 # Review note, 2026-08-29: Issue #70 also re-reviews the Worldsteel profile family after its operational CLI-version update. The machine profile timestamp and all four governed documents move together; R1-R5, retained counts, cache-miss policy, support ordering, and production authority remain unchanged.
 # Review note, 2026-08-29: Issue #70 replaces the remaining manual scope claim loop with a 166-line Foundry adapter over public CLI batch/run-lock. Existing orchestration rules now cover contract projection, family resource FIFO, pause/stop/drain, the 1,898-line owner, focused boundary cases, and unchanged semantic ledger/report authority.
 # Review note, 2026-08-29: Issue #70 makes the batch public owner a five-line facade and moves the 1,649-line composition root to an explicitly named/budgeted lib path. This preserves the same three exports, help, profile adapters, semantic modules, CLI delegation, and authority while keeping residual composition density visible.
-lastReviewedAt: "2026-08-29"
-lastReviewedCommit: "b4c9b777929ac27694fbebd748f0c4bec968fab2"
+lastReviewedAt: "2026-09-04"
+lastReviewedCommit: "1078b2b2c515cb06b66d19f3ce572e3fdc5f15e5"
 
 catalog:
   repos:

@@ -4,10 +4,13 @@ import type { SpawnSyncReturns } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readlinkSync,
   readdirSync,
   rmSync,
   symlinkSync,
@@ -48,6 +51,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const keepArtifacts = process.argv.includes("--keep");
 const tempRoot = mkdtempSync(path.join(os.tmpdir(), "foundry-golden-diff-"));
 const beforeRoot = path.join(tempRoot, "before-worktree");
+const afterRoot = path.join(tempRoot, "after-worktree");
 const beforeOut = path.join(tempRoot, "before-output");
 const afterOut = path.join(tempRoot, "after-output");
 const normalizedRoot = path.join(tempRoot, "normalized");
@@ -118,6 +122,8 @@ function resolveGoldenBase(): GoldenBase {
     });
     const commit = mergeBase.status === 0 ? mergeBase.stdout.trim() : "";
     if (commit && commit !== head) return { commit, comparisonRef: candidate };
+    // A resolved authoritative trunk at HEAD must not fall through to a stale local main.
+    if (commit === head) break;
   }
   const parent = spawnSync("git", ["rev-parse", "HEAD^"], {
     cwd: repoRoot,
@@ -505,6 +511,36 @@ function installBaselineDependencies(root: string): void {
   run("pnpm", args, { cwd: root });
 }
 
+function prepareCurrentSourceSnapshot(): void {
+  run("git", ["worktree", "add", "--detach", "--quiet", afterRoot, "HEAD"], { cwd: repoRoot });
+  const files = run("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], {
+    cwd: repoRoot,
+  })
+    .stdout.split("\0")
+    .filter(Boolean);
+  for (const relative of new Set(files)) {
+    const source = path.join(repoRoot, relative);
+    const target = path.join(afterRoot, relative);
+    if (!existsSync(source)) {
+      rmSync(target, { force: true });
+      continue;
+    }
+    mkdirSync(path.dirname(target), { recursive: true });
+    const stat = lstatSync(source);
+    if (stat.isSymbolicLink()) {
+      rmSync(target, { force: true });
+      symlinkSync(readlinkSync(source), target);
+    } else if (stat.isFile()) {
+      copyFileSync(source, target);
+      chmodSync(target, stat.mode & 0o777);
+    } else {
+      throw new Error(`Unsupported candidate source entry: ${relative}`);
+    }
+  }
+  // Git-visible source only: local inputs, credentials, prior task state and reports stay outside.
+  installBaselineDependencies(afterRoot);
+}
+
 function linkLegacyInstalledCliAssets(): void {
   const installedCliRoot = path.join(beforeRoot, "node_modules", "@tiangong-lca", "cli");
   const legacyCliRoot = path.join(tempRoot, "tiangong-lca-cli");
@@ -713,6 +749,18 @@ function normalizeWorldsteelProfileContract(value: JsonRecord): JsonRecord | nul
 }
 
 function normalizeKnownContractMigration(value: JsonRecord): JsonRecord {
+  // #97 replaces the legacy API-key example with two additional OAuth public inputs.
+  // Bind the complete successful env-surface report; any new error or other change still fails.
+  if (value.file === ".env.example") {
+    const digest = createHash("sha256").update(JSON.stringify(value)).digest("hex");
+    if (
+      [
+        "0e3ad50419bf8947e7a7736b3d97dff76e42f73471ab2bcda8cfc3ee3f487b37",
+        "fcf4ade16b65a2cd77910d972062ea5e4522be52cfb487199545d0f6bb039642",
+      ].includes(digest)
+    )
+      return { ...value, variable_count: "<oauth-env-contract>" };
+  }
   const normalizedWorldsteelProfile = normalizeWorldsteelProfileContract(value);
   if (normalizedWorldsteelProfile) return normalizedWorldsteelProfile;
   const capabilityHashes = capabilityContractMigrationHashes.get(String(value.id ?? ""));
@@ -793,6 +841,7 @@ function normalize(value: unknown): unknown {
   output = replacePathVariants(output, pathVariants(beforeOut), "<side-output>");
   output = replacePathVariants(output, pathVariants(afterOut), "<side-output>");
   output = replacePathVariants(output, pathVariants(beforeRoot), "<repo-root>");
+  output = replacePathVariants(output, pathVariants(afterRoot), "<repo-root>");
   output = replacePathVariants(output, pathVariants(repoRoot), "<repo-root>");
   output = replacePathVariants(output, pathVariants(tempRoot), "<temp-root>");
   return output
@@ -964,6 +1013,7 @@ try {
   });
   normalizeBaselineLineEndings();
   installBaselineDependencies(beforeRoot);
+  prepareCurrentSourceSnapshot();
   linkLegacyInstalledCliAssets();
   const fakeTidasPath = isolatedFakeTidasScript();
   const commandEnvironment = createFoundryIsolatedChildEnvironment({
@@ -974,7 +1024,7 @@ try {
     },
   });
   const baselineEnvironment = runSide("before", beforeRoot, fixture, commandEnvironment);
-  const currentEnvironment = runSide("after", repoRoot, fixture, commandEnvironment);
+  const currentEnvironment = runSide("after", afterRoot, fixture, commandEnvironment);
   if (baselineEnvironment !== currentEnvironment) {
     throw new Error("Golden baseline and current commands must receive the same environment.");
   }
@@ -1007,13 +1057,15 @@ try {
     ),
   );
 } finally {
-  try {
-    run("git", ["worktree", "remove", "--force", beforeRoot], {
-      cwd: repoRoot,
-      expectedStatus: 0,
-    });
-  } catch {
-    // Best-effort cleanup; the temp tree is still removed below unless --keep was requested.
+  for (const root of [beforeRoot, afterRoot]) {
+    try {
+      run("git", ["worktree", "remove", "--force", root], {
+        cwd: repoRoot,
+        expectedStatus: 0,
+      });
+    } catch {
+      // Best-effort cleanup; the temp tree is still removed below unless --keep was requested.
+    }
   }
   if (!keepArtifacts) {
     rmSync(tempRoot, { recursive: true, force: true });

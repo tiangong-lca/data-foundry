@@ -496,8 +496,9 @@ export function createIdentityPreflightRunCommands({
           cwd: repoRoot,
           env: {
             ...process.env,
-            TIANGONG_LCA_DISABLE_SESSION_CACHE: "true",
-            TIANGONG_LCA_FORCE_REAUTH: "true",
+            TIANGONG_LCA_AUTH_MODE: "oauth",
+            TIANGONG_LCA_DISABLE_SESSION_CACHE: "false",
+            TIANGONG_LCA_FORCE_REAUTH: "false",
           },
           encoding: "utf8",
           maxBuffer: 256 * 1024,
@@ -524,7 +525,6 @@ export function createIdentityPreflightRunCommands({
         maxAgeMs: positiveIntegerOption(options.authReceiptMaxAgeMs, 300_000) ?? 300_000,
         expectedProjectRef,
         expectedUserId,
-        requireFreshSignin: true,
       });
     }
     const logDir = path.join(outDir, "logs");

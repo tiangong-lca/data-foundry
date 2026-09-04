@@ -59,7 +59,8 @@ test("Golden source preserves Node-native comparison and executable-plus-argv po
   assert.match(source, /readFileSync\(baselinePath\)\.equals\(readFileSync\(currentPath\)\)/u);
   assert.match(source, /resolveTidasProcessCommand|fake-tidas\.(?:mjs|ts)/u);
   assert.doesNotMatch(source, /spawnSync\(\s*["']diff["']/u);
-  assert.doesNotMatch(source, /worktree["'],\s*["']add["'].*["']HEAD["']/su);
+  assert.match(source, /beforeRoot,\s*goldenBase\.commit/u);
+  assert.doesNotMatch(source, /beforeRoot,\s*["']HEAD["']/u);
 });
 
 test("Golden baseline and current commands share one explicit credential-free environment", () => {
@@ -70,7 +71,7 @@ test("Golden baseline and current commands share one explicit credential-free en
   assert.match(source, /commandProcessor,\s*\["\/d",\s*"\/s",\s*"\/c"/u);
   assert.match(source, /childEnvironmentSnapshot/u);
   assert.match(source, /runSide\("before",\s*beforeRoot,\s*fixture,\s*commandEnvironment\)/u);
-  assert.match(source, /runSide\("after",\s*repoRoot,\s*fixture,\s*commandEnvironment\)/u);
+  assert.match(source, /runSide\("after",\s*afterRoot,\s*fixture,\s*commandEnvironment\)/u);
   assert.match(source, /baselineEnvironment\s*!==\s*currentEnvironment/u);
   assert.match(source, /env:\s*commandEnvironment/u);
   assert.doesNotMatch(source, /\.\.\.process\.env/u);

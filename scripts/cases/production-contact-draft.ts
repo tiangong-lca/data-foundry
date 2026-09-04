@@ -29,10 +29,12 @@ import {
   stableJson,
 } from "../lib/identity-preflight-proof.ts";
 
+import { requirePrivateOAuthSessionFile } from "../lib/oauth-session-reference.ts";
+
 const CASE_SCHEMA = "tiangong-foundry.production-contact-draft-case.v1" as const;
 const FAILURE_SCHEMA = "tiangong-foundry.production-contact-draft-case-failure.v1" as const;
 const CLI_PACKAGE_NAME = "@tiangong-lca/cli" as const;
-const CLI_PACKAGE_VERSION = "0.1.3" as const;
+const CLI_PACKAGE_VERSION = "0.1.9" as const;
 const MAX_CHILD_OUTPUT_BYTES = 8 * 1024 * 1024;
 const CHILD_TIMEOUT_MS = 120_000;
 const RECEIPT_MAX_AGE_MS = 5 * 60_000;
@@ -42,7 +44,8 @@ const PROJECT_REF_PATTERN = /^[a-z0-9-]+$/u;
 const REQUIRED_ENV_KEYS = [
   "TIANGONG_LCA_API_BASE_URL",
   "TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY",
-  "TIANGONG_LCA_TEST_API_KEY",
+  "TIANGONG_LCA_SESSION_FILE",
+  "TIANGONG_LCA_OAUTH_CLIENT_ID",
 ] as const;
 const SYSTEM_ENV_ALLOWLIST = [
   "PATH",
@@ -624,6 +627,7 @@ function readCaseEnv(envFile: string, root: string): CaseEnv {
       2,
     );
   }
+  requirePrivateOAuthSessionFile(selected.TIANGONG_LCA_SESSION_FILE as string);
   return selected as CaseEnv;
 }
 
@@ -667,9 +671,11 @@ function remoteEnv(source: NodeJS.ProcessEnv, caseEnv: CaseEnv): NodeJS.ProcessE
     ...systemEnv(source),
     TIANGONG_LCA_API_BASE_URL: caseEnv.TIANGONG_LCA_API_BASE_URL,
     TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY: caseEnv.TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY,
-    TIANGONG_LCA_API_KEY: caseEnv.TIANGONG_LCA_TEST_API_KEY,
-    TIANGONG_LCA_DISABLE_SESSION_CACHE: "true",
-    TIANGONG_LCA_FORCE_REAUTH: "true",
+    TIANGONG_LCA_AUTH_MODE: "oauth",
+    TIANGONG_LCA_SESSION_FILE: caseEnv.TIANGONG_LCA_SESSION_FILE,
+    TIANGONG_LCA_OAUTH_CLIENT_ID: caseEnv.TIANGONG_LCA_OAUTH_CLIENT_ID,
+    TIANGONG_LCA_DISABLE_SESSION_CACHE: "false",
+    TIANGONG_LCA_FORCE_REAUTH: "false",
   };
 }
 
@@ -807,7 +813,21 @@ function signalExitCode(signal: NodeJS.Signals): number {
 }
 
 function containsSecretMaterial(value: string, secrets: string[]): boolean {
-  return secrets.some((secret) => secret.length > 0 && value.includes(secret));
+  return redactCredentialText(value, secrets) !== value;
+}
+
+function redactCredentialText(value: string, references: string[]): string {
+  let text = value;
+  for (const reference of references.filter(Boolean))
+    text = text.replaceAll(reference, "[REDACTED]");
+  // The CLI owns session contents. Detect structured credentials without reading that store.
+  return text
+    .replace(
+      /("(?:access_token|refresh_token|password|authorization|cookie|set-cookie)"\s*:\s*)"(?:[^"\\]|\\.)*"/giu,
+      '$1"[REDACTED]"',
+    )
+    .replace(/\bBearer [A-Za-z0-9._~+/-]+=*/gu, "Bearer [REDACTED]")
+    .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/gu, "[REDACTED]");
 }
 
 function fileFact(filePath: string, relativeTo: string): ArtifactFact {
@@ -1067,16 +1087,10 @@ function redactSecrets(root: string, secrets: string[]): string[] {
       const entryPath = path.join(directory, entry.name);
       if (entry.isDirectory()) visit(entryPath);
       else if (entry.isFile()) {
-        let text = readFileSync(entryPath).toString("utf8");
-        let changed = false;
-        for (const secret of secrets.filter(Boolean)) {
-          if (text.includes(secret)) {
-            text = text.replaceAll(secret, "[REDACTED]");
-            changed = true;
-          }
-        }
-        if (changed) {
-          overwritePrivateFile(entryPath, text);
+        const text = readFileSync(entryPath).toString("utf8");
+        const redacted = redactCredentialText(text, secrets);
+        if (redacted !== text) {
+          overwritePrivateFile(entryPath, redacted);
           changedPaths.push(entryPath);
         }
       }
@@ -1377,7 +1391,7 @@ export async function runProductionContactDraftCase(
 
     stage = "load-production-env";
     const caseEnv = readCaseEnv(options.envFile, root);
-    secrets = [caseEnv.TIANGONG_LCA_TEST_API_KEY];
+    secrets = [caseEnv.TIANGONG_LCA_SESSION_FILE];
     if (projectRefFromBaseUrl(caseEnv.TIANGONG_LCA_API_BASE_URL) !== options.expectedProjectRef) {
       return fail("Production env project does not match intent.", "CASE_PROJECT_MISMATCH", 2);
     }
@@ -1398,7 +1412,6 @@ export async function runProductionContactDraftCase(
       maxAgeMs: RECEIPT_MAX_AGE_MS,
       expectedProjectRef: options.expectedProjectRef,
       expectedUserId: options.expectedUserId,
-      requireFreshSignin: true,
     });
     assertReceiptRuntime(firstReceipt, runtime);
     const firstReceiptPath = path.join(options.outDir, "identity-receipt-before-reads.json");
@@ -1460,7 +1473,6 @@ export async function runProductionContactDraftCase(
       maxAgeMs: RECEIPT_MAX_AGE_MS,
       expectedProjectRef: options.expectedProjectRef,
       expectedUserId: options.expectedUserId,
-      requireFreshSignin: true,
     });
     assertReceiptRuntime(secondReceipt, runtime);
     if (Date.parse(secondReceipt.captured_at_utc) < Date.parse(firstReceipt.captured_at_utc)) {

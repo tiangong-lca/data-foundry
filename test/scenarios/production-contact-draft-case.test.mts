@@ -31,7 +31,7 @@ const USER_ID = "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7";
 const CONTACT_ID = "11111111-2222-4333-8444-555555555555";
 const TEST_KEY = "fixture-production-test-key-never-persist";
 
-function receipt(capturedAtUtc: string, packageVersion = "0.1.3") {
+function receipt(capturedAtUtc: string, packageVersion = "0.1.9") {
   return testAuthIdentityReceipt({
     projectRef: PROJECT_REF,
     userId: USER_ID,
@@ -136,7 +136,7 @@ test("production contact case requires POSIX-private ignored output before runti
     return {
       entrypoint: "/never/started.js",
       cliPackageName: "@tiangong-lca/cli",
-      cliPackageVersion: "0.1.3",
+      cliPackageVersion: "0.1.9",
       cliEntrypointSha256: "a".repeat(64),
       cliRuntimeSha256: "b".repeat(64),
       runnerSha256: "c".repeat(64),
@@ -281,18 +281,20 @@ test(
       [
         `TIANGONG_LCA_API_BASE_URL=https://${PROJECT_REF}.supabase.co/functions/v1`,
         "TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY=fixture-publishable-key",
-        `TIANGONG_LCA_TEST_API_KEY=${TEST_KEY}`,
+        `TIANGONG_LCA_SESSION_FILE=${path.join(root, "oauth-session.json")}`,
+        "TIANGONG_LCA_OAUTH_CLIENT_ID=11111111-1111-4111-8111-111111111111",
         "UNRELATED_PRIVATE_SECRET=must-never-reach-child",
         "",
       ].join("\n"),
     );
+    fs.writeFileSync(path.join(root, "oauth-session.json"), TEST_KEY, { mode: 0o600 });
     if (process.platform !== "win32") fs.chmodSync(envFile, 0o600);
     const spawns: ProductionContactDraftSpawn[] = [];
     let receiptCount = 0;
     let commitDispatches = 0;
     let runtimeCleanups = 0;
     let successfulSpawn: RunProductionContactDraftCaseDeps["spawnImpl"];
-    let receiptPackageVersion = "0.1.3";
+    let receiptPackageVersion = "0.1.9";
     let authCallsThisRun = 0;
     let mutateAfterWriteReceipt = false;
     let extraPostwriteCheckStatus: string | null = null;
@@ -306,7 +308,7 @@ test(
     ) => ({
       entrypoint: "/trusted/private/cli.js",
       cliPackageName: "@tiangong-lca/cli",
-      cliPackageVersion: "0.1.3",
+      cliPackageVersion: "0.1.9",
       cliEntrypointSha256: "a".repeat(64),
       cliRuntimeSha256: "b".repeat(64),
       runnerSha256: "c".repeat(64),
@@ -459,7 +461,9 @@ test(
                   status: "ok",
                   exact_version: postWrite ? "00.00.001" : null,
                   latest_version: postWrite ? "00.00.001" : null,
-                  ...(postWrite && injectSecretInPostwriteSidecar ? { debug_value: TEST_KEY } : {}),
+                  ...(postWrite && injectSecretInPostwriteSidecar
+                    ? { access_token: TEST_KEY }
+                    : {}),
                 },
                 ...(postWrite
                   ? [
@@ -510,7 +514,7 @@ test(
                       root_payload_mismatches: 0,
                     },
                     blockers: [],
-                    ...(postWrite && injectSecretInPostwrite ? { debug_value: TEST_KEY } : {}),
+                    ...(postWrite && injectSecretInPostwrite ? { access_token: TEST_KEY } : {}),
                     files: { checks: checksPath },
                   },
                   reportPath,
@@ -570,7 +574,18 @@ test(
       assert.ok(spawns.every((spawn) => !spawn.options.shell));
       assert.ok(spawns.every((spawn) => spawn.options.cwd === path.join(outDir, "clean-cwd")));
       const remoteSpawns = spawns.slice(2);
-      assert.ok(remoteSpawns.every((spawn) => spawn.options.env.TIANGONG_LCA_API_KEY === TEST_KEY));
+      assert.ok(
+        remoteSpawns.every((spawn) => spawn.options.env.TIANGONG_LCA_API_KEY === undefined),
+      );
+      assert.ok(
+        remoteSpawns.every((spawn) => spawn.options.env.TIANGONG_LCA_AUTH_MODE === "oauth"),
+      );
+      assert.ok(
+        remoteSpawns.every(
+          (spawn) =>
+            spawn.options.env.TIANGONG_LCA_SESSION_FILE === path.join(root, "oauth-session.json"),
+        ),
+      );
       assert.ok(
         remoteSpawns.every((spawn) => spawn.options.env.UNRELATED_PRIVATE_SECRET === undefined),
       );
@@ -717,7 +732,7 @@ test(
         ),
         /receipt CLI does not match the pinned runtime/u,
       );
-      receiptPackageVersion = "0.1.3";
+      receiptPackageVersion = "0.1.9";
       assert.equal(
         readJson(path.join(wrongReceiptOutDir, "case-failure.json")).mutation_dispatch_count,
         0,

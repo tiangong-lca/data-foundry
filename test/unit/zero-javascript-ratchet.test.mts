@@ -23,6 +23,9 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // Issue #81's strict no-replay handoff recovery and helper leaves remain native TypeScript too.
 // Issue #82 keeps the pnpm 11.24 package-manager edge exact and adds no compatibility runner.
 // Issue #83's immutable location-queue binding cases remain native TypeScript too.
+// Issue #97 keeps OAuth session-reference guards and isolated Golden snapshots native TypeScript.
+// Hook fixture isolation also stays native .mts and cannot inherit the push repository.
+// The CLI 0.1.9 support-export adapter and its integrity/intent tests remain native TypeScript.
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");

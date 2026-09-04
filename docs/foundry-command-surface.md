@@ -83,8 +83,8 @@ checkPaths:
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-08-29
-lastReviewedCommit: 2504a80
+lastReviewedAt: 2026-09-04
+lastReviewedCommit: 1078b2b2c515cb06b66d19f3ce572e3fdc5f15e5
 lastReviewedNote: "Reviewed for Issue #74: dataset-process-scope-run retains its command/help surface while scope command values explicitly migrate from argv arrays to CommandSpecs."
 ---
 

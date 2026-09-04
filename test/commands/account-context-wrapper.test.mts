@@ -40,9 +40,11 @@ function writeProfile(
   const profileDir = path.join(root, "profiles");
   const profilePath = path.join(profileDir, "production-test.env");
   fs.mkdirSync(profileDir, { recursive: true });
+  fs.writeFileSync(path.join(root, "oauth-session.json"), "{}\n", { mode: 0o600 });
   const profile = {
     TIANGONG_LCA_API_BASE_URL: `https://${PROJECT_REF}.functions.supabase.co/functions/v1`,
-    TIANGONG_LCA_API_KEY: API_KEY,
+    TIANGONG_LCA_SESSION_FILE: path.join(root, "oauth-session.json"),
+    TIANGONG_LCA_OAUTH_CLIENT_ID: "11111111-1111-4111-8111-111111111111",
     TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY: "publishable-key",
     TIANGONG_LCA_REGION: "global",
     FOUNDRY_ACCOUNT_LABEL: "production-test",
@@ -57,6 +59,7 @@ function writeProfile(
       .map(([key, value]) => `${key}=${value}`)
       .join("\n")}\n`,
   );
+  fs.chmodSync(profilePath, 0o600);
   return { profileDir, profilePath };
 }
 
@@ -79,7 +82,7 @@ function baseDeps(
     },
     resolveInstalledCli: () => ({
       packageName: "@tiangong-lca/cli",
-      packageVersion: "0.1.3",
+      packageVersion: "0.1.9",
       binPath: path.join(root, "trusted", "tiangong-lca.js"),
     }),
     spawnSyncImpl: (executable: string, argv: readonly string[], options: SpawnCall["options"]) => {
@@ -124,9 +127,15 @@ test("account wrapper obtains a fresh intent-bound CLI receipt before exact argv
       "--json",
     ]);
     assert.equal(calls[0].options.shell, false);
-    assert.equal(calls[0].options.env?.TIANGONG_LCA_API_KEY, API_KEY);
-    assert.equal(calls[0].options.env?.TIANGONG_LCA_DISABLE_SESSION_CACHE, "true");
-    assert.equal(calls[0].options.env?.TIANGONG_LCA_FORCE_REAUTH, "true");
+    assert.equal(calls[0].options.env?.TIANGONG_LCA_API_KEY, undefined);
+    assert.equal(calls[0].options.env?.TIANGONG_LCA_AUTH_MODE, "oauth");
+    assert.equal(
+      calls[0].options.env?.TIANGONG_LCA_SESSION_FILE,
+      path.join(root, "oauth-session.json"),
+    );
+    assert.equal(calls[0].options.env?.FOUNDRY_RUNTIME_ENV_FILE_POLICY, "disabled");
+    assert.equal(calls[0].options.env?.TIANGONG_LCA_DISABLE_SESSION_CACHE, "false");
+    assert.equal(calls[0].options.env?.TIANGONG_LCA_FORCE_REAUTH, "false");
     assert.equal(calls[0].options.env?.UNRELATED_SECRET, undefined);
     assert.equal(calls[0].options.env?.HOME, undefined);
     assert.equal(calls[0].options.env?.FOUNDRY_ACCOUNT_PROFILE_SKIP_AUTH_CHECK, undefined);
@@ -226,7 +235,7 @@ test("account wrapper executes when invoked through a symlinked entrypoint", (co
       encoding: "utf8",
     });
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /fresh, intent-bound CLI 0\.1\.3 identity receipt/u);
+    assert.match(result.stdout, /fresh, intent-bound CLI 0\.1\.9 identity receipt/u);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -254,6 +263,50 @@ test("account wrapper rejects legacy bypass and missing project or user intent b
             baseDeps(root, profileDir, calls),
           ),
         /(?:does not accept wrapper flags|FOUNDRY_EXPECTED_PROJECT_REF|FOUNDRY_EXPECTED_USER_ID)/u,
+      );
+      assert.equal(calls.length, 0);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }
+});
+
+test("account wrapper rejects credential profiles and unsafe session references before dispatch", () => {
+  for (const overrides of [
+    { TIANGONG_LCA_API_KEY: API_KEY },
+    { TIANGONG_LCA_PASSWORD: "synthetic-password" },
+    { TIANGONG_LCA_ACCESS_TOKEN: "synthetic-token" },
+    { TIANGONG_LCA_SESSION_FILE: "relative-session.json" },
+    { TIANGONG_LCA_SESSION_FILE: "" },
+  ]) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-account-oauth-"));
+    const { profileDir } = writeProfile(root, overrides);
+    const calls: SpawnCall[] = [];
+    try {
+      assert.throws(() =>
+        runWithLcaAccount(
+          ["production-test", "--", process.execPath, "command.mjs"],
+          baseDeps(root, profileDir, calls),
+        ),
+      );
+      assert.equal(calls.length, 0);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }
+  if (process.platform !== "win32") {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-account-session-mode-"));
+    const { profileDir } = writeProfile(root);
+    const calls: SpawnCall[] = [];
+    try {
+      fs.chmodSync(path.join(root, "oauth-session.json"), 0o644);
+      assert.throws(
+        () =>
+          runWithLcaAccount(
+            ["production-test", "--", process.execPath, "command.mjs"],
+            baseDeps(root, profileDir, calls),
+          ),
+        /private file/u,
       );
       assert.equal(calls.length, 0);
     } finally {

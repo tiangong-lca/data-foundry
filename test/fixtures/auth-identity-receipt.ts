@@ -62,7 +62,7 @@ export function testAuthIdentityReceipt({
   projectRef = "qgzvkongdjqiiamzbbts",
   userId = "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
   capturedAtUtc = new Date().toISOString(),
-  packageVersion = "0.1.3",
+  packageVersion = "0.1.9",
   displayEmail = "te****@example.com",
   scopeOverrides = {},
 }: TestAuthIdentityReceiptOptions = {}): AuthIdentityReceipt {
@@ -79,10 +79,10 @@ export function testAuthIdentityReceipt({
     },
     identity: { user_id: userId, display_email: displayEmail },
     session: {
-      source: "signin",
-      cache_mode: "disabled",
-      force_reauth: true,
-      expires_at_utc: null,
+      source: "cache",
+      cache_mode: "custom-file",
+      force_reauth: false,
+      expires_at_utc: new Date(Date.parse(capturedAtUtc) + 3_600_000).toISOString(),
     },
     bindings: {
       request_sha256: requestFingerprint(projectRef),

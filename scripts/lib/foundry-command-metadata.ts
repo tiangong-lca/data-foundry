@@ -698,12 +698,25 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     category: "workflow-internal",
     ownerModule: "scripts/commands/support-cache.ts",
     ownerExport: "createSupportCacheCommands().runDatasetSupportCacheRefresh",
-    inputs: ["CLI support lookup command", "canonical support mapping policy"],
+    inputs: [
+      "intent-bound CLI support export artifacts",
+      "public canonical support mapping policy",
+    ],
     outputs: [
       "specs/canonical-support/flow-properties-unit-groups.json",
       "support cache refresh report",
     ],
-    keyTests: [commandSmoke("dataset-support-cache-refresh --help")],
+    keyTests: [
+      commandSmoke("dataset-support-cache-refresh --help"),
+      nodeTest(
+        "test/unit/cli-support-export.test.mts",
+        "support bridge delegates to one trusted CLI in an isolated credential-free cwd",
+      ),
+      nodeTest(
+        "test/unit/support-cache-command-factory.test.mts",
+        "support refresh preserves exported row order, summaries and mappings through the owner CLI",
+      ),
+    ],
   }),
   "dataset-canonical-support-mappings-autofill": metadata({
     category: "workflow-internal",

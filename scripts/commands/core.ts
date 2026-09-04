@@ -76,7 +76,9 @@ const runtimeDirs = [
 
 const envExampleAllowedKeys = new Set([
   "TIANGONG_LCA_API_BASE_URL",
-  "TIANGONG_LCA_API_KEY",
+  "TIANGONG_LCA_AUTH_MODE",
+  "TIANGONG_LCA_OAUTH_CLIENT_ID",
+  "TIANGONG_LCA_OAUTH_REDIRECT_URI",
   "TIANGONG_LCA_REGION",
   "TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY",
   "TIANGONG_LCA_SESSION_FILE",
@@ -374,16 +376,13 @@ export function createCoreCommands({
   }
 
   function envCheck() {
-    const requiredForRemoteWrites = [
-      "TIANGONG_LCA_API_BASE_URL",
-      "TIANGONG_LCA_API_KEY",
-      "TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY",
-    ];
+    const requiredForRemoteWrites = ["TIANGONG_LCA_SESSION_FILE"];
     return {
       generated_at_utc: nowIso(),
       repo_env_exists: fileExists(path.join(repoRoot, ".env")),
       env_example_surface: envExampleSurfaceCheck(),
       dry_run_allowed: true,
+      auth_readiness: "requires-cli-live-identity",
       remote_write_policy: {
         enabled: process.env.FOUNDRY_ENABLE_REMOTE_COMMIT === "true",
         single_record: process.env.FOUNDRY_SINGLE_RECORD_COMMIT === "true",
