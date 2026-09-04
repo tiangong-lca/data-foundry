@@ -103,6 +103,24 @@ function interruptedResult(
   });
 }
 
+function failedResult(
+  operation: FoundryPublicOperation,
+  taskId: string | null,
+  code: string,
+  message: string,
+): FoundryOperationResult {
+  return createFoundryOperationResult({
+    operation,
+    status: "failed",
+    taskId,
+    artifacts: [],
+    blockers: [{ code, message, scope: taskId }],
+    nextActions: [],
+    runtimeIdentity: null,
+    permissions: { state: "not_required", requested_actions: [], approval_reference: null },
+  });
+}
+
 async function runPublicCommand(
   parsed: ParsedPublicCommand,
   host: FoundryRuntimeCommandHost,
@@ -165,6 +183,7 @@ async function runPublicCommand(
     workspace,
     runtimeSelection: host.runtimeSelection,
     accountIntent: parsed.operation === "doctor" ? doctorAccountIntent(parsed.args) : undefined,
+    signal: host.signal,
   });
   let result: FoundryOperationResult;
   if (parsed.operation === "workspace.init") result = facade.initialize();
@@ -202,7 +221,7 @@ async function runPublicCommand(
         ? await facade.status({ taskId, actorId })
         : await facade.resume({ taskId, actorId });
   }
-  return host.signal?.aborted ? interruptedResult(parsed.operation, result.task_id) : result;
+  return result;
 }
 
 async function runLegacyWorkspaceRuntimeCommand(argv: string[]): Promise<void> {
@@ -293,14 +312,17 @@ export async function runFoundryRuntimeCommand(
   try {
     result = await runPublicCommand(parsed, effectiveHost);
   } catch (error) {
-    result = invalidResult(
-      parsed.operation,
-      null,
-      error instanceof FoundryContextError ? error.code : "runtime_operation_failed",
-      error instanceof FoundryContextError
-        ? error.message
-        : "Foundry public operation failed before changing task state.",
-    );
+    result =
+      error instanceof FoundryContextError && error.code.startsWith("argument_")
+        ? invalidResult(parsed.operation, null, error.code, error.message)
+        : failedResult(
+            parsed.operation,
+            null,
+            error instanceof FoundryContextError ? error.code : "runtime_operation_failed",
+            error instanceof FoundryContextError
+              ? error.message
+              : "Foundry public operation failed before changing task state.",
+          );
   }
   try {
     writeStdout(`${JSON.stringify(result)}\n`);

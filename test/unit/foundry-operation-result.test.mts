@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   FOUNDRY_OPERATION_RESULT_SCHEMA,
   assertFoundryOperationResult,
+  commandNextActionBindingSha256,
   createFoundryOperationResult,
   exitCodeForFoundryOperationResult,
   foundryOperationPermissionStates,
@@ -121,6 +122,25 @@ test("operation result validation rejects extra fields, display commands and mal
     assertFoundryOperationResult({
       ...base,
       next_actions: [{ kind: "command", display: "sh -c anything" }],
+    }),
+  );
+  const command = {
+    kind: "command",
+    code: "resume",
+    executable: "/runtime/node",
+    argv: ["/runtime/foundry.js", "task", "resume"],
+    cwd: "/workspace",
+    purpose: "Resume the registered task.",
+  };
+  const bound = {
+    ...command,
+    binding_sha256: commandNextActionBindingSha256(command),
+  };
+  assert.doesNotThrow(() => assertFoundryOperationResult({ ...base, next_actions: [bound] }));
+  assert.throws(() =>
+    assertFoundryOperationResult({
+      ...base,
+      next_actions: [{ ...bound, argv: [...bound.argv, "--other"] }],
     }),
   );
 });

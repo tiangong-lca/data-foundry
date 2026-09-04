@@ -31,7 +31,13 @@ export interface FoundryWorkspaceMigrationPlan {
   readonly tree_sha256: string;
 }
 
-const maxEntries = 100_000;
+const maxEntries = 10_000;
+const maxDepth = 64;
+const maxHashedFileBytes = 64 * 1024 * 1024;
+
+function credentialNamed(relative: string): boolean {
+  return relative.split("/").some((part) => /^\.env(?:\.|$)/iu.test(part));
+}
 
 function classify(relative: string): MigrationEntry["state_class"] {
   if (relative === "workspace.json" || relative.startsWith("state/")) return "workspace-control";
@@ -97,7 +103,12 @@ export function inventoryFoundryWorkspace(workspace: string): FoundryWorkspaceMi
       "Foundry state root must be a real directory.",
     );
   const entries: MigrationEntry[] = [];
-  const walk = (directory: string) => {
+  const walk = (directory: string, depth: number) => {
+    if (depth > maxDepth)
+      throw new FoundryContextError(
+        "migration_depth_limit",
+        "Migration inventory exceeds its directory-depth limit.",
+      );
     for (const name of fs.readdirSync(directory).sort()) {
       const file = path.join(directory, name);
       const relative = path.relative(root, file).split(path.sep).join("/");
@@ -120,7 +131,7 @@ export function inventoryFoundryWorkspace(workspace: string): FoundryWorkspaceMi
             "migration_inventory_limit",
             "Migration inventory exceeds its entry limit.",
           );
-        walk(file);
+        walk(file, depth + 1);
         continue;
       }
       if (!stat.isFile())
@@ -128,13 +139,14 @@ export function inventoryFoundryWorkspace(workspace: string): FoundryWorkspaceMi
           "migration_entry_unsupported",
           "Migration inventory supports only regular files and directories.",
         );
-      const fact = captureFoundryInput(file);
+      const omitHash = credentialNamed(relative) || stat.size > maxHashedFileBytes;
+      const fact = omitHash ? null : captureFoundryInput(file);
       entries.push({
         path: relative,
         kind: "file",
-        bytes: fact.bytes,
-        sha256: fact.sha256,
-        state_class: classify(relative),
+        bytes: stat.size,
+        sha256: fact?.sha256 ?? null,
+        state_class: credentialNamed(relative) ? "authorization-or-account" : classify(relative),
       });
       if (entries.length > maxEntries)
         throw new FoundryContextError(
@@ -143,7 +155,7 @@ export function inventoryFoundryWorkspace(workspace: string): FoundryWorkspaceMi
         );
     }
   };
-  walk(root);
+  walk(root, 0);
   const schema = markerSchema(root);
   const immutableEntries = Object.freeze(entries.map((entry) => Object.freeze(entry)));
   return Object.freeze({

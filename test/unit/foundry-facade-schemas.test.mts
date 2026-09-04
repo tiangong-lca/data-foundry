@@ -60,7 +60,7 @@ test("facade task, result, request and migration schemas compile and reject unsa
     revisions: [
       {
         revision: 1,
-        task_id: "task-1111111111111111-r0001",
+        task_id: `task-${"1".repeat(64)}-r0001`,
         predecessor_task_id: null,
         fingerprint_sha256: digest,
         spec_source: { path: "/spec.json", bytes: 1, sha256: digest },

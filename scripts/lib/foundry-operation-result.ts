@@ -1,4 +1,5 @@
 import { FoundryContextError } from "./foundry-runtime-context.ts";
+import { sha256Json } from "./identity-preflight-proof.ts";
 
 export const FOUNDRY_OPERATION_RESULT_SCHEMA = "tiangong-foundry.operation-result.v1" as const;
 export const foundryOperationStatuses = Object.freeze([
@@ -80,6 +81,9 @@ export interface FoundryOperationResult {
   readonly runtime_identity: unknown;
   readonly permissions: Readonly<FoundryOperationPermissions>;
 }
+
+export const FOUNDRY_COMMAND_NEXT_ACTION_BINDING_SCHEMA =
+  "tiangong-foundry.command-next-action-binding.v1" as const;
 
 interface CreateFoundryOperationResultOptions {
   operation: string;
@@ -221,17 +225,45 @@ function nextAction(value: unknown): FoundryOperationNextAction {
       !shaPattern.test(item.binding_sha256)
     )
       fail("Command next action requires bounded argv and an exact binding digest.");
-    return {
-      kind: "command",
+    const action = {
+      kind: "command" as const,
       code: text(item.code, "Command action code", 256),
       executable: text(item.executable, "Command executable"),
-      argv: [...item.argv],
+      argv: [...item.argv] as string[],
       cwd: text(item.cwd, "Command working directory"),
       purpose: text(item.purpose, "Command purpose", 4_096),
-      binding_sha256: item.binding_sha256,
     };
+    if (commandNextActionBindingSha256(action) !== item.binding_sha256)
+      fail("Command next action binding does not match its executable fields.");
+    return { ...action, binding_sha256: item.binding_sha256 };
   }
   return fail("Next actions must be explicit human or executable-plus-argv records.");
+}
+
+/** Bind exactly the executable fields a consumer is allowed to invoke. */
+export function commandNextActionBindingSha256(value: unknown): string {
+  const item = record(value, "Command next action binding input");
+  exact(
+    item,
+    ["kind", "code", "executable", "argv", "cwd", "purpose"],
+    "Command next action binding input",
+  );
+  if (
+    item.kind !== "command" ||
+    !Array.isArray(item.argv) ||
+    item.argv.length > 256 ||
+    item.argv.some((token) => typeof token !== "string" || !token || /[\0\r\n]/u.test(token))
+  )
+    fail("Command next action binding input is malformed.");
+  return sha256Json({
+    schema: FOUNDRY_COMMAND_NEXT_ACTION_BINDING_SCHEMA,
+    kind: "command",
+    code: text(item.code, "Command action code", 256),
+    executable: text(item.executable, "Command executable"),
+    argv: [...item.argv],
+    cwd: text(item.cwd, "Command working directory"),
+    purpose: text(item.purpose, "Command purpose", 4_096),
+  });
 }
 
 function permissions(value: unknown): FoundryOperationPermissions {

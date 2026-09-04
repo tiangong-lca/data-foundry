@@ -27,7 +27,7 @@
     "write_allowed": { "const": false },
     "entries": {
       "type": "array",
-      "maxItems": 100000,
+      "maxItems": 10000,
       "items": { "$ref": "#/$defs/entry" }
     },
     "tree_sha256": { "$ref": "#/$defs/sha256" }

@@ -64,7 +64,7 @@ export interface FoundryFacadeTaskRecord {
 }
 
 const shaPattern = /^[0-9a-f]{64}$/u;
-const taskIdPattern = /^task-[0-9a-f]{16}-r\d{4}$/u;
+const taskIdPattern = /^task-[0-9a-f]{64}-r\d{4}$/u;
 const maxIndexBytes = 8 * 1024 * 1024;
 const maxRevisions = 1_000;
 
@@ -123,13 +123,31 @@ function taskPointerPath(context: FoundryRuntimeContext, taskId: string): string
 }
 
 function readBounded(file: string): Buffer {
-  const stat = fs.lstatSync(file);
-  if (!stat.isFile() || stat.isSymbolicLink() || stat.size > maxIndexBytes)
-    fail("facade_request_invalid", "Facade request state must be a bounded regular file.");
-  const bytes = fs.readFileSync(file);
-  if (bytes.length > maxIndexBytes)
-    fail("facade_request_invalid", "Facade request state changed beyond its size limit.");
-  return bytes;
+  let fd: number;
+  try {
+    fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+  } catch {
+    return fail("facade_request_invalid", "Facade request state must be an existing regular file.");
+  }
+  try {
+    const before = fs.fstatSync(fd, { bigint: true });
+    if (!before.isFile() || before.size > BigInt(maxIndexBytes))
+      fail("facade_request_invalid", "Facade request state must be a bounded regular file.");
+    const bytes = fs.readFileSync(fd);
+    const after = fs.fstatSync(fd, { bigint: true });
+    if (
+      bytes.length > maxIndexBytes ||
+      before.dev !== after.dev ||
+      before.ino !== after.ino ||
+      before.size !== after.size ||
+      before.mtimeNs !== after.mtimeNs ||
+      BigInt(bytes.length) !== after.size
+    )
+      fail("facade_request_invalid", "Facade request state changed while it was read.");
+    return bytes;
+  } finally {
+    fs.closeSync(fd);
+  }
 }
 
 function revision(value: unknown, expected: number): FacadeRequestRevision {
@@ -219,7 +237,7 @@ function readRequest(
   const revisions = raw.revisions.map((item, index) => revision(item, index + 1));
   for (let index = 0; index < revisions.length; index += 1) {
     const entry = revisions[index];
-    const expectedTaskId = `task-${requestSha256.slice(0, 16)}-r${String(index + 1).padStart(4, "0")}`;
+    const expectedTaskId = `task-${requestSha256}-r${String(index + 1).padStart(4, "0")}`;
     if (
       entry.task_id !== expectedTaskId ||
       entry.predecessor_task_id !== (revisions[index - 1]?.task_id ?? null)
@@ -321,7 +339,7 @@ export async function registerFoundryFacadeTask(
     specSource: FoundryInputFact;
     spec: FoundryTaskStartSpec;
     inputs: readonly FoundryInputFact[];
-    createOrLoad: (taskId: string) => { created_at_utc: string };
+    createOrLoad: (taskId: string) => { created_at_utc: string; inputs_sha256: string };
   },
 ): Promise<FoundryFacadeTaskRecord> {
   assertFoundryRuntimeContext(context);
@@ -360,8 +378,31 @@ export async function registerFoundryFacadeTask(
         latest?.fingerprint_sha256 === fingerprint ? latest.revision : (latest?.revision ?? 0) + 1;
       if (revisionNumber > maxRevisions)
         fail("facade_request_limit", "Facade request has too many retained revisions.");
-      const taskId = `task-${requestSha256.slice(0, 16)}-r${String(revisionNumber).padStart(4, "0")}`;
-      const task = options.createOrLoad(taskId);
+      const taskId = `task-${requestSha256}-r${String(revisionNumber).padStart(4, "0")}`;
+      let task: { created_at_utc: string; inputs_sha256: string };
+      try {
+        task = options.createOrLoad(taskId);
+        if (task.inputs_sha256 !== sha256Json(options.inputs))
+          throw new FoundryContextError(
+            "task_source_changed",
+            "Registered task sources do not match this facade revision.",
+          );
+      } catch (error) {
+        const taskStateExists =
+          fs.existsSync(path.join(context.controlRoot, "workspaces", taskId)) ||
+          fs.existsSync(resolveFoundryOutput(context, `task-publications/${taskId}.json`, "state"));
+        if (
+          (!latest || latest.fingerprint_sha256 !== fingerprint) &&
+          taskStateExists &&
+          error instanceof FoundryContextError &&
+          error.code.startsWith("task_")
+        )
+          throw new FoundryContextError(
+            "facade_crash_recovery_conflict",
+            `An interrupted start already registered ${taskId}; retry the original task-start spec to complete its request index before creating another revision.`,
+          );
+        throw error;
+      }
       let selected = latest;
       if (!latest || latest.fingerprint_sha256 !== fingerprint) {
         const unsigned = {

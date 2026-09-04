@@ -5,6 +5,11 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { runFoundryRuntimeCommand } from "../../scripts/runtime-entry.ts";
+import {
+  commandNextActionBindingSha256,
+  exitCodeForFoundryOperationResult,
+} from "../../scripts/lib/foundry-operation-result.ts";
+import { createFoundryFacade } from "../../scripts/foundry-facade.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 const entry = path.join(repoRoot, "scripts/foundry.ts");
@@ -142,12 +147,21 @@ test("hierarchical facade emits one JSON envelope and resumes only registered lo
   const started = run(cwd, ["task", "start", "--workspace", workspace, "--spec", spec, "--json"]);
   assert.equal(started.exit, 0);
   const taskId = String(started.json.task_id);
-  assert.match(taskId, /^task-[0-9a-f]{16}-r0001$/u);
+  assert.match(taskId, /^task-[0-9a-f]{64}-r0001$/u);
   const resumeAction = (started.json.next_actions as Array<Record<string, unknown>>)[0];
   assert.equal(resumeAction.kind, "command");
   assert.equal(resumeAction.cwd, fs.realpathSync(workspace));
   assert.equal(Object.hasOwn(resumeAction, "display"), false);
   assert.ok(Array.isArray(resumeAction.argv));
+  const { binding_sha256: bindingSha256, ...boundAction } = resumeAction;
+  assert.equal(bindingSha256, commandNextActionBindingSha256(boundAction));
+  assert.notEqual(
+    bindingSha256,
+    commandNextActionBindingSha256({
+      ...boundAction,
+      argv: [...(boundAction.argv as string[]), "--different-task"],
+    }),
+  );
 
   const wrongActor = run(cwd, [
     "task",
@@ -170,7 +184,7 @@ test("hierarchical facade emits one JSON envelope and resumes only registered lo
     "--workspace",
     workspace,
     "--task",
-    "task-0000000000000000-r0001",
+    `task-${"0".repeat(64)}-r0001`,
     "--actor",
     "public-test-actor",
     "--json",
@@ -217,6 +231,52 @@ test("hierarchical facade emits one JSON envelope and resumes only registered lo
   );
 });
 
+test("credential-like or linked task specs are stable needs-input errors", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-public-input-errors-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const workspace = path.join(root, "workspace");
+  assert.equal(run(root, ["workspace", "init", "--workspace", workspace, "--json"]).exit, 0);
+  const credential = path.join(root, ".env");
+  fs.writeFileSync(credential, "PRIVATE=unchanged\n", { mode: 0o600 });
+  const credentialBefore = fs.readFileSync(credential);
+  const credentialResult = run(root, [
+    "task",
+    "start",
+    "--workspace",
+    workspace,
+    "--spec",
+    credential,
+    "--json",
+  ]);
+  assert.equal(credentialResult.exit, 2);
+  assert.equal(credentialResult.json.status, "needs_input");
+  assert.equal(
+    (credentialResult.json.blockers as Array<{ code: string }>)[0]?.code,
+    "credential_input_forbidden",
+  );
+  assert.deepEqual(fs.readFileSync(credential), credentialBefore);
+
+  const target = path.join(root, "target.json");
+  const linked = path.join(root, "linked.json");
+  fs.writeFileSync(target, "{}\n");
+  fs.symlinkSync(target, linked);
+  const linkedResult = run(root, [
+    "task",
+    "start",
+    "--workspace",
+    workspace,
+    "--spec",
+    linked,
+    "--json",
+  ]);
+  assert.equal(linkedResult.exit, 2);
+  assert.equal(linkedResult.json.status, "needs_input");
+  assert.equal(
+    (linkedResult.json.blockers as Array<{ code: string }>)[0]?.code,
+    "regular_file_required",
+  );
+});
+
 test("migration dry-run classifies legacy attempts without modifying their bytes", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-public-migration-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -248,6 +308,58 @@ test("migration dry-run classifies legacy attempts without modifying their bytes
   assert.deepEqual(fs.readFileSync(attempt), before);
   assert.deepEqual(fs.readdirSync(path.dirname(attempt)), entriesBefore);
   assert.equal(fs.existsSync(path.join(workspace, ".foundry", "workspace.json")), false);
+});
+
+test("migration dry-run bounds envelope size and inventories credential or oversized files without reading them", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-public-migration-bounds-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const workspace = path.join(root, "legacy");
+  const legacy = path.join(workspace, ".foundry", "legacy");
+  fs.mkdirSync(legacy, { recursive: true });
+  const credential = path.join(legacy, ".env.production");
+  fs.writeFileSync(credential, "PRIVATE=unchanged\n", { mode: 0o600 });
+  const credentialBefore = fs.readFileSync(credential);
+  const oversized = path.join(legacy, "large.bin");
+  fs.writeFileSync(oversized, "");
+  fs.truncateSync(oversized, 64 * 1024 * 1024 + 1);
+
+  const bounded = run(root, [
+    "workspace",
+    "migrate",
+    "--workspace",
+    workspace,
+    "--dry-run",
+    "--json",
+  ]);
+  assert.equal(bounded.exit, 0);
+  const plan = (
+    bounded.json.artifacts as Array<{ value: { entries: Array<Record<string, unknown>> } }>
+  )[0].value;
+  const credentialEntry = plan.entries.find((entry) => entry.path === "legacy/.env.production");
+  assert.equal(credentialEntry?.state_class, "authorization-or-account");
+  assert.equal(credentialEntry?.sha256, null);
+  const oversizedEntry = plan.entries.find((entry) => entry.path === "legacy/large.bin");
+  assert.equal(oversizedEntry?.bytes, 64 * 1024 * 1024 + 1);
+  assert.equal(oversizedEntry?.sha256, null);
+  assert.deepEqual(fs.readFileSync(credential), credentialBefore);
+
+  for (let index = 0; index < 10_000; index += 1)
+    fs.writeFileSync(path.join(legacy, `entry-${String(index).padStart(5, "0")}`), "");
+  const overLimit = run(root, [
+    "workspace",
+    "migrate",
+    "--workspace",
+    workspace,
+    "--dry-run",
+    "--json",
+  ]);
+  assert.equal(overLimit.exit, 4);
+  assert.equal(overLimit.json.status, "blocked");
+  assert.equal(
+    (overLimit.json.blockers as Array<{ code: string }>)[0]?.code,
+    "migration_inventory_limit",
+  );
+  assert.deepEqual(fs.readFileSync(credential), credentialBefore);
 });
 
 test("an already-aborted host returns exit 130 without creating workspace state", async (t) => {
@@ -292,4 +404,26 @@ test("an already-aborted host returns exit 130 without creating workspace state"
     [process.listenerCount("SIGINT"), process.listenerCount("SIGTERM")],
     signalCounts,
   );
+});
+
+test("cooperative interruption after an atomic mutation reports exit 130 and retains evidence", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-public-midflight-abort-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const workspace = path.join(root, "workspace");
+  let reads = 0;
+  const signal = {
+    get aborted() {
+      reads += 1;
+      return reads >= 3;
+    },
+  } as AbortSignal;
+  const result = createFoundryFacade({
+    moduleUrl: new URL("../../scripts/runtime-entry.ts", import.meta.url).href,
+    workspace,
+    signal,
+  }).initialize();
+  assert.equal(result.status, "failed");
+  assert.equal(result.blockers[0]?.code, "operation_interrupted");
+  assert.equal(exitCodeForFoundryOperationResult(result), 130);
+  assert.equal(fs.existsSync(path.join(workspace, ".foundry", "workspace.json")), true);
 });

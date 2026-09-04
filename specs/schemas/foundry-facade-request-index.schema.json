@@ -54,10 +54,10 @@
       ],
       "properties": {
         "revision": { "type": "integer", "minimum": 1, "maximum": 1000 },
-        "task_id": { "type": "string", "pattern": "^task-[0-9a-f]{16}-r[0-9]{4}$" },
+        "task_id": { "type": "string", "pattern": "^task-[0-9a-f]{64}-r[0-9]{4}$" },
         "predecessor_task_id": {
           "oneOf": [
-            { "type": "string", "pattern": "^task-[0-9a-f]{16}-r[0-9]{4}$" },
+            { "type": "string", "pattern": "^task-[0-9a-f]{64}-r[0-9]{4}$" },
             { "type": "null" }
           ]
         },

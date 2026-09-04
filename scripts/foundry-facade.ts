@@ -12,6 +12,7 @@ import {
   type FoundryRuntimeContextOptions,
 } from "./lib/foundry-runtime-context.ts";
 import {
+  commandNextActionBindingSha256,
   createFoundryOperationResult,
   type FoundryOperationArtifact,
   type FoundryOperationNextAction,
@@ -49,6 +50,7 @@ export interface FoundryFacadeOptions {
   readonly environment?: NodeJS.ProcessEnv;
   readonly runtimeSelection?: FoundryFacadeRuntimeSelection;
   readonly accountIntent?: FoundryAccountIntent;
+  readonly signal?: AbortSignal;
 }
 
 const maxSpecBytes = 1024 * 1024;
@@ -98,20 +100,11 @@ function resumeCommand(
   context: ReturnType<typeof createFoundryRuntimeContext>,
   record: FoundryFacadeTaskRecord,
 ): FoundryOperationNextAction {
-  const binding = sha256Json({
-    workspace_id: context.workspaceId,
-    task_id: record.task_id,
-    actor_id: record.spec.actor_id,
-    revision: record.revision,
-    fingerprint_sha256: record.fingerprint_sha256,
-    runtime_entry_sha256: context.runtime.entrySha256,
-    cwd: context.workspaceRoot,
-  });
-  return Object.freeze({
+  const action = {
     kind: "command",
     code: "resume_local_preparation",
     executable: process.execPath,
-    argv: Object.freeze([
+    argv: [
       context.runtime.entryPath,
       "task",
       "resume",
@@ -122,10 +115,14 @@ function resumeCommand(
       "--actor",
       record.spec.actor_id,
       "--json",
-    ]),
+    ],
     cwd: context.workspaceRoot,
     purpose: "Resume the content-bound deterministic local preparation for this task revision.",
-    binding_sha256: binding,
+  } as const;
+  return Object.freeze({
+    ...action,
+    argv: Object.freeze([...action.argv]),
+    binding_sha256: commandNextActionBindingSha256(action),
   });
 }
 
@@ -135,6 +132,14 @@ function noPermission(): FoundryOperationPermissions {
     requested_actions: Object.freeze([]),
     approval_reference: null,
   });
+}
+
+function assertNotInterrupted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted)
+    throw new FoundryContextError(
+      "operation_interrupted",
+      "Operation was interrupted; retained evidence must be inspected before resume.",
+    );
 }
 
 function contextOptions(options: FoundryFacadeOptions): FoundryRuntimeContextOptions {
@@ -206,18 +211,40 @@ function failure(
       ? error.message
       : "Foundry could not complete this operation; selected state was preserved.";
   const needsAuth = code === "needs_auth" || code.startsWith("identity_");
+  const needsInputCodes = new Set([
+    "task_not_found",
+    "workspace_not_initialized",
+    "input_not_selected",
+    "regular_file_required",
+    "credential_input_forbidden",
+    "task_id_invalid",
+    "task_account_invalid",
+    "task_document_invalid",
+    "task_document_limit",
+    "task_entities_invalid",
+    "task_profile_unknown",
+    "task_request_invalid",
+    "task_source_invalid",
+  ]);
+  const blockedCodes = new Set([
+    "facade_crash_recovery_conflict",
+    "task_actor_mismatch",
+    "task_account_mismatch",
+    "task_attempt_state_invalid",
+    "task_authorization_state_invalid",
+    "migration_inventory_limit",
+    "migration_depth_limit",
+  ]);
   const needsInput =
-    code === "task_not_found" ||
+    needsInputCodes.has(code) ||
     code.startsWith("argument_") ||
     code.startsWith("task_spec_") ||
-    code.startsWith("task_seed_") ||
-    code === "task_seed_required" ||
-    code === "workspace_not_initialized" ||
-    code === "input_not_selected";
+    code.startsWith("task_seed_");
   const blocked =
     !needsAuth &&
     !needsInput &&
-    (code.includes("mismatch") ||
+    (blockedCodes.has(code) ||
+      code.includes("mismatch") ||
       code.includes("changed") ||
       code.includes("legacy") ||
       code.includes("unsupported") ||
@@ -402,11 +429,7 @@ function taskProjection(
         ),
       ],
       runtimeIdentity: identity,
-      permissions: {
-        state: inspected.authorization_present ? "required" : "not_required",
-        requested_actions: [],
-        approval_reference: inspected.authorization_present ? "authorization.json" : null,
-      },
+      permissions: noPermission(),
     });
   const prepared = inspected.artifacts.some(
     (entry) => entry.command === "dataset-curation-cleanup",
@@ -443,8 +466,11 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
   return Object.freeze({
     initialize(): FoundryOperationResult {
       try {
+        assertNotInterrupted(options.signal);
         const initial = base();
+        assertNotInterrupted(options.signal);
         initializeFoundryWorkspace(initial);
+        assertNotInterrupted(options.signal);
         const current = base();
         const marker = path.join(current.controlRoot, "workspace.json");
         return createFoundryOperationResult({
@@ -463,8 +489,10 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
     },
     doctor(): FoundryOperationResult {
       try {
+        assertNotInterrupted(options.signal);
         const current = base();
         const qualified = qualification(current, options.runtimeSelection);
+        assertNotInterrupted(options.signal);
         const readiness = accountReadiness(current);
         const nextActions = [
           ...(current.workspaceId
@@ -513,7 +541,9 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
     },
     migrationDryRun(): FoundryOperationResult {
       try {
+        assertNotInterrupted(options.signal);
         const plan = inventoryFoundryWorkspace(options.workspace);
+        assertNotInterrupted(options.signal);
         return createFoundryOperationResult({
           operation: "workspace.migrate",
           status: "ready",
@@ -538,7 +568,9 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
     },
     async start(input: { specFile: string }): Promise<FoundryOperationResult> {
       let current: ReturnType<typeof createFoundryRuntimeContext> | null = null;
+      let taskId: string | null = null;
       try {
+        assertNotInterrupted(options.signal);
         current = base();
         if (!current.workspaceId)
           throw new FoundryContextError(
@@ -548,6 +580,7 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
         const selectedSpec = readSpec(path.resolve(current.workspaceRoot, input.specFile));
         const inputs = selectedInputs(current.workspaceRoot, selectedSpec.spec);
         const selectedSeed = seed(selectedSpec.spec, inputs);
+        assertNotInterrupted(options.signal);
         const record = await registerFoundryFacadeTask(current, {
           specSource: selectedSpec.fact,
           spec: selectedSpec.spec,
@@ -568,11 +601,17 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
               targetEntities: [...selectedSpec.spec.target_entities],
               seed: selectedSeed,
             });
-            return { created_at_utc: task.job.created_at_utc };
+            return {
+              created_at_utc: task.job.created_at_utc,
+              inputs_sha256: sha256Json(task.sources),
+            };
           },
         });
+        taskId = record.task_id;
+        assertNotInterrupted(options.signal);
         const context = taskContext(options, current, record);
         const inspected = await createFoundryRuntime(context).inspectTask();
+        assertNotInterrupted(options.signal);
         const result = taskProjection(
           "task.start",
           context,
@@ -598,17 +637,19 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
           permissions: result.permissions,
         });
       } catch (error) {
-        return failure("task.start", null, error, current ? runtimeIdentity(current) : null);
+        return failure("task.start", taskId, error, current ? runtimeIdentity(current) : null);
       }
     },
     async status(input: { taskId: string; actorId: string }): Promise<FoundryOperationResult> {
       let current: ReturnType<typeof createFoundryRuntimeContext> | null = null;
       try {
+        assertNotInterrupted(options.signal);
         current = base();
         const record = loadFoundryFacadeTaskRecord(current, input.taskId, input.actorId);
         const context = taskContext(options, current, record);
         const qualified = qualification(context, options.runtimeSelection);
         const inspected = await createFoundryRuntime(context, qualified).inspectTask();
+        assertNotInterrupted(options.signal);
         return taskProjection(
           "task.status",
           context,
@@ -628,12 +669,14 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
     async resume(input: { taskId: string; actorId: string }): Promise<FoundryOperationResult> {
       let current: ReturnType<typeof createFoundryRuntimeContext> | null = null;
       try {
+        assertNotInterrupted(options.signal);
         current = base();
         const record = loadFoundryFacadeTaskRecord(current, input.taskId, input.actorId);
         const context = taskContext(options, current, record);
         const qualified = qualification(context, options.runtimeSelection);
         const runtime = createFoundryRuntime(context, qualified);
         const before = await runtime.inspectTask();
+        assertNotInterrupted(options.signal);
         if (before.attempts_present)
           return taskProjection(
             "task.resume",
@@ -644,6 +687,7 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
           );
         const preparation = record.spec.preparation;
         if (preparation) {
+          assertNotInterrupted(options.signal);
           await runtime.cleanup({
             input: sourcePath(record, preparation.input),
             type: preparation.type,
@@ -653,8 +697,10 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
               : undefined,
             profileId: record.spec.profile_id,
           });
+          assertNotInterrupted(options.signal);
         }
         const inspected = await runtime.inspectTask();
+        assertNotInterrupted(options.signal);
         const projected = taskProjection(
           "task.resume",
           context,
@@ -663,13 +709,13 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
           runtimeIdentity(context, qualified),
         );
         if (!preparation) return projected;
-        const artifacts = taskArtifacts(context, inspected);
+        const artifacts = [...projected.artifacts];
         const cleaned = artifacts.find((artifact) =>
           artifact.kind === "file" ? /\.cleaned\.jsonl$/u.test(artifact.path) : false,
         );
         return createFoundryOperationResult({
           operation: "task.resume",
-          status: "ready",
+          status: projected.status,
           taskId: record.task_id,
           artifacts: cleaned
             ? [
@@ -677,7 +723,7 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
                 ...artifacts.filter((item) => item !== cleaned),
               ]
             : artifacts,
-          blockers: [],
+          blockers: projected.blockers,
           nextActions: projected.next_actions,
           runtimeIdentity: projected.runtime_identity,
           permissions: projected.permissions,
@@ -692,8 +738,10 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
       }
     },
     requestBinding(input: { taskId: string; actorId: string }): string {
+      assertNotInterrupted(options.signal);
       const current = base();
       const record = loadFoundryFacadeTaskRecord(current, input.taskId, input.actorId);
+      assertNotInterrupted(options.signal);
       return sha256Json({
         workspace_id: current.workspaceId,
         task_id: record.task_id,
