@@ -155,6 +155,8 @@ lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session refer
 
 # TianGong LCA Data Foundry
 
+The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` currently admits initialization, diagnostics, profile listing and deterministic cleanup; other business families remain tracked for context migration in #100. The final facade names and envelope are fixed in `docs/public-runtime-contract.md` before W05 implementation. Repository maintenance remains a developer surface and is not qualified for the final consumer package.
+
 Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel account overrides, QA waivers and the Worldsteel full-context relaxation grant no permission to a new task. `docs/task-authorization-contract.md` owns the separate workspace/task/actor/account/profile/input binding and exact action evidence. Local candidate preparation and checked public-reference proofs remain available; current final-row hashes, task permissions and all content/closure/no-replay gates are required before a restricted write handoff.
 
 Control plane for turning external source material into validated, import-ready TIDAS data.

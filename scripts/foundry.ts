@@ -60,8 +60,13 @@ import {
 } from "./lib/tidas-adapter.ts";
 import { createTidasRowUtils } from "./lib/tidas-row-utils.ts";
 import { createTraceCoverageUtils } from "./lib/trace-coverage.ts";
+import { runFoundryRuntimeCommand } from "./runtime-entry.ts";
 
 export function main(argv: string[] = process.argv): void {
+  if (Object.hasOwn(parseArgs(argv.slice(3)), "workspace")) {
+    runFoundryRuntimeCommand(argv);
+    return;
+  }
   const { repoRoot } = resolveFoundryRuntimePaths(import.meta.url);
   const foundryTraceNamespace = "https://tiangong-lca.dev/foundry/import-curation/1";
 

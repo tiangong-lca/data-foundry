@@ -309,6 +309,8 @@ Body: {{ issue.description }}
 
 ## Classify
 
+For consumer workspace execution, follow `docs/runtime-context-contract.md`. The context owns separate package assets, workspace/task state and content cache roots; `.env` is not loaded and an emitted package needs no source TypeScript or Git. Initialization, diagnostics, profiles and cleanup are admitted first through `scripts/runtime-entry.ts`; remaining command families and task/execution bindings stay tracked in #100. The final user facade is governed by `docs/public-runtime-contract.md` and W05, rather than the developer maintenance entry.
+
 Choose one lane:
 
 - `external-dataset-curated-import`: packaged LCA data supported by unified Rust `tidas import`.

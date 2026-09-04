@@ -143,6 +143,8 @@ lastReviewedNote: "Reviewed for Issue #76: retention navigation separates CAS st
 
 # Foundry AI Navigation
 
+The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` currently admits initialization, diagnostics, profile listing and deterministic cleanup; other business families remain tracked for context migration in #100. The final facade names and envelope are fixed in `docs/public-runtime-contract.md` before W05 implementation. Repository maintenance remains a developer surface and is not qualified for the final consumer package.
+
 For profile/permission work, start with `docs/task-authorization-contract.md`, `scripts/lib/task-authorization.ts` and `import-curation/internal/profiles-config.ts`. A profile carries source rules; an immutable validated task grant carries exact action/QA exceptions. Source preparation, strict datetime/scale checks and public reference proofs remain separate from write admission. Handoff checks current rules and final rows again; a legacy ready report or serialized profile cannot approve an action.
 
 Foundry is a thin control plane. Start from commands and artifacts, then move to the semantic owner module. Do not start from large implementation files.

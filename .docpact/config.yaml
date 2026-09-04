@@ -405,6 +405,48 @@ rules:
       - path: docs/task-authorization-contract.md
         mode: review_or_update
     reason: Task exceptions need their own binding, action, evidence and legacy no-replay contract beyond the existing general control-plane and source-profile documentation.
+  - id: foundry-runtime-context-contract
+    scope: repo
+    repo: data-foundry
+    triggers:
+      - path: scripts/lib/foundry-runtime-context.ts
+        kind: explicit-runtime-roots
+      - path: scripts/lib/foundry-runtime-paths.ts
+        kind: package-layout-resolution
+      - path: scripts/foundry-runtime.ts
+        kind: consumer-command-adapter
+      - path: scripts/lib/import-curation/internal/runtime-io.ts
+        kind: scoped-runtime-io
+      - path: scripts/lib/import-curation/curation-cleanup.ts
+        kind: context-aware-command-owner
+      - path: test/unit/runtime-layout.test.mts
+        kind: runtime-layout-contract-test
+      - path: test/unit/foundry-runtime-context.test.mts
+        kind: runtime-context-contract-test
+      - path: test/scenarios/runtime-workspace.test.mts
+        kind: workspace-isolation-scenario
+      - path: docs/runtime-context-contract.md
+        kind: runtime-context-contract
+    requiredDocs:
+      - path: docs/runtime-context-contract.md
+        mode: review_or_update
+      - path: docs/public-runtime-contract.md
+        mode: must_exist
+    reason: Explicit roots, package layout and input/output confinement form the consumer runtime boundary and must remain separate from developer maintenance.
+  - id: foundry-public-runtime-protocol
+    scope: repo
+    repo: data-foundry
+    triggers:
+      - path: scripts/runtime-entry.ts
+        kind: runtime-entry-adapter
+      - path: docs/public-runtime-contract.md
+        kind: public-runtime-protocol
+    requiredDocs:
+      - path: docs/public-runtime-contract.md
+        mode: review_or_update
+      - path: docs/runtime-context-contract.md
+        mode: review_or_update
+    reason: Entry adapters must preserve the normative public facade target while command availability is qualified separately.
   - id: foundry-prewrite-datetime-contract
     scope: repo
     repo: data-foundry

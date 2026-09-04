@@ -160,6 +160,10 @@ test("Node 24 loads the emitted entry and index with the same complete live name
       { cwd: repoRoot, encoding: "utf8", stdio: "pipe" },
     );
 
+    const manifest = JSON.parse(readRepoFile("package.json"));
+    manifest.foundryRuntime.emitted_entry = "scripts/foundry.js";
+    fs.writeFileSync(path.join(buildRoot, "package.json"), `${JSON.stringify(manifest)}\n`);
+
     const entryPath = path.join(buildRoot, "scripts", "lib", "import-curation.js");
     const indexPath = path.join(buildRoot, "scripts", "lib", "import-curation", "index.js");
     assert.equal(fs.existsSync(entryPath), true);

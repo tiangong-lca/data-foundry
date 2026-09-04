@@ -280,6 +280,8 @@ lastReviewedNote: "Reviewed for Issue #76: tests pin CAS dedupe, receipt verific
 
 # Test Layout
 
+The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` currently admits initialization, diagnostics, profile listing and deterministic cleanup; other business families remain tracked for context migration in #100. The final facade names and envelope are fixed in `docs/public-runtime-contract.md` before W05 implementation. Repository maintenance remains a developer surface and is not qualified for the final consumer package.
+
 W03 task authorization is covered by `unit/task-authorization.test.mts` (immutable grants, exact binding, expiry, actions and evidence), `unit/task-profile-authority.test.mts` (no inherited legacy permission and scoped Worldsteel naming), and the mixed-support handoff case in `unit/handoff-identity-task-command-factories.test.mts` (actual row types, input-byte drift and account mismatch). `fixtures/task-authorizations.ts` is explicit test-only approval data; tests must opt in and never derive permission from a profile flag. Local candidate/closure regressions remain in the existing command/scenario suites. Real CLI identity plus the frozen private Flow case is exercised outside public CI, without business writes or committed private payloads.
 
 Foundry tests are organized by responsibility, not by the date a regression was added.

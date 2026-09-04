@@ -28,6 +28,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // The CLI 0.1.9 support-export adapter and its integrity/intent tests remain native TypeScript.
 // Issue #98 task authorization and action/QA/row-binding cases remain native TypeScript.
 // Issue #100's import-isolation probe and explicit Node 24 entry remain native TypeScript.
+// Runtime layout/context and off-repository cleanup adapters also stay native TypeScript.
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");

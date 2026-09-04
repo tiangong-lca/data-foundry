@@ -81,5 +81,11 @@
   "dependencies": {
     "@tiangong-lca/cli": "0.1.9",
     "ajv": "8.20.0"
+  },
+  "foundryRuntime": {
+    "schema": "tiangong-foundry.runtime-layout.v1",
+    "asset_root": ".",
+    "source_entry": "scripts/foundry.ts",
+    "emitted_entry": "dist/scripts/foundry.js"
   }
 }
