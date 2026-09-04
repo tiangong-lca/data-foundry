@@ -8,6 +8,7 @@ import {
   FoundryContextError,
   initializeFoundryWorkspace,
   type FoundryInputFact,
+  type FoundryAccountIntent,
   type FoundryRuntimeContextOptions,
 } from "./lib/foundry-runtime-context.ts";
 import {
@@ -47,6 +48,7 @@ export interface FoundryFacadeOptions {
   readonly cwd?: string;
   readonly environment?: NodeJS.ProcessEnv;
   readonly runtimeSelection?: FoundryFacadeRuntimeSelection;
+  readonly accountIntent?: FoundryAccountIntent;
 }
 
 const maxSpecBytes = 1024 * 1024;
@@ -142,7 +144,23 @@ function contextOptions(options: FoundryFacadeOptions): FoundryRuntimeContextOpt
     cacheBase: options.cacheBase,
     cwd: options.cwd,
     environment: options.environment,
+    accountIntent: options.accountIntent,
   };
+}
+
+function accountReadiness(context: ReturnType<typeof createFoundryRuntimeContext>) {
+  const intent = context.accountIntent;
+  if (!intent) return Object.freeze({ status: "not_requested", reference_selected: false });
+  if (!intent.sessionReference)
+    return Object.freeze({ status: "needs_auth", reference_selected: false });
+  try {
+    const stat = fs.lstatSync(intent.sessionReference);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size < 1 || stat.size > 8 * 1024 * 1024)
+      return Object.freeze({ status: "needs_auth", reference_selected: true });
+  } catch {
+    return Object.freeze({ status: "needs_auth", reference_selected: true });
+  }
+  return Object.freeze({ status: "configured_unverified", reference_selected: true });
 }
 
 function qualification(
@@ -172,6 +190,7 @@ function runtimeIdentity(
     }),
     platform: context.platform,
     qualification: described.qualification,
+    account_readiness: accountReadiness(context),
   });
 }
 
@@ -446,6 +465,7 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
       try {
         const current = base();
         const qualified = qualification(current, options.runtimeSelection);
+        const readiness = accountReadiness(current);
         const nextActions = [
           ...(current.workspaceId
             ? []
@@ -458,13 +478,31 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
                   "Launch through the trusted CLI runtime manager before a child-required stage.",
                 ),
               ]),
+          ...(readiness.status === "needs_auth"
+            ? [
+                human(
+                  "authenticate_cli",
+                  "Complete the trusted CLI OAuth flow, then resume with the same account intent.",
+                ),
+              ]
+            : []),
         ];
         return createFoundryOperationResult({
           operation: "doctor",
-          status: "ready",
+          status: readiness.status === "needs_auth" ? "needs_auth" : "ready",
           taskId: null,
           artifacts: [],
-          blockers: [],
+          blockers:
+            readiness.status === "needs_auth"
+              ? [
+                  {
+                    code: "needs_auth",
+                    message:
+                      "The selected account intent needs a CLI-owned OAuth session before restricted work.",
+                    scope: null,
+                  },
+                ]
+              : [],
           nextActions,
           runtimeIdentity: runtimeIdentity(current, qualified),
           permissions: noPermission(),

@@ -76,6 +76,21 @@ test("hierarchical facade emits one JSON envelope and resumes only registered lo
   assert.equal(missingJson.exit, 2);
   assert.equal(missingJson.json.status, "needs_input");
   assert.equal(fs.existsSync(workspace), false);
+  const injectedRuntime = run(cwd, [
+    "workspace",
+    "init",
+    "--workspace",
+    workspace,
+    "--runtime-expectation",
+    "/task/input.json",
+    "--json",
+  ]);
+  assert.equal(injectedRuntime.exit, 2);
+  assert.equal(
+    (injectedRuntime.json.blockers as Array<{ code: string }>)[0]?.code,
+    "argument_option_unsupported",
+  );
+  assert.equal(fs.existsSync(workspace), false);
 
   const initialized = run(cwd, ["workspace", "init", "--workspace", workspace, "--json"]);
   assert.equal(initialized.exit, 0);
@@ -95,6 +110,34 @@ test("hierarchical facade emits one JSON envelope and resumes only registered lo
       (action) => action.code === "provide_qualified_runtime",
     ),
   );
+  const accountArgs = [
+    "--expected-project-ref",
+    "aaaaaaaaaaaaaaaaaaaa",
+    "--expected-user-id",
+    "11111111-1111-4111-8111-111111111111",
+  ];
+  const needsAuth = run(cwd, ["doctor", "--workspace", workspace, ...accountArgs, "--json"]);
+  assert.equal(needsAuth.exit, 3);
+  assert.equal(needsAuth.json.status, "needs_auth");
+  const sessionReference = path.join(root, "private-session.json");
+  fs.writeFileSync(sessionReference, '{"opaque":"unchanged"}\n', { mode: 0o600 });
+  const sessionBefore = fs.readFileSync(sessionReference);
+  const accountReady = run(cwd, [
+    "doctor",
+    "--workspace",
+    workspace,
+    ...accountArgs,
+    "--session-reference",
+    sessionReference,
+    "--json",
+  ]);
+  assert.equal(accountReady.exit, 0);
+  assert.equal(
+    (accountReady.json.runtime_identity as { account_readiness: { status: string } })
+      .account_readiness.status,
+    "configured_unverified",
+  );
+  assert.deepEqual(fs.readFileSync(sessionReference), sessionBefore);
 
   const started = run(cwd, ["task", "start", "--workspace", workspace, "--spec", spec, "--json"]);
   assert.equal(started.exit, 0);

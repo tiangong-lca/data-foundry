@@ -35,6 +35,19 @@ function option(value: unknown, name: string): string | undefined {
   return value;
 }
 
+function doctorAccountIntent(args: ParsedArgs) {
+  const projectRef = option(args.expectedProjectRef, "--expected-project-ref");
+  const userId = option(args.expectedUserId, "--expected-user-id");
+  const sessionReference = option(args.sessionReference, "--session-reference");
+  if (!projectRef && !userId && !sessionReference) return undefined;
+  if (!projectRef || !userId)
+    throw new FoundryContextError(
+      "argument_account_intent_incomplete",
+      "Account diagnostics require both expected project and user identifiers.",
+    );
+  return { projectRef, userId, ...(sessionReference ? { sessionReference } : {}) };
+}
+
 function publicCommand(argv: string[]): ParsedPublicCommand | null {
   const [group, action, ...rest] = argv.slice(2);
   if (group === "doctor")
@@ -117,6 +130,28 @@ async function runPublicCommand(
       "argument_positional_unsupported",
       "Public Foundry operations do not accept extra positional arguments.",
     );
+  const allowed = new Set([
+    "_",
+    "json",
+    "workspace",
+    ...(parsed.operation === "doctor"
+      ? ["expectedProjectRef", "expectedUserId", "sessionReference"]
+      : parsed.operation === "workspace.migrate"
+        ? ["dryRun"]
+        : parsed.operation === "task.start"
+          ? ["spec"]
+          : parsed.operation === "task.status" || parsed.operation === "task.resume"
+            ? ["task", "actor"]
+            : []),
+  ]);
+  const unknownOption = Object.keys(parsed.args).find((key) => !allowed.has(key));
+  if (unknownOption)
+    return invalidResult(
+      parsed.operation,
+      taskId,
+      "argument_option_unsupported",
+      `Public Foundry operation does not accept --${unknownOption}.`,
+    );
   const workspace = option(parsed.args.workspace, "--workspace");
   if (!workspace)
     return invalidResult(
@@ -129,6 +164,7 @@ async function runPublicCommand(
     moduleUrl: import.meta.url,
     workspace,
     runtimeSelection: host.runtimeSelection,
+    accountIntent: parsed.operation === "doctor" ? doctorAccountIntent(parsed.args) : undefined,
   });
   let result: FoundryOperationResult;
   if (parsed.operation === "workspace.init") result = facade.initialize();

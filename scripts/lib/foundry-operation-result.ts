@@ -16,17 +16,18 @@ export const foundryOperationPermissionStates = Object.freeze([
   "granted",
   "invalid",
 ] as const);
+export const foundryPublicOperations = Object.freeze([
+  "workspace.init",
+  "doctor",
+  "task.start",
+  "task.status",
+  "task.resume",
+  "workspace.migrate",
+] as const);
 
 export type FoundryOperationStatus = (typeof foundryOperationStatuses)[number];
 export type FoundryOperationPermissionState = (typeof foundryOperationPermissionStates)[number];
-export type FoundryPublicOperation =
-  | "unknown"
-  | "workspace.init"
-  | "doctor"
-  | "task.start"
-  | "task.status"
-  | "task.resume"
-  | "workspace.migrate";
+export type FoundryPublicOperation = "unknown" | (typeof foundryPublicOperations)[number];
 
 export interface FoundryOperationBlocker {
   readonly code: string;
@@ -91,15 +92,7 @@ interface CreateFoundryOperationResultOptions {
   permissions: unknown;
 }
 
-const operations = new Set<FoundryPublicOperation>([
-  "unknown",
-  "workspace.init",
-  "doctor",
-  "task.start",
-  "task.status",
-  "task.resume",
-  "workspace.migrate",
-]);
+const operations = new Set<FoundryPublicOperation>(["unknown", ...foundryPublicOperations]);
 const shaPattern = /^[0-9a-f]{64}$/u;
 const idPattern = /^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,255}$/u;
 const credentialKey = /(?:^|_)(?:password|passwd|token|secret|cookie|credential|session)(?:_|$)/iu;

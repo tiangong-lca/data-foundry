@@ -7,6 +7,7 @@ import {
   exitCodeForFoundryOperationResult,
   foundryOperationPermissionStates,
   foundryOperationStatuses,
+  foundryPublicOperations,
 } from "../../scripts/lib/foundry-operation-result.ts";
 
 test("public operation results have one exact immutable envelope and exit table", () => {
@@ -24,6 +25,14 @@ test("public operation results have one exact immutable envelope and exit table"
     "required",
     "granted",
     "invalid",
+  ]);
+  assert.deepEqual(foundryPublicOperations, [
+    "workspace.init",
+    "doctor",
+    "task.start",
+    "task.status",
+    "task.resume",
+    "workspace.migrate",
   ]);
   const ready = createFoundryOperationResult({
     operation: "doctor",

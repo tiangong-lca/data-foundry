@@ -124,6 +124,22 @@ test("facade request revisions are deterministic, idempotent and preserve predec
   assert.equal(request.revisions[1].predecessor_task_id, first.task_id);
   assert.equal(fs.existsSync(path.join(workspace, ".foundry/workspaces", firstTaskId)), true);
   assert.equal(fs.existsSync(path.join(workspace, ".foundry/workspaces", secondTaskId)), true);
+  const fakeCompletion = path.join(
+    workspace,
+    ".foundry/workspaces",
+    secondTaskId,
+    "outputs",
+    "dataset-import-completion-report.json",
+  );
+  fs.mkdirSync(path.dirname(fakeCompletion), { recursive: true });
+  fs.writeFileSync(
+    fakeCompletion,
+    `${JSON.stringify({ status: "completed", task_id: secondTaskId, blockers: [] })}\n`,
+  );
+  assert.equal(
+    (await facade.status({ taskId: secondTaskId, actorId: "agent/session-001" })).status,
+    "ready",
+  );
 
   const movedInput = path.join(root, "moved-flow.jsonl");
   fs.copyFileSync(input, movedInput);

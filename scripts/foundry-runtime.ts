@@ -40,6 +40,7 @@ import {
   type RehydrateFoundryExecutionAdmissionOptions,
 } from "./lib/foundry-execution-admission.ts";
 import { foundryRuntimeCommandPolicies } from "./lib/foundry-runtime-command-policy.ts";
+import { foundryPublicOperations } from "./lib/foundry-operation-result.ts";
 import { listImportProfiles } from "./lib/import-curation/profiles.ts";
 import { runDatasetCurationCleanup } from "./lib/import-curation/curation-cleanup.ts";
 import { readRows } from "./lib/import-curation/internal/runtime-io.ts";
@@ -167,6 +168,7 @@ export function createFoundryRuntime(
         : { status: "required", identity: null },
       command_policy: {
         total: foundryRuntimeCommandPolicies.length,
+        public_operations: foundryPublicOperations,
         public_facade: foundryRuntimeCommandPolicies
           .filter((policy) => policy.distribution === "public-facade")
           .map((policy) => policy.command),
