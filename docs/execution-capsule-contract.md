@@ -18,14 +18,18 @@ checkPaths:
   - test/commands/execution-capsule.test.mts
   - test/unit/execution-capsule-attempt-state.test.mts
   - test/unit/execution-capsule-command-factory.test.mts
-lastReviewedAt: 2026-08-26
-lastReviewedCommit: af5573acf9d8731fc5d7445433f3f3caf633fa8e
-lastReviewedNote: "Reviewed for Issue #67 final cutover: native TS7 command and attempt-state suites preserve immutable outputs, receipt/hash lineage, CAS/reviewer/boundary checks, seals, zero dispatch and no replay."
+  - specs/schemas/execution-context.schema.json
+  - scripts/lib/foundry-execution-admission.ts
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
+lastReviewedNote: "Reviewed for #100 W04: this offline zero-attempt seal remains distinct from the qualified current-task child execution context."
 ---
 
 # Execution Capsule Admission Contract
 
 `execution-capsule-admit` is a Foundry-owned, workflow-internal offline gate. It turns one staged evidence revision into an immutable local admission record. It does not execute the consumer, create a session, access a network or database, dispatch a CLI write, or authorize production work.
+
+This `foundry-execution-capsule-stage.v1` contract is distinct from `tiangong-foundry.execution-context.v1` in `execution-context.schema.json`. The stage contract packages offline evidence and proves an unconsumed attempt. The newer child execution context binds current runtime qualification, identity, task authorization, final-row lineage and one reviewed CommandSpec immediately before handing that spec to the existing no-replay owner. Neither document authorizes replay or replaces the other's checks.
 
 ## Fast path
 

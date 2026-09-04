@@ -20,6 +20,7 @@ checkPaths:
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
   - scripts/lib/foundry-runtime-paths.ts
+  - scripts/lib/foundry-runtime-command-policy.ts
   - scripts/commands/identity-decisions.ts
   - scripts/commands/classification-decisions.ts
   - scripts/commands/location-decisions.ts
@@ -84,13 +85,15 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-04
-lastReviewedCommit: 1078b2b2c515cb06b66d19f3ce572e3fdc5f15e5
-lastReviewedNote: "Reviewed for Issue #74: dataset-process-scope-run retains its command/help surface while scope command values explicitly migrate from argv arrays to CommandSpecs."
+lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
+lastReviewedNote: "Reviewed for #100 W04: the 63 command names and owners are unchanged; each now has an explicit consumer runtime disposition and path/child authority."
 ---
 
 # Foundry Command Surface
 
 The internal `createFoundryApplication`/`createFoundryCommandDispatcher` APIs share the existing owner registry with the developer CLI. Programmatic dispatch returns results and rejects unknown or inherited object-property names; only the CLI adapter prints the result and applies process exit semantics. Consumer admission remains the explicit workspace runtime's responsibility. No new operator command or permission is introduced by exposing this composition boundary.
+
+`scripts/lib/foundry-runtime-command-policy.ts` is the exhaustive consumer-runtime disposition table for the same 63 commands. It identifies the two current facade adapters, developer-only maintenance, internal task control, native stages and task stages, along with asset/input/output roots, child owner, qualification and restricted-action requirements. A registry command without an explicit classification fails initialization. This table does not rename commands or make an internal owner directly public.
 
 Foundry CLI-spine and command governance has these checked contracts:
 

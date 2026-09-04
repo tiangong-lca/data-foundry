@@ -276,8 +276,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
-lastReviewedNote: "Reviewed for #100 CLI C1 adoption: runtime identity joins the existing public CLI primitives without changing task, authorization or no-replay ownership."
+lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
+lastReviewedNote: "Reviewed for #100 W04: qualified child execution now joins the existing task and no-replay workflow without owning mutation dispatch."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -309,9 +309,9 @@ Body: {{ issue.description }}
 
 ## Classify
 
-The v2 task store now persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Runtime identity and persisted authorization are revalidated through the exact public CLI and independently selected approval evidence. See `docs/foundry-task-contracts.md`. This does not yet complete the public task facade, remaining command families, or final remote execution binding.
+The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS runtime qualification, explicit disposition for all 63 owner commands, derived-input authorization and content-addressed child execution admission complete the W04 authority boundary. These are internal runtime APIs; the W05 public task facade and W06 package closure remain separate. See `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 
-For consumer workspace execution, follow `docs/runtime-context-contract.md`. The context owns separate package assets, workspace/task state and content cache roots; `.env` is not loaded and an emitted package needs no source TypeScript or Git. Initialization, diagnostics, profiles and cleanup are admitted first through `scripts/runtime-entry.ts`; remaining command families and task/execution bindings stay tracked in #100. The final user facade is governed by `docs/public-runtime-contract.md` and W05, rather than the developer maintenance entry.
+For consumer workspace execution, follow `docs/runtime-context-contract.md`. The context owns separate package assets, workspace/task state and content cache roots; `.env` is not loaded and an emitted package needs no source TypeScript or Git. `scripts/runtime-entry.ts` exposes initialization, diagnostics, profiles and cleanup. Other command families are internal or excluded under `foundry-runtime-command-policy.ts`; child execution requires fresh qualification, identity, authorization, lineage and an exact CommandSpec. The final user facade is governed by `docs/public-runtime-contract.md` and W05.
 
 Choose one lane:
 

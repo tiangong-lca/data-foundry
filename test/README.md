@@ -274,17 +274,19 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
-lastReviewedNote: "Reviewed for #100 CLI C1 adoption: exact 0.1.10 runtime exports, descriptor drift and existing public primitive consumers are covered."
+lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
+lastReviewedNote: "Reviewed for #100 W04: focused tests cover qualification, all-command policy, authority schemas, derived lineage and child execution rehydration."
 ---
 
 # Test Layout
 
-The v2 task store now persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Runtime identity and persisted authorization are revalidated through the exact public CLI and independently selected approval evidence. See `docs/foundry-task-contracts.md`. This does not yet complete the public task facade, remaining command families, or final remote execution binding.
+The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS runtime qualification, explicit disposition for all 63 owner commands, derived-input authorization and content-addressed child execution admission complete the W04 authority boundary. These are internal runtime APIs; the W05 public task facade and W06 package closure remain separate. See `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 
-The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` currently admits initialization, diagnostics, profile listing and deterministic cleanup; other business families remain tracked for context migration in #100. The final facade names and envelope are fixed in `docs/public-runtime-contract.md` before W05 implementation. Repository maintenance remains a developer surface and is not qualified for the final consumer package.
+The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` exposes initialization, diagnostics, profile listing and deterministic cleanup. Every other owner command now has an explicit public/internal/excluded, input/output, child-process, qualification and authorization disposition; a later facade may reach internal stages only through the qualified context and cannot fall back to the developer runner. The final facade names and envelope remain fixed in `docs/public-runtime-contract.md` for W05.
 
 W03 task authorization is covered by `unit/task-authorization.test.mts` (immutable grants, exact binding, expiry, actions and evidence), `unit/task-profile-authority.test.mts` (no inherited legacy permission and scoped Worldsteel naming), and the mixed-support handoff case in `unit/handoff-identity-task-command-factories.test.mts` (actual row types, input-byte drift and account mismatch). `fixtures/task-authorizations.ts` is explicit test-only approval data; tests must opt in and never derive permission from a profile flag. Local candidate/closure regressions remain in the existing command/scenario suites. Real CLI identity plus the frozen private Flow case is exercised outside public CI, without business writes or committed private payloads.
+
+W04 authority tests are split by contract. `unit/foundry-runtime-qualification.test.mts` compares the real installed CLI descriptor and an isolated TIDAS process, including drift and diagnostic rejection. `unit/foundry-runtime-command-policy.test.mts` proves every command is classified exactly once and preparation does not inherit restricted permission. `unit/foundry-runtime-authority-schemas.test.mts` compiles the four machine schemas strictly. `scenarios/foundry-execution-admission.test.mts` reconstructs a child context from a deterministic derived artifact and rejects serialized proofs, unrelated or mislabeled CLI commands, wrong actions/QA, capsule relocation and changed final bytes. Private real-case qualification repeats the same boundary with actual published C1/TIDAS artifacts; public CI keeps only synthetic identity and data fixtures.
 
 Foundry tests are organized by responsibility, not by the date a regression was added.
 

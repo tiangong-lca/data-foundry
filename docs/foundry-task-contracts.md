@@ -16,11 +16,16 @@ checkPaths:
   - docs/foundry-task-contracts.md
   - AGENTS.md
   - WORKFLOW.md
+  - scripts/lib/foundry-task-store.ts
+  - scripts/lib/foundry-task-authorization.ts
+  - scripts/lib/foundry-execution-admission.ts
+  - specs/schemas/authorization-derivation.schema.json
+  - specs/schemas/execution-context.schema.json
   - specs/import-profiles.json
   - tasks/**
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
-lastReviewedNote: "Reviewed for #100 CLI C1 adoption: identity execution now pins 0.1.10; persisted task, grant, lineage and no-replay semantics are unchanged."
+lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
+lastReviewedNote: "Reviewed for #100 W04: verified multi-producer lineage, derived authorization evidence and qualified child execution admission extend the v2 task store without changing old attempts."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -55,6 +60,7 @@ The earlier v1 examples at commit `ad9c885dde64b22f6e0a8e17f9da46bdba5345ef` rem
   checkpoints/<operation-id>.plan.json
   checkpoints/<operation-id>.json
   evidence/authorizations/<grant-id>/
+  evidence/executions/<execution-context-sha256>.json
   outputs/<operation-revision>/
 ```
 
@@ -88,7 +94,7 @@ A completed _operation receipt_ means its local invocation produced recorded out
 
 The v2 JSONL index records sequence, previous record digest, operation/command/input-scope identity, producer receipt reference, task-relative artifact path, byte size and SHA-256. The index points to artifacts; it does not copy payloads. It is replaced atomically under the metadata lock, with previous-byte comparison and bounded size. Truncated, malformed or changed chains are rejected.
 
-A derived input must match an indexed output. Its completed producer receipt and plan must match the same job and content digests; every ancestor must lead through earlier index entries to frozen original source. Arbitrary files placed under `outputs/` do not become trusted inputs. Changing a parent receipt or plan invalidates continuation. Current selected input bytes are checked again, including before a local operation receipt is finalized.
+A derived input must match an indexed output. Its completed producer receipt and plan must match the same job and content digests; every ancestor must lead through earlier index entries to frozen original source. The lineage walk verifies every receipt and plan again and explores every matching earlier producer, so reproducing identical output bytes cannot hide another valid ancestry path. Arbitrary files placed under `outputs/` do not become trusted inputs. Changing a parent receipt or plan invalidates continuation. Current selected input bytes are checked again, including before a local operation receipt is finalized.
 
 ## Account and authorization
 
@@ -98,6 +104,6 @@ An expected account may be selected after local preparation. The first selection
 
 `registerFoundryTaskAuthorization` is an explicit host approval operation. It requires fresh identity, current task/input lineage, a valid W03 grant, and independently selected evidence facts supplied by the trusted caller. The grant cannot select its own evidence paths. Each original evidence file is rechecked and copied into an immutable task snapshot; the grant and selection are registered in workspace state. Updating `authorization.json` uses compare-and-swap against its prior digest and preserves historical grants. Unknown legacy authorization files are not overwritten.
 
-`loadFoundryTaskAuthorization` rechecks live identity, task registration, input lineage, active pointer/registration, grant expiry/scope and both evidence snapshots and originals. A previous grant cannot be relabeled for changed or derived inputs; a new exact binding requires an explicit approved registration after lineage validation. Login, task creation, local preparation and an empty grant never grant publication, deletion or restricted write actions.
+`loadFoundryTaskAuthorization` rechecks live identity, task registration, input lineage, active pointer/registration, grant expiry/scope and both evidence snapshots and originals. A previous grant cannot be relabeled for changed or derived inputs. Reusing its approval requires a qualified, process-local derivation that proves ancestry, changes only the input digest, retains authority bounds and records `authorization-derivation.v1` evidence. The active parent pointer is checked around preparation and captured for later compare-and-swap. A separately reviewed approval may instead register the exact derived bytes directly. Login, task creation, local preparation and an empty grant never grant publication, deletion or restricted write actions.
 
-These programmatic paths do not yet complete the public task facade, automatic approved lineage propagation, all command families or final execution guards. Those remain required by #100/W05. Remote writes continue to require current authorization, actual handoff/row bindings and the CLI's no-replay/readback controls.
+Before a restricted child handoff, the runtime stores a content-addressed `execution-context.v1` under task evidence. A new process must reconstruct the context, qualification and identity, then recheck source ancestry, final bytes, current authorization/QA exceptions, owner CLI path and CommandSpec operation semantics. Only the verified spec is returned to the existing no-replay executor. The execution context never carries credentials and never clears or retries an attempt. The public W05 facade still needs to orchestrate these APIs and expose the normative result envelope.

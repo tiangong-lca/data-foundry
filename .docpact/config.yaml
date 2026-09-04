@@ -209,6 +209,9 @@ docInventory:
     - docs/runtime-skill-management.md
     - docs/env-surface-policy.md
     - docs/foundry-task-contracts.md
+    - docs/task-authorization-contract.md
+    - docs/runtime-context-contract.md
+    - docs/public-runtime-contract.md
     - docs/safety-policy.md
     - docs/foundry-ai-navigation.md
     - docs/foundry-command-surface.md
@@ -388,6 +391,10 @@ rules:
         kind: task-authorization-contract
       - path: scripts/lib/task-authorization.ts
         kind: task-authorization-validator
+      - path: scripts/lib/foundry-task-authorization.ts
+        kind: persisted-task-authorization
+      - path: scripts/lib/foundry-execution-admission.ts
+        kind: final-child-execution-admission
       - path: scripts/lib/import-curation/internal/profiles-config.ts
         kind: rule-and-authorization-admission
       - path: scripts/lib/import-curation/mutation-manifest.ts
@@ -398,10 +405,16 @@ rules:
         kind: elementary-action-admission
       - path: specs/schemas/task-authorization.schema.json
         kind: task-authorization-schema
+      - path: specs/schemas/authorization-derivation.schema.json
+        kind: authorization-derivation-schema
+      - path: specs/schemas/execution-context.schema.json
+        kind: child-execution-context-schema
       - path: test/unit/task-authorization.test.mts
         kind: task-authorization-contract-test
       - path: test/unit/task-profile-authority.test.mts
         kind: profile-authority-contract-test
+      - path: test/scenarios/foundry-execution-admission.test.mts
+        kind: child-execution-admission-scenario
     requiredDocs:
       - path: docs/task-authorization-contract.md
         mode: review_or_update
@@ -416,6 +429,14 @@ rules:
         kind: package-layout-resolution
       - path: scripts/foundry-runtime.ts
         kind: consumer-command-adapter
+      - path: scripts/lib/foundry-runtime-command-policy.ts
+        kind: all-command-runtime-disposition
+      - path: scripts/lib/foundry-runtime-qualification.ts
+        kind: component-runtime-qualification
+      - path: scripts/lib/foundry-execution-admission.ts
+        kind: qualified-child-execution
+      - path: scripts/lib/tidas-adapter.ts
+        kind: explicit-native-child-environment
       - path: scripts/lib/import-curation/internal/runtime-io.ts
         kind: scoped-runtime-io
       - path: scripts/lib/import-curation/curation-cleanup.ts
@@ -424,10 +445,18 @@ rules:
         kind: runtime-layout-contract-test
       - path: test/unit/foundry-runtime-context.test.mts
         kind: runtime-context-contract-test
+      - path: test/unit/foundry-runtime-command-policy.test.mts
+        kind: command-disposition-contract-test
+      - path: test/unit/foundry-runtime-qualification.test.mts
+        kind: runtime-qualification-contract-test
+      - path: test/unit/foundry-runtime-authority-schemas.test.mts
+        kind: runtime-authority-schema-contract-test
       - path: test/unit/public-cli-runtime.test.mts
         kind: cli-runtime-consumer-contract-test
       - path: test/scenarios/runtime-workspace.test.mts
         kind: workspace-isolation-scenario
+      - path: test/scenarios/foundry-execution-admission.test.mts
+        kind: qualified-child-execution-scenario
       - path: docs/runtime-context-contract.md
         kind: runtime-context-contract
     requiredDocs:
@@ -458,10 +487,16 @@ rules:
         kind: registered-task-state
       - path: scripts/lib/foundry-runtime-identity.ts
         kind: task-identity-verification
+      - path: scripts/lib/foundry-runtime-qualification.ts
+        kind: task-runtime-qualification
+      - path: scripts/lib/foundry-execution-admission.ts
+        kind: task-child-execution-admission
       - path: test/scenarios/task-runtime-binding.test.mts
         kind: task-recovery-contract-test
       - path: test/scenarios/task-authorization-persistence.test.mts
         kind: persisted-authorization-contract-test
+      - path: test/scenarios/foundry-execution-admission.test.mts
+        kind: derived-authorization-and-child-admission-test
     requiredDocs:
       - path: docs/foundry-task-contracts.md
         mode: review_or_update

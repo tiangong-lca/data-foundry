@@ -71,9 +71,11 @@ checkPaths:
   - scripts/lib/import-curation/internal/workflow-source-reference-context.ts
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
-lastReviewedAt: 2026-08-25
-lastReviewedCommit: 24c9a1f
-lastReviewedNote: "Reviewed for Issue #76: verified-scope pruning requires immutable control receipts, zero dangling required references, and symlink-safe ownership checks."
+  - scripts/lib/foundry-execution-admission.ts
+  - specs/schemas/execution-context.schema.json
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
+lastReviewedNote: "Reviewed for #100 W04: final child admission rechecks qualification, lineage, active actions/QA and owner CLI semantics without changing mutation attempts."
 ---
 
 # Safety Policy
@@ -121,6 +123,7 @@ Remote database writes are blocked unless:
 - mutation-manifest evidence reports point to the exact write rows: schema and remote verification `input_path` match the rows file, cleanup `cleaned_rows_file` matches the rows file, and AI patch apply output chains into cleanup input when AI patching was used
 - `dataset-commit-handoff-plan` reports `ready_for_explicit_commit` for the exact finalize report, mutation manifest, final rows file, target user id, and expected state_code
 - commit and post-write verify are authoritative `tiangong-foundry.command-spec.v1` objects; their SHA-256 binds executable, argv, and the same final-row path/bytes/SHA-256, while display is never executed and every runner rechecks artifact bytes before `shell=false` spawn
+- a new process may receive a restricted commit CommandSpec only after `tiangong-foundry.execution-context.v1` is rehydrated from task evidence with current process-local runtime qualification and identity, approved-input ancestry, active exact actions/QA waivers, unchanged final rows, task-contained output path and reviewed owner CLI argv semantics; this admission returns the spec but never dispatches or retries it
 - insert/versioned writes have explicit reasons
 - state_code=100 rows have source-review records instead of direct overwrite
 - a dry-run artifact exists

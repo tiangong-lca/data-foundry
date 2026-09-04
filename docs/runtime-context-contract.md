@@ -16,15 +16,23 @@ checkPaths:
   - scripts/foundry-runtime.ts
   - scripts/runtime-entry.ts
   - scripts/lib/foundry-runtime-context.ts
+  - scripts/lib/foundry-runtime-command-policy.ts
+  - scripts/lib/foundry-runtime-qualification.ts
+  - scripts/lib/foundry-execution-admission.ts
   - scripts/lib/foundry-runtime-paths.ts
+  - scripts/lib/tidas-adapter.ts
   - scripts/lib/import-curation/internal/runtime-io.ts
   - scripts/lib/import-curation/curation-cleanup.ts
   - test/unit/runtime-layout.test.mts
   - test/unit/foundry-runtime-context.test.mts
+  - test/unit/foundry-runtime-command-policy.test.mts
+  - test/unit/foundry-runtime-qualification.test.mts
+  - test/unit/foundry-runtime-authority-schemas.test.mts
   - test/scenarios/runtime-workspace.test.mts
+  - test/scenarios/foundry-execution-admission.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
-lastReviewedNote: "Reviewed for #100 CLI C1 adoption: public descriptors are installed and consumer-tested; context qualification and TIDAS binding remain open."
+lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
+lastReviewedNote: "Reviewed for #100 W04: exact CLI/TIDAS qualification, explicit command dispositions, derived lineage and child execution rechecks are implemented; W05 facade and W06 package remain separate."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
@@ -33,11 +41,19 @@ related:
 
 # Runtime context
 
-Local preparation now enters the registered v2 task store in `foundry-task-store.ts`; it binds source/profile/actor/runtime metadata and revalidates indexed producer lineage before using derived input. Fresh CLI identity and registered authorization are exposed through the runtime API. Account intent remains separate from authentication, and these additions do not admit remote write commands or complete the W05 facade.
+Local preparation enters the registered v2 task store in `foundry-task-store.ts`; it binds source/profile/actor/runtime metadata and revalidates indexed producer lineage before using derived input. Fresh CLI identity, exact runtime qualification, registered authorization, derived-input succession and child execution admission are exposed through the runtime API. Account intent remains separate from authentication. The API returns a reviewed CommandSpec to the existing no-replay owner; it does not execute or retry a mutation itself.
 
 The consumer runtime receives an explicit `FoundryRuntimeContext`. Construction reads package identity and an explicitly selected/discovered workspace marker, but never loads `.env`, creates state, changes CWD or performs authentication. A process-local brand prevents serialized context data from becoming an executable context. `accountIntent` is expected identity, not proof of login or permission; `actorId` is caller intent and must also be checked against durable task state before execution.
 
-This contract is being implemented under #100. The first admitted runtime operations are workspace initialization, diagnostics, profile listing and deterministic cleanup. The context API delegates cleanup to the existing owner with scoped I/O rather than duplicating transforms. Other operations must be migrated and admitted explicitly; they cannot fall back to the developer runner when a workspace context was requested. The final user command/envelope contract is defined separately in `public-runtime-contract.md` and implemented by W05.
+The direct runtime entry exposes workspace initialization, diagnostics, profile listing and deterministic cleanup. The context API delegates cleanup to the existing owner with scoped I/O rather than duplicating transforms. All 63 internal commands have an explicit disposition in `foundry-runtime-command-policy.ts`: the two current facade adapters are public, repository maintenance is excluded, and task/native families remain internal with declared asset/input/output roots, child-process ownership, qualification and authorization requirements. Internal status does not grant a caller direct access. The final user command/envelope contract is defined separately in `public-runtime-contract.md` and implemented by W05.
+
+## Runtime qualification and child admission
+
+`qualifyFoundryRuntime` compares an independently selected CLI expectation with the exact installed `@tiangong-lca/cli@0.1.10` runtime descriptor. It also compares a strict TIDAS expectation with the selected platform, executable bytes, compatible 0.2.x version, validation protocols, event schemas and asset fingerprint. The selected TIDAS executable is copied into a private temporary directory, rehashed there and invoked with the credential-free child environment; both handshake calls must be silent. Qualification uses a process-local brand. The portable identity described by `runtime-qualification.schema.json` is diagnostic evidence and cannot be deserialized into authority.
+
+The TIDAS expectation admits only `linux-x64`, `linux-arm64`, `darwin-arm64` and `win32-x64`; `darwin-x64` cannot enter the schema or runtime context. `tidas-runtime-expectation.schema.json` is the reviewed machine shape. CLI and TIDAS content are re-observed whenever qualification is asserted, including immediately before child admission.
+
+`execution-context.schema.json` describes the content-addressed child handoff stored under `evidence/executions/`. It is distinct from the older offline `foundry-execution-capsule-stage.v1` admission ledger: the older contract proves immutable staged evidence and attempt state, while `tiangong-foundry.execution-context.v1` binds a current task invocation. Rehydration requires a fresh process-local context, qualification and identity; exact workspace/task/actor, approved source ancestry, current final-row bytes, active authorization and QA waivers, installed owner CLI, owner-draft argv semantics, task-contained output root and CommandSpec digest are rechecked. The action list must match the CLI operation. Serialized admissions, unrelated CLI commands and changed capsule/spec/input bytes fail closed.
 
 ## Root ownership
 
@@ -76,6 +92,6 @@ Task artifacts are written only under the selected `taskRoot`; state and cache h
 
 The default in-memory data-read bound is 64 MiB; native/streaming stages must declare and enforce their own larger-input protocol instead of silently loading unbounded payloads. Cache contents and layout records are not write or replay authority.
 
-## Remaining integration obligations
+## Downstream integration obligations
 
-Every admitted command must bind its input families and output roots, reuse package assets explicitly, and pass this context through nested operations. Registered local jobs, actor/account intent, recorded artifact lineage, fresh CLI identity and persisted authorization are now implemented for the admitted local path. The exact public CLI 0.1.10 descriptor/manager export is installed and consumer-tested. Independently selected CLI expectations, a TIDAS executable descriptor, remaining command-family dispositions, child-process propagation, approved derived-grant handling and final execution rechecks remain required before #100 can close. Local preparation does not grant restricted writes; W03 task permissions and existing no-replay controls remain mandatory. Developer maintenance entrypoints and their assets must be excluded from the final consumer artifact in W06.
+W05 must route its public task operations through these internal dispositions and the same registered task state. W06 must publish only the required runtime modules, schemas and assets, then prove the same qualification and execution behavior from a read-only installed package. Local preparation does not grant restricted writes; W03 task permissions and existing attempt/readback no-replay controls remain mandatory. Developer maintenance entrypoints, tests and private case drivers remain excluded from the consumer artifact.

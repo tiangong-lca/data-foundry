@@ -13,17 +13,22 @@ whenToUpdate:
   - when task binding, allowed actions, waiver evidence or replay boundaries change
 checkPaths:
   - scripts/lib/task-authorization.ts
+  - scripts/lib/foundry-task-authorization.ts
+  - scripts/lib/foundry-execution-admission.ts
   - scripts/lib/import-curation/internal/profiles-config.ts
   - scripts/lib/import-curation/mutation-manifest.ts
   - scripts/commands/commit-handoff.ts
   - scripts/commands/identity-decisions.ts
   - specs/import-profiles.json
   - specs/schemas/task-authorization.schema.json
+  - specs/schemas/authorization-derivation.schema.json
+  - specs/schemas/execution-context.schema.json
   - test/unit/task-authorization.test.mts
   - test/unit/task-profile-authority.test.mts
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: ad9c885dde64b22f6e0a8e17f9da46bdba5345ef
-lastReviewedNote: "W03 contract: separate distributable rules, local preparation and exact task exceptions. No old lock, seal or attempt grants execution authority."
+  - test/scenarios/foundry-execution-admission.test.mts
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
+lastReviewedNote: "Reviewed for #100 W04: derived grants retain the exact parent authority and current child admission rechecks actions, evidence, final rows, qualification and CommandSpec semantics."
 related:
   - docs/architecture.md
   - docs/safety-policy.md
@@ -32,13 +37,13 @@ related:
 
 # Task authorization
 
-The persisted host boundary is implemented in `foundry-task-authorization.ts` and `foundry-runtime-identity.ts`. See `foundry-task-contracts.md` for workspace registration, evidence snapshots, active-pointer compare-and-swap and current-identity revalidation. Registration requires independently selected host evidence; merely writing a grant file or copying a success report grants no authority. The public facade and final remote execution integration remain separate required work.
+The persisted host boundary is implemented in `foundry-task-authorization.ts` and `foundry-runtime-identity.ts`. See `foundry-task-contracts.md` for workspace registration, evidence snapshots, active-pointer compare-and-swap and current-identity revalidation. Registration requires independently selected host evidence; merely writing a grant file or copying a success report grants no authority. `foundry-execution-admission.ts` now owns the last internal rehydration gate before the existing no-replay owner receives a CommandSpec. The public facade remains separate W05 work.
 
 Import profiles describe source formats and domain constraints. They do not identify an account or approve an action. Selecting BAFU, USLCI or Worldsteel, loading a historical profile file, passing a waiver flag, or logging in cannot grant an exception.
 
 The task host owns the current workspace/task/actor intent, frozen inputs and fresh CLI identity. It validates a separate `tiangong-foundry.task-authorization.v1` record against those independently assembled facts. `validateTaskAuthorization` returns an immutable, process-local authorization. `profileFor` accepts it only with the same current binding and the digest of the selected rule profile. A serialized report, copied profile object or boolean is never that validated authorization.
 
-The runtime host revalidates persisted authorization through its explicit loader; every new process must obtain current identity and the same stored task/input binding. The profile API itself has no ambient file search or environment flag granting permission. Remaining command/execution integration stays tracked in #100/W05; native commands without explicit validated task context remain preparation-only for restricted rows.
+The runtime host revalidates persisted authorization through its explicit loader; every new process must obtain current identity and the same stored task/input binding. When qualification is present, registration and loading require an identity bound to that exact qualification. The profile API itself has no ambient file search or environment flag granting permission. Native validation and other public preparation remain available without a restricted action grant; only commands that select or hand off restricted scopes declare the authorization boundary.
 
 ## Required binding and evidence
 
@@ -61,6 +66,14 @@ Grant issue/expiry timestamps use exact millisecond UTC format. A grant must be 
 | `canonical_support_local_mint` | Admit the task's canonical-gap support mint route | The corresponding FP/UG write action; canonical matches remain reuse-only |
 
 A single action never enables another. A mixed support handoff checks the actual final rows, not just the report's declared `support` type. A ready legacy finalize/mutation report cannot bypass this check. Non-generic handoffs require the mutation manifest to record the current `profile_rules_sha256`; used QA exceptions carry `required_qa_waiver_codes` and must still be authorized at handoff. No action grants publication, deletion, foreign-row visibility, review completion, full-context relaxation or replay.
+
+## Derived input and execution admission
+
+`prepareDerivedFoundryTaskAuthorization` may reuse a current approval only after the indexed receipt/plan graph proves that the selected final rows descend from the approved input. It requires the exact qualified runtime and identity. The successor changes only `input_scope_sha256`; task/account/profile binding, issue and expiry times, actions, QA waivers and evidence remain byte-equivalent in authority. The active pointer must still name the parent before and after preparation, and later activation uses its captured digest as the compare-and-swap base. `authorization-derivation.schema.json` records both content facts and parent/successor digests. It does not activate the successor.
+
+The content-addressed `tiangong-foundry.execution-context.v1` document records the current qualification, authorization, approved ancestor, final rows, sorted required actions and QA waivers, and exact CommandSpec digest. Rehydration accepts it only from the task's `evidence/executions/` root, then independently rechecks all current facts. The owner CLI must be entered through the qualified Node/CLI path, use one exact final-row input, keep outputs inside the task root, and select a reviewed owner-draft commit operation. FP/UG actions must match the requested dataset type and account-local flag; elementary create requires the corresponding write action; a canonical support mint requires the matching FP or UG write action. An unrelated command with a valid hash is still rejected.
+
+This execution context is not the earlier `foundry-execution-capsule-stage.v1` offline admission document. Neither document changes a consumed attempt. The new gate returns the verified CommandSpec to the existing executor; it does not spawn, retry, clear or relabel a mutation.
 
 ## Local preparation and domain rules
 

@@ -75,6 +75,14 @@ checkPaths:
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
   - scripts/lib/foundry-runtime-environment.ts
+  - scripts/lib/foundry-runtime-context.ts
+  - scripts/lib/foundry-runtime-command-policy.ts
+  - scripts/lib/foundry-runtime-qualification.ts
+  - scripts/lib/foundry-runtime-identity.ts
+  - scripts/lib/foundry-execution-admission.ts
+  - scripts/lib/foundry-task-store.ts
+  - scripts/lib/foundry-task-authorization.ts
+  - scripts/lib/task-authorization.ts
   - scripts/lib/foundry-runtime-paths.ts
   - scripts/lib/foundry-runtime-utils.ts
   - scripts/lib/tidas-adapter.ts
@@ -228,18 +236,22 @@ checkPaths:
   - test/unit/foundry-golden-diff-contract.test.mts
   - test/unit/foundry-entry-closure-migration.test.mts
   - test/unit/foundry-runtime-environment.test.mts
+  - test/unit/foundry-runtime-command-policy.test.mts
+  - test/unit/foundry-runtime-qualification.test.mts
+  - test/unit/foundry-runtime-authority-schemas.test.mts
+  - test/scenarios/foundry-execution-admission.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
-lastReviewedNote: "Reviewed for #100 CLI C1 adoption: exact public 0.1.10 runtime/batch/auth/CommandSpec exports and verified lock integrity are current; Foundry context qualification and F1 remain separate."
+lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
+lastReviewedNote: "Reviewed for #100 W04: qualified C1/TIDAS runtime, explicit command ownership, derived authorization and child execution admission are complete; W05/W06 remain separate."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
 
-The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` currently admits initialization, diagnostics, profile listing and deterministic cleanup; other business families remain tracked for context migration in #100. The final facade names and envelope are fixed in `docs/public-runtime-contract.md` before W05 implementation. Repository maintenance remains a developer surface and is not qualified for the final consumer package.
+The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` exposes initialization, diagnostics, profile listing and deterministic cleanup. Every other owner command now has an explicit public/internal/excluded, input/output, child-process, qualification and authorization disposition; a later facade may reach internal stages only through the qualified context and cannot fall back to the developer runner. The final facade names and envelope remain fixed in `docs/public-runtime-contract.md` for W05.
 
 Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel account overrides, QA waivers and the Worldsteel full-context relaxation grant no permission to a new task. `docs/task-authorization-contract.md` owns the separate workspace/task/actor/account/profile/input binding and exact action evidence. Local candidate preparation and checked public-reference proofs remain available; current final-row hashes, task permissions and all content/closure/no-replay gates are required before a restricted write handoff.
 

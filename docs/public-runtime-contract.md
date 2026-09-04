@@ -13,10 +13,13 @@ whenToUpdate:
 checkPaths:
   - scripts/runtime-entry.ts
   - scripts/foundry-runtime.ts
+  - scripts/lib/foundry-runtime-command-policy.ts
+  - scripts/lib/foundry-runtime-qualification.ts
+  - scripts/lib/foundry-execution-admission.ts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 7867b3d9293d9435386c68a256a2498ec492f834
-lastReviewedNote: "Reviewed for #100 CLI C1 adoption: CLI manager/bootstrap is public; the Foundry v1 facade remains a later implementation gate."
+lastReviewedCommit: 9f258f4632c091d2b12834c1699171e6cc714ed7
+lastReviewedNote: "Reviewed for #100 W04: internal command dispositions and qualified execution admission now back this frozen target; the public facade remains W05."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -24,7 +27,7 @@ related:
 
 # Public runtime protocol
 
-This is the normative v1 facade target for `@tiangong-lca/foundry`, binary `tiangong-foundry`. It freezes the surface before W05 implementation. It is not evidence that every operation is already available: #100 owns the runtime context, W05 the facade and W06 the released package. Internal flat command names remain owner interfaces, not a second user workflow.
+This is the normative v1 facade target for `@tiangong-lca/foundry`, binary `tiangong-foundry`. It freezes the surface before W05 implementation. W04 now supplies the explicit context, all-command ownership table, exact CLI/TIDAS qualification and final child-admission API; the current direct entry still exposes only init, diagnostics, profiles and deterministic cleanup. W05 owns this facade and W06 the released package. Internal flat command names remain owner interfaces, not a second user workflow.
 
 ## Commands
 
