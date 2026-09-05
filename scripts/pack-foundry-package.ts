@@ -28,14 +28,18 @@ function archiveBytes(file: string): Buffer {
   }
 }
 
-export function packFoundryPackage(): void {
+export function packFoundryPackage(
+  destination = path.join(foundryPackageRepoRoot, "package-artifacts"),
+): void {
+  if (!path.isAbsolute(destination))
+    throw new Error("Package artifact destination must be absolute.");
   buildFoundryPackage();
-  const destination = path.join(foundryPackageRepoRoot, "package-artifacts");
   if (fs.existsSync(destination)) {
     const stat = fs.lstatSync(destination);
     if (!stat.isDirectory() || stat.isSymbolicLink())
       throw new Error("Package artifact destination must be a real directory.");
   } else fs.mkdirSync(destination, { mode: 0o700 });
+  destination = fs.realpathSync(destination);
   const temporaryDirectory = fs.mkdtempSync(path.join(destination, ".pack-"));
   if (
     path.dirname(temporaryDirectory) !== destination ||

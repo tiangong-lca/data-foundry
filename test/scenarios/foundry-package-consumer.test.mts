@@ -233,10 +233,16 @@ test("packed Foundry installs twice and runs only the public facade from a read-
   );
   assert.equal(verified.status, 0, verified.stderr || verified.stdout);
   assert.equal(JSON.parse(verified.stdout).status, "passed");
+  const packDriver = pathToFileURL(path.join(repoRoot, "scripts/pack-foundry-package.ts")).href;
+  const driverDestination = path.join(root, "pack driver 中文");
   for (const attempt of ["first", "reuse"]) {
     const archived = command(
       process.execPath,
-      [path.join(repoRoot, "scripts/pack-foundry-package.ts")],
+      [
+        "--input-type=module",
+        "-e",
+        `import { packFoundryPackage } from ${JSON.stringify(packDriver)}; packFoundryPackage(${JSON.stringify(driverDestination)});`,
+      ],
       repoRoot,
       isolatedEnvironment(path.join(root, `archive-${attempt}-home`)),
     );
