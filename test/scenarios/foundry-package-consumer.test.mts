@@ -69,6 +69,20 @@ function command(executable: string, args: string[], cwd: string, environment: N
   return result;
 }
 
+function windowsPathDirectories(): string[] {
+  return (process.env.PATH ?? process.env.Path ?? "")
+    .split(path.delimiter)
+    .filter((directory) => path.isAbsolute(directory));
+}
+
+function isFile(candidate: string): boolean {
+  try {
+    return fs.statSync(candidate).isFile();
+  } catch {
+    return false;
+  }
+}
+
 function packageManagerCommand(
   manager: "npm" | "pnpm",
   args: string[],
@@ -76,34 +90,28 @@ function packageManagerCommand(
   environment: NodeJS.ProcessEnv,
 ) {
   if (process.platform !== "win32") return command(manager, args, cwd, environment);
+  const pathDirectories = windowsPathDirectories();
   if (manager === "pnpm") {
-    const pathDirectories = (process.env.PATH ?? process.env.Path ?? "")
-      .split(path.delimiter)
-      .filter((directory) => path.isAbsolute(directory));
     const pnpmHome = process.env.PNPM_HOME;
     const candidates = [
       ...(pnpmHome && path.isAbsolute(pnpmHome) ? [path.join(pnpmHome, "pnpm.exe")] : []),
       ...pathDirectories.map((directory) => path.join(directory, "pnpm.exe")),
     ];
-    const executable = candidates.find((candidate) => {
-      try {
-        return fs.statSync(candidate).isFile();
-      } catch {
-        return false;
-      }
-    });
+    const executable = candidates.find(isFile);
     assert.ok(executable, "Cannot resolve the pnpm native executable on Windows");
     return command(executable, args, cwd, environment);
   }
-  const script = path.join(
-    path.dirname(process.execPath),
-    "node_modules",
-    "npm",
-    "bin",
-    "npm-cli.js",
-  );
-  assert.equal(fs.statSync(script).isFile(), true, "npm JavaScript entrypoint is not a file");
-  return command(process.execPath, [script, ...args], cwd, environment);
+  const installation = pathDirectories
+    .map((directory) => ({
+      command: path.join(directory, "npm.cmd"),
+      node: path.join(directory, "node.exe"),
+      script: path.join(directory, "node_modules", "npm", "bin", "npm-cli.js"),
+    }))
+    .find((candidate) =>
+      [candidate.command, candidate.node, candidate.script].every((entry) => isFile(entry)),
+    );
+  assert.ok(installation, "Cannot resolve a complete npm installation on Windows");
+  return command(installation.node, [installation.script, ...args], cwd, environment);
 }
 
 function packageFiles(root: string): Array<{ path: string; bytes: number; sha256: string }> {
