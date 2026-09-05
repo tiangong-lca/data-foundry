@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
+import { resolvePackageManagerCommand } from "../../scripts/lib/package-manager-command.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 const stageRoot = path.join(repoRoot, "package-stage");
@@ -59,6 +60,7 @@ function isolatedEnvironment(home: string, extra: NodeJS.ProcessEnv = {}): NodeJ
 
 function command(executable: string, args: string[], cwd: string, environment: NodeJS.ProcessEnv) {
   const result = spawnSync(executable, args, {
+    shell: false,
     cwd,
     env: environment,
     encoding: "utf8",
@@ -69,49 +71,14 @@ function command(executable: string, args: string[], cwd: string, environment: N
   return result;
 }
 
-function windowsPathDirectories(): string[] {
-  return (process.env.PATH ?? process.env.Path ?? "")
-    .split(path.delimiter)
-    .filter((directory) => path.isAbsolute(directory));
-}
-
-function isFile(candidate: string): boolean {
-  try {
-    return fs.statSync(candidate).isFile();
-  } catch {
-    return false;
-  }
-}
-
 function packageManagerCommand(
   manager: "npm" | "pnpm",
   args: string[],
   cwd: string,
   environment: NodeJS.ProcessEnv,
 ) {
-  if (process.platform !== "win32") return command(manager, args, cwd, environment);
-  const pathDirectories = windowsPathDirectories();
-  if (manager === "pnpm") {
-    const pnpmHome = process.env.PNPM_HOME;
-    const candidates = [
-      ...(pnpmHome && path.isAbsolute(pnpmHome) ? [path.join(pnpmHome, "pnpm.exe")] : []),
-      ...pathDirectories.map((directory) => path.join(directory, "pnpm.exe")),
-    ];
-    const executable = candidates.find(isFile);
-    assert.ok(executable, "Cannot resolve the pnpm native executable on Windows");
-    return command(executable, args, cwd, environment);
-  }
-  const installation = pathDirectories
-    .map((directory) => ({
-      command: path.join(directory, "npm.cmd"),
-      node: path.join(directory, "node.exe"),
-      script: path.join(directory, "node_modules", "npm", "bin", "npm-cli.js"),
-    }))
-    .find((candidate) =>
-      [candidate.command, candidate.node, candidate.script].every((entry) => isFile(entry)),
-    );
-  assert.ok(installation, "Cannot resolve a complete npm installation on Windows");
-  return command(installation.node, [installation.script, ...args], cwd, environment);
+  const invocation = resolvePackageManagerCommand(manager, args);
+  return command(invocation.executable, invocation.argv, cwd, environment);
 }
 
 function packageFiles(root: string): Array<{ path: string; bytes: number; sha256: string }> {
@@ -258,6 +225,24 @@ test("packed Foundry installs twice and runs only the public facade from a read-
   assert.equal(secondPack.status, 0, secondPack.stderr || secondPack.stdout);
   const secondTarball = path.join(secondArtifacts, path.basename(packReport[0].filename));
   assert.deepEqual(fs.readFileSync(secondTarball), fs.readFileSync(tarball));
+  const verified = command(
+    process.execPath,
+    [path.join(repoRoot, "scripts/verify-foundry-package.ts")],
+    repoRoot,
+    isolatedEnvironment(path.join(root, "verify-home")),
+  );
+  assert.equal(verified.status, 0, verified.stderr || verified.stdout);
+  assert.equal(JSON.parse(verified.stdout).status, "passed");
+  for (const attempt of ["first", "reuse"]) {
+    const archived = command(
+      process.execPath,
+      [path.join(repoRoot, "scripts/pack-foundry-package.ts")],
+      repoRoot,
+      isolatedEnvironment(path.join(root, `archive-${attempt}-home`)),
+    );
+    assert.equal(archived.status, 0, archived.stderr || archived.stdout);
+    assert.deepEqual(fs.readFileSync(archived.stdout.trim()), fs.readFileSync(tarball));
+  }
   assert.equal(
     packReport[0].files.some(
       (file) =>

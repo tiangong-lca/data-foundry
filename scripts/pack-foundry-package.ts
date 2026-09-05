@@ -6,6 +6,7 @@ import {
   foundryPackageRepoRoot,
   foundryPackageStageRoot,
 } from "./build-foundry-package.ts";
+import { resolvePackageManagerCommand } from "./lib/package-manager-command.ts";
 
 const archiveName = "tiangong-lca-foundry-0.1.0.tgz";
 const maxArchiveBytes = 64 * 1024 * 1024;
@@ -42,17 +43,19 @@ export function packFoundryPackage(): void {
   )
     throw new Error("Refusing to use an unsafe package temporary directory.");
   try {
-    const executable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-    const result = spawnSync(
-      executable,
-      ["pack", "--json", "--pack-destination", temporaryDirectory],
-      {
-        cwd: foundryPackageStageRoot,
-        encoding: "utf8",
-        env: process.env,
-        maxBuffer: 16 * 1024 * 1024,
-      },
-    );
+    const invocation = resolvePackageManagerCommand("pnpm", [
+      "pack",
+      "--json",
+      "--pack-destination",
+      temporaryDirectory,
+    ]);
+    const result = spawnSync(invocation.executable, invocation.argv, {
+      shell: false,
+      cwd: foundryPackageStageRoot,
+      encoding: "utf8",
+      env: process.env,
+      maxBuffer: 16 * 1024 * 1024,
+    });
     if (result.error) throw result.error;
     if (result.status !== 0)
       throw new Error(`Package archive failed with exit ${result.status ?? 1}.`);

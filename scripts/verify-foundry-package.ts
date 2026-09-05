@@ -9,6 +9,7 @@ import {
   foundryPackageDescriptorPath,
 } from "./lib/foundry-package-contract.ts";
 import { foundryPackageRepoRoot, foundryPackageStageRoot } from "./build-foundry-package.ts";
+import { resolvePackageManagerCommand } from "./lib/package-manager-command.ts";
 
 interface PackFile {
   path?: unknown;
@@ -26,17 +27,15 @@ function readDescriptor() {
   );
 }
 
-function dryRunPackFiles(): string[] {
-  const result = spawnSync(
-    process.platform === "win32" ? "pnpm.cmd" : "pnpm",
-    ["pack", "--dry-run", "--json"],
-    {
-      cwd: foundryPackageStageRoot,
-      encoding: "utf8",
-      env: { ...process.env, NPM_CONFIG_UPDATE_NOTIFIER: "false", NPM_CONFIG_FUND: "false" },
-      maxBuffer: 16 * 1024 * 1024,
-    },
-  );
+export function dryRunPackFiles(): string[] {
+  const invocation = resolvePackageManagerCommand("pnpm", ["pack", "--dry-run", "--json"]);
+  const result = spawnSync(invocation.executable, invocation.argv, {
+    shell: false,
+    cwd: foundryPackageStageRoot,
+    encoding: "utf8",
+    env: { ...process.env, NPM_CONFIG_UPDATE_NOTIFIER: "false", NPM_CONFIG_FUND: "false" },
+    maxBuffer: 16 * 1024 * 1024,
+  });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error("Package dry-run rejected the Foundry package.");
   const value = JSON.parse(result.stdout) as PackReport | PackReport[];

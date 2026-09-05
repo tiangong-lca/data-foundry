@@ -45,6 +45,8 @@ Foundry `.env.example` is a public runtime contract, not a mirror of every adjac
 
 Package build, descriptor verification and packing do not load `.env`. The public staging manifest has no lifecycle scripts. Clean-consumer tests pass only platform process variables, isolated HOME/package-cache paths and optional network proxy/CA settings to package tools; credential-shaped variables are rejected from that projection. Installed workspace/task operations retain the facade's explicit account-intent/session-reference contract and never search the package directory for credentials.
 
+Repository pack/verification tools and consumer tests share `scripts/lib/package-manager-command.ts`. On Windows, it selects a native `pnpm.exe` from an absolute `PNPM_HOME` or `PATH` entry. npm requires one complete PATH installation containing `npm.cmd`, `node.exe` and `node_modules/npm/bin/npm-cli.js`; the colocated Node executes the script. These tooling selectors never execute `.cmd` or a shell, never reinterpret argv, and never become public Foundry environment variables or shipped runtime code.
+
 ## Allowed Variables
 
 Only document variables that meet at least one of these conditions:

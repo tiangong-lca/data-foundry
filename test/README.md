@@ -298,6 +298,8 @@ W05 facade coverage is split similarly. `unit/foundry-operation-result.test.mts`
 
 W06 package coverage has two layers. `unit/foundry-package-contract.test.mts` freezes identity, exports, allowlist, no-lifecycle metadata, compiler settings and descriptor tamper rejection; the facade schema suite compiles the package descriptor schema strictly. `scenarios/foundry-package-consumer.test.mts` rebuilds and packs twice byte-identically, installs the same tarball into an online then offline clean consumer, compiles a typed consumer, verifies exact C1, runs all six operations from a Unicode CWD against a read-only package, rejects internal commands and tests missing/changed/extra/linked/lifecycle-bearing/Intel-invalid closures. It uses only public synthetic inputs; the official OAuth installed-package case remains private W14 evidence.
 
+`unit/package-manager-command.test.mts` covers Windows native pnpm selection, complete npm/Node installation pairing, literal Unicode/space/metacharacter argv, missing-tool rejection, POSIX lookup and the actual package-verifier dry-run call. The consumer scenario also executes the repository verifier and pack driver, including reuse of an identical archive, on every supported CI platform. Package tools share the repository-only resolver and always spawn without a shell.
+
 Foundry tests are organized by responsibility, not by the date a regression was added.
 
 ## Directories
