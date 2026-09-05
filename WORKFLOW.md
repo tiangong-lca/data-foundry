@@ -314,6 +314,8 @@ Body: {{ issue.description }}
 
 ## Classify
 
+Migration transfer planning is governed by [the workspace migration contract](docs/workspace-migration-contract.md). The current W10 slice binds a read-only proposal to source/target/actor/runtime and retained attempt evidence; explicit apply, task adoption, activation and rollback remain pending #108. It grants no write or replay authority.
+
 The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 still owns the published package. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 
 For consumer workspace execution, follow `docs/public-runtime-contract.md`. Use `workspace init`, `doctor`, `task start`, `task status`, `task resume` and `workspace migrate --dry-run` with `--json`. Task specs own request/actor/lane/profile/source/seed/account/preparation intent; status and resume require the same explicit actor. Start and local preparation require no login. Execute only returned structured argv actions with their recorded CWD/binding; never run display text. A nonempty attempt state is readback-only, and W10 alone may apply a migration plan.

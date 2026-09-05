@@ -7,6 +7,9 @@ import Ajv2020 from "ajv/dist/2020.js";
 import { createFoundryOperationResult } from "../../scripts/lib/foundry-operation-result.ts";
 import { inventoryFoundryWorkspace } from "../../scripts/lib/foundry-migration-inventory.ts";
 import { createFoundryPackageDescriptor } from "../../scripts/lib/foundry-package-contract.ts";
+import { createFoundryRuntimeContext } from "../../scripts/lib/foundry-runtime-context.ts";
+import { planFoundryWorkspaceMigration } from "../../scripts/lib/foundry-migration-plan.ts";
+import { pathToFileURL } from "node:url";
 
 type Validator = ((value: unknown) => boolean) & { errors?: unknown };
 const Ajv = Ajv2020 as unknown as new (options: { strict: boolean }) => {
@@ -82,6 +85,34 @@ test("facade task, result, request and migration schemas compile and reject unsa
   const plan = inventoryFoundryWorkspace(root);
   assert.equal(validateMigration(plan), true, JSON.stringify(validateMigration.errors));
   assert.equal(validateMigration({ ...plan, write_allowed: true }), false);
+  fs.mkdirSync(path.join(root, ".foundry"));
+  const transferContext = createFoundryRuntimeContext({
+    moduleUrl: pathToFileURL(path.resolve(schemaRoot, "../../scripts/public-api.ts")).href,
+    workspace: path.join(os.tmpdir(), `transfer-${path.basename(root)}`),
+    cacheBase: path.join(root, "cache"),
+  });
+  const transfer = planFoundryWorkspaceMigration(transferContext, {
+    sourceWorkspace: root,
+    actorId: "actor",
+    requestId: "schema-case",
+  });
+  const validateTransfer = ajv.compile(
+    read("foundry-workspace-migration-transfer-plan.schema.json"),
+  );
+  assert.equal(validateTransfer(transfer), true, JSON.stringify(validateTransfer.errors));
+  assert.equal(validateTransfer({ ...transfer, remote_write_allowed: true }), false);
+  assert.equal(
+    validateTransfer({
+      ...transfer,
+      runtime: { ...transfer.runtime, scope: "installed-package", payload_sha256: null },
+    }),
+    false,
+  );
+  assert.equal(
+    validateTransfer({ ...transfer, runtime: { ...transfer.runtime, platform: "darwin-x64" } }),
+    false,
+  );
+  assert.equal(validateTransfer({ ...transfer, unexpected: true }), false);
 
   const validatePackage = ajv.compile(read("foundry-package-descriptor.schema.json"));
   const packageDescriptor = createFoundryPackageDescriptor(

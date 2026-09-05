@@ -307,6 +307,7 @@ test("packed Foundry installs twice and runs only the public facade from a read-
   };
   assert.deepEqual(importedResult.exports, [
     "FOUNDRY_COMMAND_NEXT_ACTION_BINDING_SCHEMA",
+    "FOUNDRY_MIGRATION_TRANSFER_PLAN_SCHEMA",
     "FOUNDRY_OPERATION_RESULT_SCHEMA",
     "FOUNDRY_PACKAGE_DESCRIPTOR_SCHEMA",
     "FOUNDRY_TASK_START_SPEC_SCHEMA",

@@ -269,6 +269,8 @@ lastReviewedNote: "Reviewed for #106 W06: the public facade is now a determinist
 
 # AGENTS.md - TianGong LCA Data Foundry
 
+Explicit migration transfer planning follows `docs/workspace-migration-contract.md`. It binds source/target/actor/runtime and selected historical stage bytes without creating a destination or granting write/replay authority. The first W10 slice is planning/revalidation only; apply, task adoption, activation and rollback remain required by #108. Never infer that a filename or an old profile proves an unattempted task.
+
 The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` now implements workspace init/migration, consumer doctor and task start/status/resume as the separate hierarchical facade. All 63 flat owner commands retain explicit public/internal/excluded, path, child, qualification and authorization dispositions; the facade reaches them only through registered task state and never falls back to the developer runner.
 
 The installable package boundary is defined by `docs/package-distribution-contract.md`. Only `scripts/package-entry.ts` and `scripts/public-api.ts` seed the package compiler graph. Pack from the generated sanitized `package-stage/`, never the repository root; do not add lifecycle scripts, source maps, internal command/case owners, credentials, task state or private evidence to the public allowlist. W06 candidates are local artifacts until W08 publishes an exact reviewed release.

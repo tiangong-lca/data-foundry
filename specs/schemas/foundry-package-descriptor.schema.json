@@ -51,6 +51,7 @@
             "tiangong-foundry.task-start.v1",
             "tiangong-foundry.facade-request-index.v1",
             "tiangong-foundry.workspace-migration-plan.v1",
+            "tiangong-foundry.workspace-migration-transfer-plan.v1",
             "tiangong-foundry.runtime-qualification.v1",
             "tiangong-foundry.tidas-runtime-expectation.v1",
             "tiangong-foundry.execution-context.v1",

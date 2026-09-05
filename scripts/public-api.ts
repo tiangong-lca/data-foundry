@@ -40,6 +40,11 @@ export {
   type FoundryWorkspaceMigrationPlan,
 } from "./lib/foundry-migration-inventory.ts";
 export {
+  FOUNDRY_MIGRATION_TRANSFER_PLAN_SCHEMA,
+  type FoundryMigrationTransferPlan,
+  type MigrationStageEvidence,
+} from "./lib/foundry-migration-plan.ts";
+export {
   FOUNDRY_PACKAGE_DESCRIPTOR_SCHEMA,
   FoundryPackageError,
   assertFoundryPackage,

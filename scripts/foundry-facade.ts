@@ -4,6 +4,7 @@ import path from "node:path";
 import { createFoundryRuntime } from "./foundry-runtime.ts";
 import {
   captureFoundryInput,
+  assertFoundryRuntimeHost,
   createFoundryRuntimeContext,
   FoundryContextError,
   initializeFoundryWorkspace,
@@ -35,6 +36,7 @@ import {
 } from "./lib/foundry-runtime-qualification.ts";
 import { sha256Json } from "./lib/identity-preflight-proof.ts";
 import { inventoryFoundryWorkspace } from "./lib/foundry-migration-inventory.ts";
+import { planFoundryWorkspaceMigration } from "./lib/foundry-migration-plan.ts";
 
 export interface FoundryFacadeRuntimeSelection {
   readonly cliExpectation: unknown;
@@ -539,23 +541,49 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
         return failure("doctor", null, error);
       }
     },
-    migrationDryRun(): FoundryOperationResult {
+    migrationDryRun(input?: {
+      destination: string;
+      actorId: string;
+      requestId: string;
+      stageManifests?: readonly string[];
+    }): FoundryOperationResult {
       try {
         assertNotInterrupted(options.signal);
-        const plan = inventoryFoundryWorkspace(options.workspace);
+        assertFoundryRuntimeHost();
+        const plan = input
+          ? planFoundryWorkspaceMigration(
+              createFoundryRuntimeContext({
+                ...contextOptions(options),
+                workspace: input.destination,
+              }),
+              {
+                sourceWorkspace: path.resolve(options.cwd ?? process.cwd(), options.workspace),
+                actorId: input.actorId,
+                requestId: input.requestId,
+                stageManifests: input.stageManifests,
+              },
+            )
+          : inventoryFoundryWorkspace(options.workspace, {
+              sessionReference: options.accountIntent?.sessionReference,
+            });
         assertNotInterrupted(options.signal);
         return createFoundryOperationResult({
           operation: "workspace.migrate",
           status: "ready",
           taskId: null,
-          artifacts: [inlineArtifact("workspace_migration_plan", plan)],
+          artifacts: [
+            inlineArtifact(
+              input ? "workspace_migration_transfer_plan" : "workspace_migration_plan",
+              plan,
+            ),
+          ],
           blockers: [],
           nextActions:
-            plan.disposition === "explicit_migration_required"
+            input || ("disposition" in plan && plan.disposition === "explicit_migration_required")
               ? [
                   human(
                     "review_workspace_migration",
-                    "Review this content-bound inventory before a separately authorized W10 apply.",
+                    "Review this content-bound plan before an explicit migration apply; retained stage labels grant no write or replay permission.",
                   ),
                 ]
               : [],

@@ -1,0 +1,309 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tiangong-lca.local/foundry/workspace-migration-transfer-plan.schema.json",
+  "title": "Foundry immutable workspace migration transfer plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "request_id",
+    "actor_id",
+    "destination_workspace",
+    "account_intent",
+    "runtime",
+    "source_inventory",
+    "stages",
+    "omitted_private_paths",
+    "blockers",
+    "source_must_remain_unchanged",
+    "remote_write_allowed",
+    "plan_sha256"
+  ],
+  "properties": {
+    "schema": {
+      "const": "tiangong-foundry.workspace-migration-transfer-plan.v1"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$"
+    },
+    "actor_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,255}$"
+    },
+    "destination_workspace": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "account_intent": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["project_ref", "user_id"],
+          "properties": {
+            "project_ref": {
+              "type": "string",
+              "pattern": "^[a-z0-9]{20}$"
+            },
+            "user_id": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+            }
+          }
+        }
+      ]
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package_name",
+        "package_version",
+        "manifest_sha256",
+        "entry_sha256",
+        "platform",
+        "scope",
+        "payload_sha256"
+      ],
+      "properties": {
+        "package_name": {
+          "const": "@tiangong-lca/foundry"
+        },
+        "package_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "manifest_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "entry_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "platform": {
+          "enum": ["linux-x64", "linux-arm64", "darwin-arm64", "win32-x64"]
+        },
+        "scope": {
+          "enum": ["entry-only", "installed-package"]
+        },
+        "payload_sha256": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "const": "installed-package"
+              }
+            },
+            "required": ["scope"]
+          },
+          "then": {
+            "properties": {
+              "payload_sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "payload_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "source_inventory": {
+      "$ref": "https://tiangong-lca.local/foundry/workspace-migration-plan.schema.json"
+    },
+    "stages": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "$ref": "#/$defs/stage"
+      }
+    },
+    "omitted_private_paths": {
+      "type": "array",
+      "maxItems": 10000,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "path"],
+        "properties": {
+          "code": {
+            "enum": [
+              "migration_unhashed_file",
+              "migration_source_schema_unsupported",
+              "migration_private_marker"
+            ]
+          },
+          "path": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "source_must_remain_unchanged": {
+      "const": true
+    },
+    "remote_write_allowed": {
+      "const": false
+    },
+    "plan_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "$defs": {
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "stage_id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,255}$"
+        },
+        "producer_id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,255}$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "scope_binding_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "disposition": {
+          "enum": [
+            "UNATTEMPTED",
+            "SUCCEEDED_EXACT_READBACK",
+            "SUCCEEDED_RECOVERED_EXACT_READBACK",
+            "UNKNOWN_DO_NOT_REPLAY"
+          ]
+        },
+        "migration_action": {
+          "enum": ["rebuild-local-preparation", "retain-terminal", "owner-readback-only"]
+        },
+        "grants_write_authority": {
+          "const": false
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "stage_id",
+        "producer_id",
+        "revision",
+        "scope_binding_sha256",
+        "disposition",
+        "migration_action",
+        "grants_write_authority"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "disposition": {
+                "const": "UNATTEMPTED"
+              }
+            },
+            "required": ["disposition"]
+          },
+          "then": {
+            "properties": {
+              "migration_action": {
+                "const": "rebuild-local-preparation"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "disposition": {
+                "const": "UNKNOWN_DO_NOT_REPLAY"
+              }
+            },
+            "required": ["disposition"]
+          },
+          "then": {
+            "properties": {
+              "migration_action": {
+                "const": "owner-readback-only"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "disposition": {
+                "enum": ["SUCCEEDED_EXACT_READBACK", "SUCCEEDED_RECOVERED_EXACT_READBACK"]
+              }
+            },
+            "required": ["disposition"]
+          },
+          "then": {
+            "properties": {
+              "migration_action": {
+                "const": "retain-terminal"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

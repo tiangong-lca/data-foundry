@@ -26,6 +26,8 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // Issue #97 keeps OAuth session-reference guards and isolated Golden snapshots native TypeScript.
 // Hook fixture isolation also stays native .mts and cannot inherit the push repository.
 // The CLI 0.1.10 support-export adapter and its integrity/intent tests remain native TypeScript.
+// Issue #108's migration planning, shared attempt model and evidence guards remain native
+// TypeScript; emitted declarations do not add a first-party JavaScript source allowance.
 // Issue #98 task authorization and action/QA/row-binding cases remain native TypeScript.
 // Issue #100's import-isolation probe and explicit Node 24 entry remain native TypeScript.
 // Runtime layout/context and off-repository cleanup adapters also stay native TypeScript.

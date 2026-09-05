@@ -1,3 +1,8 @@
+export {
+  modelExecutionAttemptDisposition,
+  type ExecutionAttemptState,
+  type ExecutionAttemptDisposition,
+} from "../lib/foundry-execution-attempt.ts";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -119,22 +124,6 @@ type ValidationResult = {
 
 type AddCheck = (checkId: string, passed: boolean, detail: string, evidence?: unknown) => boolean;
 
-export type ExecutionAttemptState = {
-  dispatch_state?: string;
-  readback_state?: string;
-};
-
-export type ExecutionAttemptDisposition = {
-  disposition:
-    | "UNATTEMPTED"
-    | "SUCCEEDED_EXACT_READBACK"
-    | "SUCCEEDED_RECOVERED_EXACT_READBACK"
-    | "UNKNOWN_DO_NOT_REPLAY";
-  attempt_consumed: boolean;
-  replay_allowed: boolean;
-  terminal: boolean;
-};
-
 export type ExecutionCapsuleOptions = Record<string, unknown> & {
   help?: unknown;
   stageManifest?: unknown;
@@ -156,12 +145,6 @@ const FRESHNESS_CLASSES = new Set([
   "LIVE_RECONCILIATION",
   "OWNER_SESSION",
   "DERIVED_REPORT",
-]);
-
-const ATTEMPT_DISPATCH_STATES = new Set([
-  "NOT_DISPATCHED",
-  "DISPATCH_CONFIRMED",
-  "DISPATCH_UNKNOWN",
 ]);
 
 function sha256(value: crypto.BinaryLike): string {
@@ -446,38 +429,6 @@ function freshnessChecks(leaf: StageLeaf, add: AddCheck): void {
       "Derived reports require at least one dependency leaf.",
     );
   }
-}
-
-export function modelExecutionAttemptDisposition(
-  state: ExecutionAttemptState,
-): ExecutionAttemptDisposition {
-  const dispatchState = state?.dispatch_state;
-  const desiredExact = state?.readback_state === "EXACT_DESIRED";
-  if (dispatchState === "NOT_DISPATCHED") {
-    return {
-      disposition: "UNATTEMPTED",
-      attempt_consumed: false,
-      replay_allowed: true,
-      terminal: false,
-    };
-  }
-  if (ATTEMPT_DISPATCH_STATES.has(dispatchState ?? "") && desiredExact) {
-    return {
-      disposition:
-        dispatchState === "DISPATCH_UNKNOWN"
-          ? "SUCCEEDED_RECOVERED_EXACT_READBACK"
-          : "SUCCEEDED_EXACT_READBACK",
-      attempt_consumed: true,
-      replay_allowed: false,
-      terminal: true,
-    };
-  }
-  return {
-    disposition: "UNKNOWN_DO_NOT_REPLAY",
-    attempt_consumed: dispatchState !== "NOT_DISPATCHED",
-    replay_allowed: false,
-    terminal: false,
-  };
 }
 
 function validateStage({

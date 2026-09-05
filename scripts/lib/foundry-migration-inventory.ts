@@ -6,7 +6,7 @@ import { sha256Json } from "./identity-preflight-proof.ts";
 export const FOUNDRY_WORKSPACE_MIGRATION_PLAN_SCHEMA =
   "tiangong-foundry.workspace-migration-plan.v1" as const;
 
-interface MigrationEntry {
+export interface MigrationEntry {
   readonly path: string;
   readonly kind: "directory" | "file";
   readonly bytes: number | null;
@@ -34,9 +34,17 @@ export interface FoundryWorkspaceMigrationPlan {
 const maxEntries = 10_000;
 const maxDepth = 64;
 const maxHashedFileBytes = 64 * 1024 * 1024;
+const maxHashedTreeBytes = 256 * 1024 * 1024;
 
-function credentialNamed(relative: string): boolean {
-  return relative.split("/").some((part) => /^\.env(?:\.|$)/iu.test(part));
+export function migrationCredentialPath(relative: string): boolean {
+  return relative
+    .split(/[\\/]/u)
+    .some(
+      (part) =>
+        /^\.env(?:\.|$)|(?:^|[-_.])(?:sessions?|tokens?|cookies?|credentials?|secrets?|passwords?|passwd|accounts?|private-key)(?:[-_.]|$)/iu.test(
+          part,
+        ) && !/^account-intent\.json$/u.test(part),
+    );
 }
 
 function classify(relative: string): MigrationEntry["state_class"] {
@@ -75,7 +83,22 @@ function markerSchema(root: string): string | null {
 }
 
 /** Deterministic read-only inventory. W10 owns any application or rollback. */
-export function inventoryFoundryWorkspace(workspace: string): FoundryWorkspaceMigrationPlan {
+export function inventoryFoundryWorkspace(
+  workspace: string,
+  options: { sessionReference?: string } = {},
+): FoundryWorkspaceMigrationPlan {
+  if (
+    options.sessionReference !== undefined &&
+    (typeof options.sessionReference !== "string" || !path.isAbsolute(options.sessionReference))
+  )
+    throw new FoundryContextError(
+      "migration_session_reference_invalid",
+      "A selected private session reference must be absolute.",
+    );
+  const selectedSession =
+    options.sessionReference && fs.existsSync(options.sessionReference)
+      ? fs.realpathSync(options.sessionReference)
+      : options.sessionReference;
   const workspaceRoot = fs.existsSync(workspace)
     ? fs.realpathSync(workspace)
     : path.resolve(workspace);
@@ -103,6 +126,7 @@ export function inventoryFoundryWorkspace(workspace: string): FoundryWorkspaceMi
       "Foundry state root must be a real directory.",
     );
   const entries: MigrationEntry[] = [];
+  let hashedBytes = 0;
   const walk = (directory: string, depth: number) => {
     if (depth > maxDepth)
       throw new FoundryContextError(
@@ -139,14 +163,23 @@ export function inventoryFoundryWorkspace(workspace: string): FoundryWorkspaceMi
           "migration_entry_unsupported",
           "Migration inventory supports only regular files and directories.",
         );
-      const omitHash = credentialNamed(relative) || stat.size > maxHashedFileBytes;
+      const privateFile = migrationCredentialPath(relative) || file === selectedSession;
+      const omitHash = privateFile || stat.size > maxHashedFileBytes;
+      if (!omitHash) {
+        hashedBytes += stat.size;
+        if (hashedBytes > maxHashedTreeBytes)
+          throw new FoundryContextError(
+            "migration_byte_limit",
+            "Migration inventory exceeds its total hashing byte limit.",
+          );
+      }
       const fact = omitHash ? null : captureFoundryInput(file);
       entries.push({
         path: relative,
         kind: "file",
         bytes: stat.size,
         sha256: fact?.sha256 ?? null,
-        state_class: credentialNamed(relative) ? "authorization-or-account" : classify(relative),
+        state_class: privateFile ? "authorization-or-account" : classify(relative),
       });
       if (entries.length > maxEntries)
         throw new FoundryContextError(
@@ -156,7 +189,7 @@ export function inventoryFoundryWorkspace(workspace: string): FoundryWorkspaceMi
     }
   };
   walk(root, 0);
-  const schema = markerSchema(root);
+  const schema = path.join(root, "workspace.json") === selectedSession ? null : markerSchema(root);
   const immutableEntries = Object.freeze(entries.map((entry) => Object.freeze(entry)));
   return Object.freeze({
     schema: FOUNDRY_WORKSPACE_MIGRATION_PLAN_SCHEMA,

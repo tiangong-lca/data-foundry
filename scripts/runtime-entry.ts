@@ -155,7 +155,7 @@ async function runPublicCommand(
     ...(parsed.operation === "doctor"
       ? ["expectedProjectRef", "expectedUserId", "sessionReference"]
       : parsed.operation === "workspace.migrate"
-        ? ["dryRun"]
+        ? ["dryRun", "to", "actor", "request", "stageManifest"]
         : parsed.operation === "task.start"
           ? ["spec"]
           : parsed.operation === "task.status" || parsed.operation === "task.resume"
@@ -196,7 +196,31 @@ async function runPublicCommand(
         "argument_dry_run_required",
         "Workspace migration is read-only in this release and requires --dry-run.",
       );
-    result = facade.migrationDryRun();
+    const destination = option(parsed.args.to, "--to");
+    const actorId = option(parsed.args.actor, "--actor");
+    const requestId = option(parsed.args.request, "--request");
+    const stageValue = parsed.args.stageManifest;
+    const stageManifests =
+      stageValue === undefined
+        ? []
+        : (Array.isArray(stageValue) ? stageValue : [stageValue]).map((value) =>
+            option(value, "--stage-manifest")!,
+          );
+    if (
+      (destination && (!actorId || !requestId)) ||
+      (!destination && (actorId || requestId || stageManifests.length))
+    )
+      return invalidResult(
+        parsed.operation,
+        null,
+        "argument_migration_intent_required",
+        "Transfer planning requires --to, --actor and --request together.",
+      );
+    result = facade.migrationDryRun(
+      destination
+        ? { destination, actorId: actorId!, requestId: requestId!, stageManifests }
+        : undefined,
+    );
   } else if (parsed.operation === "task.start") {
     const specFile = option(parsed.args.spec, "--spec");
     if (!specFile)

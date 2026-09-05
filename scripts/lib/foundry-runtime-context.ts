@@ -179,17 +179,24 @@ function discoverWorkspace(cwd: string, runtimeRoot: string): string {
   }
 }
 
-export function createFoundryRuntimeContext(
-  options: FoundryRuntimeContextOptions,
-): FoundryRuntimeContext {
+export function assertFoundryRuntimeHost(
+  platform: NodeJS.Platform = process.platform,
+  arch: string = process.arch,
+): string {
   const [nodeMajor, nodeMinor] = process.versions.node.split(".").map(Number);
   if (nodeMajor !== 24 || nodeMinor < 19)
     fail(
       "node_runtime_unsupported",
       "Foundry requires Node 24.19 or later in the Node 24 release line.",
     );
+  return supportedPlatform(platform, arch);
+}
+
+export function createFoundryRuntimeContext(
+  options: FoundryRuntimeContextOptions,
+): FoundryRuntimeContext {
   const platform = options.platform ?? process.platform;
-  const platformKey = supportedPlatform(platform, options.arch ?? process.arch);
+  const platformKey = assertFoundryRuntimeHost(platform, options.arch ?? process.arch);
   const runtime = describeFoundryRuntime(options.moduleUrl);
   const cwd = options.cwd ?? process.cwd();
   const workspaceRoot = options.workspace
