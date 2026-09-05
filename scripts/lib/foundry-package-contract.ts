@@ -16,6 +16,13 @@ export const foundryPackageStaticFiles = Object.freeze([
   "specs/schemas/foundry-package-descriptor.schema.json",
   "specs/schemas/foundry-task-start.schema.json",
   "specs/schemas/foundry-workspace-migration-plan.schema.json",
+  "specs/schemas/foundry-workspace-migration-transfer-plan.schema.json",
+  "specs/schemas/foundry-migration-transfer-receipt.schema.json",
+  "specs/schemas/foundry-workspace-migration-pending.schema.json",
+  "specs/schemas/foundry-migration-adoption-plan.schema.json",
+  "specs/schemas/foundry-migration-activation.schema.json",
+  "specs/schemas/foundry-workspace-v2.schema.json",
+  "specs/schemas/foundry-runtime-selection.schema.json",
   "specs/schemas/runtime-qualification.schema.json",
   "specs/schemas/task-authorization.schema.json",
   "specs/schemas/tidas-runtime-expectation.schema.json",
@@ -24,6 +31,7 @@ export const foundryPackageStaticFiles = Object.freeze([
   "docs/foundry-task-contracts.md",
   "docs/public-runtime-contract.md",
   "docs/runtime-context-contract.md",
+  "docs/workspace-migration-contract.md",
   "docs/safety-policy.md",
   "docs/task-authorization-contract.md",
   "docs/import-profiles/bafu/constraints.md",
@@ -60,6 +68,13 @@ const protocolSchemas = Object.freeze([
   "tiangong-foundry.task-start.v1",
   "tiangong-foundry.facade-request-index.v1",
   "tiangong-foundry.workspace-migration-plan.v1",
+  "tiangong-foundry.workspace-migration-transfer-plan.v2",
+  "tiangong-foundry.migration-transfer-receipt.v1",
+  "tiangong-foundry.workspace-migration-pending.v1",
+  "tiangong-foundry.migration-adoption-plan.v1",
+  "tiangong-foundry.migration-activation.v1",
+  "tiangong-foundry.workspace.v2",
+  "tiangong-foundry.workspace-runtime-selection.v1",
   "tiangong-foundry.runtime-qualification.v1",
   "tiangong-foundry.tidas-runtime-expectation.v1",
   "tiangong-foundry.execution-context.v1",
@@ -125,7 +140,14 @@ export interface FoundryPackageDescriptor {
   readonly runtime: Readonly<{
     layout_schema: "tiangong-foundry.runtime-layout.v2";
     supported_platforms: readonly (typeof supportedPlatforms)[number][];
-    workspace_read_schemas: readonly ["tiangong-foundry.workspace.v1"];
+    workspace_read_schemas: readonly [
+      "tiangong-foundry.workspace.v1",
+      "tiangong-foundry.workspace.v2",
+    ];
+    workspace_write_schemas: readonly [
+      "tiangong-foundry.workspace.v1",
+      "tiangong-foundry.workspace.v2",
+    ];
     workspace_write_schema: "tiangong-foundry.workspace.v1";
     protocol_schemas: readonly (typeof protocolSchemas)[number][];
   }>;
@@ -224,6 +246,7 @@ export function assertFoundryPackageDescriptor(value: unknown): FoundryPackageDe
       "supported_platforms",
       "workspace_read_schemas",
       "workspace_write_schema",
+      "workspace_write_schemas",
       "protocol_schemas",
     ],
     "Package runtime",
@@ -241,7 +264,15 @@ export function assertFoundryPackageDescriptor(value: unknown): FoundryPackageDe
     !Array.isArray(runtime.supported_platforms) ||
     !sameArray(runtime.supported_platforms as string[], supportedPlatforms) ||
     !Array.isArray(runtime.workspace_read_schemas) ||
-    !sameArray(runtime.workspace_read_schemas as string[], ["tiangong-foundry.workspace.v1"]) ||
+    !sameArray(runtime.workspace_read_schemas as string[], [
+      "tiangong-foundry.workspace.v1",
+      "tiangong-foundry.workspace.v2",
+    ]) ||
+    !Array.isArray(runtime.workspace_write_schemas) ||
+    !sameArray(runtime.workspace_write_schemas as string[], [
+      "tiangong-foundry.workspace.v1",
+      "tiangong-foundry.workspace.v2",
+    ]) ||
     runtime.workspace_write_schema !== "tiangong-foundry.workspace.v1" ||
     !Array.isArray(runtime.protocol_schemas) ||
     !sameArray(runtime.protocol_schemas as string[], protocolSchemas) ||
@@ -280,7 +311,8 @@ export function assertFoundryPackageDescriptor(value: unknown): FoundryPackageDe
     runtime: {
       layout_schema: "tiangong-foundry.runtime-layout.v2",
       supported_platforms: [...supportedPlatforms],
-      workspace_read_schemas: ["tiangong-foundry.workspace.v1"],
+      workspace_read_schemas: ["tiangong-foundry.workspace.v1", "tiangong-foundry.workspace.v2"],
+      workspace_write_schemas: ["tiangong-foundry.workspace.v1", "tiangong-foundry.workspace.v2"],
       workspace_write_schema: "tiangong-foundry.workspace.v1",
       protocol_schemas: [...protocolSchemas],
     },
@@ -424,7 +456,8 @@ export function createFoundryPackageDescriptor(
     runtime: {
       layout_schema: "tiangong-foundry.runtime-layout.v2",
       supported_platforms: [...supportedPlatforms],
-      workspace_read_schemas: ["tiangong-foundry.workspace.v1"],
+      workspace_read_schemas: ["tiangong-foundry.workspace.v1", "tiangong-foundry.workspace.v2"],
+      workspace_write_schemas: ["tiangong-foundry.workspace.v1", "tiangong-foundry.workspace.v2"],
       workspace_write_schema: "tiangong-foundry.workspace.v1",
       protocol_schemas: [...protocolSchemas],
     },

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tiangong-lca.local/foundry/workspace-migration-pending.schema.json",
+  "title": "Inactive migration control marker",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "plan_sha256"],
+  "properties": {
+    "schema": {
+      "const": "tiangong-foundry.workspace-migration-pending.v1"
+    },
+    "plan_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

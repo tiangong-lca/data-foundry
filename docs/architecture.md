@@ -152,11 +152,13 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
-lastReviewedNote: "Reviewed for #106 W06: public bin/API compilation, sanitized staging and descriptor/file qualification are implemented; F1 component trust remains W08."
+lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
+lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
 ---
 
 # Architecture
+
+Migration transfer planning is governed by [the workspace migration contract](workspace-migration-contract.md). W10 provides explicit source/queue/input staging, current-owner task adoption, audited v2 activation and separate runtime read/write selection. Preserved history blocks replay across requests and migrations; none of these records grants business permission. Operational qualification and release integration remain tracked in #108/#980.
 
 The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 compiles that facade into the descriptor-bound `@tiangong-lca/foundry` candidate; W08 still owns F1 publication and platform components. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/package-distribution-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 
@@ -186,7 +188,7 @@ Runtime selection is an injected host capability. Direct/unqualified use can ini
 
 ## Package boundary
 
-The repository and public package have separate composition roots. `scripts/foundry.ts` retains all developer owners. The public bin calls only `runFoundryPublicCommand`, and `scripts/public-api.ts` binds its own module identity before exposing the typed host facade. `tsconfig.package.json` follows those two roots to a 39-module JavaScript closure plus declarations; internal command/case implementations and source maps never enter the package tree.
+The repository and public package have separate composition roots. `scripts/foundry.ts` retains all developer owners. The public bin calls only `runFoundryPublicCommand`, and `scripts/public-api.ts` binds its own module identity before exposing the typed host facade. `tsconfig.package.json` follows those two roots to a 44-module JavaScript closure plus declarations; internal command/case implementations and source maps never enter the package tree.
 
 `build-foundry-package.ts` creates a sanitized publish stage without scripts, dev dependencies or package-manager metadata, copies only the reviewed allowlist and writes a strict file descriptor. Installed v2 package resolution checks that descriptor and the complete semantic manifest before returning a context. Exact file hashes protect code/assets; W08 provenance and component signatures protect distribution origin.
 

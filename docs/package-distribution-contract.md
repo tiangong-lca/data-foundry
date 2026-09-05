@@ -27,8 +27,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
-lastReviewedNote: "Reviewed for #106 W06: the unpublished 0.1.0 candidate has a public-only bin/API, deterministic source-free closure, sanitized staging manifest, strict descriptor and two-consumer qualification."
+lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
+lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -77,3 +77,9 @@ Verification uses regular-file, `O_NOFOLLOW`, fd size/inode/mtime and SHA checks
 The package scenario rebuilds twice, packs twice byte-identically, and installs the same tarball into two clean consumers; the second install is offline from the first consumer's isolated public cache. It verifies the exact import surface and declarations, public CLI 0.1.10 runtime identity, shebang/bin, source/installed operation equivalence, arbitrary Unicode CWD, read-only package bytes, isolated workspace writes and all six facade operations. It also proves that internal commands, modified/extra/linked files, a lifecycle-bearing manifest, a `darwin-x64` descriptor and a package copied without C1 fail closed.
 
 These checks qualify a local candidate tarball. They do not prove registry provenance, public component download, native TIDAS availability on every host or a complete Node+CLI+Foundry+TIDAS component. Those are W08 release gates.
+
+The W10 planning extension adds the shared pure attempt leaf and bounded migration plan/stage readers to the public graph, plus the transfer-plan schema and migration contract. It still excludes the internal capsule command and all developer commands. Future package qualification must use the rebuilt descriptor/tarball; the earlier W06 tarball remains an immutable baseline artifact.
+
+The W10 transfer extension ships bounded transfer I/O and staging/audit owners plus pending-marker and receipt schemas. It still has no install lifecycle effects, no business mutation dispatcher and no automatic activation; source-free consumers can explicitly stage and audit the same v2 plans.
+
+The adoption extension ships migration planning/application/authority/scope guards, explicit read/write access, runtime selection and their strict schemas. The package descriptor lists both supported read and write schemas while retaining v1 as the default initialization schema; v2 writes additionally require the trusted host feature selection. Public CLI apply/runtime-use remain separate explicit actions, never install hooks. Source and installed packages must qualify the same behaviors; managed component publication/bootstrap remains W08.

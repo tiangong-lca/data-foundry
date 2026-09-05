@@ -10,6 +10,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 
 // Explicit TypeScript AnyKeyword closures are enforced by Oxlint; this suite remains the
 // permanent boundary against reintroducing first-party JavaScript compatibility paths.
+// Issue #108's migration adoption, compatibility and replay guards remain native TypeScript.
 // Issue #68's Worldsteel profile-truth contract is native .mts and adds no compatibility path.
 // Issue #69's strict datetime cleanup and fail-closed scenarios remain native TypeScript too.
 // Issue #70's orchestration stages and post-write handoff cases remain native TypeScript.
@@ -26,6 +27,8 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // Issue #97 keeps OAuth session-reference guards and isolated Golden snapshots native TypeScript.
 // Hook fixture isolation also stays native .mts and cannot inherit the push repository.
 // The CLI 0.1.10 support-export adapter and its integrity/intent tests remain native TypeScript.
+// Issue #108's migration planning, shared attempt model and evidence guards remain native
+// TypeScript; transfer staging/audit and receipt tests add no JavaScript source allowance.
 // Issue #98 task authorization and action/QA/row-binding cases remain native TypeScript.
 // Issue #100's import-isolation probe and explicit Node 24 entry remain native TypeScript.
 // Runtime layout/context and off-repository cleanup adapters also stay native TypeScript.

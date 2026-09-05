@@ -1,3 +1,12 @@
+import {
+  parseCapsule,
+  FOUNDRY_EXECUTION_CAPSULE_SCHEMA,
+  type ExecutionCapsule,
+} from "./foundry-execution-context-format.ts";
+export {
+  FOUNDRY_EXECUTION_CAPSULE_SCHEMA,
+  type ExecutionCapsule,
+} from "./foundry-execution-context-format.ts";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -8,6 +17,7 @@ import {
 } from "@tiangong-lca/cli/command-spec";
 import {
   assertFoundryRuntimeContext,
+  assertFoundryWorkspaceActive,
   captureFoundryInput,
   FoundryContextError,
   readFoundryInput,
@@ -31,29 +41,12 @@ import { assertFoundryTaskInputLineage } from "./foundry-task-store.ts";
 import {
   taskAuthorizationAllows,
   taskAuthorizationWaivesQa,
-  taskAuthorizationActions,
   type TaskAuthorizationAction,
   type ValidatedTaskAuthorization,
 } from "./task-authorization.ts";
-import { bytes, digest, exact, object, shaPattern } from "./foundry-task-io.ts";
+import { bytes, digest } from "./foundry-task-io.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "./foundry-runtime-utils.ts";
-
-export const FOUNDRY_EXECUTION_CAPSULE_SCHEMA = "tiangong-foundry.execution-context.v1" as const;
-
-export interface ExecutionCapsule {
-  schema: typeof FOUNDRY_EXECUTION_CAPSULE_SCHEMA;
-  workspace_id: string;
-  task_id: string;
-  actor_id: string;
-  command: string;
-  qualification_sha256: string;
-  authorization_sha256: string;
-  approved_input: FoundryInputFact;
-  final_rows: FoundryInputFact;
-  required_actions: TaskAuthorizationAction[];
-  required_qa_waivers: string[];
-  command_spec_sha256: string;
-}
+import { assertFoundryMigrationNoReplay } from "./foundry-migration-replay.ts";
 
 export interface FoundryExecutionAdmission {
   readonly capsule: Readonly<ExecutionCapsule>;
@@ -77,7 +70,6 @@ export interface RehydrateFoundryExecutionAdmissionOptions {
 }
 
 const admissions = new WeakSet<object>();
-const qaWaiverCode = "process_material_balance_deviation";
 
 function fail(code: string, message: string): never {
   throw new FoundryContextError(code, message);
@@ -95,37 +87,6 @@ function selected(context: FoundryRuntimeContext, file: string): FoundryInputFac
 
 function sameFact(left: FoundryInputFact, right: FoundryInputFact): boolean {
   return left.path === right.path && left.bytes === right.bytes && left.sha256 === right.sha256;
-}
-
-function requiredQa(value: readonly string[]): readonly string[] {
-  if (
-    value.length > 1 ||
-    new Set(value).size !== value.length ||
-    value.some((code) => code !== qaWaiverCode)
-  )
-    fail(
-      "execution_qa_waiver_invalid",
-      "Only the evidence-bound process material-balance waiver can enter execution admission.",
-    );
-  return Object.freeze([...value]);
-}
-
-function requiredActions(value: readonly unknown[]): readonly TaskAuthorizationAction[] {
-  if (
-    value.length > taskAuthorizationActions.length ||
-    new Set(value).size !== value.length ||
-    value.some(
-      (action) =>
-        typeof action !== "string" ||
-        !taskAuthorizationActions.includes(action as TaskAuthorizationAction),
-    ) ||
-    [...value].sort().some((action, index) => action !== value[index])
-  )
-    fail(
-      "execution_action_invalid",
-      "Execution actions must be a unique, sorted subset of the task authorization contract.",
-    );
-  return Object.freeze([...value] as TaskAuthorizationAction[]);
 }
 
 function resolveSpecArtifact(context: FoundryRuntimeContext, value: string): string {
@@ -235,70 +196,6 @@ function commandSpec(
   return spec;
 }
 
-function parseFact(value: unknown, label: string): FoundryInputFact {
-  const fact = object(value);
-  exact(fact, ["path", "bytes", "sha256"]);
-  if (
-    typeof fact.path !== "string" ||
-    !path.isAbsolute(fact.path) ||
-    typeof fact.bytes !== "number" ||
-    !Number.isSafeInteger(fact.bytes) ||
-    fact.bytes < 0 ||
-    typeof fact.sha256 !== "string" ||
-    !shaPattern.test(fact.sha256)
-  )
-    fail("execution_capsule_invalid", `${label} content fact is malformed.`);
-  return Object.freeze({ path: fact.path, bytes: fact.bytes, sha256: fact.sha256 });
-}
-
-function parseCapsule(value: unknown): Readonly<ExecutionCapsule> {
-  const item = object(value);
-  exact(item, [
-    "schema",
-    "workspace_id",
-    "task_id",
-    "actor_id",
-    "command",
-    "qualification_sha256",
-    "authorization_sha256",
-    "approved_input",
-    "final_rows",
-    "required_actions",
-    "required_qa_waivers",
-    "command_spec_sha256",
-  ]);
-  if (
-    item.schema !== FOUNDRY_EXECUTION_CAPSULE_SCHEMA ||
-    typeof item.workspace_id !== "string" ||
-    typeof item.task_id !== "string" ||
-    typeof item.actor_id !== "string" ||
-    typeof item.command !== "string" ||
-    typeof item.qualification_sha256 !== "string" ||
-    !shaPattern.test(item.qualification_sha256) ||
-    typeof item.authorization_sha256 !== "string" ||
-    !shaPattern.test(item.authorization_sha256) ||
-    !Array.isArray(item.required_actions) ||
-    typeof item.command_spec_sha256 !== "string" ||
-    !shaPattern.test(item.command_spec_sha256) ||
-    !Array.isArray(item.required_qa_waivers)
-  )
-    fail("execution_capsule_invalid", "Execution capsule has an unsupported shape.");
-  return Object.freeze({
-    schema: FOUNDRY_EXECUTION_CAPSULE_SCHEMA,
-    workspace_id: item.workspace_id,
-    task_id: item.task_id,
-    actor_id: item.actor_id,
-    command: item.command,
-    qualification_sha256: item.qualification_sha256,
-    authorization_sha256: item.authorization_sha256,
-    approved_input: parseFact(item.approved_input, "Approved input"),
-    final_rows: parseFact(item.final_rows, "Final rows"),
-    required_actions: [...requiredActions(item.required_actions)],
-    required_qa_waivers: [...requiredQa(item.required_qa_waivers)],
-    command_spec_sha256: item.command_spec_sha256,
-  });
-}
-
 async function verifyAdmission(
   context: FoundryRuntimeContext,
   qualification: QualifiedFoundryRuntime,
@@ -327,6 +224,7 @@ async function verifyAdmission(
     fail("execution_command_unadmitted", "Selected command is not a qualified task stage.");
   const approved = selected(context, capsule.approved_input.path);
   const finalRows = selected(context, capsule.final_rows.path);
+  assertFoundryMigrationNoReplay(context, finalRows.path);
   if (!sameFact(approved, capsule.approved_input) || !sameFact(finalRows, capsule.final_rows))
     fail("execution_input_changed", "Capsule input facts differ from current host selection.");
   if (!sameFact(approved, finalRows))
@@ -368,6 +266,7 @@ async function verifyAdmission(
     capsule.required_actions.some((action) => !taskAuthorizationAllows(refreshed, action))
   )
     fail("execution_authorization_changed", "Authorization changed during final admission checks.");
+  assertFoundryMigrationNoReplay(context, finalRows.path);
   return { spec, authorization: refreshed };
 }
 
@@ -377,11 +276,12 @@ export async function createFoundryExecutionCapsule(
   identity: VerifiedFoundryIdentity,
   options: CreateFoundryExecutionCapsuleOptions,
 ) {
-  assertFoundryRuntimeContext(context);
+  assertFoundryWorkspaceActive(context);
   assertQualifiedFoundryRuntime(context, qualification);
   assertVerifiedFoundryIdentity(context, identity, qualification);
   const approved = selected(context, options.approvedInputFile);
   const finalRows = selected(context, options.finalRowsFile);
+  assertFoundryMigrationNoReplay(context, finalRows.path);
   const authorization = await loadFoundryTaskAuthorization(
     context,
     identity,
@@ -420,7 +320,7 @@ export async function rehydrateFoundryExecutionAdmission(
   identity: VerifiedFoundryIdentity,
   options: RehydrateFoundryExecutionAdmissionOptions,
 ): Promise<FoundryExecutionAdmission> {
-  assertFoundryRuntimeContext(context);
+  assertFoundryWorkspaceActive(context);
   assertQualifiedFoundryRuntime(context, qualification);
   assertVerifiedFoundryIdentity(context, identity, qualification);
   const root = context.taskRoot;

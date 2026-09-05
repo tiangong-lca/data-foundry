@@ -434,7 +434,7 @@
       ],
       "sensitivity": "non-sensitive schema; local request instances can contain private path facts",
       "tracked": true,
-      "notes": "Monotonic request revisions, deterministic task ids, predecessor and input/spec content bindings."
+      "notes": "Monotonic request revisions, deterministic task ids, predecessor and input/spec content bindings. Descendants recheck every retained predecessor publication and cannot continue around observed attempt state or missing history."
     },
     {
       "id": "foundry-workspace-migration-plan-schema",
@@ -565,6 +565,70 @@
       "sensitivity": "public synthetic package/install fixtures; live OAuth evidence remains private",
       "tracked": true,
       "notes": "Deterministic double build/pack, online/offline clean consumers, read-only six-operation facade and tamper/leakage negatives."
+    },
+    {
+      "id": "foundry-migration-adoption-plan-schema",
+      "status": "active",
+      "classification": "machine-readable-migration-schema",
+      "current_path": "specs/schemas/foundry-migration-adoption-plan.schema.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/workspace-migration-contract.md",
+        "scripts/lib/foundry-migration-adoption-plan.ts",
+        "test/scenarios/workspace-migration-adoption.test.mts"
+      ],
+      "sensitivity": "non-sensitive schema; runtime records contain identity and content references, never credential contents",
+      "tracked": true,
+      "notes": "Independent task specifications, archived source scope and current-owner adoption mapping."
+    },
+    {
+      "id": "foundry-migration-activation-schema",
+      "status": "active",
+      "classification": "machine-readable-migration-schema",
+      "current_path": "specs/schemas/foundry-migration-activation.schema.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/workspace-migration-contract.md",
+        "scripts/lib/foundry-migration-authority.ts",
+        "test/scenarios/workspace-migration-adoption.test.mts"
+      ],
+      "sensitivity": "non-sensitive schema; runtime records contain identity and content references, never credential contents",
+      "tracked": true,
+      "notes": "Immutable source, task-origin and no-replay evidence anchored by an active workspace marker."
+    },
+    {
+      "id": "foundry-workspace-v2-schema",
+      "status": "active",
+      "classification": "machine-readable-migration-schema",
+      "current_path": "specs/schemas/foundry-workspace-v2.schema.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/workspace-migration-contract.md",
+        "scripts/lib/foundry-runtime-context.ts",
+        "test/scenarios/workspace-migration-adoption.test.mts"
+      ],
+      "sensitivity": "non-sensitive schema; runtime records contain identity and content references, never credential contents",
+      "tracked": true,
+      "notes": "Migrated workspace identity, required features, preserved extension fields and activation binding."
+    },
+    {
+      "id": "foundry-runtime-selection-schema",
+      "status": "active",
+      "classification": "machine-readable-migration-schema",
+      "current_path": "specs/schemas/foundry-runtime-selection.schema.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/workspace-migration-contract.md",
+        "scripts/lib/foundry-runtime-selection.ts",
+        "test/scenarios/workspace-migration-adoption.test.mts"
+      ],
+      "sensitivity": "non-sensitive schema; runtime records contain identity and content references, never credential contents",
+      "tracked": true,
+      "notes": "Explicit qualified runtime selection and persistent current/previous component lease references."
     }
   ]
 }

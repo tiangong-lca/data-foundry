@@ -71,3 +71,5 @@ The seal is local admission evidence only. `production_authority` is always `fal
 Pre-seal constructor, parser, validator, auditor, or composer failures do not consume an attempt because no dispatch occurred. Once dispatch is confirmed or becomes unknown, the modeled attempt is consumed. Exact desired readback makes success terminal; any non-exact or missing readback after a confirmed/unknown dispatch is `UNKNOWN_DO_NOT_REPLAY`.
 
 The admission command only accepts the pre-dispatch `UNATTEMPTED` state. The exported attempt-state model exists for deterministic evidence interpretation and performs no remote action.
+
+The pure attempt model is owned by `scripts/lib/foundry-execution-attempt.ts` and re-exported unchanged by the internal command owner. Migration planning reuses this leaf, adds zero-count/dispatch consistency checks, and binds selected stage bytes; it does not ship the command owner or claim a selected historical stage is a fresh admission.

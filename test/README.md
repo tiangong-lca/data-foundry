@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
-lastReviewedNote: "Reviewed for #106 W06: package metadata/descriptor, deterministic build/pack and two clean installed consumers are covered across the four-platform gate."
+lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
+lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
 ---
 
 # Test Layout
@@ -445,3 +445,7 @@ Toolchain and migration contracts must pass in a clean arbitrary Git worktree af
 `unit/cli-support-export.test.mts` protects the CLI adapter's isolated cwd/environment, exact intent, completion marker, contained regular artifacts and row hashes/public state. `unit/support-cache-command-factory.test.mts` preserves summarization/mappings independently of transport.
 
 `foundry-application-composition.test.mts` intercepts operator-state access before it occurs and verifies two independent command applications, result-returning cleanup, unchanged process environment and unknown-command rejection. The existing entry-closure test retains byte-exact source/emitted help and exit behavior.
+
+W10 planning tests live in `unit/foundry-migration-plan.test.mts` (independent revalidation, recomputed tampering, actor/account/runtime/source drift, path/link/private-file and JSON boundaries, and attempt-model identity) and `scenarios/workspace-migration-planning.test.mts` (no credential reads, unsupported-host-before-read and byte-idempotent no-write CLI proposals). The facade schema suite validates the new transfer schema. These planning tests are complemented by explicit adoption, activation and runtime-selection scenarios.
+
+`unit/foundry-migration-transfer.test.mts` covers checkpoint interruption/resume, source/destination drift, missing/corrupt completed archives, foreign state, cancellation, concurrent staging and private queue files. `scenarios/workspace-migration-transfer.test.mts` drives CLI v2 planning/staging/audit with root queues/external files and verifies the pending target cannot initialize. `scenarios/workspace-migration-adoption.test.mts`, `workspace-read-write-compatibility.test.mts` and `workspace-runtime-selection.test.mts` cover current-owner regeneration, public apply/audit, preserved origin and no-replay scope, escaped/interrupted adoption, future fields and CLI-managed rollback leases. Component fixtures are synthetic; private source/installed frozen-case qualification is separate.

@@ -648,6 +648,8 @@ rules:
         kind: execution-capsule-contract
       - path: specs/schemas/execution-capsule-stage.schema.json
         kind: execution-capsule-schema
+      - path: scripts/lib/foundry-execution-attempt.ts
+        kind: shared-attempt-evidence-model
       - path: scripts/commands/execution-capsule.ts
         kind: execution-capsule-command
       - path: test/commands/execution-capsule.test.mts
@@ -894,3 +896,50 @@ rules:
       - path: docs/runtime-skill-management.md
         mode: must_exist
     reason: Workspace ledger files, runtime skill cache boundaries, and storage registry changes must stay consistent.
+
+  - id: foundry-workspace-migration-contract
+    scope: repo
+    repo: data-foundry
+    triggers:
+      - path: scripts/lib/foundry-migration-*.ts
+        kind: workspace-migration-evidence
+      - path: scripts/lib/foundry-runtime-selection*.ts
+        kind: workspace-runtime-selection
+      - path: scripts/lib/foundry-private-path.ts
+        kind: private-storage-boundary
+      - path: scripts/lib/foundry-runtime-error.ts
+        kind: shared-runtime-error-boundary
+      - path: scripts/lib/foundry-runtime-context-types.ts
+        kind: shared-runtime-context-types
+      - path: scripts/lib/foundry-execution-context-format.ts
+        kind: shared-execution-context-format
+      - path: scripts/lib/foundry-execution-attempt.ts
+        kind: migration-attempt-interpretation
+      - path: specs/schemas/foundry-*migration*.schema.json
+        kind: workspace-migration-transfer-schema
+      - path: specs/schemas/foundry-workspace-v2.schema.json
+        kind: migrated-workspace-schema
+      - path: specs/schemas/foundry-runtime-selection.schema.json
+        kind: runtime-selection-schema
+      - path: test/unit/foundry-migration-*.test.mts
+        kind: migration-revalidation-contract
+      - path: test/scenarios/workspace-migration-*.test.mts
+        kind: migration-planning-scenario
+      - path: test/scenarios/workspace-read-write-compatibility.test.mts
+        kind: workspace-compatibility-scenario
+      - path: test/scenarios/workspace-runtime-selection.test.mts
+        kind: runtime-selection-scenario
+      - path: test/helpers/foundry-runtime-manifest.mts
+        kind: independent-manifest-fixture
+      - path: docs/workspace-migration-contract.md
+        kind: workspace-migration-contract
+    requiredDocs:
+      - path: docs/workspace-migration-contract.md
+        mode: review_or_update
+      - path: docs/public-runtime-contract.md
+        mode: review_or_update
+      - path: docs/env-surface-policy.md
+        mode: review_or_update
+      - path: test/README.md
+        mode: review_or_update
+    reason: Explicit migration must preserve original evidence, independently bind transfer facts and distinguish retained attempt interpretation from write or replay authority.

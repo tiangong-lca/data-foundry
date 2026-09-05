@@ -4,12 +4,16 @@ import path from "node:path";
 import { createFoundryRuntime } from "./foundry-runtime.ts";
 import {
   captureFoundryInput,
+  assertFoundryRuntimeHost,
+  assertFoundryWorkspaceWrite,
   createFoundryRuntimeContext,
   FoundryContextError,
   initializeFoundryWorkspace,
+  pendingFoundryMigration,
   type FoundryInputFact,
   type FoundryAccountIntent,
   type FoundryRuntimeContextOptions,
+  type FoundryWorkspaceAccess,
 } from "./lib/foundry-runtime-context.ts";
 import {
   commandNextActionBindingSha256,
@@ -35,6 +39,22 @@ import {
 } from "./lib/foundry-runtime-qualification.ts";
 import { sha256Json } from "./lib/identity-preflight-proof.ts";
 import { inventoryFoundryWorkspace } from "./lib/foundry-migration-inventory.ts";
+import {
+  planFoundryWorkspaceMigration,
+  revalidateFoundryMigrationPlan,
+} from "./lib/foundry-migration-plan.ts";
+import { stageFoundryMigration, auditFoundryMigration } from "./lib/foundry-migration-transfer.ts";
+import {
+  planFoundryMigrationAdoption,
+  type MigrationAdoptionSelection,
+} from "./lib/foundry-migration-adoption-plan.ts";
+import { applyFoundryMigrationAdoption } from "./lib/foundry-migration-adoption.ts";
+import { readFoundryMigrationAuthority } from "./lib/foundry-migration-authority.ts";
+import {
+  selectFoundryWorkspaceRuntime,
+  type FoundryRuntimeManagerOptions,
+} from "./lib/foundry-runtime-selection.ts";
+import type { TrustedRuntimeManifest } from "@tiangong-lca/cli/runtime";
 
 export interface FoundryFacadeRuntimeSelection {
   readonly cliExpectation: unknown;
@@ -51,6 +71,8 @@ export interface FoundryFacadeOptions {
   readonly runtimeSelection?: FoundryFacadeRuntimeSelection;
   readonly accountIntent?: FoundryAccountIntent;
   readonly signal?: AbortSignal;
+  readonly workspaceAccess?: FoundryWorkspaceAccess;
+  readonly runtimeManager?: FoundryRuntimeManagerOptions;
 }
 
 const maxSpecBytes = 1024 * 1024;
@@ -150,6 +172,7 @@ function contextOptions(options: FoundryFacadeOptions): FoundryRuntimeContextOpt
     cwd: options.cwd,
     environment: options.environment,
     accountIntent: options.accountIntent,
+    workspaceAccess: options.workspaceAccess,
   };
 }
 
@@ -234,6 +257,10 @@ function failure(
     "task_authorization_state_invalid",
     "migration_inventory_limit",
     "migration_depth_limit",
+    "workspace_migration_pending",
+    "workspace_read_only",
+    "workspace_runtime_incompatible",
+    "migration_replay_forbidden",
   ]);
   const needsInput =
     needsInputCodes.has(code) ||
@@ -285,13 +312,19 @@ function selectedInputs(
   );
 }
 
-function accountIntent(spec: FoundryTaskStartSpec) {
+function accountIntent(spec: FoundryTaskStartSpec, host?: FoundryAccountIntent) {
+  const inheritedReference =
+    host &&
+    host.projectRef === spec.account_intent?.project_ref &&
+    host.userId === spec.account_intent?.user_id
+      ? host.sessionReference
+      : undefined;
   return spec.account_intent
     ? {
         projectRef: spec.account_intent.project_ref,
         userId: spec.account_intent.user_id,
-        ...(spec.account_intent.session_reference
-          ? { sessionReference: spec.account_intent.session_reference }
+        ...((spec.account_intent.session_reference ?? inheritedReference)
+          ? { sessionReference: spec.account_intent.session_reference ?? inheritedReference }
           : {}),
       }
     : undefined;
@@ -325,7 +358,7 @@ function taskContext(
     workspace: base.workspaceRoot,
     taskId: record.task_id,
     actorId: record.spec.actor_id,
-    accountIntent: accountIntent(record.spec),
+    accountIntent: accountIntent(record.spec, options.accountIntent),
     inputs: record.inputs,
   });
 }
@@ -464,6 +497,50 @@ function taskProjection(
 export function createFoundryFacade(options: FoundryFacadeOptions) {
   const base = () => createFoundryRuntimeContext(contextOptions(options));
   return Object.freeze({
+    async runtimeUse(input: {
+      manifest: TrustedRuntimeManifest;
+      requestId: string;
+      actorId: string;
+      access: "read" | "write";
+    }): Promise<FoundryOperationResult> {
+      try {
+        assertNotInterrupted(options.signal);
+        if (!options.workspaceAccess)
+          throw new FoundryContextError(
+            "workspace_runtime_selection_required",
+            "Explicit runtime selection requires an independently qualified current host.",
+          );
+        const current = base();
+        const selected = await selectFoundryWorkspaceRuntime(
+          current,
+          options.workspaceAccess.manifest,
+          input.manifest,
+          {
+            requestId: input.requestId,
+            actorId: input.actorId,
+            access: input.access,
+            manager: { ...options.runtimeManager, signal: options.signal },
+          },
+        );
+        return createFoundryOperationResult({
+          operation: "workspace.migrate",
+          status: "ready",
+          taskId: null,
+          artifacts: [fileArtifact("workspace_runtime_selection", selected.path)],
+          blockers: [],
+          nextActions: [
+            human(
+              "launch_selected_runtime",
+              "Launch through the independently trusted selected manifest. Previous and selected components remain leased; read-only selection does not permit task writes.",
+            ),
+          ],
+          runtimeIdentity: runtimeIdentity(current),
+          permissions: noPermission(),
+        });
+      } catch (error) {
+        return failure("workspace.migrate", null, error);
+      }
+    },
     initialize(): FoundryOperationResult {
       try {
         assertNotInterrupted(options.signal);
@@ -491,6 +568,11 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
       try {
         assertNotInterrupted(options.signal);
         const current = base();
+        if (pendingFoundryMigration(current))
+          throw new FoundryContextError(
+            "workspace_migration_pending",
+            "Migration is staged and requires task adoption and activation audit.",
+          );
         const qualified = qualification(current, options.runtimeSelection);
         assertNotInterrupted(options.signal);
         const readiness = accountReadiness(current);
@@ -539,27 +621,235 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
         return failure("doctor", null, error);
       }
     },
-    migrationDryRun(): FoundryOperationResult {
+    migrationDryRun(input?: {
+      destination: string;
+      actorId: string;
+      requestId: string;
+      stageManifests?: readonly string[];
+      externalInputs?: readonly string[];
+    }): FoundryOperationResult {
       try {
         assertNotInterrupted(options.signal);
-        const plan = inventoryFoundryWorkspace(options.workspace);
+        assertFoundryRuntimeHost();
+        const plan = input
+          ? planFoundryWorkspaceMigration(
+              createFoundryRuntimeContext({
+                ...contextOptions(options),
+                workspace: input.destination,
+              }),
+              {
+                sourceWorkspace: path.resolve(options.cwd ?? process.cwd(), options.workspace),
+                actorId: input.actorId,
+                requestId: input.requestId,
+                stageManifests: input.stageManifests,
+                externalInputs: input.externalInputs,
+              },
+            )
+          : inventoryFoundryWorkspace(options.workspace, {
+              sessionReference: options.accountIntent?.sessionReference,
+            });
         assertNotInterrupted(options.signal);
         return createFoundryOperationResult({
           operation: "workspace.migrate",
           status: "ready",
           taskId: null,
-          artifacts: [inlineArtifact("workspace_migration_plan", plan)],
+          artifacts: [
+            inlineArtifact(
+              input ? "workspace_migration_transfer_plan" : "workspace_migration_plan",
+              plan,
+            ),
+          ],
           blockers: [],
           nextActions:
-            plan.disposition === "explicit_migration_required"
+            input || ("disposition" in plan && plan.disposition === "explicit_migration_required")
               ? [
                   human(
                     "review_workspace_migration",
-                    "Review this content-bound inventory before a separately authorized W10 apply.",
+                    "Review this content-bound plan before an explicit migration apply; retained stage labels grant no write or replay permission.",
                   ),
                 ]
               : [],
           runtimeIdentity: null,
+          permissions: noPermission(),
+        });
+      } catch (error) {
+        return failure("workspace.migrate", null, error);
+      }
+    },
+    async migrationTransfer(input: {
+      destination: string;
+      actorId: string;
+      requestId: string;
+      stageManifests?: readonly string[];
+      externalInputs?: readonly string[];
+      plan: unknown;
+      audit?: boolean;
+    }): Promise<FoundryOperationResult> {
+      try {
+        assertNotInterrupted(options.signal);
+        assertFoundryRuntimeHost();
+        const destination = createFoundryRuntimeContext({
+          ...contextOptions(options),
+          workspace: input.destination,
+        });
+        const planning = {
+          sourceWorkspace: path.resolve(options.cwd ?? process.cwd(), options.workspace),
+          actorId: input.actorId,
+          requestId: input.requestId,
+          stageManifests: input.stageManifests,
+          externalInputs: input.externalInputs,
+        };
+        if (input.audit && destination.migration) {
+          revalidateFoundryMigrationPlan(
+            destination,
+            planning,
+            input.plan,
+            destination.migration.plan_sha256,
+          );
+          const activation = readFoundryMigrationAuthority(
+            destination.controlRoot,
+            destination.workspaceId!,
+            destination.migration,
+          );
+          return createFoundryOperationResult({
+            operation: "workspace.migrate",
+            status: "ready",
+            taskId: null,
+            artifacts: [
+              fileArtifact(
+                "migration_activation_receipt",
+                path.join(
+                  destination.controlRoot,
+                  "migrations",
+                  activation.plan_sha256,
+                  "activation.json",
+                ),
+              ),
+            ],
+            blockers: [],
+            nextActions: [],
+            runtimeIdentity: runtimeIdentity(destination),
+            permissions: noPermission(),
+          });
+        }
+        const transfer = input.audit
+          ? auditFoundryMigration(destination, planning, input.plan)
+          : await stageFoundryMigration(destination, planning, input.plan, {
+              signal: options.signal,
+            });
+        return createFoundryOperationResult({
+          operation: "workspace.migrate",
+          status: "ready",
+          taskId: null,
+          artifacts: [fileArtifact("migration_transfer_receipt", transfer.path)],
+          blockers: [],
+          nextActions: [
+            human(
+              "complete_migration_adoption",
+              "The source snapshot is staged and verified. Complete task adoption and activation audit before running this workspace.",
+            ),
+          ],
+          runtimeIdentity: null,
+          permissions: noPermission(),
+        });
+      } catch (error) {
+        return failure("workspace.migrate", null, error);
+      }
+    },
+    async migrationAdoption(input: {
+      destination: string;
+      actorId: string;
+      requestId: string;
+      stageManifests?: readonly string[];
+      externalInputs?: readonly string[];
+      plan: unknown;
+      tasks: readonly MigrationAdoptionSelection[];
+      adoptionPlan?: unknown;
+      apply?: boolean;
+    }): Promise<FoundryOperationResult> {
+      try {
+        assertNotInterrupted(options.signal);
+        if (!options.workspaceAccess)
+          throw new FoundryContextError(
+            "workspace_runtime_selection_required",
+            "Select an independently trusted Foundry runtime before task adoption.",
+          );
+        const destination = createFoundryRuntimeContext({
+          ...contextOptions(options),
+          workspace: input.destination,
+        });
+        const planning = {
+          sourceWorkspace: path.resolve(options.cwd ?? process.cwd(), options.workspace),
+          actorId: input.actorId,
+          requestId: input.requestId,
+          stageManifests: input.stageManifests,
+          externalInputs: input.externalInputs,
+        };
+        if (input.apply) {
+          if (input.adoptionPlan === undefined)
+            throw new FoundryContextError(
+              "migration_adoption_required",
+              "Explicit application requires the reviewed adoption plan.",
+            );
+          const applied = await applyFoundryMigrationAdoption(
+            destination,
+            planning,
+            input.plan,
+            input.tasks,
+            input.adoptionPlan,
+            options.workspaceAccess.manifest,
+            {
+              runtimeManager: options.runtimeManager,
+              createTaskFacade: () =>
+                createFoundryFacade({ ...options, workspace: destination.workspaceRoot }),
+            },
+            { signal: options.signal },
+          );
+          return createFoundryOperationResult({
+            operation: "workspace.migrate",
+            status: "ready",
+            taskId: null,
+            artifacts: [fileArtifact("migration_activation_receipt", applied.path)],
+            blockers: [],
+            nextActions: applied.activation.tasks.some(
+              (task) => task.disposition !== "local-unattempted",
+            )
+              ? [
+                  human(
+                    "retained_owner_recovery",
+                    "Retained terminal or unresolved legacy work stays under its original owner. Inspect the activation receipt before choosing status/readback recovery.",
+                  ),
+                ]
+              : [],
+            runtimeIdentity: runtimeIdentity(destination),
+            permissions: noPermission(),
+          });
+        }
+        if (input.adoptionPlan !== undefined)
+          throw new FoundryContextError(
+            "argument_migration_plan_invalid",
+            "Adoption preview reconstructs its plan from independent selections.",
+          );
+        const planned = await planFoundryMigrationAdoption(
+          destination,
+          planning,
+          input.plan,
+          input.tasks,
+          options.workspaceAccess.manifest,
+        );
+        return createFoundryOperationResult({
+          operation: "workspace.migrate",
+          status: "ready",
+          taskId: null,
+          artifacts: [inlineArtifact("migration_adoption_plan", planned)],
+          blockers: [],
+          nextActions: [
+            human(
+              "review_task_adoption",
+              "Review the retained history classes, exact source mapping and current preparation before explicit application.",
+            ),
+          ],
+          runtimeIdentity: runtimeIdentity(destination),
           permissions: noPermission(),
         });
       } catch (error) {
@@ -572,6 +862,7 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
       try {
         assertNotInterrupted(options.signal);
         current = base();
+        assertFoundryWorkspaceWrite(current);
         if (!current.workspaceId)
           throw new FoundryContextError(
             "workspace_not_initialized",
@@ -591,7 +882,7 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
               workspace: current!.workspaceRoot,
               taskId,
               actorId: selectedSpec.spec.actor_id,
-              accountIntent: accountIntent(selectedSpec.spec),
+              accountIntent: accountIntent(selectedSpec.spec, options.accountIntent),
               inputs,
             });
             const task = createFoundryRuntime(context).startTask({
@@ -612,6 +903,7 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
         const context = taskContext(options, current, record);
         const inspected = await createFoundryRuntime(context).inspectTask();
         assertNotInterrupted(options.signal);
+        loadFoundryFacadeTaskRecord(current, record.task_id, record.spec.actor_id);
         const result = taskProjection(
           "task.start",
           context,
@@ -650,13 +942,28 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
         const qualified = qualification(context, options.runtimeSelection);
         const inspected = await createFoundryRuntime(context, qualified).inspectTask();
         assertNotInterrupted(options.signal);
-        return taskProjection(
+        const projection = taskProjection(
           "task.status",
           context,
           record,
           inspected,
           runtimeIdentity(context, qualified),
         );
+        if (context.workspaceAccess === "read")
+          return createFoundryOperationResult({
+            ...projection,
+            operation: "task.status",
+            taskId: projection.task_id,
+            nextActions: [
+              human(
+                "workspace_read_only",
+                "This runtime can inspect retained task evidence. Select a write-qualified runtime before preparation or mutation.",
+              ),
+            ],
+            runtimeIdentity: projection.runtime_identity,
+            permissions: projection.permissions,
+          });
+        return projection;
       } catch (error) {
         return failure(
           "task.status",
@@ -671,12 +978,14 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
       try {
         assertNotInterrupted(options.signal);
         current = base();
+        assertFoundryWorkspaceWrite(current);
         const record = loadFoundryFacadeTaskRecord(current, input.taskId, input.actorId);
         const context = taskContext(options, current, record);
         const qualified = qualification(context, options.runtimeSelection);
         const runtime = createFoundryRuntime(context, qualified);
         const before = await runtime.inspectTask();
         assertNotInterrupted(options.signal);
+        loadFoundryFacadeTaskRecord(current, record.task_id, record.spec.actor_id);
         if (before.attempts_present)
           return taskProjection(
             "task.resume",

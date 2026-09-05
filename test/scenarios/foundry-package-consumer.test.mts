@@ -307,8 +307,14 @@ test("packed Foundry installs twice and runs only the public facade from a read-
   };
   assert.deepEqual(importedResult.exports, [
     "FOUNDRY_COMMAND_NEXT_ACTION_BINDING_SCHEMA",
+    "FOUNDRY_MIGRATED_WORKSPACE_SCHEMA",
+    "FOUNDRY_MIGRATION_ACTIVATION_SCHEMA",
+    "FOUNDRY_MIGRATION_ADOPTION_PLAN_SCHEMA",
+    "FOUNDRY_MIGRATION_TRANSFER_PLAN_SCHEMA",
+    "FOUNDRY_MIGRATION_TRANSFER_RECEIPT_SCHEMA",
     "FOUNDRY_OPERATION_RESULT_SCHEMA",
     "FOUNDRY_PACKAGE_DESCRIPTOR_SCHEMA",
+    "FOUNDRY_RUNTIME_SELECTION_SCHEMA",
     "FOUNDRY_TASK_START_SPEC_SCHEMA",
     "FOUNDRY_WORKSPACE_MIGRATION_PLAN_SCHEMA",
     "FoundryPackageError",
@@ -317,6 +323,7 @@ test("packed Foundry installs twice and runs only the public facade from a read-
     "assertFoundryPackageDescriptor",
     "commandNextActionBindingSha256",
     "createFoundryFacade",
+    "createFoundryWorkspaceAccess",
     "exitCodeForFoundryOperationResult",
     "foundryOperationPermissionStates",
     "foundryOperationStatuses",

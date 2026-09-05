@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   assertFoundryRuntimeContext,
+  assertFoundryWorkspaceWrite,
   FoundryContextError,
   initializeFoundryWorkspace,
   readFoundryInput,
@@ -74,6 +75,7 @@ export function createFoundryRuntime(
     qualification: qualification ?? null,
     initializeWorkspace: () => initializeFoundryWorkspace(context),
     startTask: (options: FoundryTaskOptions = {}) => {
+      assertFoundryWorkspaceWrite(context);
       const task =
         context.taskRoot && fs.existsSync(context.taskRoot)
           ? loadTask(context, options)

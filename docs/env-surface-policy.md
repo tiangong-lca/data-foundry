@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
-lastReviewedNote: "Reviewed for #106 W06: package build/pack has no credential input or lifecycle hook; consumer installs use a projected allowlisted environment."
+lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
+lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
 ---
 
 # Environment Surface Policy
@@ -112,3 +112,9 @@ Canonical-support refresh passes only public OAuth configuration, the CLI sessio
 The consumer identity runner uses a fresh private cwd and an explicit environment allowlist. OAuth uses CLI-owned defaults or complete public configuration and an optional private session reference. Headless mode forwards the caller-supplied actor token only in the one CLI process environment, disables the session cache, removes its temporary environment binding after verification, and never stores or serializes the token. Current CLI headless receipts have no token-expiry timestamp; Foundry enforces fresh server identity and does not invent token lifetime evidence.
 
 Constructing an internal `createFoundryApplication` does not call `loadRuntimeEnv`, discover a workspace or mutate process environment. The developer `main(argv)` explicitly performs its existing env loading before creating that application. This constructor guarantee does not qualify every legacy leaf command for consumer use; each leaf must receive the admitted runtime I/O and child-process environment before the facade exposes it.
+
+Migration inventory never opens recognized `.env`, OAuth/session, token/cookie or private-account storage, or the independently selected session reference under any filename; it records only path/size/classification and omits content hashes. Transfer plans project explicit account intent as project/user only and never carry a session reference, environment map or grant. No migration environment variable or alternate trust-anchor source is introduced.
+
+Transfer staging uses the public CLI batch lock in a destination-keyed cache domain outside the source. It creates no auth session or business process. Root task queues receive the same private-file projection as `.foundry`, and explicit external inputs cannot be the selected session reference or recognized private storage.
+
+The host can select an independently trusted workspace read/write manifest and explicit runtime-manager options. These never come from `.env`, task specifications or ordinary argv. Registered `state/task-accounts/<id>.json` is identity intent, not OAuth storage. The explicitly selected session path is checked before marker and protected migration reads, including aliases. Source specifications and raw migration evidence do not carry session contents into current task state.

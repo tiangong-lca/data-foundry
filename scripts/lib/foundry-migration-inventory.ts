@@ -6,7 +6,7 @@ import { sha256Json } from "./identity-preflight-proof.ts";
 export const FOUNDRY_WORKSPACE_MIGRATION_PLAN_SCHEMA =
   "tiangong-foundry.workspace-migration-plan.v1" as const;
 
-interface MigrationEntry {
+export interface MigrationEntry {
   readonly path: string;
   readonly kind: "directory" | "file";
   readonly bytes: number | null;
@@ -34,10 +34,10 @@ export interface FoundryWorkspaceMigrationPlan {
 const maxEntries = 10_000;
 const maxDepth = 64;
 const maxHashedFileBytes = 64 * 1024 * 1024;
+const maxHashedTreeBytes = 256 * 1024 * 1024;
 
-function credentialNamed(relative: string): boolean {
-  return relative.split("/").some((part) => /^\.env(?:\.|$)/iu.test(part));
-}
+export { migrationCredentialPath } from "./foundry-private-path.ts";
+import { migrationCredentialPath } from "./foundry-private-path.ts";
 
 function classify(relative: string): MigrationEntry["state_class"] {
   if (relative === "workspace.json" || relative.startsWith("state/")) return "workspace-control";
@@ -74,35 +74,34 @@ function markerSchema(root: string): string | null {
   }
 }
 
-/** Deterministic read-only inventory. W10 owns any application or rollback. */
-export function inventoryFoundryWorkspace(workspace: string): FoundryWorkspaceMigrationPlan {
-  const workspaceRoot = fs.existsSync(workspace)
-    ? fs.realpathSync(workspace)
-    : path.resolve(workspace);
-  if (fs.existsSync(workspaceRoot) && !fs.statSync(workspaceRoot).isDirectory())
-    throw new FoundryContextError(
-      "migration_workspace_invalid",
-      "Migration workspace must be a directory.",
-    );
-  const root = path.join(workspaceRoot, ".foundry");
+export interface FoundryMigrationTree {
+  readonly exists: boolean;
+  readonly entries: readonly Readonly<MigrationEntry>[];
+  readonly tree_sha256: string;
+}
+
+export function inventoryFoundryMigrationTree(
+  root: string,
+  options: { sessionReference?: string } = {},
+): FoundryMigrationTree {
+  const selectedSession =
+    options.sessionReference && fs.existsSync(options.sessionReference)
+      ? fs.realpathSync(options.sessionReference)
+      : options.sessionReference;
   if (!fs.existsSync(root))
     return Object.freeze({
-      schema: FOUNDRY_WORKSPACE_MIGRATION_PLAN_SCHEMA,
-      workspace_root: workspaceRoot,
-      foundry_root_exists: false,
-      marker_schema: null,
-      disposition: "no_state",
-      write_allowed: false,
+      exists: false,
       entries: Object.freeze([]),
       tree_sha256: sha256Json([]),
     });
-  const rootStat = fs.lstatSync(root);
-  if (!rootStat.isDirectory() || rootStat.isSymbolicLink())
+  const stat = fs.lstatSync(root);
+  if (!stat.isDirectory() || stat.isSymbolicLink())
     throw new FoundryContextError(
       "migration_root_invalid",
-      "Foundry state root must be a real directory.",
+      "Migration state must be a real directory.",
     );
   const entries: MigrationEntry[] = [];
+  let hashedBytes = 0;
   const walk = (directory: string, depth: number) => {
     if (depth > maxDepth)
       throw new FoundryContextError(
@@ -139,14 +138,23 @@ export function inventoryFoundryWorkspace(workspace: string): FoundryWorkspaceMi
           "migration_entry_unsupported",
           "Migration inventory supports only regular files and directories.",
         );
-      const omitHash = credentialNamed(relative) || stat.size > maxHashedFileBytes;
+      const privateFile = migrationCredentialPath(relative) || file === selectedSession;
+      const omitHash = privateFile || stat.size > maxHashedFileBytes;
+      if (!omitHash) {
+        hashedBytes += stat.size;
+        if (hashedBytes > maxHashedTreeBytes)
+          throw new FoundryContextError(
+            "migration_byte_limit",
+            "Migration inventory exceeds its total hashing byte limit.",
+          );
+      }
       const fact = omitHash ? null : captureFoundryInput(file);
       entries.push({
         path: relative,
         kind: "file",
         bytes: stat.size,
         sha256: fact?.sha256 ?? null,
-        state_class: credentialNamed(relative) ? "authorization-or-account" : classify(relative),
+        state_class: privateFile ? "authorization-or-account" : classify(relative),
       });
       if (entries.length > maxEntries)
         throw new FoundryContextError(
@@ -156,8 +164,56 @@ export function inventoryFoundryWorkspace(workspace: string): FoundryWorkspaceMi
     }
   };
   walk(root, 0);
-  const schema = markerSchema(root);
-  const immutableEntries = Object.freeze(entries.map((entry) => Object.freeze(entry)));
+  const immutable = Object.freeze(entries.map((entry) => Object.freeze(entry)));
+  return Object.freeze({ exists: true, entries: immutable, tree_sha256: sha256Json(immutable) });
+}
+
+/** Deterministic read-only inventory. W10 owns any application or rollback. */
+export function inventoryFoundryWorkspace(
+  workspace: string,
+  options: { sessionReference?: string } = {},
+): FoundryWorkspaceMigrationPlan {
+  if (
+    options.sessionReference !== undefined &&
+    (typeof options.sessionReference !== "string" || !path.isAbsolute(options.sessionReference))
+  )
+    throw new FoundryContextError(
+      "migration_session_reference_invalid",
+      "A selected private session reference must be absolute.",
+    );
+  const selectedSession =
+    options.sessionReference && fs.existsSync(options.sessionReference)
+      ? fs.realpathSync(options.sessionReference)
+      : options.sessionReference;
+  const workspaceRoot = fs.existsSync(workspace)
+    ? fs.realpathSync(workspace)
+    : path.resolve(workspace);
+  if (fs.existsSync(workspaceRoot) && !fs.statSync(workspaceRoot).isDirectory())
+    throw new FoundryContextError(
+      "migration_workspace_invalid",
+      "Migration workspace must be a directory.",
+    );
+  const root = path.join(workspaceRoot, ".foundry");
+  if (!fs.existsSync(root))
+    return Object.freeze({
+      schema: FOUNDRY_WORKSPACE_MIGRATION_PLAN_SCHEMA,
+      workspace_root: workspaceRoot,
+      foundry_root_exists: false,
+      marker_schema: null,
+      disposition: "no_state",
+      write_allowed: false,
+      entries: Object.freeze([]),
+      tree_sha256: sha256Json([]),
+    });
+  const rootStat = fs.lstatSync(root);
+  if (!rootStat.isDirectory() || rootStat.isSymbolicLink())
+    throw new FoundryContextError(
+      "migration_root_invalid",
+      "Foundry state root must be a real directory.",
+    );
+  const tree = inventoryFoundryMigrationTree(root, options);
+  const schema = path.join(root, "workspace.json") === selectedSession ? null : markerSchema(root);
+  const immutableEntries = tree.entries;
   return Object.freeze({
     schema: FOUNDRY_WORKSPACE_MIGRATION_PLAN_SCHEMA,
     workspace_root: workspaceRoot,

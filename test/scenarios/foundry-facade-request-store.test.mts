@@ -33,7 +33,7 @@ function writeSpec(file: string, input: string) {
   );
 }
 
-test("facade request revisions are deterministic, idempotent and preserve predecessor tasks", async (t) => {
+test("facade request revisions are deterministic, idempotent and preserve unattempted predecessor tasks", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-facade-request-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const workspace = path.join(root, "用户 project");
@@ -98,23 +98,6 @@ test("facade request revisions are deterministic, idempotent and preserve predec
   );
   assert.deepEqual(fs.readFileSync(artifactIndex), artifactsBefore);
 
-  const attempt = path.join(
-    workspace,
-    ".foundry/workspaces",
-    firstTaskId,
-    "attempts",
-    "unknown.json",
-  );
-  fs.mkdirSync(path.dirname(attempt), { recursive: true });
-  fs.writeFileSync(attempt, '{"status":"UNKNOWN_DO_NOT_REPLAY"}\n');
-  const readbackOnly = await facade.resume({
-    taskId: firstTaskId,
-    actorId: "agent/session-001",
-  });
-  assert.equal(readbackOnly.status, "blocked");
-  assert.equal(readbackOnly.blockers[0]?.code, "mutation_readback_required");
-  assert.deepEqual(fs.readFileSync(artifactIndex), artifactsBefore);
-
   fs.appendFileSync(input, '{"flowDataSet":{}}\n');
   const second = await facade.start({ specFile: spec });
   assert.equal(second.status, "ready");
@@ -176,6 +159,124 @@ test("facade request revisions are deterministic, idempotent and preserve predec
   assert.equal(linkedAuthorization.status, "blocked");
   assert.equal(linkedAuthorization.blockers[0]?.code, "task_authorization_state_invalid");
   assert.deepEqual(linkedAuthorization.artifacts, []);
+});
+
+test("changed input or paths cannot create a fresh revision over any predecessor attempt", async (t) => {
+  for (const state of ["UNKNOWN_DO_NOT_REPLAY", "VERIFIED_SUCCESS"]) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-predecessor-attempt-"));
+    t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+    const workspace = path.join(root, "project"),
+      input = path.join(root, "flow.jsonl"),
+      spec = path.join(root, "task.json");
+    fs.writeFileSync(input, '{"flowDataSet":{}}\n');
+    writeSpec(spec, input);
+    const facade = createFoundryFacade({
+      moduleUrl,
+      workspace,
+      cacheBase: path.join(root, "cache"),
+    });
+    facade.initialize();
+    const first = await facade.start({ specFile: spec }),
+      taskId = String(first.task_id),
+      taskRoot = path.join(workspace, ".foundry/workspaces", taskId);
+    const attempt = path.join(taskRoot, "attempts", "attempt.json");
+    fs.mkdirSync(path.dirname(attempt), { recursive: true });
+    fs.writeFileSync(attempt, JSON.stringify({ state }));
+    const original = fs.readFileSync(attempt);
+    const originalResume = await facade.resume({ taskId, actorId: "agent/session-001" });
+    assert.equal(originalResume.blockers[0]?.code, "mutation_readback_required");
+    const moved = path.join(root, "moved.jsonl");
+    fs.copyFileSync(input, moved);
+    for (const changedPath of [false, true]) {
+      if (changedPath) writeSpec(spec, moved);
+      else fs.appendFileSync(input, '{"flowDataSet":{}}\n');
+      const rejected = await facade.start({ specFile: spec });
+      assert.equal(rejected.status, "blocked");
+      assert.equal(rejected.blockers[0]?.code, "facade_predecessor_readback_required");
+      assert.deepEqual(fs.readdirSync(path.dirname(taskRoot)), [taskId]);
+      assert.deepEqual(fs.readFileSync(attempt), original);
+    }
+  }
+});
+
+test("a later predecessor attempt blocks already registered descendant revisions", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-late-predecessor-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const workspace = path.join(root, "project"),
+    input = path.join(root, "flow.jsonl"),
+    spec = path.join(root, "task.json");
+  fs.writeFileSync(input, '{"flowDataSet":{}}\n');
+  writeSpec(spec, input);
+  const facade = createFoundryFacade({ moduleUrl, workspace, cacheBase: path.join(root, "cache") });
+  facade.initialize();
+  const first = await facade.start({ specFile: spec });
+  fs.appendFileSync(input, '{"flowDataSet":{}}\n');
+  assert.equal((await facade.start({ specFile: spec })).status, "ready");
+  fs.appendFileSync(input, '{"flowDataSet":{}}\n');
+  const second = await facade.start({ specFile: spec });
+  assert.equal(second.status, "ready");
+  assert.match(String(second.task_id), /-r0003$/u);
+  const attempt = path.join(
+    workspace,
+    ".foundry/workspaces",
+    String(first.task_id),
+    "attempts",
+    "late.json",
+  );
+  fs.mkdirSync(path.dirname(attempt), { recursive: true });
+  fs.writeFileSync(attempt, '{"state":"UNKNOWN_DO_NOT_REPLAY"}\n');
+  const next = { taskId: String(second.task_id), actorId: "agent/session-001" };
+  for (const result of [
+    await facade.status(next),
+    await facade.resume(next),
+    await facade.start({ specFile: spec }),
+  ]) {
+    assert.equal(result.status, "blocked");
+    assert.equal(result.blockers[0]?.code, "facade_predecessor_readback_required");
+  }
+  assert.equal(
+    fs.existsSync(path.join(workspace, ".foundry/workspaces", next.taskId, "outputs")),
+    false,
+  );
+});
+
+test("missing or changed predecessor publication cannot reset a descendant's history", async (t) => {
+  for (const damage of ["missing-task", "changed-job", "missing-publication"]) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-predecessor-history-"));
+    t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+    const workspace = path.join(root, "project"),
+      input = path.join(root, "flow.jsonl"),
+      spec = path.join(root, "task.json");
+    fs.writeFileSync(input, '{"flowDataSet":{}}\n');
+    writeSpec(spec, input);
+    const facade = createFoundryFacade({
+      moduleUrl,
+      workspace,
+      cacheBase: path.join(root, "cache"),
+    });
+    facade.initialize();
+    const first = await facade.start({ specFile: spec });
+    fs.appendFileSync(input, '{"flowDataSet":{}}\n');
+    const second = await facade.start({ specFile: spec });
+    const previousRoot = path.join(workspace, ".foundry/workspaces", String(first.task_id));
+    if (damage === "missing-task") fs.rmSync(previousRoot, { recursive: true });
+    else if (damage === "changed-job")
+      fs.appendFileSync(path.join(previousRoot, "foundry-job.json"), "\n");
+    else
+      fs.unlinkSync(
+        path.join(workspace, ".foundry/state/task-publications", `${first.task_id}.json`),
+      );
+    const result = await facade.resume({
+      taskId: String(second.task_id),
+      actorId: "agent/session-001",
+    });
+    assert.equal(result.status, "blocked");
+    assert.equal(
+      fs.existsSync(path.join(workspace, ".foundry/workspaces", String(second.task_id), "outputs")),
+      false,
+    );
+    assert.equal(fs.existsSync(previousRoot), damage !== "missing-task");
+  }
 });
 
 test("resume preserves an indexed completed projection", async (t) => {

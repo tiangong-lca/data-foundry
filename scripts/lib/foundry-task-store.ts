@@ -7,6 +7,7 @@ import {
   resolveFoundryInputPath,
   resolveFoundryOutput,
   writeFoundryArtifact,
+  assertFoundryWorkspaceWrite,
   type FoundryRuntimeContext,
   type FoundryInputFact,
 } from "./foundry-runtime-context.ts";
@@ -56,6 +57,14 @@ export async function withFoundryTaskMetadata<T>(
   inspect: (task: LoadedTask, index: readonly ArtifactEntry[]) => T,
 ): Promise<T> {
   requiredTask(context);
+  const inspectCurrent = () => {
+    const task = loadTask(context, {});
+    bindAccountIntent(context);
+    const index = readIndex(context);
+    verifyInputs(context, task, index);
+    return inspect(task, index);
+  };
+  if (context.workspaceAccess === "read") return inspectCurrent();
   const runPath = resolveFoundryOutput(context, `task-locks/${context.taskId}.json`, "state");
   return withBatchRunLock(
     {
@@ -67,13 +76,7 @@ export async function withFoundryTaskMetadata<T>(
       },
       reason: "Foundry task metadata verification",
     },
-    () => {
-      const task = loadTask(context, {});
-      bindAccountIntent(context);
-      const index = readIndex(context);
-      verifyInputs(context, task, index);
-      return inspect(task, index);
-    },
+    inspectCurrent,
   );
 }
 
@@ -381,6 +384,7 @@ export async function runFoundryTaskOperation(
   input: { command: "dataset-curation-cleanup"; options: JsonRecord; task?: FoundryTaskOptions },
   operation: (transaction: FoundryTaskOperation) => JsonRecord,
 ): Promise<JsonRecord> {
+  assertFoundryWorkspaceWrite(context);
   requiredTask(context);
   const lockPath = resolveFoundryOutput(context, `task-locks/${context.taskId}.json`, "state");
   return withBatchRunLock(
