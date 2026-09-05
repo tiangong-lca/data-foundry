@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "noEmitOnError": true,
+    "rootDir": ".",
+    "outDir": "./package-dist",
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": false,
+    "inlineSources": false,
+    "newLine": "lf"
+  },
+  "files": ["scripts/package-entry.ts", "scripts/public-api.ts"],
+  "include": [],
+  "exclude": []
+}

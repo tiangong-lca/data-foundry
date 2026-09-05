@@ -28,7 +28,7 @@ export const FOUNDRY_RUNTIME_QUALIFICATION_SCHEMA =
 export const FOUNDRY_TIDAS_EXPECTATION_SCHEMA =
   "tiangong-foundry.tidas-runtime-expectation.v1" as const;
 
-interface ContentFact {
+export interface ContentFact {
   readonly bytes: number;
   readonly sha256: string;
 }

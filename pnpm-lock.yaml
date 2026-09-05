@@ -13,13 +13,13 @@ importers:
       "@tiangong-lca/cli":
         specifier: 0.1.10
         version: 0.1.10
-      ajv:
-        specifier: 8.20.0
-        version: 8.20.0
     devDependencies:
       "@types/node":
         specifier: 24.13.3
         version: 24.13.3
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
       husky:
         specifier: 9.1.7
         version: 9.1.7

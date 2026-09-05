@@ -40,7 +40,7 @@ import { resolveInstalledTiangongLcaCliPackage } from "./foundry-runtime-utils.t
 
 export const FOUNDRY_EXECUTION_CAPSULE_SCHEMA = "tiangong-foundry.execution-context.v1" as const;
 
-interface ExecutionCapsule {
+export interface ExecutionCapsule {
   schema: typeof FOUNDRY_EXECUTION_CAPSULE_SCHEMA;
   workspace_id: string;
   task_id: string;

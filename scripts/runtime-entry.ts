@@ -335,4 +335,22 @@ export async function runFoundryRuntimeCommand(
   }
 }
 
+/** Package bin boundary: never fall back to repository/developer commands. */
+export async function runFoundryPublicCommand(
+  argv: string[] = process.argv,
+  host: FoundryRuntimeCommandHost = {},
+): Promise<void> {
+  if (publicCommand(argv)) return runFoundryRuntimeCommand(argv, host);
+  return runFoundryRuntimeCommand(
+    [
+      argv[0] ?? process.execPath,
+      argv[1] ?? "tiangong-foundry",
+      "task",
+      "__unknown",
+      ...argv.slice(2),
+    ],
+    host,
+  );
+}
+
 if (import.meta.main) void runFoundryRuntimeCommand();

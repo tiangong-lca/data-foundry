@@ -253,7 +253,7 @@ test("Node 24 source and emitted entries preserve repository-backed commands and
     // A copied manifest alone must not turn the emitted outDir into the trusted repository root.
     fs.writeFileSync(
       path.join(buildRoot, "package.json"),
-      `${JSON.stringify({ name: "tiangong-lca-data-foundry", type: "module" })}\n`,
+      `${JSON.stringify({ name: "@tiangong-lca/foundry", type: "module" })}\n`,
     );
     assert.equal(fs.existsSync(path.join(fixtureRoot, ".env")), false);
     assertHelpAndUnknown(emittedEntry, executionCwd);

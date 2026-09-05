@@ -3,6 +3,9 @@
 !.env.example
 node_modules/
 dist/
+package-dist/
+package-stage/
+package-artifacts/
 coverage/
 __pycache__/
 *.pyc

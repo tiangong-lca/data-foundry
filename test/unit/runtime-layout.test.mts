@@ -13,7 +13,7 @@ function fixture(root: string) {
   fs.writeFileSync(entry, "export {};\n");
   fs.writeFileSync(module, "export {};\n");
   const manifest = {
-    name: "tiangong-lca-data-foundry",
+    name: "@tiangong-lca/foundry",
     version: "0.1.0",
     type: "module",
     foundryRuntime: {
@@ -56,4 +56,38 @@ test("layout identity cannot redirect code outside the declared runtime tree", (
     );
     assert.throws(() => resolveFoundryRuntimePaths(pathToFileURL(module).href));
   }
+});
+
+test("v2 layout selects the dedicated package entry without changing the developer entry", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-layout-v2-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const sourceEntry = path.join(root, "scripts/foundry.ts");
+  const emittedEntry = path.join(root, "dist/scripts/foundry.js");
+  const packageEntry = path.join(root, "package-dist/scripts/package-entry.js");
+  const packageModule = path.join(root, "package-dist/scripts/lib/runtime.js");
+  for (const file of [sourceEntry, emittedEntry, packageEntry, packageModule]) {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, "export {};\n");
+  }
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "@tiangong-lca/foundry",
+      version: "0.1.0",
+      type: "module",
+      foundryRuntime: {
+        schema: "tiangong-foundry.runtime-layout.v2",
+        asset_root: ".",
+        source_entry: "scripts/foundry.ts",
+        emitted_entry: "dist/scripts/foundry.js",
+        package_entry: "package-dist/scripts/package-entry.js",
+        package_descriptor: "package-dist/assets/foundry-package-descriptor.json",
+      },
+    }),
+  );
+  const source = resolveFoundryRuntimePaths(pathToFileURL(sourceEntry).href);
+  const packaged = resolveFoundryRuntimePaths(pathToFileURL(packageModule).href);
+  assert.equal(source.entryPath, fs.realpathSync(sourceEntry));
+  assert.equal(packaged.entryPath, fs.realpathSync(packageEntry));
+  assert.equal(packaged.entryRepoRelativePath, "package-dist/scripts/package-entry.js");
 });
