@@ -76,16 +76,33 @@ function packageManagerCommand(
   environment: NodeJS.ProcessEnv,
 ) {
   if (process.platform !== "win32") return command(manager, args, cwd, environment);
-  const script =
-    manager === "pnpm"
-      ? process.env.npm_execpath
-      : path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
-  assert.ok(script, `Cannot resolve the ${manager} JavaScript entrypoint on Windows`);
-  assert.equal(
-    fs.statSync(script).isFile(),
-    true,
-    `${manager} JavaScript entrypoint is not a file`,
+  if (manager === "pnpm") {
+    const pathDirectories = (process.env.PATH ?? process.env.Path ?? "")
+      .split(path.delimiter)
+      .filter((directory) => path.isAbsolute(directory));
+    const pnpmHome = process.env.PNPM_HOME;
+    const candidates = [
+      ...(pnpmHome && path.isAbsolute(pnpmHome) ? [path.join(pnpmHome, "pnpm.exe")] : []),
+      ...pathDirectories.map((directory) => path.join(directory, "pnpm.exe")),
+    ];
+    const executable = candidates.find((candidate) => {
+      try {
+        return fs.statSync(candidate).isFile();
+      } catch {
+        return false;
+      }
+    });
+    assert.ok(executable, "Cannot resolve the pnpm native executable on Windows");
+    return command(executable, args, cwd, environment);
+  }
+  const script = path.join(
+    path.dirname(process.execPath),
+    "node_modules",
+    "npm",
+    "bin",
+    "npm-cli.js",
   );
+  assert.equal(fs.statSync(script).isFile(), true, "npm JavaScript entrypoint is not a file");
   return command(process.execPath, [script, ...args], cwd, environment);
 }
 
