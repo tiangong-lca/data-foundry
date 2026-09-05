@@ -29,8 +29,8 @@ checkPaths:
   - specs/import-profiles.json
   - tasks/**
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
-lastReviewedNote: "Reviewed for #106 W06: installed package verification changes runtime identity only and preserves the v2 task/attempt authority and W10 migration boundary."
+lastReviewedCommit: a74b09c202f0ed48d3ce8bb0810e1e8b15c47603
+lastReviewedNote: "Reviewed for #108: facade descendants recheck retained predecessor publications and block on observed attempts or missing history; source credentials, execution ownership, full migration adoption and rollback boundaries remain unchanged."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -121,3 +121,5 @@ An expected account may be selected after local preparation. The first selection
 Before a restricted child handoff, the runtime stores a content-addressed `execution-context.v1` under task evidence. A new process must reconstruct the context, qualification and identity, then recheck source ancestry, final bytes, current authorization/QA exceptions, owner CLI path and CommandSpec operation semantics. Only the verified spec is returned to the existing no-replay executor. The execution context never carries credentials and never clears or retries an attempt.
 
 The W05 facade now projects these records through the public result envelope. It automatically resumes only deterministic local cleanup. A nonempty attempt directory returns readback-only recovery; an unindexed copied completion report does not change task status. `completed` requires a current indexed completion report for the same task after source and artifact verification. Other stages remain explicit next actions until their owner evidence is registered; the facade never invents a child command or treats a directory name as task state.
+
+The request store revalidates every predecessor's retained job against its publication and indexed identity before admitting a new revision or returning a descendant for status/resume. A nonempty predecessor attempt directory blocks the descendant and directs recovery to the original owner; its declared success/unknown state never clears the guard. Missing or altered predecessor state is an audit condition, not permission to reconstruct an empty history. This facade guard does not by itself establish complete migration history, cross-request inheritance or restricted execution admission.

@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
-lastReviewedNote: "Reviewed for #106 W06: package build/pack has no credential input or lifecycle hook; consumer installs use a projected allowlisted environment."
+lastReviewedCommit: a74b09c202f0ed48d3ce8bb0810e1e8b15c47603
+lastReviewedNote: "Reviewed for #108: facade descendants recheck retained predecessor publications and block on observed attempts or missing history; source credentials, execution ownership, full migration adoption and rollback boundaries remain unchanged."
 ---
 
 # Environment Surface Policy

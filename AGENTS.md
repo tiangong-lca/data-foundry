@@ -263,7 +263,7 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
+lastReviewedCommit: a74b09c202f0ed48d3ce8bb0810e1e8b15c47603
 lastReviewedNote: "Reviewed for #106 W06: the public facade is now a deterministic descriptor-verified npm candidate; W08 still owns F1 publication and components."
 ---
 

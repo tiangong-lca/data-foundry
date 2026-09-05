@@ -697,6 +697,7 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
         const context = taskContext(options, current, record);
         const inspected = await createFoundryRuntime(context).inspectTask();
         assertNotInterrupted(options.signal);
+        loadFoundryFacadeTaskRecord(current, record.task_id, record.spec.actor_id);
         const result = taskProjection(
           "task.start",
           context,
@@ -762,6 +763,7 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
         const runtime = createFoundryRuntime(context, qualified);
         const before = await runtime.inspectTask();
         assertNotInterrupted(options.signal);
+        loadFoundryFacadeTaskRecord(current, record.task_id, record.spec.actor_id);
         if (before.attempts_present)
           return taskProjection(
             "task.resume",

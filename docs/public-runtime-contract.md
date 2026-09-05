@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
-lastReviewedNote: "Reviewed for #106 W06: the six-operation protocol is now exposed through a public-only installed bin and typed package API; registry publication remains W08."
+lastReviewedCommit: a74b09c202f0ed48d3ce8bb0810e1e8b15c47603
+lastReviewedNote: "Reviewed for #108: facade descendants recheck retained predecessor publications and block on observed attempts or missing history; source credentials, execution ownership, full migration adoption and rollback boundaries remain unchanged."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -110,6 +110,8 @@ The process entry handles the first SIGINT/SIGTERM as a cooperative abort reques
 Unknown protocol/layout versions fail closed with `blocked` and a stable version blocker. Malformed public arguments/specs use `needs_input`. A child exit 0, empty queue, copied success report or successful download alone cannot produce `completed`.
 
 `completed` is projected only from a current indexed `dataset-import-completion-report` for the same task with completed status and no blockers, after all source/artifact lineage checks. A copied unindexed report remains `ready`. A nonempty or malformed attempt area blocks resume with `mutation_readback_required`; the facade never clears or dispatches it. Pre-observed cancellation returns `operation_interrupted` and exit 130 without creating state; installed-process signal qualification is repeated in W06.
+
+Every facade revision also rechecks all retained predecessors in its request chain. Missing, changed or linked predecessor task/publication state blocks continuation. Any predecessor attempt blocks creating or resuming a descendant with `facade_predecessor_readback_required`, regardless of the attempt's declared outcome or changed input bytes/paths. The original task remains available for its owner status/readback. This guard checks current registered facade history; W10 migration still must reconcile legacy external ledgers and persist no-replay inheritance across migrated workspaces and independently named requests.
 
 ## Runtime selection and migration seam
 

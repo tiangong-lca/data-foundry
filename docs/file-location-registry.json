@@ -434,7 +434,7 @@
       ],
       "sensitivity": "non-sensitive schema; local request instances can contain private path facts",
       "tracked": true,
-      "notes": "Monotonic request revisions, deterministic task ids, predecessor and input/spec content bindings."
+      "notes": "Monotonic request revisions, deterministic task ids, predecessor and input/spec content bindings. Descendants recheck every retained predecessor publication and cannot continue around observed attempt state or missing history."
     },
     {
       "id": "foundry-workspace-migration-plan-schema",

@@ -28,8 +28,8 @@ checkPaths:
   - test/unit/foundry-migration-transfer.test.mts
   - test/scenarios/workspace-migration-transfer.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: eaa73d494d94eb3b2164e913fd15f217f6c2d6a6
-lastReviewedNote: "Reviewed for #108 staging: v2 source/queue/input planning, exclusive pending transfers, copy and receipt interruption recovery, and independent archive audit are implemented. Task adoption, activation and rollback remain required."
+lastReviewedCommit: a74b09c202f0ed48d3ce8bb0810e1e8b15c47603
+lastReviewedNote: "Reviewed for #108: facade descendants recheck retained predecessor publications and block on observed attempts or missing history; source credentials, execution ownership, full migration adoption and rollback boundaries remain unchanged."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -88,6 +88,8 @@ These are interpretations of content-bound historical declarations, not fresh se
 #108 still owns immutable predecessor/task mapping, current-owner local preparation regeneration, durable no-replay inheritance across task revisions, activation after complete audit, and separate read/write workspace compatibility plus explicit runtime rollback. Tests and private real-case evidence must cover those behaviors before #108 can close. Successful staging alone does not satisfy them.
 
 The v2 plan includes root-level `tasks` automatically and binds each repeated `--input` external file independently. It does not infer external read permission from a path found inside an old manifest. Full task adoption must still prove every referenced external source and later attempt/readback record is accounted for; a snapshot alone does not establish that semantic closure.
+
+As a prerequisite, the current facade now refuses new or existing descendant revisions when a registered predecessor has attempt evidence. It rechecks all earlier task publications and preserves missing/changed history as a blocker. This closes revision-based local continuation around observed attempts; it does not claim cross-workspace migration, external-ledger reconciliation or final mutation no-replay inheritance.
 
 ## Explicit staging and audit
 

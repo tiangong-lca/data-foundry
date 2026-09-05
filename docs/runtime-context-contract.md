@@ -41,8 +41,8 @@ checkPaths:
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
-lastReviewedNote: "Reviewed for #106 W06: runtime layout v2 adds a descriptor-verified package entry while preserving source and repository-emitted entry ownership."
+lastReviewedCommit: a74b09c202f0ed48d3ce8bb0810e1e8b15c47603
+lastReviewedNote: "Reviewed for #108: facade descendants recheck retained predecessor publications and block on observed attempts or missing history; source credentials, execution ownership, full migration adoption and rollback boundaries remain unchanged."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
@@ -112,3 +112,5 @@ W06 builds only the required facade/runtime modules, schemas and assets and prov
 The shared `assertFoundryRuntimeHost` gate also protects inventory-only migration, which cannot construct a context from an unknown legacy marker. Transfer planning constructs the destination context before reading the source and requires disjoint canonical roots with no existing destination `.foundry`. It does not initialize either workspace. See [workspace migration](workspace-migration-contract.md) for the implemented planning and remaining application boundary.
 
 A strict `workspace-migration-pending.v1` marker returns no active workspace id. `initializeFoundryWorkspace` and consumer doctor explicitly reject pending state. Migration staging/audit can inspect it to recover its exact claim and preserved archive; normal task creation remains unavailable until a separately audited activation.
+
+Facade revision lookup validates retained predecessor jobs/publications without requiring their original input bytes to match a new revision. It checks every earlier revision for attempt evidence and refuses descendant continuation when any is present. Missing/changed predecessor storage is preserved as a recovery condition. This read-only request-chain check does not change runtime qualification or replace W10's complete migrated-task history and activation requirements.

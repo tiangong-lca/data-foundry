@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { withBatchRunLock } from "@tiangong-lca/cli/batch";
@@ -122,7 +122,7 @@ function taskPointerPath(context: FoundryRuntimeContext, taskId: string): string
   return resolveFoundryOutput(context, `facade-tasks/${taskId}.json`, "state");
 }
 
-function readBounded(file: string): Buffer {
+function readBounded(file: string, maxBytes = maxIndexBytes): Buffer {
   let fd: number;
   try {
     fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
@@ -131,12 +131,12 @@ function readBounded(file: string): Buffer {
   }
   try {
     const before = fs.fstatSync(fd, { bigint: true });
-    if (!before.isFile() || before.size > BigInt(maxIndexBytes))
+    if (!before.isFile() || before.size > BigInt(maxBytes))
       fail("facade_request_invalid", "Facade request state must be a bounded regular file.");
     const bytes = fs.readFileSync(fd);
     const after = fs.fstatSync(fd, { bigint: true });
     if (
-      bytes.length > maxIndexBytes ||
+      bytes.length > maxBytes ||
       before.dev !== after.dev ||
       before.ino !== after.ino ||
       before.size !== after.size ||
@@ -333,6 +333,90 @@ function pointer(value: unknown, context: FoundryRuntimeContext): FacadeTaskPoin
   return item as unknown as FacadeTaskPointer;
 }
 
+function requireUnattemptedPredecessors(
+  context: FoundryRuntimeContext,
+  predecessors: readonly FacadeRequestRevision[],
+): void {
+  for (const predecessor of predecessors) {
+    const workspaces = path.join(context.controlRoot, "workspaces"),
+      taskRoot = path.join(workspaces, predecessor.task_id),
+      jobFile = path.join(taskRoot, "foundry-job.json");
+    try {
+      for (const directory of [context.controlRoot, workspaces, taskRoot]) {
+        const stat = fs.lstatSync(directory);
+        if (!stat.isDirectory() || stat.isSymbolicLink())
+          fail(
+            "facade_predecessor_history_invalid",
+            "Predecessor task storage is missing or linked.",
+          );
+      }
+      const stat = fs.lstatSync(jobFile);
+      if (!stat.isFile() || stat.isSymbolicLink())
+        fail("facade_predecessor_history_invalid", "Predecessor job must remain a regular file.");
+      const jobBytes = readBounded(jobFile, 64 * 1024),
+        job = object(JSON.parse(jobBytes.toString("utf8"))),
+        publication = object(
+          JSON.parse(
+            readBounded(
+              resolveFoundryOutput(
+                context,
+                `task-publications/${predecessor.task_id}.json`,
+                "state",
+              ),
+              16 * 1024,
+            ).toString("utf8"),
+          ),
+        );
+      exact(publication, ["schema", "workspace_id", "task_id", "job_sha256"]);
+      if (
+        job.schema !== "tiangong-foundry.job.v2" ||
+        job.workspace_id !== context.workspaceId ||
+        job.task_id !== predecessor.task_id ||
+        job.actor_id !== predecessor.spec.actor_id ||
+        job.request_id !== predecessor.spec.request_id ||
+        job.created_at_utc !== predecessor.created_at_utc ||
+        publication.schema !== "tiangong-foundry.task-publication.v1" ||
+        publication.workspace_id !== context.workspaceId ||
+        publication.task_id !== predecessor.task_id ||
+        publication.job_sha256 !== createHash("sha256").update(jobBytes).digest("hex")
+      )
+        fail(
+          "facade_predecessor_history_invalid",
+          "Predecessor publication and task identity differ.",
+        );
+      const attempts = path.join(taskRoot, "attempts");
+      let attemptStat: fs.Stats;
+      try {
+        attemptStat = fs.lstatSync(attempts);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
+        throw error;
+      }
+      if (!attemptStat.isDirectory() || attemptStat.isSymbolicLink())
+        fail(
+          "facade_predecessor_history_invalid",
+          "Predecessor attempts must remain a contained directory.",
+        );
+      const directory = fs.opendirSync(attempts);
+      try {
+        if (directory.readSync())
+          fail(
+            "facade_predecessor_readback_required",
+            `Retained predecessor ${predecessor.task_id} has attempt evidence; use its original owner for status/readback before any revision can continue.`,
+          );
+      } finally {
+        directory.closeSync();
+      }
+    } catch (error) {
+      if (error instanceof FoundryContextError) throw error;
+      fail(
+        "facade_predecessor_history_invalid",
+        "Retained predecessor history is missing or invalid; restore or audit it before continuing.",
+      );
+    }
+  }
+}
+
 export async function registerFoundryFacadeTask(
   context: FoundryRuntimeContext,
   options: {
@@ -379,6 +463,9 @@ export async function registerFoundryFacadeTask(
       if (revisionNumber > maxRevisions)
         fail("facade_request_limit", "Facade request has too many retained revisions.");
       const taskId = `task-${requestSha256}-r${String(revisionNumber).padStart(4, "0")}`;
+      const predecessors =
+        stored.index?.revisions.filter((entry) => entry.task_id !== taskId) ?? [];
+      requireUnattemptedPredecessors(context, predecessors);
       let task: { created_at_utc: string; inputs_sha256: string };
       try {
         task = options.createOrLoad(taskId);
@@ -404,6 +491,7 @@ export async function registerFoundryFacadeTask(
         throw error;
       }
       let selected = latest;
+      requireUnattemptedPredecessors(context, predecessors);
       if (!latest || latest.fingerprint_sha256 !== fingerprint) {
         const unsigned = {
           revision: revisionNumber,
@@ -489,6 +577,7 @@ export function loadFoundryFacadeTaskRecord(
     fail("facade_task_pointer_invalid", "Facade task pointer has no current request revision.");
   if (selected.spec.actor_id !== actorId)
     fail("task_actor_mismatch", "Current actor does not match the registered task intent.");
+  requireUnattemptedPredecessors(context, request.revisions.slice(0, taskPointer.revision - 1));
   return Object.freeze({
     request_sha256: taskPointer.request_sha256,
     revision: selected.revision,
