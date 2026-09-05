@@ -2,16 +2,20 @@ import fs from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertFoundryPackage, foundryPackageDescriptorPath } from "./foundry-package-contract.ts";
 
-const foundryPackageName = "tiangong-lca-data-foundry";
+const foundryPackageName = "@tiangong-lca/foundry";
 const supportedEntryExtensions = new Set([".js", ".ts"]);
-const layoutSchema = "tiangong-foundry.runtime-layout.v1";
+const layoutSchemaV1 = "tiangong-foundry.runtime-layout.v1";
+const layoutSchemaV2 = "tiangong-foundry.runtime-layout.v2";
 
 interface RuntimeLayout {
-  schema: typeof layoutSchema;
+  schema: typeof layoutSchemaV1 | typeof layoutSchemaV2;
   asset_root: string;
   source_entry: string;
   emitted_entry: string;
+  package_entry: string | null;
+  package_descriptor: string | null;
 }
 
 interface RuntimePackage {
@@ -68,9 +72,29 @@ function layoutPath(value: unknown, directory = false): value is string {
 function readRuntimePackage(root: string): RuntimePackage | null {
   const manifestPath = path.join(root, "package.json");
   if (!fs.existsSync(manifestPath)) return null;
-  const stat = fs.lstatSync(manifestPath);
-  if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 1024 * 1024) return null;
-  const bytes = fs.readFileSync(manifestPath);
+  let fd: number;
+  try {
+    fd = fs.openSync(manifestPath, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+  } catch {
+    return null;
+  }
+  let bytes: Buffer;
+  try {
+    const before = fs.fstatSync(fd, { bigint: true });
+    if (!before.isFile() || before.size > BigInt(1024 * 1024)) return null;
+    bytes = fs.readFileSync(fd);
+    const after = fs.fstatSync(fd, { bigint: true });
+    if (
+      before.dev !== after.dev ||
+      before.ino !== after.ino ||
+      before.size !== after.size ||
+      before.mtimeNs !== after.mtimeNs ||
+      BigInt(bytes.length) !== after.size
+    )
+      return null;
+  } finally {
+    fs.closeSync(fd);
+  }
   let manifest: Record<string, unknown> | null;
   try {
     manifest = record(JSON.parse(bytes.toString("utf8")));
@@ -79,15 +103,18 @@ function readRuntimePackage(root: string): RuntimePackage | null {
   }
   if (manifest?.name !== foundryPackageName || !manifest.foundryRuntime) return null;
   const layout = record(manifest.foundryRuntime);
+  const isV1 = layout?.schema === layoutSchemaV1 && Object.keys(layout).length === 4;
+  const isV2 = layout?.schema === layoutSchemaV2 && Object.keys(layout).length === 6;
   if (
     !layout ||
-    layout.schema !== layoutSchema ||
-    Object.keys(layout).length !== 4 ||
+    (!isV1 && !isV2) ||
     !layoutPath(layout.asset_root, true) ||
     !layoutPath(layout.source_entry) ||
     !layoutPath(layout.emitted_entry) ||
+    (isV2 && (!layoutPath(layout.package_entry) || !layoutPath(layout.package_descriptor))) ||
     !String(layout.source_entry).endsWith(".ts") ||
     !String(layout.emitted_entry).endsWith(".js") ||
+    (isV2 && !String(layout.package_entry).endsWith(".js")) ||
     typeof manifest.version !== "string" ||
     !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u.test(manifest.version)
   ) {
@@ -99,10 +126,12 @@ function readRuntimePackage(root: string): RuntimePackage | null {
     version: manifest.version,
     manifestSha256: createHash("sha256").update(bytes).digest("hex"),
     layout: {
-      schema: layoutSchema,
+      schema: layout.schema as RuntimeLayout["schema"],
       asset_root: layout.asset_root,
       source_entry: layout.source_entry,
       emitted_entry: layout.emitted_entry,
+      package_entry: isV2 ? String(layout.package_entry) : null,
+      package_descriptor: isV2 ? String(layout.package_descriptor) : null,
     },
   };
 }
@@ -129,13 +158,19 @@ export function describeFoundryRuntime(moduleUrl: string): FoundryRuntimeIdentit
     throw new Error(`Unable to resolve trusted Foundry repository root from ${modulePath}.`);
   }
   const mode = extension === ".ts" ? "source" : "emitted";
-  const declaredEntry =
-    mode === "source" ? runtimePackage.layout.source_entry : runtimePackage.layout.emitted_entry;
-  const entry = path.resolve(runtimePackage.root, declaredEntry);
-  if (!fs.existsSync(entry) || !fs.lstatSync(entry).isFile()) {
-    throw new Error(`Active Foundry entry is missing: ${entry}.`);
-  }
-  const entryPath = fs.realpathSync(entry);
+  const candidates =
+    mode === "source"
+      ? [runtimePackage.layout.source_entry]
+      : [runtimePackage.layout.emitted_entry, runtimePackage.layout.package_entry].filter(
+          (entry): entry is string => Boolean(entry),
+        );
+  const selected = candidates
+    .map((declared) => ({ declared, target: path.resolve(runtimePackage.root, declared) }))
+    .filter(({ target }) => fs.existsSync(target) && fs.lstatSync(target).isFile())
+    .map(({ declared, target }) => ({ declared, entryPath: fs.realpathSync(target) }))
+    .find(({ entryPath: candidate }) => isWithinRoot(path.dirname(candidate), modulePath));
+  if (!selected) throw new Error(`Active Foundry entry is missing for ${modulePath}.`);
+  const { declared: declaredEntry, entryPath } = selected;
   const assetRoot = fs.realpathSync(
     path.resolve(runtimePackage.root, runtimePackage.layout.asset_root),
   );
@@ -146,6 +181,11 @@ export function describeFoundryRuntime(moduleUrl: string): FoundryRuntimeIdentit
     !isWithinRoot(path.dirname(entryPath), modulePath)
   ) {
     throw new Error("Foundry runtime module or assets escape the declared package layout.");
+  }
+  if (declaredEntry === runtimePackage.layout.package_entry) {
+    if (runtimePackage.layout.package_descriptor !== foundryPackageDescriptorPath)
+      throw new Error("Foundry package descriptor path differs from the public package contract.");
+    assertFoundryPackage(runtimePackage.root);
   }
   return Object.freeze({
     repoRoot: runtimePackage.root,

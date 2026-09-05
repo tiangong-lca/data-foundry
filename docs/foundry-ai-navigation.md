@@ -17,6 +17,13 @@ checkPaths:
   - docs/foundry-command-surface.md
   - test/README.md
   - scripts/foundry.ts
+  - scripts/package-entry.ts
+  - scripts/public-api.ts
+  - scripts/build-foundry-package.ts
+  - scripts/verify-foundry-package.ts
+  - scripts/lib/foundry-package-contract.ts
+  - docs/package-distribution-contract.md
+  - test/scenarios/foundry-package-consumer.test.mts
   - scripts/lib/import-curation.ts
   - scripts/lib/import-curation/index.ts
   - scripts/lib/import-curation/profiles.ts
@@ -137,13 +144,13 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
-lastReviewedNote: "Reviewed for #104 W05: six user facade operations compose unchanged internal command owners and navigation."
+lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
+lastReviewedNote: "Reviewed for #106 W06: package composition has separate public bin/API, build, descriptor, verifier and installed-consumer navigation."
 ---
 
 # Foundry AI Navigation
 
-The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade now adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 still owns the published package. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
+The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. W05 owns the facade; W06 owns the local installable package closure; W08 owns F1 release/components. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/package-distribution-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 
 The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` now implements workspace init/migration, consumer doctor and task start/status/resume as the separate hierarchical facade. All 63 flat owner commands retain explicit public/internal/excluded, path, child, qualification and authorization dispositions; the facade reaches them only through registered task state and never falls back to the developer runner.
 
@@ -152,6 +159,8 @@ For profile/permission work, start with `docs/task-authorization-contract.md`, `
 Foundry is a thin control plane. Start from commands and artifacts, then move to the semantic owner module. Do not start from large implementation files.
 
 For shared CLI primitives, start at `scripts/lib/identity-preflight-proof.ts` for public receipt parsing, `scripts/lib/foundry-runtime-utils.ts` for exact installed package/bin resolution, and `scripts/lib/batch-orchestration/` for Foundry semantic adapters around `@tiangong-lca/cli/batch`. Test receipt bytes belong only to `test/fixtures/auth-identity-receipt.ts`; installed-package public export proof is `test/unit/public-cli-batch-runtime.test.mts`. A `dist/src/**` path is a contract violation, not a navigation shortcut.
+
+For package work, start at `docs/package-distribution-contract.md`. `scripts/package-entry.ts` is the public-only bin, `scripts/public-api.ts` is the typed host surface, `tsconfig.package.json` defines reachability, `build-foundry-package.ts` creates the sanitized stage and descriptor, and `verify-foundry-package.ts` compares that stage with the pack file set. `foundry-package-contract.ts` is the installed integrity owner; the unit package contract and `scenarios/foundry-package-consumer.test.mts` are the executable boundaries. Do not enter the 63-command graph from these files.
 
 ## Command paths
 

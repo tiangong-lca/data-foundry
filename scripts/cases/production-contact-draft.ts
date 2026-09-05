@@ -295,7 +295,7 @@ function repositoryRoot(): string {
       const manifest = JSON.parse(readFileSync(path.join(current, "package.json"), "utf8")) as {
         name?: unknown;
       };
-      if (manifest.name === "tiangong-lca-data-foundry") return realpathSync(current);
+      if (manifest.name === "@tiangong-lca/foundry") return realpathSync(current);
     }
     const parent = path.dirname(current);
     if (parent === current) break;

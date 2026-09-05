@@ -19,6 +19,7 @@ checkPaths:
   - docs/architecture.md
   - docs/capability-ownership-policy.md
   - docs/runtime-skill-management.md
+  - docs/package-distribution-contract.md
   - docs/foundry-task-contracts.md
   - docs/execution-capsule-contract.md
   - docs/incremental-change-set-contract.md
@@ -35,6 +36,12 @@ checkPaths:
   - prettier.config.ts
   - tsconfig*.json
   - scripts/foundry.ts
+  - scripts/package-entry.ts
+  - scripts/public-api.ts
+  - scripts/build-foundry-package.ts
+  - scripts/pack-foundry-package.ts
+  - scripts/verify-foundry-package.ts
+  - scripts/lib/foundry-package-contract.ts
   - scripts/lib/import-curation.ts
   - scripts/lib/import-curation/index.ts
   - scripts/lib/import-curation/profiles.ts
@@ -249,18 +256,22 @@ checkPaths:
   - test/scenarios/foundry-public-facade.test.mts
   - test/scenarios/foundry-facade-request-store.test.mts
   - test/unit/foundry-facade-schemas.test.mts
+  - test/unit/foundry-package-contract.test.mts
+  - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
-lastReviewedNote: "Reviewed for #104 W05: the hierarchical facade now owns deterministic request revisions and public envelopes; W06 package/F1 remain separate."
+lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
+lastReviewedNote: "Reviewed for #106 W06: the public facade is now a deterministic descriptor-verified npm candidate; W08 still owns F1 publication and components."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
 
 The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` now implements workspace init/migration, consumer doctor and task start/status/resume as the separate hierarchical facade. All 63 flat owner commands retain explicit public/internal/excluded, path, child, qualification and authorization dispositions; the facade reaches them only through registered task state and never falls back to the developer runner.
+
+The installable package boundary is defined by `docs/package-distribution-contract.md`. Only `scripts/package-entry.ts` and `scripts/public-api.ts` seed the package compiler graph. Pack from the generated sanitized `package-stage/`, never the repository root; do not add lifecycle scripts, source maps, internal command/case owners, credentials, task state or private evidence to the public allowlist. W06 candidates are local artifacts until W08 publishes an exact reviewed release.
 
 Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel account overrides, QA waivers and the Worldsteel full-context relaxation grant no permission to a new task. `docs/task-authorization-contract.md` owns the separate workspace/task/actor/account/profile/input binding and exact action evidence. Local candidate preparation and checked public-reference proofs remain available; current final-row hashes, task permissions and all content/closure/no-replay gates are required before a restricted write handoff.
 

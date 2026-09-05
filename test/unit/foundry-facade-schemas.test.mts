@@ -6,6 +6,7 @@ import test from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
 import { createFoundryOperationResult } from "../../scripts/lib/foundry-operation-result.ts";
 import { inventoryFoundryWorkspace } from "../../scripts/lib/foundry-migration-inventory.ts";
+import { createFoundryPackageDescriptor } from "../../scripts/lib/foundry-package-contract.ts";
 
 type Validator = ((value: unknown) => boolean) & { errors?: unknown };
 const Ajv = Ajv2020 as unknown as new (options: { strict: boolean }) => {
@@ -81,4 +82,26 @@ test("facade task, result, request and migration schemas compile and reject unsa
   const plan = inventoryFoundryWorkspace(root);
   assert.equal(validateMigration(plan), true, JSON.stringify(validateMigration.errors));
   assert.equal(validateMigration({ ...plan, write_allowed: true }), false);
+
+  const validatePackage = ajv.compile(read("foundry-package-descriptor.schema.json"));
+  const packageDescriptor = createFoundryPackageDescriptor(
+    [
+      "README.md",
+      "LICENSE",
+      "package-dist/scripts/package-entry.js",
+      "package-dist/scripts/public-api.js",
+      "package-dist/scripts/public-api.d.ts",
+    ].map((selectedPath) => ({ path: selectedPath, bytes: 1, sha256: digest })),
+  );
+  assert.equal(validatePackage(packageDescriptor), true, JSON.stringify(validatePackage.errors));
+  assert.equal(
+    validatePackage({
+      ...packageDescriptor,
+      runtime: {
+        ...packageDescriptor.runtime,
+        supported_platforms: [...packageDescriptor.runtime.supported_platforms, "darwin-x64"],
+      },
+    }),
+    false,
+  );
 });

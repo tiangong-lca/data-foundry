@@ -15,6 +15,9 @@ checkPaths:
   - scripts/lib/task-authorization.ts
   - scripts/lib/foundry-task-authorization.ts
   - scripts/lib/foundry-execution-admission.ts
+  - scripts/lib/foundry-package-contract.ts
+  - scripts/public-api.ts
+  - docs/package-distribution-contract.md
   - scripts/lib/import-curation/internal/profiles-config.ts
   - scripts/lib/import-curation/mutation-manifest.ts
   - scripts/commands/commit-handoff.ts
@@ -27,8 +30,8 @@ checkPaths:
   - test/unit/task-profile-authority.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
-lastReviewedNote: "Reviewed for #104 W05: facade start/local resume remain permission-free; restricted next actions still require W04 rehydration."
+lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
+lastReviewedNote: "Reviewed for #106 W06: package integrity and public exports add no authorization; restricted actions still require current identity/grant/admission."
 related:
   - docs/architecture.md
   - docs/safety-policy.md
@@ -37,7 +40,7 @@ related:
 
 # Task authorization
 
-The persisted host boundary is implemented in `foundry-task-authorization.ts` and `foundry-runtime-identity.ts`. See `foundry-task-contracts.md` for workspace registration, evidence snapshots, active-pointer compare-and-swap and current-identity revalidation. Registration requires independently selected host evidence; merely writing a grant file or copying a success report grants no authority. `foundry-execution-admission.ts` now owns the last internal rehydration gate before the existing no-replay owner receives a CommandSpec. The public facade remains separate W05 work.
+The persisted host boundary is implemented in `foundry-task-authorization.ts` and `foundry-runtime-identity.ts`. See `foundry-task-contracts.md` for workspace registration, evidence snapshots, active-pointer compare-and-swap and current-identity revalidation. Registration requires independently selected host evidence; merely writing a grant file or copying a success report grants no authority. `foundry-execution-admission.ts` owns the last internal rehydration gate before the existing no-replay owner receives a CommandSpec. The installed W06 package verifies code/assets and exposes the W05 facade, but package integrity, import success or possession of its public API grants no task action.
 
 Import profiles describe source formats and domain constraints. They do not identify an account or approve an action. Selecting BAFU, USLCI or Worldsteel, loading a historical profile file, passing a waiver flag, or logging in cannot grant an exception.
 

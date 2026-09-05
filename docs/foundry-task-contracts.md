@@ -22,13 +22,15 @@ checkPaths:
   - scripts/foundry-facade.ts
   - scripts/lib/foundry-facade-store.ts
   - scripts/lib/foundry-task-start-spec.ts
+  - scripts/lib/foundry-package-contract.ts
+  - docs/package-distribution-contract.md
   - specs/schemas/authorization-derivation.schema.json
   - specs/schemas/execution-context.schema.json
   - specs/import-profiles.json
   - tasks/**
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
-lastReviewedNote: "Reviewed for #104 W05: facade request indexes add deterministic retained revisions and task pointers over the unchanged v2 task/attempt authority."
+lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
+lastReviewedNote: "Reviewed for #106 W06: installed package verification changes runtime identity only and preserves the v2 task/attempt authority and W10 migration boundary."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -41,6 +43,8 @@ related:
 The v2 task store is implemented by `foundry-task-registration.ts`, `foundry-task-store.ts`, `foundry-task-io.ts` and `foundry-task-types.ts`. It keeps source/profile/task identity separate from permissions and reuses the published CLI's `withBatchRunLock` for local metadata transactions. It does not perform database mutations or replace the CLI's consumed-attempt/readback recovery contract.
 
 The earlier v1 examples at commit `ad9c885dde64b22f6e0a8e17f9da46bdba5345ef` remain historical input for W10. Existing unregistered directories, v1 jobs, locks and attempts are never relabeled as v2 automatically. Real task #95 remains outside migration scope.
+
+Installing or verifying `@tiangong-lca/foundry` does not create, migrate or relabel task state. Package descriptor/file identity becomes the runtime facts recorded by newly created jobs. Existing jobs whose package identity differs require the explicit compatibility/migration path; a new package directory cannot reset their source, authorization, artifact or attempt ledgers.
 
 ## Layout and authority
 

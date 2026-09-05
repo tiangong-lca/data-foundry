@@ -23,23 +23,31 @@ checkPaths:
   - scripts/lib/foundry-facade-store.ts
   - scripts/lib/foundry-migration-inventory.ts
   - scripts/lib/foundry-runtime-paths.ts
+  - scripts/lib/foundry-package-contract.ts
+  - scripts/package-entry.ts
+  - scripts/public-api.ts
+  - tsconfig.package.json
+  - specs/schemas/foundry-package-descriptor.schema.json
   - scripts/lib/tidas-adapter.ts
   - scripts/lib/import-curation/internal/runtime-io.ts
   - scripts/lib/import-curation/curation-cleanup.ts
   - test/unit/runtime-layout.test.mts
+  - test/unit/foundry-package-contract.test.mts
   - test/unit/foundry-runtime-context.test.mts
   - test/unit/foundry-runtime-command-policy.test.mts
   - test/unit/foundry-runtime-qualification.test.mts
   - test/unit/foundry-runtime-authority-schemas.test.mts
   - test/scenarios/runtime-workspace.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
+  - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
-lastReviewedNote: "Reviewed for #104 W05: hierarchical facade requests/revisions, local resume, account readiness and migration inventory reuse the W04 context; W06 package remains separate."
+lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
+lastReviewedNote: "Reviewed for #106 W06: runtime layout v2 adds a descriptor-verified package entry while preserving source and repository-emitted entry ownership."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
   - docs/public-runtime-contract.md
+  - docs/package-distribution-contract.md
 ---
 
 # Runtime context
@@ -77,9 +85,9 @@ Node must be at least 24.19 and below 25. The admitted platform matrix is macOS 
 
 ## Package layout
 
-`package.json.foundryRuntime` owns the versioned `tiangong-foundry.runtime-layout.v1` layout: `asset_root`, `source_entry` and `emitted_entry`. All paths are relative, contained and regular where a file is required. Unknown schemas and path traversal are rejected. An emitted module resolves only within its declared entry tree; it does not require `.ts`, Git or a workspace to exist. A copied name-only package manifest cannot hijack a nested build's root.
+`package.json.foundryRuntime` accepts the retained `tiangong-foundry.runtime-layout.v1` source/emitted shape and makes v2 authoritative for new builds. V2 adds `package_entry` and `package_descriptor` while preserving the developer `source_entry` and full-repository `emitted_entry`. All paths are relative, contained and regular where a file is required. The resolver chooses the declared tree that contains the active module; unknown schemas, ambiguous roots and path traversal are rejected. An installed package needs neither source `.ts`, full `dist`, Git nor a workspace, and a copied name-only manifest cannot hijack a nested build's root.
 
-The layout resolver proves local layout and reports package-manifest/entry digests. It does not replace release provenance, complete artifact integrity or the CLI runtime manager's component verification. W06 owns the final package name, publication whitelist and descriptor for the released artifact. Source maps, maintenance tools and live-case drivers are not qualified for distribution merely because an intermediate emitted fixture runs.
+The layout resolver proves local layout and reports package-manifest/entry digests. When only the package entry is present, it also verifies the strict package descriptor, exact payload set and sanitized public manifest before creating a context. This does not replace W08 release provenance or the CLI runtime manager's component verification. Source maps, maintenance tools and live-case drivers are absent from the W06 closure.
 
 ## Workspace marker and initialization
 
@@ -99,4 +107,4 @@ The default in-memory data-read bound is 64 MiB; native/streaming stages must de
 
 W05 stores request indexes and task pointers under workspace state. Their deterministic revision identity binds normalized task spec plus ordered canonical input facts; task payloads and outputs remain in the W04 task store. Status and resume reconstruct the context from those records and recheck original bytes. The facade does not treat request state as permission or attempt authority.
 
-W06 must publish only the required facade/runtime modules, schemas and assets, then prove the same behavior from a source-free read-only installed package. W08 binds the process-local runtime-selection interface to an immutable CLI-manager product manifest. Local preparation does not grant restricted writes; W03 task permissions and existing attempt/readback no-replay controls remain mandatory. Developer maintenance entrypoints, tests and private case drivers remain excluded from the consumer artifact.
+W06 builds only the required facade/runtime modules, schemas and assets and proves the same behavior from a source-free read-only installed candidate; `package-distribution-contract.md` owns that exact closure. W08 publishes F1 and binds the process-local runtime-selection interface to an immutable CLI-manager product manifest. Local preparation does not grant restricted writes; W03 task permissions and existing attempt/readback no-replay controls remain mandatory. Developer maintenance entrypoints, tests and private case drivers remain excluded from the consumer artifact.

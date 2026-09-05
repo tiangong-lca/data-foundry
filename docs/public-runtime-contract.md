@@ -21,24 +21,29 @@ checkPaths:
   - scripts/lib/foundry-runtime-command-policy.ts
   - scripts/lib/foundry-runtime-qualification.ts
   - scripts/lib/foundry-execution-admission.ts
+  - scripts/package-entry.ts
+  - scripts/public-api.ts
+  - scripts/lib/foundry-package-contract.ts
   - specs/schemas/foundry-operation-result.schema.json
   - specs/schemas/foundry-task-start.schema.json
   - specs/schemas/foundry-facade-request-index.schema.json
   - specs/schemas/foundry-workspace-migration-plan.schema.json
   - test/scenarios/foundry-public-facade.test.mts
   - test/scenarios/foundry-facade-request-store.test.mts
+  - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
-lastReviewedNote: "Reviewed for #104 W05: the six hierarchical operations, strict envelope, request revisions, local resume and migration dry-run are implemented; W06 still owns the published bin/package."
+lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
+lastReviewedNote: "Reviewed for #106 W06: the six-operation protocol is now exposed through a public-only installed bin and typed package API; registry publication remains W08."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
+  - docs/package-distribution-contract.md
 ---
 
 # Public runtime protocol
 
-This is the implemented v1 facade protocol for the future `@tiangong-lca/foundry` package and `tiangong-foundry` binary. W05 supplies the six hierarchical operations on top of W04 context/task/qualification owners. W06 still owns the npm name, `bin` mapping, publication whitelist and installed-package qualification, so source availability is not a public release claim. Internal flat command names remain owner interfaces and the existing developer entry remains behavior-compatible.
+This is the implemented v1 facade protocol for `@tiangong-lca/foundry` and its `tiangong-foundry` binary. W05 supplies the six hierarchical operations on top of W04 context/task/qualification owners. W06 adds the public-only compiled entry, typed host API, descriptor-bound file closure and source-free installed-candidate qualification. The candidate is not a registry release or F1 until W08 completes provenance, platform-component and publication gates. Internal flat command names remain repository owner interfaces and the existing developer entry remains behavior-compatible.
 
 ## Commands
 
@@ -53,7 +58,7 @@ This is the implemented v1 facade protocol for the future `@tiangong-lca/foundry
 
 The CLI-owned `tiangong-lca runtime ensure/status` manages qualified components only; it does not initialize a Foundry job or grant data permissions. Skills invoke the Foundry facade and its next actions rather than rebuilding its task state machine.
 
-The hierarchical `runtime-entry.ts doctor --workspace ... --json` form is the consumer facade. Older direct callers of that source entry must migrate to the operation envelope. The repository-maintenance `pnpm doctor` and flat `scripts/foundry.ts doctor` command remain a separate developer surface with their existing behavior.
+The installed bin calls `runFoundryPublicCommand`; any non-facade name returns `operation=unknown` and cannot enter the developer dispatcher. `runtime-entry.ts` remains the shared implementation adapter. The repository-maintenance `pnpm doctor` and flat `scripts/foundry.ts doctor` command remain a separate source-only developer surface with their existing behavior.
 
 Input changes create an explicit new revision with retained history. A new revision, directory, runtime version or request id never resets a consumed mutation. Migration never treats historical locks or profile waivers as current approval.
 

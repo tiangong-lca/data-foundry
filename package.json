@@ -1,9 +1,67 @@
 {
-  "name": "tiangong-lca-data-foundry",
+  "name": "@tiangong-lca/foundry",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "description": "Control plane for TianGong LCA external dataset import and TIDAS authoring work.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tiangong-lca/data-foundry.git"
+  },
+  "homepage": "https://github.com/tiangong-lca/data-foundry#readme",
+  "bugs": {
+    "url": "https://github.com/tiangong-lca/data-foundry/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "types": "./package-dist/scripts/public-api.d.ts",
+  "bin": {
+    "tiangong-foundry": "./package-dist/scripts/package-entry.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./package-dist/scripts/public-api.d.ts",
+      "import": "./package-dist/scripts/public-api.js"
+    },
+    "./runtime": {
+      "types": "./package-dist/scripts/public-api.d.ts",
+      "import": "./package-dist/scripts/public-api.js"
+    }
+  },
+  "files": [
+    "package-dist/",
+    "specs/import-profiles.json",
+    "specs/schemas/authorization-derivation.schema.json",
+    "specs/schemas/execution-context.schema.json",
+    "specs/schemas/foundry-facade-request-index.schema.json",
+    "specs/schemas/foundry-operation-result.schema.json",
+    "specs/schemas/foundry-package-descriptor.schema.json",
+    "specs/schemas/foundry-task-start.schema.json",
+    "specs/schemas/foundry-workspace-migration-plan.schema.json",
+    "specs/schemas/runtime-qualification.schema.json",
+    "specs/schemas/task-authorization.schema.json",
+    "specs/schemas/tidas-runtime-expectation.schema.json",
+    "docs/architecture.md",
+    "docs/package-distribution-contract.md",
+    "docs/foundry-task-contracts.md",
+    "docs/public-runtime-contract.md",
+    "docs/runtime-context-contract.md",
+    "docs/safety-policy.md",
+    "docs/task-authorization-contract.md",
+    "docs/import-profiles/bafu/constraints.md",
+    "docs/import-profiles/bafu/leaf-process-classification-authoring.md",
+    "docs/import-profiles/bafu/profile.md",
+    "docs/import-profiles/uslci/constraints.md",
+    "docs/import-profiles/uslci/profile.md",
+    "docs/uslci-import-runbook.md",
+    "docs/import-profiles/worldsteel/constraints.md",
+    "docs/import-profiles/worldsteel/import-coverage.md",
+    "docs/import-profiles/worldsteel/import-plan.md",
+    "docs/import-profiles/worldsteel/profile.md",
+    "README.md",
+    "LICENSE"
+  ],
   "packageManager": "pnpm@11.24.0",
   "scripts": {
     "foundry": "node scripts/foundry.ts",
@@ -32,6 +90,9 @@
     "lint-staged": "pnpm exec lint-staged",
     "typecheck": "pnpm exec tsc --noEmit",
     "build": "node scripts/clean-build-output.ts && pnpm exec tsc -p tsconfig.build.json",
+    "package:build": "node scripts/build-foundry-package.ts",
+    "package:check": "node scripts/verify-foundry-package.ts",
+    "package:pack": "node scripts/pack-foundry-package.ts",
     "skills:list": "pnpm dlx skills@latest list --json",
     "skills:update": "pnpm dlx skills@latest update --project --yes",
     "skills:install:shared": "pnpm dlx skills@latest add ../tiangong-lca-skills --skill external-dataset-curated-import source-evidence-dataset-development dataset-rls-maintenance --agent '*' --yes --full-depth && pnpm dlx skills@latest add https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search document-granular-decompose --agent '*' --yes --full-depth",
@@ -46,13 +107,13 @@
     "golden:diff": "node scripts/foundry-golden-diff.ts",
     "ncu": "pnpm exec ncu",
     "ncu:update": "pnpm exec ncu -u",
-    "prepare": "husky",
+    "dev:hooks": "pnpm exec husky",
     "tasks:list": "node scripts/foundry.ts tasks-list",
     "tasks:check": "node scripts/foundry.ts tasks-check",
     "task:complete": "node scripts/foundry.ts task-complete",
     "install:frozen": "pnpm install --frozen-lockfile",
     "audit:high": "pnpm audit --audit-level high",
-    "prepush:gate": "pnpm lint && pnpm test:toolchain && pnpm test && pnpm golden:diff && pnpm surface:audit && pnpm build && pnpm audit:high"
+    "prepush:gate": "pnpm lint && pnpm test:toolchain && pnpm test && pnpm golden:diff && pnpm surface:audit && pnpm build && pnpm package:build && pnpm package:check && pnpm audit:high"
   },
   "engines": {
     "node": ">=24.19.0 <25",
@@ -67,7 +128,8 @@
     "oxlint": "1.80.0",
     "oxlint-tsgolint": "7.0.2001",
     "prettier": "3.9.6",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "ajv": "8.20.0"
   },
   "lint-staged": {
     "*.{ts,mts,cts,tsx}": [
@@ -79,13 +141,14 @@
     ]
   },
   "dependencies": {
-    "@tiangong-lca/cli": "0.1.10",
-    "ajv": "8.20.0"
+    "@tiangong-lca/cli": "0.1.10"
   },
   "foundryRuntime": {
-    "schema": "tiangong-foundry.runtime-layout.v1",
+    "schema": "tiangong-foundry.runtime-layout.v2",
     "asset_root": ".",
     "source_entry": "scripts/foundry.ts",
-    "emitted_entry": "dist/scripts/foundry.js"
+    "emitted_entry": "dist/scripts/foundry.js",
+    "package_entry": "package-dist/scripts/package-entry.js",
+    "package_descriptor": "package-dist/assets/foundry-package-descriptor.json"
   }
 }

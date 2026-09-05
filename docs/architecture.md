@@ -21,6 +21,7 @@ checkPaths:
   - test/README.md
   - docs/capability-ownership-policy.md
   - docs/workspace-project-map.md
+  - docs/package-distribution-contract.md
   - specs/capability-ownership-rules.json
   - specs/automated-lca-capability-registry.json
   - test/unit/zero-javascript-ratchet.test.mts
@@ -30,6 +31,10 @@ checkPaths:
   - scripts/check-tidas-cutover.ts
   - scripts/check-lint-suppressions.ts
   - scripts/clean-build-output.ts
+  - scripts/build-foundry-package.ts
+  - scripts/package-entry.ts
+  - scripts/public-api.ts
+  - scripts/lib/foundry-package-contract.ts
   - scripts/lib/tidas-adapter.ts
   - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
@@ -147,13 +152,13 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
-lastReviewedNote: "Reviewed for #104 W05: request/revision facade composition is implemented; package closure and F1 component trust remain pending."
+lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
+lastReviewedNote: "Reviewed for #106 W06: public bin/API compilation, sanitized staging and descriptor/file qualification are implemented; F1 component trust remains W08."
 ---
 
 # Architecture
 
-The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade now adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 still owns the published package. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
+The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 compiles that facade into the descriptor-bound `@tiangong-lca/foundry` candidate; W08 still owns F1 publication and platform components. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/package-distribution-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 
 The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` now implements workspace init/migration, consumer doctor and task start/status/resume as the separate hierarchical facade. All 63 flat owner commands retain explicit public/internal/excluded, path, child, qualification and authorization dispositions; the facade reaches them only through registered task state and never falls back to the developer runner.
 
@@ -178,6 +183,12 @@ Foundry selects a private session reference and exact project/user intent, then 
 Request and task records form a two-level index: one request retains monotonic revisions, while each revision points to one immutable v2 task. The latest identical fingerprint is reused; a changed canonical path or byte hash produces a new task with a predecessor. This preserves old attempts and avoids using user-visible filenames or current directories as identity. Status resolves through the task pointer and requires actor intent before loading task content.
 
 Runtime selection is an injected host capability. Direct/unqualified use can initialize, diagnose, create, inspect and locally prepare tasks; child-required stages need a CLI-manager selection that W06/W08 will derive from an immutable product manifest. No environment variable or task document can choose the CLI/TIDAS trust anchor.
+
+## Package boundary
+
+The repository and public package have separate composition roots. `scripts/foundry.ts` retains all developer owners. The public bin calls only `runFoundryPublicCommand`, and `scripts/public-api.ts` binds its own module identity before exposing the typed host facade. `tsconfig.package.json` follows those two roots to a 39-module JavaScript closure plus declarations; internal command/case implementations and source maps never enter the package tree.
+
+`build-foundry-package.ts` creates a sanitized publish stage without scripts, dev dependencies or package-manager metadata, copies only the reviewed allowlist and writes a strict file descriptor. Installed v2 package resolution checks that descriptor and the complete semantic manifest before returning a context. Exact file hashes protect code/assets; W08 provenance and component signatures protect distribution origin.
 
 ## Current Shape
 

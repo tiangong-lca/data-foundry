@@ -337,7 +337,8 @@ test("Foundry pins the published CLI runtime and high-risk audit closure", () =>
   const runtimeSource = readText("scripts/lib/foundry-runtime-utils.ts");
   assert.match(runtimeSource, /tiangongLcaCliPackageVersion\s*=\s*"0\.1\.10"/u);
   assert.doesNotMatch(runtimeSource, /tiangongLcaCliPackageVersion\s*=\s*"0\.1\.[0-2]"/u);
-  assert.equal(packageJson.dependencies?.ajv, "8.20.0");
+  assert.equal(packageJson.dependencies?.ajv, undefined);
+  assert.equal(packageJson.devDependencies?.ajv, "8.20.0");
   const workspace = readText("pnpm-workspace.yaml");
   assert.match(workspace, /fast-uri:\s*3\.1\.7/u);
   assert.match(workspace, /minimumReleaseAge:\s*1440/u);

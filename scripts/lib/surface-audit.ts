@@ -50,6 +50,10 @@ type PackageJson = {
   scripts?: Record<string, unknown>;
 };
 
+type TypeScriptConfig = {
+  files?: unknown;
+};
+
 const commandHandlerHelpKeys = new Set(["help", "--help", "-h"]);
 const deprecatedNamePattern = /\b(?:legacy|deprecated|compat|compatibility|alias|old)\b/iu;
 const scriptEntrypoints = new Set([
@@ -64,6 +68,24 @@ const scriptEntrypoints = new Set([
 
 function portablePath(filePath: string): string {
   return filePath.split(path.sep).join(path.posix.sep);
+}
+
+function declaredScriptEntrypoints(repoRoot: string): Set<string> {
+  const declared = new Set(scriptEntrypoints);
+  const packageJson = JSON.parse(readTextIfExists(repoRoot, "package.json") || "{}") as PackageJson;
+  for (const command of Object.values(packageJson.scripts ?? {})) {
+    if (typeof command !== "string") continue;
+    for (const match of command.matchAll(/(?:^|\s)(scripts\/[A-Za-z0-9._/-]+\.ts)(?=\s|$)/gu))
+      declared.add(match[1]);
+  }
+  const packageConfig = JSON.parse(
+    readTextIfExists(repoRoot, "tsconfig.package.json") || "{}",
+  ) as TypeScriptConfig;
+  if (Array.isArray(packageConfig.files))
+    for (const file of packageConfig.files)
+      if (typeof file === "string" && /^scripts\/[A-Za-z0-9._/-]+\.ts$/u.test(file))
+        declared.add(file);
+  return declared;
 }
 
 function walkFiles(
@@ -271,8 +293,9 @@ function auditInboundModules(repoRoot: string): SurfaceAuditCheck {
   const metadataOwnerModules = new Set(
     Object.values(commandMetadata).map((entry) => entry.ownerModule),
   );
+  const entrypoints = declaredScriptEntrypoints(repoRoot);
   for (const modulePath of modules) {
-    if (scriptEntrypoints.has(modulePath)) continue;
+    if (entrypoints.has(modulePath)) continue;
     if (metadataOwnerModules.has(modulePath)) continue;
     if (!imported.has(modulePath)) {
       errors.push({

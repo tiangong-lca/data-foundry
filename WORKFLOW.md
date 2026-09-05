@@ -19,6 +19,7 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
   - docs/runtime-skill-management.md
+  - docs/package-distribution-contract.md
   - docs/foundry-task-contracts.md
   - docs/incremental-change-set-contract.md
   - specs/automated-lca-capability-registry.json
@@ -27,6 +28,10 @@ checkPaths:
   - scripts/check-tidas-cutover.ts
   - scripts/check-lint-suppressions.ts
   - scripts/clean-build-output.ts
+  - scripts/build-foundry-package.ts
+  - scripts/package-entry.ts
+  - scripts/public-api.ts
+  - scripts/lib/foundry-package-contract.ts
   - scripts/with-lca-account.ts
   - scripts/lib/tidas-adapter.ts
   - scripts/lib/post-authoring-finalize-utils.ts
@@ -276,8 +281,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
-lastReviewedNote: "Reviewed for #104 W05: start/status/resume and migration dry-run preserve the task and no-replay owners."
+lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
+lastReviewedNote: "Reviewed for #106 W06: installed package entry and host API preserve the public task/no-replay workflow without exposing developer owners."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -399,6 +404,8 @@ All scenario suites are native `.test.mts`. Preserve every multi-command artifac
 Do not parse or execute rendered command strings. `tiangong-foundry.command-spec.v1` makes `executable` plus `argv` authoritative and keeps `display` reader-only. Its SHA-256 binds the authoritative command and exact artifact facts; commit and verify both bind the final rows path, bytes, and SHA-256, and runners reject same-path drift before `shell=false` spawn. Artifact-to-scope matching still normalizes platform separators. Durable writers fsync writable file descriptors, not read-only reopened handles.
 
 Use the exact installed project dependency as `pnpm exec tiangong-lca ...`. Foundry runtime adapters resolve that same `@tiangong-lca/cli@0.1.10` manifest and bin directly; only the external `skills@latest` source-evidence resolver remains intentionally floating, with the resolved ref recorded in task artifacts.
+
+The npm candidate is built through `pnpm package:build` and checked through `pnpm package:check`; `pnpm package:pack` archives only the generated sanitized stage. The installed `tiangong-foundry` bin accepts the six public facade operations and never routes a flat developer command. Package installation performs no initialization, login, component download or hook setup. Treat the W06 tarball as a local candidate until W08 publishes the exact F1 release and product manifest.
 
 Reusable scheduling/run-lock, receipt parsing and runtime identity come only from `@tiangong-lca/cli/batch`, `@tiangong-lca/cli/auth-identity-receipt` and `@tiangong-lca/cli/runtime`. Never restore a `dist/src/**` import or expose CLI test internals; fixture receipt construction is test-only and must pass the same public parser before it can drive a case.
 

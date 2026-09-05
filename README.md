@@ -30,6 +30,14 @@ checkPaths:
   - scripts/check-tidas-cutover.ts
   - scripts/check-lint-suppressions.ts
   - scripts/clean-build-output.ts
+  - scripts/build-foundry-package.ts
+  - scripts/pack-foundry-package.ts
+  - scripts/verify-foundry-package.ts
+  - scripts/package-entry.ts
+  - scripts/public-api.ts
+  - scripts/lib/foundry-package-contract.ts
+  - tsconfig.package.json
+  - docs/package-distribution-contract.md
   - scripts/lib/tidas-adapter.ts
   - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
@@ -148,14 +156,15 @@ checkPaths:
   - test/unit/foundry-runtime-environment.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
+  - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
-lastReviewedNote: "Reviewed for #104 W05: public workspace/task operations and schemas are implemented; npm package and F1 publication remain pending."
+lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
+lastReviewedNote: "Reviewed for #106 W06: the installable Foundry 0.1.0 candidate, public-only bin/API and descriptor-verified package closure are implemented; F1 publication remains W08."
 ---
 
 # TianGong LCA Data Foundry
 
-The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade now adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 still owns the published package. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
+The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 packages that facade as a deterministic source-free candidate; `docs/package-distribution-contract.md` owns its files and integrity. F1 registry/component publication remains W08. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 
 The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` now implements workspace init/migration, consumer doctor and task start/status/resume as the separate hierarchical facade. All 63 flat owner commands retain explicit public/internal/excluded, path, child, qualification and authorization dispositions; the facade reaches them only through registered task state and never falls back to the developer runner.
 
@@ -172,7 +181,7 @@ node scripts/foundry.ts task resume --workspace /absolute/project --task <task-i
 node scripts/foundry.ts workspace migrate --workspace /absolute/project --dry-run --json
 ```
 
-Each command emits one compact machine object. Use only structured next-action argv with its recorded CWD. Task start is local and does not log in. This source command is development evidence; installable `tiangong-foundry` arrives with W06.
+Each command emits one compact machine object. Use only structured next-action argv with its recorded CWD. Task start is local and does not log in. `pnpm package:build && pnpm package:check` qualifies the W06 candidate, and `pnpm package:pack` creates the local tarball from its sanitized staging tree. The candidate is not the public F1 release until W08.
 
 Control plane for turning external source material into validated, import-ready TIDAS data.
 

@@ -27,6 +27,13 @@ checkPaths:
   - scripts/check-tidas-cutover.ts
   - scripts/check-lint-suppressions.ts
   - scripts/clean-build-output.ts
+  - scripts/build-foundry-package.ts
+  - scripts/pack-foundry-package.ts
+  - scripts/verify-foundry-package.ts
+  - scripts/package-entry.ts
+  - scripts/public-api.ts
+  - scripts/lib/foundry-package-contract.ts
+  - docs/package-distribution-contract.md
   - scripts/lib/foundry-runtime-environment.ts
   - scripts/lib/foundry-runtime-paths.ts
   - scripts/lib/tidas-adapter.ts
@@ -86,13 +93,13 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
-lastReviewedNote: "Reviewed for #104 W05: Foundry owns the facade/request index while CLI/TIDAS and mutation execution remain with their owners."
+lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
+lastReviewedNote: "Reviewed for #106 W06: Foundry owns its public package closure/descriptor while CLI, TIDAS, component distribution and mutation execution retain their owners."
 ---
 
 # Capability Ownership Policy
 
-The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade now adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 still owns the published package. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
+The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 owns its deterministic npm candidate closure; W08 owns F1 publication and components. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/package-distribution-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 
 The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` now implements workspace init/migration, consumer doctor and task start/status/resume as the separate hierarchical facade. All 63 flat owner commands retain explicit public/internal/excluded, path, child, qualification and authorization dispositions; the facade reaches them only through registered task state and never falls back to the developer runner.
 
@@ -105,6 +112,7 @@ Foundry must distinguish project-specific orchestration from shared TianGong cap
 Foundry owns:
 
 - its exact pnpm package-manager contract, sole root workspace/lock, and repository-local validation gates;
+- its source-free public bin/API compiler graph, sanitized npm staging manifest, explicit file allowlist and package descriptor verification;
 - the six hierarchical workspace/task facade operations, strict result/task-spec schemas, request/revision indexes and actor-bound task projection;
 - deterministic local task preparation and read-only legacy inventory through existing runtime/task owners;
 
@@ -146,7 +154,7 @@ Foundry also owns portability and fail-closed handling of its local artifact pat
 
 Foundry owns the `tiangong-foundry.command-spec.v1` handoff envelope: strict executable/argv validation, duplicate critical-flag rejection, reader-only display rendering, command hashing, and exact input artifact facts. The published CLI still owns the command's remote behavior. Foundry runners may execute only the parsed executable and argv with `shell=false`, after rechecking bound artifact bytes.
 
-Profile-gated batch commit does not change ownership: Foundry may decide that an exact scope has passed policy and handoff gates, but the actual mutation command remains an official CLI/platform command executed under an account guard. Foundry's default platform invocation is the exact installed CLI package, `pnpm exec tiangong-lca ...`; credential-scoped account execution additionally requires its CLI 0.1.3 intent-bound identity receipt. Local CLI binary overrides are only explicit operator/test state, not the workflow contract.
+Profile-gated batch commit does not change ownership: Foundry may decide that an exact scope has passed policy and handoff gates, but the actual mutation command remains an official CLI/platform command executed under an account guard. Foundry's default platform invocation is the exact installed CLI package, `pnpm exec tiangong-lca ...`; credential-scoped account execution additionally requires its CLI 0.1.10 intent-bound identity receipt. Local CLI binary overrides are only explicit operator/test state, not the workflow contract.
 
 The supported library boundary is `@tiangong-lca/cli/command-spec`, `@tiangong-lca/cli/batch`, and `@tiangong-lca/cli/auth-identity-receipt`. Generic contracts, scheduling, run locks, and strict receipt parsing remain CLI-owned; Foundry owns semantic adapters and test-only fixture materialization. A private package file is never an ownership fallback.
 
