@@ -58,7 +58,7 @@ test("layout identity cannot redirect code outside the declared runtime tree", (
   }
 });
 
-test("v2 layout selects the dedicated package entry without changing the developer entry", (t) => {
+test("v2 layout preserves the developer entry and refuses an unverified package tree", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-layout-v2-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const sourceEntry = path.join(root, "scripts/foundry.ts");
@@ -86,8 +86,6 @@ test("v2 layout selects the dedicated package entry without changing the develop
     }),
   );
   const source = resolveFoundryRuntimePaths(pathToFileURL(sourceEntry).href);
-  const packaged = resolveFoundryRuntimePaths(pathToFileURL(packageModule).href);
   assert.equal(source.entryPath, fs.realpathSync(sourceEntry));
-  assert.equal(packaged.entryPath, fs.realpathSync(packageEntry));
-  assert.equal(packaged.entryRepoRelativePath, "package-dist/scripts/package-entry.js");
+  assert.throws(() => resolveFoundryRuntimePaths(pathToFileURL(packageModule).href));
 });

@@ -72,9 +72,29 @@ function layoutPath(value: unknown, directory = false): value is string {
 function readRuntimePackage(root: string): RuntimePackage | null {
   const manifestPath = path.join(root, "package.json");
   if (!fs.existsSync(manifestPath)) return null;
-  const stat = fs.lstatSync(manifestPath);
-  if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 1024 * 1024) return null;
-  const bytes = fs.readFileSync(manifestPath);
+  let fd: number;
+  try {
+    fd = fs.openSync(manifestPath, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+  } catch {
+    return null;
+  }
+  let bytes: Buffer;
+  try {
+    const before = fs.fstatSync(fd, { bigint: true });
+    if (!before.isFile() || before.size > BigInt(1024 * 1024)) return null;
+    bytes = fs.readFileSync(fd);
+    const after = fs.fstatSync(fd, { bigint: true });
+    if (
+      before.dev !== after.dev ||
+      before.ino !== after.ino ||
+      before.size !== after.size ||
+      before.mtimeNs !== after.mtimeNs ||
+      BigInt(bytes.length) !== after.size
+    )
+      return null;
+  } finally {
+    fs.closeSync(fd);
+  }
   let manifest: Record<string, unknown> | null;
   try {
     manifest = record(JSON.parse(bytes.toString("utf8")));
@@ -165,8 +185,7 @@ export function describeFoundryRuntime(moduleUrl: string): FoundryRuntimeIdentit
   if (declaredEntry === runtimePackage.layout.package_entry) {
     if (runtimePackage.layout.package_descriptor !== foundryPackageDescriptorPath)
       throw new Error("Foundry package descriptor path differs from the public package contract.");
-    if (!fs.existsSync(path.resolve(runtimePackage.root, runtimePackage.layout.source_entry)))
-      assertFoundryPackage(runtimePackage.root);
+    assertFoundryPackage(runtimePackage.root);
   }
   return Object.freeze({
     repoRoot: runtimePackage.root,

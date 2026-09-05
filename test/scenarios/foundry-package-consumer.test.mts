@@ -43,7 +43,14 @@ function isolatedEnvironment(home: string, extra: NodeJS.ProcessEnv = {}): NodeJ
     "NODE_EXTRA_CA_CERTS",
   ]) {
     const value = process.env[key];
-    if (value !== undefined && !secretKey.test(key)) environment[key] = value;
+    if (value !== undefined && !secretKey.test(key)) {
+      if (/proxy/iu.test(key)) {
+        const proxy = new URL(value);
+        assert.equal(proxy.username, "", `${key} cannot carry a username`);
+        assert.equal(proxy.password, "", `${key} cannot carry a password`);
+      }
+      environment[key] = value;
+    }
   }
   assert.deepEqual(
     Object.keys(environment).filter((key) => secretKey.test(key)),
@@ -475,6 +482,18 @@ test("packed Foundry installs twice and runs only the public facade from a read-
         ),
     );
     fs.unlinkSync(path.join(tampered, "linked-readme"));
+    fs.symlinkSync(root, path.join(tampered, "node_modules"));
+    assert.throws(
+      () => api.assertFoundryPackage(tampered),
+      (error: unknown) =>
+        Boolean(
+          error &&
+          typeof error === "object" &&
+          "code" in error &&
+          error.code === "package_file_invalid",
+        ),
+    );
+    fs.unlinkSync(path.join(tampered, "node_modules"));
   }
   const descriptor = JSON.parse(
     fs.readFileSync(

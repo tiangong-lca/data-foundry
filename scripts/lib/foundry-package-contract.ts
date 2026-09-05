@@ -341,10 +341,14 @@ function packageFiles(root: string): string[] {
     for (const entry of fs
       .readdirSync(directory, { withFileTypes: true })
       .sort((a, b) => comparePortable(a.name, b.name))) {
-      if (relativeDirectory === "" && entry.name === "node_modules") continue;
       const relative = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
       const target = path.join(directory, entry.name);
       const stat = fs.lstatSync(target);
+      if (relativeDirectory === "" && entry.name === "node_modules") {
+        if (!stat.isDirectory() || stat.isSymbolicLink())
+          fail("package_file_invalid", "Installed package node_modules must be a real directory.");
+        continue;
+      }
       if (stat.isSymbolicLink())
         fail("package_file_invalid", `Package payload contains a link: ${relative}.`);
       if (stat.isDirectory()) walk(target, relative, depth + 1);
@@ -393,6 +397,7 @@ export function assertFoundryPackage(packageRoot: string): FoundryPackageDescrip
     if (
       file.endsWith(".map") ||
       (file.endsWith(".ts") && !file.endsWith(".d.ts")) ||
+      /^package-dist\/scripts\/(?:commands|cases)\//u.test(file) ||
       /(?:^|\/)(?:test|tests|\.git|\.github|\.agents|\.env|inputs|outputs|tasks|reports|\.foundry)(?:\/|\.|$)/iu.test(
         file,
       )
