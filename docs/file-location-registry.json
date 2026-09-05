@@ -499,6 +499,72 @@
       "sensitivity": "non-sensitive runbook; no credentials and no private payloads",
       "tracked": true,
       "notes": "Continuous-run goal entry document for the USLCI import: phases, invariants, parallel-work isolation rules, blocker triage, and the current-state snapshot agents must keep updated."
+    },
+    {
+      "id": "foundry-package-distribution-contract",
+      "status": "active",
+      "classification": "package-distribution-contract",
+      "current_path": "docs/package-distribution-contract.md",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "AGENTS.md",
+        "README.md",
+        "docs/runtime-context-contract.md",
+        ".docpact/config.yaml"
+      ],
+      "sensitivity": "public package contract; no credentials or private payloads",
+      "tracked": true,
+      "notes": "Authoritative W06 package identity, compiler/staging, file allowlist, descriptor, install and W08 publication boundary."
+    },
+    {
+      "id": "foundry-package-descriptor-schema",
+      "status": "active",
+      "classification": "machine-readable-package-schema",
+      "current_path": "specs/schemas/foundry-package-descriptor.schema.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/package-distribution-contract.md",
+        "scripts/lib/foundry-package-contract.ts",
+        "test/unit/foundry-facade-schemas.test.mts"
+      ],
+      "sensitivity": "non-sensitive package identity and content-hash schema",
+      "tracked": true,
+      "notes": "Strict package/bin/API/runtime/platform/protocol and sorted payload fact contract."
+    },
+    {
+      "id": "foundry-package-public-entry",
+      "status": "active",
+      "classification": "public-package-entry",
+      "current_path": "scripts/package-entry.ts",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "package.json",
+        "scripts/public-api.ts",
+        "docs/package-distribution-contract.md",
+        "test/scenarios/foundry-package-consumer.test.mts"
+      ],
+      "sensitivity": "public source entry; no credentials or task payloads",
+      "tracked": true,
+      "notes": "Public-only tiangong-foundry bin source; never falls back to the 63-command developer dispatcher."
+    },
+    {
+      "id": "foundry-package-consumer-qualification",
+      "status": "active",
+      "classification": "package-qualification-test",
+      "current_path": "test/scenarios/foundry-package-consumer.test.mts",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/package-distribution-contract.md",
+        "test/README.md",
+        ".docpact/config.yaml"
+      ],
+      "sensitivity": "public synthetic package/install fixtures; live OAuth evidence remains private",
+      "tracked": true,
+      "notes": "Deterministic double build/pack, online/offline clean consumers, read-only six-operation facade and tamper/leakage negatives."
     }
   ]
 }

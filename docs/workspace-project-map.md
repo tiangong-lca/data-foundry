@@ -25,6 +25,11 @@ checkPaths:
   - scripts/check-tidas-cutover.ts
   - scripts/check-lint-suppressions.ts
   - scripts/clean-build-output.ts
+  - scripts/build-foundry-package.ts
+  - scripts/package-entry.ts
+  - scripts/public-api.ts
+  - scripts/lib/foundry-package-contract.ts
+  - docs/package-distribution-contract.md
   - scripts/lib/foundry-runtime-environment.ts
   - scripts/lib/foundry-runtime-paths.ts
   - scripts/lib/tidas-adapter.ts
@@ -84,8 +89,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
-lastReviewedNote: "Reviewed for #104 W05: Foundry facade routing preserves CLI/TIDAS, Skills and workspace ownership boundaries."
+lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
+lastReviewedNote: "Reviewed for #106 W06: Foundry owns its npm candidate closure; CLI owns component management, TIDAS owns native artifacts, and W08 owns release publication."
 ---
 
 # Workspace Project Map
@@ -102,7 +107,7 @@ The Wave 26 library, classification, authoring, process-scope and batch modules 
 
 | Need | Owning project | Normal surface |
 | --- | --- | --- |
-| Installed workspace/task facade, request revisions and local task evidence | `tiangong-lca-data-foundry` | `tiangong-foundry workspace ...`, `doctor`, and `task start/status/resume` after W06 publishes the package |
+| Installed workspace/task facade, request revisions and local task evidence | `tiangong-lca-data-foundry` | W06 candidate `tiangong-foundry workspace ...`, `doctor`, and `task start/status/resume`; W08 publishes F1 |
 | TIDAS schema/methodology runtime contract | Rust `tidas` for deterministic validation; `tidas-sdk`/`tiangong-lca-cli` for AI context | `tidas validate --describe`; `pnpm exec tiangong-lca dataset context-pack` |
 | Source package detection/import/conversion | Rust `tidas` (`tidas-tools`) | `node scripts/foundry.ts dataset-tidas-import` → `tidas import` |
 | Entity curation queue state | `tiangong-lca-cli` | `pnpm exec tiangong-lca dataset curation-queue build/next/verify` |
@@ -126,7 +131,7 @@ The Wave 26 library, classification, authoring, process-scope and batch modules 
 | Incremental release planning and conversion logs | `tiangong-lca-data-foundry` for offline composition; `tiangong-lca-cli` for execution/readback | `dataset-incremental-change-set-compose`, per-conversion JSONL, dependency closure, CLI candidate contract, then fresh reconciliation/capsule admission and published CLI execution |
 | Flow-topology convergence and physical retirement | `tiangong-lca-data-foundry` for offline F/P/D composition; `tiangong-lca-cli` for protected execution/readback | `dataset-topology-convergence-compose`, occurrence-keyed conversion logs, F/P contracts, post-P zero-inbound D candidates, then fixed-fingerprint `dataset maintenance apply` |
 | Foundry test structure and command navigation checks | `tiangong-lca-data-foundry` | `test/README.md`, `test/unit`, `test/commands`, `test/scenarios`, `test/fixtures`, `scripts/lib/foundry-command-metadata.ts`, `scripts/lib/surface-audit.ts` |
-| Foundry package/compiler, portable artifact I/O, and typed runtime | `tiangong-lca-data-foundry` | Node.js 24, `pnpm@11.24.0`, TypeScript `7.0.2` with erasable-only syntax, root-only Oxlint config plus Git-hook-isolated tracked-source suppression audit, intentional TS includes with Git-enumerated coverage, clean/type-error-no-emit builds, trusted source/emitted entry discovery, credential-free symmetric Golden comparison, native `prettier.config.ts`, permanent zero-JavaScript ratchet, `.gitattributes` LF policy, and separator-neutral artifacts |
+| Foundry package/compiler, portable artifact I/O, and typed runtime | `tiangong-lca-data-foundry` | Node.js 24, `pnpm@11.24.0`, TypeScript `7.0.2`, public-only package entry/API, sanitized staging manifest, descriptor-bound source-free closure, trusted source/emitted/package discovery, credential-free Golden comparison, zero-JavaScript ratchet and four-platform tests |
 | Foundry-local surface cleanup | `tiangong-lca-data-foundry` | remove old aliases, empty command categories, and orphaned draft docs only after metadata, tests, docs, and docpact show no remaining consumer |
 
 Before implementing a missing capability, classify it with `docs/capability-ownership-policy.md` and `specs/capability-ownership-rules.json`.

@@ -20,6 +20,7 @@ export const foundryPackageStaticFiles = Object.freeze([
   "specs/schemas/task-authorization.schema.json",
   "specs/schemas/tidas-runtime-expectation.schema.json",
   "docs/architecture.md",
+  "docs/package-distribution-contract.md",
   "docs/foundry-task-contracts.md",
   "docs/public-runtime-contract.md",
   "docs/runtime-context-contract.md",

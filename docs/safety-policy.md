@@ -17,6 +17,7 @@ checkPaths:
   - README.md
   - AGENTS.md
   - docs/foundry-task-contracts.md
+  - docs/package-distribution-contract.md
   - docs/import-profiles/bafu/profile.md
   - docs/import-profiles/bafu/constraints.md
   - specs/automated-lca-capability-registry.json
@@ -24,6 +25,9 @@ checkPaths:
   - scripts/foundry-golden-diff.ts
   - scripts/check-tidas-cutover.ts
   - scripts/lib/tidas-adapter.ts
+  - scripts/lib/foundry-package-contract.ts
+  - scripts/package-entry.ts
+  - test/scenarios/foundry-package-consumer.test.mts
   - scripts/lib/post-authoring-finalize-utils.ts
   - scripts/commands/tasks.ts
   - scripts/commands/import-completion.ts
@@ -76,8 +80,8 @@ checkPaths:
   - scripts/foundry-facade.ts
   - scripts/lib/foundry-facade-store.ts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
-lastReviewedNote: "Reviewed for #104 W05: request revisions preserve old tasks, resume stops at attempt evidence, and completion requires an indexed same-task report."
+lastReviewedCommit: 8cbbddb1a727ff2858918d0ff6d2efb1c8827390
+lastReviewedNote: "Reviewed for #106 W06: installed package bytes/manifest are verified before facade context, and the public bin cannot enter mutation owners."
 ---
 
 # Safety Policy
@@ -87,6 +91,8 @@ lastReviewedNote: "Reviewed for #104 W05: request revisions preserve old tasks, 
 `dry-run`.
 
 ## Remote Commit
+
+An installed package is usable only after its sanitized manifest, descriptor and complete allowed payload match. A modified, extra, linked or private/source file fails before a package-backed context is created. This package check is code/asset integrity, not task permission: it does not make a profile, completion report or mutation executable. The public bin cannot route flat developer commands, and a W06 candidate is not a published F1 component.
 
 Remote database writes are blocked unless:
 
