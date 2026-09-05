@@ -19,6 +19,12 @@ checkPaths:
   - scripts/lib/foundry-command-registry.ts
   - scripts/lib/foundry-command-metadata.ts
   - scripts/lib/surface-audit.ts
+  - scripts/package-entry.ts
+  - scripts/public-api.ts
+  - scripts/pack-foundry-package.ts
+  - scripts/verify-foundry-package.ts
+  - tsconfig.package.json
+  - test/unit/surface-audit-typescript.test.mts
   - scripts/lib/foundry-runtime-paths.ts
   - scripts/lib/foundry-runtime-command-policy.ts
   - scripts/commands/identity-decisions.ts
@@ -84,9 +90,9 @@ checkPaths:
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: 4f69b159b473d41bdf99595fe1ba5fe2d9864c5e
-lastReviewedNote: "Reviewed for #104 W05: six hierarchical facade operations compose the unchanged 63 owner commands without publishing them directly."
+lastReviewedAt: 2026-09-05
+lastReviewedCommit: 66fc5f71e3962a4a486a39b74d8b6cd385ed57d6
+lastReviewedNote: "Reviewed for #106 W06: public package bin/API and package scripts are declared entrypoints while the 63 owner commands remain source-only."
 ---
 
 # Foundry Command Surface
@@ -102,7 +108,7 @@ Foundry CLI-spine and command governance has these checked contracts:
 - `scripts/lib/foundry-args.ts` is the typed positional/option/scalar parsing contract.
 - `scripts/lib/foundry-command-registry.ts` is the typed runtime command list, help JSON, and exit-code policy.
 - `scripts/lib/foundry-command-metadata.ts` is the typed AI-readable navigation and ownership map.
-- `scripts/lib/surface-audit.ts` checks hidden handlers, category coverage, orphan docs, declared entrypoints, and script-only inbound imports with portable report paths.
+- `scripts/lib/surface-audit.ts` checks hidden handlers, category coverage, orphan docs, declared entrypoints, and script-only inbound imports with portable report paths. Entrypoints come from the fixed repository set, package script targets and `tsconfig.package.json.files`; arbitrary unreferenced modules still fail.
 
 The metadata module must cover every command returned by `node scripts/foundry.ts help`. It records each command category, owner module, owner export, input artifacts, output artifacts, workflow entry audit state, and key behavior checks.
 
