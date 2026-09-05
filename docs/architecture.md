@@ -151,9 +151,9 @@ checkPaths:
   - test/unit/foundry-runtime-environment.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
-lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
-lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
+lastReviewedAt: 2026-09-06
+lastReviewedCommit: 7f600bc2db0c60a946a8609bfdc1cc41bc1125a2
+lastReviewedNote: "Reviewed for #110 / workspace #980 W11: remove the owned macOS Intel Oxlint age exception while preserving the frozen toolchain, supported platforms, public package closure and runtime/authorization boundaries. The package descriptor owns the current closure inventory."
 ---
 
 # Architecture
@@ -188,7 +188,7 @@ Runtime selection is an injected host capability. Direct/unqualified use can ini
 
 ## Package boundary
 
-The repository and public package have separate composition roots. `scripts/foundry.ts` retains all developer owners. The public bin calls only `runFoundryPublicCommand`, and `scripts/public-api.ts` binds its own module identity before exposing the typed host facade. `tsconfig.package.json` follows those two roots to a 44-module JavaScript closure plus declarations; internal command/case implementations and source maps never enter the package tree.
+The repository and public package have separate composition roots. `scripts/foundry.ts` retains all developer owners. The public bin calls only `runFoundryPublicCommand`, and `scripts/public-api.ts` binds its own module identity before exposing the typed host facade. `tsconfig.package.json` follows those two roots to the descriptor-bound JavaScript closure plus declarations; internal command/case implementations and source maps never enter the package tree.
 
 `build-foundry-package.ts` creates a sanitized publish stage without scripts, dev dependencies or package-manager metadata, copies only the reviewed allowlist and writes a strict file descriptor. Installed v2 package resolution checks that descriptor and the complete semantic manifest before returning a context. Exact file hashes protect code/assets; W08 provenance and component signatures protect distribution origin.
 

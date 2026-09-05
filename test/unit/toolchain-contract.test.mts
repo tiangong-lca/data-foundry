@@ -342,6 +342,7 @@ test("Foundry pins the published CLI runtime and high-risk audit closure", () =>
   const workspace = readText("pnpm-workspace.yaml");
   assert.match(workspace, /fast-uri:\s*3\.1\.7/u);
   assert.match(workspace, /minimumReleaseAge:\s*1440/u);
+  assert.doesNotMatch(workspace, /^\s*-\s*["']?@oxlint\/binding-darwin-x64@/mu);
   assert.match(workspace, /-\s+["']?@tiangong-lca\/cli@0\.1\.10["']?/u);
   assert.doesNotMatch(workspace, /-\s+["']?@tiangong-lca\/cli@0\.1\.[0-2](?:["']|\s|$)/u);
   for (const file of trackedFiles().filter((value) => /\.(?:cts|mts|ts)$/u.test(value))) {
