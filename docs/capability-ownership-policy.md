@@ -92,9 +92,9 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
-lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
+lastReviewedAt: 2026-09-06
+lastReviewedCommit: 7f600bc2db0c60a946a8609bfdc1cc41bc1125a2
+lastReviewedNote: "Reviewed for #110 / workspace #980 W11: remove the owned macOS Intel Oxlint age exception while preserving the frozen toolchain, supported platforms, public package closure and runtime/authorization boundaries. The package descriptor owns the current closure inventory."
 ---
 
 # Capability Ownership Policy
