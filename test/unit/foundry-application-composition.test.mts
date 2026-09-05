@@ -41,6 +41,7 @@ test("command applications return results without loading env, exiting or sharin
       for (const method of ['existsSync','statSync','lstatSync','readFileSync','readdirSync','openSync']) {
         const original=fs[method].bind(fs);
         fs[method]=(...args)=>{
+          if (typeof args[0] === 'number') return original(...args);
           const raw=args[0] instanceof URL ? fileURLToPath(args[0]) : String(args[0]);
           const value=path.resolve(raw).replaceAll('\\\\','/');
           if (/(?:^|\\/)\\.env(?:[.\\/]|$)/u.test(value) ||

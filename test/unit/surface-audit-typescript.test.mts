@@ -152,6 +152,19 @@ test("surface audit resolves explicit TypeScript and dynamic imports", () => {
   assert.deepEqual(inbound.errors, []);
 });
 
+test("surface audit derives package script and compiler entrypoints from their manifests", () => {
+  const report = auditFixture({
+    "package.json": '{"scripts":{"package:pack":"node scripts/pack-entry.ts"}}\n',
+    "tsconfig.package.json": '{"files":["scripts/package-entry.ts","scripts/public-api.ts"]}\n',
+    "scripts/pack-entry.ts": "export {};\n",
+    "scripts/package-entry.ts": "export {};\n",
+    "scripts/public-api.ts": "export {};\n",
+  });
+  const inbound = reportCheck(report, "inbound_modules");
+  assert.equal(inbound.scanned, 3);
+  assert.deepEqual(inbound.errors, []);
+});
+
 test("surface audit emits portable POSIX paths and ignores test-only inbound imports", () => {
   const report = auditFixture({
     "scripts/foundry.ts": 'import { run } from "./lib/foundry-cli.ts";\nvoid run;\n',
