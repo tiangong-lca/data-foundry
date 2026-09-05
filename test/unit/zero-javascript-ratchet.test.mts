@@ -33,6 +33,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // The shared application/CLI dispatcher and host-isolation regression stay native TypeScript.
 // Qualified runtime, command-policy, authority-schema and child-admission cases stay native TS.
 // Public facade, request-revision, migration and protocol-schema owners also stay native TS.
+// Issue #106's public package entry, compiler, descriptor, verifier and consumer stay native TS.
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
@@ -89,7 +90,7 @@ test("Prettier configuration is native TypeScript with no compatibility config",
 });
 
 test("TypeScript and pnpm surfaces contain no JavaScript compatibility graph", () => {
-  for (const configPath of ["tsconfig.json", "tsconfig.build.json"]) {
+  for (const configPath of ["tsconfig.json", "tsconfig.build.json", "tsconfig.package.json"]) {
     const config = JSON.parse(readRepoFile(configPath)) as {
       compilerOptions?: Record<string, unknown>;
       include?: string[];
