@@ -9,8 +9,6 @@ import { pathToFileURL } from "node:url";
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 const stageRoot = path.join(repoRoot, "package-stage");
-const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
-const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const secretKey = /(?:PASSWORD|PASSWD|TOKEN|SECRET|COOKIE|CREDENTIAL|API_?KEY|PRIVATE_?KEY)/iu;
 
 function isolatedEnvironment(home: string, extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
@@ -69,6 +67,26 @@ function command(executable: string, args: string[], cwd: string, environment: N
   });
   if (result.error) throw result.error;
   return result;
+}
+
+function packageManagerCommand(
+  manager: "npm" | "pnpm",
+  args: string[],
+  cwd: string,
+  environment: NodeJS.ProcessEnv,
+) {
+  if (process.platform !== "win32") return command(manager, args, cwd, environment);
+  const script =
+    manager === "pnpm"
+      ? process.env.npm_execpath
+      : path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
+  assert.ok(script, `Cannot resolve the ${manager} JavaScript entrypoint on Windows`);
+  assert.equal(
+    fs.statSync(script).isFile(),
+    true,
+    `${manager} JavaScript entrypoint is not a file`,
+  );
+  return command(process.execPath, [script, ...args], cwd, environment);
 }
 
 function packageFiles(root: string): Array<{ path: string; bytes: number; sha256: string }> {
@@ -138,8 +156,8 @@ function installConsumer(
     path.join(project, "package.json"),
     '{"name":"foundry-package-consumer","version":"1.0.0","private":true,"type":"module"}\n',
   );
-  const result = command(
-    npmCommand,
+  const result = packageManagerCommand(
+    "npm",
     [
       "install",
       "--ignore-scripts",
@@ -182,8 +200,8 @@ test("packed Foundry installs twice and runs only the public facade from a read-
   assert.deepEqual(packageFiles(stageRoot), firstBuild);
   const artifacts = path.join(root, "artifacts");
   fs.mkdirSync(artifacts);
-  const packed = command(
-    pnpmCommand,
+  const packed = packageManagerCommand(
+    "pnpm",
     ["pack", "--json", "--pack-destination", artifacts],
     stageRoot,
     isolatedEnvironment(path.join(root, "pack-home")),
@@ -206,8 +224,8 @@ test("packed Foundry installs twice and runs only the public facade from a read-
   assert.equal(fs.existsSync(tarball), true);
   const secondArtifacts = path.join(root, "artifacts-second");
   fs.mkdirSync(secondArtifacts);
-  const secondPack = command(
-    pnpmCommand,
+  const secondPack = packageManagerCommand(
+    "pnpm",
     ["pack", "--json", "--pack-destination", secondArtifacts],
     stageRoot,
     isolatedEnvironment(path.join(root, "second-pack-home")),
