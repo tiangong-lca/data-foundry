@@ -6,26 +6,42 @@
   "additionalProperties": false,
   "required": ["schema", "package", "runtime", "files", "files_sha256"],
   "properties": {
-    "schema": { "const": "tiangong-foundry.package-descriptor.v1" },
+    "schema": {
+      "const": "tiangong-foundry.package-descriptor.v1"
+    },
     "package": {
       "type": "object",
       "additionalProperties": false,
       "required": ["name", "version", "cli_dependency", "bin", "public_api", "types"],
       "properties": {
-        "name": { "const": "@tiangong-lca/foundry" },
-        "version": { "const": "0.1.0" },
+        "name": {
+          "const": "@tiangong-lca/foundry"
+        },
+        "version": {
+          "const": "0.1.0"
+        },
         "cli_dependency": {
           "type": "object",
           "additionalProperties": false,
           "required": ["name", "version"],
           "properties": {
-            "name": { "const": "@tiangong-lca/cli" },
-            "version": { "const": "0.1.10" }
+            "name": {
+              "const": "@tiangong-lca/cli"
+            },
+            "version": {
+              "const": "0.1.10"
+            }
           }
         },
-        "bin": { "const": "package-dist/scripts/package-entry.js" },
-        "public_api": { "const": "package-dist/scripts/public-api.js" },
-        "types": { "const": "package-dist/scripts/public-api.d.ts" }
+        "bin": {
+          "const": "package-dist/scripts/package-entry.js"
+        },
+        "public_api": {
+          "const": "package-dist/scripts/public-api.js"
+        },
+        "types": {
+          "const": "package-dist/scripts/public-api.d.ts"
+        }
       }
     },
     "runtime": {
@@ -36,15 +52,22 @@
         "supported_platforms",
         "workspace_read_schemas",
         "workspace_write_schema",
-        "protocol_schemas"
+        "protocol_schemas",
+        "workspace_write_schemas"
       ],
       "properties": {
-        "layout_schema": { "const": "tiangong-foundry.runtime-layout.v2" },
+        "layout_schema": {
+          "const": "tiangong-foundry.runtime-layout.v2"
+        },
         "supported_platforms": {
           "const": ["linux-x64", "linux-arm64", "darwin-arm64", "win32-x64"]
         },
-        "workspace_read_schemas": { "const": ["tiangong-foundry.workspace.v1"] },
-        "workspace_write_schema": { "const": "tiangong-foundry.workspace.v1" },
+        "workspace_read_schemas": {
+          "const": ["tiangong-foundry.workspace.v1", "tiangong-foundry.workspace.v2"]
+        },
+        "workspace_write_schema": {
+          "const": "tiangong-foundry.workspace.v1"
+        },
         "protocol_schemas": {
           "const": [
             "tiangong-foundry.operation-result.v1",
@@ -54,12 +77,19 @@
             "tiangong-foundry.workspace-migration-transfer-plan.v2",
             "tiangong-foundry.migration-transfer-receipt.v1",
             "tiangong-foundry.workspace-migration-pending.v1",
+            "tiangong-foundry.migration-adoption-plan.v1",
+            "tiangong-foundry.migration-activation.v1",
+            "tiangong-foundry.workspace.v2",
+            "tiangong-foundry.workspace-runtime-selection.v1",
             "tiangong-foundry.runtime-qualification.v1",
             "tiangong-foundry.tidas-runtime-expectation.v1",
             "tiangong-foundry.execution-context.v1",
             "tiangong-foundry.authorization-derivation.v1",
             "tiangong-foundry.task-authorization.v1"
           ]
+        },
+        "workspace_write_schemas": {
+          "const": ["tiangong-foundry.workspace.v1", "tiangong-foundry.workspace.v2"]
         }
       }
     },
@@ -72,15 +102,30 @@
         "additionalProperties": false,
         "required": ["path", "bytes", "sha256"],
         "properties": {
-          "path": { "type": "string", "minLength": 1, "maxLength": 4096 },
-          "bytes": { "type": "integer", "minimum": 0, "maximum": 33554432 },
-          "sha256": { "$ref": "#/$defs/sha256" }
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 33554432
+          },
+          "sha256": {
+            "$ref": "#/$defs/sha256"
+          }
         }
       }
     },
-    "files_sha256": { "$ref": "#/$defs/sha256" }
+    "files_sha256": {
+      "$ref": "#/$defs/sha256"
+    }
   },
   "$defs": {
-    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
   }
 }

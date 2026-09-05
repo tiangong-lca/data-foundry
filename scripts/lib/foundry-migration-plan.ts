@@ -25,6 +25,8 @@ export type { MigrationStageEvidence } from "./foundry-migration-stage.ts";
 import { sha256Json } from "./identity-preflight-proof.ts";
 import { describeFoundryRuntime } from "./foundry-runtime-paths.ts";
 import { assertFoundryPackage } from "./foundry-package-contract.ts";
+import { readFoundryMigrationAuthority } from "./foundry-migration-authority.ts";
+import { transferRead } from "./foundry-migration-transfer-io.ts";
 
 export const FOUNDRY_MIGRATION_TRANSFER_PLAN_SCHEMA =
   "tiangong-foundry.workspace-migration-transfer-plan.v2" as const;
@@ -141,7 +143,9 @@ export function planFoundryWorkspaceMigration(
     fail("migration_roots_overlap", "Migration source and destination must be disjoint.");
   if (
     fs.existsSync(context.controlRoot) &&
-    (!pendingPlanSha256 || pendingFoundryMigration(context) !== pendingPlanSha256)
+    (!pendingPlanSha256 ||
+      (pendingFoundryMigration(context) !== pendingPlanSha256 &&
+        context.migration?.plan_sha256 !== pendingPlanSha256))
   )
     fail("migration_destination_exists", "Choose a destination without existing Foundry state.");
   const privateOptions = { sessionReference: context.accountIntent?.sessionReference };
@@ -229,11 +233,39 @@ export function planFoundryWorkspaceMigration(
     blockers.push(Object.freeze({ code: "migration_private_marker", path: "workspace.json" }));
   if (
     inventory.marker_schema !== null &&
-    inventory.marker_schema !== "tiangong-foundry.workspace.v1"
+    !["tiangong-foundry.workspace.v1", "tiangong-foundry.workspace.v2"].includes(
+      inventory.marker_schema,
+    )
   )
     blockers.push(
       Object.freeze({ code: "migration_source_schema_unsupported", path: "workspace.json" }),
     );
+  if (inventory.marker_schema === "tiangong-foundry.workspace.v2") {
+    try {
+      const marker = JSON.parse(
+        transferRead(path.join(source, ".foundry/workspace.json"), 64 * 1024).toString("utf8"),
+      ) as { workspace_id: string; migration: { plan_sha256: string; activation_sha256: string } };
+      const authority = readFoundryMigrationAuthority(
+        path.join(source, ".foundry"),
+        marker.workspace_id,
+        marker.migration,
+        false,
+        privateOptions.sessionReference,
+      );
+      for (const file of authority.protected_files) {
+        const actual = inventory.entries.find((entry) => entry.path === file.path);
+        if (!actual || actual.sha256 !== file.sha256 || actual.bytes !== file.bytes)
+          fail(
+            "migration_source_authority_invalid",
+            "Current migration evidence is missing, private or changed.",
+          );
+      }
+    } catch {
+      blockers.push(
+        Object.freeze({ code: "migration_source_authority_invalid", path: "workspace.json" }),
+      );
+    }
+  }
   const current = inventoryFoundryWorkspace(source, privateOptions);
   if (
     sha256Json(current) !== sha256Json(inventory) ||
@@ -278,12 +310,7 @@ export function planFoundryWorkspaceMigration(
 }
 
 /** Untrusted serialized plans are accepted only when a fresh independent reconstruction matches every field. */
-export function revalidateFoundryMigrationPlan(
-  context: FoundryRuntimeContext,
-  options: FoundryMigrationPlanningOptions,
-  value: unknown,
-  pendingPlanSha256?: string,
-): FoundryMigrationTransferPlan {
+export function assertFoundryMigrationJson(value: unknown): void {
   let count = 0;
   const json = (item: unknown, depth: number): void => {
     if (++count > 200_000 || depth > 64)
@@ -335,6 +362,15 @@ export function revalidateFoundryMigrationPlan(
   json(value, 0);
   if (Buffer.byteLength(JSON.stringify(value)) > maxDocumentBytes)
     fail("migration_plan_limit", "Migration plan exceeds its document byte limit.");
+}
+
+export function revalidateFoundryMigrationPlan(
+  context: FoundryRuntimeContext,
+  options: FoundryMigrationPlanningOptions,
+  value: unknown,
+  pendingPlanSha256?: string,
+): FoundryMigrationTransferPlan {
+  assertFoundryMigrationJson(value);
   const supplied = record(value);
   const current = planFoundryWorkspaceMigration(context, options, pendingPlanSha256);
   if (sha256Json(supplied) !== sha256Json(current))

@@ -217,6 +217,22 @@ test("concurrent staging shares the destination lock and produces one immutable 
   assert.deepEqual(results[0], results[1]);
 });
 
+test("migration cache locks cannot follow a link into the preserved source", async (t) => {
+  const f = setup(t);
+  const namespace = path.join(f.context.cacheBase, "tiangong-lca");
+  fs.mkdirSync(namespace, { recursive: true });
+  fs.symlinkSync(
+    path.join(f.source, ".foundry"),
+    path.join(namespace, "migration-locks"),
+    process.platform === "win32" ? "junction" : "dir",
+  );
+  await assert.rejects(
+    stageFoundryMigration(f.context, f.options, f.plan),
+    code("migration_path_invalid"),
+  );
+  assert.equal(fs.existsSync(f.dest), false);
+});
+
 test("cancellation and unowned scratch data preserve the source and keep the destination inactive", async (t) => {
   const f = setup(t),
     aborted = new AbortController();
@@ -268,5 +284,34 @@ test("private queue storage is omitted and external private inputs are rejected"
   );
   assert.throws(() =>
     planFoundryWorkspaceMigration(context, { ...f.options, externalInputs: [privateFile] }),
+  );
+});
+
+test("registered account intent is preserved while CLI account storage stays private", async (t) => {
+  const f = setup(t);
+  const intent = path.join(f.source, ".foundry/state/task-accounts/task-one.json");
+  const session = path.join(f.source, ".foundry/state/accounts/cli-session.json");
+  fs.mkdirSync(path.dirname(intent), { recursive: true });
+  fs.mkdirSync(path.dirname(session), { recursive: true });
+  fs.writeFileSync(
+    intent,
+    '{"schema":"tiangong-foundry.account-intent.v1","project_ref":"fixture"}\n',
+  );
+  fs.writeFileSync(session, "synthetic private account storage");
+  const plan = planFoundryWorkspaceMigration(f.context, f.options);
+  assert.ok(
+    plan.source_inventory.entries.find((item) => item.path === "state/task-accounts/task-one.json")
+      ?.sha256,
+  );
+  assert.equal(
+    plan.source_inventory.entries.find((item) => item.path === "state/accounts/cli-session.json")
+      ?.sha256,
+    null,
+  );
+  const result = await stageFoundryMigration(f.context, f.options, plan);
+  assert.ok(result.receipt.files.some((item) => item.source === fs.realpathSync(intent)));
+  assert.equal(
+    result.receipt.files.some((item) => item.source === fs.realpathSync(session)),
+    false,
   );
 });

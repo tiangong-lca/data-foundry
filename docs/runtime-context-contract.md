@@ -41,8 +41,8 @@ checkPaths:
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: a74b09c202f0ed48d3ce8bb0810e1e8b15c47603
-lastReviewedNote: "Reviewed for #108: facade descendants recheck retained predecessor publications and block on observed attempts or missing history; source credentials, execution ownership, full migration adoption and rollback boundaries remain unchanged."
+lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
+lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
@@ -91,7 +91,7 @@ The layout resolver proves local layout and reports package-manifest/entry diges
 
 ## Workspace marker and initialization
 
-The exact marker schema is `tiangong-foundry.workspace.v1`, with `layout_version: 1`, a UUID `workspace_id` and a UTC creation time. Initialization installs a complete marker through an exclusive atomic hardlink from an owned temporary file. A concurrent winner is re-read and validated. Repetition preserves existing bytes and workspace identity, then verifies required control directories. An interrupted recognized v1 initialization may complete its directories; unknown marker versions are never overwritten.
+The default initialization marker is `tiangong-foundry.workspace.v1`, with `layout_version: 1`, a UUID `workspace_id` and a UTC creation time. Initialization installs a complete marker through an exclusive atomic hardlink from an owned temporary file. A concurrent winner is re-read and validated. Repetition preserves existing bytes and workspace identity, then verifies required control directories. An interrupted recognized v1 initialization may complete its directories; unknown marker versions are never overwritten.
 
 An unversioned nonempty `.foundry` requires explicit inventory/migration. Initialization does not label old state as new, clear old attempts or replay work. In particular, no real #95 workspace is migrated by this implementation.
 
@@ -109,8 +109,12 @@ W05 stores request indexes and task pointers under workspace state. Their determ
 
 W06 builds only the required facade/runtime modules, schemas and assets and proves the same behavior from a source-free read-only installed candidate; `package-distribution-contract.md` owns that exact closure. W08 publishes F1 and binds the process-local runtime-selection interface to an immutable CLI-manager product manifest. Local preparation does not grant restricted writes; W03 task permissions and existing attempt/readback no-replay controls remain mandatory. Developer maintenance entrypoints, tests and private case drivers remain excluded from the consumer artifact.
 
-The shared `assertFoundryRuntimeHost` gate also protects inventory-only migration, which cannot construct a context from an unknown legacy marker. Transfer planning constructs the destination context before reading the source and requires disjoint canonical roots with no existing destination `.foundry`. It does not initialize either workspace. See [workspace migration](workspace-migration-contract.md) for the implemented planning and remaining application boundary.
+The shared `assertFoundryRuntimeHost` gate also protects inventory-only migration, which cannot construct a context from an unknown legacy marker. Transfer planning constructs the destination context before reading the source and requires disjoint canonical roots with no existing destination `.foundry`. It does not initialize either workspace. See [workspace migration](workspace-migration-contract.md) for transfer, explicit adoption/activation and rollback boundaries.
 
 A strict `workspace-migration-pending.v1` marker returns no active workspace id. `initializeFoundryWorkspace` and consumer doctor explicitly reject pending state. Migration staging/audit can inspect it to recover its exact claim and preserved archive; normal task creation remains unavailable until a separately audited activation.
 
 Facade revision lookup validates retained predecessor jobs/publications without requiring their original input bytes to match a new revision. It checks every earlier revision for attempt evidence and refuses descendant continuation when any is present. Missing/changed predecessor storage is preserved as a recovery condition. This read-only request-chain check does not change runtime qualification or replace W10's complete migrated-task history and activation requirements.
+
+Migrated `workspace.v2` state binds an activation receipt, required features and an extension object. Construction validates the anchored migration documents and requires an independently trusted host selection. Write access must qualify the executing Foundry version and every required feature; unknown write features fail closed. The internal pending-adoption scope supplies a future id only during the bounded local callback and cannot survive it or create authorization/execution admission. Read-only task inspection skips write locks and cannot repair missing records. Read-compatible inspection may verify retained older runtime/profile snapshots without treating them as current write rules.
+
+`state/runtime-selection.json` records an explicit component selection and read/write mode. Ordinary writes must match it. The dedicated selector requires an independently qualified current writer, verifies/pins both component versions through the public CLI manager, and records selection history without rewriting the workspace marker or business state. An explicit CLI session reference cannot be read as marker or protected migration metadata.

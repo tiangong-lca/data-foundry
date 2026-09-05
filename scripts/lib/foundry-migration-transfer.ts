@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { withBatchRunLock } from "@tiangong-lca/cli/batch";
 import {
-  assertFoundryRuntimeContext,
+  assertFoundryWorkspaceWrite,
   pendingFoundryMigration,
   resolveFoundryOutput,
   type FoundryRuntimeContext,
@@ -172,9 +172,104 @@ function assertOwnedTree(
       ...expected.files.map((f) => f.destination),
     ]);
   const allowedDirectories = new Set(expected.directories);
+  const adoptionFile = transferPath(context.controlRoot, `${base}/adoption.json`);
+  let adoptedIds = new Set<string>();
+  if (fs.existsSync(adoptionFile)) {
+    const value = JSON.parse(
+      transferRead(adoptionFile, 8 * 1024 * 1024).toString("utf8"),
+    ) as Record<string, unknown>;
+    const { adoption_sha256: digest, ...unsigned } = value;
+    if (
+      value.schema !== "tiangong-foundry.migration-adoption-plan.v1" ||
+      value.plan_sha256 !== plan.plan_sha256 ||
+      value.actor_id !== plan.actor_id ||
+      !Array.isArray(value.tasks) ||
+      digest !== sha256Json(unsigned)
+    )
+      transferFail(
+        "migration_adoption_invalid",
+        "Adoption layout is not bound to the preserved transfer.",
+      );
+    adoptedIds = new Set(
+      (value.tasks as { authority: { task_id: string | null } }[])
+        .map((row) => row.authority.task_id)
+        .filter((id): id is string => id !== null),
+    );
+    if ([...adoptedIds].some((id) => !/^task-[0-9a-f]{64}-r0001$/u.test(id)))
+      transferFail("migration_adoption_invalid", "Adoption task paths are unsupported.");
+    for (const file of [
+      "adoption.json",
+      "activation.json",
+      "pending-marker.json",
+      "workspace-next.json",
+    ])
+      allowedFiles.add(`${base}/${file}`);
+    allowedDirectories.add(`${base}/specs`);
+    for (const directory of [
+      "state",
+      "workspaces",
+      "state/task-initialization",
+      "state/task-locks",
+      "state/facade-request-locks",
+      "state/task-registrations",
+      "state/task-publications",
+      "state/task-accounts",
+      "state/facade-requests",
+      "state/facade-tasks",
+    ])
+      allowedDirectories.add(directory);
+  }
+  const adoptionPath = (value: string, directory: boolean) => {
+    if (!fs.existsSync(adoptionFile)) return false;
+    if (value.startsWith(`${base}/specs/`))
+      return (
+        !directory &&
+        /^(?:task-[0-9a-f]{64}-r0001|source-[0-9a-f]{64})\.json$/u.test(
+          path.posix.basename(value),
+        ) &&
+        path.posix.dirname(value) === `${base}/specs`
+      );
+    const parts = value.split("/");
+    if (parts[0] === "workspaces")
+      return adoptedIds.has(parts[1]) && (directory || parts.length > 2);
+    if (parts[0] !== "state") return false;
+    if (directory && parts.length === 3) {
+      if (parts[1] === "task-locks")
+        return parts[2].endsWith(".json") && adoptedIds.has(parts[2].slice(0, -5));
+      if (parts[1] === "facade-request-locks")
+        return [...adoptedIds].some((id) => parts[2] === `${id.slice(5, 69)}.json`);
+    }
+    if (parts[1] === "task-initialization") {
+      const id = parts[2]?.slice(0, 75);
+      return (
+        adoptedIds.has(id) &&
+        /^task-[0-9a-f]{64}-r0001-[0-9a-f-]{36}$/u.test(parts[2]) &&
+        (directory ||
+          (parts.length === 4 &&
+            [
+              "foundry-job.json",
+              "source-manifest.json",
+              "profile-lock.json",
+              "seed-manifest.json",
+              "artifact-index.jsonl",
+            ].includes(parts[3])))
+      );
+    }
+    if (directory || parts.length !== 3) return false;
+    if (
+      ["task-registrations", "task-publications", "task-accounts", "facade-tasks"].includes(
+        parts[1],
+      )
+    )
+      return adoptedIds.has(parts[2].replace(/\.json$/u, "")) && parts[2].endsWith(".json");
+    return (
+      parts[1] === "facade-requests" &&
+      [...adoptedIds].some((id) => parts[2] === `${id.slice(5, 69)}.json`)
+    );
+  };
   const tree = transferTree(context.controlRoot);
   for (const file of tree.files) {
-    if (allowedFiles.has(file)) continue;
+    if (allowedFiles.has(file) || adoptionPath(file, false)) continue;
     if (
       allowScratch &&
       file.startsWith(`${base}/scratch/`) &&
@@ -186,10 +281,13 @@ function assertOwnedTree(
       "Unexpected transfer files were preserved; activation is refused.",
     );
   }
-  if (tree.directories.some((d) => !allowedDirectories.has(d)))
+  const foreignDirectory = tree.directories.find(
+    (d) => !allowedDirectories.has(d) && !adoptionPath(d, true),
+  );
+  if (foreignDirectory)
     transferFail(
       "migration_destination_conflict",
-      "Unexpected transfer directories were preserved.",
+      `Unexpected transfer directory was preserved: ${foreignDirectory}.`,
     );
   return tree;
 }
@@ -246,38 +344,18 @@ function result(
   return receipt;
 }
 
-export async function stageFoundryMigration(
+export async function withFoundryMigrationLock<T>(
   context: FoundryRuntimeContext,
-  planning: FoundryMigrationPlanningOptions,
-  provided: unknown,
-  options: MigrationTransferOptions = {},
-): Promise<{ receipt: FoundryMigrationTransferReceipt; path: string }> {
-  assertFoundryRuntimeContext(context);
-  check(options);
-  const prior = revalidateFoundryMigrationPlan(
-    context,
-    planning,
-    provided,
-    pendingFoundryMigration(context) ?? undefined,
-  );
-  if (prior.blockers.length)
-    transferFail("migration_plan_blocked", "Resolve every migration plan blocker before staging.");
-  const proposed = mapping(prior);
-  for (const file of proposed.files) transferPath(context.controlRoot, file.destination);
-  for (const directory of proposed.directories) transferPath(context.controlRoot, directory);
-  const lock = path.join(
-    // Version-independent destination lock; no source workspace state is written.
+  sourceRoot: string,
+  body: () => T | Promise<T>,
+): Promise<T> {
+  assertFoundryWorkspaceWrite(context);
+  const lock = transferPath(
     context.cacheBase,
-    "tiangong-lca",
-    "migration-locks",
-    `${sha256Json(context.workspaceRoot)}.json`,
+    `tiangong-lca/migration-locks/${sha256Json(context.workspaceRoot)}.json`,
   );
-  const sourceRelative = path.relative(prior.source_inventory.workspace_root, lock);
-  if (
-    !path.isAbsolute(sourceRelative) &&
-    sourceRelative !== ".." &&
-    !sourceRelative.startsWith(`..${path.sep}`)
-  )
+  const relative = path.relative(fs.realpathSync(sourceRoot), lock);
+  if (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${path.sep}`))
     transferFail(
       "migration_cache_invalid",
       "Migration locks must remain outside the source workspace.",
@@ -290,117 +368,134 @@ export async function stageFoundryMigration(
         schema: "tiangong-foundry.migration-lock.v1",
         workspace_root: context.workspaceRoot,
       },
-      reason: "Explicit workspace migration staging",
+      reason: "Explicit source-preserving workspace migration",
     },
-    () => {
-      check(options);
-      const pending = pendingFoundryMigration(context);
-      const plan = revalidateFoundryMigrationPlan(
-        context,
-        planning,
-        provided,
-        pending ?? undefined,
-      );
-      if (plan.blockers.length)
-        transferFail(
-          "migration_plan_blocked",
-          "Resolve every migration plan blocker before staging.",
-        );
-      if (
-        fs.existsSync(context.workspaceRoot) &&
-        fs.realpathSync(context.workspaceRoot) !== context.workspaceRoot
-      )
-        transferFail("migration_destination_conflict", "Destination root changed.");
-      if (!pending) {
-        resolveFoundryOutput(context, "migration-publication-boundary", "state");
-        fs.mkdirSync(context.workspaceRoot, { recursive: true, mode: 0o700 });
-        resolveFoundryOutput(context, "migration-publication-boundary", "state");
-        const temp = fs.mkdtempSync(path.join(context.workspaceRoot, ".migration-control-"));
-        try {
-          const claim: Claim = {
-            schema: "tiangong-foundry.migration-transfer-claim.v1",
-            plan_sha256: plan.plan_sha256,
-            workspace_id: workspaceId(plan),
-            actor_id: plan.actor_id,
-            request_id: plan.request_id,
-            source_workspace: plan.source_inventory.workspace_root,
-            destination_workspace: context.workspaceRoot,
-          };
-          transferWriteOnce(
-            temp,
-            "workspace.json",
-            transferBytes({ schema: pendingSchema, plan_sha256: plan.plan_sha256 }),
-          );
-          transferWriteOnce(temp, "migration-claim.json", transferBytes(claim));
-          transferWriteOnce(temp, `${prefix(plan)}/plan.json`, transferBytes(plan));
-          revalidateFoundryMigrationPlan(context, planning, provided);
-          if (fs.existsSync(context.controlRoot))
-            transferFail(
-              "migration_destination_conflict",
-              "Destination state appeared before publication.",
-            );
-          fs.renameSync(temp, context.controlRoot);
-        } finally {
-          if (fs.existsSync(temp)) fs.rmSync(temp, { recursive: true, force: true });
-        }
-      }
-      const claim = readClaim(context, plan),
-        base = prefix(plan),
-        receiptFile = transferPath(context.controlRoot, `${base}/receipt.json`);
-      assertOwnedTree(context, plan, true);
-      const scratch = transferPath(context.controlRoot, `${base}/scratch`);
-      if (fs.existsSync(scratch)) {
-        for (const file of fs.readdirSync(scratch)) {
-          if (!temporaryFilePattern.test(file) || !fs.lstatSync(path.join(scratch, file)).isFile())
-            transferFail("migration_destination_conflict", "Unknown scratch data was preserved.");
-          fs.unlinkSync(path.join(scratch, file));
-        }
-      }
-      if (fs.existsSync(receiptFile)) {
-        const audited = result(context, plan, claim);
-        if (!transferRead(receiptFile).equals(transferBytes(audited)))
-          transferFail(
-            "migration_audit_failed",
-            "Stored transfer receipt differs from the independent audit.",
-          );
-        return { receipt: audited, path: receiptFile };
-      }
-      options.checkpoint?.("claimed", 0);
-      check(options);
-      const expected = mapping(plan);
-      for (const directory of expected.directories) {
-        fs.mkdirSync(transferPath(context.controlRoot, directory), {
-          recursive: true,
-          mode: 0o700,
-        });
-        transferPath(context.controlRoot, directory);
-      }
-      for (const [index, file] of expected.files.entries()) {
-        check(options);
-        transferCopy(
-          context.controlRoot,
-          file.destination,
-          { path: file.source, bytes: file.bytes, sha256: file.sha256 },
-          scratch,
-        );
-        options.checkpoint?.("copied", index + 1);
-      }
-      check(options);
-      revalidateFoundryMigrationPlan(context, planning, provided, plan.plan_sha256);
-      const receipt = result(context, plan, claim);
-      options.checkpoint?.("audited", expected.files.length);
-      check(options);
-      revalidateFoundryMigrationPlan(context, planning, provided, plan.plan_sha256);
-      auditFiles(context, plan);
-      transferWriteOnce(
-        context.controlRoot,
-        `${base}/receipt.json`,
-        transferBytes(receipt),
-        `${base}/scratch`,
-      );
-      return { receipt, path: receiptFile };
-    },
+    body,
   );
+}
+
+export async function stageFoundryMigration(
+  context: FoundryRuntimeContext,
+  planning: FoundryMigrationPlanningOptions,
+  provided: unknown,
+  options: MigrationTransferOptions = {},
+): Promise<{ receipt: FoundryMigrationTransferReceipt; path: string }> {
+  assertFoundryWorkspaceWrite(context);
+  check(options);
+  const prior = revalidateFoundryMigrationPlan(
+    context,
+    planning,
+    provided,
+    pendingFoundryMigration(context) ?? undefined,
+  );
+  if (prior.blockers.length)
+    transferFail("migration_plan_blocked", "Resolve every migration plan blocker before staging.");
+  const proposed = mapping(prior);
+  for (const file of proposed.files) transferPath(context.controlRoot, file.destination);
+  for (const directory of proposed.directories) transferPath(context.controlRoot, directory);
+  return withFoundryMigrationLock(context, prior.source_inventory.workspace_root, () => {
+    check(options);
+    const pending = pendingFoundryMigration(context);
+    const plan = revalidateFoundryMigrationPlan(context, planning, provided, pending ?? undefined);
+    if (plan.blockers.length)
+      transferFail(
+        "migration_plan_blocked",
+        "Resolve every migration plan blocker before staging.",
+      );
+    if (
+      fs.existsSync(context.workspaceRoot) &&
+      fs.realpathSync(context.workspaceRoot) !== context.workspaceRoot
+    )
+      transferFail("migration_destination_conflict", "Destination root changed.");
+    if (!pending) {
+      resolveFoundryOutput(context, "migration-publication-boundary", "state");
+      fs.mkdirSync(context.workspaceRoot, { recursive: true, mode: 0o700 });
+      resolveFoundryOutput(context, "migration-publication-boundary", "state");
+      const temp = fs.mkdtempSync(path.join(context.workspaceRoot, ".migration-control-"));
+      try {
+        const claim: Claim = {
+          schema: "tiangong-foundry.migration-transfer-claim.v1",
+          plan_sha256: plan.plan_sha256,
+          workspace_id: workspaceId(plan),
+          actor_id: plan.actor_id,
+          request_id: plan.request_id,
+          source_workspace: plan.source_inventory.workspace_root,
+          destination_workspace: context.workspaceRoot,
+        };
+        transferWriteOnce(
+          temp,
+          "workspace.json",
+          transferBytes({ schema: pendingSchema, plan_sha256: plan.plan_sha256 }),
+        );
+        transferWriteOnce(temp, "migration-claim.json", transferBytes(claim));
+        transferWriteOnce(temp, `${prefix(plan)}/plan.json`, transferBytes(plan));
+        revalidateFoundryMigrationPlan(context, planning, provided);
+        if (fs.existsSync(context.controlRoot))
+          transferFail(
+            "migration_destination_conflict",
+            "Destination state appeared before publication.",
+          );
+        fs.renameSync(temp, context.controlRoot);
+      } finally {
+        if (fs.existsSync(temp)) fs.rmSync(temp, { recursive: true, force: true });
+      }
+    }
+    const claim = readClaim(context, plan),
+      base = prefix(plan),
+      receiptFile = transferPath(context.controlRoot, `${base}/receipt.json`);
+    assertOwnedTree(context, plan, true);
+    const scratch = transferPath(context.controlRoot, `${base}/scratch`);
+    if (fs.existsSync(scratch)) {
+      for (const file of fs.readdirSync(scratch)) {
+        if (!temporaryFilePattern.test(file) || !fs.lstatSync(path.join(scratch, file)).isFile())
+          transferFail("migration_destination_conflict", "Unknown scratch data was preserved.");
+        fs.unlinkSync(path.join(scratch, file));
+      }
+    }
+    if (fs.existsSync(receiptFile)) {
+      const audited = result(context, plan, claim);
+      if (!transferRead(receiptFile).equals(transferBytes(audited)))
+        transferFail(
+          "migration_audit_failed",
+          "Stored transfer receipt differs from the independent audit.",
+        );
+      return { receipt: audited, path: receiptFile };
+    }
+    options.checkpoint?.("claimed", 0);
+    check(options);
+    const expected = mapping(plan);
+    for (const directory of expected.directories) {
+      fs.mkdirSync(transferPath(context.controlRoot, directory), {
+        recursive: true,
+        mode: 0o700,
+      });
+      transferPath(context.controlRoot, directory);
+    }
+    for (const [index, file] of expected.files.entries()) {
+      check(options);
+      transferCopy(
+        context.controlRoot,
+        file.destination,
+        { path: file.source, bytes: file.bytes, sha256: file.sha256 },
+        scratch,
+      );
+      options.checkpoint?.("copied", index + 1);
+    }
+    check(options);
+    revalidateFoundryMigrationPlan(context, planning, provided, plan.plan_sha256);
+    const receipt = result(context, plan, claim);
+    options.checkpoint?.("audited", expected.files.length);
+    check(options);
+    revalidateFoundryMigrationPlan(context, planning, provided, plan.plan_sha256);
+    auditFiles(context, plan);
+    transferWriteOnce(
+      context.controlRoot,
+      `${base}/receipt.json`,
+      transferBytes(receipt),
+      `${base}/scratch`,
+    );
+    return { receipt, path: receiptFile };
+  });
 }
 
 export function auditFoundryMigration(

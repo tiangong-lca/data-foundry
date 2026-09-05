@@ -6,6 +6,7 @@ import {
   resolveFoundryInputPath,
   resolveFoundryOutput,
   writeFoundryArtifact,
+  assertFoundryWorkspaceActive,
   type FoundryInputFact,
   type FoundryRuntimeContext,
 } from "./foundry-runtime-context.ts";
@@ -205,6 +206,7 @@ export async function registerFoundryTaskAuthorization(
   },
   qualification?: QualifiedFoundryRuntime,
 ): Promise<{ authorization_sha256: string; pointer_sha256: string }> {
+  assertFoundryWorkspaceActive(context);
   assertVerifiedFoundryIdentity(context, identity, qualification);
   return withFoundryTaskMetadata(context, (task) => {
     assertVerifiedFoundryIdentity(context, identity, qualification);
@@ -434,6 +436,7 @@ export async function prepareDerivedFoundryTaskAuthorization(
   identity: VerifiedFoundryIdentity,
   options: PrepareDerivedFoundryTaskAuthorizationOptions,
 ) {
+  assertFoundryWorkspaceActive(context);
   assertVerifiedFoundryIdentity(context, identity, qualification);
   const parent = await loadFoundryTaskAuthorization(
     context,

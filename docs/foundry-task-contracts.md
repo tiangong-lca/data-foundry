@@ -29,8 +29,8 @@ checkPaths:
   - specs/import-profiles.json
   - tasks/**
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: a74b09c202f0ed48d3ce8bb0810e1e8b15c47603
-lastReviewedNote: "Reviewed for #108: facade descendants recheck retained predecessor publications and block on observed attempts or missing history; source credentials, execution ownership, full migration adoption and rollback boundaries remain unchanged."
+lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
+lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -123,3 +123,5 @@ Before a restricted child handoff, the runtime stores a content-addressed `execu
 The W05 facade now projects these records through the public result envelope. It automatically resumes only deterministic local cleanup. A nonempty attempt directory returns readback-only recovery; an unindexed copied completion report does not change task status. `completed` requires a current indexed completion report for the same task after source and artifact verification. Other stages remain explicit next actions until their owner evidence is registered; the facade never invents a child command or treats a directory name as task state.
 
 The request store revalidates every predecessor's retained job against its publication and indexed identity before admitting a new revision or returning a descendant for status/resume. A nonempty predecessor attempt directory blocks the descendant and directs recovery to the original owner; its declared success/unknown state never clears the guard. Missing or altered predecessor state is an audit condition, not permission to reconstruct an empty history. This facade guard does not by itself establish complete migration history, cross-request inheritance or restricted execution admission.
+
+Explicit migration preserves original records and creates current registrations only for independently admitted local preparation. The adoption callback remains pending and expires after preparation; activation anchors the archive and immutable current registrations. Read-only inspection can validate retained runtime/profile bytes without matching current write rules and without taking a write lock. Mutation admission rechecks retained dataset scope independently of new request/path/runtime labels; terminal or unresolved work is not a new executable task. Subsequent migration retains origin ids and rechecks later attempts. See the workspace migration contract for scope limitations and original-owner recovery.

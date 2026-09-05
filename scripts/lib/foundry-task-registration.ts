@@ -3,6 +3,8 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import {
   assertFoundryRuntimeContext,
+  assertFoundryWorkspaceWrite,
+  assertPendingFoundryTaskIntent,
   captureFoundryInput,
   resolveFoundryAsset,
   resolveFoundryOutput,
@@ -108,11 +110,15 @@ function readRegistration(context: FoundryRuntimeContext): TaskRegistration | nu
     fail("task_binding_mismatch", "Registered task belongs to another workspace or task.");
   if (job.actor_id !== context.actorId)
     fail("task_actor_mismatch", "Task actor does not match the registered task intent.");
-  if (sha256Json(job.runtime_identity) !== sha256Json(runtimeIdentity(context)))
+  if (
+    context.workspaceAccess === "write" &&
+    sha256Json(job.runtime_identity) !== sha256Json(runtimeIdentity(context))
+  )
     fail("task_runtime_changed", "Task runtime differs from its registration.");
   if (
     typeof job.target_profile !== "string" ||
-    !bytes(value.profile_lock).equals(bytes(profileLock(context, job.target_profile)))
+    (context.workspaceAccess === "write" &&
+      !bytes(value.profile_lock).equals(bytes(profileLock(context, job.target_profile))))
   )
     fail("task_profile_changed", "Registered profile does not match current package rules.");
   return value as unknown as TaskRegistration;
@@ -123,6 +129,7 @@ function writeStateOnce(
   relativePath: string,
   content: Buffer,
 ): void {
+  assertFoundryWorkspaceWrite(context);
   const target = resolveFoundryOutput(context, relativePath, "state");
   fs.mkdirSync(path.dirname(target), { recursive: true, mode: 0o700 });
   resolveFoundryOutput(context, target, "state");
@@ -278,6 +285,13 @@ export function createTask(
   context: FoundryRuntimeContext,
   options: FoundryTaskOptions,
 ): LoadedTask {
+  assertFoundryWorkspaceWrite(context);
+  assertPendingFoundryTaskIntent(
+    context,
+    context.taskId!,
+    options.requestId ?? context.taskId!,
+    context.actorId!,
+  );
   const target = context.taskRoot!;
   if (
     fs.existsSync(

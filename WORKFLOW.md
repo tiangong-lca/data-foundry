@@ -281,8 +281,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: a74b09c202f0ed48d3ce8bb0810e1e8b15c47603
-lastReviewedNote: "Reviewed for #108: facade descendants recheck retained predecessor publications and block on observed attempts or missing history; source credentials, execution ownership, full migration adoption and rollback boundaries remain unchanged."
+lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
+lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -314,7 +314,7 @@ Body: {{ issue.description }}
 
 ## Classify
 
-Migration transfer planning is governed by [the workspace migration contract](docs/workspace-migration-contract.md). W10 binds source/queue/external-input transfer plans and can stage and independently audit preserved bytes; task adoption, activation and rollback remain pending #108. It grants no write or replay authority.
+Migration transfer planning is governed by [the workspace migration contract](docs/workspace-migration-contract.md). W10 provides explicit source/queue/input staging, current-owner task adoption, audited v2 activation and separate runtime read/write selection. Preserved history blocks replay across requests and migrations; none of these records grants business permission. Operational qualification and release integration remain tracked in #108/#980.
 
 The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 still owns the published package. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 

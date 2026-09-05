@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import path from "node:path";
+import type { TrustedRuntimeManifest } from "@tiangong-lca/cli/runtime";
+import type { FoundryRuntimeManagerOptions } from "./lib/foundry-runtime-selection.ts";
 import { transferRead } from "./lib/foundry-migration-transfer-io.ts";
 import { migrationCredentialPath } from "./lib/foundry-migration-inventory.ts";
 import { createFoundryFacade, type FoundryFacadeRuntimeSelection } from "./foundry-facade.ts";
@@ -9,6 +11,8 @@ import {
   captureFoundryInput,
   createFoundryRuntimeContext,
   FoundryContextError,
+  type FoundryWorkspaceAccess,
+  type FoundryAccountIntent,
 } from "./lib/foundry-runtime-context.ts";
 import { exitCodeForCommand } from "./lib/foundry-command-registry.ts";
 import {
@@ -20,6 +24,11 @@ import {
 
 export interface FoundryRuntimeCommandHost {
   readonly runtimeSelection?: FoundryFacadeRuntimeSelection;
+  readonly workspaceAccess?: FoundryWorkspaceAccess;
+  readonly cacheBase?: string;
+  readonly accountIntent?: FoundryAccountIntent;
+  readonly runtimeTarget?: TrustedRuntimeManifest;
+  readonly runtimeManager?: FoundryRuntimeManagerOptions;
   readonly signal?: AbortSignal;
   readonly writeStdout?: (text: string) => void;
   readonly setExitCode?: (code: number) => void;
@@ -157,7 +166,23 @@ async function runPublicCommand(
     ...(parsed.operation === "doctor"
       ? ["expectedProjectRef", "expectedUserId", "sessionReference"]
       : parsed.operation === "workspace.migrate"
-        ? ["dryRun", "to", "actor", "request", "stageManifest", "input", "stage", "audit", "plan"]
+        ? [
+            "dryRun",
+            "to",
+            "actor",
+            "request",
+            "stageManifest",
+            "input",
+            "stage",
+            "audit",
+            "plan",
+            "adoptionDryRun",
+            "apply",
+            "adoptionPlan",
+            "taskSpec",
+            "runtimeUse",
+            "access",
+          ]
         : parsed.operation === "task.start"
           ? ["spec"]
           : parsed.operation === "task.status" || parsed.operation === "task.resume"
@@ -183,23 +208,75 @@ async function runPublicCommand(
   const facade = createFoundryFacade({
     moduleUrl: import.meta.url,
     workspace,
+    cacheBase: host.cacheBase,
     runtimeSelection: host.runtimeSelection,
-    accountIntent: parsed.operation === "doctor" ? doctorAccountIntent(parsed.args) : undefined,
+    workspaceAccess: host.workspaceAccess,
+    runtimeManager: host.runtimeManager,
+    accountIntent:
+      parsed.operation === "doctor"
+        ? (doctorAccountIntent(parsed.args) ?? host.accountIntent)
+        : host.accountIntent,
     signal: host.signal,
   });
   let result: FoundryOperationResult;
   if (parsed.operation === "workspace.init") result = facade.initialize();
   else if (parsed.operation === "doctor") result = facade.doctor();
   else if (parsed.operation === "workspace.migrate") {
+    if (parsed.args.runtimeUse === true) {
+      const permitted = new Set([
+        "_",
+        "json",
+        "workspace",
+        "runtimeUse",
+        "access",
+        "actor",
+        "request",
+      ]);
+      if (Object.keys(parsed.args).some((key) => !permitted.has(key)))
+        return invalidResult(
+          parsed.operation,
+          null,
+          "argument_runtime_selection_invalid",
+          "Runtime selection cannot be combined with migration file operations.",
+        );
+      const actorId = option(parsed.args.actor, "--actor"),
+        requestId = option(parsed.args.request, "--request"),
+        access = option(parsed.args.access, "--access") ?? "read";
+      if (!actorId || !requestId || !["read", "write"].includes(access) || !host.runtimeTarget)
+        return invalidResult(
+          parsed.operation,
+          null,
+          "argument_runtime_selection_required",
+          "Runtime selection requires actor/request intent and an independently trusted target manifest from the host.",
+        );
+      return facade.runtimeUse({
+        manifest: host.runtimeTarget,
+        actorId,
+        requestId,
+        access: access as "read" | "write",
+      });
+    }
+    if (parsed.args.access !== undefined)
+      return invalidResult(
+        parsed.operation,
+        null,
+        "argument_runtime_selection_invalid",
+        "Access mode belongs to explicit runtime selection.",
+      );
     if (
-      [parsed.args.dryRun, parsed.args.stage, parsed.args.audit].filter((value) => value === true)
-        .length !== 1
+      [
+        parsed.args.dryRun,
+        parsed.args.stage,
+        parsed.args.audit,
+        parsed.args.adoptionDryRun,
+        parsed.args.apply,
+      ].filter((value) => value === true).length !== 1
     )
       return invalidResult(
         parsed.operation,
         null,
         "argument_dry_run_required",
-        "Select exactly one migration mode: --dry-run, --stage or --audit.",
+        "Select exactly one migration mode: --dry-run, --stage, --adoption-dry-run, --apply or --audit.",
       );
     const destination = option(parsed.args.to, "--to");
     const actorId = option(parsed.args.actor, "--actor");
@@ -227,7 +304,11 @@ async function runPublicCommand(
           externalInputs.length ||
           parsed.args.stage ||
           parsed.args.audit ||
-          parsed.args.plan))
+          parsed.args.plan ||
+          parsed.args.adoptionDryRun ||
+          parsed.args.apply ||
+          parsed.args.adoptionPlan ||
+          parsed.args.taskSpec))
     )
       return invalidResult(
         parsed.operation,
@@ -235,7 +316,12 @@ async function runPublicCommand(
         "argument_migration_intent_required",
         "Transfer planning requires --to, --actor and --request together.",
       );
-    if (parsed.args.stage === true || parsed.args.audit === true) {
+    if (
+      parsed.args.stage === true ||
+      parsed.args.audit === true ||
+      parsed.args.adoptionDryRun === true ||
+      parsed.args.apply === true
+    ) {
       const planFile = option(parsed.args.plan, "--plan");
       if (!planFile || !destination || !actorId || !requestId)
         return invalidResult(
@@ -254,17 +340,71 @@ async function runPublicCommand(
       const plan: unknown = JSON.parse(
         transferRead(path.resolve(planFile), 8 * 1024 * 1024).toString("utf8"),
       );
-      result = await facade.migrationTransfer({
-        destination,
-        actorId,
-        requestId,
-        stageManifests,
-        externalInputs,
-        plan,
-        audit: parsed.args.audit === true,
-      });
+      if (parsed.args.adoptionDryRun === true || parsed.args.apply === true) {
+        const raw = parsed.args.taskSpec;
+        const tasks = (raw === undefined ? [] : Array.isArray(raw) ? raw : [raw]).map((value) => {
+          const selected = option(value, "--task-spec")!;
+          const separator = selected.indexOf("=");
+          if (separator < 1 || separator === selected.length - 1)
+            throw new FoundryContextError(
+              "argument_task_spec_invalid",
+              "Select --task-spec source-task=absolute-spec-file.",
+            );
+          return {
+            sourceTask: selected.slice(0, separator),
+            specFile: path.resolve(selected.slice(separator + 1)),
+          };
+        });
+        const adoptionFile = option(parsed.args.adoptionPlan, "--adoption-plan");
+        if (
+          (parsed.args.apply === true && !adoptionFile) ||
+          (parsed.args.adoptionDryRun === true && adoptionFile)
+        )
+          throw new FoundryContextError(
+            "argument_adoption_plan_required",
+            "Apply requires a saved adoption plan; adoption dry-run reconstructs it.",
+          );
+        if (adoptionFile && migrationCredentialPath(adoptionFile))
+          throw new FoundryContextError(
+            "argument_migration_plan_invalid",
+            "Private storage cannot be used as an adoption plan.",
+          );
+        const adoptionPlan: unknown = adoptionFile
+          ? JSON.parse(transferRead(path.resolve(adoptionFile), 8 * 1024 * 1024).toString("utf8"))
+          : undefined;
+        result = await facade.migrationAdoption({
+          destination,
+          actorId,
+          requestId,
+          stageManifests,
+          externalInputs,
+          plan,
+          tasks,
+          adoptionPlan,
+          apply: parsed.args.apply === true,
+        });
+      } else {
+        if (parsed.args.taskSpec !== undefined || parsed.args.adoptionPlan !== undefined)
+          throw new FoundryContextError(
+            "argument_migration_plan_invalid",
+            "Task specifications belong to explicit adoption preview/application.",
+          );
+        result = await facade.migrationTransfer({
+          destination,
+          actorId,
+          requestId,
+          stageManifests,
+          externalInputs,
+          plan,
+          audit: parsed.args.audit === true,
+        });
+      }
     } else {
-      if (parsed.args.plan !== undefined)
+      if (
+        parsed.args.plan !== undefined ||
+        parsed.args.taskSpec !== undefined ||
+        parsed.args.adoptionPlan !== undefined
+      )
         return invalidResult(
           parsed.operation,
           null,

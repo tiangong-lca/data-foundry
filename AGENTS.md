@@ -263,13 +263,13 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: a74b09c202f0ed48d3ce8bb0810e1e8b15c47603
-lastReviewedNote: "Reviewed for #106 W06: the public facade is now a deterministic descriptor-verified npm candidate; W08 still owns F1 publication and components."
+lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
+lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
 
-Explicit migration transfer planning follows `docs/workspace-migration-contract.md`. It binds source/target/actor/runtime and selected historical stage bytes without creating a destination or granting write/replay authority. W10 staging and archive audit remain inactive until task adoption; apply, task adoption, activation and rollback remain required by #108. Never infer that a filename or an old profile proves an unattempted task.
+Explicit migration transfer planning follows `docs/workspace-migration-contract.md`. It binds source/target/actor/runtime and selected historical stage bytes without creating a destination or granting write/replay authority. Staging remains inactive until independently audited current-owner task adoption. Explicit apply publishes a v2 marker, and runtime rollback separately checks read/write compatibility and retains component leases. Never infer that a filename or an old profile proves an unattempted task.
 
 The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` now implements workspace init/migration, consumer doctor and task start/status/resume as the separate hierarchical facade. All 63 flat owner commands retain explicit public/internal/excluded, path, child, qualification and authorization dispositions; the facade reaches them only through registered task state and never falls back to the developer runner.
 

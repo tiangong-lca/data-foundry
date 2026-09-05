@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
-import { FoundryContextError, type FoundryInputFact } from "./foundry-runtime-context.ts";
+import { FoundryContextError } from "./foundry-runtime-error.ts";
+import type { FoundryInputFact } from "./foundry-runtime-context-types.ts";
 
 export function transferFail(code: string, message: string): never {
   throw new FoundryContextError(code, message);

@@ -36,16 +36,8 @@ const maxDepth = 64;
 const maxHashedFileBytes = 64 * 1024 * 1024;
 const maxHashedTreeBytes = 256 * 1024 * 1024;
 
-export function migrationCredentialPath(relative: string): boolean {
-  return relative
-    .split(/[\\/]/u)
-    .some(
-      (part) =>
-        /^\.env(?:\.|$)|(?:^|[-_.])(?:sessions?|tokens?|cookies?|credentials?|secrets?|passwords?|passwd|accounts?|private-key)(?:[-_.]|$)/iu.test(
-          part,
-        ) && !/^account-intent\.json$/u.test(part),
-    );
-}
+export { migrationCredentialPath } from "./foundry-private-path.ts";
+import { migrationCredentialPath } from "./foundry-private-path.ts";
 
 function classify(relative: string): MigrationEntry["state_class"] {
   if (relative === "workspace.json" || relative.startsWith("state/")) return "workspace-control";

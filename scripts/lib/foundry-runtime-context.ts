@@ -2,67 +2,138 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
-import { describeFoundryRuntime, type FoundryRuntimeIdentity } from "./foundry-runtime-paths.ts";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { assertWorkspaceCompatibility } from "@tiangong-lca/cli/runtime";
+import { describeFoundryRuntime } from "./foundry-runtime-paths.ts";
+import { FoundryContextError } from "./foundry-runtime-error.ts";
+export { FoundryContextError } from "./foundry-runtime-error.ts";
+import {
+  FOUNDRY_MIGRATED_WORKSPACE_SCHEMA,
+  FOUNDRY_MIGRATED_WORKSPACE_FEATURES,
+  readFoundryMigrationAuthority,
+} from "./foundry-migration-authority.ts";
+import { transferRead, transferHash } from "./foundry-migration-transfer-io.ts";
+import { sha256Json } from "./identity-preflight-proof.ts";
+import { assertNotFoundrySessionFile } from "./foundry-private-path.ts";
+import { readFoundryRuntimeSelection } from "./foundry-runtime-selection-record.ts";
 
-export interface FoundryInputFact {
-  readonly path: string;
-  readonly bytes: number;
-  readonly sha256: string;
-}
-
-export interface FoundryAccountIntent {
-  readonly projectRef: string;
-  readonly userId: string;
-  readonly sessionReference?: string;
-}
-
-export interface FoundryRuntimeContext {
-  readonly runtime: FoundryRuntimeIdentity;
-  readonly runtimeRoot: string;
-  readonly assetRoot: string;
-  readonly workspaceRoot: string;
-  readonly workspaceId: string | null;
-  readonly controlRoot: string;
-  readonly stateRoot: string;
-  readonly taskId: string | null;
-  readonly actorId: string | null;
-  readonly taskRoot: string | null;
-  readonly tempRoot: string;
-  readonly cacheRoot: string;
-  readonly cacheBase: string;
-  readonly platform: string;
-  readonly accountIntent: Readonly<FoundryAccountIntent> | null;
-  readonly inputs: readonly Readonly<FoundryInputFact>[];
-}
-
-export interface FoundryRuntimeContextOptions {
-  moduleUrl: string;
-  workspace?: string;
-  cwd?: string;
-  taskId?: string;
-  actorId?: string;
-  cacheBase?: string;
-  environment?: NodeJS.ProcessEnv;
-  platform?: NodeJS.Platform;
-  arch?: string;
-  accountIntent?: FoundryAccountIntent;
-  inputs?: readonly FoundryInputFact[];
-}
-
-export class FoundryContextError extends Error {
-  code: string;
-  constructor(code: string, message: string) {
-    super(message);
-    this.name = "FoundryContextError";
-    this.code = code;
-  }
-}
+import type {
+  FoundryInputFact,
+  FoundryWorkspaceAccess,
+  FoundryRuntimeContext,
+  FoundryRuntimeContextOptions,
+} from "./foundry-runtime-context-types.ts";
+export type {
+  FoundryInputFact,
+  FoundryAccountIntent,
+  FoundryWorkspaceAccess,
+  FoundryRuntimeContext,
+  FoundryRuntimeContextOptions,
+} from "./foundry-runtime-context-types.ts";
 
 const contexts = new WeakSet<object>();
+const workspaceSelections = new WeakMap<object, FoundryWorkspaceAccess>();
+const migratedMarkerHashes = new WeakMap<object, string>();
+interface PendingAdoptionScope {
+  workspaceRoot: string;
+  workspaceId: string;
+  planSha256: string;
+  markerSha256: string;
+  adoptionFileSha256: string;
+  tasks: readonly {
+    task_id: string;
+    request_id: string;
+    actor_id: string;
+    spec_fingerprint_sha256: string;
+  }[];
+  active: boolean;
+}
+const adoptionScopes = new AsyncLocalStorage<PendingAdoptionScope>();
+const pendingContexts = new WeakMap<object, PendingAdoptionScope>();
 const workspaceSchema = "tiangong-foundry.workspace.v1";
 const hashPattern = /^[0-9a-f]{64}$/u;
 const idPattern = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/u;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
+
+function verifyWorkspaceAccess(
+  selection: FoundryWorkspaceAccess,
+  version: string,
+  schema: string,
+  features: readonly string[],
+): void {
+  if (selection.access !== "read" && selection.access !== "write")
+    fail("workspace_access_invalid", "Workspace access must be read or write.");
+  try {
+    assertWorkspaceCompatibility(selection.manifest, { schema, features }, selection.access);
+  } catch {
+    fail(
+      "workspace_runtime_incompatible",
+      "Supply an independently trusted runtime manifest that supports the requested workspace access.",
+    );
+  }
+  if (
+    selection.manifest.manifest.product.id !== "tiangong-foundry" ||
+    (selection.access === "write" && selection.manifest.manifest.product.version !== version)
+  )
+    fail(
+      "workspace_runtime_incompatible",
+      "Write compatibility must qualify the executing Foundry version.",
+    );
+  if (
+    selection.access === "write" &&
+    features.some((feature) => !FOUNDRY_MIGRATED_WORKSPACE_FEATURES.includes(feature))
+  )
+    fail(
+      "workspace_feature_unsupported",
+      "This writer cannot preserve an unknown required workspace feature.",
+    );
+}
+
+function migratedMarker(value: Record<string, unknown>): {
+  features: readonly string[];
+  migration: Readonly<{ plan_sha256: string; activation_sha256: string }>;
+} {
+  const migration = value.migration as Record<string, unknown> | null;
+  const features = value.required_features;
+  if (
+    value.layout_version !== 2 ||
+    Object.keys(value).length !== 7 ||
+    typeof value.workspace_id !== "string" ||
+    !uuidPattern.test(value.workspace_id) ||
+    typeof value.created_at_utc !== "string" ||
+    !Number.isFinite(Date.parse(value.created_at_utc)) ||
+    new Date(value.created_at_utc).toISOString() !== value.created_at_utc ||
+    !Array.isArray(features) ||
+    features.length > 64 ||
+    features.some(
+      (feature) => typeof feature !== "string" || !/^[a-z][a-z0-9-]{0,63}$/u.test(feature),
+    ) ||
+    new Set(features).size !== features.length ||
+    FOUNDRY_MIGRATED_WORKSPACE_FEATURES.some((feature) => !features.includes(feature)) ||
+    !migration ||
+    typeof migration !== "object" ||
+    Array.isArray(migration) ||
+    Object.keys(migration).length !== 2 ||
+    typeof migration.plan_sha256 !== "string" ||
+    !hashPattern.test(migration.plan_sha256) ||
+    typeof migration.activation_sha256 !== "string" ||
+    !hashPattern.test(migration.activation_sha256) ||
+    !value.extensions ||
+    typeof value.extensions !== "object" ||
+    Array.isArray(value.extensions)
+  )
+    fail(
+      "workspace_version_unsupported",
+      "Migrated workspace marker is incomplete or unsupported.",
+    );
+  return {
+    features: Object.freeze([...features] as string[]),
+    migration: Object.freeze({
+      plan_sha256: migration.plan_sha256,
+      activation_sha256: migration.activation_sha256,
+    }),
+  };
+}
 
 function fail(code: string, message: string): never {
   throw new FoundryContextError(code, message);
@@ -120,9 +191,10 @@ function confined(root: string, requested: string): string {
   return target;
 }
 
-function readWorkspaceId(workspaceRoot: string): string | null {
+function readWorkspaceId(workspaceRoot: string, sessionReference?: string): string | null {
   const file = confined(workspaceRoot, path.join(workspaceRoot, ".foundry", "workspace.json"));
   if (!fs.existsSync(file)) return null;
+  assertNotFoundrySessionFile(file, sessionReference);
   if (regularFile(file).size > 64 * 1024)
     fail("workspace_invalid", "Workspace marker exceeds its size limit.");
   let value: unknown;
@@ -134,6 +206,10 @@ function readWorkspaceId(workspaceRoot: string): string | null {
   if (!value || typeof value !== "object" || Array.isArray(value))
     fail("workspace_invalid", "Workspace marker must be an object.");
   const marker = value as Record<string, unknown>;
+  if (marker.schema === FOUNDRY_MIGRATED_WORKSPACE_SCHEMA) {
+    migratedMarker(marker);
+    return marker.workspace_id as string;
+  }
   if (
     marker.schema === "tiangong-foundry.workspace-migration-pending.v1" &&
     Object.keys(marker).length === 2 &&
@@ -172,10 +248,10 @@ function defaultCacheBase(platform: NodeJS.Platform, env: NodeJS.ProcessEnv): st
   return env.XDG_CACHE_HOME || path.join(home, ".cache");
 }
 
-function discoverWorkspace(cwd: string, runtimeRoot: string): string {
+function discoverWorkspace(cwd: string, runtimeRoot: string, sessionReference?: string): string {
   let current = canonicalFuturePath(cwd);
   while (true) {
-    if (!inside(runtimeRoot, current) && readWorkspaceId(current)) return current;
+    if (!inside(runtimeRoot, current) && readWorkspaceId(current, sessionReference)) return current;
     const parent = path.dirname(current);
     if (parent === current)
       fail(
@@ -208,7 +284,7 @@ export function createFoundryRuntimeContext(
   const cwd = options.cwd ?? process.cwd();
   const workspaceRoot = options.workspace
     ? canonicalFuturePath(path.resolve(cwd, options.workspace))
-    : discoverWorkspace(cwd, runtime.runtimeRoot);
+    : discoverWorkspace(cwd, runtime.runtimeRoot, options.accountIntent?.sessionReference);
   const slashRoot = workspaceRoot.split(path.sep).join("/");
   if (
     workspaceRoot === path.parse(workspaceRoot).root ||
@@ -223,7 +299,44 @@ export function createFoundryRuntimeContext(
   }
   if (fs.existsSync(workspaceRoot) && !fs.statSync(workspaceRoot).isDirectory())
     fail("root_not_directory", "Workspace root must be a directory.");
-  const workspaceId = readWorkspaceId(workspaceRoot);
+  let workspaceId = readWorkspaceId(workspaceRoot, options.accountIntent?.sessionReference);
+  const activeAdoption = adoptionScopes.getStore();
+  const pending =
+    !workspaceId && activeAdoption?.active && activeAdoption.workspaceRoot === workspaceRoot
+      ? activeAdoption
+      : undefined;
+  if (pending) workspaceId = pending.workspaceId;
+  const markerBytes = workspaceId
+    ? transferRead(
+        confined(workspaceRoot, path.join(workspaceRoot, ".foundry/workspace.json")),
+        64 * 1024,
+      )
+    : null;
+  const marker = markerBytes
+    ? (JSON.parse(markerBytes.toString("utf8")) as Record<string, unknown>)
+    : null;
+  const migrated =
+    marker?.schema === FOUNDRY_MIGRATED_WORKSPACE_SCHEMA ? migratedMarker(marker) : null;
+  const selectedSchema = migrated || pending ? FOUNDRY_MIGRATED_WORKSPACE_SCHEMA : workspaceSchema;
+  const selectedFeatures =
+    migrated?.features ??
+    (pending ? FOUNDRY_MIGRATED_WORKSPACE_FEATURES : Object.freeze(["registered-tasks-v2"]));
+  const selection = options.workspaceAccess;
+  if ((migrated || pending) && !selection)
+    fail(
+      "workspace_runtime_selection_required",
+      "Migrated workspaces require an independently trusted read/write runtime selection.",
+    );
+  if (selection)
+    verifyWorkspaceAccess(selection, runtime.packageVersion, selectedSchema, selectedFeatures);
+  if (migrated)
+    readFoundryMigrationAuthority(
+      path.join(workspaceRoot, ".foundry"),
+      workspaceId!,
+      migrated.migration,
+      false,
+      options.accountIntent?.sessionReference,
+    );
   const taskId = options.taskId ?? null;
   const actorId = options.actorId ?? null;
   if (
@@ -317,6 +430,12 @@ export function createFoundryRuntimeContext(
     assetRoot: runtime.assetRoot,
     workspaceRoot,
     workspaceId,
+    workspaceAccess: selection?.access ?? "write",
+    workspaceManifestSha256: selection?.manifest.sha256 ?? null,
+    workspaceSchema: selectedSchema,
+    workspaceFeatures: selectedFeatures,
+    migration: migrated?.migration ?? null,
+    pendingMigration: pending?.planSha256 ?? null,
     controlRoot,
     stateRoot,
     taskRoot,
@@ -330,6 +449,9 @@ export function createFoundryRuntimeContext(
     inputs: Object.freeze(inputs),
   });
   contexts.add(context);
+  if (selection) workspaceSelections.set(context, Object.freeze({ ...selection }));
+  if (migrated && markerBytes) migratedMarkerHashes.set(context, transferHash(markerBytes));
+  if (pending) pendingContexts.set(context, pending);
   return context;
 }
 
@@ -339,14 +461,244 @@ export function assertFoundryRuntimeContext(context: FoundryRuntimeContext): voi
       "runtime_context_unverified",
       "Use the runtime context constructor; serialized context is not authority.",
     );
-  if (context.workspaceId && readWorkspaceId(context.workspaceRoot) !== context.workspaceId)
+  const pending = pendingContexts.get(context);
+  if (pending) {
+    if (
+      !pending.active ||
+      adoptionScopes.getStore() !== pending ||
+      transferHash(
+        transferRead(
+          confined(context.workspaceRoot, path.join(context.controlRoot, "workspace.json")),
+          64 * 1024,
+        ),
+      ) !== pending.markerSha256 ||
+      transferHash(
+        transferRead(
+          confined(
+            context.workspaceRoot,
+            path.join(context.controlRoot, "migrations", pending.planSha256, "adoption.json"),
+          ),
+        ),
+      ) !== pending.adoptionFileSha256
+    )
+      fail(
+        "migration_session_closed",
+        "Pending adoption context is stale or outside its scoped local operation.",
+      );
+  } else if (
+    context.workspaceId &&
+    readWorkspaceId(context.workspaceRoot, context.accountIntent?.sessionReference) !==
+      context.workspaceId
+  )
     fail("workspace_changed", "Workspace identity changed after context construction.");
+  const selection = workspaceSelections.get(context);
+  if (selection)
+    verifyWorkspaceAccess(
+      selection,
+      context.runtime.packageVersion,
+      context.workspaceSchema,
+      context.workspaceFeatures,
+    );
+  const markerHash = migratedMarkerHashes.get(context);
+  if (
+    markerHash &&
+    transferHash(
+      transferRead(
+        confined(context.workspaceRoot, path.join(context.controlRoot, "workspace.json")),
+        64 * 1024,
+      ),
+    ) !== markerHash
+  )
+    fail("workspace_changed", "Migrated workspace marker changed after runtime selection.");
+  if (context.migration)
+    readFoundryMigrationAuthority(
+      context.controlRoot,
+      context.workspaceId!,
+      context.migration,
+      false,
+      context.accountIntent?.sessionReference,
+    );
+}
+
+export function assertFoundryWorkspaceWrite(context: FoundryRuntimeContext): void {
+  assertFoundryRuntimeContext(context);
+  if (context.workspaceAccess !== "write")
+    fail(
+      "workspace_read_only",
+      "The selected runtime has read-only workspace access; use a write-qualified runtime before changing task state.",
+    );
+  const selected = context.workspaceId
+    ? readFoundryRuntimeSelection(
+        context.controlRoot,
+        context.workspaceId,
+        context.accountIntent?.sessionReference,
+      )
+    : null;
+  if (
+    selected &&
+    (selected.value.access !== "write" ||
+      selected.value.selected_manifest_sha256 !== context.workspaceManifestSha256)
+  )
+    fail(
+      "workspace_runtime_selection_mismatch",
+      "The project is pinned to another runtime or read-only mode; explicitly select a qualified writer before changing task state.",
+    );
+  const pending = pendingContexts.get(context);
+  if (
+    pending &&
+    context.taskId &&
+    !pending.tasks.some(
+      (task) => task.task_id === context.taskId && task.actor_id === context.actorId,
+    )
+  )
+    fail(
+      "migration_task_adoption_required",
+      "Pending preparation is limited to the independently reviewed task mapping.",
+    );
+}
+
+/** Control-plane selection can restore a qualified writer without granting task mutation. */
+export function assertFoundryRuntimeSelector(context: FoundryRuntimeContext): void {
+  assertFoundryRuntimeContext(context);
+  if (
+    !context.workspaceId ||
+    context.pendingMigration ||
+    context.workspaceAccess !== "write" ||
+    !context.workspaceManifestSha256
+  )
+    fail(
+      "workspace_runtime_selection_required",
+      "Runtime selection requires an active workspace and an independently qualified current writer.",
+    );
+}
+
+export function assertFoundryWorkspaceActive(context: FoundryRuntimeContext): void {
+  assertFoundryWorkspaceWrite(context);
+  if (context.pendingMigration)
+    fail(
+      "workspace_migration_pending",
+      "Pending adoption cannot create business authorization or execution admission.",
+    );
+}
+
+export function assertPendingFoundryTaskIntent(
+  context: FoundryRuntimeContext,
+  id: string,
+  request: string,
+  actor: string,
+  fingerprint?: string,
+): void {
+  assertFoundryRuntimeContext(context);
+  const pending = pendingContexts.get(context);
+  if (
+    pending &&
+    !pending.tasks.some(
+      (task) =>
+        task.task_id === id &&
+        task.request_id === request &&
+        task.actor_id === actor &&
+        (fingerprint === undefined || task.spec_fingerprint_sha256 === fingerprint),
+    )
+  )
+    fail(
+      "migration_task_adoption_required",
+      "Pending task intent differs from the reviewed migration mapping.",
+    );
+}
+
+/** Internal migration owner scope. Never exported by the package's public API. */
+export async function withFoundryPendingAdoption<T>(
+  context: FoundryRuntimeContext,
+  callback: () => Promise<T>,
+): Promise<T> {
+  assertFoundryWorkspaceWrite(context);
+  const plan = pendingFoundryMigration(context);
+  const selection = workspaceSelections.get(context);
+  if (!plan || !selection)
+    fail(
+      "migration_adoption_required",
+      "Pending adoption requires a staged plan and trusted writer selection.",
+    );
+  verifyWorkspaceAccess(
+    selection,
+    context.runtime.packageVersion,
+    FOUNDRY_MIGRATED_WORKSPACE_SCHEMA,
+    FOUNDRY_MIGRATED_WORKSPACE_FEATURES,
+  );
+  const markerBytes = transferRead(
+    confined(context.workspaceRoot, path.join(context.controlRoot, "workspace.json")),
+    64 * 1024,
+  );
+  const claim = JSON.parse(
+    transferRead(
+      confined(context.workspaceRoot, path.join(context.controlRoot, "migration-claim.json")),
+    ).toString("utf8"),
+  ) as Record<string, unknown>;
+  const adoptionBytes = transferRead(
+    confined(
+      context.workspaceRoot,
+      path.join(context.controlRoot, "migrations", plan, "adoption.json"),
+    ),
+  );
+  const adoption = JSON.parse(adoptionBytes.toString("utf8")) as Record<string, unknown>;
+  const { adoption_sha256: digest, ...unsigned } = adoption;
+  if (
+    adoption.schema !== "tiangong-foundry.migration-adoption-plan.v1" ||
+    adoption.plan_sha256 !== plan ||
+    typeof adoption.workspace_id !== "string" ||
+    !uuidPattern.test(adoption.workspace_id) ||
+    adoption.workspace_id !== claim.workspace_id ||
+    claim.plan_sha256 !== plan ||
+    adoption.actor_id !== claim.actor_id ||
+    adoption.runtime_manifest_sha256 !== selection.manifest.sha256 ||
+    digest !== sha256Json(unsigned) ||
+    !Array.isArray(adoption.tasks)
+  )
+    fail(
+      "migration_adoption_invalid",
+      "Pending adoption differs from its source transfer, actor or trusted runtime.",
+    );
+  const tasks: PendingAdoptionScope["tasks"][number][] = [];
+  for (const row of adoption.tasks as Record<string, unknown>[]) {
+    const task = row.authority as Record<string, unknown>;
+    if (task.disposition !== "local-unattempted") continue;
+    if (
+      typeof task.task_id !== "string" ||
+      !/^task-[0-9a-f]{64}-r0001$/u.test(task.task_id) ||
+      typeof task.request_id !== "string" ||
+      typeof task.actor_id !== "string" ||
+      typeof task.spec_fingerprint_sha256 !== "string" ||
+      !hashPattern.test(task.spec_fingerprint_sha256)
+    )
+      fail("migration_adoption_invalid", "Pending preparation task identity is invalid.");
+    tasks.push({
+      task_id: task.task_id,
+      request_id: task.request_id,
+      actor_id: task.actor_id,
+      spec_fingerprint_sha256: task.spec_fingerprint_sha256,
+    });
+  }
+  const scope: PendingAdoptionScope = {
+    workspaceRoot: context.workspaceRoot,
+    workspaceId: adoption.workspace_id,
+    planSha256: plan,
+    markerSha256: transferHash(markerBytes),
+    adoptionFileSha256: transferHash(adoptionBytes),
+    tasks: Object.freeze(tasks),
+    active: true,
+  };
+  try {
+    return await adoptionScopes.run(scope, callback);
+  } finally {
+    scope.active = false;
+  }
 }
 
 export function pendingFoundryMigration(context: FoundryRuntimeContext): string | null {
   assertFoundryRuntimeContext(context);
   const marker = confined(context.workspaceRoot, path.join(context.controlRoot, "workspace.json"));
   if (!fs.existsSync(marker)) return null;
+  assertNotFoundrySessionFile(marker, context.accountIntent?.sessionReference);
   if (regularFile(marker).size > 64 * 1024)
     fail("workspace_invalid", "Workspace marker exceeds its limit.");
   const value: unknown = JSON.parse(fs.readFileSync(marker, "utf8"));
@@ -490,6 +842,7 @@ export function writeFoundryArtifact(
   filePath: string,
   content: string | Buffer,
 ): void {
+  assertFoundryWorkspaceWrite(context);
   const target = resolveFoundryOutput(context, filePath);
   if (target === context.taskRoot)
     fail("output_file_required", "An artifact must be a file below the task root.");
@@ -522,7 +875,7 @@ export function initializeFoundryWorkspace(context: FoundryRuntimeContext): {
   workspace_id: string;
   status: "created" | "existing";
 } {
-  assertFoundryRuntimeContext(context);
+  assertFoundryWorkspaceWrite(context);
   if (pendingFoundryMigration(context))
     fail(
       "workspace_migration_pending",
@@ -530,12 +883,12 @@ export function initializeFoundryWorkspace(context: FoundryRuntimeContext): {
     );
   if (canonicalFuturePath(context.workspaceRoot) !== context.workspaceRoot)
     fail("workspace_changed", "Workspace root changed after context construction.");
-  let existing = readWorkspaceId(context.workspaceRoot);
+  let existing = readWorkspaceId(context.workspaceRoot, context.accountIntent?.sessionReference);
   if (!existing && fs.existsSync(context.controlRoot)) {
     const names = fs
       .readdirSync(context.controlRoot)
       .filter((name) => !/^\.workspace-[0-9a-f-]+\.tmp$/u.test(name));
-    existing = readWorkspaceId(context.workspaceRoot);
+    existing = readWorkspaceId(context.workspaceRoot, context.accountIntent?.sessionReference);
     if (names.length && !existing)
       fail(
         "legacy_workspace_requires_migration",
@@ -569,7 +922,10 @@ export function initializeFoundryWorkspace(context: FoundryRuntimeContext): {
       if (fs.existsSync(temp)) fs.unlinkSync(temp);
     }
   }
-  const workspaceId = readWorkspaceId(context.workspaceRoot)!;
+  const workspaceId = readWorkspaceId(
+    context.workspaceRoot,
+    context.accountIntent?.sessionReference,
+  )!;
   for (const relative of ["state", "tasks/inbox", "tasks/active", "tasks/done", "workspaces"]) {
     const target = confined(context.workspaceRoot, path.join(context.controlRoot, relative));
     fs.mkdirSync(target, { recursive: true, mode: 0o700 });

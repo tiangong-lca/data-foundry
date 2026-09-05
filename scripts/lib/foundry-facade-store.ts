@@ -4,6 +4,8 @@ import path from "node:path";
 import { withBatchRunLock } from "@tiangong-lca/cli/batch";
 import {
   assertFoundryRuntimeContext,
+  assertFoundryWorkspaceWrite,
+  assertPendingFoundryTaskIntent,
   FoundryContextError,
   resolveFoundryOutput,
   type FoundryInputFact,
@@ -426,7 +428,7 @@ export async function registerFoundryFacadeTask(
     createOrLoad: (taskId: string) => { created_at_utc: string; inputs_sha256: string };
   },
 ): Promise<FoundryFacadeTaskRecord> {
-  assertFoundryRuntimeContext(context);
+  assertFoundryWorkspaceWrite(context);
   if (!context.workspaceId || context.taskId)
     fail(
       "workspace_context_required",
@@ -463,6 +465,7 @@ export async function registerFoundryFacadeTask(
       if (revisionNumber > maxRevisions)
         fail("facade_request_limit", "Facade request has too many retained revisions.");
       const taskId = `task-${requestSha256}-r${String(revisionNumber).padStart(4, "0")}`;
+      assertPendingFoundryTaskIntent(context, taskId, spec.request_id, spec.actor_id, fingerprint);
       const predecessors =
         stored.index?.revisions.filter((entry) => entry.task_id !== taskId) ?? [];
       requireUnattemptedPredecessors(context, predecessors);

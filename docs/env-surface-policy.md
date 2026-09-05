@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: a74b09c202f0ed48d3ce8bb0810e1e8b15c47603
-lastReviewedNote: "Reviewed for #108: facade descendants recheck retained predecessor publications and block on observed attempts or missing history; source credentials, execution ownership, full migration adoption and rollback boundaries remain unchanged."
+lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
+lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
 ---
 
 # Environment Surface Policy
@@ -116,3 +116,5 @@ Constructing an internal `createFoundryApplication` does not call `loadRuntimeEn
 Migration inventory never opens recognized `.env`, OAuth/session, token/cookie or private-account storage, or the independently selected session reference under any filename; it records only path/size/classification and omits content hashes. Transfer plans project explicit account intent as project/user only and never carry a session reference, environment map or grant. No migration environment variable or alternate trust-anchor source is introduced.
 
 Transfer staging uses the public CLI batch lock in a destination-keyed cache domain outside the source. It creates no auth session or business process. Root task queues receive the same private-file projection as `.foundry`, and explicit external inputs cannot be the selected session reference or recognized private storage.
+
+The host can select an independently trusted workspace read/write manifest and explicit runtime-manager options. These never come from `.env`, task specifications or ordinary argv. Registered `state/task-accounts/<id>.json` is identity intent, not OAuth storage. The explicitly selected session path is checked before marker and protected migration reads, including aliases. Source specifications and raw migration evidence do not carry session contents into current task state.

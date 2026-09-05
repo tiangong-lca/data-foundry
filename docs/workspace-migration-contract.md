@@ -7,7 +7,8 @@ authoritative: true
 owner: tiangong-lca-data-foundry
 language: en
 whenToUse:
-  - when planning or revalidating an explicit legacy workspace migration
+  - when planning, applying, auditing or recovering an explicit workspace migration
+  - when selecting read/write runtime compatibility or rollback
   - when interpreting retained attempt evidence without granting replay authority
 whenToUpdate:
   - when migration planning, state preservation, application, audit or rollback behavior changes
@@ -17,6 +18,13 @@ checkPaths:
   - scripts/lib/foundry-migration-stage.ts
   - scripts/lib/foundry-migration-transfer.ts
   - scripts/lib/foundry-migration-transfer-io.ts
+  - scripts/lib/foundry-migration-adoption-plan.ts
+  - scripts/lib/foundry-migration-adoption.ts
+  - scripts/lib/foundry-migration-authority.ts
+  - scripts/lib/foundry-migration-replay.ts
+  - scripts/lib/foundry-runtime-selection.ts
+  - scripts/lib/foundry-runtime-selection-record.ts
+  - scripts/lib/foundry-private-path.ts
   - scripts/lib/foundry-execution-attempt.ts
   - scripts/foundry-facade.ts
   - scripts/runtime-entry.ts
@@ -28,8 +36,8 @@ checkPaths:
   - test/unit/foundry-migration-transfer.test.mts
   - test/scenarios/workspace-migration-transfer.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: a74b09c202f0ed48d3ce8bb0810e1e8b15c47603
-lastReviewedNote: "Reviewed for #108: facade descendants recheck retained predecessor publications and block on observed attempts or missing history; source credentials, execution ownership, full migration adoption and rollback boundaries remain unchanged."
+lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
+lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -39,74 +47,77 @@ related:
 
 # Workspace migration
 
-W10 now implements a source-bound transfer plan, explicit staging, interruption recovery and independent archive audit. Task adoption, activation and runtime rollback remain required by #108; `--apply` stays unavailable until those gates are implemented. A staged transfer is not an active or completed workspace migration.
+Migration is an explicit, source-preserving operation. Install, ordinary init and ordinary resume do not migrate legacy state. The destination becomes active only after copied evidence and regenerated local preparation have passed independent checks. Historical grants, paths, seals and attempts remain evidence; they never become new authorization.
 
-The source remains unchanged. Dry-run planning creates no destination, lock, cache, marker or authorization. Explicit staging writes only its owned destination control tree and a destination-scoped cache lock; it never dispatches a business command or changes remote data. Original #95 tasks and operator workspaces are outside the private test scope.
+## Transfer and adoption
 
-## Explicit transfer planning
+The public `workspace migrate` operation has five file-operation modes:
 
-The retained inventory-only command remains available. To bind a proposed transfer:
+1. `--dry-run` binds source, destination, actor, request, selected stage records and explicit external inputs into `workspace-migration-transfer-plan.v2`.
+2. `--stage --plan <file>` copies and independently audits the bound control tree, root task queues and external inputs. It publishes only `workspace-migration-pending.v1`.
+3. `--adoption-dry-run --plan <file> --task-spec <source-task>=<spec-file>` prepares `migration-adoption-plan.v1`. Repeat `--task-spec` for independently selected tasks.
+4. `--apply --plan <file> --adoption-plan <file> --task-spec ...` reconstructs both plans, regenerates eligible preparation through current owners, and publishes an anchored `workspace.v2` marker after audit.
+5. `--audit --plan <file>` checks either the pending transfer or the active migration evidence.
 
-```sh
-tiangong-foundry workspace migrate --workspace /absolute/legacy-project \
-  --to /absolute/new-project --actor agent/session-001 --request migration-001 \
-  --stage-manifest workspaces/issue-123/stage-revisions/revision-0001.json \
-  --dry-run --json
-```
+Each operation repeats explicit `--workspace <source> --to <destination> --actor <id> --request <id>`, the same repeated `--stage-manifest` selections and the same repeated `--input` files. Task selectors use source-control-relative paths such as `workspaces/issue-123`. A specification is independently selected; paths found in old metadata do not themselves authorize reading another file.
 
-`--to`, `--actor` and `--request` are required together. `--stage-manifest` may repeat, up to 128 unique source-state-relative paths. Both path separators are accepted; stored paths use `/`, and aliases that normalize to the same file are rejected as duplicates. A selected stage is evidence to interpret, not executable input or proof that every legacy task has been enumerated. The target may be an existing user project, but it must contain no `.foundry` state. Source and target must be physically disjoint. A package, installed skill directory, filesystem root or unsupported platform is rejected before source capture.
+Adoption and active-workspace access require the host's independently trusted CLI product manifest. The public typed factory accepts `workspaceAccess: { manifest, access }`; the CLI host supplies that same boundary. Ordinary argv, task specifications, workspace pointers, environment files and cached observations cannot establish manifest trust. Without a trusted host selection, apply is blocked. `createFoundryFacade(...).migrationAdoption(...)` provides the same preview/apply protocol; `migrationTransfer({ audit: true, ... })` audits the resulting evidence.
 
-`createFoundryFacade(...).migrationDryRun({ destination, actorId, requestId, stageManifests })` returns the same transfer artifact. Host account intent is projected as project/user only; an OAuth session reference is never serialized in the plan. Ordinary arguments and plans do not provide runtime trust anchors.
+## Source and filesystem boundaries
 
-## Plan identity and preservation
+Source and destination are canonical, physically disjoint directories. A new destination may be an existing user project but must have no Foundry control state. Package roots, installed skill roots, filesystem roots, links, traversal and unsupported hosts are rejected. Legacy source records and original inputs remain unchanged, including raw/canonical hashes, CWD, program, argv, profile locks, seals and terminal/attempt evidence.
 
-`tiangong-foundry.workspace-migration-transfer-plan.v2` binds request, actor, canonical source and destination, current package/entry/platform identity, optional account intent, bounded `.foundry` and root-level `tasks` inventories, independently selected external input facts, explicitly selected stage evidence and blocker/omission lists. `plan_sha256` is the canonical digest of every other field. Arrays are ordered deterministically. There is no current timestamp that would change an unchanged proposal on retry.
+The transfer inventory covers `.foundry`, root-level `tasks` and independently selected external files. Combined selected state is bounded to 10,000 entries and 256 MiB of hashed bytes, with 64 MiB per file and 64 directory levels. Oversized non-private inputs are blockers. Known credential/session/token/cookie storage and the explicitly selected opaque OAuth session reference are not read or copied; their omissions remain recorded. `account-intent.json` and the registered `state/task-accounts/<id>.json` shape represent identity intent, not OAuth storage.
 
-The inventory still uses `workspace-migration-plan.v1` and observational path classes. The combined state, queue and external-input selection is limited to 10,000 entries and 256 MiB of hashed bytes; with a 64 MiB per-file bound, 10,000 entries and 64 directory levels. `.env*`, recognized OAuth/session/token/cookie/credential/private-account storage and the host-selected session reference (including an opaque filename) are metadata-only: no content read or new digest. A selected session that collides with `workspace.json` is not opened as a marker and blocks transfer. Their paths are listed under `omitted_private_paths`; omission is not a claim that their content was verified or copied. Oversized non-private files carry explicit blockers, and unsupported source marker schemas remain blocked. The source itself must always be preserved, including excluded files.
+Plans bind current runtime/package/entry/platform facts. Installed mode also binds the complete package inventory digest; source mode remains explicitly entry-only and is not a provenance claim. Serialized plans must be bounded plain JSON. A fresh reconstruction must match every field, even when a supplied digest has been recomputed. Source, input, runtime, actor or destination drift blocks the operation.
 
-Selected stage JSON is capped at 8 MiB and must match its inventory path/size/hash. Reads reject links and check descriptor identity, size, timestamps and bytes. The entire inventory is observed again before returning a plan; a change rejects the proposal. This detects observed drift but does not claim an atomic filesystem snapshot or protection from arbitrary same-user filesystem tampering.
+A shared CLI-owned migration lock is keyed by canonical destination and independent of runtime version. Its complete cache path is checked before acquisition, including symlinked cache ancestors, and it cannot be placed in the preserved source. Copies are streamed, hashed and flushed before exclusive publication. Different existing files are preserved and rejected. A completed archive is audited rather than reconstructed after lost or corrupt evidence. Recognized temporary copy/metadata files are confined to owned scratch; unknown state remains a blocker.
 
-`revalidateFoundryMigrationPlan` accepts plain JSON only and reconstructs the proposal from independently supplied source, destination context, request, actor and stage selections. Every field must match the fresh result. Runtime manifest/entry facts are observed again before and after planning; installed packages additionally bind the complete descriptor inventory digest. Source or repository-emitted mode is explicitly `entry-only`, not a claim of component provenance. Recomputing a forged plan digest does not select another account, runtime or source. Unknown fields, non-JSON values, accessors and structural/byte overflow fail closed. This is a pre-mutation boundary; later apply/audit must recheck selected source files around each mutation and must not use a past planning result as a permanent authority object.
+## Historical task classes
 
-## Retained attempt evidence
-
-The existing `modelExecutionAttemptDisposition` now lives in the small `foundry-execution-attempt.ts` owner and is re-exported by the internal capsule command. Its original semantics and function identity are preserved. The public package imports this leaf without importing the capsule command or the 63-command developer surface.
-
-Transfer planning adds count/consistency checks before using a declared disposition:
-
-| Retained evidence | Planning action |
+| Evidence | Adoption behavior |
 | --- | --- |
-| Explicit `UNATTEMPTED`, both counts zero, `NOT_DISPATCHED`, `NONE` mutation and `NOT_STARTED` readback | Rebuild local preparation through current owners; old admission is not reused. |
-| Confirmed dispatch with exact desired readback | Retain terminal evidence; no mutation replay. |
-| Unknown dispatch with exact desired readback | Retain recovered terminal evidence; no mutation replay. |
-| Missing, inconsistent or unresolved dispatch/readback facts | Owner readback only; never clear or reseal as unattempted. |
+| Complete known local preparation with no retained attempt or unresolved predecessor history | Register a new task identity, remap independently selected sources to verified archive copies, load the current profile and regenerate preparation through current task owners. |
+| A terminal report validated through the retained registered task's artifact/receipt lineage | Preserve terminal authority and create no new executable task. |
+| Attempted, ambiguous, later, unclassified or incomplete execution history | Keep original-owner status/readback recovery; no local reseal as unattempted. |
+| Missing or incompatible source, actor, profile or current task specification | Preserve the evidence and block affected adoption. |
 
-These are interpretations of content-bound historical declarations, not fresh server readback or validation of every capsule leaf. `grants_write_authority` and `remote_write_allowed` are always false. A selected file name, profile waiver, old account proof, new path, runtime or request cannot grant write/replay permission. Full task/capsule/lineage validation and fresh independent identity remain necessary before later task adoption or restricted execution.
+Older job/source-manifest records use `schema_version: 1`; current registrations use the v2 task contracts. The migration keeps their original bytes. Current task specifications must cover the retained source set and preserve lane/profile/entity scope while selecting the current actor and explicit account intent. An old profile waiver or authentication record is never copied into current permission.
 
-## Remaining W10 delivery
+A pre-dispatch stage may still declare `UNATTEMPTED` after a later dispatch. Selected stage declarations do not prove complete history or confirmed terminal success. The batch owner can remove successful entries from active attempt state and can clear the event file during compaction; terminal/readback records must therefore remain in the reviewed source closure. Empty or missing compacted logs do not reset authority. Unaccounted shared control records keep affected history under owner recovery.
 
-#108 still owns immutable predecessor/task mapping, current-owner local preparation regeneration, durable no-replay inheritance across task revisions, activation after complete audit, and separate read/write workspace compatibility plus explicit runtime rollback. Tests and private real-case evidence must cover those behaviors before #108 can close. Successful staging alone does not satisfy them.
+## Pending preparation and activation
 
-The v2 plan includes root-level `tasks` automatically and binds each repeated `--input` external file independently. It does not infer external read permission from a path found inside an old manifest. Full task adoption must still prove every referenced external source and later attempt/readback record is accounted for; a snapshot alone does not establish that semantic closure.
+The adoption plan records immutable origin identity, exact task/spec/source mapping, scope evidence and the intended runtime manifest. Source specifications and generated current specifications are preserved separately. Original strings are never rewritten in place.
 
-As a prerequisite, the current facade now refuses new or existing descendant revisions when a registered predecessor has attempt evidence. It rechecks all earlier task publications and preserves missing/changed history as a blocker. This closes revision-based local continuation around observed attempts; it does not claim cross-workspace migration, external-ledger reconciliation or final mutation no-replay inheritance.
+`target_spec` is a credential-free task template, not an executable task specification. Its account intent contains project/user only. Materialization adds the current task schema and a null session-reference slot; the matching host may supply its CLI-owned reference only in the process context. The original selected specification remains an immutable file snapshot. Session contents are never copied, and inline operation results retain their credential-field rejection.
 
-## Explicit staging and audit
+An internal asynchronous adoption scope supplies the future workspace id only while current owners register and prepare the selected tasks. The physical marker stays pending. The scope admits only the bound local task identities and expires when its callback finishes, including for escaped asynchronous work. Pending state cannot create business authorization or execution admission.
 
-Repeat the same independently chosen source, target, actor, request, stage and external-input selections when staging or auditing a saved v2 plan:
+Current source/profile/job registrations, publications, immutable revision pointers and initial source evidence are audited and anchored with the complete archive in `migration-activation.v1`. The active `workspace.v2` marker binds that receipt. Request indexes can append later revisions; each original revision must still match its immutable pointer and fingerprint. Original source facts are checked again immediately before activation. Repeated application verifies the same intent and retained evidence. Interruptions before activation remain pending; interruptions after publication recover from the existing activation instead of creating fresh task history.
 
-```sh
-tiangong-foundry workspace migrate --workspace /absolute/legacy-project \
-  --to /absolute/new-project --actor agent/session-001 --request migration-001 \
-  --input /absolute/original.json --plan /absolute/transfer-plan.json --stage --json
-```
+A later migration of a v2 workspace retains earlier origin identities and non-executable historical mappings, and rechecks attempts recorded after the first adoption. Missing previously registered tasks are recovery conditions. They cannot be recreated as empty history.
 
-Use `--audit` instead of `--stage` to verify an existing transfer without writing. Dry-run accepts the same `--input` selections. Old v1 plans omitted queues/external inputs and cannot authorize staging; regenerate them as v2.
+## No-replay admission
 
-Staging revalidates before taking a version-independent destination lock and again while locked. It prepares a complete control-directory template with a pending marker, immutable claim and exact plan, then publishes that directory only while the target `.foundry` is absent. It never publishes an active workspace marker. Existing state is preserved and rejected. Source files are streamed through hash/descriptor checks into private temporary files, flushed, then installed exclusively; equal bytes may be reused and different existing bytes are never overwritten.
+Migration scope uses the existing dataset owner's native JSON/JSONL interpretation over content-bound sources and retained native payloads. Scope keys include entity type, UUID and version. Opaque or incomplete source scope remains unknown rather than proving an empty range.
 
-Archived `.foundry` files, root queues and explicit external inputs live under `migrations/<plan-sha>/original/`. Old seals, grants, attempts, queue Markdown and source paths are raw evidence, not current task state. Empty directories are retained; private files remain in the untouched source and their omissions remain bound by the plan. A final `migration-transfer-receipt.v1` binds every copied file and directory after independent destination and source audits. It always records `state=staged`, `activated=false`, and `remote_write_allowed=false`.
+Execution admission rechecks preserved migration evidence independently of the new request, file path or runtime selection. Retained terminal scope cannot re-enter the same mutation scope; unresolved attempts also block version changes for the affected resource. Unknown scope requires original-owner recovery before mutation admission. Independent native dataset scopes can proceed through the ordinary fresh identity, authorization, lineage, QA and CLI no-replay checks. The migration guard grants no permission and does not dispatch, clear or replay an attempt.
 
-`workspace-migration-pending.v1` has only its schema and plan SHA. New `init`/doctor and downlevel runtimes reject normal use; it supplies no workspace id or task authority. The future workspace id is deterministically derived from the full plan identity and recorded in the claim/receipt. Claim, plan, actor, source and destination mismatches stop recovery. Completed transfers are re-audited, not recopied after missing or corrupt history. A recognized partial transfer can resume identical files. Named temporary copy and receipt files live inside its owned scratch directory and are removed on explicit resume, including when interruption occurs after receipt publication; unknown files or links are preserved and block progress. Read-only audit never performs that cleanup.
+Attempts recorded later in an adopted local task remain relevant. Their complete execution-context records and final-row facts are inspected again. Missing or changed history fails closed. The same checks run when a child admission is rehydrated and immediately before it is returned to the existing executor.
 
-An interrupted transfer remains pending. Audit and revalidation must pass again before a receipt is written; source drift or destination drift at any tested boundary prevents success. Transfer receipts are bounded to 16 MiB. The migration implementation does not claim an atomic source filesystem snapshot or isolation against arbitrary same-user filesystem tampering. Later task adoption, no-replay inheritance and activation must use these preserved records without treating this receipt as business completion.
+## Runtime selection and rollback
+
+Read and write compatibility are separate. V2 requires the `migration-adoption-v1` and `registered-tasks-v2` features and preserves an extension object. The selected writer must match the executing Foundry version, be independently qualified for all required features and understand those write features. Unknown required features cannot be force-written. A read-compatible selection permits diagnostics and verified read-only inspection; it cannot initialize, prepare, register authorization or admit a mutation. Read-only metadata inspection does not acquire a write lock or repair missing state.
+
+`workspace migrate --runtime-use --workspace <project> --actor <id> --request <id> --access read|write` selects a target supplied independently through the trusted host. It cannot be combined with file migration modes. `runtimeUse(...)` is the corresponding typed API. The control-plane selector verifies target compatibility and CLI-managed components, pins current and target component sets with persistent workspace/manifest leases, and saves an immutable selection receipt plus an atomic project pointer. Repeating a request rechecks components. A qualified selector can restore a writer while the project's ordinary task operations remain read-only.
+
+The pointer records intent; it is never its own trust anchor. Subsequent launches still need an independently trusted matching manifest. Previous caches and leases remain available and are not automatically released by rollback. When a managed host supplies runtime-manager options during adoption, the active component set is pinned before activation. Plain source/npm consumers retain their existing package-manager ownership; managed component publication and bootstrap integration are qualified in W08/W09.
+
+Runtime rollback does not rewrite workspace schemas, remove added fields, reset attempts, undo a business mutation or restore macOS Intel support. An older package that cannot read the required schema/features is rejected. Existing task runtime/profile bindings remain additional requirements for task writes.
+
+## Qualification and limits
+
+#108 owns synthetic state-class, source/installed, interruption, forgery, scope and compatibility tests plus fresh official-OAuth frozen-case qualification with zero business writes. Existing #95/214 work and operator workspaces require their own bounded authorization and are not migration fixtures. Final package/component/release qualification and exact workspace integration remain required by workspace #980.
+
+The implementation detects observed drift and preserves source evidence. It does not claim an atomic source filesystem snapshot, isolation from arbitrary same-user filesystem tampering or global revocation of offline historical copies. Operators must select the current owner history and retain the resulting migration references.

@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: a74b09c202f0ed48d3ce8bb0810e1e8b15c47603
-lastReviewedNote: "Reviewed for #108: facade descendants recheck retained predecessor publications and block on observed attempts or missing history; source credentials, execution ownership, full migration adoption and rollback boundaries remain unchanged."
+lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
+lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -111,7 +111,7 @@ Unknown protocol/layout versions fail closed with `blocked` and a stable version
 
 `completed` is projected only from a current indexed `dataset-import-completion-report` for the same task with completed status and no blockers, after all source/artifact lineage checks. A copied unindexed report remains `ready`. A nonempty or malformed attempt area blocks resume with `mutation_readback_required`; the facade never clears or dispatches it. Pre-observed cancellation returns `operation_interrupted` and exit 130 without creating state; installed-process signal qualification is repeated in W06.
 
-Every facade revision also rechecks all retained predecessors in its request chain. Missing, changed or linked predecessor task/publication state blocks continuation. Any predecessor attempt blocks creating or resuming a descendant with `facade_predecessor_readback_required`, regardless of the attempt's declared outcome or changed input bytes/paths. The original task remains available for its owner status/readback. This guard checks current registered facade history; W10 migration still must reconcile legacy external ledgers and persist no-replay inheritance across migrated workspaces and independently named requests.
+Every facade revision also rechecks all retained predecessors in its request chain. Missing, changed or linked predecessor task/publication state blocks continuation. Any predecessor attempt blocks creating or resuming a descendant with `facade_predecessor_readback_required`, regardless of the attempt's declared outcome or changed input bytes/paths. The original task remains available for its owner status/readback. This guard checks current registered facade history; the migration owner additionally retains origin/scope evidence and rechecks it before execution admission across migrated workspaces and independently named requests.
 
 ## Runtime selection and migration seam
 
@@ -125,6 +125,10 @@ CLI session ownership, fresh identity receipts and the existing explicit process
 
 The facade cannot authorize actions from source text or infer permission from a historical profile. Missing grants block only affected operations; independent preparation and ready scopes continue. User-facing summaries show stages, counts and concrete remedies, with versions/argv/hashes in diagnostic artifacts when needed.
 
-Transfer planning adds `--to <destination> --actor <actor> --request <request>` and optional repeated `--stage-manifest <source-state-relative-path>` to the same dry-run operation. It produces `workspace-migration-transfer-plan.v2`, independently binds runtime and intent, observes source bytes again, and interprets selected historical attempt evidence without granting execution authority. Apply/activation/rollback remain pending #108. See [workspace migration](workspace-migration-contract.md). Both inventory and transfer paths reject unsupported hosts before legacy-state reads.
+Transfer planning adds `--to <destination> --actor <actor> --request <request>` and optional repeated `--stage-manifest <source-state-relative-path>` to the same dry-run operation. It produces `workspace-migration-transfer-plan.v2`, independently binds runtime and intent, observes source bytes again, and interprets selected historical attempt evidence without granting execution authority. Explicit adoption/apply/audit and runtime selection are defined by the migration contract. See [workspace migration](workspace-migration-contract.md). Both inventory and transfer paths reject unsupported hosts before legacy-state reads.
 
-Explicit `--stage --plan <file>` copies the complete selected v2 source snapshot into an inactive migration area; `--audit --plan <file>` rechecks it. Both repeat independent transfer intent and `--input` selections. Pending markers cannot be initialized or used as active workspaces, and neither a staged receipt nor a historical declaration grants replay permission. Full `--apply` remains pending task adoption/activation in #108.
+Explicit `--stage --plan <file>` copies the complete selected v2 source snapshot into an inactive migration area; `--audit --plan <file>` rechecks it. Both repeat independent transfer intent and `--input` selections. Pending markers cannot be initialized or used as active workspaces, and neither a staged receipt nor a historical declaration grants replay permission. `--adoption-dry-run` and `--apply` require independently selected task specifications and a trusted runtime host; successful application publishes only after current-owner preparation and audit.
+
+The migration operation also accepts `--runtime-use --actor <id> --request <id> --access read|write` with an independently trusted host target manifest; file migration flags cannot be mixed with it. The host carries `workspaceAccess`, optional `runtimeManager`, `runtimeTarget`, `accountIntent` and `cacheBase` through the typed boundary. An explicit read selection never returns a preparation command from task status. Workspace pointers are selection intent, not manifest trust anchors.
+
+`createFoundryWorkspaceAccess({ manifestBytes, expectedSha256, access })` is the public host bridge when bootstrap and Foundry load separate CLI SDK instances. It verifies the independently selected digest again with Foundry's own CLI instance. The host must obtain that expected digest from its trusted release/skill configuration; it must not derive it from workspace data or the bytes being checked. The bridge is not exposed through ordinary argv or task specifications.
