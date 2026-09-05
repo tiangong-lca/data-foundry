@@ -79,3 +79,5 @@ The package scenario rebuilds twice, packs twice byte-identically, and installs 
 These checks qualify a local candidate tarball. They do not prove registry provenance, public component download, native TIDAS availability on every host or a complete Node+CLI+Foundry+TIDAS component. Those are W08 release gates.
 
 The W10 planning extension adds the shared pure attempt leaf and bounded migration plan/stage readers to the public graph, plus the transfer-plan schema and migration contract. It still excludes the internal capsule command and all developer commands. Future package qualification must use the rebuilt descriptor/tarball; the earlier W06 tarball remains an immutable baseline artifact.
+
+The W10 transfer extension ships bounded transfer I/O and staging/audit owners plus pending-marker and receipt schemas. It still has no install lifecycle effects, no business mutation dispatcher and no automatic activation; source-free consumers can explicitly stage and audit the same v2 plans.

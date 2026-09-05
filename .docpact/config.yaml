@@ -905,11 +905,11 @@ rules:
         kind: workspace-migration-evidence
       - path: scripts/lib/foundry-execution-attempt.ts
         kind: migration-attempt-interpretation
-      - path: specs/schemas/foundry-workspace-migration-transfer-plan.schema.json
+      - path: specs/schemas/foundry-*migration*.schema.json
         kind: workspace-migration-transfer-schema
-      - path: test/unit/foundry-migration-plan.test.mts
+      - path: test/unit/foundry-migration-*.test.mts
         kind: migration-revalidation-contract
-      - path: test/scenarios/workspace-migration-planning.test.mts
+      - path: test/scenarios/workspace-migration-*.test.mts
         kind: migration-planning-scenario
       - path: docs/workspace-migration-contract.md
         kind: workspace-migration-contract

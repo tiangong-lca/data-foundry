@@ -113,6 +113,38 @@ test("facade task, result, request and migration schemas compile and reject unsa
     false,
   );
   assert.equal(validateTransfer({ ...transfer, unexpected: true }), false);
+  const validatePending = ajv.compile(read("foundry-workspace-migration-pending.schema.json"));
+  assert.equal(
+    validatePending({
+      schema: "tiangong-foundry.workspace-migration-pending.v1",
+      plan_sha256: digest,
+    }),
+    true,
+  );
+  assert.equal(
+    validatePending({
+      schema: "tiangong-foundry.workspace-migration-pending.v1",
+      plan_sha256: digest,
+      workspace_id: "active",
+    }),
+    false,
+  );
+  const validateReceipt = ajv.compile(read("foundry-migration-transfer-receipt.schema.json"));
+  const receipt = {
+    schema: "tiangong-foundry.migration-transfer-receipt.v1",
+    state: "staged",
+    activated: false,
+    remote_write_allowed: false,
+    plan_sha256: digest,
+    workspace_id: "00000000-0000-8000-8000-000000000001",
+    actor_id: "actor",
+    files: [],
+    directories: [],
+    files_sha256: digest,
+    receipt_sha256: digest,
+  };
+  assert.equal(validateReceipt(receipt), true, JSON.stringify(validateReceipt.errors));
+  assert.equal(validateReceipt({ ...receipt, activated: true }), false);
 
   const validatePackage = ajv.compile(read("foundry-package-descriptor.schema.json"));
   const packageDescriptor = createFoundryPackageDescriptor(

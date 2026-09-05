@@ -8,6 +8,7 @@ import {
   createFoundryRuntimeContext,
   FoundryContextError,
   initializeFoundryWorkspace,
+  pendingFoundryMigration,
   type FoundryInputFact,
   type FoundryAccountIntent,
   type FoundryRuntimeContextOptions,
@@ -37,6 +38,7 @@ import {
 import { sha256Json } from "./lib/identity-preflight-proof.ts";
 import { inventoryFoundryWorkspace } from "./lib/foundry-migration-inventory.ts";
 import { planFoundryWorkspaceMigration } from "./lib/foundry-migration-plan.ts";
+import { stageFoundryMigration, auditFoundryMigration } from "./lib/foundry-migration-transfer.ts";
 
 export interface FoundryFacadeRuntimeSelection {
   readonly cliExpectation: unknown;
@@ -236,6 +238,7 @@ function failure(
     "task_authorization_state_invalid",
     "migration_inventory_limit",
     "migration_depth_limit",
+    "workspace_migration_pending",
   ]);
   const needsInput =
     needsInputCodes.has(code) ||
@@ -493,6 +496,11 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
       try {
         assertNotInterrupted(options.signal);
         const current = base();
+        if (pendingFoundryMigration(current))
+          throw new FoundryContextError(
+            "workspace_migration_pending",
+            "Migration is staged and requires task adoption and activation audit.",
+          );
         const qualified = qualification(current, options.runtimeSelection);
         assertNotInterrupted(options.signal);
         const readiness = accountReadiness(current);
@@ -546,6 +554,7 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
       actorId: string;
       requestId: string;
       stageManifests?: readonly string[];
+      externalInputs?: readonly string[];
     }): FoundryOperationResult {
       try {
         assertNotInterrupted(options.signal);
@@ -561,6 +570,7 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
                 actorId: input.actorId,
                 requestId: input.requestId,
                 stageManifests: input.stageManifests,
+                externalInputs: input.externalInputs,
               },
             )
           : inventoryFoundryWorkspace(options.workspace, {
@@ -587,6 +597,53 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
                   ),
                 ]
               : [],
+          runtimeIdentity: null,
+          permissions: noPermission(),
+        });
+      } catch (error) {
+        return failure("workspace.migrate", null, error);
+      }
+    },
+    async migrationTransfer(input: {
+      destination: string;
+      actorId: string;
+      requestId: string;
+      stageManifests?: readonly string[];
+      externalInputs?: readonly string[];
+      plan: unknown;
+      audit?: boolean;
+    }): Promise<FoundryOperationResult> {
+      try {
+        assertNotInterrupted(options.signal);
+        assertFoundryRuntimeHost();
+        const destination = createFoundryRuntimeContext({
+          ...contextOptions(options),
+          workspace: input.destination,
+        });
+        const planning = {
+          sourceWorkspace: path.resolve(options.cwd ?? process.cwd(), options.workspace),
+          actorId: input.actorId,
+          requestId: input.requestId,
+          stageManifests: input.stageManifests,
+          externalInputs: input.externalInputs,
+        };
+        const transfer = input.audit
+          ? auditFoundryMigration(destination, planning, input.plan)
+          : await stageFoundryMigration(destination, planning, input.plan, {
+              signal: options.signal,
+            });
+        return createFoundryOperationResult({
+          operation: "workspace.migrate",
+          status: "ready",
+          taskId: null,
+          artifacts: [fileArtifact("migration_transfer_receipt", transfer.path)],
+          blockers: [],
+          nextActions: [
+            human(
+              "complete_migration_adoption",
+              "The source snapshot is staged and verified. Complete task adoption and activation audit before running this workspace.",
+            ),
+          ],
           runtimeIdentity: null,
           permissions: noPermission(),
         });

@@ -163,7 +163,7 @@ test("public migration planning binds destination, actor, runtime and declared a
   assert.equal(result.stderr, "");
   const envelope = JSON.parse(result.stdout);
   const plan = envelope.artifacts[0].value;
-  assert.equal(plan.schema, "tiangong-foundry.workspace-migration-transfer-plan.v1");
+  assert.equal(plan.schema, "tiangong-foundry.workspace-migration-transfer-plan.v2");
   assert.equal(plan.actor_id, "test-owner");
   assert.equal(plan.destination_workspace, path.join(fs.realpathSync(root), "new workspace"));
   assert.equal(plan.source_inventory.workspace_root, fs.realpathSync(source));

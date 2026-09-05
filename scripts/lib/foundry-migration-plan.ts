@@ -5,11 +5,16 @@ import {
   assertFoundryRuntimeContext,
   FoundryContextError,
   type FoundryRuntimeContext,
+  type FoundryInputFact,
+  captureFoundryInput,
+  pendingFoundryMigration,
 } from "./foundry-runtime-context.ts";
 import {
   inventoryFoundryWorkspace,
   migrationCredentialPath,
   type FoundryWorkspaceMigrationPlan,
+  inventoryFoundryMigrationTree,
+  type FoundryMigrationTree,
 } from "./foundry-migration-inventory.ts";
 import {
   inspectFoundryMigrationStage,
@@ -22,7 +27,7 @@ import { describeFoundryRuntime } from "./foundry-runtime-paths.ts";
 import { assertFoundryPackage } from "./foundry-package-contract.ts";
 
 export const FOUNDRY_MIGRATION_TRANSFER_PLAN_SCHEMA =
-  "tiangong-foundry.workspace-migration-transfer-plan.v1" as const;
+  "tiangong-foundry.workspace-migration-transfer-plan.v2" as const;
 
 export interface FoundryMigrationTransferPlan {
   readonly schema: typeof FOUNDRY_MIGRATION_TRANSFER_PLAN_SCHEMA;
@@ -40,6 +45,8 @@ export interface FoundryMigrationTransferPlan {
     readonly payload_sha256: string | null;
   };
   readonly source_inventory: FoundryWorkspaceMigrationPlan;
+  readonly source_queue: FoundryMigrationTree;
+  readonly external_inputs: readonly FoundryInputFact[];
   readonly stages: readonly MigrationStageEvidence[];
   readonly omitted_private_paths: readonly string[];
   readonly blockers: readonly { readonly code: string; readonly path: string | null }[];
@@ -53,6 +60,7 @@ export interface FoundryMigrationPlanningOptions {
   readonly requestId: string;
   readonly actorId: string;
   readonly stageManifests?: readonly string[];
+  readonly externalInputs?: readonly string[];
 }
 
 const maxDocumentBytes = 8 * 1024 * 1024;
@@ -102,6 +110,7 @@ function runtimeFacts(context: FoundryRuntimeContext): FoundryMigrationTransferP
 export function planFoundryWorkspaceMigration(
   context: FoundryRuntimeContext,
   options: FoundryMigrationPlanningOptions,
+  pendingPlanSha256?: string,
 ): FoundryMigrationTransferPlan {
   assertFoundryRuntimeContext(context);
   const runtime = runtimeFacts(context);
@@ -130,16 +139,61 @@ export function planFoundryWorkspaceMigration(
   const source = fs.realpathSync(options.sourceWorkspace);
   if (inside(source, context.workspaceRoot) || inside(context.workspaceRoot, source))
     fail("migration_roots_overlap", "Migration source and destination must be disjoint.");
-  if (fs.existsSync(context.controlRoot))
+  if (
+    fs.existsSync(context.controlRoot) &&
+    (!pendingPlanSha256 || pendingFoundryMigration(context) !== pendingPlanSha256)
+  )
     fail("migration_destination_exists", "Choose a destination without existing Foundry state.");
   const privateOptions = { sessionReference: context.accountIntent?.sessionReference };
   const inventory = inventoryFoundryWorkspace(source, privateOptions);
+  const queue = inventoryFoundryMigrationTree(path.join(source, "tasks"), privateOptions);
+  const inputs = options.externalInputs ?? [];
+  if (
+    !Array.isArray(inputs) ||
+    inputs.length > 1000 ||
+    inputs.some((file) => typeof file !== "string" || !path.isAbsolute(file))
+  )
+    fail("migration_inputs_invalid", "External inputs must be explicitly selected absolute files.");
+  const externalInputs = inputs
+    .map((file) => {
+      const canonical = fs.realpathSync(file);
+      if (
+        migrationCredentialPath(file) ||
+        (privateOptions.sessionReference &&
+          fs.existsSync(privateOptions.sessionReference) &&
+          canonical === fs.realpathSync(privateOptions.sessionReference))
+      )
+        fail(
+          "migration_credential_forbidden",
+          "A private file cannot be selected as external migration data.",
+        );
+      if (inside(context.workspaceRoot, canonical))
+        fail("migration_roots_overlap", "External inputs cannot be inside the destination.");
+      const stat = fs.lstatSync(file);
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 64 * 1024 * 1024)
+        fail("migration_inputs_invalid", "External inputs must be bounded regular files.");
+      return captureFoundryInput(file);
+    })
+    .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  if (new Set(externalInputs.map((f) => f.path)).size !== externalInputs.length)
+    fail("migration_inputs_invalid", "External inputs contain canonical duplicates.");
+  const allEntries = [...inventory.entries, ...queue.entries];
+  if (
+    allEntries.length + externalInputs.length > 10_000 ||
+    allEntries.reduce((n, f) => n + (f.sha256 ? (f.bytes ?? 0) : 0), 0) +
+      externalInputs.reduce((n, f) => n + f.bytes, 0) >
+      256 * 1024 * 1024
+  )
+    fail(
+      "migration_inventory_limit",
+      "Combined migration sources exceed the inventory or byte limit.",
+    );
   if (inventory.marker_schema !== null && inventory.marker_schema.length > 256)
     fail(
       "migration_source_schema_unsupported",
       "Source marker schema exceeds the migration protocol limit.",
     );
-  if (!inventory.foundry_root_exists)
+  if (!inventory.foundry_root_exists && !queue.exists)
     fail("migration_source_empty", "The selected source has no Foundry state to migrate.");
   const stages = Object.freeze(
     [...selected].sort().map((file) => inspectFoundryMigrationStage(inventory, file)),
@@ -154,9 +208,23 @@ export function planFoundryWorkspaceMigration(
   const omitted = inventory.entries
     .filter((entry) => privatePath(entry.path))
     .map((entry) => entry.path);
+  const queuePrivate = (relative: string) =>
+    migrationCredentialPath(relative) || path.join(source, "tasks", relative) === privateReference;
+  omitted.push(
+    ...queue.entries
+      .filter((entry) => queuePrivate(entry.path))
+      .map((entry) => `tasks/${entry.path}`),
+  );
   const blockers: Array<Readonly<{ code: string; path: string | null }>> = inventory.entries
     .filter((entry) => entry.kind === "file" && entry.sha256 === null && !privatePath(entry.path))
     .map((entry) => Object.freeze({ code: "migration_unhashed_file", path: entry.path }));
+  blockers.push(
+    ...queue.entries
+      .filter((entry) => entry.kind === "file" && !entry.sha256 && !queuePrivate(entry.path))
+      .map((entry) =>
+        Object.freeze({ code: "migration_unhashed_file", path: `tasks/${entry.path}` }),
+      ),
+  );
   if (privatePath("workspace.json"))
     blockers.push(Object.freeze({ code: "migration_private_marker", path: "workspace.json" }));
   if (
@@ -167,7 +235,12 @@ export function planFoundryWorkspaceMigration(
       Object.freeze({ code: "migration_source_schema_unsupported", path: "workspace.json" }),
     );
   const current = inventoryFoundryWorkspace(source, privateOptions);
-  if (sha256Json(current) !== sha256Json(inventory))
+  if (
+    sha256Json(current) !== sha256Json(inventory) ||
+    sha256Json(inventoryFoundryMigrationTree(path.join(source, "tasks"), privateOptions)) !==
+      sha256Json(queue) ||
+    externalInputs.some((file) => sha256Json(captureFoundryInput(file.path)) !== sha256Json(file))
+  )
     fail(
       "migration_source_changed",
       "Source state changed while the migration plan was assembled.",
@@ -190,6 +263,8 @@ export function planFoundryWorkspaceMigration(
       : null,
     runtime,
     source_inventory: inventory,
+    source_queue: queue,
+    external_inputs: Object.freeze(externalInputs),
     stages,
     omitted_private_paths: Object.freeze(omitted),
     blockers: Object.freeze(blockers),
@@ -207,6 +282,7 @@ export function revalidateFoundryMigrationPlan(
   context: FoundryRuntimeContext,
   options: FoundryMigrationPlanningOptions,
   value: unknown,
+  pendingPlanSha256?: string,
 ): FoundryMigrationTransferPlan {
   let count = 0;
   const json = (item: unknown, depth: number): void => {
@@ -260,7 +336,7 @@ export function revalidateFoundryMigrationPlan(
   if (Buffer.byteLength(JSON.stringify(value)) > maxDocumentBytes)
     fail("migration_plan_limit", "Migration plan exceeds its document byte limit.");
   const supplied = record(value);
-  const current = planFoundryWorkspaceMigration(context, options);
+  const current = planFoundryWorkspaceMigration(context, options, pendingPlanSha256);
   if (sha256Json(supplied) !== sha256Json(current))
     fail(
       "migration_plan_changed",

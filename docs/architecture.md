@@ -158,7 +158,7 @@ lastReviewedNote: "Reviewed for #106 W06: public bin/API compilation, sanitized 
 
 # Architecture
 
-Migration transfer planning is governed by [the workspace migration contract](workspace-migration-contract.md). The current W10 slice binds a read-only proposal to source/target/actor/runtime and retained attempt evidence; explicit apply, task adoption, activation and rollback remain pending #108. It grants no write or replay authority.
+Migration transfer planning is governed by [the workspace migration contract](workspace-migration-contract.md). W10 binds source/queue/external-input transfer plans and can stage and independently audit preserved bytes; task adoption, activation and rollback remain pending #108. It grants no write or replay authority.
 
 The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 compiles that facade into the descriptor-bound `@tiangong-lca/foundry` candidate; W08 still owns F1 publication and platform components. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/package-distribution-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 
@@ -188,7 +188,7 @@ Runtime selection is an injected host capability. Direct/unqualified use can ini
 
 ## Package boundary
 
-The repository and public package have separate composition roots. `scripts/foundry.ts` retains all developer owners. The public bin calls only `runFoundryPublicCommand`, and `scripts/public-api.ts` binds its own module identity before exposing the typed host facade. `tsconfig.package.json` follows those two roots to a 42-module JavaScript closure plus declarations; internal command/case implementations and source maps never enter the package tree.
+The repository and public package have separate composition roots. `scripts/foundry.ts` retains all developer owners. The public bin calls only `runFoundryPublicCommand`, and `scripts/public-api.ts` binds its own module identity before exposing the typed host facade. `tsconfig.package.json` follows those two roots to a 44-module JavaScript closure plus declarations; internal command/case implementations and source maps never enter the package tree.
 
 `build-foundry-package.ts` creates a sanitized publish stage without scripts, dev dependencies or package-manager metadata, copies only the reviewed allowlist and writes a strict file descriptor. Installed v2 package resolution checks that descriptor and the complete semantic manifest before returning a context. Exact file hashes protect code/assets; W08 provenance and component signatures protect distribution origin.
 

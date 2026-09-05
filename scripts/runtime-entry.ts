@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import path from "node:path";
+import { transferRead } from "./lib/foundry-migration-transfer-io.ts";
+import { migrationCredentialPath } from "./lib/foundry-migration-inventory.ts";
 import { createFoundryFacade, type FoundryFacadeRuntimeSelection } from "./foundry-facade.ts";
 import { createFoundryRuntime } from "./foundry-runtime.ts";
 import { parseArgs, type ParsedArgs } from "./lib/foundry-args.ts";
@@ -155,7 +157,7 @@ async function runPublicCommand(
     ...(parsed.operation === "doctor"
       ? ["expectedProjectRef", "expectedUserId", "sessionReference"]
       : parsed.operation === "workspace.migrate"
-        ? ["dryRun", "to", "actor", "request", "stageManifest"]
+        ? ["dryRun", "to", "actor", "request", "stageManifest", "input", "stage", "audit", "plan"]
         : parsed.operation === "task.start"
           ? ["spec"]
           : parsed.operation === "task.status" || parsed.operation === "task.resume"
@@ -189,17 +191,27 @@ async function runPublicCommand(
   if (parsed.operation === "workspace.init") result = facade.initialize();
   else if (parsed.operation === "doctor") result = facade.doctor();
   else if (parsed.operation === "workspace.migrate") {
-    if (parsed.args.dryRun !== true)
+    if (
+      [parsed.args.dryRun, parsed.args.stage, parsed.args.audit].filter((value) => value === true)
+        .length !== 1
+    )
       return invalidResult(
         parsed.operation,
         null,
         "argument_dry_run_required",
-        "Workspace migration is read-only in this release and requires --dry-run.",
+        "Select exactly one migration mode: --dry-run, --stage or --audit.",
       );
     const destination = option(parsed.args.to, "--to");
     const actorId = option(parsed.args.actor, "--actor");
     const requestId = option(parsed.args.request, "--request");
     const stageValue = parsed.args.stageManifest;
+    const inputValue = parsed.args.input;
+    const externalInputs =
+      inputValue === undefined
+        ? []
+        : (Array.isArray(inputValue) ? inputValue : [inputValue]).map((value) =>
+            path.resolve(option(value, "--input")!),
+          );
     const stageManifests =
       stageValue === undefined
         ? []
@@ -208,7 +220,14 @@ async function runPublicCommand(
           );
     if (
       (destination && (!actorId || !requestId)) ||
-      (!destination && (actorId || requestId || stageManifests.length))
+      (!destination &&
+        (actorId ||
+          requestId ||
+          stageManifests.length ||
+          externalInputs.length ||
+          parsed.args.stage ||
+          parsed.args.audit ||
+          parsed.args.plan))
     )
       return invalidResult(
         parsed.operation,
@@ -216,11 +235,54 @@ async function runPublicCommand(
         "argument_migration_intent_required",
         "Transfer planning requires --to, --actor and --request together.",
       );
-    result = facade.migrationDryRun(
-      destination
-        ? { destination, actorId: actorId!, requestId: requestId!, stageManifests }
-        : undefined,
-    );
+    if (parsed.args.stage === true || parsed.args.audit === true) {
+      const planFile = option(parsed.args.plan, "--plan");
+      if (!planFile || !destination || !actorId || !requestId)
+        return invalidResult(
+          parsed.operation,
+          null,
+          "argument_migration_plan_required",
+          "Staging and audit require a saved --plan and explicit transfer intent.",
+        );
+      if (migrationCredentialPath(planFile))
+        return invalidResult(
+          parsed.operation,
+          null,
+          "argument_migration_plan_invalid",
+          "A private file cannot be used as a migration plan.",
+        );
+      const plan: unknown = JSON.parse(
+        transferRead(path.resolve(planFile), 8 * 1024 * 1024).toString("utf8"),
+      );
+      result = await facade.migrationTransfer({
+        destination,
+        actorId,
+        requestId,
+        stageManifests,
+        externalInputs,
+        plan,
+        audit: parsed.args.audit === true,
+      });
+    } else {
+      if (parsed.args.plan !== undefined)
+        return invalidResult(
+          parsed.operation,
+          null,
+          "argument_migration_plan_invalid",
+          "Dry-run reconstructs a new plan; saved plans are used by stage or audit.",
+        );
+      result = facade.migrationDryRun(
+        destination
+          ? {
+              destination,
+              actorId: actorId!,
+              requestId: requestId!,
+              stageManifests,
+              externalInputs,
+            }
+          : undefined,
+      );
+    }
   } else if (parsed.operation === "task.start") {
     const specFile = option(parsed.args.spec, "--spec");
     if (!specFile)

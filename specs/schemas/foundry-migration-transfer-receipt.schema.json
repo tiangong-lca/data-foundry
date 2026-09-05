@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tiangong-lca.local/foundry/migration-transfer-receipt.schema.json",
+  "title": "Foundry inactive migration transfer receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "state",
+    "activated",
+    "remote_write_allowed",
+    "plan_sha256",
+    "workspace_id",
+    "actor_id",
+    "files",
+    "directories",
+    "files_sha256",
+    "receipt_sha256"
+  ],
+  "properties": {
+    "schema": {
+      "const": "tiangong-foundry.migration-transfer-receipt.v1"
+    },
+    "state": {
+      "const": "staged"
+    },
+    "activated": {
+      "const": false
+    },
+    "remote_write_allowed": {
+      "const": false
+    },
+    "plan_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9-]{36}$"
+    },
+    "actor_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "files": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "destination", "bytes", "sha256"],
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "destination": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 67108864
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "directories": {
+      "type": "array",
+      "maxItems": 30000,
+      "items": {
+        "type": "string",
+        "maxLength": 8192
+      }
+    },
+    "files_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "receipt_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

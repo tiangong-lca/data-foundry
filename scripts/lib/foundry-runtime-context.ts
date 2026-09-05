@@ -135,6 +135,13 @@ function readWorkspaceId(workspaceRoot: string): string | null {
     fail("workspace_invalid", "Workspace marker must be an object.");
   const marker = value as Record<string, unknown>;
   if (
+    marker.schema === "tiangong-foundry.workspace-migration-pending.v1" &&
+    Object.keys(marker).length === 2 &&
+    typeof marker.plan_sha256 === "string" &&
+    hashPattern.test(marker.plan_sha256)
+  )
+    return null;
+  if (
     marker.schema !== workspaceSchema ||
     marker.layout_version !== 1 ||
     typeof marker.workspace_id !== "string" ||
@@ -336,6 +343,26 @@ export function assertFoundryRuntimeContext(context: FoundryRuntimeContext): voi
     fail("workspace_changed", "Workspace identity changed after context construction.");
 }
 
+export function pendingFoundryMigration(context: FoundryRuntimeContext): string | null {
+  assertFoundryRuntimeContext(context);
+  const marker = confined(context.workspaceRoot, path.join(context.controlRoot, "workspace.json"));
+  if (!fs.existsSync(marker)) return null;
+  if (regularFile(marker).size > 64 * 1024)
+    fail("workspace_invalid", "Workspace marker exceeds its limit.");
+  const value: unknown = JSON.parse(fs.readFileSync(marker, "utf8"));
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>;
+    if (
+      record.schema === "tiangong-foundry.workspace-migration-pending.v1" &&
+      typeof record.plan_sha256 === "string" &&
+      hashPattern.test(record.plan_sha256) &&
+      Object.keys(record).length === 2
+    )
+      return record.plan_sha256;
+  }
+  return null;
+}
+
 export function resolveFoundryOutput(
   context: FoundryRuntimeContext,
   value: string,
@@ -496,6 +523,11 @@ export function initializeFoundryWorkspace(context: FoundryRuntimeContext): {
   status: "created" | "existing";
 } {
   assertFoundryRuntimeContext(context);
+  if (pendingFoundryMigration(context))
+    fail(
+      "workspace_migration_pending",
+      "Migration is staged and must pass task adoption and activation audit before workspace use.",
+    );
   if (canonicalFuturePath(context.workspaceRoot) !== context.workspaceRoot)
     fail("workspace_changed", "Workspace root changed after context construction.");
   let existing = readWorkspaceId(context.workspaceRoot);

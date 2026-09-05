@@ -150,7 +150,7 @@ lastReviewedNote: "Reviewed for #106 W06: package composition has separate publi
 
 # Foundry AI Navigation
 
-Migration transfer planning is governed by [the workspace migration contract](workspace-migration-contract.md). The current W10 slice binds a read-only proposal to source/target/actor/runtime and retained attempt evidence; explicit apply, task adoption, activation and rollback remain pending #108. It grants no write or replay authority.
+Migration transfer planning is governed by [the workspace migration contract](workspace-migration-contract.md). W10 binds source/queue/external-input transfer plans and can stage and independently audit preserved bytes; task adoption, activation and rollback remain pending #108. It grants no write or replay authority.
 
 The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. W05 owns the facade; W06 owns the local installable package closure; W08 owns F1 release/components. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/package-distribution-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 

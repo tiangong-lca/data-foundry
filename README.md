@@ -164,7 +164,7 @@ lastReviewedNote: "Reviewed for #106 W06: the installable Foundry 0.1.0 candidat
 
 # TianGong LCA Data Foundry
 
-Migration transfer planning is governed by [the workspace migration contract](docs/workspace-migration-contract.md). The current W10 slice binds a read-only proposal to source/target/actor/runtime and retained attempt evidence; explicit apply, task adoption, activation and rollback remain pending #108. It grants no write or replay authority.
+Migration transfer planning is governed by [the workspace migration contract](docs/workspace-migration-contract.md). W10 binds source/queue/external-input transfer plans and can stage and independently audit preserved bytes; task adoption, activation and rollback remain pending #108. It grants no write or replay authority.
 
 The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 packages that facade as a deterministic source-free candidate; `docs/package-distribution-contract.md` owns its files and integrity. F1 registry/component publication remains W08. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 

@@ -15,15 +15,21 @@ checkPaths:
   - scripts/lib/foundry-migration-inventory.ts
   - scripts/lib/foundry-migration-plan.ts
   - scripts/lib/foundry-migration-stage.ts
+  - scripts/lib/foundry-migration-transfer.ts
+  - scripts/lib/foundry-migration-transfer-io.ts
   - scripts/lib/foundry-execution-attempt.ts
   - scripts/foundry-facade.ts
   - scripts/runtime-entry.ts
   - specs/schemas/foundry-workspace-migration-transfer-plan.schema.json
+  - specs/schemas/foundry-migration-transfer-receipt.schema.json
+  - specs/schemas/foundry-workspace-migration-pending.schema.json
   - test/unit/foundry-migration-plan.test.mts
   - test/scenarios/workspace-migration-planning.test.mts
+  - test/unit/foundry-migration-transfer.test.mts
+  - test/scenarios/workspace-migration-transfer.test.mts
 lastReviewedAt: 2026-09-05
-lastReviewedCommit: bed7f3d9d48c462a90211e3675241e12f17d2495
-lastReviewedNote: "Reviewed for #108 first W10 slice: read-only bound transfer planning and source revalidation are implemented; apply, task adoption, activation and rollback remain required."
+lastReviewedCommit: eaa73d494d94eb3b2164e913fd15f217f6c2d6a6
+lastReviewedNote: "Reviewed for #108 staging: v2 source/queue/input planning, exclusive pending transfers, copy and receipt interruption recovery, and independent archive audit are implemented. Task adoption, activation and rollback remain required."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -33,9 +39,9 @@ related:
 
 # Workspace migration
 
-The first W10 slice implements a reviewable transfer plan and fresh revalidation. Applying a plan, activating a migrated workspace, rebuilding local task revisions and runtime rollback are still required by #108. `--apply` remains unavailable. This planning boundary must not be presented as a completed migration or F1 qualification.
+W10 now implements a source-bound transfer plan, explicit staging, interruption recovery and independent archive audit. Task adoption, activation and runtime rollback remain required by #108; `--apply` stays unavailable until those gates are implemented. A staged transfer is not an active or completed workspace migration.
 
-The source remains unchanged. Planning never creates the destination, a lock, a cache, a workspace marker or an authorization. It neither dispatches a command nor changes remote data. Original #95 tasks and operator workspaces are outside the private test scope.
+The source remains unchanged. Dry-run planning creates no destination, lock, cache, marker or authorization. Explicit staging writes only its owned destination control tree and a destination-scoped cache lock; it never dispatches a business command or changes remote data. Original #95 tasks and operator workspaces are outside the private test scope.
 
 ## Explicit transfer planning
 
@@ -54,9 +60,9 @@ tiangong-foundry workspace migrate --workspace /absolute/legacy-project \
 
 ## Plan identity and preservation
 
-`tiangong-foundry.workspace-migration-transfer-plan.v1` binds request, actor, canonical source and destination, current package/entry/platform identity, optional account intent, the complete bounded `.foundry` inventory, explicitly selected stage evidence and blocker/omission lists. `plan_sha256` is the canonical digest of every other field. Arrays are ordered deterministically. There is no current timestamp that would change an unchanged proposal on retry.
+`tiangong-foundry.workspace-migration-transfer-plan.v2` binds request, actor, canonical source and destination, current package/entry/platform identity, optional account intent, bounded `.foundry` and root-level `tasks` inventories, independently selected external input facts, explicitly selected stage evidence and blocker/omission lists. `plan_sha256` is the canonical digest of every other field. Arrays are ordered deterministically. There is no current timestamp that would change an unchanged proposal on retry.
 
-The inventory still uses `workspace-migration-plan.v1` and observational path classes. It hashes at most 256 MiB in total, with a 64 MiB per-file bound, 10,000 entries and 64 directory levels. `.env*`, recognized OAuth/session/token/cookie/credential/private-account storage and the host-selected session reference (including an opaque filename) are metadata-only: no content read or new digest. A selected session that collides with `workspace.json` is not opened as a marker and blocks transfer. Their paths are listed under `omitted_private_paths`; omission is not a claim that their content was verified or copied. Oversized non-private files carry explicit blockers, and unsupported source marker schemas remain blocked. The source itself must always be preserved, including excluded files.
+The inventory still uses `workspace-migration-plan.v1` and observational path classes. The combined state, queue and external-input selection is limited to 10,000 entries and 256 MiB of hashed bytes; with a 64 MiB per-file bound, 10,000 entries and 64 directory levels. `.env*`, recognized OAuth/session/token/cookie/credential/private-account storage and the host-selected session reference (including an opaque filename) are metadata-only: no content read or new digest. A selected session that collides with `workspace.json` is not opened as a marker and blocks transfer. Their paths are listed under `omitted_private_paths`; omission is not a claim that their content was verified or copied. Oversized non-private files carry explicit blockers, and unsupported source marker schemas remain blocked. The source itself must always be preserved, including excluded files.
 
 Selected stage JSON is capped at 8 MiB and must match its inventory path/size/hash. Reads reject links and check descriptor identity, size, timestamps and bytes. The entire inventory is observed again before returning a plan; a change rejects the proposal. This detects observed drift but does not claim an atomic filesystem snapshot or protection from arbitrary same-user filesystem tampering.
 
@@ -79,6 +85,26 @@ These are interpretations of content-bound historical declarations, not fresh se
 
 ## Remaining W10 delivery
 
-#108 still owns exclusive staged copying, immutable predecessor/task mapping, current-owner local preparation regeneration, durable no-replay inheritance across task revisions, interruption recovery, independent destination audit before activation, and separate read/write workspace compatibility plus explicit runtime rollback. Tests and private real-case evidence must cover those behaviors before #108 can close. Successful planning alone does not satisfy them.
+#108 still owns immutable predecessor/task mapping, current-owner local preparation regeneration, durable no-replay inheritance across task revisions, activation after complete audit, and separate read/write workspace compatibility plus explicit runtime rollback. Tests and private real-case evidence must cover those behaviors before #108 can close. Successful staging alone does not satisfy them.
 
-The current inventory covers `.foundry` only. Root-level legacy task queues and external source-manifest inputs need their own explicit selection and preservation before full task adoption; they are not implicitly covered by this first planning slice.
+The v2 plan includes root-level `tasks` automatically and binds each repeated `--input` external file independently. It does not infer external read permission from a path found inside an old manifest. Full task adoption must still prove every referenced external source and later attempt/readback record is accounted for; a snapshot alone does not establish that semantic closure.
+
+## Explicit staging and audit
+
+Repeat the same independently chosen source, target, actor, request, stage and external-input selections when staging or auditing a saved v2 plan:
+
+```sh
+tiangong-foundry workspace migrate --workspace /absolute/legacy-project \
+  --to /absolute/new-project --actor agent/session-001 --request migration-001 \
+  --input /absolute/original.json --plan /absolute/transfer-plan.json --stage --json
+```
+
+Use `--audit` instead of `--stage` to verify an existing transfer without writing. Dry-run accepts the same `--input` selections. Old v1 plans omitted queues/external inputs and cannot authorize staging; regenerate them as v2.
+
+Staging revalidates before taking a version-independent destination lock and again while locked. It prepares a complete control-directory template with a pending marker, immutable claim and exact plan, then publishes that directory only while the target `.foundry` is absent. It never publishes an active workspace marker. Existing state is preserved and rejected. Source files are streamed through hash/descriptor checks into private temporary files, flushed, then installed exclusively; equal bytes may be reused and different existing bytes are never overwritten.
+
+Archived `.foundry` files, root queues and explicit external inputs live under `migrations/<plan-sha>/original/`. Old seals, grants, attempts, queue Markdown and source paths are raw evidence, not current task state. Empty directories are retained; private files remain in the untouched source and their omissions remain bound by the plan. A final `migration-transfer-receipt.v1` binds every copied file and directory after independent destination and source audits. It always records `state=staged`, `activated=false`, and `remote_write_allowed=false`.
+
+`workspace-migration-pending.v1` has only its schema and plan SHA. New `init`/doctor and downlevel runtimes reject normal use; it supplies no workspace id or task authority. The future workspace id is deterministically derived from the full plan identity and recorded in the claim/receipt. Claim, plan, actor, source and destination mismatches stop recovery. Completed transfers are re-audited, not recopied after missing or corrupt history. A recognized partial transfer can resume identical files. Named temporary copy and receipt files live inside its owned scratch directory and are removed on explicit resume, including when interruption occurs after receipt publication; unknown files or links are preserved and block progress. Read-only audit never performs that cleanup.
+
+An interrupted transfer remains pending. Audit and revalidation must pass again before a receipt is written; source drift or destination drift at any tested boundary prevents success. Transfer receipts are bounded to 16 MiB. The migration implementation does not claim an atomic source filesystem snapshot or isolation against arbitrary same-user filesystem tampering. Later task adoption, no-replay inheritance and activation must use these preserved records without treating this receipt as business completion.

@@ -45,6 +45,10 @@ export {
   type MigrationStageEvidence,
 } from "./lib/foundry-migration-plan.ts";
 export {
+  FOUNDRY_MIGRATION_TRANSFER_RECEIPT_SCHEMA,
+  type FoundryMigrationTransferReceipt,
+} from "./lib/foundry-migration-transfer.ts";
+export {
   FOUNDRY_PACKAGE_DESCRIPTOR_SCHEMA,
   FoundryPackageError,
   assertFoundryPackage,
