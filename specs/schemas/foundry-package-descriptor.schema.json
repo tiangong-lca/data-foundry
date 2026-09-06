@@ -29,7 +29,7 @@
               "const": "@tiangong-lca/cli"
             },
             "version": {
-              "const": "0.1.10"
+              "const": "0.1.11"
             }
           }
         },

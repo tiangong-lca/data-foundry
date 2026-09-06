@@ -34,7 +34,7 @@ import { requirePrivateOAuthSessionFile } from "../lib/oauth-session-reference.t
 const CASE_SCHEMA = "tiangong-foundry.production-contact-draft-case.v1" as const;
 const FAILURE_SCHEMA = "tiangong-foundry.production-contact-draft-case-failure.v1" as const;
 const CLI_PACKAGE_NAME = "@tiangong-lca/cli" as const;
-const CLI_PACKAGE_VERSION = "0.1.10" as const;
+const CLI_PACKAGE_VERSION = "0.1.11" as const;
 const MAX_CHILD_OUTPUT_BYTES = 8 * 1024 * 1024;
 const CHILD_TIMEOUT_MS = 120_000;
 const RECEIPT_MAX_AGE_MS = 5 * 60_000;

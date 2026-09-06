@@ -360,7 +360,7 @@ test("packed Foundry installs twice and runs only the public facade from a read-
     "parseFoundryTaskStartSpec",
     "runFoundryPublicCommand",
   ]);
-  assert.deepEqual(importedResult.cli, { name: "@tiangong-lca/cli", version: "0.1.10" });
+  assert.deepEqual(importedResult.cli, { name: "@tiangong-lca/cli", version: "0.1.11" });
   assert.equal(importedResult.doctor, "ready");
 
   const typeSource = path.join(firstProject, "consumer.ts");

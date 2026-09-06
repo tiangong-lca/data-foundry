@@ -82,7 +82,7 @@ function baseDeps(
     },
     resolveInstalledCli: () => ({
       packageName: "@tiangong-lca/cli",
-      packageVersion: "0.1.10",
+      packageVersion: "0.1.11",
       binPath: path.join(root, "trusted", "tiangong-lca.js"),
     }),
     spawnSyncImpl: (executable: string, argv: readonly string[], options: SpawnCall["options"]) => {
@@ -235,7 +235,7 @@ test("account wrapper executes when invoked through a symlinked entrypoint", (co
       encoding: "utf8",
     });
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /fresh, intent-bound CLI 0\.1\.10 identity receipt/u);
+    assert.match(result.stdout, /fresh, intent-bound CLI 0\.1\.11 identity receipt/u);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

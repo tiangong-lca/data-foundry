@@ -2,10 +2,10 @@
   "schema": "tiangong-foundry.release-runtime-inputs.v1",
   "cli": {
     "package": "@tiangong-lca/cli",
-    "version": "0.1.10",
-    "source_commit": "58191977a837e1cdd673ef6d77c35fa2a4caf7ed",
+    "version": "0.1.11",
+    "source_commit": "1f9f75fcae3c386e601b49a7da95df0d6a526f6f",
     "repository": "https://github.com/tiangong-lca/tiangong-cli",
-    "tag": "cli-v0.1.10"
+    "tag": "cli-v0.1.11"
   },
   "node": {
     "version": "24.19.0",

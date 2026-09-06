@@ -279,10 +279,10 @@ export function qualifyFoundryRuntime(
       "CLI runtime bytes do not match the independently selected C1 expectation.",
     );
   }
-  if (cli.package.version !== "0.1.10" || cli.platform !== context.platform)
+  if (cli.package.version !== "0.1.11" || cli.platform !== context.platform)
     fail(
       "runtime_cli_unqualified",
-      "Foundry requires the exact CLI 0.1.10 C1 runtime on the selected platform.",
+      "Foundry requires the exact CLI 0.1.11 C1 runtime on the selected platform.",
     );
   const cliExpectation = Object.freeze({ ...(options.cliExpectation as CliRuntimeExpectation) });
   if (cliExpectation.schema !== CLI_RUNTIME_EXPECTATION_SCHEMA)

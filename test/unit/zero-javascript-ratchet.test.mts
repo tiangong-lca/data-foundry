@@ -16,6 +16,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // Frozen registry payload, upstream extraction and SPDX/license assembly remain source-only TS.
 // The production-input entrypoint consumes these owners without a runtime or JavaScript fallback.
 // Native artifact selection and inspection also use typed source commands without installer hooks.
+// CLI 0.1.11 runtime/host adoption remains native TypeScript and uses only public package exports.
 // TIDAS 0.2.2 intake and empty external-runtime requirement reporting retain that boundary.
 // Issue #110's tool-policy retirement preserves Node 24 and the native TypeScript graph.
 // Issue #108's migration adoption, compatibility and replay guards remain native TypeScript.

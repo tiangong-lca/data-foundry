@@ -12,7 +12,7 @@ function oauthReceipt(source = "cache", overrides: Record<string, unknown> = {})
   return testAuthIdentityReceipt({
     projectRef: expectedProjectRef,
     userId: expectedUserId,
-    packageVersion: "0.1.10",
+    packageVersion: "0.1.11",
     capturedAtUtc: "2026-09-04T07:59:45.000Z",
     scopeOverrides: {
       session: {

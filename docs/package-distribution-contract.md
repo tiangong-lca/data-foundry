@@ -34,9 +34,9 @@ checkPaths:
   - test/commands/foundry-release-*.test.mts
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
-lastReviewedAt: 2026-09-06
-lastReviewedCommit: dc42f2aac8bc56a5e109f096024ef5c56c8adf6b
-lastReviewedNote: "Reviewed for Foundry #112: native intake now consumes the public TIDAS 0.2.2 tag/source and all four independently verified archive hashes. The Windows external CRT defect is corrected; Linux GLIBC 2.38 remains required. Source/env/host authority boundaries are unchanged and complete F1 cold-start qualification remains pending."
+lastReviewedAt: 2026-09-07
+lastReviewedCommit: 1f37034f7451e95fc5e3efc4528b15245c77b377
+lastReviewedNote: "Reviewed for Foundry #112: adopt provenance-verified public CLI 0.1.11 and its exact runtime/source pins. Existing profile rules, task authorization, storage ownership and historical case evidence are unchanged; the managed Foundry host and final F1 publication remain pending."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -48,7 +48,7 @@ related:
 
 The npm identity is `@tiangong-lca/foundry`; the public bin is `tiangong-foundry`. W06 establishes the installable `0.1.0` candidate and its production dependency closure. It does not publish a registry version or call this candidate F1. W08 owns the release-only workflow, Trusted Publishing/provenance, immutable tag, platform components, SBOM/license bundle and product compatibility manifest.
 
-The package depends exactly on public `@tiangong-lca/cli@0.1.10`. Ajv remains a development dependency for internal commands and release-side SPDX validation. Sigstore 5.0.0, YAML 2.9.0, tar 7.5.22 and fflate 0.8.3 are also development-only release tools for signing/verification, lock parsing and bounded upstream archive selection. None enters the public compiler/dependency closure. TIDAS is an independently verified native component selected later by the CLI manager, not an npm dependency or bundled binary.
+The package depends exactly on public `@tiangong-lca/cli@0.1.11`. Ajv remains a development dependency for internal commands and release-side SPDX validation. Sigstore 5.0.0, YAML 2.9.0, tar 7.5.22 and fflate 0.8.3 are also development-only release tools for signing/verification, lock parsing and bounded upstream archive selection. None enters the public compiler/dependency closure. TIDAS is an independently verified native component selected later by the CLI manager, not an npm dependency or bundled binary.
 
 ## Public surface
 
@@ -170,7 +170,7 @@ Native handshake success is not minimum-host or clean-machine qualification. Cur
 
 `pnpm package:build` rebuilds both output roots from scratch and verifies the staged package. `pnpm package:check` compares the stage with the descriptor, runs a pack dry-run, and verifies the installed C1 descriptor. `pnpm package:pack` packs only `package-stage/` into an owned temporary directory, derives the versioned archive name from the verified staged descriptor, then installs it with an exclusive hardlink. The repository manifest, compiled verifier version and descriptor JSON Schema version remain coherent release projections; the verifier never takes its expected identity from the installed manifest it is checking. An identical existing archive is reused; a link, invalid file or different existing bytes are preserved and rejected rather than overwritten.
 
-The package scenario rebuilds twice, packs twice byte-identically, and installs the same tarball into two clean consumers; the second install is offline from the first consumer's isolated public cache. The scenario first verifies the source-pinned pnpm version. Corepack, when used, stores that tool in a fresh scenario-local cache shared across the isolated tool homes; later packing runs with Corepack networking disabled and latest-version lookup disabled. Tool bootstrap and the first public-registry install have bounded five-minute deadlines for cold network downloads; the offline install and local commands retain their two-minute deadlines. It verifies the exact import surface and declarations, public CLI 0.1.10 runtime identity, shebang/bin, source/installed operation equivalence, arbitrary Unicode CWD, read-only package bytes, isolated workspace writes and all six facade operations. It also proves that internal commands, modified/extra/linked files, a lifecycle-bearing manifest, a `darwin-x64` descriptor and a package copied without C1 fail closed.
+The package scenario rebuilds twice, packs twice byte-identically, and installs the same tarball into two clean consumers; the second install is offline from the first consumer's isolated public cache. The scenario first verifies the source-pinned pnpm version. Corepack, when used, stores that tool in a fresh scenario-local cache shared across the isolated tool homes; later packing runs with Corepack networking disabled and latest-version lookup disabled. Tool bootstrap and the first public-registry install have bounded five-minute deadlines for cold network downloads; the offline install and local commands retain their two-minute deadlines. It verifies the exact import surface and declarations, public CLI 0.1.11 runtime identity, shebang/bin, source/installed operation equivalence, arbitrary Unicode CWD, read-only package bytes, isolated workspace writes and all six facade operations. It also proves that internal commands, modified/extra/linked files, a lifecycle-bearing manifest, a `darwin-x64` descriptor and a package copied without C1 fail closed.
 
 These checks qualify a local candidate tarball. They do not prove registry provenance, public component download, native TIDAS availability on every host or a complete Node+CLI+Foundry+TIDAS component. Those are W08 release gates.
 

@@ -151,9 +151,9 @@ checkPaths:
   - test/unit/foundry-runtime-environment.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
-lastReviewedAt: 2026-09-06
-lastReviewedCommit: dc42f2aac8bc56a5e109f096024ef5c56c8adf6b
-lastReviewedNote: "Reviewed for Foundry #112: verified TIDAS 0.2.2 native inputs and empty Windows external-runtime reporting remain source release preparation. Control-plane, public facade, task permission, ownership, skill and native TypeScript boundaries are unchanged."
+lastReviewedAt: 2026-09-07
+lastReviewedCommit: 1f37034f7451e95fc5e3efc4528b15245c77b377
+lastReviewedNote: "Reviewed for Foundry #112: adopt provenance-verified public CLI 0.1.11 and its exact runtime/source pins. Existing profile rules, task authorization, storage ownership and historical case evidence are unchanged; the managed Foundry host and final F1 publication remain pending."
 ---
 
 # Architecture
@@ -170,7 +170,7 @@ Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel a
 
 ## OAuth identity boundary
 
-Foundry selects a private session reference and exact project/user intent, then calls the published CLI for a fresh server-verified identity receipt. It validates TTL, canonical hash, expected identity and current OAuth session metadata without owning login, password decoding, token exchange or refresh. Candidate Golden execution uses an isolated Git-visible source snapshot so ignored operator state cannot change qualification. Support-cache transport is owned by the public CLI export. Foundry validates the fresh identity, project, public-state scope, completion marker, artifact paths and hashes, then summarizes rows and atomically replaces only the requested local cache. The CLI runs in a private temporary cwd with an allowlisted OAuth environment; the operator checkout .env and unrelated secrets cannot enter that child. Exact public CLI 0.1.10 and TIDAS 0.2.x expectations are independently selected and re-observed through the W04 qualification boundary. F1 component provenance and package qualification remain W06/W08 gates.
+Foundry selects a private session reference and exact project/user intent, then calls the published CLI for a fresh server-verified identity receipt. It validates TTL, canonical hash, expected identity and current OAuth session metadata without owning login, password decoding, token exchange or refresh. Candidate Golden execution uses an isolated Git-visible source snapshot so ignored operator state cannot change qualification. Support-cache transport is owned by the public CLI export. Foundry validates the fresh identity, project, public-state scope, completion marker, artifact paths and hashes, then summarizes rows and atomically replaces only the requested local cache. The CLI runs in a private temporary cwd with an allowlisted OAuth environment; the operator checkout .env and unrelated secrets cannot enter that child. Exact public CLI 0.1.11 and TIDAS 0.2.x expectations are independently selected and re-observed through the W04 qualification boundary. F1 component provenance and package qualification remain W06/W08 gates.
 
 ## Qualified execution boundary
 
@@ -327,7 +327,7 @@ Build and test resolution must be worktree-local. A clean arbitrary Git worktree
 
 Cross-platform characterization is also explicit: the Golden harness compares normalized outputs to a non-`HEAD` merge-base, performs recursive comparison in Node rather than calling an external Unix utility, and uses full Git history in CI. Script-backed executable overrides are represented as an executable plus argv prefix and run through Node on macOS, Linux, and Windows. The root `.gitattributes` fixes text files to LF while allowing Windows launcher exceptions, preventing checkout policy from masquerading as format drift.
 
-The first credential-bearing entrypoint on that spine is `scripts/with-lca-account.ts`. It does not authenticate against Supabase itself. It resolves the exact installed CLI 0.1.10, requests `auth identity-receipt` with both expected project and user assertions, accepts only a fresh intent-bound forced signin, and then launches the requested executable plus argv with `shell:false` and a restricted environment. The CLI owns session and live identity behavior; Foundry owns the profile/thread intent checks and safe process boundary.
+The first credential-bearing entrypoint on that spine is `scripts/with-lca-account.ts`. It does not authenticate against Supabase itself. It resolves the exact installed CLI 0.1.11, requests `auth identity-receipt` with both expected project and user assertions, accepts only a fresh intent-bound forced signin, and then launches the requested executable plus argv with `shell:false` and a restricted environment. The CLI owns session and live identity behavior; Foundry owns the profile/thread intent checks and safe process boundary.
 
 `scripts/lib/identity-preflight-proof.ts` imports the strict parser from the public `@tiangong-lca/cli/auth-identity-receipt` subpath. `test/fixtures/auth-identity-receipt.ts` is the sole test-only wire-fixture owner and produces bytes that must pass that public parser. No production module or fixture may load CLI `dist/src/**`; the installed-package contract also exercises public batch scheduling/run-lock behavior and proves the private path remains closed.
 

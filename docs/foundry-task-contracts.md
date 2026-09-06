@@ -28,9 +28,9 @@ checkPaths:
   - specs/schemas/execution-context.schema.json
   - specs/import-profiles.json
   - tasks/**
-lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
-lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
+lastReviewedAt: 2026-09-07
+lastReviewedCommit: 1f37034f7451e95fc5e3efc4528b15245c77b377
+lastReviewedNote: "Reviewed for Foundry #112: adopt provenance-verified public CLI 0.1.11 and its exact runtime/source pins. Existing profile rules, task authorization, storage ownership and historical case evidence are unchanged; the managed Foundry host and final F1 publication remain pending."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -112,7 +112,7 @@ A derived input must match an indexed output. Its completed producer receipt and
 
 An expected account may be selected after local preparation. The first selection is registered as project/user intent; subsequent disagreement is rejected. A missing task-local account file may only be restored from its existing workspace registration. This is intent, not proof of authentication.
 
-`verifyFoundryRuntimeIdentity` invokes the exact installed CLI through executable/argv in a fresh private CWD with a restricted environment. The CLI owns OAuth/session refresh and server identity verification. Returned proof is immutable, process-local and bound to workspace/task/actor/runtime, with a 60-second freshness check at permission admission. Serialized proof is not reusable authority. Headless mode uses the CLI's existing explicit target and process-only access token, with cache disabled and no token persistence. CLI 0.1.10 reports no token-expiry timestamp for that mode; Foundry does not invent one or claim a separately verified token lifetime.
+`verifyFoundryRuntimeIdentity` invokes the exact installed CLI through executable/argv in a fresh private CWD with a restricted environment. The CLI owns OAuth/session refresh and server identity verification. Returned proof is immutable, process-local and bound to workspace/task/actor/runtime, with a 60-second freshness check at permission admission. Serialized proof is not reusable authority. Headless mode uses the CLI's existing explicit target and process-only access token, with cache disabled and no token persistence. CLI 0.1.11 reports no token-expiry timestamp for that mode; Foundry does not invent one or claim a separately verified token lifetime.
 
 `registerFoundryTaskAuthorization` is an explicit host approval operation. It requires fresh identity, current task/input lineage, a valid W03 grant, and independently selected evidence facts supplied by the trusted caller. The grant cannot select its own evidence paths. Each original evidence file is rechecked and copied into an immutable task snapshot; the grant and selection are registered in workspace state. Updating `authorization.json` uses compare-and-swap against its prior digest and preserves historical grants. Unknown legacy authorization files are not overwritten.
 

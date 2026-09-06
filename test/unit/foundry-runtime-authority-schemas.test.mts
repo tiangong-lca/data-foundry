@@ -57,7 +57,7 @@ test("runtime authority documents have strict reviewable machine schemas", () =>
       schema: "tiangong-foundry.runtime-qualification.v1",
       qualification_sha256: digest,
       cli: {
-        package_version: "0.1.10",
+        package_version: "0.1.11",
         platform: "darwin-arm64",
         content_sha256: digest,
         node_version: "24.19.0",
