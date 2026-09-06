@@ -6,5 +6,108 @@
     "source_commit": "58191977a837e1cdd673ef6d77c35fa2a4caf7ed",
     "repository": "https://github.com/tiangong-lca/tiangong-cli",
     "tag": "cli-v0.1.10"
+  },
+  "node": {
+    "version": "24.19.0",
+    "repository": "https://github.com/nodejs/node",
+    "source_commit": "cdc1b38d40cb567b7ad0b39c86addf830a0af0ae",
+    "tag": "v24.19.0",
+    "checksum_source": "https://nodejs.org/dist/v24.19.0/SHASUMS256.txt",
+    "license": {
+      "bytes": 157606,
+      "sha256": "148eacf7863ef4329224a29398623077200a27194aa075569faf4a0a85566ca5",
+      "source_url": "https://raw.githubusercontent.com/nodejs/node/cdc1b38d40cb567b7ad0b39c86addf830a0af0ae/LICENSE"
+    },
+    "platforms": {
+      "darwin-arm64": {
+        "url": "https://nodejs.org/dist/v24.19.0/node-v24.19.0-darwin-arm64.tar.gz",
+        "sha256": "8294b7aa9b03997481c06babf1e8b270c859358f27da57a11509afe537ac381d",
+        "format": "tar-gzip",
+        "executable": "node-v24.19.0-darwin-arm64/bin/node",
+        "license": "node-v24.19.0-darwin-arm64/LICENSE"
+      },
+      "linux-x64": {
+        "url": "https://nodejs.org/dist/v24.19.0/node-v24.19.0-linux-x64.tar.gz",
+        "sha256": "f625d97cd707df4ff96254916fbc5ff014f09c09effe5a1e0ca8f6d41a8789d4",
+        "format": "tar-gzip",
+        "executable": "node-v24.19.0-linux-x64/bin/node",
+        "license": "node-v24.19.0-linux-x64/LICENSE"
+      },
+      "linux-arm64": {
+        "url": "https://nodejs.org/dist/v24.19.0/node-v24.19.0-linux-arm64.tar.gz",
+        "sha256": "d28c8a5bf0a808f0ed434a1dce8c54ae98f0371c0bd86ac58abc613f73e6643f",
+        "format": "tar-gzip",
+        "executable": "node-v24.19.0-linux-arm64/bin/node",
+        "license": "node-v24.19.0-linux-arm64/LICENSE"
+      },
+      "win32-x64": {
+        "url": "https://nodejs.org/dist/v24.19.0/win-x64/node.exe",
+        "sha256": "3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237",
+        "format": "file",
+        "executable": "node.exe",
+        "license": null
+      }
+    }
+  },
+  "tidas": {
+    "version": "0.2.1",
+    "repository": "https://github.com/tiangong-lca/tidas-tools",
+    "source_commit": "8f930e0bf7c2e86741c95812aa21652d99eacc7e",
+    "tag": "v0.2.1",
+    "checksum_source": "https://github.com/tiangong-lca/tidas-tools/releases/download/v0.2.1/SHA256SUMS",
+    "platforms": {
+      "darwin-arm64": {
+        "url": "https://github.com/tiangong-lca/tidas-tools/releases/download/v0.2.1/tidas-v0.2.1-aarch64-apple-darwin.tar.gz",
+        "sha256": "384ed24a110b51c8069ffcb45b7d35df910c795b38c1ba11e951beb27b790d9c",
+        "format": "tar-gzip",
+        "target": "aarch64-apple-darwin",
+        "executable": "tidas-v0.2.1-aarch64-apple-darwin/bin/tidas",
+        "manifest": "tidas-v0.2.1-aarch64-apple-darwin/distribution-manifest.json",
+        "license": "tidas-v0.2.1-aarch64-apple-darwin/share/licenses/tidas/LICENSE"
+      },
+      "linux-arm64": {
+        "url": "https://github.com/tiangong-lca/tidas-tools/releases/download/v0.2.1/tidas-v0.2.1-aarch64-unknown-linux-gnu.tar.gz",
+        "sha256": "8351b89128793f546377799e79c4bb787b2c20606ae43c040440d2e0d76bd9aa",
+        "format": "tar-gzip",
+        "target": "aarch64-unknown-linux-gnu",
+        "executable": "tidas-v0.2.1-aarch64-unknown-linux-gnu/bin/tidas",
+        "manifest": "tidas-v0.2.1-aarch64-unknown-linux-gnu/distribution-manifest.json",
+        "license": "tidas-v0.2.1-aarch64-unknown-linux-gnu/share/licenses/tidas/LICENSE",
+        "requirements": {
+          "glibc": "2.38",
+          "binary_sha256": "a9ccf3696361991c1a9f3ce0f04748565d372fd3aab80604c5d18929f8b13232",
+          "evidence": "ELF version-reference table observed with LLVM objdump; maximum required GLIBC version is 2.38."
+        }
+      },
+      "linux-x64": {
+        "url": "https://github.com/tiangong-lca/tidas-tools/releases/download/v0.2.1/tidas-v0.2.1-x86_64-unknown-linux-gnu.tar.gz",
+        "sha256": "ca8efdcae2b435df1a9532ec63e040e4f2684d972aaafc7e6acd38db0239e1c8",
+        "format": "tar-gzip",
+        "target": "x86_64-unknown-linux-gnu",
+        "executable": "tidas-v0.2.1-x86_64-unknown-linux-gnu/bin/tidas",
+        "manifest": "tidas-v0.2.1-x86_64-unknown-linux-gnu/distribution-manifest.json",
+        "license": "tidas-v0.2.1-x86_64-unknown-linux-gnu/share/licenses/tidas/LICENSE",
+        "requirements": {
+          "glibc": "2.38",
+          "binary_sha256": "2500d6b419f00b7f37865e16cb1c1f151a081653cf6e93ee9bd0001c38c11853",
+          "evidence": "ELF version-reference table observed with LLVM objdump; maximum required GLIBC version is 2.38."
+        }
+      },
+      "win32-x64": {
+        "url": "https://github.com/tiangong-lca/tidas-tools/releases/download/v0.2.1/tidas-v0.2.1-x86_64-pc-windows-msvc.zip",
+        "sha256": "a1311180c1954388224e2fe01daf2dfd1e7e40b3bf6fe741fa190cc758965756",
+        "format": "zip",
+        "target": "x86_64-pc-windows-msvc",
+        "executable": "tidas-v0.2.1-x86_64-pc-windows-msvc/bin/tidas.exe",
+        "manifest": "tidas-v0.2.1-x86_64-pc-windows-msvc/distribution-manifest.json",
+        "license": "tidas-v0.2.1-x86_64-pc-windows-msvc/share/licenses/tidas/LICENSE",
+        "requirements": {
+          "external_runtime_dlls": ["VCRUNTIME140.dll"],
+          "binary_sha256": "7a0081930eff8fda07f0195ed9a299feb728bf61bf4b99424672203b06f20933",
+          "status": "owner-fix-required",
+          "issue": "https://github.com/tiangong-lca/tidas-tools/issues/181"
+        }
+      }
+    }
   }
 }

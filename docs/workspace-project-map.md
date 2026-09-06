@@ -89,8 +89,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 292c5bba283c62e24b0ffc53f3b7d128ea6b9f92
-lastReviewedNote: "Reviewed for Foundry #112: the source-only production-input command now owns the lock/materialization/SPDX call graph, binds a clean source and reviewed public C1 input, and returns a verified archive plus receipt. Public runtime behavior is unchanged; complete native Node/F1/TIDAS assembly and final release qualification remain pending."
+lastReviewedCommit: ab5746cde4c7814fdbb97fc37a3eb55080a871c5
+lastReviewedNote: "Reviewed for Foundry #112: source-only native intake now pins official Node/TIDAS artifacts, selects bounded bytes and executes isolated native handshakes. Actual ABI evidence records glibc 2.38 and the Windows TIDAS VC runtime defect tracked in tidas-tools #181. Complete clean-machine component qualification remains pending."
 ---
 
 # Workspace Project Map

@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 292c5bba283c62e24b0ffc53f3b7d128ea6b9f92
-lastReviewedNote: "Reviewed for Foundry #112: the source-only production-input command now owns the lock/materialization/SPDX call graph, binds a clean source and reviewed public C1 input, and returns a verified archive plus receipt. Public runtime behavior is unchanged; complete native Node/F1/TIDAS assembly and final release qualification remain pending."
+lastReviewedCommit: ab5746cde4c7814fdbb97fc37a3eb55080a871c5
+lastReviewedNote: "Reviewed for Foundry #112: source-only native intake now pins official Node/TIDAS artifacts, selects bounded bytes and executes isolated native handshakes. Actual ABI evidence records glibc 2.38 and the Windows TIDAS VC runtime defect tracked in tidas-tools #181. Complete clean-machine component qualification remains pending."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -48,7 +48,7 @@ related:
 
 The npm identity is `@tiangong-lca/foundry`; the public bin is `tiangong-foundry`. W06 establishes the installable `0.1.0` candidate and its production dependency closure. It does not publish a registry version or call this candidate F1. W08 owns the release-only workflow, Trusted Publishing/provenance, immutable tag, platform components, SBOM/license bundle and product compatibility manifest.
 
-The package depends exactly on public `@tiangong-lca/cli@0.1.10`. Ajv remains a development dependency for internal commands and release-side SPDX validation. Sigstore 5.0.0, YAML 2.9.0 and tar 7.5.22 are also development-only release tools for signing/verification, lock parsing and bounded upstream package extraction. None enters the public compiler/dependency closure. TIDAS is an independently verified native component selected later by the CLI manager, not an npm dependency or bundled binary.
+The package depends exactly on public `@tiangong-lca/cli@0.1.10`. Ajv remains a development dependency for internal commands and release-side SPDX validation. Sigstore 5.0.0, YAML 2.9.0, tar 7.5.22 and fflate 0.8.3 are also development-only release tools for signing/verification, lock parsing and bounded upstream archive selection. None enters the public compiler/dependency closure. TIDAS is an independently verified native component selected later by the CLI manager, not an npm dependency or bundled binary.
 
 ## Public surface
 
@@ -157,6 +157,14 @@ Production-tree results are fresh in-process evidence. `collectFoundryNpmMetadat
 `createFoundrySpdxDocument` emits deterministic SPDX 2.3 package/dependency data with exact archive checksums, source locations and retained license references. It rejects an incomplete graph or unsupported source/version/platform context. Its timestamp is normalized to the owning source commit; its namespace also binds the sorted software facts. Package-level metadata sets `filesAnalyzed: false` and does not claim per-file license conclusions; C1's component manifest separately binds every shipped file. The document is validated against the unmodified upstream SPDX 2.3 schema pinned in `specs/release/upstream-assets.json`. That catalog preserves its source commit, digest, attribution and CC-BY-3.0 license URI. The exact schema is excluded from formatting so its source digest remains valid; these source release assets are absent from the npm allowlist.
 
 The production dependency payload is an input to complete runtime-component assembly. Its npm-only SBOM and candidate archive do not qualify a complete Node/C1/Foundry/TIDAS component, native host compatibility, public downloads or the final product manifest. Final assembly must include the selected native/software artifacts and their metadata, use the public C1 component writer, and pass every declared platform's actual consumer/manager/bootstrap gate.
+
+## Native release inputs
+
+`pnpm release:prepare-native --output <new-absolute-directory>` binds its clean source and current supported host to the reviewed Node/TIDAS entries in `specs/release/runtime-inputs.json`. It offers no platform, version, source or registry override. Native downloads use a bounded HTTPS transfer through official artifact hosts, verify the pinned SHA-256 before parsing, and select only the declared executable, license and distribution metadata. The tar reader never extracts unrelated files; selected links/duplicates and missing or oversized entries fail. ZIP decoding uses development-only fflate 0.8.3 into memory and writes only the fixed regular output files, never archive-supplied filesystem links or paths.
+
+The current Node input is24.19.0 at source `cdc1b38d40cb567b7ad0b39c86addf830a0af0ae`; its official SHASUMS256 entries pin the four targets. The source LICENSE is byte-identical to the selected macOS release LICENSE. Windows uses the official `win-x64/node.exe` plus that checksum-bound source license. TIDAS0.2.1 is pinned to actual release target `8f930e0bf7c2e86741c95812aa21652d99eacc7e`, as recorded by the owning release request; workspace-integrated `ff49fe3` is the later request/review commit, not the binary build target. The command checks the TIDAS distribution manifest, executes the downloaded Node to verify version/architecture, and uses the existing TIDAS version/validation handshake in an isolated home. It records native observations, selected file hashes, upstream sources, licenses and SPDX data as assembly inputs.
+
+Native handshake success is not minimum-host or clean-machine qualification. Current binary inspection finds Node macOS minimum13.5 and TIDAS minimum11.0; both TIDAS GNU Linux targets require GLIBC2.38. The current Windows TIDAS PE imports `VCRUNTIME140.dll`, absent from its archive. This known requirement is recorded in the input profile/report, and [tidas-tools #181](https://github.com/tiangong-lca/tidas-tools/issues/181) owns the correction before complete Windows/F1 qualification. A development runner's installed VC runtime cannot substitute for that fix.
 
 ## Qualification
 

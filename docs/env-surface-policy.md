@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 292c5bba283c62e24b0ffc53f3b7d128ea6b9f92
-lastReviewedNote: "Reviewed for Foundry #112: the source-only production-input command now owns the lock/materialization/SPDX call graph, binds a clean source and reviewed public C1 input, and returns a verified archive plus receipt. Public runtime behavior is unchanged; complete native Node/F1/TIDAS assembly and final release qualification remain pending."
+lastReviewedCommit: ab5746cde4c7814fdbb97fc37a3eb55080a871c5
+lastReviewedNote: "Reviewed for Foundry #112: source-only native intake now pins official Node/TIDAS artifacts, selects bounded bytes and executes isolated native handshakes. Actual ABI evidence records glibc 2.38 and the Windows TIDAS VC runtime defect tracked in tidas-tools #181. Complete clean-machine component qualification remains pending."
 ---
 
 # Environment Surface Policy
@@ -60,6 +60,8 @@ The publication child omits inherited GitHub/npm credentials, OIDC endpoints and
 Frozen production materialization and metadata collection are source release operations. They read the selected owning lock and reviewed assets, fetch only its fixed public-registry tarball URLs without credentials, and never load `.env`, run package lifecycle hooks, resolve floating versions or accept a serialized lock as installation authority. Missing optional peers remain absent. Package extraction uses owned fresh directories and complete content checks; metadata reads license bytes and the checksum-bound upstream schema/supplement from source. These APIs add no public runtime environment variables or authentication store.
 
 The `release:prepare-production` command binds its own clean physical Git root and the source Node/pnpm declarations. Its only input is a fresh explicit output directory. Public C1 provenance comes from the reviewed runtime input file; package/registry/source expectations cannot be supplied through environment or command options. Its independent C1 inspection child receives platform process settings only, never source account credentials or Node options. Failed assembly removes only the newly owned output.
+
+`release:prepare-native` similarly takes only a fresh output and the current supported tuple. Its URLs/digests come from reviewed source data. Redirects remain on the fixed official HTTPS artifact hosts and carry no account authorization. Native inspection uses only platform settings and a fresh private child home, without inherited Node options, TIDAS overrides or user sessions. The downloaded Node/TIDAS artifacts and upstream license texts are inputs, not sources of runtime authority or business permissions.
 
 ## Allowed Variables
 

@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 292c5bba283c62e24b0ffc53f3b7d128ea6b9f92
-lastReviewedNote: "Reviewed for Foundry #112: the source-only production-input command now owns the lock/materialization/SPDX call graph, binds a clean source and reviewed public C1 input, and returns a verified archive plus receipt. Public runtime behavior is unchanged; complete native Node/F1/TIDAS assembly and final release qualification remain pending."
+lastReviewedCommit: ab5746cde4c7814fdbb97fc37a3eb55080a871c5
+lastReviewedNote: "Reviewed for Foundry #112: source-only native intake now pins official Node/TIDAS artifacts, selects bounded bytes and executes isolated native handshakes. Actual ABI evidence records glibc 2.38 and the Windows TIDAS VC runtime defect tracked in tidas-tools #181. Complete clean-machine component qualification remains pending."
 ---
 
 # Test Layout
@@ -315,6 +315,8 @@ The Git command suite also qualifies filesystem case aliases while rejecting a d
 `unit/foundry-release-metadata.test.mts` checks complete license copying, deterministic schema-validated SPDX dependency data, incomplete-graph rejection and post-verification license drift. A separate real-registry qualification materializes all 16 locked packages (2,224 files), runs the public C1 runtime inspection in that independent tree, retains all licenses including the exact upstream saxes supplement, and packs the payload twice with C1's public archive writer. This proves the npm dependency input and metadata path; it does not replace actual complete Node/F1/TIDAS component qualification or public release evidence.
 
 `commands/foundry-release-production.test.mts` exercises the maintainer entrypoint's output and argument guards. The source command consumes the real projection/materialization/metadata APIs; they are part of the repository command graph rather than test-only helpers. Doctor, surface audit and Golden tests protect that integration. Actual source-command qualification additionally requires a clean checkout and the public C1 provenance/locked tarballs, with no source or publication override.
+
+`unit/foundry-release-native.test.mts` tests checksum-first native file selection for gzip tar, ZIP and raw files, selected-link/duplicate/missing-entry rejection and credential-free HTTPS redirect boundaries. `commands/foundry-release-native.test.mts` checks source/target override and existing-output rejection. Real intake additionally verifies the current four TIDAS archives, executes the downloaded macOS Node/TIDAS handshakes and records binary ABI observations. The known Windows VC runtime requirement is an owning release defect tracked in tidas-tools #181; these source tests do not claim clean-machine Windows/F1 readiness.
 
 W06 package coverage has two layers. `unit/foundry-package-contract.test.mts` checks coherent repository/compiled/schema versions, valid-version tamper rejection, fixed package identity, exports, allowlist, no-lifecycle metadata and compiler settings; the facade schema suite compiles the package descriptor schema strictly. `scenarios/foundry-package-consumer.test.mts` rebuilds and packs twice byte-identically, installs the same tarball into an online then offline clean consumer, compiles a typed consumer, verifies exact C1, runs all six operations from a Unicode CWD against a read-only package, rejects internal commands and tests missing/changed/extra/linked/lifecycle-bearing/Intel-invalid closures. It uses only public synthetic inputs; the official OAuth installed-package case remains private W14 evidence.
 

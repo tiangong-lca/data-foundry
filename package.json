@@ -109,6 +109,7 @@
     "release:verify-prepared": "node scripts/release-verify-prepared.ts",
     "release:publish-package": "node scripts/release-publish-package.ts",
     "release:prepare-production": "node scripts/release-prepare-production.ts",
+    "release:prepare-native": "node scripts/release-prepare-native.ts",
     "release:verify-npm": "node scripts/release-verify-npm.ts",
     "skills:list": "pnpm dlx skills@latest list --json",
     "skills:update": "pnpm dlx skills@latest update --project --yes",
@@ -140,6 +141,7 @@
   "devDependencies": {
     "@types/node": "24.13.3",
     "ajv": "8.20.0",
+    "fflate": "0.8.3",
     "husky": "9.1.7",
     "lint-staged": "17.3.0",
     "npm-check-updates": "23.1.0",
