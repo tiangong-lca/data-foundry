@@ -186,7 +186,11 @@ test("the source CLI binds its own clean Git root and ignores inherited reposito
     if (key.startsWith("GIT_")) delete environment[key];
   }
   try {
-    for (const file of ["scripts/release-version.ts", "scripts/lib/foundry-release-version.ts"]) {
+    for (const file of [
+      "scripts/release-version.ts",
+      "scripts/lib/foundry-release-version.ts",
+      "scripts/lib/foundry-release-root.ts",
+    ]) {
       fs.copyFileSync(path.join(repoRoot, file), path.join(root, file));
     }
     for (const argv of [

@@ -61,7 +61,7 @@ async function component(root: string, version: string, writable: boolean) {
 test("runtime rollback preserves both component leases and cannot convert read compatibility into task writes", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-runtime-switch-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const current = await component(root, "0.1.0", true),
+  const current = await component(root, workspaceManifestFixture().manifest.product.version, true),
     older = await component(root, "0.0.9", false);
   const cache = path.join(root, "components");
   const seeds = Object.fromEntries(

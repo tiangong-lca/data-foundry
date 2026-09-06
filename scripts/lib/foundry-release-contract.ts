@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import fs from "node:fs";
+import { sameFoundryReleaseDirectory } from "./foundry-release-root.ts";
 import {
   foundryReleaseVersionPaths,
   projectFoundryReleaseVersion,
@@ -135,8 +135,9 @@ export function inspectFoundryRelease(
 } {
   if (![base, head].every((sha) => /^[0-9a-f]{40}$/u.test(sha)))
     throw new Error("Release inspection requires exact 40-character commits.");
-  const actualRoot = fs.realpathSync(git(root, ["rev-parse", "--show-toplevel"]).trim());
-  if (actualRoot !== fs.realpathSync(root)) throw new Error("Release inspection root mismatch.");
+  const actualRoot = git(root, ["rev-parse", "--show-toplevel"]).trim();
+  if (!sameFoundryReleaseDirectory(root, actualRoot))
+    throw new Error("Release inspection root mismatch.");
   git(root, ["merge-base", "--is-ancestor", base, head]);
   const names = git(root, ["diff", "--name-only", "-z", base, head]).split("\0").filter(Boolean);
   const tree = git(root, ["rev-parse", `${head}^{tree}`]).trim();

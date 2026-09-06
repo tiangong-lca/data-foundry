@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import packageManifest from "../../package.json" with { type: "json" };
 import {
   trustRuntimeManifest,
   type RuntimeManifest,
@@ -29,7 +30,7 @@ export function workspaceManifestFixture(
   const manifest: RuntimeManifest = {
     schema: "tiangong-lca.runtime-manifest.v1",
     bootstrap_protocol: "tiangong-lca.runtime-bootstrap.v1",
-    product: { id: "tiangong-foundry", version: options.version ?? "0.1.0" },
+    product: { id: "tiangong-foundry", version: options.version ?? packageManifest.version },
     minimum_hosts: {
       [platform]: { os_release: "0.0.0", glibc: platform.startsWith("linux") ? "0.0" : null },
     },

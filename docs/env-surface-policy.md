@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 3a8a0a68b854342ad62a50c14840d445f0753847
-lastReviewedNote: "Reviewed for Foundry #112: source workflow admission binds the exact canonical event, clean main source, version-only diff, recovery tag and merged PR; the existing four-platform quality gate is reusable at that SHA. No tag, registry or component publication stage is enabled yet; runtime/account/ownership contracts remain unchanged."
+lastReviewedCommit: c22bcb2ee562e848e3f36b8d1dc90ab3ccb659ed
+lastReviewedNote: "Reviewed for Foundry #112: release roots bind native physical directory identity across Git/Node path casing; migration/current-runtime fixtures follow the executing package version. Different roots, older writers, untrusted manifests, account and no-replay boundaries remain rejected; the production compatibility guard is unchanged."
 ---
 
 # Environment Surface Policy
@@ -45,7 +45,7 @@ Foundry `.env.example` is a public runtime contract, not a mirror of every adjac
 
 Package build, descriptor verification and packing do not load `.env`. The public staging manifest has no lifecycle scripts. Clean-consumer tests pass only platform process variables, isolated HOME/package-cache paths and optional network proxy/CA settings to package tools; credential-shaped variables are rejected from that projection. Installed workspace/task operations retain the facade's explicit account-intent/session-reference contract and never search the package directory for credentials.
 
-The source-only release-version preparer reads no `.env` and has no runtime or registry authority. Its CLI binds the executing repository root, clears inherited Git repository variables before clean-worktree checks, and writes only the three validated version projections after explicit `--apply`.
+The source-only release-version preparer reads no `.env` and has no runtime or registry authority. Its CLI binds the executing repository root by native filesystem directory identity, clears inherited Git repository variables before clean-worktree checks, and writes only the three validated version projections after explicit `--apply`. Equivalent directory casing cannot redirect it to another physical repository.
 
 Release inspection similarly binds its own Git root and ignores inherited Git repository bindings and replacement objects. Its optional `GITHUB_ACTIONS`/`GITHUB_OUTPUT` transport writes only validated release scalars for CI; these are not public runtime configuration. The source-only npm verifier makes uncredentialed HTTPS requests to fixed public npm endpoints and Sigstore trust services, with no `.env`, npm configuration, account session or token input. Its private temporary trust cache is removed after verification; optional evidence output requires a fresh explicit directory. Sigstore remains a development dependency outside the shipped runtime.
 

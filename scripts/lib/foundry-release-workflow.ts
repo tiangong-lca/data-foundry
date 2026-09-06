@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import { sameFoundryReleaseDirectory } from "./foundry-release-root.ts";
 import {
   FOUNDRY_PUBLISH_WORKFLOW,
   FOUNDRY_RELEASE_REPOSITORY,
@@ -97,9 +97,9 @@ export function inspectFoundryReleaseWorkflow(
   root: string,
   event: FoundryReleaseWorkflowEvent,
 ): FoundryReleaseWorkflowContext {
-  const actualRoot = fs.realpathSync(git(root, ["rev-parse", "--show-toplevel"]).trim());
+  const actualRoot = git(root, ["rev-parse", "--show-toplevel"]).trim();
   if (
-    actualRoot !== fs.realpathSync(root) ||
+    !sameFoundryReleaseDirectory(root, actualRoot) ||
     git(root, ["rev-parse", "HEAD"]).trim() !== event.head
   )
     throw new Error(

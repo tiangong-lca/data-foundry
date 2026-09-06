@@ -35,9 +35,9 @@ checkPaths:
   - test/scenarios/workspace-migration-planning.test.mts
   - test/unit/foundry-migration-transfer.test.mts
   - test/scenarios/workspace-migration-transfer.test.mts
-lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
-lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
+lastReviewedAt: 2026-09-06
+lastReviewedCommit: c22bcb2ee562e848e3f36b8d1dc90ab3ccb659ed
+lastReviewedNote: "Reviewed for Foundry #112: release roots bind native physical directory identity across Git/Node path casing; migration/current-runtime fixtures follow the executing package version. Different roots, older writers, untrusted manifests, account and no-replay boundaries remain rejected; the production compatibility guard is unchanged."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md

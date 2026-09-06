@@ -9,6 +9,7 @@ import {
   planFoundryReleaseVersion,
 } from "../../scripts/lib/foundry-release-version.ts";
 import { inspectFoundryReleaseWorkflow } from "../../scripts/lib/foundry-release-workflow.ts";
+import { inspectFoundryRelease } from "../../scripts/lib/foundry-release-contract.ts";
 
 const source = path.resolve(import.meta.dirname, "../..");
 
@@ -47,6 +48,7 @@ function fixture(): {
     "scripts/lib/foundry-package-contract.ts",
     "specs/schemas/foundry-package-descriptor.schema.json",
     "scripts/lib/foundry-release-version.ts",
+    "scripts/lib/foundry-release-root.ts",
     "scripts/lib/foundry-release-contract.ts",
     "scripts/release-inspect.ts",
     "scripts/lib/foundry-release-workflow.ts",
@@ -268,6 +270,32 @@ test("workflow command skips an ordinary main commit without a token or PR looku
     assert.equal(report.head, head);
     assert.match(fs.readFileSync(output, "utf8"), /^should_release=false\n/u);
   } finally {
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test("release root identity accepts filesystem case aliases without accepting another directory", () => {
+  const f = fixture();
+  const alias = path.join(path.dirname(f.root), path.basename(f.root).toUpperCase());
+  let createdAlias = false;
+  try {
+    applyFoundryReleaseVersion(planFoundryReleaseVersion(f.root, f.version));
+    f.git("add", ".");
+    f.git("commit", "-m", "Prepare case-alias release");
+    const head = f.git("rev-parse", "HEAD");
+    if (fs.existsSync(alias)) {
+      assert.equal(inspectFoundryRelease(alias, f.initial, head).release, true);
+    } else {
+      fs.mkdirSync(alias);
+      createdAlias = true;
+      assert.throws(() => inspectFoundryRelease(alias, f.initial, head), /Git inspection/iu);
+    }
+    assert.throws(
+      () => inspectFoundryRelease(path.join(f.root, "scripts"), f.initial, head),
+      /root mismatch/iu,
+    );
+  } finally {
+    if (createdAlias) fs.rmSync(alias, { recursive: true, force: true });
     fs.rmSync(f.root, { recursive: true, force: true });
   }
 });

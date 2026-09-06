@@ -34,8 +34,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 3a8a0a68b854342ad62a50c14840d445f0753847
-lastReviewedNote: "Reviewed for Foundry #112: source workflow admission binds the exact canonical event, clean main source, version-only diff, recovery tag and merged PR; the existing four-platform quality gate is reusable at that SHA. No tag, registry or component publication stage is enabled yet; runtime/account/ownership contracts remain unchanged."
+lastReviewedCommit: c22bcb2ee562e848e3f36b8d1dc90ab3ccb659ed
+lastReviewedNote: "Reviewed for Foundry #112: release roots bind native physical directory identity across Git/Node path casing; migration/current-runtime fixtures follow the executing package version. Different roots, older writers, untrusted manifests, account and no-replay boundaries remain rejected; the production compatibility guard is unchanged."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -83,6 +83,8 @@ Verification uses regular-file, `O_NOFOLLOW`, fd size/inode/mtime and SHA checks
 
 `--apply` additionally requires a clean Git working tree at the script’s own repository root; inherited Git repository bindings are removed before that check. The private in-process plan binds the original file bytes and modes. Metadata must be regular files reached through real repository directories, and all inputs are rechecked before prepared files are renamed. Replacement is atomic per file, not a cross-file filesystem transaction; an I/O failure after a replacement reports the affected Git paths for review. This command creates no commit or tag and performs no registry operation. Release-only orchestration and publication remain separate W08 gates.
 
+Release tools compare native filesystem directory identity when binding the script root to Git's reported root. Different drive/path casing for the same directory is accepted; a parent, child or other directory is rejected. This applies to version preparation, exact Git inspection and workflow admission without weakening clean-tree or inherited-Git-environment guards.
+
 ## Release diff and published-source verification
 
 `pnpm release:inspect --base <40-hex-sha> --head <40-hex-sha>` reads exact ancestor-related commits from its own Git root, with inherited repository bindings and replacement objects disabled. It reports the source tree and whether the package version changed. Ordinary commits return `release: false` before unrelated blobs are read. A version change must equal the same three-file projection used by the version preparer. Every changed file must retain regular Git mode `100644` and valid UTF-8 bytes. Other source, lock, additions, deletions or mode changes fail; existing Markdown frontmatter and `.docpact/config.yaml` may change only the single-line `lastReviewedAt`, `lastReviewedCommit` and `lastReviewedNote` values. Document bodies and all remaining bytes stay fixed. `--github-output` writes validated scalar outputs only within GitHub Actions. This inspection does not prove PR approval, main eligibility or a completed release.
@@ -108,6 +110,8 @@ An ordinary unchanged-version main push exits without a GitHub PR lookup. A rele
 The package scenario rebuilds twice, packs twice byte-identically, and installs the same tarball into two clean consumers; the second install is offline from the first consumer's isolated public cache. It verifies the exact import surface and declarations, public CLI 0.1.10 runtime identity, shebang/bin, source/installed operation equivalence, arbitrary Unicode CWD, read-only package bytes, isolated workspace writes and all six facade operations. It also proves that internal commands, modified/extra/linked files, a lifecycle-bearing manifest, a `darwin-x64` descriptor and a package copied without C1 fail closed.
 
 These checks qualify a local candidate tarball. They do not prove registry provenance, public component download, native TIDAS availability on every host or a complete Node+CLI+Foundry+TIDAS component. Those are W08 release gates.
+
+Version rehearsal also runs the complete gate after the coherent version projection in an isolated source checkout. Synthetic current-host manifests used by migration and runtime-selection tests follow the executing repository package version; explicitly older and untrusted selections still test rejection. Passing only the unchanged `0.1.0` source tests does not prove that a versioned release can pass the gate.
 
 The W10 planning extension adds the shared pure attempt leaf and bounded migration plan/stage readers to the public graph, plus the transfer-plan schema and migration contract. It still excludes the internal capsule command and all developer commands. Future package qualification must use the rebuilt descriptor/tarball; the earlier W06 tarball remains an immutable baseline artifact.
 

@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import fs from "node:fs";
+import { sameFoundryReleaseDirectory } from "./lib/foundry-release-root.ts";
 import path from "node:path";
 import {
   applyFoundryReleaseVersion,
@@ -40,7 +40,7 @@ function main(argv: readonly string[]): void {
     });
     if (
       top.status !== 0 ||
-      fs.realpathSync(top.stdout.trim()) !== fs.realpathSync(repoRoot) ||
+      !sameFoundryReleaseDirectory(repoRoot, top.stdout.trim()) ||
       status.status !== 0 ||
       status.stdout.trim()
     )
