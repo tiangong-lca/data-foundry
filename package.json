@@ -108,6 +108,7 @@
     "release:prepare-package": "node scripts/release-prepare-package.ts",
     "release:verify-prepared": "node scripts/release-verify-prepared.ts",
     "release:publish-package": "node scripts/release-publish-package.ts",
+    "release:prepare-production": "node scripts/release-prepare-production.ts",
     "release:verify-npm": "node scripts/release-verify-npm.ts",
     "skills:list": "pnpm dlx skills@latest list --json",
     "skills:update": "pnpm dlx skills@latest update --project --yes",
@@ -146,7 +147,9 @@
     "oxlint-tsgolint": "7.0.2001",
     "prettier": "3.9.6",
     "sigstore": "5.0.0",
-    "typescript": "7.0.2"
+    "tar": "7.5.22",
+    "typescript": "7.0.2",
+    "yaml": "2.9.0"
   },
   "lint-staged": {
     "*.{ts,mts,cts,tsx}": [

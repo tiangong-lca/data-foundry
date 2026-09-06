@@ -281,8 +281,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 84ba46b5a13e7d014bb7e72efb6754baf3f503fb
-lastReviewedNote: "Reviewed for Foundry #112: routine npm publication now requires explicit package-specific OIDC exchange, isolated pinned pnpm transport and independent public source/byte readback. First identity is a maintainer handoff; existing versions and uncertain responses never replay publication. Native components and final F1 qualification remain pending."
+lastReviewedCommit: 292c5bba283c62e24b0ffc53f3b7d128ea6b9f92
+lastReviewedNote: "Reviewed for Foundry #112: the source-only production-input command now owns the lock/materialization/SPDX call graph, binds a clean source and reviewed public C1 input, and returns a verified archive plus receipt. Public runtime behavior is unchanged; complete native Node/F1/TIDAS assembly and final release qualification remain pending."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

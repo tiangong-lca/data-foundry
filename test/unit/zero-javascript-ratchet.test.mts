@@ -13,6 +13,8 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // Issue #112 keeps archive/version preparation, exact Git inspection, Sigstore provenance
 // signing/verification, prepared-artifact handoff, OIDC publication/readback and tag admission,
 // version-aware fixtures native TypeScript.
+// Frozen registry payload, upstream extraction and SPDX/license assembly remain source-only TS.
+// The production-input entrypoint consumes these owners without a runtime or JavaScript fallback.
 // Issue #110's tool-policy retirement preserves Node 24 and the native TypeScript graph.
 // Issue #108's migration adoption, compatibility and replay guards remain native TypeScript.
 // Issue #68's Worldsteel profile-truth contract is native .mts and adds no compatibility path.

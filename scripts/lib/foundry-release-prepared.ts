@@ -3,7 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { npmReleasePolicy, verifyNpmProvenanceBundle } from "./foundry-release-provenance.ts";
 
-export function readFoundryReleaseArtifact(file: string, limit: number): Buffer {
+export function readFoundryReleaseArtifact(
+  file: string,
+  limit: number,
+  allowEmpty = false,
+): Buffer {
   let fd: number;
   try {
     if (!fs.lstatSync(file).isFile()) throw new Error("Not a regular file.");
@@ -17,7 +21,7 @@ export function readFoundryReleaseArtifact(file: string, limit: number): Buffer 
   try {
     const before = fs.fstatSync(fd, { bigint: true });
     if (!before.isFile()) throw new Error("Prepared artifact must be a regular file.");
-    if (before.size < 1n || before.size > BigInt(limit))
+    if (before.size < (allowEmpty ? 0n : 1n) || before.size > BigInt(limit))
       throw new Error("Prepared artifact size exceeds its bound or is empty.");
     const buffer = Buffer.alloc(Number(before.size) + 1);
     let length = 0;

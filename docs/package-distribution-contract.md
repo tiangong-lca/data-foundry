@@ -28,14 +28,15 @@ checkPaths:
   - scripts/lib/foundry-package-contract.ts
   - scripts/lib/foundry-runtime-paths.ts
   - specs/schemas/foundry-package-descriptor.schema.json
+  - specs/release/**
   - test/unit/foundry-package-contract.test.mts
   - test/unit/foundry-release-*.test.mts
   - test/commands/foundry-release-*.test.mts
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 84ba46b5a13e7d014bb7e72efb6754baf3f503fb
-lastReviewedNote: "Reviewed for Foundry #112: routine npm publication now requires explicit package-specific OIDC exchange, isolated pinned pnpm transport and independent public source/byte readback. First identity is a maintainer handoff; existing versions and uncertain responses never replay publication. Native components and final F1 qualification remain pending."
+lastReviewedCommit: 292c5bba283c62e24b0ffc53f3b7d128ea6b9f92
+lastReviewedNote: "Reviewed for Foundry #112: the source-only production-input command now owns the lock/materialization/SPDX call graph, binds a clean source and reviewed public C1 input, and returns a verified archive plus receipt. Public runtime behavior is unchanged; complete native Node/F1/TIDAS assembly and final release qualification remain pending."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -47,7 +48,7 @@ related:
 
 The npm identity is `@tiangong-lca/foundry`; the public bin is `tiangong-foundry`. W06 establishes the installable `0.1.0` candidate and its production dependency closure. It does not publish a registry version or call this candidate F1. W08 owns the release-only workflow, Trusted Publishing/provenance, immutable tag, platform components, SBOM/license bundle and product compatibility manifest.
 
-The package depends exactly on public `@tiangong-lca/cli@0.1.10`. Ajv remains a development dependency because only repository-internal command owners import it; those owners are absent from the public compiler graph. Sigstore 5.0.0 is also development-only and serves source release signing and verification; it is absent from the public dependency closure. TIDAS is an independently verified native component selected later by the CLI manager, not an npm dependency or bundled binary.
+The package depends exactly on public `@tiangong-lca/cli@0.1.10`. Ajv remains a development dependency for internal commands and release-side SPDX validation. Sigstore 5.0.0, YAML 2.9.0 and tar 7.5.22 are also development-only release tools for signing/verification, lock parsing and bounded upstream package extraction. None enters the public compiler/dependency closure. TIDAS is an independently verified native component selected later by the CLI manager, not an npm dependency or bundled binary.
 
 ## Public surface
 
@@ -140,6 +141,22 @@ The pinned pnpm 11.24.0 executable uploads copied, rechecked tarball/signature b
 There is one publisher invocation. Regardless of its reported success or an uncertain/failed response, independent public readback owns the outcome. Up to three bounded readback attempts accommodate registry propagation; they never repeat publication. The public tarball's byte count and SHA-512 must match the prepared artifact, in addition to all signed-source/workflow checks. A different existing version payload, missing provenance or failed readback stops the release. Existing-version verification does not establish that the account has configured future Trusted Publisher permissions.
 
 `package-artifacts/npm-publication/` contains the publication result and readable report; a successful result also preserves public metadata, attestations and verification. The workflow exports this evidence even when publication fails. `npm_published=true` is emitted only after public verification succeeds; later component/manifest stages must require it. It proves package publication only, not complete F1 runtime qualification.
+
+## Frozen production payload and metadata
+
+`pnpm release:prepare-production --output <new-absolute-directory>` is the source-only entrypoint for this input. It requires its own clean checkout, the pinned Node/pnpm source toolchain declaration and a supported host. Output must be outside the source checkout or under ignored `package-artifacts/`; existing destinations are preserved. `specs/release/runtime-inputs.json` binds the exact public CLI version, source commit, repository and tag, and must agree with the public Foundry dependency. The command independently verifies that public CLI release before assembling locked package bytes, runs C1's public runtime inspection from the isolated tree, and uses C1's public writer to produce the archive. It rechecks source before returning the receipt and readable report. No source/version/registry/publish override is available. Its `npm-production-input` result is a prepared assembly input, not a complete runtime or released F1.
+
+`projectFoundryProductionLock` reads the sole owning pnpm lock and the exact direct dependency declaration from the public package. It requires the pnpm 9.0 lock format, one root importer and coherent exact root versions. Strict YAML parsing rejects duplicate keys, aliases, multiple documents and invalid UTF-8. The projection follows every required snapshot edge, binds canonical SHA-512 package integrities and default public-registry tarball locations, and excludes development-only nodes. Its source byte count/hash refer to the original lock, including its development graph; the derived JSON is release evidence, not a second authoritative package-manager lock.
+
+The current qualified closure contains 16 packages with one version per package name. `materializeFoundryProductionPackages` consumes a fresh in-process projection, downloads those exact public tarballs without credentials/redirects, verifies their locked SHA-512 and extracts them into a new physical `node_modules` tree. It performs no version/range resolution, package-manager install, lifecycle execution or floating dependency lookup. Each tarball's manifest name/version and dependency/peer declaration must match the locked graph. The optional `@opentelemetry/api` peer declared by Supabase is explicitly recorded as absent; it is not silently installed or counted as shipped software. A missing required peer or an absent peer that would accidentally resolve in the flattened tree fails. Other optional package graphs, peer-context locators, aliases, non-registry resolutions or multiple versions of one name require an explicit layout/qualification change before use; they cannot silently select another layout.
+
+The source tar extractor accepts bounded gzip npm archives with complete regular files under `package/`. Before creating a payload root it checks portable paths, case-folded duplicates, file/directory collisions, complete bodies and unpacked/count bounds. It rejects links, special entries, outside-prefix paths and malformed archives. Extraction uses the maintained tar library with strict parsing, ownership/path protections and bounded metadata; every extracted file is then compared with the preflight byte inventory. Modes normalize to 0644/0755, including on Windows; empty payload files remain valid. Existing destinations are never replaced and failures remove only the newly owned tree. This upstream npm reader does not relax C1's separate canonical component archive contract.
+
+Production-tree results are fresh in-process evidence. `collectFoundryNpmMetadata` rechecks retained license bytes against the package inventory, preserves complete texts, and deduplicates identical texts by digest. Its license index binds each package, original archive/path or exact upstream source, declared license and copied file hash. The npm saxes 6.0.0 archive omits LICENSE: the reviewed supplement in `specs/release/` binds its exact package integrity and upstream commit `211fa0ebec9b628affc09219199639887174bfc3`, which matches both npm `gitHead` and the dereferenced `v6.0.0` tag. Full historical notices are retained. A new missing license needs its own reviewed source; the tool never invents license text or applies the saxes exception to another artifact.
+
+`createFoundrySpdxDocument` emits deterministic SPDX 2.3 package/dependency data with exact archive checksums, source locations and retained license references. It rejects an incomplete graph or unsupported source/version/platform context. Its timestamp is normalized to the owning source commit; its namespace also binds the sorted software facts. Package-level metadata sets `filesAnalyzed: false` and does not claim per-file license conclusions; C1's component manifest separately binds every shipped file. The document is validated against the unmodified upstream SPDX 2.3 schema pinned in `specs/release/upstream-assets.json`. That catalog preserves its source commit, digest, attribution and CC-BY-3.0 license URI. The exact schema is excluded from formatting so its source digest remains valid; these source release assets are absent from the npm allowlist.
+
+The production dependency payload is an input to complete runtime-component assembly. Its npm-only SBOM and candidate archive do not qualify a complete Node/C1/Foundry/TIDAS component, native host compatibility, public downloads or the final product manifest. Final assembly must include the selected native/software artifacts and their metadata, use the public C1 component writer, and pass every declared platform's actual consumer/manager/bootstrap gate.
 
 ## Qualification
 

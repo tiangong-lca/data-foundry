@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 84ba46b5a13e7d014bb7e72efb6754baf3f503fb
-lastReviewedNote: "Reviewed for Foundry #112: routine npm publication now requires explicit package-specific OIDC exchange, isolated pinned pnpm transport and independent public source/byte readback. First identity is a maintainer handoff; existing versions and uncertain responses never replay publication. Native components and final F1 qualification remain pending."
+lastReviewedCommit: 292c5bba283c62e24b0ffc53f3b7d128ea6b9f92
+lastReviewedNote: "Reviewed for Foundry #112: the source-only production-input command now owns the lock/materialization/SPDX call graph, binds a clean source and reviewed public C1 input, and returns a verified archive plus receipt. Public runtime behavior is unchanged; complete native Node/F1/TIDAS assembly and final release qualification remain pending."
 ---
 
 # Environment Surface Policy
@@ -56,6 +56,10 @@ Repository pack/verification tools and consumer tests share `scripts/lib/package
 The `npm-package` job receives read permissions for GitHub contents/PR evidence and `id-token: write` for signing and npm authentication. It binds the exact hosted job, event, source/workflow SHA/ref and numeric repository/run/attempt identities. `ACTIONS_ID_TOKEN_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` are used only for bounded authenticated HTTPS requests to GitHub Actions with the fixed audience `sigstore` or `npm:registry.npmjs.org`; redirects, alternate origins, malformed/oversized responses and static `SIGSTORE_ID_TOKEN` input are rejected. The signing identity is supplied directly to Sigstore. The npm identity must be exchanged at the fixed package-specific registry endpoint for a fresh short-lived OIDC credential before invoking pnpm. No identity or registry credential is saved or printed.
 
 The publication child omits inherited GitHub/npm credentials, OIDC endpoints and `NODE_OPTIONS`. Its `NODE_AUTH_TOKEN` exists only in that child environment and comes from the just-completed OIDC exchange. Explicit upper/lowercase npm user/global configuration selectors point to owned temporary files containing fixed settings and a literal environment placeholder, never a token value; inherited user configuration cannot provide a fallback. The pinned client receives prepacked files outside Git, no stdin, a bounded execution time and zero fetch retries. Public verification is uncredentialed, and preparation/download verification adds no installed-runtime environment input or account credential store.
+
+Frozen production materialization and metadata collection are source release operations. They read the selected owning lock and reviewed assets, fetch only its fixed public-registry tarball URLs without credentials, and never load `.env`, run package lifecycle hooks, resolve floating versions or accept a serialized lock as installation authority. Missing optional peers remain absent. Package extraction uses owned fresh directories and complete content checks; metadata reads license bytes and the checksum-bound upstream schema/supplement from source. These APIs add no public runtime environment variables or authentication store.
+
+The `release:prepare-production` command binds its own clean physical Git root and the source Node/pnpm declarations. Its only input is a fresh explicit output directory. Public C1 provenance comes from the reviewed runtime input file; package/registry/source expectations cannot be supplied through environment or command options. Its independent C1 inspection child receives platform process settings only, never source account credentials or Node options. Failed assembly removes only the newly owned output.
 
 ## Allowed Variables
 

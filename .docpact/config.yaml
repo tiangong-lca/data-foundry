@@ -507,6 +507,8 @@ rules:
         kind: release-platform-qualification
       - path: scripts/lib/foundry-release-*.ts
         kind: source-release-integrity-policy
+      - path: specs/release/**
+        kind: source-release-upstream-asset
       - path: test/unit/foundry-release-*.test.mts
         kind: source-release-policy-test
       - path: test/commands/foundry-release-*.test.mts
