@@ -281,8 +281,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: ab5746cde4c7814fdbb97fc37a3eb55080a871c5
-lastReviewedNote: "Reviewed for Foundry #112: source-only native intake now pins official Node/TIDAS artifacts, selects bounded bytes and executes isolated native handshakes. Actual ABI evidence records glibc 2.38 and the Windows TIDAS VC runtime defect tracked in tidas-tools #181. Complete clean-machine component qualification remains pending."
+lastReviewedCommit: dc42f2aac8bc56a5e109f096024ef5c56c8adf6b
+lastReviewedNote: "Reviewed for Foundry #112: verified TIDAS 0.2.2 native inputs and empty Windows external-runtime reporting remain source release preparation. Control-plane, public facade, task permission, ownership, skill and native TypeScript boundaries are unchanged."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

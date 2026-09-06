@@ -10,9 +10,11 @@ import { resolvePackageManagerCommand } from "../../scripts/lib/package-manager-
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 const stageRoot = path.join(repoRoot, "package-stage");
-const sourcePackageVersion = (
-  JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8")) as { version: string }
-).version;
+const sourceManifest = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8")) as {
+  version: string;
+  packageManager: string;
+};
+const sourcePackageVersion = sourceManifest.version;
 const secretKey = /(?:PASSWORD|PASSWD|TOKEN|SECRET|COOKIE|CREDENTIAL|API_?KEY|PRIVATE_?KEY)/iu;
 
 function isolatedEnvironment(home: string, extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
@@ -24,6 +26,9 @@ function isolatedEnvironment(home: string, extra: NodeJS.ProcessEnv = {}): NodeJ
     NPM_CONFIG_UPDATE_NOTIFIER: "false",
     NPM_CONFIG_FUND: "false",
     NPM_CONFIG_AUDIT: "false",
+    COREPACK_HOME: path.join(path.dirname(home), "corepack-cache"),
+    COREPACK_DEFAULT_TO_LATEST: "0",
+    COREPACK_ENABLE_NETWORK: "0",
     ...extra,
   };
   for (const key of [
@@ -61,14 +66,20 @@ function isolatedEnvironment(home: string, extra: NodeJS.ProcessEnv = {}): NodeJ
   return environment;
 }
 
-function command(executable: string, args: string[], cwd: string, environment: NodeJS.ProcessEnv) {
+function command(
+  executable: string,
+  args: string[],
+  cwd: string,
+  environment: NodeJS.ProcessEnv,
+  timeout = 120_000,
+) {
   const result = spawnSync(executable, args, {
     shell: false,
     cwd,
     env: environment,
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
-    timeout: 120_000,
+    timeout,
   });
   if (result.error) throw result.error;
   return result;
@@ -79,9 +90,10 @@ function packageManagerCommand(
   args: string[],
   cwd: string,
   environment: NodeJS.ProcessEnv,
+  timeout = 120_000,
 ) {
   const invocation = resolvePackageManagerCommand(manager, args);
-  return command(invocation.executable, invocation.argv, cwd, environment);
+  return command(invocation.executable, invocation.argv, cwd, environment, timeout);
 }
 
 function packageFiles(root: string): Array<{ path: string; bytes: number; sha256: string }> {
@@ -165,6 +177,7 @@ function installConsumer(
     ],
     project,
     isolatedEnvironment(cacheHome),
+    offline ? 120_000 : 300_000,
   );
   assert.equal(result.status, 0, result.stderr || result.stdout);
   return project;
@@ -177,6 +190,19 @@ test("packed Foundry installs twice and runs only the public facade from a read-
     for (const installed of installedRoots) restoreWritable(installed);
     fs.rmSync(root, { recursive: true, force: true });
   });
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({ private: true, packageManager: sourceManifest.packageManager }),
+  );
+  const packageManager = packageManagerCommand(
+    "pnpm",
+    ["--version"],
+    root,
+    isolatedEnvironment(path.join(root, "toolchain-home"), { COREPACK_ENABLE_NETWORK: "1" }),
+    300_000,
+  );
+  assert.equal(packageManager.status, 0, packageManager.stderr || packageManager.stdout);
+  assert.equal(`pnpm@${packageManager.stdout.trim()}`, sourceManifest.packageManager);
   const build = command(
     process.execPath,
     [path.join(repoRoot, "scripts", "build-foundry-package.ts")],

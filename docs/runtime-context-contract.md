@@ -41,8 +41,8 @@ checkPaths:
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: ab5746cde4c7814fdbb97fc37a3eb55080a871c5
-lastReviewedNote: "Reviewed for Foundry #112: source-only native intake now pins official Node/TIDAS artifacts, selects bounded bytes and executes isolated native handshakes. Actual ABI evidence records glibc 2.38 and the Windows TIDAS VC runtime defect tracked in tidas-tools #181. Complete clean-machine component qualification remains pending."
+lastReviewedCommit: dc42f2aac8bc56a5e109f096024ef5c56c8adf6b
+lastReviewedNote: "Reviewed for Foundry #112: native intake now consumes the public TIDAS 0.2.2 tag/source and all four independently verified archive hashes. The Windows external CRT defect is corrected; Linux GLIBC 2.38 remains required. Source/env/host authority boundaries are unchanged and complete F1 cold-start qualification remains pending."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md

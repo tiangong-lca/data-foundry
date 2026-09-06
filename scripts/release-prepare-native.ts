@@ -247,7 +247,9 @@ async function main(args: readonly string[]): Promise<void> {
     };
     const requirements = "requirements" in tidas ? tidas.requirements : undefined;
     const runtimeNote =
-      requirements && "external_runtime_dlls" in requirements
+      requirements &&
+      "external_runtime_dlls" in requirements &&
+      requirements.external_runtime_dlls.length > 0
         ? `Current TIDAS ${inputs.tidas.version} requires ${requirements.external_runtime_dlls.join(", ")}; a developer-runner handshake does not qualify clean startup. Owning correction: ${requirements.issue}.\n`
         : "";
     fs.writeFileSync(path.join(output, "native-input.json"), json(receipt), {
