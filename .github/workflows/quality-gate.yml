@@ -49,3 +49,6 @@ jobs:
 
       - name: Run canonical gate
         run: pnpm prepush:gate
+
+      - name: Qualify assembled native runtime candidate
+        run: pnpm release:prepare-runtime --output "${{ runner.temp }}/foundry-runtime-candidate"

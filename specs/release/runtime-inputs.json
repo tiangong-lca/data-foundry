@@ -47,7 +47,8 @@
         "executable": "node.exe",
         "license": null
       }
-    }
+    },
+    "source_date": "2026-07-30T11:57:02.000Z"
   },
   "tidas": {
     "version": "0.2.2",
@@ -109,6 +110,25 @@
           "evidence": "Public v0.2.2 archive verified against exact source-bound SLSA provenance; independent LLVM PE import inspection finds only Windows OS DLLs. Native release run 34034003739 passed Windows packaged smoke."
         }
       }
+    },
+    "source_date": "2026-09-06T12:10:24.000Z"
+  },
+  "minimum_hosts": {
+    "darwin-arm64": {
+      "os_release": "22.6.0",
+      "glibc": null
+    },
+    "linux-x64": {
+      "os_release": "4.18.0",
+      "glibc": "2.38"
+    },
+    "linux-arm64": {
+      "os_release": "4.18.0",
+      "glibc": "2.38"
+    },
+    "win32-x64": {
+      "os_release": "10.0.0",
+      "glibc": null
     }
   }
 }

@@ -13,6 +13,40 @@ import {
 } from "./lib/foundry-release-metadata.ts";
 import { runTidasHandshake } from "./lib/tidas-adapter.ts";
 
+import { freezeFoundryReleaseValue } from "./lib/foundry-release-component-io.ts";
+
+export interface PreparedFoundryNativeInput {
+  readonly output: string;
+  readonly payloadRoot: string;
+  readonly source: Readonly<{ commit: string; tree: string; date: string }>;
+  readonly version: string;
+  readonly platform: RuntimePlatform;
+  readonly files: readonly ComponentFile[];
+  readonly software: readonly FoundrySbomPackage[];
+  readonly licenseCoverage: Readonly<{
+    node: "vendor-distribution-notices";
+    tidas: "project-license-only" | "owner-inventory-verified";
+  }>;
+  readonly executables: Readonly<{ node: string; tidas: string }>;
+  readonly sources: Readonly<
+    Record<"node" | "tidas", Readonly<{ repository: string; commit: string; date: string }>>
+  >;
+  readonly provenance: Readonly<Record<"node" | "tidas", unknown>>;
+  readonly observations: Readonly<{
+    node: Readonly<{ version: string; platform: string; arch: string; versions: unknown }>;
+    tidas: ReturnType<typeof runTidasHandshake>;
+  }>;
+}
+const preparedNative = new WeakSet<object>();
+export function assertPreparedFoundryNativeInput(
+  value: unknown,
+): asserts value is PreparedFoundryNativeInput {
+  if (!value || typeof value !== "object" || !preparedNative.has(value))
+    throw new Error(
+      "Runtime assembly requires freshly prepared native inputs, not serialized receipts.",
+    );
+}
+
 const usage = "Usage: release-prepare-native --output <new-absolute-directory>";
 const json = (value: unknown): Buffer => Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
 const hash = (bytes: Buffer): string => createHash("sha256").update(bytes).digest("hex");
@@ -21,14 +55,14 @@ function format(value: string): "tar-gzip" | "zip" | "file" {
   throw new Error("Native release archive format is invalid.");
 }
 
-async function main(args: readonly string[]): Promise<void> {
-  if (args.length === 1 && args[0] === "--help") {
-    process.stdout.write(`${usage}\n`);
-    return;
-  }
-  if (args.length !== 2 || args[0] !== "--output" || !args[1]) throw new Error(usage);
-  if (!path.isAbsolute(args[1])) throw new Error("Native input output must be absolute.");
-  const output = path.join(fs.realpathSync(path.dirname(args[1])), path.basename(args[1]));
+export async function prepareFoundryNativeInput(
+  selectedOutput: string,
+): Promise<PreparedFoundryNativeInput> {
+  if (!path.isAbsolute(selectedOutput)) throw new Error("Native input output must be absolute.");
+  const output = path.join(
+    fs.realpathSync(path.dirname(selectedOutput)),
+    path.basename(selectedOutput),
+  );
   if (fs.existsSync(output))
     throw new Error("Native input will not replace an existing directory.");
   const root = path.resolve(import.meta.dirname, "..");
@@ -261,9 +295,57 @@ async function main(args: readonly string[]): Promise<void> {
       `# Prepared native runtime input\n\nSource: ${sourceCommit}\n\nVerified official Node and TIDAS bytes, licenses and native handshakes for ${platform}. This is an assembly input; final minimum-host ABI, complete Node/CLI/Foundry/TIDAS components and cold-start qualification remain separate gates.\n\n${runtimeNote}`,
       { flag: "wx", mode: 0o600 },
     );
-    process.stdout.write(
-      `${JSON.stringify({ status: receipt.status, scope: receipt.scope, output, platform, node: nodeObservation.version, tidas: tidasObservation.binary_version, files: files.length })}\n`,
-    );
+    const prepared = freezeFoundryReleaseValue({
+      output,
+      payloadRoot: payload,
+      source: receipt.source,
+      version,
+      platform,
+      files,
+      software,
+      executables: { node: nodeExecutable, tidas: tidasExecutable },
+      sources: {
+        node: {
+          repository: inputs.node.repository,
+          commit: inputs.node.source_commit,
+          date: inputs.node.source_date,
+        },
+        tidas: {
+          repository: inputs.tidas.repository,
+          commit: inputs.tidas.source_commit,
+          date: inputs.tidas.source_date,
+        },
+      },
+      provenance: {
+        node: {
+          schema: "tiangong-foundry.native-component-provenance.v1",
+          repository: inputs.node.repository,
+          source_commit: inputs.node.source_commit,
+          source_date: inputs.node.source_date,
+          version: inputs.node.version,
+          tag: inputs.node.tag,
+          artifact: { ...node, bytes: nodeArchive.length },
+          license: inputs.node.license,
+        },
+        tidas: {
+          schema: "tiangong-foundry.native-component-provenance.v1",
+          repository: inputs.tidas.repository,
+          source_commit: inputs.tidas.source_commit,
+          source_date: inputs.tidas.source_date,
+          version: inputs.tidas.version,
+          tag: inputs.tidas.tag,
+          artifact: { ...tidas, bytes: tidasArchive.length },
+          distribution: distributionExpected,
+        },
+      },
+      observations: receipt.observations,
+      licenseCoverage: {
+        node: "vendor-distribution-notices" as const,
+        tidas: "project-license-only" as const,
+      },
+    });
+    preparedNative.add(prepared);
+    return prepared;
   } catch (error) {
     if (fs.existsSync(output)) {
       const current = fs.lstatSync(output, { bigint: true });
@@ -272,6 +354,18 @@ async function main(args: readonly string[]): Promise<void> {
     }
     throw error;
   }
+}
+
+async function main(args: readonly string[]): Promise<void> {
+  if (args.length === 1 && args[0] === "--help") {
+    process.stdout.write(`${usage}\n`);
+    return;
+  }
+  if (args.length !== 2 || args[0] !== "--output" || !args[1]) throw new Error(usage);
+  const prepared = await prepareFoundryNativeInput(args[1]);
+  process.stdout.write(
+    `${JSON.stringify({ status: "prepared", scope: "native-runtime-input", output: prepared.output, platform: prepared.platform, node: prepared.observations.node.version, tidas: prepared.observations.tidas.binary_version, files: prepared.files.length })}\n`,
+  );
 }
 
 if (import.meta.main)

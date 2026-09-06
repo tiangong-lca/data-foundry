@@ -138,9 +138,24 @@ export function createFoundrySpdxDocument(
     readonly platform: string;
     readonly sourceCommit: string;
     readonly sourceDate: string;
+    readonly namespaceRepository?: string;
+    readonly creator?: string;
   },
 ) {
   npmReleasePolicy({ package: "foundry", version: context.version, gitHead: context.sourceCommit });
+  const namespace = new URL(
+    context.namespaceRepository ?? "https://github.com/tiangong-lca/data-foundry",
+  );
+  const creator = context.creator ?? `Tool: tiangong-foundry-release-${context.version}`;
+  if (
+    namespace.protocol !== "https:" ||
+    namespace.username ||
+    namespace.password ||
+    namespace.search ||
+    namespace.hash ||
+    !/^Tool: [A-Za-z0-9._/-]{1,128}$/u.test(creator)
+  )
+    throw new Error("SPDX namespace or creator is invalid.");
   if (
     !/^[a-z][a-z0-9-]{0,127}$/u.test(context.component) ||
     !/^\d+\.\d+\.\d+$/u.test(context.version) ||
@@ -174,8 +189,8 @@ export function createFoundrySpdxDocument(
       !pkg.license_files.length
     )
       throw new Error("SPDX package identity, checksum or license evidence is incomplete.");
-    const url = new URL(pkg.download_url);
-    if (url.protocol !== "https:" || url.username || url.password || url.hash)
+    const url = pkg.download_url === "NOASSERTION" ? null : new URL(pkg.download_url);
+    if (url && (url.protocol !== "https:" || url.username || url.password || url.hash))
       throw new Error("SPDX package source URL is invalid.");
     for (const id of pkg.dependencies) {
       if (!ids.has(id)) throw new Error("SPDX dependency graph is incomplete.");
@@ -189,7 +204,7 @@ export function createFoundrySpdxDocument(
       SPDXID: ids.get(pkg.id)!,
       name: pkg.name,
       versionInfo: pkg.version,
-      downloadLocation: url.href,
+      downloadLocation: url?.href ?? "NOASSERTION",
       filesAnalyzed: false,
       licenseConcluded: "NOASSERTION",
       copyrightText: "NOASSERTION",
@@ -224,10 +239,10 @@ export function createFoundrySpdxDocument(
     spdxVersion: "SPDX-2.3",
     dataLicense: "CC0-1.0",
     name: `${context.component}@${context.version} (${context.platform})`,
-    documentNamespace: `https://github.com/tiangong-lca/data-foundry/spdx/${context.sourceCommit}/${context.component}/${context.platform}/${hash(JSON.stringify(selected))}`,
+    documentNamespace: `${namespace.href.replace(/\/$/u, "")}/spdx/${context.sourceCommit}/${context.component}/${context.platform}/${hash(JSON.stringify(selected))}`,
     creationInfo: {
       created: context.sourceDate,
-      creators: [`Tool: tiangong-foundry-release-${context.version}`],
+      creators: [creator],
       comment:
         "Timestamp normalized to the owning source commit for reproducible builds. Package-level SPDX data; the component manifest separately binds every shipped file.",
     },

@@ -158,8 +158,8 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 846cc25ada0f6bea300e37397a7e6e18e0629ec3
-lastReviewedNote: "Reviewed for Foundry #112 managed host admission: public CLI IPC and inventory-bound runtime metadata supply package/CLI/TIDAS identity, workspace read/write mode and target selection before operations. Workspace/task/actor/account, permissions, no-replay and source-only maintenance boundaries remain separate. Production F1 assembly, publication and final acceptance remain pending."
+lastReviewedCommit: 0d80df8200029509b94e548f079d14604ace8c3a
+lastReviewedNote: "Reviewed for Foundry #112 component assembly and native qualification: source-candidate and verified-published inputs, complete declared file copies, intrinsic native metadata and empty-tool-PATH public lifecycle checks preserve ownership, workspace and permission boundaries. TIDAS185 supplies the missing complete third-party notice inventory before final publication."
 ---
 
 # TianGong LCA Data Foundry

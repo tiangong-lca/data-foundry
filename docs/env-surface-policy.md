@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 846cc25ada0f6bea300e37397a7e6e18e0629ec3
-lastReviewedNote: "Reviewed for Foundry #112 managed process admission: inherited public CLI IPC and inventory-bound package/CLI/TIDAS/launch/target metadata now precede workspace operations. Read/write, cancellation, cache/migration and no-replay boundaries remain enforced. Real installed-process regressions use explicit native/release fixtures; complete production F1 assembly and publication remain pending."
+lastReviewedCommit: 0d80df8200029509b94e548f079d14604ace8c3a
+lastReviewedNote: "Reviewed for Foundry #112 complete component preparation: privately produced native/npm inputs, exact source or verified published package, intrinsic Node/TIDAS components, complete runtime lock/SPDX and native local-archive qualification. Source and publication scopes remain separate; TIDAS185 owns the missing complete third-party notice evidence before final distribution."
 ---
 
 # Environment Surface Policy
@@ -48,6 +48,8 @@ Package build, descriptor verification and packing do not load `.env`. The publi
 The managed package bin consumes only the inherited CLI IPC context for runtime authority. `metadata/foundry-runtime.json` and any selected target manifest are read through independently verified component inventory facts; no environment variable or ordinary argument can replace them. The host adds no credential storage or login step. Its mutable per-workspace cache namespace sits outside component roots within the manager-owned cache, while the whole manager cache remains excluded from workspace roots. Failed or interrupted admission returns through the existing public result/signal adapter before workspace operations.
 
 The source-only release-version preparer reads no `.env` and has no runtime or registry authority. Its CLI binds the executing repository root by native filesystem directory identity, clears inherited Git repository variables before clean-worktree checks, and writes only the three validated version projections after explicit `--apply`. Equivalent directory casing cannot redirect it to another physical repository.
+
+The source-only runtime component assembler accepts only a fresh output plus optional `--published` verification mode. It obtains production/native inputs through their process-local owners, packs the exact source and optionally verifies the matching public npm artifact. It never restores authority from an output receipt or reads a task-selected runtime manifest. Its native qualifier supplies an empty tool PATH and private HOME/temp/workspace directories, uses the selected component Node executable, and counts manager downloads separately from preparation-time public artifact retrieval. It performs local workspace/task qualification without account intent or business operations. The candidate CI step has read-only permissions and does not upload or publish the component binaries.
 
 Release inspection similarly binds its own Git root and ignores inherited Git repository bindings and replacement objects. Its optional `GITHUB_ACTIONS`/`GITHUB_OUTPUT` transport writes only validated release scalars for CI; these are not public runtime configuration. The source-only npm verifier makes uncredentialed HTTPS requests to fixed public npm endpoints and Sigstore trust services, with no `.env`, npm configuration, account session or token input. Its private temporary trust cache is removed after verification; optional evidence output requires a fresh explicit directory. Sigstore remains a development dependency outside the shipped runtime.
 

@@ -2,30 +2,67 @@ import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { writeRuntimeComponentArchive, type ComponentFile } from "@tiangong-lca/cli/runtime";
+import {
+  CLI_RUNTIME_DESCRIPTOR_SCHEMA,
+  writeRuntimeComponentArchive,
+  type ComponentFile,
+  type RuntimePlatform,
+} from "@tiangong-lca/cli/runtime";
 import inputs from "../specs/release/runtime-inputs.json" with { type: "json" };
 import { readFoundryReleaseGit as git } from "./lib/foundry-release-contract.ts";
 import { sameFoundryReleaseDirectory } from "./lib/foundry-release-root.ts";
 import { npmReleasePolicy, verifyPublicNpmRelease } from "./lib/foundry-release-provenance.ts";
 import { readFoundryReleaseArtifact } from "./lib/foundry-release-prepared.ts";
-import { projectFoundryProductionLock } from "./lib/foundry-release-production.ts";
+import {
+  projectFoundryProductionLock,
+  type FoundryProductionLock,
+} from "./lib/foundry-release-production.ts";
 import { materializeFoundryProductionPackages } from "./lib/foundry-release-production-materialize.ts";
 import {
   collectFoundryNpmMetadata,
   createFoundrySpdxDocument,
+  type FoundrySbomPackage,
 } from "./lib/foundry-release-metadata.ts";
+
+import { freezeFoundryReleaseValue } from "./lib/foundry-release-component-io.ts";
+import type { VerifiedNpmRelease } from "./lib/foundry-release-provenance.ts";
+
+export interface PreparedFoundryProductionInput {
+  readonly output: string;
+  readonly payloadRoot: string;
+  readonly source: Readonly<{ repository: string; commit: string; tree: string; date: string }>;
+  readonly version: string;
+  readonly platform: RuntimePlatform;
+  readonly files: readonly ComponentFile[];
+  readonly lock: FoundryProductionLock;
+  readonly software: readonly FoundrySbomPackage[];
+  readonly licenses: ReturnType<typeof collectFoundryNpmMetadata>["license_index"];
+  readonly cli: VerifiedNpmRelease;
+  readonly cliContentSha256: string;
+  readonly archive: Readonly<{ bytes: number; sha256: string }>;
+}
+const preparedProduction = new WeakSet<object>();
+export function assertPreparedFoundryProductionInput(
+  value: unknown,
+): asserts value is PreparedFoundryProductionInput {
+  if (!value || typeof value !== "object" || !preparedProduction.has(value))
+    throw new Error(
+      "Runtime assembly requires freshly prepared production inputs, not serialized receipts.",
+    );
+}
 
 const usage = "Usage: release-prepare-production --output <new-absolute-directory>";
 const json = (value: unknown): Buffer => Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
 
-async function main(args: readonly string[]): Promise<void> {
-  if (args.length === 1 && args[0] === "--help") {
-    process.stdout.write(`${usage}\n`);
-    return;
-  }
-  if (args.length !== 2 || args[0] !== "--output" || !args[1]) throw new Error(usage);
-  if (!path.isAbsolute(args[1])) throw new Error("Production input output must be absolute.");
-  const output = path.join(fs.realpathSync(path.dirname(args[1])), path.basename(args[1]));
+export async function prepareFoundryProductionInput(
+  selectedOutput: string,
+): Promise<PreparedFoundryProductionInput> {
+  if (!path.isAbsolute(selectedOutput))
+    throw new Error("Production input output must be absolute.");
+  const output = path.join(
+    fs.realpathSync(path.dirname(selectedOutput)),
+    path.basename(selectedOutput),
+  );
   if (fs.existsSync(output))
     throw new Error("Production input will not replace an existing directory.");
   const root = path.resolve(import.meta.dirname, "..");
@@ -113,6 +150,8 @@ async function main(args: readonly string[]): Promise<void> {
     });
     const additions = [
       ...metadata.files,
+      { path: "metadata/cli-registry.json", bytes: cli.metadataBytes },
+      { path: "metadata/cli-attestations.json", bytes: cli.attestationBytes },
       { path: "metadata/production-lock.json", bytes: json(lock) },
       { path: "metadata/licenses.json", bytes: json(metadata.license_index) },
       { path: "metadata/sbom.spdx.json", bytes: json(sbom) },
@@ -177,6 +216,19 @@ async function main(args: readonly string[]): Promise<void> {
     if (inspected.error || inspected.status !== 0)
       throw new Error("Production input failed public CLI runtime inspection.");
     const observed: unknown = JSON.parse(inspected.stdout);
+    if (
+      !observed ||
+      typeof observed !== "object" ||
+      Array.isArray(observed) ||
+      !("schema" in observed) ||
+      observed.schema !== CLI_RUNTIME_DESCRIPTOR_SCHEMA ||
+      !("platform" in observed) ||
+      observed.platform !== platform ||
+      !("content_sha256" in observed) ||
+      typeof observed.content_sha256 !== "string" ||
+      !/^[0-9a-f]{64}$/u.test(observed.content_sha256)
+    )
+      throw new Error("Production CLI inspection returned an invalid descriptor.");
     const archive = await writeRuntimeComponentArchive(
       tree.root,
       files,
@@ -220,9 +272,22 @@ async function main(args: readonly string[]): Promise<void> {
       `# Prepared Foundry npm production input\n\nSource: ${sourceCommit}\n\nThis contains the locked npm dependency payload, complete retained licenses, SPDX data and independently verified public CLI provenance. It is an input to complete runtime assembly; it is not a released Node/CLI/Foundry/TIDAS component or a product manifest.\n`,
       { flag: "wx", mode: 0o600 },
     );
-    process.stdout.write(
-      `${JSON.stringify({ status: receipt.status, scope: receipt.scope, output, sourceCommit, packages: tree.packages.length, files: files.length, archive })}\n`,
-    );
+    const prepared = freezeFoundryReleaseValue({
+      output,
+      payloadRoot: tree.root,
+      source: receipt.source,
+      version: manifest.version,
+      platform: platform as RuntimePlatform,
+      files,
+      lock,
+      software: metadata.packages,
+      licenses: metadata.license_index,
+      cli: cli.evidence,
+      cliContentSha256: observed.content_sha256,
+      archive,
+    });
+    preparedProduction.add(prepared);
+    return prepared;
   } catch (error) {
     if (fs.existsSync(output)) {
       const current = fs.lstatSync(output, { bigint: true });
@@ -231,6 +296,18 @@ async function main(args: readonly string[]): Promise<void> {
     }
     throw error;
   }
+}
+
+async function main(args: readonly string[]): Promise<void> {
+  if (args.length === 1 && args[0] === "--help") {
+    process.stdout.write(`${usage}\n`);
+    return;
+  }
+  if (args.length !== 2 || args[0] !== "--output" || !args[1]) throw new Error(usage);
+  const prepared = await prepareFoundryProductionInput(args[1]);
+  process.stdout.write(
+    `${JSON.stringify({ status: "prepared", scope: "npm-production-input", output: prepared.output, sourceCommit: prepared.source.commit, packages: prepared.software.length, files: prepared.files.length, archive: prepared.archive })}\n`,
+  );
 }
 
 if (import.meta.main)

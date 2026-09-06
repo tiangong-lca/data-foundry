@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 846cc25ada0f6bea300e37397a7e6e18e0629ec3
-lastReviewedNote: "Reviewed for Foundry #112 managed process admission: inherited public CLI IPC and inventory-bound package/CLI/TIDAS/launch/target metadata now precede workspace operations. Read/write, cancellation, cache/migration and no-replay boundaries remain enforced. Real installed-process regressions use explicit native/release fixtures; complete production F1 assembly and publication remain pending."
+lastReviewedCommit: 0d80df8200029509b94e548f079d14604ace8c3a
+lastReviewedNote: "Reviewed for Foundry #112 component assembly and native qualification: source-candidate and verified-published inputs, complete declared file copies, intrinsic native metadata and empty-tool-PATH public lifecycle checks preserve ownership, workspace and permission boundaries. TIDAS185 supplies the missing complete third-party notice inventory before final publication."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md

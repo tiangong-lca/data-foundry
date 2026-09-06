@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 846cc25ada0f6bea300e37397a7e6e18e0629ec3
-lastReviewedNote: "Reviewed for Foundry #112 managed process admission: inherited public CLI IPC and inventory-bound package/CLI/TIDAS/launch/target metadata now precede workspace operations. Read/write, cancellation, cache/migration and no-replay boundaries remain enforced. Real installed-process regressions use explicit native/release fixtures; complete production F1 assembly and publication remain pending."
+lastReviewedCommit: 0d80df8200029509b94e548f079d14604ace8c3a
+lastReviewedNote: "Reviewed for Foundry #112 complete component preparation: privately produced native/npm inputs, exact source or verified published package, intrinsic Node/TIDAS components, complete runtime lock/SPDX and native local-archive qualification. Source and publication scopes remain separate; TIDAS185 owns the missing complete third-party notice evidence before final distribution."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -71,6 +71,22 @@ The host additionally validates relationships that the structural schema cannot 
 The public command adapter accepts an optional trusted asynchronous host initializer so signal handling and the single-result envelope cover admission as well as the operation. Pre-observed cancellation skips initialization. Cancellation while waiting for IPC closes that channel and preserves the interrupted result. Unsupported managed metadata versions return `blocked`; invalid bindings return `failed` before workspace effects. The initializer cannot replace the adapter's output handlers or cancellation signal.
 
 Installed-process tests use real Node, the packed Foundry candidate, public CLI APIs and genuine IPC, with separate application/native fixture components. TIDAS and predecessor-release metadata remain explicit fixtures. These tests qualify the admission mechanism; final production component assembly, real native inputs, immutable publication and complete F1 startup qualification remain separate W08 work.
+
+## Complete runtime component preparation
+
+`pnpm release:prepare-runtime --output <new-absolute-directory>` builds a source candidate from its own clean physical checkout. `--published` selects the independently verified public Foundry package at that same version/source and compares its exact tarball bytes with the source package. It is a read-only publication-input selection, not an upload command. Neither mode accepts alternate source roots, versions, platforms, URLs or serialized preparation receipts.
+
+Production and native preparation now expose frozen process-local inputs for the assembler. Their existing standalone commands retain their output and source boundaries. Production payloads also retain the original verified CLI registry metadata and attestation bytes. Component copying checks the complete declared source inventory before copying, rejects changed/unlisted/linked files, rechecks copied bytes and modes, and never replaces an existing destination. Native subsets are selected only after their complete preparation input has been checked.
+
+The assembler produces three regular-file-only components: `foundry`, `node` and `tidas`. The application component contains the exact Foundry package, all sixteen locked CLI dependency packages, source/public provenance, retained licenses, a complete runtime lock, the managed-host binding, an application SPDX document and a nineteen-package product SPDX graph. The product graph includes the native Node/TIDAS dependencies; native license comments use `component-id:relative-path` references into those separately declared components. Each native component retains its actual executable/license/input facts and its own lock, package-level SPDX and upstream source evidence.
+
+Native component identities and metadata use the selected upstream version, source commit/date and a fixed component-format creator. They do not change merely because the Foundry source revision changes. Source candidates use SPDX `NOASSERTION` for the unpublished Foundry package download location. Published-package mode uses the verified registry artifact and retains its original metadata/attestation. Native input documents describe the upstream distributions; they are not a claim that an embedded-dependency notice inventory was present when it was absent.
+
+Minimum-host data is frozen in `specs/release/runtime-inputs.json`. [The pinned Node source platform table](https://github.com/nodejs/node/blob/cdc1b38d40cb567b7ad0b39c86addf830a0af0ae/BUILDING.md) supplies Linux kernel4.18, macOS13.5 and Windows10/Server2016 ABI floors. The manifest represents those as Linux4.18.0, Darwin22.6.0 and Windows10.0.0; the independently observed TIDAS GNU requirement raises the combined GLIBC floor to2.38. Only the four approved platform tuples are included.
+
+The source-side qualifier receives the in-process prepared authority. It executes the actual packaged Node/Foundry/TIDAS combination with an empty tool PATH, no supplied credentials, an empty component cache seeded from the verified local archives, and then a warm cache with no manager downloads. It checks public init/doctor/task lifecycle, read selection/restoration and rejection of developer commands. Diagnostic timings and results live outside hashed component payloads. This proves native execution from the prepared archives; published URL download/copy-bootstrap and final four-platform publication remain distinct gates.
+
+The current TIDAS0.2.2 archive contains only its executable, distribution manifest and project MIT license. It does not provide a complete third-party notice inventory. Candidate preparation reports `tidas_third_party_notices_required`; `--published` refuses that incomplete license evidence. The owning TIDAS release must qualify the missing inventory before final native component publication. Candidate component URLs are intended release locations and are not advertised as already downloadable. The source CI performs candidate assembly/qualification but does not publish its binaries.
 
 ## Build and staging roots
 

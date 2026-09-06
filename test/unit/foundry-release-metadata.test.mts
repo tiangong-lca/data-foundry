@@ -17,6 +17,48 @@ const context = {
   sourceDate: "2026-09-06T08:00:00.000Z",
 } as const;
 
+test("candidate SPDX uses NOASSERTION instead of inventing a download and native identity is intrinsic", () => {
+  const packages = [
+    {
+      id: "candidate@1.0.0",
+      name: "candidate",
+      version: "1.0.0",
+      download_url: "NOASSERTION",
+      sha256: "b".repeat(64),
+      declared_license: "MIT",
+      license_files: ["LICENSE"],
+      dependencies: [],
+      source_info: "Unpublished source candidate.",
+    },
+  ];
+  const candidate = createFoundrySpdxDocument(packages, [packages[0].id], context);
+  assert.equal(candidate.packages[0].downloadLocation, "NOASSERTION");
+  const intrinsic = createFoundrySpdxDocument(packages, [packages[0].id], {
+    ...context,
+    namespaceRepository: "https://github.com/nodejs/node",
+    creator: "Tool: tiangong-foundry-component-v1",
+  });
+  assert.match(intrinsic.documentNamespace, /^https:\/\/github.com\/nodejs\/node\/spdx\//u);
+  assert.deepEqual(intrinsic.creationInfo.creators, ["Tool: tiangong-foundry-component-v1"]);
+  assert.throws(
+    () =>
+      createFoundrySpdxDocument(packages, [packages[0].id], {
+        ...context,
+        namespaceRepository: "https://user:secret@example.invalid/repo",
+      }),
+    /namespace/u,
+  );
+  assert.throws(
+    () =>
+      createFoundrySpdxDocument(
+        [{ ...packages[0], download_url: "file:///unpublished" }],
+        [packages[0].id],
+        context,
+      ),
+    /source URL/u,
+  );
+});
+
 test("metadata preserves license bytes and produces a deterministic SPDX document with every dependency", async () => {
   const f = createFoundryProductionFixture();
   try {
