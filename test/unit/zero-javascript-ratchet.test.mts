@@ -11,7 +11,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // Explicit TypeScript AnyKeyword closures are enforced by Oxlint; this suite remains the
 // permanent boundary against reintroducing first-party JavaScript compatibility paths.
 // Issue #112 keeps archive/version preparation, exact Git inspection, Sigstore provenance
-// signing/verification, prepared-artifact handoff, merged-fork/workflow/tag admission and
+// signing/verification, prepared-artifact handoff, OIDC publication/readback and tag admission,
 // version-aware fixtures native TypeScript.
 // Issue #110's tool-policy retirement preserves Node 24 and the native TypeScript graph.
 // Issue #108's migration adoption, compatibility and replay guards remain native TypeScript.

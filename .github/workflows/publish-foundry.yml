@@ -95,7 +95,7 @@ jobs:
         run: pnpm release:tag
 
   npm-package:
-    name: Prepare the signed npm package
+    name: Publish the verified npm package
     needs:
       - release-context
       - release-qualification
@@ -103,6 +103,8 @@ jobs:
     if: needs.release-context.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      npm_published: ${{ steps.publish.outputs.npm_published }}
     permissions:
       contents: read
       pull-requests: read
@@ -141,3 +143,18 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
+
+      - name: Publish with short-lived OIDC and verify public registry evidence
+        id: publish
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pnpm release:publish-package
+
+      - name: Preserve the publication result and public verification
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: foundry-publication-${{ needs.release-context.outputs.version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: package-artifacts/npm-publication/
+          if-no-files-found: warn
+          retention-days: 30

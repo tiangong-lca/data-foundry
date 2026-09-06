@@ -21,14 +21,11 @@ function identifier(value: string | undefined): string {
   return value;
 }
 
-export function buildFoundryNpmProvenance(
+export function assertFoundryNpmWorkflowEnvironment(
   context: FoundryReleaseWorkflowContext,
-  sha512: string,
   environment: Readonly<NodeJS.ProcessEnv>,
-) {
+): void {
   if (!context.release) throw new Error("Foundry provenance requires a release-only source.");
-  const expected = { package: "foundry" as const, version: context.version, gitHead: context.head };
-  const policy = npmReleasePolicy(expected);
   const event = context.mode === "main-push" ? "push" : "workflow_dispatch";
   if (
     environment.GITHUB_JOB !== "npm-package" ||
@@ -45,6 +42,25 @@ export function buildFoundryNpmProvenance(
       "Foundry provenance must describe the exact hosted npm-package workflow source.",
     );
   assertFoundryGitHubOidcEnvironment(environment);
+  for (const value of [
+    environment.GITHUB_REPOSITORY_ID,
+    environment.GITHUB_REPOSITORY_OWNER_ID,
+    environment.GITHUB_RUN_ID,
+    environment.GITHUB_RUN_ATTEMPT,
+  ])
+    identifier(value);
+}
+
+export function buildFoundryNpmProvenance(
+  context: FoundryReleaseWorkflowContext,
+  sha512: string,
+  environment: Readonly<NodeJS.ProcessEnv>,
+) {
+  if (!context.release) throw new Error("Foundry provenance requires a release-only source.");
+  assertFoundryNpmWorkflowEnvironment(context, environment);
+  const expected = { package: "foundry" as const, version: context.version, gitHead: context.head };
+  const policy = npmReleasePolicy(expected);
+  const event = context.mode === "main-push" ? "push" : "workflow_dispatch";
   if (!/^[0-9a-f]{128}$/u.test(sha512))
     throw new Error("Foundry provenance tarball digest is invalid.");
   const statement = {

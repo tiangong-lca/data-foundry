@@ -152,8 +152,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 2fa0087a7083adf18c7e52a45dfecdb28733e9a3
-lastReviewedNote: "Reviewed for Foundry #112: the qualified npm-package job now prepares and verifies a GitHub OIDC-signed archive, exports its bounded artifact handoff, and provides independent source/version verification before first upload. Signing and maintainer tooling stay outside the public runtime; npm publication and native component qualification remain pending."
+lastReviewedCommit: 84ba46b5a13e7d014bb7e72efb6754baf3f503fb
+lastReviewedNote: "Reviewed for Foundry #112: routine npm publication now requires explicit package-specific OIDC exchange, isolated pinned pnpm transport and independent public source/byte readback. First identity is a maintainer handoff; existing versions and uncertain responses never replay publication. Native components and final F1 qualification remain pending."
 ---
 
 # Architecture

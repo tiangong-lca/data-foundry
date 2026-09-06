@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 2fa0087a7083adf18c7e52a45dfecdb28733e9a3
-lastReviewedNote: "Reviewed for Foundry #112: the qualified npm-package job now prepares and verifies a GitHub OIDC-signed archive, exports its bounded artifact handoff, and provides independent source/version verification before first upload. Signing and maintainer tooling stay outside the public runtime; npm publication and native component qualification remain pending."
+lastReviewedCommit: 84ba46b5a13e7d014bb7e72efb6754baf3f503fb
+lastReviewedNote: "Reviewed for Foundry #112: routine npm publication now requires explicit package-specific OIDC exchange, isolated pinned pnpm transport and independent public source/byte readback. First identity is a maintainer handoff; existing versions and uncertain responses never replay publication. Native components and final F1 qualification remain pending."
 ---
 
 # Environment Surface Policy
@@ -53,7 +53,9 @@ The source-only workflow context command additionally reads GitHub's event file 
 
 Repository pack/verification tools and consumer tests share `scripts/lib/package-manager-command.ts`. On Windows, it selects a native `pnpm.exe` from an absolute `PNPM_HOME` or `PATH` entry. npm requires one complete PATH installation containing `npm.cmd`, `node.exe` and `node_modules/npm/bin/npm-cli.js`; the colocated Node executes the script. These tooling selectors never execute `.cmd` or a shell, never reinterpret argv, and never become public Foundry environment variables or shipped runtime code.
 
-The `npm-package` preparation job receives only read permissions for GitHub contents/PR evidence and `id-token: write` for signing. It binds the exact hosted job, event, source/workflow SHA/ref and numeric repository/run/attempt identities. `ACTIONS_ID_TOKEN_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` are used only for a bounded authenticated HTTPS request to GitHub Actions with audience `sigstore`; redirects, alternate origins, malformed/oversized responses and static `SIGSTORE_ID_TOKEN` input are rejected. The short-lived returned identity is supplied directly to Sigstore and never saved or printed. Prepared artifact verification is read-only, takes explicit source/version expectations and needs no account credentials. Neither command adds an installed-runtime environment input or an npm token fallback.
+The `npm-package` job receives read permissions for GitHub contents/PR evidence and `id-token: write` for signing and npm authentication. It binds the exact hosted job, event, source/workflow SHA/ref and numeric repository/run/attempt identities. `ACTIONS_ID_TOKEN_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` are used only for bounded authenticated HTTPS requests to GitHub Actions with the fixed audience `sigstore` or `npm:registry.npmjs.org`; redirects, alternate origins, malformed/oversized responses and static `SIGSTORE_ID_TOKEN` input are rejected. The signing identity is supplied directly to Sigstore. The npm identity must be exchanged at the fixed package-specific registry endpoint for a fresh short-lived OIDC credential before invoking pnpm. No identity or registry credential is saved or printed.
+
+The publication child omits inherited GitHub/npm credentials, OIDC endpoints and `NODE_OPTIONS`. Its `NODE_AUTH_TOKEN` exists only in that child environment and comes from the just-completed OIDC exchange. Explicit upper/lowercase npm user/global configuration selectors point to owned temporary files containing fixed settings and a literal environment placeholder, never a token value; inherited user configuration cannot provide a fallback. The pinned client receives prepacked files outside Git, no stdin, a bounded execution time and zero fetch retries. Public verification is uncredentialed, and preparation/download verification adds no installed-runtime environment input or account credential store.
 
 ## Allowed Variables
 

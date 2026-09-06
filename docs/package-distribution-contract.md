@@ -34,8 +34,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 2fa0087a7083adf18c7e52a45dfecdb28733e9a3
-lastReviewedNote: "Reviewed for Foundry #112: the qualified npm-package job now prepares and verifies a GitHub OIDC-signed archive, exports its bounded artifact handoff, and provides independent source/version verification before first upload. Signing and maintainer tooling stay outside the public runtime; npm publication and native component qualification remain pending."
+lastReviewedCommit: 84ba46b5a13e7d014bb7e72efb6754baf3f503fb
+lastReviewedNote: "Reviewed for Foundry #112: routine npm publication now requires explicit package-specific OIDC exchange, isolated pinned pnpm transport and independent public source/byte readback. First identity is a maintainer handoff; existing versions and uncertain responses never replay publication. Native components and final F1 qualification remain pending."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -125,9 +125,21 @@ For a package identity's first publication, after the reviewed pipeline has prod
 2. An authorized maintainer signs in to npm using their own account and completes the required 2FA. Keep the artifact files unchanged and change into their downloaded directory outside a Git checkout.
 3. With pinned pnpm 11.24.0, execute the generated command: `pnpm publish ./tiangong-lca-foundry-<version>.tgz --access public --no-git-checks --config.provenance-file=./foundry-<version>.sigstore`. The generic `--config.provenance-file` spelling is required by this pinned client. The provided CI signature accompanies the unchanged package; the account authorizes its upload.
 4. Independently run `release:verify-npm` for that exact version/source, compare its tarball digests with the prepared verification, and preserve the result. After a failed or uncertain upload, inspect the exact public version before deciding the next action; do not blindly replay a publish or overwrite an existing version.
-5. Review the new package's npm Trusted Publisher settings for organization `tiangong-lca`, repository `data-foundry`, workflow `publish-foundry.yml` and the actual job environment binding. The current preparation job declares no GitHub environment. Routine publication must use that reviewed workflow's OIDC path and receive separate public readback verification.
+5. Review the new package's npm Trusted Publisher settings for organization `tiangong-lca`, repository `data-foundry`, workflow `publish-foundry.yml`, permission to publish and the actual job environment binding. The current job declares no GitHub environment. Routine publication must use that reviewed workflow's OIDC path and receive separate public readback verification.
 
-The npm package identity and publisher configuration are account-controlled prerequisites, separate from CI signing. At this implementation checkpoint the workflow exports prepared artifacts; the routine npm transport, complete native components and immutable product-manifest publication remain W08 work. A prepared artifact, a successful mock-registry transport test or source-only native qualification is not a published F1 release.
+The npm package identity and publisher configuration are account-controlled prerequisites, separate from CI signing. A prepared artifact, a successful mock-registry transport test or source-only native qualification is not a published F1 release. The actual versioned workflow execution, complete native components and immutable product-manifest publication remain W08 release gates.
+
+## Registry publication
+
+After exporting the prepared artifact, the owning job runs `pnpm release:publish-package`. This command accepts no arguments and requires the exact `npm-package` job, merged release-only source, verified prepared bytes and unchanged immutable tag. An absent package identity produces a `needs-maintainer` result and stops with no upload; the already exported artifact contains the first-upload instructions. An existing exact version must pass independent public provenance/source/byte verification and is never uploaded again. A new version must advance an existing stable public `latest` tag. Registry availability and source/tag identity are refreshed before a new upload.
+
+The new-version path explicitly requests GitHub OIDC audience `npm:registry.npmjs.org` and exchanges that identity at npm's fixed, package-specific endpoint. Only HTTP 201 with `token_type: oidc`, a fresh creation time, a future expiry and at most two hours of credential lifetime is accepted. Exchange failures do not reach the publisher. This uses the [official npm OIDC exchange](https://api-docs.npmjs.com/) and prevents pnpm's automatic OIDC failure handling from selecting an unrelated credential.
+
+The pinned pnpm 11.24.0 executable uploads copied, rechecked tarball/signature bytes from a fresh private directory proven to be outside Git. Its environment contains essential process settings and only the newly exchanged short-lived credential; inherited npm/GitHub credentials, OIDC endpoints, Node options and user configuration overrides are omitted. Private npm configuration files contain fixed registry/TLS settings and an environment-variable placeholder, never the credential itself. Those files and temporary package copies are removed after the process closes. Publishing uses the prepacked artifact, provided provenance, no Git checks and zero HTTP retries; no shell, package lifecycle, ordinary-account token or alternate package manager is involved.
+
+There is one publisher invocation. Regardless of its reported success or an uncertain/failed response, independent public readback owns the outcome. Up to three bounded readback attempts accommodate registry propagation; they never repeat publication. The public tarball's byte count and SHA-512 must match the prepared artifact, in addition to all signed-source/workflow checks. A different existing version payload, missing provenance or failed readback stops the release. Existing-version verification does not establish that the account has configured future Trusted Publisher permissions.
+
+`package-artifacts/npm-publication/` contains the publication result and readable report; a successful result also preserves public metadata, attestations and verification. The workflow exports this evidence even when publication fails. `npm_published=true` is emitted only after public verification succeeds; later component/manifest stages must require it. It proves package publication only, not complete F1 runtime qualification.
 
 ## Qualification
 

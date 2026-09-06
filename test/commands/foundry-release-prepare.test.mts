@@ -8,24 +8,21 @@ import test from "node:test";
 const source = path.resolve(import.meta.dirname, "../..");
 
 test("package preparation rejects other jobs and caller arguments before inspecting source", () => {
-  for (const [job, args] of [
-    ["release-qualification", []],
-    ["npm-package", ["--version", "0.1.1"]],
-  ] as const) {
-    const result = spawnSync(
-      process.execPath,
-      [path.join(source, "scripts/release-prepare-package.ts"), ...args],
-      {
+  for (const script of ["release-prepare-package.ts", "release-publish-package.ts"])
+    for (const [job, args] of [
+      ["release-qualification", []],
+      ["npm-package", ["--version", "0.1.1"]],
+    ] as const) {
+      const result = spawnSync(process.execPath, [path.join(source, "scripts", script), ...args], {
         cwd: os.tmpdir(),
         encoding: "utf8",
         timeout: 30_000,
         env: { ...process.env, GITHUB_JOB: job, GITHUB_EVENT_PATH: "missing-event.json" },
-      },
-    );
-    assert.equal(result.status, 1, result.stderr);
-    assert.match(result.stderr, /owning npm-package workflow job/u);
-    assert.equal(result.stdout, "");
-  }
+      });
+      assert.equal(result.status, 1, result.stderr);
+      assert.match(result.stderr, /owning npm-package workflow job/u);
+      assert.equal(result.stdout, "");
+    }
 });
 
 test("download verification has a read-only command with explicit source and version", () => {
