@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: c22bcb2ee562e848e3f36b8d1dc90ab3ccb659ed
-lastReviewedNote: "Reviewed for Foundry #112: release roots bind native physical directory identity across Git/Node path casing; migration/current-runtime fixtures follow the executing package version. Different roots, older writers, untrusted manifests, account and no-replay boundaries remain rejected; the production compatibility guard is unchanged."
+lastReviewedCommit: 9d77eacbf81226c4049301d353745a630bbc4638
+lastReviewedNote: "Reviewed for Foundry #112: the create-only tag stage follows all four native source gates, revalidates the exact release/main/PR context and preserves an immutable same-commit ref. Lost responses use bounded readback without mutation replay. Only the tag job gains contents-write; registry/components and business runtime authority remain separate."
 ---
 
 # Environment Surface Policy
@@ -49,7 +49,7 @@ The source-only release-version preparer reads no `.env` and has no runtime or r
 
 Release inspection similarly binds its own Git root and ignores inherited Git repository bindings and replacement objects. Its optional `GITHUB_ACTIONS`/`GITHUB_OUTPUT` transport writes only validated release scalars for CI; these are not public runtime configuration. The source-only npm verifier makes uncredentialed HTTPS requests to fixed public npm endpoints and Sigstore trust services, with no `.env`, npm configuration, account session or token input. Its private temporary trust cache is removed after verification; optional evidence output requires a fresh explicit directory. Sigstore remains a development dependency outside the shipped runtime.
 
-The source-only workflow context command additionally reads GitHub's event file and repository/ref/source/workflow bindings. Only its bounded merged-PR lookup receives `GITHUB_TOKEN` from the owning workflow step. That token is not forwarded to native tests or public npm verification, and no token, event-file contents or environment map is included in context output. The current source qualification workflow grants read permissions only; its reusable quality gate does not persist checkout credentials. These CI variables stay out of `.env.example` and the installed runtime.
+The source-only workflow context command additionally reads GitHub's event file and repository/ref/source/workflow bindings. Its `GITHUB_TOKEN` is used only for the bounded merged-PR lookup. The separate `release-tag` job receives contents-write permission after all native qualification jobs pass, revalidates that same context and uses its token only for bounded canonical-repository tag reads and create-only refs. No project dependencies are installed in that job. The token is not forwarded to native tests or public npm verification, and no token, event-file contents or environment map is included in output. Source qualification remains read-only, and checkout credentials are not persisted. These CI variables stay out of `.env.example` and the installed runtime.
 
 Repository pack/verification tools and consumer tests share `scripts/lib/package-manager-command.ts`. On Windows, it selects a native `pnpm.exe` from an absolute `PNPM_HOME` or `PATH` entry. npm requires one complete PATH installation containing `npm.cmd`, `node.exe` and `node_modules/npm/bin/npm-cli.js`; the colocated Node executes the script. These tooling selectors never execute `.cmd` or a shell, never reinterpret argv, and never become public Foundry environment variables or shipped runtime code.
 

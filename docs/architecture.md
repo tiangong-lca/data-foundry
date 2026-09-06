@@ -152,8 +152,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: c22bcb2ee562e848e3f36b8d1dc90ab3ccb659ed
-lastReviewedNote: "Reviewed for Foundry #112: release roots bind native physical directory identity across Git/Node path casing; migration/current-runtime fixtures follow the executing package version. Different roots, older writers, untrusted manifests, account and no-replay boundaries remain rejected; the production compatibility guard is unchanged."
+lastReviewedCommit: 9d77eacbf81226c4049301d353745a630bbc4638
+lastReviewedNote: "Reviewed for Foundry #112: the create-only tag stage follows all four native source gates, revalidates the exact release/main/PR context and preserves an immutable same-commit ref. Lost responses use bounded readback without mutation replay. Only the tag job gains contents-write; registry/components and business runtime authority remain separate."
 ---
 
 # Architecture

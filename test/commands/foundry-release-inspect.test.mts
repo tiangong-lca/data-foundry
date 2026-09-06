@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
 import {
   applyFoundryReleaseVersion,
   planFoundryReleaseVersion,
@@ -297,5 +298,37 @@ test("release root identity accepts filesystem case aliases without accepting an
   } finally {
     if (createdAlias) fs.rmSync(alias, { recursive: true, force: true });
     fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test("tag command refuses a qualification job before reading an event or using the network", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-tag-job-guard-"));
+  try {
+    const hook = path.join(root, "no-network.ts");
+    fs.writeFileSync(
+      hook,
+      'globalThis.fetch = async () => { throw new Error("network must not be used"); };\n',
+    );
+    const result = spawnSync(
+      process.execPath,
+      ["--import", pathToFileURL(hook).href, path.join(source, "scripts/release-create-tag.ts")],
+      {
+        cwd: root,
+        encoding: "utf8",
+        timeout: 30_000,
+        env: {
+          ...process.env,
+          GITHUB_ACTIONS: "true",
+          GITHUB_JOB: "release-qualification",
+          GITHUB_TOKEN: "unit-test-token",
+          GITHUB_EVENT_PATH: path.join(root, "missing-event.json"),
+        },
+      },
+    );
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /restricted to the owning release-tag job/iu);
+    assert.equal(result.stdout, "");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });

@@ -34,8 +34,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: c22bcb2ee562e848e3f36b8d1dc90ab3ccb659ed
-lastReviewedNote: "Reviewed for Foundry #112: release roots bind native physical directory identity across Git/Node path casing; migration/current-runtime fixtures follow the executing package version. Different roots, older writers, untrusted manifests, account and no-replay boundaries remain rejected; the production compatibility guard is unchanged."
+lastReviewedCommit: 9d77eacbf81226c4049301d353745a630bbc4638
+lastReviewedNote: "Reviewed for Foundry #112: the create-only tag stage follows all four native source gates, revalidates the exact release/main/PR context and preserves an immutable same-commit ref. Lost responses use bounded readback without mutation replay. Only the tag job gains contents-write; registry/components and business runtime authority remain separate."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -101,7 +101,13 @@ CLI provenance is restricted to `tiangong-lca/tiangong-cli` and `.github/workflo
 
 An ordinary unchanged-version main push exits without a GitHub PR lookup. A release requires one canonical, merged main PR whose merge commit exactly matches the source; foreign, open, unmerged, ambiguous, incomplete or mismatched evidence fails. The bounded read-only GitHub API lookup uses only the workflow-provided token and emits the PR identity, never credentials. This proves the source relationship; it does not replace required review or platform qualification.
 
-`.github/workflows/publish-foundry.yml` currently connects that context gate to the existing four-native-host canonical gate through `workflow_call`. The reusable quality workflow checks out the admitted SHA, retains its ordinary PR/manual triggers, and does not persist checkout credentials. These source qualification jobs have read-only permissions. Immutable tag creation, npm publication, component production and final manifest publication remain further W08 stages; a successful source qualification run alone is not F1 publication.
+`.github/workflows/publish-foundry.yml` connects that context gate to the existing four-native-host canonical gate through `workflow_call`. The reusable quality workflow checks out the admitted SHA, retains its ordinary PR/manual triggers, and does not persist checkout credentials. These source qualification jobs have read-only permissions.
+
+After every host passes, the separate `release-tag` job revalidates the event, clean source/main relationship, release-only diff and merged PR. `pnpm release:tag` accepts no source/tag arguments or serialized context and requires that exact job identity. Only this job receives GitHub contents-write permission; it installs no project dependencies and does not persist checkout credentials.
+
+The tag helper derives `foundry-v<version>`, queries only the canonical repository and creates a missing tag reference at the exact qualified source commit. An existing tag must resolve to that same commit; an annotated tag is followed through at most four tag objects, with cycles and invalid object types rejected. There is no update, force or delete operation. If a create response is lost or fails, one readback may confirm the intended tag; an absent or different result stays failed without replaying the mutation. A fresh workflow rerun repeats source validation and the same create-or-verify policy.
+
+GitHub tag creation and source qualification alone are not F1 publication. npm publication, component production and final manifest publication remain further W08 stages.
 
 ## Qualification
 

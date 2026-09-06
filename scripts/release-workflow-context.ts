@@ -1,26 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
-import {
-  parseFoundryReleaseWorkflowEvent,
-  inspectFoundryReleaseWorkflow,
-  fetchMergedFoundryReleasePr,
-} from "./lib/foundry-release-workflow.ts";
+import { loadFoundryReleaseWorkflowContext } from "./lib/foundry-release-workflow.ts";
 
 async function main(args: readonly string[]): Promise<void> {
   if (args.length > 1 || (args.length === 1 && args[0] !== "--github-output"))
     throw new Error("Usage: release-workflow-context [--github-output]");
-  const eventPath = process.env.GITHUB_EVENT_PATH;
-  if (!eventPath || !path.isAbsolute(eventPath))
-    throw new Error("Foundry release requires the workflow event file.");
-  const stat = fs.lstatSync(eventPath);
-  if (!stat.isFile() || stat.isSymbolicLink() || stat.size < 1 || stat.size > 5 * 1024 * 1024)
-    throw new Error("Foundry release event file must be a bounded regular file.");
-  const event: unknown = JSON.parse(fs.readFileSync(eventPath, "utf8"));
-  const parsed = parseFoundryReleaseWorkflowEvent(process.env, event);
-  const context = inspectFoundryReleaseWorkflow(path.resolve(import.meta.dirname, ".."), parsed);
-  const pr = context.release
-    ? await fetchMergedFoundryReleasePr(context.head, process.env.GITHUB_TOKEN ?? "")
-    : null;
+  const { context, pr } = await loadFoundryReleaseWorkflowContext(
+    path.resolve(import.meta.dirname, ".."),
+    process.env,
+  );
   if (args.length) {
     const output = process.env.GITHUB_OUTPUT;
     if (!output) throw new Error("Foundry release workflow output path is missing.");

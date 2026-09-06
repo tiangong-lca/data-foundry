@@ -1,4 +1,6 @@
 import { sameFoundryReleaseDirectory } from "./foundry-release-root.ts";
+import fs from "node:fs";
+import path from "node:path";
 import {
   FOUNDRY_PUBLISH_WORKFLOW,
   FOUNDRY_RELEASE_REPOSITORY,
@@ -208,4 +210,26 @@ export async function fetchMergedFoundryReleasePr(
     throw new Error("Foundry release PR evidence must be valid UTF-8.");
   const result: unknown = JSON.parse(text);
   return validateMergedFoundryReleasePr(result, head);
+}
+
+export async function loadFoundryReleaseWorkflowContext(
+  root: string,
+  environment: Readonly<NodeJS.ProcessEnv>,
+): Promise<{
+  readonly context: FoundryReleaseWorkflowContext;
+  readonly pr: FoundryReleasePr | null;
+}> {
+  const eventPath = environment.GITHUB_EVENT_PATH;
+  if (!eventPath || !path.isAbsolute(eventPath))
+    throw new Error("Foundry release requires the workflow event file.");
+  const stat = fs.lstatSync(eventPath);
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.size < 1 || stat.size > 5 * 1024 * 1024)
+    throw new Error("Foundry release event file must be a bounded regular file.");
+  const event: unknown = JSON.parse(fs.readFileSync(eventPath, "utf8"));
+  const parsed = parseFoundryReleaseWorkflowEvent(environment, event);
+  const context = inspectFoundryReleaseWorkflow(root, parsed);
+  const pr = context.release
+    ? await fetchMergedFoundryReleasePr(context.head, environment.GITHUB_TOKEN ?? "")
+    : null;
+  return Object.freeze({ context, pr });
 }

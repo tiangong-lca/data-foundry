@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: c22bcb2ee562e848e3f36b8d1dc90ab3ccb659ed
-lastReviewedNote: "Reviewed for Foundry #112: release roots bind native physical directory identity across Git/Node path casing; migration/current-runtime fixtures follow the executing package version. Different roots, older writers, untrusted manifests, account and no-replay boundaries remain rejected; the production compatibility guard is unchanged."
+lastReviewedCommit: 9d77eacbf81226c4049301d353745a630bbc4638
+lastReviewedNote: "Reviewed for Foundry #112: the create-only tag stage follows all four native source gates, revalidates the exact release/main/PR context and preserves an immutable same-commit ref. Lost responses use bounded readback without mutation replay. Only the tag job gains contents-write; registry/components and business runtime authority remain separate."
 ---
 
 # Test Layout
@@ -303,6 +303,8 @@ W05 facade coverage is split similarly. `unit/foundry-operation-result.test.mts`
 `unit/foundry-release-workflow.test.mts` checks canonical event/workflow/source identity, exact-tag recovery and unique merged-main-PR evidence. The release inspection command suite also exercises real clean/dirty Git checkouts, main ancestry, changed tag targets and the actual unchanged-version workflow command without a token or network lookup. Static validation of the owning and reusable workflow checks their YAML, contexts and call inputs; four native hosts still run the canonical gate in CI.
 
 The Git command suite also qualifies filesystem case aliases while rejecting a different or nested root. `helpers/foundry-runtime-manifest.mts` derives its default current-host version from the local repository package manifest. Migration adoption and runtime rollback retain explicit older/untrusted fixtures, so a coherent package version bump preserves the same compatibility rejection cases instead of leaving positive cases bound to the original `0.1.0` candidate.
+
+`unit/foundry-release-tag.test.mts` exercises create-only tag identity, exact existing-source reuse, conflicting targets, lost-response readback without replay, canonical GitHub endpoints and bounded annotated-tag resolution using injected stores/responses. The command suite proves a source qualification job cannot enter the tag writer or use the network. These tests perform no real GitHub tag mutation; native source qualification and actual release execution remain separate evidence.
 
 W06 package coverage has two layers. `unit/foundry-package-contract.test.mts` checks coherent repository/compiled/schema versions, valid-version tamper rejection, fixed package identity, exports, allowlist, no-lifecycle metadata and compiler settings; the facade schema suite compiles the package descriptor schema strictly. `scenarios/foundry-package-consumer.test.mts` rebuilds and packs twice byte-identically, installs the same tarball into an online then offline clean consumer, compiles a typed consumer, verifies exact C1, runs all six operations from a Unicode CWD against a read-only package, rejects internal commands and tests missing/changed/extra/linked/lifecycle-bearing/Intel-invalid closures. It uses only public synthetic inputs; the official OAuth installed-package case remains private W14 evidence.
 

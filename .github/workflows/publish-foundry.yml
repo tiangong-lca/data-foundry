@@ -59,3 +59,37 @@ jobs:
     uses: ./.github/workflows/quality-gate.yml
     with:
       source_sha: ${{ needs.release-context.outputs.release_head }}
+
+  release-tag:
+    name: Preserve the immutable qualified release tag
+    needs:
+      - release-context
+      - release-qualification
+    if: needs.release-context.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: Check out the qualified source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-context.outputs.release_head }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Refresh main ancestry
+        run: git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
+
+      - name: Set up pnpm and Node.js
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        with:
+          runtime: node@24.19.0
+          install: false
+          cache: false
+
+      - name: Revalidate source and create or verify its tag
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pnpm release:tag
