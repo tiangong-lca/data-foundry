@@ -6,10 +6,19 @@ import {
   foundryPackageRepoRoot,
   foundryPackageStageRoot,
 } from "./build-foundry-package.ts";
-import { assertFoundryPackage } from "./lib/foundry-package-contract.ts";
+import {
+  assertFoundryPackage,
+  type FoundryPackageDescriptor,
+} from "./lib/foundry-package-contract.ts";
 import { resolvePackageManagerCommand } from "./lib/package-manager-command.ts";
 
 const maxArchiveBytes = 64 * 1024 * 1024;
+
+export interface PackedFoundryPackage {
+  readonly path: string;
+  readonly bytes: Buffer;
+  readonly descriptor: FoundryPackageDescriptor;
+}
 
 function archiveBytes(file: string): Buffer {
   let fd: number;
@@ -30,7 +39,7 @@ function archiveBytes(file: string): Buffer {
 
 export function packFoundryPackage(
   destination = path.join(foundryPackageRepoRoot, "package-artifacts"),
-): void {
+): PackedFoundryPackage {
   if (!path.isAbsolute(destination))
     throw new Error("Package artifact destination must be absolute.");
   buildFoundryPackage();
@@ -85,10 +94,10 @@ export function packFoundryPackage(
       if (!archiveBytes(target).equals(generated))
         throw new Error("A different package archive already exists; it was not overwritten.");
     }
-    process.stdout.write(`${target}\n`);
+    return Object.freeze({ path: target, bytes: generated, descriptor });
   } finally {
     fs.rmSync(temporaryDirectory, { recursive: true, force: true });
   }
 }
 
-if (import.meta.main) packFoundryPackage();
+if (import.meta.main) process.stdout.write(`${packFoundryPackage().path}\n`);

@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 7ff15a24930492475985c8592e5d38e55b2ca096
-lastReviewedNote: "Reviewed for Foundry #112: release proof follows the exact commit merged into canonical main and remains valid for a merged fork PR after its source fork is deleted. Unmerged, wrong-target and mismatched commits remain blocked; immutable tags, qualification and runtime permissions are unchanged."
+lastReviewedCommit: 2fa0087a7083adf18c7e52a45dfecdb28733e9a3
+lastReviewedNote: "Reviewed for Foundry #112: the qualified npm-package job now prepares and verifies a GitHub OIDC-signed archive, exports its bounded artifact handoff, and provides independent source/version verification before first upload. Signing and maintainer tooling stay outside the public runtime; npm publication and native component qualification remain pending."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

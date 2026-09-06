@@ -244,7 +244,7 @@ test("packed Foundry installs twice and runs only the public facade from a read-
       [
         "--input-type=module",
         "-e",
-        `import { packFoundryPackage } from ${JSON.stringify(packDriver)}; packFoundryPackage(${JSON.stringify(driverDestination)});`,
+        `import { packFoundryPackage } from ${JSON.stringify(packDriver)}; const packed = packFoundryPackage(${JSON.stringify(driverDestination)}); process.stdout.write(packed.path);`,
       ],
       repoRoot,
       isolatedEnvironment(path.join(root, `archive-${attempt}-home`)),

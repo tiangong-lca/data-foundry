@@ -93,3 +93,51 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pnpm release:tag
+
+  npm-package:
+    name: Prepare the signed npm package
+    needs:
+      - release-context
+      - release-qualification
+      - release-tag
+    if: needs.release-context.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+    steps:
+      - name: Check out the qualified source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-context.outputs.release_head }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Refresh main ancestry
+        run: git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
+
+      - name: Set up pnpm and Node.js
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        with:
+          runtime: node@24.19.0
+          install: false
+          cache: false
+
+      - name: Install frozen build and signature dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build and sign the exact release package
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pnpm release:prepare-package
+
+      - name: Preserve the signed package and first-publication handoff
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: foundry-npm-${{ needs.release-context.outputs.version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: package-artifacts/npm-release/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0

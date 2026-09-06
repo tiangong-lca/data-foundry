@@ -105,6 +105,8 @@
     "release:inspect": "node scripts/release-inspect.ts",
     "release:context": "node scripts/release-workflow-context.ts",
     "release:tag": "node scripts/release-create-tag.ts",
+    "release:prepare-package": "node scripts/release-prepare-package.ts",
+    "release:verify-prepared": "node scripts/release-verify-prepared.ts",
     "release:verify-npm": "node scripts/release-verify-npm.ts",
     "skills:list": "pnpm dlx skills@latest list --json",
     "skills:update": "pnpm dlx skills@latest update --project --yes",

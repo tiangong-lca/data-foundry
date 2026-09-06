@@ -246,7 +246,7 @@ export function validateNpmProvenanceStatement(
   return Object.freeze({ ref, invocationId, signerIdentity });
 }
 
-function requireProvenanceBundle(value: unknown): { bundle: Bundle; payload: Buffer } {
+function requireProvenanceBundle(value: unknown): Buffer {
   const response = record(value, "attestation response");
   const attestations = response.attestations;
   if (!Array.isArray(attestations)) throw new Error("npm release provenance is missing.");
@@ -255,7 +255,11 @@ function requireProvenanceBundle(value: unknown): { bundle: Bundle; payload: Buf
   );
   if (provenances.length !== 1)
     throw new Error("npm release requires one unambiguous provenance bundle.");
-  const bundle = record(record(provenances[0], "provenance attestation").bundle, "DSSE bundle");
+  return Buffer.from(JSON.stringify(record(provenances[0], "provenance attestation").bundle));
+}
+
+function requireProvenanceEnvelope(value: unknown): { bundle: Bundle; payload: Buffer } {
+  const bundle = record(value, "DSSE bundle");
   const envelope = record(bundle.dsseEnvelope, "DSSE envelope");
   if (
     envelope.payloadType !== "application/vnd.in-toto+json" ||
@@ -269,6 +273,47 @@ function requireProvenanceBundle(value: unknown): { bundle: Bundle; payload: Buf
     throw new Error("npm release DSSE payload must use canonical base64.");
   // Sigstore owns complete bundle/protobuf, certificate and transparency-log validation.
   return { bundle: bundle as Bundle, payload };
+}
+
+/** Verifies a standalone CI-produced bundle; registry publication is a separate fact. */
+export async function verifyNpmProvenanceBundle(
+  bundleBytes: Buffer,
+  expectation: NpmReleaseExpectation,
+  sha512: string,
+): Promise<NpmProvenanceBinding> {
+  const expected = { ...expectation };
+  const policy = npmReleasePolicy(expected);
+  if (!/^[0-9a-f]{128}$/u.test(sha512))
+    throw new Error("npm release provenance digest is invalid.");
+  const { bundle, payload } = requireProvenanceEnvelope(
+    parseJson(Buffer.from(bundleBytes), maxAttestationBytes, "provenance bundle"),
+  );
+  const identities = policy.refs.map((ref) => `${policy.repository}/${policy.workflow}@${ref}`);
+  const expression = `^(?:${identities.map((identity) => identity.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")).join("|")})$`;
+  const cache = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-npm-trust-"));
+  try {
+    fs.chmodSync(cache, 0o700);
+    const signer = await verifySigstore(bundle, {
+      certificateIssuer: issuer,
+      certificateIdentityURI: expression,
+      ctLogThreshold: 1,
+      tlogThreshold: 1,
+      timeout: 30_000,
+      retry: 2,
+      tufCachePath: cache,
+    });
+    const signerIdentity = signer.identity?.subjectAlternativeName;
+    if (typeof signerIdentity !== "string")
+      throw new Error("npm release requires a verified certificate signer identity.");
+    return validateNpmProvenanceStatement(
+      parseJson(payload, maxAttestationBytes, "provenance"),
+      expected,
+      sha512,
+      signerIdentity,
+    );
+  } finally {
+    fs.rmSync(cache, { recursive: true, force: true });
+  }
 }
 
 export async function verifyNpmReleaseEvidence(input: {
@@ -291,36 +336,10 @@ export async function verifyNpmReleaseEvidence(input: {
   const actual = createHash("sha512").update(tarballBytes).digest();
   if (!timingSafeEqual(actual, Buffer.from(metadata.sha512, "hex")))
     throw new Error("npm release tarball integrity does not match registry metadata.");
-  const { bundle, payload } = requireProvenanceBundle(
+  const bundleBytes = requireProvenanceBundle(
     parseJson(attestationBytes, maxAttestationBytes, "attestations"),
   );
-  const identities = policy.refs.map((ref) => `${policy.repository}/${policy.workflow}@${ref}`);
-  const expression = `^(?:${identities.map((identity) => identity.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")).join("|")})$`;
-  const cache = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-npm-trust-"));
-  let binding: NpmProvenanceBinding;
-  try {
-    fs.chmodSync(cache, 0o700);
-    const signer = await verifySigstore(bundle, {
-      certificateIssuer: issuer,
-      certificateIdentityURI: expression,
-      ctLogThreshold: 1,
-      tlogThreshold: 1,
-      timeout: 30_000,
-      retry: 2,
-      tufCachePath: cache,
-    });
-    const signerIdentity = signer.identity?.subjectAlternativeName;
-    if (typeof signerIdentity !== "string")
-      throw new Error("npm release requires a verified certificate signer identity.");
-    binding = validateNpmProvenanceStatement(
-      parseJson(payload, maxAttestationBytes, "provenance"),
-      expected,
-      metadata.sha512,
-      signerIdentity,
-    );
-  } finally {
-    fs.rmSync(cache, { recursive: true, force: true });
-  }
+  const binding = await verifyNpmProvenanceBundle(bundleBytes, expected, metadata.sha512);
   return Object.freeze({
     schema: "tiangong-foundry.verified-npm-release.v1",
     package: Object.freeze({ name: policy.name, version: expected.version }),

@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 7ff15a24930492475985c8592e5d38e55b2ca096
-lastReviewedNote: "Reviewed for Foundry #112: release proof follows the exact commit merged into canonical main and remains valid for a merged fork PR after its source fork is deleted. Unmerged, wrong-target and mismatched commits remain blocked; immutable tags, qualification and runtime permissions are unchanged."
+lastReviewedCommit: 2fa0087a7083adf18c7e52a45dfecdb28733e9a3
+lastReviewedNote: "Reviewed for Foundry #112: the qualified npm-package job now prepares and verifies a GitHub OIDC-signed archive, exports its bounded artifact handoff, and provides independent source/version verification before first upload. Signing and maintainer tooling stay outside the public runtime; npm publication and native component qualification remain pending."
 ---
 
 # Test Layout
@@ -305,6 +305,8 @@ W05 facade coverage is split similarly. `unit/foundry-operation-result.test.mts`
 The Git command suite also qualifies filesystem case aliases while rejecting a different or nested root. `helpers/foundry-runtime-manifest.mts` derives its default current-host version from the local repository package manifest. Migration adoption and runtime rollback retain explicit older/untrusted fixtures, so a coherent package version bump preserves the same compatibility rejection cases instead of leaving positive cases bound to the original `0.1.0` candidate.
 
 `unit/foundry-release-tag.test.mts` exercises create-only tag identity, exact existing-source reuse, conflicting targets, lost-response readback without replay, canonical GitHub endpoints and bounded annotated-tag resolution using injected stores/responses. The command suite proves a source qualification job cannot enter the tag writer or use the network. These tests perform no real GitHub tag mutation; native source qualification and actual release execution remain separate evidence.
+
+`unit/foundry-release-signing.test.mts` binds the prepared provenance to the exact hosted job/source/workflow and tests fixed-audience OIDC requests, endpoint/permission/UTF-8 response rejection and absence of static identity fallback. `unit/foundry-release-prepared.test.mts` exercises bounded regular artifact reads and independent source/version requirements; `commands/foundry-release-prepare.test.mts` checks actual command job/argument guards and the read-only download verifier. They do not emulate successful cryptographic signing. Real public CLI provenance separately qualifies standalone signature verification and rejects tampering; actual Foundry signing remains an owning release-workflow operation. The package consumer scenario exercises the packer's direct returned path and byte-identical archive reuse.
 
 W06 package coverage has two layers. `unit/foundry-package-contract.test.mts` checks coherent repository/compiled/schema versions, valid-version tamper rejection, fixed package identity, exports, allowlist, no-lifecycle metadata and compiler settings; the facade schema suite compiles the package descriptor schema strictly. `scenarios/foundry-package-consumer.test.mts` rebuilds and packs twice byte-identically, installs the same tarball into an online then offline clean consumer, compiles a typed consumer, verifies exact C1, runs all six operations from a Unicode CWD against a read-only package, rejects internal commands and tests missing/changed/extra/linked/lifecycle-bearing/Intel-invalid closures. It uses only public synthetic inputs; the official OAuth installed-package case remains private W14 evidence.
 

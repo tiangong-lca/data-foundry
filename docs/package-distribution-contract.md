@@ -34,8 +34,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 7ff15a24930492475985c8592e5d38e55b2ca096
-lastReviewedNote: "Reviewed for Foundry #112: release proof follows the exact commit merged into canonical main and remains valid for a merged fork PR after its source fork is deleted. Unmerged, wrong-target and mismatched commits remain blocked; immutable tags, qualification and runtime permissions are unchanged."
+lastReviewedCommit: 2fa0087a7083adf18c7e52a45dfecdb28733e9a3
+lastReviewedNote: "Reviewed for Foundry #112: the qualified npm-package job now prepares and verifies a GitHub OIDC-signed archive, exports its bounded artifact handoff, and provides independent source/version verification before first upload. Signing and maintainer tooling stay outside the public runtime; npm publication and native component qualification remain pending."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -47,7 +47,7 @@ related:
 
 The npm identity is `@tiangong-lca/foundry`; the public bin is `tiangong-foundry`. W06 establishes the installable `0.1.0` candidate and its production dependency closure. It does not publish a registry version or call this candidate F1. W08 owns the release-only workflow, Trusted Publishing/provenance, immutable tag, platform components, SBOM/license bundle and product compatibility manifest.
 
-The package depends exactly on public `@tiangong-lca/cli@0.1.10`. Ajv remains a development dependency because only repository-internal command owners import it; those owners are absent from the public compiler graph. Sigstore 5.0.0 is also development-only and serves source release verification; it is absent from the public dependency closure. TIDAS is an independently verified native component selected later by the CLI manager, not an npm dependency or bundled binary.
+The package depends exactly on public `@tiangong-lca/cli@0.1.10`. Ajv remains a development dependency because only repository-internal command owners import it; those owners are absent from the public compiler graph. Sigstore 5.0.0 is also development-only and serves source release signing and verification; it is absent from the public dependency closure. TIDAS is an independently verified native component selected later by the CLI manager, not an npm dependency or bundled binary.
 
 ## Public surface
 
@@ -108,6 +108,26 @@ After every host passes, the separate `release-tag` job revalidates the event, c
 The tag helper derives `foundry-v<version>`, queries only the canonical repository and creates a missing tag reference at the exact qualified source commit. An existing tag must resolve to that same commit; an annotated tag is followed through at most four tag objects, with cycles and invalid object types rejected. There is no update, force or delete operation. If a create response is lost or fails, one readback may confirm the intended tag; an absent or different result stays failed without replaying the mutation. A fresh workflow rerun repeats source validation and the same create-or-verify policy.
 
 GitHub tag creation and source qualification alone are not F1 publication. npm publication, component production and final manifest publication remain further W08 stages.
+
+## Prepared package and first publication
+
+The `npm-package` job runs after four-host qualification and exact tag creation. It checks out that source without persisted credentials, installs frozen development dependencies without lifecycle scripts, and runs `pnpm release:prepare-package`. The command accepts no arguments, revalidates the merged release-only source and exact remote tag, builds a fresh package and rechecks the source after building. Packing returns the verified descriptor and archive bytes directly; the command does not reconstruct the archive from process output.
+
+Signing is restricted to that GitHub-hosted job and the exact event/source/workflow identity. It requests a short-lived GitHub Actions OIDC identity with audience `sigstore`, signs standard in-toto/SLSA provenance binding the package SHA-512, canonical repository, source commit and workflow run attempt, then cryptographically verifies the returned bundle. A static `SIGSTORE_ID_TOKEN` is rejected. The signing token is neither persisted nor printed. This step publishes a transparency-log attestation but makes no npm registry write.
+
+The fresh `package-artifacts/npm-release/` directory contains the exact tarball, `foundry-<version>.sigstore`, `prepared-release.json` and a generated README with source/PR/run links and exact commands. The workflow exports these files as a run/attempt-specific artifact. The receipt records source, file digests and inventory as preparation evidence; it does not establish npm publication or supply an independent runtime trust anchor.
+
+`pnpm release:verify-prepared --directory <absolute-download-directory> --version <x.y.z> --expected-git-head <40-hex-sha>` is a read-only maintainer verifier. Select the expected version and source commit independently from the reviewed release PR. The verifier reads bounded regular files at the canonical versioned names and verifies the actual package bytes against the Sigstore certificate/log and signed source/workflow. It does not derive the expected identity from the downloaded receipt or README. Use this source command from the reviewed checkout with its frozen development dependencies installed.
+
+For a package identity's first publication, after the reviewed pipeline has produced and verified the exact artifact:
+
+1. Download the artifact from the qualified release's exact GitHub run attempt. Verify it with the command above and retain its result alongside the release record.
+2. An authorized maintainer signs in to npm using their own account and completes the required 2FA. Keep the artifact files unchanged and change into their downloaded directory outside a Git checkout.
+3. With pinned pnpm 11.24.0, execute the generated command: `pnpm publish ./tiangong-lca-foundry-<version>.tgz --access public --no-git-checks --config.provenance-file=./foundry-<version>.sigstore`. The generic `--config.provenance-file` spelling is required by this pinned client. The provided CI signature accompanies the unchanged package; the account authorizes its upload.
+4. Independently run `release:verify-npm` for that exact version/source, compare its tarball digests with the prepared verification, and preserve the result. After a failed or uncertain upload, inspect the exact public version before deciding the next action; do not blindly replay a publish or overwrite an existing version.
+5. Review the new package's npm Trusted Publisher settings for organization `tiangong-lca`, repository `data-foundry`, workflow `publish-foundry.yml` and the actual job environment binding. The current preparation job declares no GitHub environment. Routine publication must use that reviewed workflow's OIDC path and receive separate public readback verification.
+
+The npm package identity and publisher configuration are account-controlled prerequisites, separate from CI signing. At this implementation checkpoint the workflow exports prepared artifacts; the routine npm transport, complete native components and immutable product-manifest publication remain W08 work. A prepared artifact, a successful mock-registry transport test or source-only native qualification is not a published F1 release.
 
 ## Qualification
 

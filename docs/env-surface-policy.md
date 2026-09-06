@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 7ff15a24930492475985c8592e5d38e55b2ca096
-lastReviewedNote: "Reviewed for Foundry #112: release proof follows the exact commit merged into canonical main and remains valid for a merged fork PR after its source fork is deleted. Unmerged, wrong-target and mismatched commits remain blocked; immutable tags, qualification and runtime permissions are unchanged."
+lastReviewedCommit: 2fa0087a7083adf18c7e52a45dfecdb28733e9a3
+lastReviewedNote: "Reviewed for Foundry #112: the qualified npm-package job now prepares and verifies a GitHub OIDC-signed archive, exports its bounded artifact handoff, and provides independent source/version verification before first upload. Signing and maintainer tooling stay outside the public runtime; npm publication and native component qualification remain pending."
 ---
 
 # Environment Surface Policy
@@ -52,6 +52,8 @@ Release inspection similarly binds its own Git root and ignores inherited Git re
 The source-only workflow context command additionally reads GitHub's event file and repository/ref/source/workflow bindings. Its `GITHUB_TOKEN` is used only for the bounded merged-PR lookup. The separate `release-tag` job receives contents-write permission after all native qualification jobs pass, revalidates that same context and uses its token only for bounded canonical-repository tag reads and create-only refs. No project dependencies are installed in that job. The token is not forwarded to native tests or public npm verification, and no token, event-file contents or environment map is included in output. Source qualification remains read-only, and checkout credentials are not persisted. These CI variables stay out of `.env.example` and the installed runtime.
 
 Repository pack/verification tools and consumer tests share `scripts/lib/package-manager-command.ts`. On Windows, it selects a native `pnpm.exe` from an absolute `PNPM_HOME` or `PATH` entry. npm requires one complete PATH installation containing `npm.cmd`, `node.exe` and `node_modules/npm/bin/npm-cli.js`; the colocated Node executes the script. These tooling selectors never execute `.cmd` or a shell, never reinterpret argv, and never become public Foundry environment variables or shipped runtime code.
+
+The `npm-package` preparation job receives only read permissions for GitHub contents/PR evidence and `id-token: write` for signing. It binds the exact hosted job, event, source/workflow SHA/ref and numeric repository/run/attempt identities. `ACTIONS_ID_TOKEN_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` are used only for a bounded authenticated HTTPS request to GitHub Actions with audience `sigstore`; redirects, alternate origins, malformed/oversized responses and static `SIGSTORE_ID_TOKEN` input are rejected. The short-lived returned identity is supplied directly to Sigstore and never saved or printed. Prepared artifact verification is read-only, takes explicit source/version expectations and needs no account credentials. Neither command adds an installed-runtime environment input or an npm token fallback.
 
 ## Allowed Variables
 
