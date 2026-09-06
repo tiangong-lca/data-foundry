@@ -60,9 +60,10 @@ async function component(
     fs.writeFileSync(path.join(source, name), "{}\n");
   fs.writeFileSync(path.join(source, "fixture-license.txt"), "Component metadata fixture only.\n");
   fs.chmodSync(path.join(source, executable), 0o755);
-  const inventory = files(source).sort((left, right) =>
-    left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
-  );
+  // Windows stat/chmod cannot supply the portable archive's executable bit.
+  const inventory = files(source)
+    .map((file) => (file.path === executable ? { ...file, mode: 493 as const } : file))
+    .sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
   const archive = path.join(root, `${id}.tar.gz`);
   const archiveFact = await writeRuntimeComponentArchive(source, inventory, archive);
   const platform = template.manifest.components[0].platform;
