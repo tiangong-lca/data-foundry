@@ -93,8 +93,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 152b83e13342187239caed808f8efbf99777b1c1
-lastReviewedNote: "Reviewed for Foundry #112: source-only version preparation plans and explicitly applies three coherent metadata projections with clean-Git, file-boundary and drift guards. It does not commit, tag, publish, load credentials or change public runtime/authorization behavior."
+lastReviewedCommit: dc5c52ba9cdc1c55695bf7f1d23d44e687972c76
+lastReviewedNote: "Reviewed for Foundry #112: exact release-only Git inspection and cryptographic public npm provenance verification are source-only typed tools. Dev-only Sigstore does not enter the public package; task, runtime, account and mutation ownership remain unchanged. W08 workflow/components/publication are still required."
 ---
 
 # Capability Ownership Policy

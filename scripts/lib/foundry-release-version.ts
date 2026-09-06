@@ -115,15 +115,17 @@ function replaceProjection(
   );
 }
 
-export function planFoundryReleaseVersion(
-  repoRoot: string,
+export function projectFoundryReleaseVersion(
+  metadata: Readonly<Record<string, string>>,
   version: string,
-): FoundryReleaseVersionPlan {
+): { readonly currentVersion: string; readonly replacements: Readonly<Record<string, string>> } {
   const targetParts = versionParts(version);
-  const root = fs.realpathSync(repoRoot);
-  if (!fs.statSync(root).isDirectory() || root === path.parse(root).root)
-    throw new Error("Release version requires a repository directory.");
-  const sources = versionPaths.map((relative) => readSource(root, relative));
+  const sources = versionPaths.map((relative) => {
+    const content = metadata[relative];
+    if (typeof content !== "string")
+      throw new Error(`Missing release version projection: ${relative}`);
+    return { content };
+  });
   const manifest = record(JSON.parse(sources[0].content), "manifest");
   if (manifest.name !== "@tiangong-lca/foundry" || typeof manifest.version !== "string")
     throw new Error("Release version package identity is not @tiangong-lca/foundry.");
@@ -167,9 +169,32 @@ export function planFoundryReleaseVersion(
       "descriptor schema",
     ),
   ];
-  const updates = sources.map((source, index) => ({
+  return Object.freeze({
+    currentVersion,
+    replacements: Object.freeze(
+      Object.fromEntries(versionPaths.map((file, index) => [file, replacements[index]])),
+    ),
+  });
+}
+
+export const foundryReleaseVersionPaths = versionPaths;
+
+export function planFoundryReleaseVersion(
+  repoRoot: string,
+  version: string,
+): FoundryReleaseVersionPlan {
+  const root = fs.realpathSync(repoRoot);
+  if (!fs.statSync(root).isDirectory() || root === path.parse(root).root)
+    throw new Error("Release version requires a repository directory.");
+  const sources = versionPaths.map((relative) => readSource(root, relative));
+  const projection = projectFoundryReleaseVersion(
+    Object.fromEntries(sources.map((source) => [source.relative, source.content])),
+    version,
+  );
+  const currentVersion = projection.currentVersion;
+  const updates = sources.map((source) => ({
     ...source,
-    replacement: replacements[index],
+    replacement: projection.replacements[source.relative],
   }));
   const changed = currentVersion !== version;
   const plan: FoundryReleaseVersionPlan = Object.freeze({

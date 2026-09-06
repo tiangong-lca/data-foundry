@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 152b83e13342187239caed808f8efbf99777b1c1
-lastReviewedNote: "Reviewed for Foundry #112: source-only version preparation plans and explicitly applies three coherent metadata projections with clean-Git, file-boundary and drift guards. It does not commit, tag, publish, load credentials or change public runtime/authorization behavior."
+lastReviewedCommit: dc5c52ba9cdc1c55695bf7f1d23d44e687972c76
+lastReviewedNote: "Reviewed for Foundry #112: exact release-only Git inspection and cryptographic public npm provenance verification are source-only typed tools. Dev-only Sigstore does not enter the public package; task, runtime, account and mutation ownership remain unchanged. W08 workflow/components/publication are still required."
 ---
 
 # Test Layout
@@ -297,6 +297,8 @@ W04 authority tests are split by contract. `unit/foundry-runtime-qualification.t
 W05 facade coverage is split similarly. `unit/foundry-operation-result.test.mts` fixes the exact envelope, statuses, permissions and exit table. `unit/foundry-task-start-spec.test.mts` fixes task intent, selected seed and fingerprint rules. `unit/foundry-facade-schemas.test.mts` compiles all four public/request/migration schemas. `scenarios/foundry-facade-request-store.test.mts` covers concurrent idempotence, changed bytes/path revisions, predecessor preservation, deterministic cleanup reuse, fake completion rejection and attempted-state readback-only behavior. `scenarios/foundry-public-facade.test.mts` exercises one-line CLI JSON, option rejection, account-reference readiness, actor/missing-task errors, migration no-write and exit 130. The entry-closure suite runs workspace init through both source and emitted entries.
 
 `unit/foundry-release-version.test.mts` exercises read-only version planning, coherent three-file updates, valid-version monotonicity, source drift and serialized-plan rejection, directory-link boundaries, and the CLI’s own-root/clean-Git checks. It uses disposable metadata repositories and never modifies the executing repository version or publishes a package.
+
+`unit/foundry-release-contract.test.mts` rejects mixed version/source changes, partial projections, non-review document edits and file-mode drift. `commands/foundry-release-inspect.test.mts` exercises the actual command against disposable Git commits, including exact tree binding, inherited Git redirection, unchanged-version large-blob skipping and invalid UTF-8 byte comparisons. `unit/foundry-release-provenance.test.mts` checks fixed npm identities/URLs, canonical integrity and signed-statement policy, including source, workflow/ref, signer, event, hosted builder and run binding. These deterministic tests do not mock cryptographic success or contact the registry; release qualification separately runs `release:verify-npm` against actual public artifacts and rejects tampering of the real signed bundle.
 
 W06 package coverage has two layers. `unit/foundry-package-contract.test.mts` checks coherent repository/compiled/schema versions, valid-version tamper rejection, fixed package identity, exports, allowlist, no-lifecycle metadata and compiler settings; the facade schema suite compiles the package descriptor schema strictly. `scenarios/foundry-package-consumer.test.mts` rebuilds and packs twice byte-identically, installs the same tarball into an online then offline clean consumer, compiles a typed consumer, verifies exact C1, runs all six operations from a Unicode CWD against a read-only package, rejects internal commands and tests missing/changed/extra/linked/lifecycle-bearing/Intel-invalid closures. It uses only public synthetic inputs; the official OAuth installed-package case remains private W14 evidence.
 

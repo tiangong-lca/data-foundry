@@ -102,6 +102,8 @@
     "package:check": "node scripts/verify-foundry-package.ts",
     "package:pack": "node scripts/pack-foundry-package.ts",
     "release:version": "node scripts/release-version.ts",
+    "release:inspect": "node scripts/release-inspect.ts",
+    "release:verify-npm": "node scripts/release-verify-npm.ts",
     "skills:list": "pnpm dlx skills@latest list --json",
     "skills:update": "pnpm dlx skills@latest update --project --yes",
     "skills:install:shared": "pnpm dlx skills@latest add ../tiangong-lca-skills --skill external-dataset-curated-import source-evidence-dataset-development dataset-rls-maintenance --agent '*' --yes --full-depth && pnpm dlx skills@latest add https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search document-granular-decompose --agent '*' --yes --full-depth",
@@ -131,14 +133,15 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "24.13.3",
+    "ajv": "8.20.0",
     "husky": "9.1.7",
     "lint-staged": "17.3.0",
     "npm-check-updates": "23.1.0",
     "oxlint": "1.80.0",
     "oxlint-tsgolint": "7.0.2001",
     "prettier": "3.9.6",
-    "typescript": "7.0.2",
-    "ajv": "8.20.0"
+    "sigstore": "5.0.0",
+    "typescript": "7.0.2"
   },
   "lint-staged": {
     "*.{ts,mts,cts,tsx}": [

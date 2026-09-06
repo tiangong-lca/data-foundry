@@ -9,6 +9,7 @@ language: en
 whenToUse:
   - when changing the Foundry npm package, public bin, exports, package compiler or shipped assets
   - when qualifying a packed or installed Foundry candidate
+  - when preparing a release-only version change or verifying published npm provenance
 whenToUpdate:
   - when package identity, file closure, descriptor, runtime layout, supported platform or install behavior changes
 checkPaths:
@@ -20,15 +21,19 @@ checkPaths:
   - scripts/build-foundry-package.ts
   - scripts/pack-foundry-package.ts
   - scripts/verify-foundry-package.ts
+  - scripts/release-*.ts
+  - scripts/lib/foundry-release-*.ts
   - scripts/lib/foundry-package-contract.ts
   - scripts/lib/foundry-runtime-paths.ts
   - specs/schemas/foundry-package-descriptor.schema.json
   - test/unit/foundry-package-contract.test.mts
+  - test/unit/foundry-release-*.test.mts
+  - test/commands/foundry-release-*.test.mts
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 152b83e13342187239caed808f8efbf99777b1c1
-lastReviewedNote: "Reviewed for Foundry #112: source-only version preparation plans and explicitly applies three coherent metadata projections with clean-Git, file-boundary and drift guards. It does not commit, tag, publish, load credentials or change public runtime/authorization behavior."
+lastReviewedCommit: dc5c52ba9cdc1c55695bf7f1d23d44e687972c76
+lastReviewedNote: "Reviewed for Foundry #112: exact release-only Git inspection and cryptographic public npm provenance verification are source-only typed tools. Dev-only Sigstore does not enter the public package; task, runtime, account and mutation ownership remain unchanged. W08 workflow/components/publication are still required."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -40,7 +45,7 @@ related:
 
 The npm identity is `@tiangong-lca/foundry`; the public bin is `tiangong-foundry`. W06 establishes the installable `0.1.0` candidate and its production dependency closure. It does not publish a registry version or call this candidate F1. W08 owns the release-only workflow, Trusted Publishing/provenance, immutable tag, platform components, SBOM/license bundle and product compatibility manifest.
 
-The package depends exactly on public `@tiangong-lca/cli@0.1.10`. Ajv remains a development dependency because only repository-internal command owners import it; those owners are absent from the public compiler graph. TIDAS is an independently verified native component selected later by the CLI manager, not an npm dependency or bundled binary.
+The package depends exactly on public `@tiangong-lca/cli@0.1.10`. Ajv remains a development dependency because only repository-internal command owners import it; those owners are absent from the public compiler graph. Sigstore 5.0.0 is also development-only and serves source release verification; it is absent from the public dependency closure. TIDAS is an independently verified native component selected later by the CLI manager, not an npm dependency or bundled binary.
 
 ## Public surface
 
@@ -75,6 +80,16 @@ Verification uses regular-file, `O_NOFOLLOW`, fd size/inode/mtime and SHA checks
 `pnpm release:version --version <major.minor.patch>` is a read-only maintainer plan. It validates the repository package identity and coherent manifest, compiled-verifier and descriptor-schema versions, then reports the three bounded content changes. Stable versions cannot decrease. The CLI has no alternate-root or serialized-plan input.
 
 `--apply` additionally requires a clean Git working tree at the script’s own repository root; inherited Git repository bindings are removed before that check. The private in-process plan binds the original file bytes and modes. Metadata must be regular files reached through real repository directories, and all inputs are rechecked before prepared files are renamed. Replacement is atomic per file, not a cross-file filesystem transaction; an I/O failure after a replacement reports the affected Git paths for review. This command creates no commit or tag and performs no registry operation. Release-only orchestration and publication remain separate W08 gates.
+
+## Release diff and published-source verification
+
+`pnpm release:inspect --base <40-hex-sha> --head <40-hex-sha>` reads exact ancestor-related commits from its own Git root, with inherited repository bindings and replacement objects disabled. It reports the source tree and whether the package version changed. Ordinary commits return `release: false` before unrelated blobs are read. A version change must equal the same three-file projection used by the version preparer. Every changed file must retain regular Git mode `100644` and valid UTF-8 bytes. Other source, lock, additions, deletions or mode changes fail; existing Markdown frontmatter and `.docpact/config.yaml` may change only the single-line `lastReviewedAt`, `lastReviewedCommit` and `lastReviewedNote` values. Document bodies and all remaining bytes stay fixed. `--github-output` writes validated scalar outputs only within GitHub Actions. This inspection does not prove PR approval, main eligibility or a completed release.
+
+`pnpm release:verify-npm --package <cli|foundry> --version <x.y.z> --expected-git-head <40-hex-sha>` independently downloads the exact public npm metadata, tarball and attestation. Downloads reject redirects, credentials, alternate registry origins/paths and unbounded responses. Verification binds canonical SHA-512 to the downloaded tarball, then verifies the Sigstore certificate, issuer and transparency logs before interpreting the signed in-toto/SLSA payload. The verified certificate identity must match the signed workflow/ref, package subject, source commit and exact GitHub-hosted run attempt. Optional registry `gitHead` must match when present; its absence never substitutes for signed provenance.
+
+CLI provenance is restricted to `tiangong-lca/tiangong-cli` and `.github/workflows/publish.yml` at the exact `cli-v<version>` tag. The Foundry policy binds `tiangong-lca/data-foundry` and `.github/workflows/publish-foundry.yml`; a normal publication must originate from a main push, and recovery must originate from `workflow_dispatch` on the exact `foundry-v<version>` tag. Both paths require the expected source digest. This verification policy defines the intended publishing identity; implementation of the owning publishing workflow, its gates and actual publication remains separately required by W08.
+
+`--output <new-absolute-directory>` preserves the verified tarball, raw registry metadata/attestations and the digest-bound verification report only after verification succeeds. It never replaces an existing directory. Reports are verification evidence, not independent trust anchors: component consumers still require the separately trusted product manifest/Skills lock. The tool cannot publish, tag, configure a publisher, read `.env` or supply a registry token. Sigstore uses an owned temporary trust cache that is removed after verification.
 
 ## Qualification
 
