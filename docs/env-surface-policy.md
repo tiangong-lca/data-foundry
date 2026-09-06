@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: bc1198c57c71fccb07395534cfba4ba1a1fafab4
-lastReviewedNote: "Reviewed for Foundry #112: archive naming follows the verified staged descriptor; repository, compiled and schema versions remain bound. The isolated 0.1.1 fixture is not a publication. Package closure, runtime/auth ownership, pinned dependencies and F1 release prerequisites remain unchanged."
+lastReviewedCommit: 152b83e13342187239caed808f8efbf99777b1c1
+lastReviewedNote: "Reviewed for Foundry #112: source-only version preparation plans and explicitly applies three coherent metadata projections with clean-Git, file-boundary and drift guards. It does not commit, tag, publish, load credentials or change public runtime/authorization behavior."
 ---
 
 # Environment Surface Policy
@@ -44,6 +44,8 @@ lastReviewedNote: "Reviewed for Foundry #112: archive naming follows the verifie
 Foundry `.env.example` is a public runtime contract, not a mirror of every adjacent repository environment variable.
 
 Package build, descriptor verification and packing do not load `.env`. The public staging manifest has no lifecycle scripts. Clean-consumer tests pass only platform process variables, isolated HOME/package-cache paths and optional network proxy/CA settings to package tools; credential-shaped variables are rejected from that projection. Installed workspace/task operations retain the facade's explicit account-intent/session-reference contract and never search the package directory for credentials.
+
+The source-only release-version preparer reads no `.env` and has no runtime or registry authority. Its CLI binds the executing repository root, clears inherited Git repository variables before clean-worktree checks, and writes only the three validated version projections after explicit `--apply`.
 
 Repository pack/verification tools and consumer tests share `scripts/lib/package-manager-command.ts`. On Windows, it selects a native `pnpm.exe` from an absolute `PNPM_HOME` or `PATH` entry. npm requires one complete PATH installation containing `npm.cmd`, `node.exe` and `node_modules/npm/bin/npm-cli.js`; the colocated Node executes the script. These tooling selectors never execute `.cmd` or a shell, never reinterpret argv, and never become public Foundry environment variables or shipped runtime code.
 

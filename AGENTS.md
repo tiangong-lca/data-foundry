@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: bc1198c57c71fccb07395534cfba4ba1a1fafab4
-lastReviewedNote: "Reviewed for Foundry #112: descriptor-bound archive naming and coherent version contract checks preserve the public candidate closure, native TypeScript toolchain, runtime/auth ownership and separate F1 publication gates."
+lastReviewedCommit: 152b83e13342187239caed808f8efbf99777b1c1
+lastReviewedNote: "Reviewed for Foundry #112: source-only version preparation plans and explicitly applies three coherent metadata projections with clean-Git, file-boundary and drift guards. It does not commit, tag, publish, load credentials or change public runtime/authorization behavior."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

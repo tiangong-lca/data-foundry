@@ -10,7 +10,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 
 // Explicit TypeScript AnyKeyword closures are enforced by Oxlint; this suite remains the
 // permanent boundary against reintroducing first-party JavaScript compatibility paths.
-// Issue #112 keeps descriptor-bound archive naming and version contract tests native TypeScript.
+// Issue #112 keeps descriptor-bound archive naming, release-version preparation and contract tests native TypeScript.
 // Issue #110's tool-policy retirement preserves Node 24 and the native TypeScript graph.
 // Issue #108's migration adoption, compatibility and replay guards remain native TypeScript.
 // Issue #68's Worldsteel profile-truth contract is native .mts and adds no compatibility path.

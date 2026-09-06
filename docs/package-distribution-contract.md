@@ -27,8 +27,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: bc1198c57c71fccb07395534cfba4ba1a1fafab4
-lastReviewedNote: "Reviewed for Foundry #112: archive naming follows the verified staged descriptor; repository, compiled and schema versions remain bound. The isolated 0.1.1 fixture is not a publication. Package closure, runtime/auth ownership, pinned dependencies and F1 release prerequisites remain unchanged."
+lastReviewedCommit: 152b83e13342187239caed808f8efbf99777b1c1
+lastReviewedNote: "Reviewed for Foundry #112: source-only version preparation plans and explicitly applies three coherent metadata projections with clean-Git, file-boundary and drift guards. It does not commit, tag, publish, load credentials or change public runtime/authorization behavior."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -69,6 +69,12 @@ The repository manifest retains developer scripts. `build-foundry-package.ts` pr
 `package-dist/assets/foundry-package-descriptor.json` uses `tiangong-foundry.package-descriptor.v1`. It binds package/bin/API identity, exact CLI dependency, runtime layout v2, the four supported tuples, workspace read/write schema and public protocol set. Its sorted file inventory binds every other shipped payload by portable path, bytes and SHA-256. The descriptor excludes itself. `package.json` is also excluded from the byte inventory because package managers normalize its property order; the installed verifier instead compares its complete semantic object to the exact sanitized public shape and rejects every extra field, including lifecycle scripts.
 
 Verification uses regular-file, `O_NOFOLLOW`, fd size/inode/mtime and SHA checks. Missing, extra, linked, renamed, traversing, oversized or changed payloads fail before a package-backed facade context is created. Every package-entry resolution performs this check even if an extra source-like file appears; such a file is itself an unexpected payload and cannot switch the resolver into developer mode. A nested `node_modules` may be dependency storage only when it is a real directory, never a symlink. Source and ordinary developer-emitted layouts remain readable as legacy layout v1 or repository layout v2 without treating a copied name-only manifest as a package.
+
+## Version preparation
+
+`pnpm release:version --version <major.minor.patch>` is a read-only maintainer plan. It validates the repository package identity and coherent manifest, compiled-verifier and descriptor-schema versions, then reports the three bounded content changes. Stable versions cannot decrease. The CLI has no alternate-root or serialized-plan input.
+
+`--apply` additionally requires a clean Git working tree at the script’s own repository root; inherited Git repository bindings are removed before that check. The private in-process plan binds the original file bytes and modes. Metadata must be regular files reached through real repository directories, and all inputs are rechecked before prepared files are renamed. Replacement is atomic per file, not a cross-file filesystem transaction; an I/O failure after a replacement reports the affected Git paths for review. This command creates no commit or tag and performs no registry operation. Release-only orchestration and publication remain separate W08 gates.
 
 ## Qualification
 

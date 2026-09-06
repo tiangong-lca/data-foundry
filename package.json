@@ -101,6 +101,7 @@
     "package:build": "node scripts/build-foundry-package.ts",
     "package:check": "node scripts/verify-foundry-package.ts",
     "package:pack": "node scripts/pack-foundry-package.ts",
+    "release:version": "node scripts/release-version.ts",
     "skills:list": "pnpm dlx skills@latest list --json",
     "skills:update": "pnpm dlx skills@latest update --project --yes",
     "skills:install:shared": "pnpm dlx skills@latest add ../tiangong-lca-skills --skill external-dataset-curated-import source-evidence-dataset-development dataset-rls-maintenance --agent '*' --yes --full-depth && pnpm dlx skills@latest add https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search document-granular-decompose --agent '*' --yes --full-depth",

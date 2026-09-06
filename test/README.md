@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: bc1198c57c71fccb07395534cfba4ba1a1fafab4
-lastReviewedNote: "Reviewed for Foundry #112: archive naming follows the verified staged descriptor; repository, compiled and schema versions remain bound. The isolated 0.1.1 fixture is not a publication. Package closure, runtime/auth ownership, pinned dependencies and F1 release prerequisites remain unchanged."
+lastReviewedCommit: 152b83e13342187239caed808f8efbf99777b1c1
+lastReviewedNote: "Reviewed for Foundry #112: source-only version preparation plans and explicitly applies three coherent metadata projections with clean-Git, file-boundary and drift guards. It does not commit, tag, publish, load credentials or change public runtime/authorization behavior."
 ---
 
 # Test Layout
@@ -295,6 +295,8 @@ W03 task authorization is covered by `unit/task-authorization.test.mts` (immutab
 W04 authority tests are split by contract. `unit/foundry-runtime-qualification.test.mts` compares the real installed CLI descriptor and an isolated TIDAS process, including drift and diagnostic rejection. `unit/foundry-runtime-command-policy.test.mts` proves every command is classified exactly once and preparation does not inherit restricted permission. `unit/foundry-runtime-authority-schemas.test.mts` compiles the four machine schemas strictly. `scenarios/foundry-execution-admission.test.mts` reconstructs a child context from a deterministic derived artifact and rejects serialized proofs, unrelated or mislabeled CLI commands, wrong actions/QA, capsule relocation and changed final bytes. Private real-case qualification repeats the same boundary with actual published C1/TIDAS artifacts; public CI keeps only synthetic identity and data fixtures.
 
 W05 facade coverage is split similarly. `unit/foundry-operation-result.test.mts` fixes the exact envelope, statuses, permissions and exit table. `unit/foundry-task-start-spec.test.mts` fixes task intent, selected seed and fingerprint rules. `unit/foundry-facade-schemas.test.mts` compiles all four public/request/migration schemas. `scenarios/foundry-facade-request-store.test.mts` covers concurrent idempotence, changed bytes/path revisions, predecessor preservation, deterministic cleanup reuse, fake completion rejection and attempted-state readback-only behavior. `scenarios/foundry-public-facade.test.mts` exercises one-line CLI JSON, option rejection, account-reference readiness, actor/missing-task errors, migration no-write and exit 130. The entry-closure suite runs workspace init through both source and emitted entries.
+
+`unit/foundry-release-version.test.mts` exercises read-only version planning, coherent three-file updates, valid-version monotonicity, source drift and serialized-plan rejection, directory-link boundaries, and the CLI’s own-root/clean-Git checks. It uses disposable metadata repositories and never modifies the executing repository version or publishes a package.
 
 W06 package coverage has two layers. `unit/foundry-package-contract.test.mts` checks coherent repository/compiled/schema versions, valid-version tamper rejection, fixed package identity, exports, allowlist, no-lifecycle metadata and compiler settings; the facade schema suite compiles the package descriptor schema strictly. `scenarios/foundry-package-consumer.test.mts` rebuilds and packs twice byte-identically, installs the same tarball into an online then offline clean consumer, compiles a typed consumer, verifies exact C1, runs all six operations from a Unicode CWD against a read-only package, rejects internal commands and tests missing/changed/extra/linked/lifecycle-bearing/Intel-invalid closures. It uses only public synthetic inputs; the official OAuth installed-package case remains private W14 evidence.
 
