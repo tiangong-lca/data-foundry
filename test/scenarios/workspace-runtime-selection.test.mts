@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import {
@@ -16,12 +17,99 @@ import {
   createFoundryRuntimeContext,
   initializeFoundryWorkspace,
 } from "../../scripts/lib/foundry-runtime-context.ts";
-import { selectFoundryWorkspaceRuntime } from "../../scripts/lib/foundry-runtime-selection.ts";
+import {
+  leaseFoundryRuntime,
+  selectFoundryWorkspaceRuntime,
+} from "../../scripts/lib/foundry-runtime-selection.ts";
 import { createFoundryFacade } from "../../scripts/public-api.ts";
 import { workspaceManifestFixture } from "../helpers/foundry-runtime-manifest.mts";
 
 const moduleUrl = new URL("../../scripts/public-api.ts", import.meta.url).href;
 const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
+
+test("managed cache ownership never admits source or developer-emitted roots or excluded migration roots", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-cache-boundary-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const manifest = workspaceManifestFixture({ write: ["registered-tasks-v2"] });
+  const options = {
+    moduleUrl,
+    workspace: path.join(root, "project"),
+    cacheBase: path.join(root, "work-cache"),
+    workspaceAccess: { manifest, access: "write" as const },
+  };
+  initializeFoundryWorkspace(createFoundryRuntimeContext(options));
+  const source = createFoundryRuntimeContext(options);
+  const boundary = (error: unknown) =>
+    error instanceof Error && "code" in error && error.code === "runtime_cache_boundary";
+  const offline = async () => {
+    throw new Error("Rejected cache must not download components.");
+  };
+  for (const cacheDir of [
+    source.runtimeRoot,
+    path.dirname(source.runtimeRoot),
+    path.join(source.runtimeRoot, "components"),
+  ])
+    await assert.rejects(
+      leaseFoundryRuntime(source, manifest, source.workspaceId!, { cacheDir, fetchImpl: offline }),
+      boundary,
+    );
+
+  const developerCache = path.join(root, "developer-cache");
+  const checkout = path.join(developerCache, "checkout");
+  const entry = path.join(checkout, "dist/scripts/foundry.js");
+  fs.mkdirSync(path.dirname(entry), { recursive: true });
+  fs.writeFileSync(entry, "// Developer-emitted fixture, not an installed package.\n");
+  fs.writeFileSync(
+    path.join(checkout, "package.json"),
+    JSON.stringify({
+      name: "@tiangong-lca/foundry",
+      version: manifest.manifest.product.version,
+      foundryRuntime: {
+        schema: "tiangong-foundry.runtime-layout.v1",
+        asset_root: ".",
+        source_entry: "scripts/foundry.ts",
+        emitted_entry: "dist/scripts/foundry.js",
+      },
+    }),
+  );
+  const emitted = createFoundryRuntimeContext({ ...options, moduleUrl: pathToFileURL(entry).href });
+  assert.equal(emitted.runtime.mode, "emitted");
+  await assert.rejects(
+    leaseFoundryRuntime(emitted, manifest, emitted.workspaceId!, {
+      cacheDir: developerCache,
+      fetchImpl: offline,
+    }),
+    boundary,
+  );
+  const cacheDir = path.join(root, "migration-cache");
+  if (process.platform === "win32") {
+    const absentDrive = [..."ZYXWVUTSRQPONMLKJIHGFE"].find(
+      (drive) => !fs.existsSync(`${drive}:\\`),
+    );
+    if (absentDrive)
+      await assert.rejects(
+        leaseFoundryRuntime(source, manifest, source.workspaceId!, {
+          cacheDir: `${absentDrive}:\\components`,
+          fetchImpl: offline,
+        }),
+        boundary,
+      );
+  }
+  await assert.rejects(
+    leaseFoundryRuntime(source, manifest, source.workspaceId!, { cacheDir, fetchImpl: offline }, [
+      path.join(cacheDir, "source"),
+    ]),
+    boundary,
+  );
+  await assert.rejects(
+    leaseFoundryRuntime(source, manifest, source.workspaceId!, { cacheDir, fetchImpl: offline }, [
+      cacheDir,
+    ]),
+    boundary,
+  );
+  assert.equal(fs.existsSync(cacheDir), false);
+});
+
 async function component(root: string, version: string, writable: boolean) {
   const source = path.join(root, version);
   fs.mkdirSync(source);

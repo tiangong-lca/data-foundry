@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 1f37034f7451e95fc5e3efc4528b15245c77b377
-lastReviewedNote: "Reviewed for Foundry #112: adopt provenance-verified public CLI 0.1.11 and its exact runtime/source pins. Existing profile rules, task authorization, storage ownership and historical case evidence are unchanged; the managed Foundry host and final F1 publication remain pending."
+lastReviewedCommit: 9c3198add30adfbf87f2b5e8f92f55738363a484
+lastReviewedNote: "Reviewed for Foundry #112: a real installed package can retain its independently verified owning component cache using the current host manifest. Rollback targets cannot supply ownership; canonical workspace/source/excluded roots and missing/corrupt/foreign cache rejection remain enforced. Component fixture evidence does not replace managed-host or final F1 release qualification."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -130,5 +130,7 @@ Transfer planning adds `--to <destination> --actor <actor> --request <request>` 
 Explicit `--stage --plan <file>` copies the complete selected v2 source snapshot into an inactive migration area; `--audit --plan <file>` rechecks it. Both repeat independent transfer intent and `--input` selections. Pending markers cannot be initialized or used as active workspaces, and neither a staged receipt nor a historical declaration grants replay permission. `--adoption-dry-run` and `--apply` require independently selected task specifications and a trusted runtime host; successful application publishes only after current-owner preparation and audit.
 
 The migration operation also accepts `--runtime-use --actor <id> --request <id> --access read|write` with an independently trusted host target manifest; file migration flags cannot be mixed with it. The host carries `workspaceAccess`, optional `runtimeManager`, `runtimeTarget`, `accountIntent` and `cacheBase` through the typed boundary. An explicit read selection never returns a preparation command from task status. Workspace pointers are selection intent, not manifest trust anchors.
+
+Runtime selection from a managed installed package revalidates ownership of its current component cache before leasing current and target components. Rollback does not require the target to contain the executing package; its independently trusted current host manifest remains the ownership authority. A damaged, incomplete or unrelated cache fails before replacement beneath the running package, while ordinary workspace and source exclusions remain enforced.
 
 `createFoundryWorkspaceAccess({ manifestBytes, expectedSha256, access })` is the public host bridge when bootstrap and Foundry load separate CLI SDK instances. It verifies the independently selected digest again with Foundry's own CLI instance. The host must obtain that expected digest from its trusted release/skill configuration; it must not derive it from workspace data or the bytes being checked. The bridge is not exposed through ordinary argv or task specifications.

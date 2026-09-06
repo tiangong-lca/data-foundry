@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 1f37034f7451e95fc5e3efc4528b15245c77b377
-lastReviewedNote: "Reviewed for Foundry #112: adopt provenance-verified public CLI 0.1.11 and its exact runtime/source pins. Existing profile rules, task authorization, storage ownership and historical case evidence are unchanged; the managed Foundry host and final F1 publication remain pending."
+lastReviewedCommit: 9c3198add30adfbf87f2b5e8f92f55738363a484
+lastReviewedNote: "Reviewed for Foundry #112: independently verified current component ownership permits installed-package cache leases while workspace, source, migration, task and credential authority boundaries remain intact. The cache proof stays native TypeScript and uses public CLI APIs; managed process entry and final F1 release qualification remain pending."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

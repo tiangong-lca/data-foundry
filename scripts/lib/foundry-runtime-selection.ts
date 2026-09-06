@@ -4,11 +4,13 @@ import { withBatchRunLock } from "@tiangong-lca/cli/batch";
 import {
   assertWorkspaceCompatibility,
   ensureRuntimeComponents,
+  inspectRuntimeComponents,
   type TrustedRuntimeManifest,
   type RuntimeManagerOptions,
 } from "@tiangong-lca/cli/runtime";
 import {
   assertFoundryRuntimeSelector,
+  currentFoundryRuntimeManifest,
   resolveFoundryOutput,
   type FoundryRuntimeContext,
 } from "./foundry-runtime-context.ts";
@@ -25,33 +27,81 @@ import {
   transferWriteOnce,
 } from "./foundry-migration-transfer-io.ts";
 import { sha256Json } from "./identity-preflight-proof.ts";
+import { assertFoundryPackage } from "./foundry-package-contract.ts";
 
 export type FoundryRuntimeManagerOptions = Omit<RuntimeManagerOptions, "lease">;
-function componentCache(
-  context: FoundryRuntimeContext,
-  selected?: string,
-  excludedRoots: readonly string[] = [],
-): string {
-  let current = path.resolve(
-    selected ?? path.join(context.cacheBase, "tiangong-lca/managed-runtimes"),
-  );
+
+function within(root: string, target: string): boolean {
+  const relative = path.relative(root, target);
+  return !path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${path.sep}`);
+}
+
+function canonicalPath(selected: string): string {
+  let current = path.resolve(selected);
   const tail: string[] = [];
   while (!fs.existsSync(current)) {
+    const parent = path.dirname(current);
+    if (parent === current)
+      transferFail(
+        "runtime_cache_boundary",
+        "Managed cache paths require an accessible filesystem root.",
+      );
     tail.unshift(path.basename(current));
-    current = path.dirname(current);
+    current = parent;
   }
-  const cache = path.join(fs.realpathSync(current), ...tail);
-  for (const selectedRoot of [context.workspaceRoot, context.runtimeRoot, ...excludedRoots]) {
-    const root = fs.existsSync(selectedRoot)
-      ? fs.realpathSync(selectedRoot)
-      : path.resolve(selectedRoot);
-    for (const relative of [path.relative(root, cache), path.relative(cache, root)])
-      if (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${path.sep}`))
-        transferFail(
-          "runtime_cache_boundary",
-          "Managed components must stay outside workspace, source and package data.",
-        );
+  return path.join(fs.realpathSync(current), ...tail);
+}
+
+function cacheOwnsRuntime(
+  context: FoundryRuntimeContext,
+  cache: string,
+  manager: FoundryRuntimeManagerOptions,
+): boolean {
+  try {
+    const current = currentFoundryRuntimeManifest(context);
+    if (!current || current.manifest.product.version !== context.runtime.packageVersion)
+      return false;
+    const descriptor = assertFoundryPackage(context.runtimeRoot);
+    if (descriptor.package.version !== context.runtime.packageVersion) return false;
+    const report = inspectRuntimeComponents(current, { cacheDir: cache, host: manager.host });
+    return (
+      report.status === "ready" &&
+      report.components.some(
+        (component) =>
+          component.status === "ready" &&
+          within(fs.realpathSync(component.root), context.runtimeRoot),
+      )
+    );
+  } catch {
+    return false;
   }
+}
+
+function componentCache(
+  context: FoundryRuntimeContext,
+  manager: FoundryRuntimeManagerOptions,
+  excludedRoots: readonly string[] = [],
+): string {
+  const cache = canonicalPath(
+    manager.cacheDir ?? path.join(context.cacheBase, "tiangong-lca/managed-runtimes"),
+  );
+  for (const selectedRoot of [context.workspaceRoot, ...excludedRoots]) {
+    const root = canonicalPath(selectedRoot);
+    if (within(root, cache) || within(cache, root))
+      transferFail(
+        "runtime_cache_boundary",
+        "Managed components must stay outside workspace, source and package data.",
+      );
+  }
+  const runtime = canonicalPath(context.runtimeRoot);
+  if (
+    within(runtime, cache) ||
+    (within(cache, runtime) && !cacheOwnsRuntime(context, cache, manager))
+  )
+    transferFail(
+      "runtime_cache_boundary",
+      "Managed components require a separate cache or the independently verified cache owning this installed package.",
+    );
   return cache;
 }
 export async function leaseFoundryRuntime(
@@ -66,7 +116,7 @@ export async function leaseFoundryRuntime(
   const lease = `foundry:${workspaceId}:${manifest.sha256}`;
   const report = await ensureRuntimeComponents(manifest, {
     ...manager,
-    cacheDir: componentCache(context, manager.cacheDir, excludedRoots),
+    cacheDir: componentCache(context, manager, excludedRoots),
     lease: { id: lease, owner: `foundry-workspace:${context.workspaceRoot}` },
   });
   if (report.status !== "ready")

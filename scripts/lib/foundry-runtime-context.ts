@@ -3,7 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { AsyncLocalStorage } from "node:async_hooks";
-import { assertWorkspaceCompatibility } from "@tiangong-lca/cli/runtime";
+import {
+  assertWorkspaceCompatibility,
+  type TrustedRuntimeManifest,
+} from "@tiangong-lca/cli/runtime";
 import { describeFoundryRuntime } from "./foundry-runtime-paths.ts";
 import { FoundryContextError } from "./foundry-runtime-error.ts";
 export { FoundryContextError } from "./foundry-runtime-error.ts";
@@ -518,6 +521,14 @@ export function assertFoundryRuntimeContext(context: FoundryRuntimeContext): voi
       false,
       context.accountIntent?.sessionReference,
     );
+}
+
+/** Current host authority, never the persisted workspace pointer or a rollback target. */
+export function currentFoundryRuntimeManifest(
+  context: FoundryRuntimeContext,
+): TrustedRuntimeManifest | null {
+  assertFoundryRuntimeContext(context);
+  return workspaceSelections.get(context)?.manifest ?? null;
 }
 
 export function assertFoundryWorkspaceWrite(context: FoundryRuntimeContext): void {

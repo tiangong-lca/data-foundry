@@ -7,6 +7,7 @@ import path from "node:path";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
 import { resolvePackageManagerCommand } from "../../scripts/lib/package-manager-command.ts";
+import { verifyManagedPackageCache } from "../helpers/managed-package-cache.mts";
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 const stageRoot = path.join(repoRoot, "package-stage");
@@ -316,6 +317,7 @@ test("packed Foundry installs twice and runs only the public facade from a read-
   };
   assert.equal(api.assertFoundryPackage(firstPackage).package.name, "@tiangong-lca/foundry");
   assert.equal(api.assertFoundryPackage(secondPackage).package.version, sourcePackageVersion);
+  await verifyManagedPackageCache(firstPackage, root);
   const consumerModule = path.join(firstProject, "consumer.mjs");
   const apiWorkspace = path.join(root, "api workspace");
   fs.writeFileSync(

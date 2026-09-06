@@ -35,9 +35,9 @@ checkPaths:
   - test/scenarios/workspace-migration-planning.test.mts
   - test/unit/foundry-migration-transfer.test.mts
   - test/scenarios/workspace-migration-transfer.test.mts
-lastReviewedAt: 2026-09-06
-lastReviewedCommit: c22bcb2ee562e848e3f36b8d1dc90ab3ccb659ed
-lastReviewedNote: "Reviewed for Foundry #112: release roots bind native physical directory identity across Git/Node path casing; migration/current-runtime fixtures follow the executing package version. Different roots, older writers, untrusted manifests, account and no-replay boundaries remain rejected; the production compatibility guard is unchanged."
+lastReviewedAt: 2026-09-07
+lastReviewedCommit: 9c3198add30adfbf87f2b5e8f92f55738363a484
+lastReviewedNote: "Reviewed for Foundry #112: a real installed package can retain its independently verified owning component cache using the current host manifest. Rollback targets cannot supply ownership; canonical workspace/source/excluded roots and missing/corrupt/foreign cache rejection remain enforced. Component fixture evidence does not replace managed-host or final F1 release qualification."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -113,6 +113,8 @@ Read and write compatibility are separate. V2 requires the `migration-adoption-v
 `workspace migrate --runtime-use --workspace <project> --actor <id> --request <id> --access read|write` selects a target supplied independently through the trusted host. It cannot be combined with file migration modes. `runtimeUse(...)` is the corresponding typed API. The control-plane selector verifies target compatibility and CLI-managed components, pins current and target component sets with persistent workspace/manifest leases, and saves an immutable selection receipt plus an atomic project pointer. Repeating a request rechecks components. A qualified selector can restore a writer while the project's ordinary task operations remain read-only.
 
 The pointer records intent; it is never its own trust anchor. Subsequent launches still need an independently trusted matching manifest. Previous caches and leases remain available and are not automatically released by rollback. When a managed host supplies runtime-manager options during adoption, the active component set is pinned before activation. Plain source/npm consumers retain their existing package-manager ownership; managed component publication and bootstrap integration are qualified in W08/W09.
+
+An executing installed package may lease its verified owning cache. Ownership is checked against the current host manifest and complete component inventory before either current or target leases are acquired, including when the rollback target contains a different component set. Missing, corrupt or foreign current components cannot be repaired implicitly beneath the running package during selection. Workspace, source, package-internal cache and explicit migration-root exclusions still apply after canonical path resolution.
 
 Runtime rollback does not rewrite workspace schemas, remove added fields, reset attempts, undo a business mutation or restore macOS Intel support. An older package that cannot read the required schema/features is rejected. Existing task runtime/profile bindings remain additional requirements for task writes.
 

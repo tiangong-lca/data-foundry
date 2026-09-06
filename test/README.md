@@ -280,11 +280,13 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 1f37034f7451e95fc5e3efc4528b15245c77b377
-lastReviewedNote: "Reviewed for Foundry #112: adopt provenance-verified public CLI 0.1.11 and its exact runtime/source pins. Existing profile rules, task authorization, storage ownership and historical case evidence are unchanged; the managed Foundry host and final F1 publication remain pending."
+lastReviewedCommit: 9c3198add30adfbf87f2b5e8f92f55738363a484
+lastReviewedNote: "Reviewed for Foundry #112: a real installed package can retain its independently verified owning component cache using the current host manifest. Rollback targets cannot supply ownership; canonical workspace/source/excluded roots and missing/corrupt/foreign cache rejection remain enforced. Component fixture evidence does not replace managed-host or final F1 release qualification."
 ---
 
 # Test Layout
+
+The packed consumer scenario imports and runs the actual installed Foundry API from a CLI-verified application component. It checks owning-cache selection, rollback to another component set, restoration, retained leases, canonical aliases, workspace/package exclusions and corrupt/missing/foreign current-cache rejection without network calls during component management. The component metadata and older target are explicit fixtures, not final F1 release evidence. Separate runtime-selection cases keep source/developer-emitted and excluded migration roots outside the managed cache.
 
 The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. W05 covers the hierarchical facade. W06 adds the descriptor-bound source-free candidate and installed-consumer suite; W08 still owns F1 publication/components. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/package-distribution-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 

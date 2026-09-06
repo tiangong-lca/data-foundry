@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 1f37034f7451e95fc5e3efc4528b15245c77b377
-lastReviewedNote: "Reviewed for Foundry #112: adopt provenance-verified public CLI 0.1.11 and its exact runtime/source pins. Existing profile rules, task authorization, storage ownership and historical case evidence are unchanged; the managed Foundry host and final F1 publication remain pending."
+lastReviewedCommit: 9c3198add30adfbf87f2b5e8f92f55738363a484
+lastReviewedNote: "Reviewed for Foundry #112: a real installed package can retain its independently verified owning component cache using the current host manifest. Rollback targets cannot supply ownership; canonical workspace/source/excluded roots and missing/corrupt/foreign cache rejection remain enforced. Component fixture evidence does not replace managed-host or final F1 release qualification."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -55,6 +55,8 @@ The package depends exactly on public `@tiangong-lca/cli@0.1.11`. Ajv remains a 
 `scripts/package-entry.ts` is the only bin source. It calls `runFoundryPublicCommand`, which routes the six operations in `public-runtime-contract.md` and converts every other name into the stable unknown-operation envelope. It never falls back to `scripts/foundry.ts`, the repository doctor, 63-command dispatcher, production case runner or maintenance owners.
 
 `scripts/public-api.ts` binds the facade's module identity internally. A consumer supplies workspace, optional runtime selection/account intent and host controls; it cannot redirect package discovery through its own `moduleUrl`. The root and `./runtime` exports expose only the facade, public command host, result/task/migration protocol types and validators, next-action binding verifier, and package descriptor verifier. Internal command factories, mutation dispatch and raw runtime/task stores are not package exports.
+
+The installed `runtimeUse` facade can retain a CLI-managed cache containing its own package after the package descriptor and independently trusted current component set both verify that ownership. The source-free consumer test exercises that behavior from real installed application bytes, including rollback, restoration, retained leases and rejected cache drift. Its surrounding component metadata is explicitly a fixture; it does not establish F1 provenance, native launch qualification or publication.
 
 ## Build and staging roots
 

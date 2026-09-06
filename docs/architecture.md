@@ -152,8 +152,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 1f37034f7451e95fc5e3efc4528b15245c77b377
-lastReviewedNote: "Reviewed for Foundry #112: adopt provenance-verified public CLI 0.1.11 and its exact runtime/source pins. Existing profile rules, task authorization, storage ownership and historical case evidence are unchanged; the managed Foundry host and final F1 publication remain pending."
+lastReviewedCommit: 9c3198add30adfbf87f2b5e8f92f55738363a484
+lastReviewedNote: "Reviewed for Foundry #112 owning-cache verification: current host manifest, complete public CLI component inspection and installed package identity authorize only the containing component cache. Workspace/source exclusions, credential and task ownership, public command scope and no-replay rules are unchanged."
 ---
 
 # Architecture

@@ -41,8 +41,8 @@ checkPaths:
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 1f37034f7451e95fc5e3efc4528b15245c77b377
-lastReviewedNote: "Reviewed for Foundry #112: adopt provenance-verified public CLI 0.1.11 and its exact runtime/source pins. Existing profile rules, task authorization, storage ownership and historical case evidence are unchanged; the managed Foundry host and final F1 publication remain pending."
+lastReviewedCommit: 9c3198add30adfbf87f2b5e8f92f55738363a484
+lastReviewedNote: "Reviewed for Foundry #112: a real installed package can retain its independently verified owning component cache using the current host manifest. Rollback targets cannot supply ownership; canonical workspace/source/excluded roots and missing/corrupt/foreign cache rejection remain enforced. Component fixture evidence does not replace managed-host or final F1 release qualification."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
@@ -118,3 +118,5 @@ Facade revision lookup validates retained predecessor jobs/publications without 
 Migrated `workspace.v2` state binds an activation receipt, required features and an extension object. Construction validates the anchored migration documents and requires an independently trusted host selection. Write access must qualify the executing Foundry version and every required feature; unknown write features fail closed. The internal pending-adoption scope supplies a future id only during the bounded local callback and cannot survive it or create authorization/execution admission. Read-only task inspection skips write locks and cannot repair missing records. Read-compatible inspection may verify retained older runtime/profile snapshots without treating them as current write rules.
 
 `state/runtime-selection.json` records an explicit component selection and read/write mode. Ordinary writes must match it. The dedicated selector requires an independently qualified current writer, verifies/pins both component versions through the public CLI manager, and records selection history without rewriting the workspace marker or business state. An explicit CLI session reference cannot be read as marker or protected migration metadata.
+
+An installed package may retain the component cache that contains it only when its current host manifest is still independently trusted, the public CLI inspection verifies the complete current component set, and the installed package verifier proves its identity inside one of those components. The context retains that host manifest privately; the persisted selection pointer and rollback target cannot substitute for it. Workspace and excluded migration roots remain disjoint from the cache in both directions, and the cache cannot sit inside the runtime root. Source and developer-emitted roots receive no package exception. Existing parent directories are canonicalized even for missing descendants, so filesystem aliases cannot bypass those boundaries.
