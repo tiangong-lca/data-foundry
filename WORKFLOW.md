@@ -281,8 +281,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: dc5c52ba9cdc1c55695bf7f1d23d44e687972c76
-lastReviewedNote: "Reviewed for Foundry #112: exact release-only Git inspection and cryptographic public npm provenance verification are source-only typed tools. Dev-only Sigstore does not enter the public package; task, runtime, account and mutation ownership remain unchanged. W08 workflow/components/publication are still required."
+lastReviewedCommit: 3a8a0a68b854342ad62a50c14840d445f0753847
+lastReviewedNote: "Reviewed for Foundry #112: source workflow admission binds the exact canonical event, clean main source, version-only diff, recovery tag and merged PR; the existing four-platform quality gate is reusable at that SHA. No tag, registry or component publication stage is enabled yet; runtime/account/ownership contracts remain unchanged."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

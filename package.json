@@ -103,6 +103,7 @@
     "package:pack": "node scripts/pack-foundry-package.ts",
     "release:version": "node scripts/release-version.ts",
     "release:inspect": "node scripts/release-inspect.ts",
+    "release:context": "node scripts/release-workflow-context.ts",
     "release:verify-npm": "node scripts/release-verify-npm.ts",
     "skills:list": "pnpm dlx skills@latest list --json",
     "skills:update": "pnpm dlx skills@latest update --project --yes",

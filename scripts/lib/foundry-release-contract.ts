@@ -121,6 +121,8 @@ function git(root: string, args: readonly string[]): string {
   return text;
 }
 
+export { git as readFoundryReleaseGit };
+
 export function inspectFoundryRelease(
   root: string,
   base: string,

@@ -8,6 +8,7 @@ import {
   applyFoundryReleaseVersion,
   planFoundryReleaseVersion,
 } from "../../scripts/lib/foundry-release-version.ts";
+import { inspectFoundryReleaseWorkflow } from "../../scripts/lib/foundry-release-workflow.ts";
 
 const source = path.resolve(import.meta.dirname, "../..");
 
@@ -48,6 +49,8 @@ function fixture(): {
     "scripts/lib/foundry-release-version.ts",
     "scripts/lib/foundry-release-contract.ts",
     "scripts/release-inspect.ts",
+    "scripts/lib/foundry-release-workflow.ts",
+    "scripts/release-workflow-context.ts",
   ]) {
     fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
     fs.copyFileSync(path.join(source, file), path.join(root, file));
@@ -170,6 +173,100 @@ test("release Git comparison cannot conceal changed non-UTF-8 document bytes", (
     const result = f.inspect(base, f.git("rev-parse", "HEAD"));
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /UTF-8/iu);
+  } finally {
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test("workflow Git inspection binds clean main ancestry and the exact recovery tag", () => {
+  const f = fixture();
+  try {
+    applyFoundryReleaseVersion(planFoundryReleaseVersion(f.root, f.version));
+    f.git("add", ".");
+    f.git("commit", "-m", "Prepare qualified release");
+    const head = f.git("rev-parse", "HEAD"),
+      tag = `foundry-v${f.version}`;
+    f.git("update-ref", "refs/remotes/origin/main", head);
+    f.git("tag", tag, head);
+    const event = { mode: "main-push" as const, ref: "refs/heads/main", base: f.initial, head };
+    assert.equal(inspectFoundryReleaseWorkflow(f.root, event).release, true);
+    const recovery = {
+      ...event,
+      mode: "tag-recovery" as const,
+      ref: `refs/tags/${tag}`,
+      base: null,
+    };
+    assert.equal(inspectFoundryReleaseWorkflow(f.root, recovery).release, true);
+    assert.throws(
+      () => inspectFoundryReleaseWorkflow(f.root, { ...event, head: f.initial }),
+      /checkout/iu,
+    );
+    const dirty = path.join(f.root, "unexpected.txt");
+    fs.writeFileSync(dirty, "Uncommitted source\n");
+    assert.throws(() => inspectFoundryReleaseWorkflow(f.root, event), /clean/iu);
+    fs.rmSync(dirty);
+    f.git("update-ref", "refs/remotes/origin/main", f.initial);
+    assert.throws(() => inspectFoundryReleaseWorkflow(f.root, event), /Git inspection/iu);
+    f.git("update-ref", "refs/remotes/origin/main", head);
+    f.git("tag", "--force", tag, f.initial);
+    assert.throws(() => inspectFoundryReleaseWorkflow(f.root, recovery), /recovery tag/iu);
+  } finally {
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test("workflow command skips an ordinary main commit without a token or PR lookup", () => {
+  const f = fixture();
+  try {
+    fs.writeFileSync(path.join(f.root, "implementation.ts"), "export const fixture = true;\n");
+    f.git("add", ".");
+    f.git("commit", "-m", "Ordinary main update");
+    const head = f.git("rev-parse", "HEAD");
+    f.git("update-ref", "refs/remotes/origin/main", head);
+    const eventPath = path.join(f.root, ".git", "event.json"),
+      output = path.join(f.root, ".git", "action-output");
+    fs.writeFileSync(
+      eventPath,
+      JSON.stringify({
+        repository: { full_name: "tiangong-lca/data-foundry" },
+        before: f.initial,
+        after: head,
+        ref: "refs/heads/main",
+        created: false,
+        deleted: false,
+        forced: false,
+        head_commit: { id: head },
+      }),
+    );
+    const result = spawnSync(
+      process.execPath,
+      [path.join(f.root, "scripts/release-workflow-context.ts"), "--github-output"],
+      {
+        cwd: os.tmpdir(),
+        encoding: "utf8",
+        timeout: 30_000,
+        env: {
+          ...process.env,
+          GITHUB_TOKEN: "",
+          GITHUB_ACTIONS: "true",
+          GITHUB_SHA: head,
+          GITHUB_REPOSITORY: "tiangong-lca/data-foundry",
+          GITHUB_REF: "refs/heads/main",
+          GITHUB_EVENT_NAME: "push",
+          GITHUB_WORKFLOW_REF:
+            "tiangong-lca/data-foundry/.github/workflows/publish-foundry.yml@refs/heads/main",
+          GITHUB_WORKFLOW_SHA: head,
+          GITHUB_EVENT_PATH: eventPath,
+          GITHUB_OUTPUT: output,
+        },
+      },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    const report = JSON.parse(result.stdout) as Record<string, unknown>;
+    assert.equal(report.release, false);
+    assert.equal(report.pr, null);
+    assert.equal(report.head, head);
+    assert.match(fs.readFileSync(output, "utf8"), /^should_release=false\n/u);
   } finally {
     fs.rmSync(f.root, { recursive: true, force: true });
   }

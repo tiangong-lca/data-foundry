@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: dc5c52ba9cdc1c55695bf7f1d23d44e687972c76
-lastReviewedNote: "Reviewed for Foundry #112: exact release-only Git inspection and cryptographic public npm provenance verification are source-only typed tools. Dev-only Sigstore does not enter the public package; task, runtime, account and mutation ownership remain unchanged. W08 workflow/components/publication are still required."
+lastReviewedCommit: 3a8a0a68b854342ad62a50c14840d445f0753847
+lastReviewedNote: "Reviewed for Foundry #112: source workflow admission binds the exact canonical event, clean main source, version-only diff, recovery tag and merged PR; the existing four-platform quality gate is reusable at that SHA. No tag, registry or component publication stage is enabled yet; runtime/account/ownership contracts remain unchanged."
 ---
 
 # Test Layout
@@ -299,6 +299,8 @@ W05 facade coverage is split similarly. `unit/foundry-operation-result.test.mts`
 `unit/foundry-release-version.test.mts` exercises read-only version planning, coherent three-file updates, valid-version monotonicity, source drift and serialized-plan rejection, directory-link boundaries, and the CLI’s own-root/clean-Git checks. It uses disposable metadata repositories and never modifies the executing repository version or publishes a package.
 
 `unit/foundry-release-contract.test.mts` rejects mixed version/source changes, partial projections, non-review document edits and file-mode drift. `commands/foundry-release-inspect.test.mts` exercises the actual command against disposable Git commits, including exact tree binding, inherited Git redirection, unchanged-version large-blob skipping and invalid UTF-8 byte comparisons. `unit/foundry-release-provenance.test.mts` checks fixed npm identities/URLs, canonical integrity and signed-statement policy, including source, workflow/ref, signer, event, hosted builder and run binding. These deterministic tests do not mock cryptographic success or contact the registry; release qualification separately runs `release:verify-npm` against actual public artifacts and rejects tampering of the real signed bundle.
+
+`unit/foundry-release-workflow.test.mts` checks canonical event/workflow/source identity, exact-tag recovery and unique merged-main-PR evidence. The release inspection command suite also exercises real clean/dirty Git checkouts, main ancestry, changed tag targets and the actual unchanged-version workflow command without a token or network lookup. Static validation of the owning and reusable workflow checks their YAML, contexts and call inputs; four native hosts still run the canonical gate in CI.
 
 W06 package coverage has two layers. `unit/foundry-package-contract.test.mts` checks coherent repository/compiled/schema versions, valid-version tamper rejection, fixed package identity, exports, allowlist, no-lifecycle metadata and compiler settings; the facade schema suite compiles the package descriptor schema strictly. `scenarios/foundry-package-consumer.test.mts` rebuilds and packs twice byte-identically, installs the same tarball into an online then offline clean consumer, compiles a typed consumer, verifies exact C1, runs all six operations from a Unicode CWD against a read-only package, rejects internal commands and tests missing/changed/extra/linked/lifecycle-bearing/Intel-invalid closures. It uses only public synthetic inputs; the official OAuth installed-package case remains private W14 evidence.
 

@@ -3,6 +3,12 @@ name: quality-gate
 on:
   pull_request:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      source_sha:
+        description: Exact commit already admitted by the owning release workflow.
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -28,6 +34,8 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ inputs.source_sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up pnpm and Node.js
         uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2

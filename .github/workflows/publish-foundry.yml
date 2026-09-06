@@ -1,0 +1,61 @@
+name: Foundry Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundry-release
+  cancel-in-progress: false
+
+jobs:
+  release-context:
+    name: Exact release context
+    if: github.repository == 'tiangong-lca/data-foundry'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      should_release: ${{ steps.context.outputs.should_release }}
+      release_head: ${{ steps.context.outputs.release_head }}
+      release_base: ${{ steps.context.outputs.release_base }}
+      version: ${{ steps.context.outputs.version }}
+      tag: ${{ steps.context.outputs.tag }}
+      release_pr: ${{ steps.context.outputs.release_pr }}
+    steps:
+      - name: Check out the event commit
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Refresh main ancestry
+        run: git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
+
+      - name: Set up pnpm and Node.js
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        with:
+          runtime: node@24.19.0
+          install: false
+          cache: false
+
+      - name: Verify event, release diff and merged PR
+        id: context
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pnpm release:context --github-output
+
+  release-qualification:
+    name: Qualify the exact source on all supported hosts
+    needs: release-context
+    if: needs.release-context.outputs.should_release == 'true'
+    uses: ./.github/workflows/quality-gate.yml
+    with:
+      source_sha: ${{ needs.release-context.outputs.release_head }}

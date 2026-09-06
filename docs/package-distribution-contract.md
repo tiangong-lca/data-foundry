@@ -23,6 +23,8 @@ checkPaths:
   - scripts/verify-foundry-package.ts
   - scripts/release-*.ts
   - scripts/lib/foundry-release-*.ts
+  - .github/workflows/publish-foundry.yml
+  - .github/workflows/quality-gate.yml
   - scripts/lib/foundry-package-contract.ts
   - scripts/lib/foundry-runtime-paths.ts
   - specs/schemas/foundry-package-descriptor.schema.json
@@ -32,8 +34,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: dc5c52ba9cdc1c55695bf7f1d23d44e687972c76
-lastReviewedNote: "Reviewed for Foundry #112: exact release-only Git inspection and cryptographic public npm provenance verification are source-only typed tools. Dev-only Sigstore does not enter the public package; task, runtime, account and mutation ownership remain unchanged. W08 workflow/components/publication are still required."
+lastReviewedCommit: 3a8a0a68b854342ad62a50c14840d445f0753847
+lastReviewedNote: "Reviewed for Foundry #112: source workflow admission binds the exact canonical event, clean main source, version-only diff, recovery tag and merged PR; the existing four-platform quality gate is reusable at that SHA. No tag, registry or component publication stage is enabled yet; runtime/account/ownership contracts remain unchanged."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -87,9 +89,17 @@ Verification uses regular-file, `O_NOFOLLOW`, fd size/inode/mtime and SHA checks
 
 `pnpm release:verify-npm --package <cli|foundry> --version <x.y.z> --expected-git-head <40-hex-sha>` independently downloads the exact public npm metadata, tarball and attestation. Downloads reject redirects, credentials, alternate registry origins/paths and unbounded responses. Verification binds canonical SHA-512 to the downloaded tarball, then verifies the Sigstore certificate, issuer and transparency logs before interpreting the signed in-toto/SLSA payload. The verified certificate identity must match the signed workflow/ref, package subject, source commit and exact GitHub-hosted run attempt. Optional registry `gitHead` must match when present; its absence never substitutes for signed provenance.
 
-CLI provenance is restricted to `tiangong-lca/tiangong-cli` and `.github/workflows/publish.yml` at the exact `cli-v<version>` tag. The Foundry policy binds `tiangong-lca/data-foundry` and `.github/workflows/publish-foundry.yml`; a normal publication must originate from a main push, and recovery must originate from `workflow_dispatch` on the exact `foundry-v<version>` tag. Both paths require the expected source digest. This verification policy defines the intended publishing identity; implementation of the owning publishing workflow, its gates and actual publication remains separately required by W08.
+CLI provenance is restricted to `tiangong-lca/tiangong-cli` and `.github/workflows/publish.yml` at the exact `cli-v<version>` tag. The Foundry policy binds `tiangong-lca/data-foundry` and `.github/workflows/publish-foundry.yml`; a normal publication must originate from a main push, and recovery must originate from `workflow_dispatch` on the exact `foundry-v<version>` tag. Both paths require the expected source digest.
 
 `--output <new-absolute-directory>` preserves the verified tarball, raw registry metadata/attestations and the digest-bound verification report only after verification succeeds. It never replaces an existing directory. Reports are verification evidence, not independent trust anchors: component consumers still require the separately trusted product manifest/Skills lock. The tool cannot publish, tag, configure a publisher, read `.env` or supply a registry token. Sigstore uses an owned temporary trust cache that is removed after verification.
+
+## Workflow source qualification
+
+`pnpm release:context [--github-output]` admits only the canonical GitHub Actions event and workflow definition at the event's exact commit. A normal push must update main without creating, deleting or force-updating it. Manual recovery has no alternate-source inputs: it must dispatch the existing stable `foundry-v<version>` tag, with matching event/ref/workflow/source identity. The checked-out source must be clean, match the event commit and remain an ancestor of fetched `origin/main`; recovery additionally proves the exact local tag and its release-only first-parent diff.
+
+An ordinary unchanged-version main push exits without a GitHub PR lookup. A release requires one canonical, merged main PR whose merge commit exactly matches the source; foreign, open, unmerged, ambiguous, incomplete or mismatched evidence fails. The bounded read-only GitHub API lookup uses only the workflow-provided token and emits the PR identity, never credentials. This proves the source relationship; it does not replace required review or platform qualification.
+
+`.github/workflows/publish-foundry.yml` currently connects that context gate to the existing four-native-host canonical gate through `workflow_call`. The reusable quality workflow checks out the admitted SHA, retains its ordinary PR/manual triggers, and does not persist checkout credentials. These source qualification jobs have read-only permissions. Immutable tag creation, npm publication, component production and final manifest publication remain further W08 stages; a successful source qualification run alone is not F1 publication.
 
 ## Qualification
 
