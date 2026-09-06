@@ -136,16 +136,14 @@ export function validateMergedFoundryReleasePr(pulls: unknown, head: string): Fo
   const matches = pulls
     .map((value: unknown) => record(value, "PR evidence"))
     .filter((pull) => {
-      const base = record(pull.base, "PR base"),
-        source = record(pull.head, "PR head");
+      const base = record(pull.base, "PR base");
       return (
         pull.state === "closed" &&
         typeof pull.merged_at === "string" &&
         Number.isFinite(Date.parse(pull.merged_at)) &&
         pull.merge_commit_sha === head &&
         base.ref === "main" &&
-        record(base.repo, "PR base repository").full_name === FOUNDRY_RELEASE_REPOSITORY &&
-        record(source.repo, "PR head repository").full_name === FOUNDRY_RELEASE_REPOSITORY
+        record(base.repo, "PR base repository").full_name === FOUNDRY_RELEASE_REPOSITORY
       );
     });
   if (matches.length !== 1)

@@ -126,7 +126,6 @@ test("release source requires one merged canonical main PR with the exact merge 
     { state: "open" },
     { merged_at: null },
     { merge_commit_sha: base },
-    { head: { sha: "c".repeat(40), repo: { full_name: "other/data-foundry" } } },
     { base: { ref: "dev", repo: { full_name: repository } } },
     { base: { ref: "main", repo: { full_name: "other/data-foundry" } } },
   ])
@@ -142,4 +141,19 @@ test("release source requires one merged canonical main PR with the exact merge 
       ),
     /PR/iu,
   );
+});
+
+test("a merged fork PR remains valid evidence after its source repository is deleted", () => {
+  for (const repo of [{ full_name: "contributor/data-foundry" }, null]) {
+    const source = { ...pull(), head: { ...pull().head, repo } };
+    assert.equal(validateMergedFoundryReleasePr([source], head).number, 123);
+    assert.throws(
+      () => validateMergedFoundryReleasePr([{ ...source, merged_at: null }], head),
+      /merged.*PR/iu,
+    );
+    assert.throws(
+      () => validateMergedFoundryReleasePr([{ ...source, merge_commit_sha: base }], head),
+      /merged.*PR/iu,
+    );
+  }
 });

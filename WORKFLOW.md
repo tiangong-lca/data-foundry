@@ -281,8 +281,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 9d77eacbf81226c4049301d353745a630bbc4638
-lastReviewedNote: "Reviewed for Foundry #112: the create-only tag stage follows all four native source gates, revalidates the exact release/main/PR context and preserves an immutable same-commit ref. Lost responses use bounded readback without mutation replay. Only the tag job gains contents-write; registry/components and business runtime authority remain separate."
+lastReviewedCommit: 7ff15a24930492475985c8592e5d38e55b2ca096
+lastReviewedNote: "Reviewed for Foundry #112: release proof follows the exact commit merged into canonical main and remains valid for a merged fork PR after its source fork is deleted. Unmerged, wrong-target and mismatched commits remain blocked; immutable tags, qualification and runtime permissions are unchanged."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

@@ -34,8 +34,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 9d77eacbf81226c4049301d353745a630bbc4638
-lastReviewedNote: "Reviewed for Foundry #112: the create-only tag stage follows all four native source gates, revalidates the exact release/main/PR context and preserves an immutable same-commit ref. Lost responses use bounded readback without mutation replay. Only the tag job gains contents-write; registry/components and business runtime authority remain separate."
+lastReviewedCommit: 7ff15a24930492475985c8592e5d38e55b2ca096
+lastReviewedNote: "Reviewed for Foundry #112: release proof follows the exact commit merged into canonical main and remains valid for a merged fork PR after its source fork is deleted. Unmerged, wrong-target and mismatched commits remain blocked; immutable tags, qualification and runtime permissions are unchanged."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -99,7 +99,7 @@ CLI provenance is restricted to `tiangong-lca/tiangong-cli` and `.github/workflo
 
 `pnpm release:context [--github-output]` admits only the canonical GitHub Actions event and workflow definition at the event's exact commit. A normal push must update main without creating, deleting or force-updating it. Manual recovery has no alternate-source inputs: it must dispatch the existing stable `foundry-v<version>` tag, with matching event/ref/workflow/source identity. The checked-out source must be clean, match the event commit and remain an ancestor of fetched `origin/main`; recovery additionally proves the exact local tag and its release-only first-parent diff.
 
-An ordinary unchanged-version main push exits without a GitHub PR lookup. A release requires one canonical, merged main PR whose merge commit exactly matches the source; foreign, open, unmerged, ambiguous, incomplete or mismatched evidence fails. The bounded read-only GitHub API lookup uses only the workflow-provided token and emits the PR identity, never credentials. This proves the source relationship; it does not replace required review or platform qualification.
+An ordinary unchanged-version main push exits without a GitHub PR lookup. A release requires one PR merged into the canonical repository's main branch whose merge commit exactly matches the source; wrong-target, open, unmerged, ambiguous, incomplete or mismatched evidence fails. A merged fork PR remains valid even after its source fork is deleted: the canonical main commit and merged PR record own the source proof. The bounded read-only GitHub API lookup uses only the workflow-provided token and emits the PR identity, never credentials. This proves the source relationship; it does not replace required review or platform qualification.
 
 `.github/workflows/publish-foundry.yml` connects that context gate to the existing four-native-host canonical gate through `workflow_call`. The reusable quality workflow checks out the admitted SHA, retains its ordinary PR/manual triggers, and does not persist checkout credentials. These source qualification jobs have read-only permissions.
 
