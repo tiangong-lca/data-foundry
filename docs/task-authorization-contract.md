@@ -30,8 +30,8 @@ checkPaths:
   - test/unit/task-profile-authority.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 1f37034f7451e95fc5e3efc4528b15245c77b377
-lastReviewedNote: "Reviewed for Foundry #112: adopt provenance-verified public CLI 0.1.11 and its exact runtime/source pins. Existing profile rules, task authorization, storage ownership and historical case evidence are unchanged; the managed Foundry host and final F1 publication remain pending."
+lastReviewedCommit: 846cc25ada0f6bea300e37397a7e6e18e0629ec3
+lastReviewedNote: "Reviewed for Foundry #112 managed host admission: public CLI IPC and inventory-bound runtime metadata supply package/CLI/TIDAS identity, workspace read/write mode and target selection before operations. Workspace/task/actor/account, permissions, no-replay and source-only maintenance boundaries remain separate. Production F1 assembly, publication and final acceptance remain pending."
 related:
   - docs/architecture.md
   - docs/safety-policy.md

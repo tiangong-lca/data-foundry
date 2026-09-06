@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 9c3198add30adfbf87f2b5e8f92f55738363a484
-lastReviewedNote: "Reviewed for Foundry #112 owning-cache verification: current host manifest, complete public CLI component inspection and installed package identity authorize only the containing component cache. Workspace/source exclusions, credential and task ownership, public command scope and no-replay rules are unchanged."
+lastReviewedCommit: 846cc25ada0f6bea300e37397a7e6e18e0629ec3
+lastReviewedNote: "Reviewed for Foundry #112 managed process admission: inherited public CLI IPC and inventory-bound package/CLI/TIDAS/launch/target metadata now precede workspace operations. Read/write, cancellation, cache/migration and no-replay boundaries remain enforced. Real installed-process regressions use explicit native/release fixtures; complete production F1 assembly and publication remain pending."
 ---
 
 # Environment Surface Policy
@@ -44,6 +44,8 @@ lastReviewedNote: "Reviewed for Foundry #112 owning-cache verification: current 
 Foundry `.env.example` is a public runtime contract, not a mirror of every adjacent repository environment variable.
 
 Package build, descriptor verification and packing do not load `.env`. The public staging manifest has no lifecycle scripts. Clean-consumer tests pass only platform process variables, isolated HOME/package-cache paths and optional network proxy/CA settings to package tools; credential-shaped variables are rejected from that projection. Installed workspace/task operations retain the facade's explicit account-intent/session-reference contract and never search the package directory for credentials.
+
+The managed package bin consumes only the inherited CLI IPC context for runtime authority. `metadata/foundry-runtime.json` and any selected target manifest are read through independently verified component inventory facts; no environment variable or ordinary argument can replace them. The host adds no credential storage or login step. Its mutable per-workspace cache namespace sits outside component roots within the manager-owned cache, while the whole manager cache remains excluded from workspace roots. Failed or interrupted admission returns through the existing public result/signal adapter before workspace operations.
 
 The source-only release-version preparer reads no `.env` and has no runtime or registry authority. Its CLI binds the executing repository root by native filesystem directory identity, clears inherited Git repository variables before clean-worktree checks, and writes only the three validated version projections after explicit `--apply`. Equivalent directory casing cannot redirect it to another physical repository.
 

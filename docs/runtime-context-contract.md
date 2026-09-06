@@ -41,8 +41,8 @@ checkPaths:
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 9c3198add30adfbf87f2b5e8f92f55738363a484
-lastReviewedNote: "Reviewed for Foundry #112: a real installed package can retain its independently verified owning component cache using the current host manifest. Rollback targets cannot supply ownership; canonical workspace/source/excluded roots and missing/corrupt/foreign cache rejection remain enforced. Component fixture evidence does not replace managed-host or final F1 release qualification."
+lastReviewedCommit: 846cc25ada0f6bea300e37397a7e6e18e0629ec3
+lastReviewedNote: "Reviewed for Foundry #112 managed process admission: inherited public CLI IPC and inventory-bound package/CLI/TIDAS/launch/target metadata now precede workspace operations. Read/write, cancellation, cache/migration and no-replay boundaries remain enforced. Real installed-process regressions use explicit native/release fixtures; complete production F1 assembly and publication remain pending."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
@@ -120,3 +120,7 @@ Migrated `workspace.v2` state binds an activation receipt, required features and
 `state/runtime-selection.json` records an explicit component selection and read/write mode. Ordinary writes must match it. The dedicated selector requires an independently qualified current writer, verifies/pins both component versions through the public CLI manager, and records selection history without rewriting the workspace marker or business state. An explicit CLI session reference cannot be read as marker or protected migration metadata.
 
 An installed package may retain the component cache that contains it only when its current host manifest is still independently trusted, the public CLI inspection verifies the complete current component set, and the installed package verifier proves its identity inside one of those components. The context retains that host manifest privately; the persisted selection pointer and rollback target cannot substitute for it. Workspace and excluded migration roots remain disjoint from the cache in both directions, and the cache cannot sit inside the runtime root. Source and developer-emitted roots receive no package exception. Existing parent directories are canonicalized even for missing descendants, so filesystem aliases cannot bypass those boundaries.
+
+Managed facade construction passes the independently selected component-cache root through the internal context options. The context rejects workspace overlap before reading its marker and privately retains that root for subsequent assertions. Overridden migration destinations inherit the same exclusion. `foundry-runtime-cache.ts` owns this shared canonical-path boundary; it does not create a cache or grant installed-package ownership.
+
+The package-owned managed initializer receives the public CLI IPC context before public operations, verifies the installed entry and component metadata, and supplies the existing CLI/TIDAS qualification, workspace-access and runtime-target interfaces. It reads no `.env` or task-selected trust anchor. The metadata schema and exact admission sequence are defined by `package-distribution-contract.md`; native qualification and task/identity authorization retain their existing owners.

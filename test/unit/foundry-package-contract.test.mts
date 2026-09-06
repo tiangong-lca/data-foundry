@@ -28,6 +28,7 @@ const packageFiles = [
   "specs/schemas/foundry-migration-activation.schema.json",
   "specs/schemas/foundry-workspace-v2.schema.json",
   "specs/schemas/foundry-runtime-selection.schema.json",
+  "specs/schemas/foundry-managed-runtime.schema.json",
   "specs/schemas/runtime-qualification.schema.json",
   "specs/schemas/task-authorization.schema.json",
   "specs/schemas/tidas-runtime-expectation.schema.json",

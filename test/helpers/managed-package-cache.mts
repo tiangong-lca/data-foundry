@@ -12,6 +12,7 @@ import {
   writeRuntimeComponentArchive,
   type ComponentFile,
   type RuntimeManifest,
+  type RuntimeLaunch,
   type TrustedRuntimeManifest,
 } from "@tiangong-lca/cli/runtime";
 import { workspaceManifestFixture } from "./foundry-runtime-manifest.mts";
@@ -55,14 +56,21 @@ async function component(
   source: string,
   template: TrustedRuntimeManifest,
   executable: string,
+  options: {
+    argv?: RuntimeLaunch["argv"];
+    contextProtocol?: RuntimeLaunch["context_protocol"];
+    executables?: readonly string[];
+    protocols?: readonly string[];
+  } = {},
 ) {
   for (const name of ["fixture-lock.json", "fixture-sbom.json", "fixture-provenance.json"])
     fs.writeFileSync(path.join(source, name), "{}\n");
   fs.writeFileSync(path.join(source, "fixture-license.txt"), "Component metadata fixture only.\n");
-  fs.chmodSync(path.join(source, executable), 0o755);
+  const executables = new Set([executable, ...(options.executables ?? [])]);
+  for (const selected of executables) fs.chmodSync(path.join(source, selected), 0o755);
   // Windows stat/chmod cannot supply the portable archive's executable bit.
   const inventory = files(source)
-    .map((file) => (file.path === executable ? { ...file, mode: 493 as const } : file))
+    .map((file) => (executables.has(file.path) ? { ...file, mode: 493 as const } : file))
     .sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
   const archive = path.join(root, `${id}.tar.gz`);
   const archiveFact = await writeRuntimeComponentArchive(source, inventory, archive);
@@ -85,7 +93,7 @@ async function component(
         sbom: "fixture-sbom.json",
         licenses: ["fixture-license.txt"],
         provenance: ["fixture-provenance.json"],
-        protocols: ["fixture.v1"],
+        protocols: options.protocols ?? ["fixture.v1"],
         asset_fingerprints: {},
       },
     ],
@@ -95,12 +103,15 @@ async function component(
         platform,
         executable: { component: id, path: executable },
         environment: "isolated",
-        argv: [],
+        argv: options.argv ?? [],
+        ...(options.contextProtocol ? { context_protocol: options.contextProtocol } : {}),
       },
     ],
   });
   return { manifest, archive };
 }
+
+export { component as createManagedComponentFixture };
 
 export async function verifyManagedPackageCache(installedPackage: string, root: string) {
   const input = path.join(root, "managed-package-input");

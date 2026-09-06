@@ -158,11 +158,13 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 9c3198add30adfbf87f2b5e8f92f55738363a484
-lastReviewedNote: "Reviewed for Foundry #112 owning-cache verification: current host manifest, complete public CLI component inspection and installed package identity authorize only the containing component cache. Workspace/source exclusions, credential and task ownership, public command scope and no-replay rules are unchanged."
+lastReviewedCommit: 846cc25ada0f6bea300e37397a7e6e18e0629ec3
+lastReviewedNote: "Reviewed for Foundry #112 managed host admission: public CLI IPC and inventory-bound runtime metadata supply package/CLI/TIDAS identity, workspace read/write mode and target selection before operations. Workspace/task/actor/account, permissions, no-replay and source-only maintenance boundaries remain separate. Production F1 assembly, publication and final acceptance remain pending."
 ---
 
 # TianGong LCA Data Foundry
+
+The package candidate now supports CLI-managed execution with verified runtime components and separate read/write workspace access. F1 publication and complete production qualification remain in progress; see `docs/package-distribution-contract.md` for the current release boundary.
 
 Migration transfer planning is governed by [the workspace migration contract](docs/workspace-migration-contract.md). W10 provides explicit source/queue/input staging, current-owner task adoption, audited v2 activation and separate runtime read/write selection. Preserved history blocks replay across requests and migrations; none of these records grants business permission. Operational qualification and release integration remain tracked in #108/#980.
 

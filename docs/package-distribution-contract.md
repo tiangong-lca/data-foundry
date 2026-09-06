@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 9c3198add30adfbf87f2b5e8f92f55738363a484
-lastReviewedNote: "Reviewed for Foundry #112: a real installed package can retain its independently verified owning component cache using the current host manifest. Rollback targets cannot supply ownership; canonical workspace/source/excluded roots and missing/corrupt/foreign cache rejection remain enforced. Component fixture evidence does not replace managed-host or final F1 release qualification."
+lastReviewedCommit: 846cc25ada0f6bea300e37397a7e6e18e0629ec3
+lastReviewedNote: "Reviewed for Foundry #112 managed process admission: inherited public CLI IPC and inventory-bound package/CLI/TIDAS/launch/target metadata now precede workspace operations. Read/write, cancellation, cache/migration and no-replay boundaries remain enforced. Real installed-process regressions use explicit native/release fixtures; complete production F1 assembly and publication remain pending."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -57,6 +57,20 @@ The package depends exactly on public `@tiangong-lca/cli@0.1.11`. Ajv remains a 
 `scripts/public-api.ts` binds the facade's module identity internally. A consumer supplies workspace, optional runtime selection/account intent and host controls; it cannot redirect package discovery through its own `moduleUrl`. The root and `./runtime` exports expose only the facade, public command host, result/task/migration protocol types and validators, next-action binding verifier, and package descriptor verifier. Internal command factories, mutation dispatch and raw runtime/task stores are not package exports.
 
 The installed `runtimeUse` facade can retain a CLI-managed cache containing its own package after the package descriptor and independently trusted current component set both verify that ownership. The source-free consumer test exercises that behavior from real installed application bytes, including rollback, restoration, retained leases and rejected cache drift. Its surrounding component metadata is explicitly a fixture; it does not establish F1 provenance, native launch qualification or publication.
+
+## Managed process admission
+
+The package bin initializes its host before running any public operation. An inherited IPC channel is consumed through the public CLI `receiveRuntimeHostContext` API. The receiver supplies the independently trusted full manifest, canonical cache/CWD, launch id and actual host after its handshake. Without IPC, the ordinary installed bin retains the unqualified local facade. A failed IPC handshake never falls back to that unmanaged path.
+
+The selected launch must use the current managed Node and exactly one declared application argument: the verified installed Foundry bin. The executing package version must equal the product version, and its component must declare `tiangong-foundry.managed-runtime.v1`. The host reads `metadata/foundry-runtime.json` only from that application component and rechecks its inventory-bound bytes. A familiar filename or self-computed digest alone is not authority.
+
+`specs/schemas/foundry-managed-runtime.schema.json` describes the strict structural shape: schema and platform, the exact CLI expectation, a TIDAS component/file reference plus expectation, and at most sixteen unique launch-id policies. Each policy chooses `read` or `write` workspace access and a target of either `null` (the current manifest) or a declared component file containing another runtime manifest. The selected target's original bytes are verified against the digest already bound by the current trusted manifest. Ordinary argv, task files and environment variables cannot select alternate metadata or target trust anchors.
+
+The host additionally validates relationships that the structural schema cannot prove: every policy uses the declared Node and installed package entry, the installed CLI/Node match their independent expectation, and the selected TIDAS file matches its declared size/hash/executable mode. Existing runtime qualification owns the TIDAS version/protocol/assets handshake when an operation requests qualification. A read policy never grants writes; explicit runtime selection still requires a qualified current writer and actor/request intent. The CLI-owned component cache and its descendants/ancestors cannot become a workspace, including migration destinations.
+
+The public command adapter accepts an optional trusted asynchronous host initializer so signal handling and the single-result envelope cover admission as well as the operation. Pre-observed cancellation skips initialization. Cancellation while waiting for IPC closes that channel and preserves the interrupted result. Unsupported managed metadata versions return `blocked`; invalid bindings return `failed` before workspace effects. The initializer cannot replace the adapter's output handlers or cancellation signal.
+
+Installed-process tests use real Node, the packed Foundry candidate, public CLI APIs and genuine IPC, with separate application/native fixture components. TIDAS and predecessor-release metadata remain explicit fixtures. These tests qualify the admission mechanism; final production component assembly, real native inputs, immutable publication and complete F1 startup qualification remain separate W08 work.
 
 ## Build and staging roots
 

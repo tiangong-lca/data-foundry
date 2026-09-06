@@ -28,29 +28,13 @@ import {
 } from "./foundry-migration-transfer-io.ts";
 import { sha256Json } from "./identity-preflight-proof.ts";
 import { assertFoundryPackage } from "./foundry-package-contract.ts";
+import {
+  canonicalFoundryCachePath as canonicalPath,
+  foundryPathContains as within,
+  assertFoundryCacheRootSeparated,
+} from "./foundry-runtime-cache.ts";
 
 export type FoundryRuntimeManagerOptions = Omit<RuntimeManagerOptions, "lease">;
-
-function within(root: string, target: string): boolean {
-  const relative = path.relative(root, target);
-  return !path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${path.sep}`);
-}
-
-function canonicalPath(selected: string): string {
-  let current = path.resolve(selected);
-  const tail: string[] = [];
-  while (!fs.existsSync(current)) {
-    const parent = path.dirname(current);
-    if (parent === current)
-      transferFail(
-        "runtime_cache_boundary",
-        "Managed cache paths require an accessible filesystem root.",
-      );
-    tail.unshift(path.basename(current));
-    current = parent;
-  }
-  return path.join(fs.realpathSync(current), ...tail);
-}
 
 function cacheOwnsRuntime(
   context: FoundryRuntimeContext,
@@ -85,14 +69,8 @@ function componentCache(
   const cache = canonicalPath(
     manager.cacheDir ?? path.join(context.cacheBase, "tiangong-lca/managed-runtimes"),
   );
-  for (const selectedRoot of [context.workspaceRoot, ...excludedRoots]) {
-    const root = canonicalPath(selectedRoot);
-    if (within(root, cache) || within(cache, root))
-      transferFail(
-        "runtime_cache_boundary",
-        "Managed components must stay outside workspace, source and package data.",
-      );
-  }
+  for (const selectedRoot of [context.workspaceRoot, ...excludedRoots])
+    assertFoundryCacheRootSeparated(cache, selectedRoot);
   const runtime = canonicalPath(context.runtimeRoot);
   if (
     within(runtime, cache) ||

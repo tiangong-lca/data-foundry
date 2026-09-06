@@ -81,6 +81,7 @@
             "tiangong-foundry.migration-activation.v1",
             "tiangong-foundry.workspace.v2",
             "tiangong-foundry.workspace-runtime-selection.v1",
+            "tiangong-foundry.managed-runtime.v1",
             "tiangong-foundry.runtime-qualification.v1",
             "tiangong-foundry.tidas-runtime-expectation.v1",
             "tiangong-foundry.execution-context.v1",

@@ -162,6 +162,8 @@ function parseTidasExpectation(value: unknown, platform: string): FoundryTidasRu
   });
 }
 
+export { parseTidasExpectation as parseFoundryTidasRuntimeExpectation };
+
 function hash(value: unknown): string {
   return sha256Json(value);
 }

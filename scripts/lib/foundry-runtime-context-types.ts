@@ -50,6 +50,7 @@ export interface FoundryRuntimeContextOptions {
   taskId?: string;
   actorId?: string;
   cacheBase?: string;
+  managedCacheRoot?: string;
   environment?: NodeJS.ProcessEnv;
   platform?: NodeJS.Platform;
   arch?: string;

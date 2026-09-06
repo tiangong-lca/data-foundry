@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 9c3198add30adfbf87f2b5e8f92f55738363a484
-lastReviewedNote: "Reviewed for Foundry #112: independently verified current component ownership permits installed-package cache leases while workspace, source, migration, task and credential authority boundaries remain intact. The cache proof stays native TypeScript and uses public CLI APIs; managed process entry and final F1 release qualification remain pending."
+lastReviewedCommit: 846cc25ada0f6bea300e37397a7e6e18e0629ec3
+lastReviewedNote: "Reviewed for Foundry #112 managed host admission: public CLI IPC and inventory-bound runtime metadata supply package/CLI/TIDAS identity, workspace read/write mode and target selection before operations. Workspace/task/actor/account, permissions, no-replay and source-only maintenance boundaries remain separate. Production F1 assembly, publication and final acceptance remain pending."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -273,7 +273,7 @@ Explicit migration transfer planning follows `docs/workspace-migration-contract.
 
 The explicit workspace runtime is defined by `docs/runtime-context-contract.md`: package layout comes from `package.json.foundryRuntime`, emitted execution needs no source TypeScript or Git, and selected inputs/task outputs are bound to an immutable runtime context. `scripts/runtime-entry.ts` now implements workspace init/migration, consumer doctor and task start/status/resume as the separate hierarchical facade. All 63 flat owner commands retain explicit public/internal/excluded, path, child, qualification and authorization dispositions; the facade reaches them only through registered task state and never falls back to the developer runner.
 
-The installable package boundary is defined by `docs/package-distribution-contract.md`. Only `scripts/package-entry.ts` and `scripts/public-api.ts` seed the package compiler graph. Pack from the generated sanitized `package-stage/`, never the repository root; do not add lifecycle scripts, source maps, internal command/case owners, credentials, task state or private evidence to the public allowlist. W06 candidates are local artifacts until W08 publishes an exact reviewed release.
+The installable package boundary is defined by `docs/package-distribution-contract.md`. Only `scripts/package-entry.ts` and `scripts/public-api.ts` seed the package compiler graph. Pack from the generated sanitized `package-stage/`, never the repository root; do not add lifecycle scripts, source maps, internal command/case owners, credentials, task state or private evidence to the public allowlist. W06 candidates are local artifacts until W08 publishes an exact reviewed release. Managed package launches must finish public CLI IPC admission and inventory-bound runtime binding before workspace operations. The manager cache is excluded from every workspace and migration destination; read/write launch policy grants no business permission.
 
 Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel account overrides, QA waivers and the Worldsteel full-context relaxation grant no permission to a new task. `docs/task-authorization-contract.md` owns the separate workspace/task/actor/account/profile/input binding and exact action evidence. Local candidate preparation and checked public-reference proofs remain available; current final-row hashes, task permissions and all content/closure/no-replay gates are required before a restricted write handoff.
 

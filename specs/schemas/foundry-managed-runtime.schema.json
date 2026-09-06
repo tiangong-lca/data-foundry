@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tiangong-lca.local/foundry/foundry-managed-runtime.schema.json",
+  "title": "Foundry managed runtime binding v1",
+  "$comment": "Structural contract only. The package host additionally validates the independently trusted manifest, installed entry, component files, current platform and launch/target relationships.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "platform", "cli", "tidas", "launches"],
+  "properties": {
+    "schema": {
+      "const": "tiangong-foundry.managed-runtime.v1"
+    },
+    "platform": {
+      "$ref": "#/$defs/platform"
+    },
+    "cli": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "package_version",
+        "platform",
+        "content_sha256",
+        "node_version",
+        "node_sha256"
+      ],
+      "properties": {
+        "schema": {
+          "const": "tiangong-lca.cli-runtime-expectation.v1"
+        },
+        "package_version": {
+          "const": "0.1.11"
+        },
+        "platform": {
+          "$ref": "#/$defs/platform"
+        },
+        "content_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "node_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "node_version": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+        }
+      }
+    },
+    "tidas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["executable", "expectation"],
+      "properties": {
+        "executable": {
+          "$ref": "#/$defs/componentReference"
+        },
+        "expectation": {
+          "$ref": "https://tiangong-lca.local/foundry/tidas-runtime-expectation.schema.json"
+        }
+      }
+    },
+    "launches": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "access", "target"],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/identifier"
+          },
+          "access": {
+            "enum": ["read", "write"]
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/componentReference"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "platform": {
+      "enum": ["linux-x64", "linux-arm64", "darwin-arm64", "win32-x64"]
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$"
+    },
+    "componentReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component", "path"],
+      "properties": {
+        "component": {
+          "$ref": "#/$defs/identifier"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^(?!/)(?!.*\\\\)(?!.*\\u0000)(?!.*:)(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*/$).+$"
+        }
+      }
+    }
+  }
+}

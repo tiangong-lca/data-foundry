@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 9c3198add30adfbf87f2b5e8f92f55738363a484
-lastReviewedNote: "Reviewed for Foundry #112: a real installed package can retain its independently verified owning component cache using the current host manifest. Rollback targets cannot supply ownership; canonical workspace/source/excluded roots and missing/corrupt/foreign cache rejection remain enforced. Component fixture evidence does not replace managed-host or final F1 release qualification."
+lastReviewedCommit: 846cc25ada0f6bea300e37397a7e6e18e0629ec3
+lastReviewedNote: "Reviewed for Foundry #112 managed process admission: inherited public CLI IPC and inventory-bound package/CLI/TIDAS/launch/target metadata now precede workspace operations. Read/write, cancellation, cache/migration and no-replay boundaries remain enforced. Real installed-process regressions use explicit native/release fixtures; complete production F1 assembly and publication remain pending."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -59,6 +59,8 @@ This is the implemented v1 facade protocol for `@tiangong-lca/foundry` and its `
 The CLI-owned `tiangong-lca runtime ensure/status` manages qualified components only; it does not initialize a Foundry job or grant data permissions. Skills invoke the Foundry facade and its next actions rather than rebuilding its task state machine.
 
 The installed bin calls `runFoundryPublicCommand`; any non-facade name returns `operation=unknown` and cannot enter the developer dispatcher. `runtime-entry.ts` remains the shared implementation adapter. The repository-maintenance `pnpm doctor` and flat `scripts/foundry.ts doctor` command remain a separate source-only developer surface with their existing behavior.
+
+For a CLI-managed process, the bin first receives the inherited host context and validates its full manifest, installed entry and inventory-bound Foundry runtime metadata. This completes before any workspace operation. An invalid managed context never falls back to unmanaged execution. Plain installed calls without IPC retain their existing behavior. The package distribution contract owns the metadata shape and read/write/target bindings.
 
 Input changes create an explicit new revision with retained history. A new revision, directory, runtime version or request id never resets a consumed mutation. Migration never treats historical locks or profile waivers as current approval.
 
@@ -115,7 +117,7 @@ Every facade revision also rechecks all retained predecessors in its request cha
 
 ## Runtime selection and migration seam
 
-The public facade accepts CLI/TIDAS expectations only through its process-local host interface. Ordinary argv, task specs, `.env` and ambient `TIDAS_BIN`/expectation variables cannot select trust anchors. Without a host selection, doctor, start, status and local resume work and report `qualification.required`; child-required work must return the runtime qualification action. W06/W08 bind this interface to the CLI manager and final immutable product manifest. The current exact CLI 0.1.11 constraint remains explicit rather than silently accepting a future version.
+The public facade accepts CLI/TIDAS expectations only through its process-local host interface. Ordinary argv, task specs, `.env` and ambient `TIDAS_BIN`/expectation variables cannot select trust anchors. Without a host selection, doctor, start, status and local resume work and report `qualification.required`; child-required work must return the runtime qualification action. The managed bin now obtains this selection from the CLI IPC context and its verified component metadata. The final immutable production product manifest remains a W08 deliverable. The current exact CLI 0.1.11 constraint remains explicit rather than silently accepting a future version.
 
 `workspace migrate --dry-run` recursively inventories only regular files/directories, rejects links and returns `tiangong-foundry.workspace-migration-plan.v1` as an inline content-bound artifact. It classifies control, local-preparation, terminal-success, attempted/unknown, authorization/account and unclassified paths. The public envelope is bounded to 10,000 entries and 64 directory levels. The total hashed inventory is bounded to 256 MiB. Files larger than 64 MiB and recognized credential/session files retain path/size/classification facts with `sha256=null`; their contents are not read by this inventory. The tree digest binds this observational inventory, not an atomic filesystem snapshot, so W10 must re-read and verify every selected source immediately before apply. It writes nothing. W10 owns application, rollback and detailed old-schema mapping.
 
@@ -132,5 +134,7 @@ Explicit `--stage --plan <file>` copies the complete selected v2 source snapshot
 The migration operation also accepts `--runtime-use --actor <id> --request <id> --access read|write` with an independently trusted host target manifest; file migration flags cannot be mixed with it. The host carries `workspaceAccess`, optional `runtimeManager`, `runtimeTarget`, `accountIntent` and `cacheBase` through the typed boundary. An explicit read selection never returns a preparation command from task status. Workspace pointers are selection intent, not manifest trust anchors.
 
 Runtime selection from a managed installed package revalidates ownership of its current component cache before leasing current and target components. Rollback does not require the target to contain the executing package; its independently trusted current host manifest remains the ownership authority. A damaged, incomplete or unrelated cache fails before replacement beneath the running package, while ordinary workspace and source exclusions remain enforced.
+
+A managed launch policy can supply a target manifest as a file already bound by the current trusted component inventory. `null` selects the current manifest. This supplies the existing `runtimeTarget` host seam without a manifest-path or digest option in ordinary argv. The same host also supplies its component-cache root, which is excluded from workspace operations before marker reads or writes.
 
 `createFoundryWorkspaceAccess({ manifestBytes, expectedSha256, access })` is the public host bridge when bootstrap and Foundry load separate CLI SDK instances. It verifies the independently selected digest again with Foundry's own CLI instance. The host must obtain that expected digest from its trusted release/skill configuration; it must not derive it from workspace data or the bytes being checked. The bridge is not exposed through ordinary argv or task specifications.

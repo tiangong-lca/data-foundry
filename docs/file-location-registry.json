@@ -1,7 +1,7 @@
 {
   "$schema": "../specs/schemas/file-location-registry.schema.json",
   "schema_version": 1,
-  "updated_at_utc": "2026-09-06T19:04:54Z",
+  "updated_at_utc": "2026-09-06T20:45:23Z",
   "policy_doc": "docs/file-organization.md",
   "entries": [
     {
@@ -629,6 +629,22 @@
       "sensitivity": "non-sensitive schema; runtime records contain identity and content references, never credential contents",
       "tracked": true,
       "notes": "Explicit qualified runtime selection and persistent current/previous component lease references."
+    },
+    {
+      "id": "foundry-managed-runtime-schema",
+      "status": "active",
+      "classification": "machine-readable-runtime-qualification-schema",
+      "current_path": "specs/schemas/foundry-managed-runtime.schema.json",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "docs/package-distribution-contract.md",
+        "scripts/lib/foundry-managed-host.ts",
+        "test/unit/foundry-managed-runtime-schema.test.mts"
+      ],
+      "sensitivity": "non-sensitive runtime expectation and component-file reference schema; no credentials",
+      "tracked": true,
+      "notes": "Structural managed-host metadata contract. Current trusted manifest, installed package, platform, file bytes and launch/target relationships are revalidated by the package host before workspace operations."
     }
   ]
 }

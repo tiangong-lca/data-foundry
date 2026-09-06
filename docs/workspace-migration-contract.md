@@ -36,8 +36,8 @@ checkPaths:
   - test/unit/foundry-migration-transfer.test.mts
   - test/scenarios/workspace-migration-transfer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 9c3198add30adfbf87f2b5e8f92f55738363a484
-lastReviewedNote: "Reviewed for Foundry #112: a real installed package can retain its independently verified owning component cache using the current host manifest. Rollback targets cannot supply ownership; canonical workspace/source/excluded roots and missing/corrupt/foreign cache rejection remain enforced. Component fixture evidence does not replace managed-host or final F1 release qualification."
+lastReviewedCommit: 846cc25ada0f6bea300e37397a7e6e18e0629ec3
+lastReviewedNote: "Reviewed for Foundry #112 managed process admission: inherited public CLI IPC and inventory-bound package/CLI/TIDAS/launch/target metadata now precede workspace operations. Read/write, cancellation, cache/migration and no-replay boundaries remain enforced. Real installed-process regressions use explicit native/release fixtures; complete production F1 assembly and publication remain pending."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -115,6 +115,8 @@ Read and write compatibility are separate. V2 requires the `migration-adoption-v
 The pointer records intent; it is never its own trust anchor. Subsequent launches still need an independently trusted matching manifest. Previous caches and leases remain available and are not automatically released by rollback. When a managed host supplies runtime-manager options during adoption, the active component set is pinned before activation. Plain source/npm consumers retain their existing package-manager ownership; managed component publication and bootstrap integration are qualified in W08/W09.
 
 An executing installed package may lease its verified owning cache. Ownership is checked against the current host manifest and complete component inventory before either current or target leases are acquired, including when the rollback target contains a different component set. Missing, corrupt or foreign current components cannot be repaired implicitly beneath the running package during selection. Workspace, source, package-internal cache and explicit migration-root exclusions still apply after canonical path resolution.
+
+The managed bin obtains read/write intent and its target through inventory-bound launch policy metadata. A target reference names a manifest file already authenticated by the current full component manifest; it is not a task-supplied path or a new trust anchor. The selected writer still verifies target compatibility and actor/request intent. Source inventory and overridden destinations are checked against the manager's complete cache root before they can become migration workspaces.
 
 Runtime rollback does not rewrite workspace schemas, remove added fields, reset attempts, undo a business mutation or restore macOS Intel support. An older package that cannot read the required schema/features is rejected. Existing task runtime/profile bindings remain additional requirements for task writes.
 

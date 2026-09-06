@@ -280,13 +280,15 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 73bc0c2dda4538ae20c5c9388e993a9d81acb43c
-lastReviewedNote: "Reviewed for Foundry #112: a real installed package can retain its independently verified owning component cache using the current host manifest. Rollback targets cannot supply ownership; canonical workspace/source/excluded roots and missing/corrupt/foreign cache rejection remain enforced. Component fixture evidence does not replace managed-host or final F1 release qualification."
+lastReviewedCommit: 846cc25ada0f6bea300e37397a7e6e18e0629ec3
+lastReviewedNote: "Reviewed for Foundry #112 managed process admission: inherited public CLI IPC and inventory-bound package/CLI/TIDAS/launch/target metadata now precede workspace operations. Read/write, cancellation, cache/migration and no-replay boundaries remain enforced. Real installed-process regressions use explicit native/release fixtures; complete production F1 assembly and publication remain pending."
 ---
 
 # Test Layout
 
 The packed consumer scenario imports and runs the actual installed Foundry API from a CLI-verified application component. It checks owning-cache selection, rollback to another component set, restoration, retained leases, canonical aliases, workspace/package exclusions and corrupt/missing/foreign current-cache rejection without network calls during component management. Fixture archives declare their launch entry executable independently of host file-mode bits, including on Windows. The component metadata and older target are explicit fixtures, not final F1 release evidence. Separate runtime-selection cases keep source/developer-emitted and excluded migration roots outside the managed cache.
+
+The same packed-consumer scenario also launches the actual package bin through public CLI host IPC and real Node, using separate native/application fixture components. It checks managed init/qualified doctor, read-only refusal, an inventory-bound predecessor target, rollback/restoration, protected cache roots, bad metadata/CLI/TIDAS bindings, extra launch argv and mismatched product identity. TIDAS and the predecessor component remain explicit fixtures. POSIX additionally checks SIGINT while admission waits for its parent; portable adapter tests cover rejected, pending-cancelled and pre-cancelled initialization with one result, no workspace effects and listener cleanup. The shipped managed-runtime schema is tested independently as a structural contract; process tests prove cross-file and host relationships.
 
 The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. W05 covers the hierarchical facade. W06 adds the descriptor-bound source-free candidate and installed-consumer suite; W08 still owns F1 publication/components. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/package-distribution-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 
