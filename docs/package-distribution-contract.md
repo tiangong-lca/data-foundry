@@ -26,9 +26,9 @@ checkPaths:
   - test/unit/foundry-package-contract.test.mts
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
-lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
-lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
+lastReviewedAt: 2026-09-06
+lastReviewedCommit: bc1198c57c71fccb07395534cfba4ba1a1fafab4
+lastReviewedNote: "Reviewed for Foundry #112: archive naming follows the verified staged descriptor; repository, compiled and schema versions remain bound. The isolated 0.1.1 fixture is not a publication. Package closure, runtime/auth ownership, pinned dependencies and F1 release prerequisites remain unchanged."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -72,7 +72,7 @@ Verification uses regular-file, `O_NOFOLLOW`, fd size/inode/mtime and SHA checks
 
 ## Qualification
 
-`pnpm package:build` rebuilds both output roots from scratch and verifies the staged package. `pnpm package:check` compares the stage with the descriptor, runs a pack dry-run, and verifies the installed C1 descriptor. `pnpm package:pack` packs only `package-stage/` into an owned temporary directory, then installs the standard archive name with an exclusive hardlink. An identical existing archive is reused; a link, invalid file or different existing bytes are preserved and rejected rather than overwritten.
+`pnpm package:build` rebuilds both output roots from scratch and verifies the staged package. `pnpm package:check` compares the stage with the descriptor, runs a pack dry-run, and verifies the installed C1 descriptor. `pnpm package:pack` packs only `package-stage/` into an owned temporary directory, derives the versioned archive name from the verified staged descriptor, then installs it with an exclusive hardlink. The repository manifest, compiled verifier version and descriptor JSON Schema version remain coherent release projections; the verifier never takes its expected identity from the installed manifest it is checking. An identical existing archive is reused; a link, invalid file or different existing bytes are preserved and rejected rather than overwritten.
 
 The package scenario rebuilds twice, packs twice byte-identically, and installs the same tarball into two clean consumers; the second install is offline from the first consumer's isolated public cache. It verifies the exact import surface and declarations, public CLI 0.1.10 runtime identity, shebang/bin, source/installed operation equivalence, arbitrary Unicode CWD, read-only package bytes, isolated workspace writes and all six facade operations. It also proves that internal commands, modified/extra/linked files, a lifecycle-bearing manifest, a `darwin-x64` descriptor and a package copied without C1 fail closed.
 

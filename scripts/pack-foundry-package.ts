@@ -6,9 +6,9 @@ import {
   foundryPackageRepoRoot,
   foundryPackageStageRoot,
 } from "./build-foundry-package.ts";
+import { assertFoundryPackage } from "./lib/foundry-package-contract.ts";
 import { resolvePackageManagerCommand } from "./lib/package-manager-command.ts";
 
-const archiveName = "tiangong-lca-foundry-0.1.0.tgz";
 const maxArchiveBytes = 64 * 1024 * 1024;
 
 function archiveBytes(file: string): Buffer {
@@ -34,6 +34,8 @@ export function packFoundryPackage(
   if (!path.isAbsolute(destination))
     throw new Error("Package artifact destination must be absolute.");
   buildFoundryPackage();
+  const descriptor = assertFoundryPackage(foundryPackageStageRoot);
+  const archiveName = `tiangong-lca-foundry-${descriptor.package.version}.tgz`;
   if (fs.existsSync(destination)) {
     const stat = fs.lstatSync(destination);
     if (!stat.isDirectory() || stat.isSymbolicLink())

@@ -93,8 +93,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 7f600bc2db0c60a946a8609bfdc1cc41bc1125a2
-lastReviewedNote: "Reviewed for #110 / workspace #980 W11: remove the owned macOS Intel Oxlint age exception while preserving the frozen toolchain, supported platforms, public package closure and runtime/authorization boundaries. The package descriptor owns the current closure inventory."
+lastReviewedCommit: bc1198c57c71fccb07395534cfba4ba1a1fafab4
+lastReviewedNote: "Reviewed for Foundry #112: archive naming follows the verified staged descriptor; repository, compiled and schema versions remain bound. The isolated 0.1.1 fixture is not a publication. Package closure, runtime/auth ownership, pinned dependencies and F1 release prerequisites remain unchanged."
 ---
 
 # Capability Ownership Policy

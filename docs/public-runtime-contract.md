@@ -32,9 +32,9 @@ checkPaths:
   - test/scenarios/foundry-facade-request-store.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
-lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
-lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
+lastReviewedAt: 2026-09-06
+lastReviewedCommit: bc1198c57c71fccb07395534cfba4ba1a1fafab4
+lastReviewedNote: "Reviewed for Foundry #112: archive naming follows the verified staged descriptor; repository, compiled and schema versions remain bound. The isolated 0.1.1 fixture is not a publication. Package closure, runtime/auth ownership, pinned dependencies and F1 release prerequisites remain unchanged."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md

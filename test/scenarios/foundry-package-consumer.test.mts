@@ -10,6 +10,9 @@ import { resolvePackageManagerCommand } from "../../scripts/lib/package-manager-
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 const stageRoot = path.join(repoRoot, "package-stage");
+const sourcePackageVersion = (
+  JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8")) as { version: string }
+).version;
 const secretKey = /(?:PASSWORD|PASSWD|TOKEN|SECRET|COOKIE|CREDENTIAL|API_?KEY|PRIVATE_?KEY)/iu;
 
 function isolatedEnvironment(home: string, extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
@@ -286,7 +289,7 @@ test("packed Foundry installs twice and runs only the public facade from a read-
     assertFoundryPackageDescriptor: (value: unknown) => unknown;
   };
   assert.equal(api.assertFoundryPackage(firstPackage).package.name, "@tiangong-lca/foundry");
-  assert.equal(api.assertFoundryPackage(secondPackage).package.version, "0.1.0");
+  assert.equal(api.assertFoundryPackage(secondPackage).package.version, sourcePackageVersion);
   const consumerModule = path.join(firstProject, "consumer.mjs");
   const apiWorkspace = path.join(root, "api workspace");
   fs.writeFileSync(

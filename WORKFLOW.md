@@ -281,8 +281,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 7f600bc2db0c60a946a8609bfdc1cc41bc1125a2
-lastReviewedNote: "Reviewed for #110 / workspace #980 W11: remove the owned macOS Intel Oxlint age exception while preserving the frozen toolchain, supported platforms, public package closure and runtime/authorization boundaries. The package descriptor owns the current closure inventory."
+lastReviewedCommit: bc1198c57c71fccb07395534cfba4ba1a1fafab4
+lastReviewedNote: "Reviewed for Foundry #112: archive naming follows the verified staged descriptor; repository, compiled and schema versions remain bound. The isolated 0.1.1 fixture is not a publication. Package closure, runtime/auth ownership, pinned dependencies and F1 release prerequisites remain unchanged."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -316,7 +316,7 @@ Body: {{ issue.description }}
 
 Migration transfer planning is governed by [the workspace migration contract](docs/workspace-migration-contract.md). W10 provides explicit source/queue/input staging, current-owner task adoption, audited v2 activation and separate runtime read/write selection. Preserved history blocks replay across requests and migrations; none of these records grants business permission. Operational qualification and release integration remain tracked in #108/#980.
 
-The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 still owns the published package. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
+The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 owns the installable candidate closure; W08 owns F1 publication and platform components. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 
 For consumer workspace execution, follow `docs/public-runtime-contract.md`. Use `workspace init`, `doctor`, `task start`, `task status`, `task resume` and `workspace migrate --dry-run` with `--json`. Task specs own request/actor/lane/profile/source/seed/account/preparation intent; status and resume require the same explicit actor. Start and local preparation require no login. Execute only returned structured argv actions with their recorded CWD/binding; never run display text. A nonempty attempt state is readback-only, and W10 alone may apply a migration plan.
 

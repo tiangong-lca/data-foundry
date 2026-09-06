@@ -279,9 +279,9 @@ checkPaths:
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
-lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
-lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
+lastReviewedAt: 2026-09-06
+lastReviewedCommit: bc1198c57c71fccb07395534cfba4ba1a1fafab4
+lastReviewedNote: "Reviewed for Foundry #112: archive naming follows the verified staged descriptor; repository, compiled and schema versions remain bound. The isolated 0.1.1 fixture is not a publication. Package closure, runtime/auth ownership, pinned dependencies and F1 release prerequisites remain unchanged."
 ---
 
 # Test Layout
@@ -296,7 +296,7 @@ W04 authority tests are split by contract. `unit/foundry-runtime-qualification.t
 
 W05 facade coverage is split similarly. `unit/foundry-operation-result.test.mts` fixes the exact envelope, statuses, permissions and exit table. `unit/foundry-task-start-spec.test.mts` fixes task intent, selected seed and fingerprint rules. `unit/foundry-facade-schemas.test.mts` compiles all four public/request/migration schemas. `scenarios/foundry-facade-request-store.test.mts` covers concurrent idempotence, changed bytes/path revisions, predecessor preservation, deterministic cleanup reuse, fake completion rejection and attempted-state readback-only behavior. `scenarios/foundry-public-facade.test.mts` exercises one-line CLI JSON, option rejection, account-reference readiness, actor/missing-task errors, migration no-write and exit 130. The entry-closure suite runs workspace init through both source and emitted entries.
 
-W06 package coverage has two layers. `unit/foundry-package-contract.test.mts` freezes identity, exports, allowlist, no-lifecycle metadata, compiler settings and descriptor tamper rejection; the facade schema suite compiles the package descriptor schema strictly. `scenarios/foundry-package-consumer.test.mts` rebuilds and packs twice byte-identically, installs the same tarball into an online then offline clean consumer, compiles a typed consumer, verifies exact C1, runs all six operations from a Unicode CWD against a read-only package, rejects internal commands and tests missing/changed/extra/linked/lifecycle-bearing/Intel-invalid closures. It uses only public synthetic inputs; the official OAuth installed-package case remains private W14 evidence.
+W06 package coverage has two layers. `unit/foundry-package-contract.test.mts` checks coherent repository/compiled/schema versions, valid-version tamper rejection, fixed package identity, exports, allowlist, no-lifecycle metadata and compiler settings; the facade schema suite compiles the package descriptor schema strictly. `scenarios/foundry-package-consumer.test.mts` rebuilds and packs twice byte-identically, installs the same tarball into an online then offline clean consumer, compiles a typed consumer, verifies exact C1, runs all six operations from a Unicode CWD against a read-only package, rejects internal commands and tests missing/changed/extra/linked/lifecycle-bearing/Intel-invalid closures. It uses only public synthetic inputs; the official OAuth installed-package case remains private W14 evidence.
 
 `unit/package-manager-command.test.mts` covers Windows native pnpm selection, complete npm/Node installation pairing, literal Unicode/space/metacharacter argv, missing-tool rejection, POSIX lookup and the actual package-verifier dry-run call. The consumer scenario also executes the repository verifier and pack driver, including reuse of an identical archive, on every supported CI platform. Package tools share the repository-only resolver and always spawn without a shell.
 

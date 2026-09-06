@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-06
-lastReviewedCommit: 7f600bc2db0c60a946a8609bfdc1cc41bc1125a2
-lastReviewedNote: "Reviewed for #110 / workspace #980 W11: remove the owned macOS Intel Oxlint age exception while preserving the frozen toolchain, supported platforms, public package closure and runtime/authorization boundaries. The package descriptor owns the current closure inventory."
+lastReviewedCommit: bc1198c57c71fccb07395534cfba4ba1a1fafab4
+lastReviewedNote: "Reviewed for Foundry #112: descriptor-bound archive naming and coherent version contract checks preserve the public candidate closure, native TypeScript toolchain, runtime/auth ownership and separate F1 publication gates."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

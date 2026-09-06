@@ -56,7 +56,13 @@ const packageFiles = [
 test("Foundry package metadata exposes only the reviewed public closure", () => {
   const manifest = readJson("package.json");
   assert.equal(manifest.name, "@tiangong-lca/foundry");
-  assert.equal(manifest.version, "0.1.0");
+  assert.equal(typeof manifest.version, "string");
+  assert.match(manifest.version as string, /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u);
+  const schemaProperties = readJson("specs/schemas/foundry-package-descriptor.schema.json")
+    .properties as Record<string, unknown>;
+  const packageProperties = (schemaProperties.package as Record<string, unknown>)
+    .properties as Record<string, unknown>;
+  assert.equal((packageProperties.version as Record<string, unknown>).const, manifest.version);
   assert.equal(Object.hasOwn(manifest, "private"), false);
   assert.deepEqual(manifest.publishConfig, {
     access: "public",
@@ -153,6 +159,16 @@ test("package descriptor rejects platform, path, order and digest drift", () => 
   assert.deepEqual(
     assertFoundryPackageDescriptor(JSON.parse(JSON.stringify(descriptor))),
     descriptor,
+  );
+  assert.equal(descriptor.package.version, readJson("package.json").version);
+  assert.throws(() =>
+    assertFoundryPackageDescriptor({
+      ...descriptor,
+      package: {
+        ...descriptor.package,
+        version: descriptor.package.version.replace(/\d+$/u, (patch) => String(BigInt(patch) + 1n)),
+      },
+    }),
   );
   assert.throws(() =>
     assertFoundryPackageDescriptor({
