@@ -246,6 +246,25 @@ test("row validation maps official batch evidence into Foundry compatibility rep
     });
     const invalidReport = invalid.report as Record<string, Record<string, unknown>>;
     assert.equal(invalidReport.rust_contract.batch_final_schema, "tidas.validation-final-event.v1");
+    const nativeIssues = withEnvironment(
+      {
+        TIDAS_BIN: bin,
+        FAKE_TIDAS_INVALID: "1",
+        FAKE_TIDAS_BATCH_DATA_ISSUES: "1",
+        FAKE_TIDAS_EXIT_CLASS: undefined,
+      },
+      () =>
+        runTidasRowsValidation({
+          repoRoot: root,
+          options: { rowsFile, type: "process", outDir: path.join(root, "native-data-issues") },
+        }),
+    );
+    assert.equal(nativeIssues.rust_exit_code, 2);
+    assert.equal(nativeIssues.exit_code, 2);
+    assert.deepEqual(nativeIssues.report.counts, invalid.report.counts);
+    assert.ok(
+      typeof nativeIssues.report_file === "string" && fs.existsSync(nativeIssues.report_file),
+    );
     const valid = withEnvironment({ TIDAS_BIN: bin, FAKE_TIDAS_INVALID: undefined }, () =>
       runTidasRowsValidation({
         repoRoot: root,

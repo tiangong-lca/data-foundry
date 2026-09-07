@@ -382,7 +382,12 @@ function replaceIndex(
 export async function runFoundryTaskOperation(
   context: FoundryRuntimeContext,
   input: {
-    command: "dataset-curation-cleanup" | "dataset-tidas-import" | "dataset-context-pack";
+    command:
+      | "dataset-curation-cleanup"
+      | "dataset-tidas-import"
+      | "dataset-context-pack"
+      | "dataset-workflow-rows"
+      | "dataset-workflow-assessment";
     options: JsonRecord;
     task?: FoundryTaskOptions;
   },

@@ -1,7 +1,7 @@
 {
   "$schema": "../specs/schemas/file-location-registry.schema.json",
   "schema_version": 1,
-  "updated_at_utc": "2026-09-07T11:21:35Z",
+  "updated_at_utc": "2026-09-07T12:53:40Z",
   "policy_doc": "docs/file-organization.md",
   "entries": [
     {
@@ -200,11 +200,13 @@
         "scripts/lib/foundry-task-store.ts",
         "scripts/lib/foundry-task-authorization.ts",
         "scripts/lib/foundry-workflow-import.ts",
-        "scripts/lib/foundry-workflow-context.ts"
+        "scripts/lib/foundry-workflow-context.ts",
+        "scripts/lib/foundry-workflow-rows.ts",
+        "scripts/lib/foundry-workflow-assessment.ts"
       ],
       "sensitivity": "non-sensitive task ledger schema examples; contains no credentials and no private payloads",
       "tracked": true,
-      "notes": "Owns implemented v2 registered jobs/source/profile snapshots, account intent, operation receipts and artifact-index lineage. Workspace state anchors task identity; authorization registers independent evidence. Legacy v1 files and consumed attempts require explicit migration/recovery. Native import and CLI context generations publish outputs through the same task receipt/index; interrupted unindexed context output is not stage authority."
+      "notes": "Owns implemented v2 registered jobs/source/profile snapshots, account intent, operation receipts and artifact-index lineage. Workspace state anchors task identity; authorization registers independent evidence. Legacy v1 files and consumed attempts require explicit migration/recovery. Native import and CLI context generations publish outputs through the same task receipt/index; interrupted unindexed context output is not stage authority. Indexed rows and assessment bind native/QA/queue/curation/authoring evidence and preserve owner reference bases."
     },
     {
       "id": "foundry-safety-policy",

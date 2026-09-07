@@ -66,6 +66,7 @@ interface JsonRecord {
 }
 
 interface CurationGateOptions extends JsonRecord {
+  includeExecutionCommands?: boolean;
   help?: unknown;
   type?: unknown;
   datasetType?: unknown;
@@ -554,7 +555,9 @@ export function runDatasetCurationGate({
         patch_contract:
           "Structured patch sets must include authoring_package, row_index or dataset_id/version, operation evidence or basis, and closes_action_items for the package action_items they resolve.",
         recommended_apply:
-          "node scripts/foundry.ts dataset-patch-apply --input <rows.jsonl> --patch <ai-patches.json> --out <patched.jsonl> --out-dir <apply-dir> --authoring-package-dir <ai-authoring-packages-dir> --require-authoring-package --require-action-item-closure",
+          options.includeExecutionCommands === false
+            ? null
+            : "node scripts/foundry.ts dataset-patch-apply --input <rows.jsonl> --patch <ai-patches.json> --out <patched.jsonl> --out-dir <apply-dir> --authoring-package-dir <ai-authoring-packages-dir> --require-authoring-package --require-action-item-closure",
         cleanup_owner:
           "Foundry removes or externalizes import-only trace metadata before remote write",
         final_gate_owner: "Foundry profile-aware curation gate",

@@ -47,6 +47,8 @@ import { runDatasetCurationCleanup } from "./lib/import-curation/curation-cleanu
 import { readRows } from "./lib/import-curation/internal/runtime-io.ts";
 import { importFoundryWorkflowPackage } from "./lib/foundry-workflow-import.ts";
 import { prepareFoundryWorkflowContext } from "./lib/foundry-workflow-context.ts";
+import { materializeFoundryWorkflowRows } from "./lib/foundry-workflow-rows.ts";
+import { assessFoundryWorkflowRows } from "./lib/foundry-workflow-assessment.ts";
 
 export interface FoundryCleanupRequest {
   input: string;
@@ -83,6 +85,10 @@ export function createFoundryRuntime(
       ),
     prepareContext: (types: readonly string[]) =>
       prepareFoundryWorkflowContext(context, requireQualification(), types),
+    materializeRows: (sources: readonly string[]) =>
+      materializeFoundryWorkflowRows(context, sources),
+    assessRows: (rows: string, contracts: readonly string[]) =>
+      assessFoundryWorkflowRows(context, requireQualification(), rows, contracts),
     initializeWorkspace: () => initializeFoundryWorkspace(context),
     startTask: (options: FoundryTaskOptions = {}) => {
       assertFoundryWorkspaceWrite(context);

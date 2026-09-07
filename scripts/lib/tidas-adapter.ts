@@ -600,7 +600,7 @@ export function runTidasRowsValidation({
       options,
       environment,
     });
-    if (operation.exit_code !== 0) return operation;
+    if (operation.exit_code !== 0 && operation.exit_code !== 2) return operation;
     const finalEvent = record(operation.report?.summary?.validation_batch_final);
     if (
       !finalEvent ||

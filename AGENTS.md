@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 618c18f08a0ea968fc649a0f71a4f6e03e8e9b2e
-lastReviewedNote: "Reviewed for Foundry #118 native conversion and CLI context stages: qualified local owner calls register outputs through existing task lineage. Runtime/input/actor boundaries remain enforced; complete semantic/write workflow and final F1 qualification remain required."
+lastReviewedCommit: a470cf5dba43508170299b8cca09e5a755918143
+lastReviewedNote: "Reviewed for Foundry #118 indexed rows and local schema/QA/queue/curation/authoring assessment. Native data-issue reports and concrete support queue types retain owner evidence; public semantic work is needs_input, not write authority. Semantic intake and final publication remain required."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

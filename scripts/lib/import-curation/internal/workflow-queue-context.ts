@@ -1,6 +1,6 @@
 import path from "node:path";
 import { resolveArtifactPath } from "./artifact-inputs.ts";
-import { identityKey } from "./dataset-payload.ts";
+import { identityKey, detectDatasetType, unwrapDatasetPayload } from "./dataset-payload.ts";
 import { annualSupplyMissingDataSentinelText } from "./prewrite-cleanup.ts";
 import {
   asText,
@@ -250,18 +250,23 @@ export function findQueueTask(
   identity: DatasetIdentity,
 ): QueueTask | null {
   if (!queueContext || datasetType === "lifecyclemodel") return null;
-  const exact = queueContext.tasks.find(
-    (task) =>
-      task.entity_type === datasetType &&
-      task.entity_id === identity.id &&
-      task.version === identity.version,
-  );
-  if (exact) return exact;
-  return (
-    queueContext.tasks.find(
-      (task) => task.entity_type === datasetType && task.entity_id === identity.id,
-    ) ?? null
-  );
+  const queueType = ["contact", "source", "unitgroup", "flowproperty"].includes(datasetType)
+    ? "support"
+    : datasetType;
+  for (const type of new Set([datasetType, queueType])) {
+    const exact = queueContext.tasks.find(
+      (task) =>
+        task.entity_type === type &&
+        task.entity_id === identity.id &&
+        task.version === identity.version,
+    );
+    if (exact) return exact;
+    const fallback = queueContext.tasks.find(
+      (task) => task.entity_type === type && task.entity_id === identity.id,
+    );
+    if (fallback) return fallback;
+  }
+  return null;
 }
 
 export function buildQueueAuthoringContext(
@@ -287,7 +292,15 @@ export function buildQueueAuthoringContext(
   }
 
   const task = findQueueTask(queueContext, datasetType, identity);
-  if (!task) {
+  const concreteSupport = task?.entity_type === "support" && datasetType !== "support";
+  const supportInput = concreteSupport ? readQueueTaskRows(repoRoot, queueContext, task) : [];
+  const matchingSupport =
+    !concreteSupport ||
+    (supportInput.length > 0 &&
+      supportInput.every(
+        (row) => detectDatasetType(unwrapDatasetPayload(row, datasetType)) === datasetType,
+      ));
+  if (!task || !matchingSupport) {
     return {
       ...base,
       status: "missing_task",

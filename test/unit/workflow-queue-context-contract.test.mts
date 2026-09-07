@@ -237,6 +237,21 @@ test("queue task paths, summaries, rows, exact identity preference, and id fallb
     );
     assert.equal(queue.findQueueTask(context, "lifecyclemodel", { id: "x", version: "1" }), null);
     assert.equal(queue.findQueueTask(null, "process", { id: "x", version: "1" }), null);
+    assert.equal(
+      queue.buildQueueAuthoringContext(root, context, "source", {
+        id: "support-id",
+        version: "00.00.001",
+      })?.status,
+      "attached",
+    );
+    assert.equal(
+      queue.buildQueueAuthoringContext(root, context, "contact", {
+        id: "support-id",
+        version: "00.00.001",
+      })?.status,
+      "missing_task",
+      "a support alias must not attach another concrete dataset type",
+    );
   });
 });
 

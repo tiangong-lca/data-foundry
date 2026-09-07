@@ -56,6 +56,7 @@ import {
   type FoundryRuntimeManagerOptions,
 } from "./lib/foundry-runtime-selection.ts";
 import type { TrustedRuntimeManifest } from "@tiangong-lca/cli/runtime";
+import { datasetTypePlural } from "./lib/import-curation/internal/dataset-types.ts";
 
 export interface FoundryFacadeRuntimeSelection {
   readonly cliExpectation: unknown;
@@ -359,6 +360,7 @@ function taskContext(
   options: FoundryFacadeOptions,
   base: ReturnType<typeof createFoundryRuntimeContext>,
   record: FoundryFacadeTaskRecord,
+  derived: readonly FoundryInputFact[] = [],
 ) {
   return createFoundryRuntimeContext({
     ...contextOptions(options),
@@ -366,7 +368,10 @@ function taskContext(
     taskId: record.task_id,
     actorId: record.spec.actor_id,
     accountIntent: accountIntent(record.spec, options.accountIntent),
-    inputs: record.inputs,
+    inputs: [
+      ...record.inputs,
+      ...derived.filter((fact) => !record.inputs.some((source) => source.path === fact.path)),
+    ],
   });
 }
 
@@ -476,7 +481,13 @@ function taskProjection(
   );
   const nativeReport = artifacts.find(
     (artifact) =>
-      artifact.kind === "file" && path.basename(artifact.path) === "foundry-native-import.json",
+      artifact.kind === "file" &&
+      path.basename(artifact.path) === "foundry-native-import.json" &&
+      inspected.artifacts.some(
+        (entry) =>
+          entry.command === "dataset-tidas-import" &&
+          path.join(context.taskRoot!, entry.path) === artifact.path,
+      ),
   );
   if (nativeReport?.kind === "file") {
     const result: unknown = JSON.parse(
@@ -517,6 +528,107 @@ function taskProjection(
         permissions: noPermission(),
       });
   }
+  const assessment = inspected.artifacts.find(
+    (entry) =>
+      entry.command === "dataset-workflow-assessment" &&
+      path.basename(entry.path) === "foundry-assessment.json",
+  );
+  if (assessment) {
+    const report: unknown = JSON.parse(
+      readCaptured(
+        { ...assessment, path: path.join(context.taskRoot!, assessment.path) },
+        maxSeedBytes,
+        "workflow_assessment_invalid",
+      ).toString("utf8"),
+    );
+    if (
+      !report ||
+      typeof report !== "object" ||
+      !("schema" in report) ||
+      report.schema !== "tiangong-foundry.assessment-stage.v1" ||
+      !("sets" in report) ||
+      !Array.isArray(report.sets)
+    )
+      throw new FoundryContextError(
+        "workflow_assessment_invalid",
+        "Registered assessment metadata is invalid.",
+      );
+    const pending = report.sets.filter((value: unknown) => {
+      if (
+        !value ||
+        typeof value !== "object" ||
+        !("curation_counts" in value) ||
+        !("authoring_counts" in value) ||
+        !("type" in value) ||
+        typeof value.type !== "string"
+      )
+        throw new FoundryContextError(
+          "workflow_assessment_invalid",
+          "Assessment counts are missing.",
+        );
+      const curation = value.curation_counts as Record<string, unknown>;
+      const authoring = value.authoring_counts as Record<string, unknown>;
+      if (
+        !curation ||
+        !authoring ||
+        !Number.isSafeInteger(curation.blocking_items) ||
+        !Number.isSafeInteger(authoring.tasks)
+      )
+        throw new FoundryContextError(
+          "workflow_assessment_invalid",
+          "Assessment counts are invalid.",
+        );
+      for (const key of [
+        "rows",
+        "schema_report",
+        "qa_report",
+        "curation_report",
+        "authoring_manifest",
+      ]) {
+        const file = (value as Record<string, unknown>)[key];
+        if (typeof file !== "string")
+          throw new FoundryContextError(
+            "workflow_assessment_invalid",
+            "Assessment file reference is missing.",
+          );
+        const expected = inspected.artifacts.find(
+          (entry) => path.join(context.taskRoot!, entry.path) === file,
+        );
+        if (!expected)
+          throw new FoundryContextError(
+            "workflow_assessment_invalid",
+            "Assessment references an unregistered artifact.",
+          );
+        const observed = captureFoundryInput(file);
+        if (observed.bytes !== expected.bytes || observed.sha256 !== expected.sha256)
+          throw new FoundryContextError(
+            "workflow_assessment_changed",
+            "An assessed input or report changed; retain its original evidence before continuing.",
+          );
+      }
+      return Number(curation.blocking_items ?? 0) > 0 || Number(authoring.tasks ?? 0) > 0;
+    }) as Array<{ type: string; curation_report: string; authoring_manifest: string }>;
+    if (pending.length)
+      return createFoundryOperationResult({
+        operation,
+        status: "needs_input",
+        taskId: record.task_id,
+        artifacts,
+        blockers: pending.map((set) => ({
+          code: "curation_requires_input",
+          message: `Resolve the current ${set.type} curation and authoring work before a write handoff.`,
+          scope: record.task_id,
+        })),
+        nextActions: pending.map((set) =>
+          human(
+            "review_semantic_work",
+            `Read the registered curation report ${set.curation_report} and authoring manifest ${set.authoring_manifest}. Use their bound source/context evidence; no write permission is implied.`,
+          ),
+        ),
+        runtimeIdentity: identity,
+        permissions: noPermission(),
+      });
+  }
   const nextActions = prepared
     ? [
         human(
@@ -525,12 +637,12 @@ function taskProjection(
         ),
       ]
     : record.spec.preparation ||
-        !inspected.artifacts.some((entry) => entry.command === "dataset-context-pack")
+        !inspected.artifacts.some((entry) => entry.command === "dataset-workflow-assessment")
       ? [resumeCommand(context, record)]
       : [
           human(
-            "review_contract_context",
-            "Review the registered contract context and frozen source evidence before semantic authoring; context preparation is not content acceptance.",
+            "review_assessment",
+            "Review the registered curation reports and authoring-task manifests. Resolve their current semantic work before requesting a write handoff; assessment does not grant permission.",
           ),
         ];
   return createFoundryOperationResult({
@@ -1057,6 +1169,17 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
         const contextPrepared = before.artifacts.some(
           (artifact) => artifact.command === "dataset-context-pack",
         );
+        const nativeRows = before.artifacts.filter(
+          (artifact) =>
+            artifact.command === "dataset-tidas-import" &&
+            artifact.path.endsWith(".json") &&
+            Object.values(datasetTypePlural).includes(
+              /^outputs\/import\/[^/]+\/tidas\/([^/]+)\//u.exec(artifact.path)?.[1] ?? "",
+            ),
+        );
+        const rowsPrepared = before.artifacts.some(
+          (artifact) => artifact.command === "dataset-workflow-rows",
+        );
         if (!preparation && record.spec.lane === "external-dataset-curated-import" && !imported) {
           if (record.inputs.length !== 1)
             throw new FoundryContextError(
@@ -1066,7 +1189,54 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
           await runtime.importPackage(record.inputs[0].path);
           assertNotInterrupted(options.signal);
         } else if (!preparation && !contextPrepared) {
-          await runtime.prepareContext(record.spec.target_entities);
+          const closureTypes = Object.entries(datasetTypePlural)
+            .filter(([, plural]) =>
+              nativeRows.some((artifact) => artifact.path.includes(`/tidas/${plural}/`)),
+            )
+            .map(([type]) => type);
+          await runtime.prepareContext([
+            ...new Set([...record.spec.target_entities, ...closureTypes]),
+          ]);
+          assertNotInterrupted(options.signal);
+        } else if (!preparation && !rowsPrepared) {
+          const facts =
+            record.spec.lane === "external-dataset-curated-import"
+              ? nativeRows.map((artifact) => ({
+                  path: path.join(context.taskRoot!, artifact.path),
+                  bytes: artifact.bytes,
+                  sha256: artifact.sha256,
+                }))
+              : record.inputs.filter(
+                  (fact) => fact.path === sourcePath(record, record.spec.seed!.path),
+                );
+          const selected = taskContext(options, current, record, facts);
+          await createFoundryRuntime(selected, qualified).materializeRows(
+            facts.map((fact) => fact.path),
+          );
+          assertNotInterrupted(options.signal);
+        } else if (
+          !preparation &&
+          !before.artifacts.some((artifact) => artifact.command === "dataset-workflow-assessment")
+        ) {
+          const selectedArtifacts = before.artifacts.filter((artifact) =>
+            ["dataset-workflow-rows", "dataset-context-pack"].includes(artifact.command),
+          );
+          const facts = selectedArtifacts.map((artifact) => ({
+            path: path.join(context.taskRoot!, artifact.path),
+            bytes: artifact.bytes,
+            sha256: artifact.sha256,
+          }));
+          const rows = facts.find((fact) => path.basename(fact.path) === "foundry-rows.json");
+          if (!rows)
+            throw new FoundryContextError(
+              "workflow_rows_required",
+              "Registered row preparation is required.",
+            );
+          const contracts = facts
+            .filter((fact) => path.basename(fact.path) === "contract-report.json")
+            .map((fact) => fact.path);
+          const selected = taskContext(options, current, record, facts);
+          await createFoundryRuntime(selected, qualified).assessRows(rows.path, contracts);
           assertNotInterrupted(options.signal);
         }
         if (preparation) {

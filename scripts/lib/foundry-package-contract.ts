@@ -9,6 +9,7 @@ export const foundryPackageDescriptorPath =
 export const foundryPackageStaticFiles = Object.freeze([
   "package-dist/",
   "specs/import-profiles.json",
+  "specs/prewrite-content-policy.json",
   "specs/schemas/authorization-derivation.schema.json",
   "specs/schemas/execution-context.schema.json",
   "specs/schemas/foundry-facade-request-index.schema.json",

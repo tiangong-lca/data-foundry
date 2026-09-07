@@ -74,6 +74,12 @@ Status and resume resolve a task only through its immutable task pointer and req
 
 Native conversion uses the selected qualified TIDAS executable with an isolated environment. Automatic format detection omits the native `--from-format` option. Output files, the import report and the adapter result enter the existing content-bound task transaction. A converter-reported failure blocks later stages; successful conversion alone is not task completion. CLI context packs preserve their actual task-contained file references and enter the same index. A new invocation never adopts an interrupted, unindexed context generation.
 
+After context preparation, the facade materializes typed row arrays from the selected seed or the primary native dataset tree. Process-bundle copies remain evidence and are not counted as additional source rows. Derived inputs must have a verified producer in the same task index. Context preparation includes the converted dependency types as well as the requested types.
+
+The assessment stage invokes native schema validation, CLI deterministic QA and the existing curation/authoring owners on the same indexed row files. A process collection also receives a CLI-owned curation queue containing its flow and support closure. Concrete contact/source/unitgroup/flowproperty checks match `support` queue entries only when the underlying row type agrees. A complete native validation batch with data-issues exit code 2 still produces the compatibility report needed for repair.
+
+Curation blockers or authoring tasks produce `needs_input` with references to the registered reports and task manifests. Active row, schema, QA, curation and authoring files are checked before presenting that state; changed bytes block continuation. Public authoring artifacts omit developer-runner execution commands and retain full source/context evidence plus the required English guidance. Assessment readiness is distinct from semantic input acceptance, write authorization and final completion.
+
 An executable next action contains Node/active source-or-emitted entry argv, `cwd=workspaceRoot` and purpose. Its verified binding digest covers every executable field; workspace, task and actor are explicit argv values, while task lookup revalidates the immutable revision fingerprint and current runtime/input facts before work. It has no `display` authority. A final restricted data CommandSpec still requires the W04 execution-context/identity/authorization gate; W05 does not dispatch it.
 
 ## Single-result envelope

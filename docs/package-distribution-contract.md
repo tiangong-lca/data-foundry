@@ -102,6 +102,8 @@ The package compiler sets LF output and disables source maps, declaration maps a
 
 The public compiler closure includes the native-import and contract-context adapters reached through the facade. They reuse qualified TIDAS and the exact CLI, persist only user-workspace stage artifacts, and add no public flat command or source-checkout requirement. Package installation and these local stages do not establish complete task or release acceptance.
 
+Indexed row preparation and local assessment include the existing curation and authoring library owners in that closure. `specs/prewrite-content-policy.json` is an explicit required asset; the packaged path must not fall back to an absent content policy. Native validation data issues remain available to curation. Public authoring output disables legacy source-runner commands while the developer producer retains its default command rendering.
+
 The repository manifest retains developer scripts. `build-foundry-package.ts` projects a separate exact public manifest into `package-stage/` containing identity, repository links, public access intent, bin/exports/files, Node engine, license, one production dependency and runtime layout. It omits `scripts`, `devDependencies`, `packageManager`, lint configuration and `private`. There are no install/prepare lifecycle hooks; installation cannot initialize a workspace, install Git hooks, authenticate or download a component. Repository hook setup is the explicit `pnpm dev:hooks` command.
 
 ## File and descriptor integrity

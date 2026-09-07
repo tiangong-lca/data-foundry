@@ -7,13 +7,34 @@ import test, { type TestContext } from "node:test";
 import { CLI_RUNTIME_EXPECTATION_SCHEMA, describeCliRuntime } from "@tiangong-lca/cli/runtime";
 import { createFoundryFacade } from "../../scripts/public-api.ts";
 import { FOUNDRY_TIDAS_EXPECTATION_SCHEMA } from "../../scripts/lib/foundry-runtime-qualification.ts";
+import { flowRow } from "../fixtures/row-builders.ts";
 
-function workflowFixture(t: TestContext, importFails = false) {
+function workflowFixture(t: TestContext, importFails = false, validationFails = false) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-public-workflow-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const workspace = path.join(root, "项目 workspace");
   const binary = path.join(root, "native owner fixture.ts");
   fs.copyFileSync(path.resolve(import.meta.dirname, "../fixtures/fake-tidas.ts"), binary);
+  if (!importFails) {
+    const before = fs.readFileSync(binary, "utf8");
+    const marker = 'fs.writeFileSync(path.join(output, "issues.jsonl"), "");';
+    assert.ok(before.includes(marker));
+    fs.writeFileSync(
+      binary,
+      before
+        .replace(
+          marker,
+          `${marker}
+    const primary = path.join(output, "tidas", "processes", "sample.json");
+    fs.writeFileSync(primary, JSON.stringify({ processDataSet: { processInformation: { dataSetInformation: { "common:UUID": "33333333-3333-4333-8333-333333333333" } } } }));
+    const bundled = path.join(output, "process-bundles", "sample", "tidas", "processes");
+    fs.mkdirSync(bundled, { recursive: true });
+    fs.copyFileSync(primary, path.join(bundled, "sample.json"));
+    `,
+        )
+        .replace("object_counts: { processes: 0 }", "object_counts: { processes: 1 }"),
+    );
+  }
   if (importFails) {
     const before = fs.readFileSync(binary, "utf8");
     const declaration =
@@ -28,6 +49,16 @@ function workflowFixture(t: TestContext, importFails = false) {
     );
   }
   fs.chmodSync(binary, 0o755);
+  if (validationFails) {
+    const before = fs.readFileSync(binary, "utf8");
+    assert.ok(before.includes('process.env.FAKE_TIDAS_INVALID === "1"'));
+    fs.writeFileSync(
+      binary,
+      before
+        .replace('process.env.FAKE_TIDAS_INVALID === "1"', "true")
+        .replace('process.env.FAKE_TIDAS_BATCH_DATA_ISSUES === "1"', "true"),
+    );
+  }
   const cli = describeCliRuntime();
   const facade = createFoundryFacade({
     workspace,
@@ -110,6 +141,16 @@ test("qualified public import dispatches the native owner and retains indexed st
     ),
     "the next resume must prepare real CLI-owned contract context",
   );
+  const materialized = await facade.resume({ taskId: started.task_id, actorId: "workflow-actor" });
+  const processRows = materialized.artifacts.find(
+    (artifact) => artifact.kind === "file" && path.basename(artifact.path) === "process.rows.json",
+  );
+  assert.ok(processRows?.kind === "file");
+  assert.equal(
+    JSON.parse(fs.readFileSync(processRows.path, "utf8")).length,
+    1,
+    "bundle snapshots must not duplicate the primary converted dataset",
+  );
   const status = await facade.status({ taskId: started.task_id, actorId: "workflow-actor" });
   assert.ok(
     status.artifacts.some(
@@ -158,9 +199,14 @@ test("a failed native conversion remains blocked without preparing later context
 });
 
 test("source-evidence resume prepares an indexed SDK context before semantic work", async (t) => {
-  const { root, facade } = workflowFixture(t);
+  const { root, facade } = workflowFixture(t, false, true);
   const seed = path.join(root, "selected-seed.json");
-  fs.writeFileSync(seed, JSON.stringify({ rows: [{ flowDataSet: {} }] }));
+  const sourceRow = {
+    id: "22222222-2222-4222-8222-222222222222",
+    version: "00.00.001",
+    flow: flowRow("22222222-2222-4222-8222-222222222222"),
+  };
+  fs.writeFileSync(seed, JSON.stringify({ rows: [sourceRow] }));
   const specFile = path.join(root, "source-request.json");
   fs.writeFileSync(
     specFile,
@@ -202,4 +248,48 @@ test("source-evidence resume prepares an indexed SDK context before semantic wor
     );
   }
   assert.notEqual(resumed.status, "completed");
+  const normalized = await facade.resume({ taskId: started.task_id, actorId: "source-actor" });
+  const rowFile = normalized.artifacts.find(
+    (artifact) => artifact.kind === "file" && path.basename(artifact.path) === "flow.rows.json",
+  );
+  assert.ok(rowFile?.kind === "file", "the next stage must materialize the selected rows");
+  assert.deepEqual(JSON.parse(fs.readFileSync(rowFile.path, "utf8")), [sourceRow]);
+  const assessed = await facade.resume({ taskId: started.task_id, actorId: "source-actor" });
+  assert.ok(
+    assessed.artifacts.some(
+      (artifact) =>
+        artifact.kind === "file" && path.basename(artifact.path) === "validation-report.json",
+    ),
+    JSON.stringify(assessed),
+  );
+  const manifest = assessed.artifacts.find(
+    (artifact) =>
+      artifact.kind === "file" && path.basename(artifact.path) === "authoring-task-manifest.json",
+  );
+  assert.ok(manifest?.kind === "file", "assessment must publish concrete owner authoring work");
+  const work = JSON.parse(fs.readFileSync(manifest.path, "utf8")) as {
+    commands: { apply_all_patches: string | null };
+    tasks: Array<{ commands: { apply_patch: string | null; validate_after_apply: string | null } }>;
+  };
+  assert.equal(work.commands.apply_all_patches, null);
+  for (const task of work.tasks) {
+    assert.equal(task.commands.apply_patch, null);
+    assert.equal(task.commands.validate_after_apply, null);
+  }
+  assert.equal(assessed.status, "needs_input");
+  assert.ok(
+    assessed.next_actions.some(
+      (action) => action.kind === "human" && action.code === "review_semantic_work",
+    ),
+  );
+  const repeated = await facade.resume({ taskId: started.task_id, actorId: "source-actor" });
+  assert.deepEqual(
+    repeated.artifacts,
+    assessed.artifacts,
+    "pending semantic work must not rerun local owners",
+  );
+  fs.appendFileSync(rowFile.path, "\n");
+  const changed = await facade.resume({ taskId: started.task_id, actorId: "source-actor" });
+  assert.equal(changed.status, "blocked");
+  assert.equal(changed.blockers[0]?.code, "workflow_assessment_changed");
 });

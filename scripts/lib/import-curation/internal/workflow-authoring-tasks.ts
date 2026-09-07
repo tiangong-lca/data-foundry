@@ -51,6 +51,7 @@ interface TaskReadinessOptions {
 }
 
 interface AuthoringBuildOptions extends JsonRecord {
+  includeExecutionCommands?: boolean;
   patchFile?: string;
   patch?: string;
   patchedRows?: string;
@@ -94,8 +95,8 @@ interface AuthoringFiles extends JsonRecord {
 }
 
 interface AuthoringCommands extends JsonRecord {
-  apply_patch: string;
-  validate_after_apply: string;
+  apply_patch: string | null;
+  validate_after_apply: string | null;
 }
 
 interface AuthoringActionItem extends JsonRecord {
@@ -121,6 +122,7 @@ interface AuthoringTask extends JsonRecord {
 }
 
 interface SharedContextOptions extends JsonRecord {
+  includeExecutionCommands?: boolean;
   sharedContextCacheDir?: string | null;
 }
 
@@ -427,7 +429,7 @@ The patch must:
 - close every AI-required action item with \`closes_action_items\`
 - for full-context import profiles, every non-test operation must include \`closes_action_items\`; supporting cleanup operations should close the same action item they are needed to resolve
 - avoid database writes, direct Supabase calls, or hand-edited row files
-- preserve source-language content; do not add extra language variants unless the source evidence supports them
+- preserve source-language content and provide evidence-backed English for fields required by the current TIDAS/profile contract; keep the same factual meaning
 - do not use \`common:other\` as a substitute for mandatory schema fields; schema-required values need evidence-backed values or must remain blocked
 - if a value cannot be inferred safely and the action item's allowed modes include \`deferred_to_common_other\`, add \`common:other.tiangongfoundry:unresolvedTrace\` with \`status\`, \`action_item_code\`, \`blocked_path\`, \`reason\`, structured \`evidence\`, and \`next_action\`; evidence must include source plus quote/trace/path/citation pointer
 - do not defer \`annualSupplyOrProductionVolume\` to \`common:other\`; if source annual volume evidence is missing, Foundry deterministic cleanup writes \`${annualSupplyMissingDataSentinelText}\` into the required field for later database-side curation
@@ -435,9 +437,7 @@ The patch must:
 
 ## Deterministic Apply
 
-\`\`\`bash
-${task.commands.apply_patch}
-\`\`\`
+${task.commands.apply_patch ? `\`\`\`bash\n${task.commands.apply_patch}\n\`\`\`` : "Prepare the completed patch file for review. Apply it only through a structured next action from the public task; do not invoke a developer source runner."}
 
 After apply, rerun Rust tidas validation, deterministic CLI QA where relevant, Foundry cleanup, dry-run publish/save, mutation manifest, explicit commit, and post-commit \`dataset verify-remote --compare-root-payload\`.
 `;
@@ -571,8 +571,12 @@ export function buildDatasetAuthoringTaskFromPackage({
       apply_dir: repoRelativePath(repoRoot, applyDir),
     },
     commands: {
-      apply_patch: applyArgs.map(shellQuote).join(" "),
-      validate_after_apply: `node scripts/foundry.ts dataset-tidas-validate --type ${datasetType} --rows-file ${shellQuote(repoRelativePath(repoRoot, patchedRowsFile))} --out-dir ${shellQuote(path.join(repoRelativePath(repoRoot, outDir), "dataset-validate"))}`,
+      apply_patch:
+        options.includeExecutionCommands === false ? null : applyArgs.map(shellQuote).join(" "),
+      validate_after_apply:
+        options.includeExecutionCommands === false
+          ? null
+          : `node scripts/foundry.ts dataset-tidas-validate --type ${datasetType} --rows-file ${shellQuote(repoRelativePath(repoRoot, patchedRowsFile))} --out-dir ${shellQuote(path.join(repoRelativePath(repoRoot, outDir), "dataset-validate"))}`,
     },
   };
 
@@ -887,12 +891,17 @@ export function writeAuthoringTaskBatchManifest(
       patched_rows: canApplyBatch ? repoRelativePath(repoRoot, batchPatchedRows) : null,
       apply_dir: canApplyBatch ? repoRelativePath(repoRoot, batchApplyDir) : null,
       instruction:
-        totalActionItems === 0
-          ? "No patch batch is required; resolve decision_only_action_items with the dedicated deterministic decision apply commands."
-          : "AI/Codex may combine all per-task patch sets into this batch file, then run apply_all_patches once to produce one patched rows file.",
+        options.includeExecutionCommands === false
+          ? "Prepare the completed per-task patch sets in this batch file for review. Apply only through a structured action from the public task."
+          : totalActionItems === 0
+            ? "No patch batch is required; resolve decision_only_action_items with the dedicated deterministic decision apply commands."
+            : "AI/Codex may combine all per-task patch sets into this batch file, then run apply_all_patches once to produce one patched rows file.",
     },
     commands: {
-      apply_all_patches: canApplyBatch ? applyBatchArgs.map(shellQuote).join(" ") : null,
+      apply_all_patches:
+        options.includeExecutionCommands !== false && canApplyBatch
+          ? applyBatchArgs.map(shellQuote).join(" ")
+          : null,
     },
     shared_context_bundle: sharedContextBundleRef,
     tasks: tasksWithSharedContext.map((task) => ({
