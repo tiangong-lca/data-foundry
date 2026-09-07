@@ -361,6 +361,7 @@ test("packed Foundry installs twice and runs only the public facade from a read-
     doctor: string;
   };
   assert.deepEqual(importedResult.exports, [
+    "FOUNDRY_AUTHORIZATION_INPUT_SCHEMA",
     "FOUNDRY_COMMAND_NEXT_ACTION_BINDING_SCHEMA",
     "FOUNDRY_MIGRATED_WORKSPACE_SCHEMA",
     "FOUNDRY_MIGRATION_ACTIVATION_SCHEMA",
