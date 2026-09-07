@@ -30,6 +30,7 @@ import {
 import { runFoundryTaskOperation, withFoundryTaskMetadata } from "./foundry-task-store.ts";
 import { registerWorkflowStageFiles } from "./foundry-workflow-io.ts";
 import type { ArtifactEntry } from "./foundry-task-types.ts";
+import { readTaskBytes } from "./foundry-task-io.ts";
 
 export async function finalizeFoundryWorkflow(
   context: FoundryRuntimeContext,
@@ -53,6 +54,9 @@ export async function finalizeFoundryWorkflow(
       );
     return task.job.target_profile;
   });
+  const profileLock = workflowObject(
+    JSON.parse(readTaskBytes(context, "profile-lock.json").toString("utf8")),
+  );
   const nonce = randomUUID(),
     output = resolveFoundryOutput(context, `outputs/finalize/${nonce}`);
   const temporary = resolveFoundryOutput(context, `tmp/finalize-${nonce}`);
@@ -240,6 +244,35 @@ export async function finalizeFoundryWorkflow(
             : null,
         mutation_manifest: files.mutation_manifest,
         handoff: files.commit_handoff_plan,
+        authorization_inputs: context.accountIntent
+          ? [
+              { input_kind: "current_rows", file: set.file },
+              ...(typeof files.final_rows === "string"
+                ? [
+                    {
+                      input_kind: "final_rows",
+                      file: path.resolve(context.assetRoot, files.final_rows),
+                    },
+                  ]
+                : []),
+            ].map((input) => {
+              const fact = captureFoundryInput(input.file);
+              return {
+                ...input,
+                sha256: fact.sha256,
+                binding: {
+                  workspace_id: context.workspaceId,
+                  task_id: context.taskId,
+                  actor_id: context.actorId,
+                  project_ref: context.accountIntent!.projectRef,
+                  user_id: context.accountIntent!.userId,
+                  profile_id: profile,
+                  profile_sha256: profileLock.profile_sha256,
+                  input_scope_sha256: fact.sha256,
+                },
+              };
+            })
+          : [],
       });
       const before = blockers.length;
       if (Array.isArray(result.blockers)) blockers.push(...result.blockers.map(workflowObject));

@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: b8f2873d0def1bbf446bf214e3b773c91bca460e
-lastReviewedNote: "Reviewed for Foundry #118 public finalization through existing owners: explicit CLI/native environments, fresh per-type preflight outputs, preserved indexed evidence, current rows/assessment capture and authorization-pending results. Canonical catalog is a bound reference asset; write authorization/execution/readback and full release acceptance remain open."
+lastReviewedCommit: 03e7642ca44829fc19a011210abb144153d862f0
+lastReviewedNote: "Reviewed for Foundry #118 explicit public grant/evidence selection, locked current-finalization activation, competing-pointer refusal, current final-row handoff/capsule sealing and idempotent approval reuse. Prepared-row derivation, owner dispatch/readback and full release acceptance remain open; no new auth or mutation bypass."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -107,6 +107,8 @@ Indexed row preparation and local assessment include the existing curation and a
 Finalization includes the reused library owner closure and the existing public canonical support reference catalog at `specs/canonical-support/flow-properties-unit-groups.json`. The catalog is an explicit allowlisted, descriptor-bound asset; it supplies reference choices and does not grant write permission or replace current remote verification. Queue, dry-run and verification calls use the qualified CLI with explicit environments. Developer command modules remain outside the compiled package.
 
 The package includes `foundry-semantic-input.schema.json` and exports its schema identifier and input types. Public semantic submission reuses the existing collector and exact CLI local patch owner. Selected bytes are captured without exposing a caller-selected runtime or an arbitrary executable, and only a successful local apply advances the indexed row version.
+
+`foundry-authorization-input.schema.json` and its public identifier/types describe explicit approval selection. The compiled closure reuses current identity, authorization registration and execution-capsule owners. No approval content, credentials or task artifacts enter the distributed package. Public command hosts may provide the same process-only authentication configuration as SDK hosts; it is not an ordinary CLI/task-file option.
 
 The repository manifest retains developer scripts. `build-foundry-package.ts` projects a separate exact public manifest into `package-stage/` containing identity, repository links, public access intent, bin/exports/files, Node engine, license, one production dependency and runtime layout. It omits `scripts`, `devDependencies`, `packageManager`, lint configuration and `private`. There are no install/prepare lifecycle hooks; installation cannot initialize a workspace, install Git hooks, authenticate or download a component. Repository hook setup is the explicit `pnpm dev:hooks` command.
 

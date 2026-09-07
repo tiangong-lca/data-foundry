@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: b8f2873d0def1bbf446bf214e3b773c91bca460e
-lastReviewedNote: "Reviewed for Foundry #118 public finalization through existing owners: explicit CLI/native environments, fresh per-type preflight outputs, preserved indexed evidence, current rows/assessment capture and authorization-pending results. Canonical catalog is a bound reference asset; write authorization/execution/readback and full release acceptance remain open."
+lastReviewedCommit: 03e7642ca44829fc19a011210abb144153d862f0
+lastReviewedNote: "Reviewed for Foundry #118 explicit public grant/evidence selection, locked current-finalization activation, competing-pointer refusal, current final-row handoff/capsule sealing and idempotent approval reuse. Prepared-row derivation, owner dispatch/readback and full release acceptance remain open; no new auth or mutation bypass."
 ---
 
 # Test Layout
@@ -297,6 +297,8 @@ The public identity regression uses the real installed request/context/curation 
 Public identity submission covers `create_new` and `reuse_existing_reference`, wrong snapshot/context refusal, unresolved diagnostics with unchanged rows, duplicate reuse and preserved report lineage. A reference-rewrite case verifies flow partition cardinality and dependent process IDs while retaining canonical row metadata. Source/receipt/lineage tamper checks remain required after producer lookup is indexed; no timing threshold substitutes for correctness checks.
 
 Public finalization tests continue the create-new case through original owner dry-run/reference-report formats to `permissions.required`, and retain an explicit verification blocker for reference-only scope. Remote responses are intercepted; commit flags are forbidden in the test transport. Repeated pending resume must return the same artifacts without more reads. Legacy finalize ready/blocked/order tests continue through thin command adapters. A separate actual TIDAS 0.3.0/CLI 0.1.11 local probe checks report generation and precise missing identity/reference/owner blockers on the frozen reference sample; it performs no real account query or write and is not final live acceptance.
+
+Authorization input tests cover strict file/scope schema, frozen selection, required user evidence, duplicate evidence IDs and unknown selectors. The public flow rejects stale finalization and incorrect binding, permits only one winner for competing initial grants, produces the existing sealed capsule and reuses identical approval. The CLI `--authorization-input` route emits one envelope. These tests intercept account/remote responses, never dispatch the sealed commit, and do not establish live write/readback or F1 acceptance.
 
 The public-workflow regression now covers primary-tree selection without process-bundle double counting, typed API seed wrappers, schema data-issue reports, local QA/queue/curation, concrete semantic manifests, disabled developer commands and changed-assessment refusal. Queue tests verify concrete support-type matching without attaching a different dataset type. Real installed candidates are additionally checked with the valid ILCD fixture, retained valid Flow sample and a derived missing-name sample; only the latter requires semantic repair.
 

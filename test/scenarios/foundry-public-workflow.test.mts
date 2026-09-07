@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
 import { CLI_RUNTIME_EXPECTATION_SCHEMA, describeCliRuntime } from "@tiangong-lca/cli/runtime";
-import { createFoundryFacade } from "../../scripts/public-api.ts";
+import { createFoundryFacade, runFoundryPublicCommand } from "../../scripts/public-api.ts";
 import { FOUNDRY_TIDAS_EXPECTATION_SCHEMA } from "../../scripts/lib/foundry-runtime-qualification.ts";
 import { flowRow, processRowWithInvalidLocation } from "../fixtures/row-builders.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "../../scripts/lib/foundry-runtime-utils.ts";
@@ -109,7 +109,7 @@ ${marker}`,
     );
   }
   const cli = describeCliRuntime();
-  const facade = createFoundryFacade({
+  const facadeOptions = {
     workspace,
     cacheBase: path.join(root, "cache"),
     runtimeSelection: {
@@ -141,10 +141,11 @@ ${marker}`,
         },
       },
     },
-  });
+  };
+  const facade = createFoundryFacade(facadeOptions);
   assert.equal(facade.initialize().status, "ready");
   assert.equal(facade.doctor().status, "ready");
-  return { root, workspace, facade };
+  return { root, workspace, facade, runtimeSelection: facadeOptions.runtimeSelection };
 }
 
 test("qualified public import dispatches the native owner and retains indexed stage evidence", async (t) => {
@@ -578,7 +579,7 @@ test("public decisions bind their owner and context, preserve rows on refusal, a
 
 for (const identityDecision of ["create_new", "reuse_existing_reference"] as const) {
   test(`public identity preflight and ${identityDecision} submission preserve current scope and evidence`, async (t) => {
-    const { root, facade } = workflowFixture(t);
+    const { root, workspace, facade, runtimeSelection } = workflowFixture(t);
     const id = "77777777-7777-4777-8777-777777777777";
     const basic = flowRow(id);
     const payload = {
@@ -1003,7 +1004,14 @@ for (const identityDecision of ["create_new", "reuse_existing_reference"] as con
     );
     assert.ok(finalizeArtifact?.kind === "file");
     const finalReport = JSON.parse(fs.readFileSync(finalizeArtifact.path, "utf8")) as {
-      sets: Array<{ report: string }>;
+      sets: Array<{
+        report: string;
+        authorization_inputs: Array<{
+          input_kind: string;
+          sha256: string;
+          binding: Record<string, string>;
+        }>;
+      }>;
       blockers: unknown[];
     };
     assert.equal(finalReport.sets.length, identityDecision === "create_new" ? 1 : 0);
@@ -1025,6 +1033,159 @@ for (const identityDecision of ["create_new", "reuse_existing_reference"] as con
       reads,
       "pending finalization cannot repeat remote reads",
     );
+    if (identityDecision === "create_new") {
+      const input = finalReport.sets[0].authorization_inputs.find(
+        (item) => item.input_kind === "final_rows",
+      );
+      assert.ok(input);
+      const evidenceFile = path.join(root, "approval-evidence.txt"),
+        grantFile = path.join(root, "grant.json"),
+        approvalFile = path.join(root, "authorization-input.json");
+      fs.writeFileSync(
+        evidenceFile,
+        "Controlled test approval of the exact final-row scope. No real remote writes.",
+      );
+      const grant = {
+        schema: "tiangong-foundry.task-authorization.v1",
+        binding: input.binding,
+        issued_at_utc: new Date(Date.now() - 1000).toISOString(),
+        expires_at_utc: new Date(Date.now() + 3600000).toISOString(),
+        remote_state_code: 0,
+        allowed_actions: [],
+        qa_waivers: [],
+        evidence: [
+          {
+            id: "approval",
+            kind: "user-decision",
+            reference: fs.realpathSync(evidenceFile),
+            sha256: digestFile(evidenceFile),
+          },
+        ],
+      };
+      const writeApproval = (value = grant, finalizationSha = finalizeArtifact.sha256) => {
+        fs.writeFileSync(grantFile, JSON.stringify(value));
+        fs.writeFileSync(
+          approvalFile,
+          JSON.stringify({
+            schema: "tiangong-foundry.authorization-input.v1",
+            task_id: invocation.taskId,
+            actor_id: invocation.actorId,
+            finalization_sha256: finalizationSha,
+            dataset_type: "flow",
+            input_kind: "final_rows",
+            input_sha256: input.sha256,
+            expected_previous_sha256: null,
+            grant: { file: grantFile, sha256: digestFile(grantFile) },
+            evidence: [
+              {
+                id: "approval",
+                kind: "user-decision",
+                file: evidenceFile,
+                sha256: digestFile(evidenceFile),
+              },
+            ],
+          }),
+        );
+      };
+      writeApproval(grant, "0".repeat(64));
+      assert.equal(
+        (await facade.resume({ ...invocation, authorizationInputFile: approvalFile })).blockers[0]
+          ?.code,
+        "authorization_finalization_mismatch",
+      );
+      const wrong = structuredClone(grant);
+      wrong.binding.actor_id = "wrong-actor";
+      writeApproval(wrong);
+      const refused = await facade.resume({ ...invocation, authorizationInputFile: approvalFile });
+      assert.notEqual(refused.permissions.state, "granted");
+      writeApproval();
+      const alternateGrant = structuredClone(grant);
+      alternateGrant.issued_at_utc = new Date(Date.now() - 2000).toISOString();
+      const otherGrantFile = path.join(root, "alternate-grant.json"),
+        otherApproval = path.join(root, "alternate-approval.json");
+      fs.writeFileSync(otherGrantFile, JSON.stringify(alternateGrant));
+      const alternate = JSON.parse(fs.readFileSync(approvalFile, "utf8")) as {
+        grant: { file: string; sha256: string };
+      };
+      alternate.grant = { file: otherGrantFile, sha256: digestFile(otherGrantFile) };
+      fs.writeFileSync(otherApproval, JSON.stringify(alternate));
+      const raced = await Promise.all(
+        [approvalFile, otherApproval].map((authorizationInputFile) =>
+          facade.resume({ ...invocation, authorizationInputFile }),
+        ),
+      );
+      assert.equal(
+        raced.filter((value) => value.permissions.state === "granted").length,
+        1,
+        JSON.stringify(raced.map((value) => value.blockers)),
+      );
+      const winner = raced.findIndex((value) => value.permissions.state === "granted");
+      const approved = raced[winner],
+        acceptedApproval = [approvalFile, otherApproval][winner];
+      assert.equal(approved.permissions.state, "granted", JSON.stringify(approved.blockers));
+      assert.equal(
+        approved.blockers[0]?.code,
+        "authorized_execution_pending",
+        JSON.stringify(approved.blockers),
+      );
+      const recorded = approved.artifacts.findLast(
+        (item) => item.role === "foundry-authorization.json",
+      );
+      assert.ok(recorded?.kind === "file");
+      const authorization = JSON.parse(fs.readFileSync(recorded.path, "utf8")) as {
+        status: string;
+        capsule: { capsule_file: string };
+        handoff: { commands: { commit: { argv: string[] } } };
+      };
+      assert.equal(authorization.status, "sealed");
+      assert.ok(fs.existsSync(authorization.capsule.capsule_file));
+      assert.ok(
+        authorization.handoff.commands.commit.argv.includes("--commit"),
+        "sealed intent is retained without dispatch",
+      );
+      const authCount = authCalls;
+      assert.deepEqual(
+        (await facade.resume({ ...invocation, authorizationInputFile: acceptedApproval }))
+          .artifacts,
+        approved.artifacts,
+      );
+      assert.equal(authCalls, authCount, "identical approval is a read-only reuse");
+      let stdout = "",
+        exitCode = -1;
+      await runFoundryPublicCommand(
+        [
+          process.execPath,
+          "tiangong-foundry",
+          "task",
+          "resume",
+          "--workspace",
+          workspace,
+          "--task",
+          invocation.taskId,
+          "--actor",
+          invocation.actorId,
+          "--authorization-input",
+          acceptedApproval,
+          "--json",
+        ],
+        {
+          runtimeSelection,
+          cacheBase: path.join(root, "cache"),
+          writeStdout: (text) => {
+            stdout += text;
+          },
+          setExitCode: (code) => {
+            exitCode = code;
+          },
+        },
+      );
+      assert.equal(stdout.trim().split("\n").length, 1);
+      assert.equal(
+        (JSON.parse(stdout) as { permissions: { state: string } }).permissions.state,
+        "granted",
+      );
+      assert.equal(exitCode, 2, "sealed execution still requires the subsequent execution stage");
+    }
   });
 }
 

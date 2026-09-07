@@ -29,8 +29,8 @@ checkPaths:
   - specs/import-profiles.json
   - tasks/**
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: b8f2873d0def1bbf446bf214e3b773c91bca460e
-lastReviewedNote: "Reviewed for Foundry #118 public finalization through existing owners: explicit CLI/native environments, fresh per-type preflight outputs, preserved indexed evidence, current rows/assessment capture and authorization-pending results. Canonical catalog is a bound reference asset; write authorization/execution/readback and full release acceptance remain open."
+lastReviewedCommit: 03e7642ca44829fc19a011210abb144153d862f0
+lastReviewedNote: "Reviewed for Foundry #118 explicit public grant/evidence selection, locked current-finalization activation, competing-pointer refusal, current final-row handoff/capsule sealing and idempotent approval reuse. Prepared-row derivation, owner dispatch/readback and full release acceptance remain open; no new auth or mutation bypass."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -85,6 +85,8 @@ Identity preflight runs its qualified, account-bound remote reads before a local
 Facade request indexes map one explicit request id to retained task revisions. The request key binds workspace id plus request id; a revision fingerprint binds the strict task-start spec and ordered canonical source path/bytes/SHA facts. Task ids include the complete request SHA-256 plus the revision ordinal, avoiding a shorter cross-request namespace. A changed source path or content, actor/account, lane/profile/entity scope, seed or preparation creates a predecessor-bound task rather than editing the prior job. Same-fingerprint concurrent starts serialize through the CLI-owned lock and return the same task bytes. The immutable task pointer names one exact revision record; status never locates authority by scanning task directories. If a host stops after publishing a task but before appending its request revision, only the original spec can complete that interrupted registration; a different retry returns `facade_crash_recovery_conflict` and identifies the deterministic task id.
 
 ## Task creation and recovery
+
+Public authorization result records identify the current finalization, concrete input scope, grant/pointer digests, expiry and optional sealed handoff/capsule. The grant and approval snapshots remain owned by the existing authorization registry. State projection uses only a matching active pointer, current finalization and unexpired result; it is not execution admission. Registration and snapshot sealing never run a database command, and duplicate current approval reuses the recorded result.
 
 Semantic submissions bind current assessment and work-item digests independently of their supplied files. Accepted input, its projected collection manifest, local CLI result and new row manifest enter the same receipt/index lineage. A blocked application may retain a diagnostic output but publishes no new current-row manifest. Current row selection follows the latest registered row-manifest producer, and an assessment is current only for those row files. The semantic transaction checks current selection again while holding the task lock; it cannot publish a stale result after another submission advanced the task.
 

@@ -397,6 +397,7 @@ export async function runFoundryTaskOperation(
       | "dataset-workflow-assessment"
       | "dataset-workflow-identity"
       | "dataset-workflow-finalize"
+      | "dataset-workflow-authorization"
       | "dataset-semantic-apply";
     options: JsonRecord;
     task?: FoundryTaskOptions;

@@ -93,8 +93,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: b8f2873d0def1bbf446bf214e3b773c91bca460e
-lastReviewedNote: "Reviewed for Foundry #118 public finalization through existing owners: explicit CLI/native environments, fresh per-type preflight outputs, preserved indexed evidence, current rows/assessment capture and authorization-pending results. Canonical catalog is a bound reference asset; write authorization/execution/readback and full release acceptance remain open."
+lastReviewedCommit: 03e7642ca44829fc19a011210abb144153d862f0
+lastReviewedNote: "Reviewed for Foundry #118 explicit public grant/evidence selection, locked current-finalization activation, competing-pointer refusal, current final-row handoff/capsule sealing and idempotent approval reuse. Prepared-row derivation, owner dispatch/readback and full release acceptance remain open; no new auth or mutation bypass."
 ---
 
 # Capability Ownership Policy

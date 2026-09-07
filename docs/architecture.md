@@ -152,8 +152,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: b8f2873d0def1bbf446bf214e3b773c91bca460e
-lastReviewedNote: "Reviewed for Foundry #118 public finalization through existing owners: explicit CLI/native environments, fresh per-type preflight outputs, preserved indexed evidence, current rows/assessment capture and authorization-pending results. Canonical catalog is a bound reference asset; write authorization/execution/readback and full release acceptance remain open."
+lastReviewedCommit: 03e7642ca44829fc19a011210abb144153d862f0
+lastReviewedNote: "Reviewed for Foundry #118 explicit public grant/evidence selection, locked current-finalization activation, competing-pointer refusal, current final-row handoff/capsule sealing and idempotent approval reuse. Prepared-row derivation, owner dispatch/readback and full release acceptance remain open; no new auth or mutation bypass."
 ---
 
 # Architecture
@@ -190,11 +190,13 @@ Foundry selects a private session reference and exact project/user intent, then 
 
 `foundry-workflow-identity-apply.ts` admits exact task/snapshot/context-bound decisions, delegates identity partitioning and dependent process-reference rewrites to existing owners, and verifies that partition contents preserve current scope. The semantic transaction activates only successful resolved output, retaining identity/rewrite report lineage. Unresolved partitions remain diagnostic with unchanged current rows.
 
-`foundry-finalize-owners.ts` composes the existing finalize, handoff and queue factories under `lib/finalize-owners/` with explicit environments and the qualified installed CLI. Original command modules remain thin compatible adapters. `foundry-workflow-finalize.ts` follows current row-manifest ancestry, supplies current evidence and per-type contract context, isolates fresh preflight outputs, and captures owner reports after read-only work. It never dispatches a mutation. Current finalization is bound to both rows and assessment; success requests task authorization, while blockers retain concrete diagnostic reports. Authorization submission, owner write and readback integration remain pending.
+`foundry-finalize-owners.ts` composes the existing finalize, handoff and queue factories under `lib/finalize-owners/` with explicit environments and the qualified installed CLI. Original command modules remain thin compatible adapters. `foundry-workflow-finalize.ts` follows current row-manifest ancestry, supplies current evidence and per-type contract context, isolates fresh preflight outputs, and captures owner reports after read-only work. It never dispatches a mutation. Current finalization is bound to both rows and assessment; success requests task authorization, while blockers retain concrete diagnostic reports. Owner write and readback integration remain pending.
 
 Request and task records form a two-level index: one request retains monotonic revisions, while each revision points to one immutable v2 task. The latest identical fingerprint is reused; a changed canonical path or byte hash produces a new task with a predecessor. This preserves old attempts and avoids using user-visible filenames or current directories as identity. Status resolves through the task pointer and requires actor intent before loading task content.
 
 Runtime selection is an injected host capability. Direct/unqualified use can initialize, diagnose, create, inspect and locally prepare tasks; child-required stages need a CLI-manager selection that W06/W08 will derive from an immutable product manifest. No environment variable or task document can choose the CLI/TIDAS trust anchor.
+
+`foundry-authorization-input.ts` captures explicit grant/evidence selections. `foundry-workflow-authorization.ts` binds them to a current finalization scope, calls the existing fresh-identity registration/loader, rebuilds the owner handoff and seals exact final-row intent through the existing execution-admission API. It records approval metadata without executing the command. Prepared-row re-finalization/derivation and mutation/readback dispatch remain separate work.
 
 ## Package boundary
 

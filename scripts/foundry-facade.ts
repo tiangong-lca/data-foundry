@@ -61,6 +61,8 @@ import { currentWorkflowState } from "./lib/foundry-workflow-state.ts";
 import { selectFoundrySemanticInput } from "./lib/foundry-semantic-input.ts";
 import { runFoundryWorkflowIdentity } from "./lib/foundry-workflow-identity.ts";
 import { finalizeFoundryWorkflow } from "./lib/foundry-workflow-finalize.ts";
+import { selectFoundryAuthorizationInput } from "./lib/foundry-authorization-input.ts";
+import { authorizeFoundryWorkflow } from "./lib/foundry-workflow-authorization.ts";
 import type { FoundryAuthentication } from "./lib/foundry-runtime-identity.ts";
 
 export interface FoundryFacadeRuntimeSelection {
@@ -281,6 +283,7 @@ function failure(
     code.startsWith("argument_") ||
     code.startsWith("task_spec_") ||
     code.startsWith("task_semantic_") ||
+    code.startsWith("task_authorization_input_") ||
     code.startsWith("task_seed_");
   const blocked =
     !needsAuth &&
@@ -536,6 +539,45 @@ function taskProjection(
       });
   }
   const workflow = currentWorkflowState(context, inspected.artifacts);
+  if (workflow.authorization) {
+    const report = workflow.authorization.value;
+    const code =
+      report.status === "sealed"
+        ? "authorized_execution_pending"
+        : report.status === "authorized_current_rows"
+          ? "authorized_refinalization_pending"
+          : "authorized_handoff_requires_input";
+    return createFoundryOperationResult({
+      operation,
+      status: "needs_input",
+      taskId: record.task_id,
+      artifacts,
+      blockers: [
+        {
+          code,
+          message:
+            report.status === "sealed"
+              ? "Current approval and execution capsule are recorded; owner execution remains pending."
+              : "Current approval is registered; resolve the remaining preparation or handoff work.",
+          scope: record.task_id,
+        },
+      ],
+      nextActions: [
+        human(
+          code,
+          `Read the registered approval result ${workflow.authorization.file}. Existing approval does not permit replay of any consumed attempt.`,
+        ),
+      ],
+      runtimeIdentity: identity,
+      permissions: {
+        state: "granted",
+        requested_actions: Array.isArray(report.allowed_actions)
+          ? report.allowed_actions.filter((item): item is string => typeof item === "string")
+          : [],
+        approval_reference: String(report.authorization_sha256),
+      },
+    });
+  }
   if (workflow.finalization) {
     const ready = workflow.finalization.value.status === "ready_for_authorization";
     const found = workflow.finalization;
@@ -1211,6 +1253,7 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
       taskId: string;
       actorId: string;
       semanticInputFile?: string;
+      authorizationInputFile?: string;
     }): Promise<FoundryOperationResult> {
       let current: ReturnType<typeof createFoundryRuntimeContext> | null = null;
       try {
@@ -1232,6 +1275,39 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
           runtimeIdentity(context, qualified),
         );
         if (existing.status === "completed" || existing.status === "blocked") return existing;
+        if (input.authorizationInputFile) {
+          if (input.semanticInputFile || record.spec.preparation)
+            throw new FoundryContextError(
+              "task_authorization_input_invalid",
+              "Submit approval separately from semantic input or explicit cleanup.",
+            );
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Approval admission requires qualified runtime owners.",
+            );
+          const submission = selectFoundryAuthorizationInput(context, input.authorizationInputFile);
+          const facts = before.artifacts.map((artifact) => ({
+            path: path.join(context.taskRoot!, artifact.path),
+            bytes: artifact.bytes,
+            sha256: artifact.sha256,
+          }));
+          const selected = taskContext(options, current, record, facts);
+          await authorizeFoundryWorkflow(
+            selected,
+            qualified,
+            before.artifacts,
+            submission,
+            options.authentication,
+          );
+          return taskProjection(
+            "task.resume",
+            context,
+            record,
+            await runtime.inspectTask(),
+            runtimeIdentity(context, qualified),
+          );
+        }
         if (input.semanticInputFile) {
           if (record.spec.preparation)
             throw new FoundryContextError(

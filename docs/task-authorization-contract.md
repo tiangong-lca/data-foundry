@@ -30,8 +30,8 @@ checkPaths:
   - test/unit/task-profile-authority.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: b8f2873d0def1bbf446bf214e3b773c91bca460e
-lastReviewedNote: "Reviewed for Foundry #118 public finalization through existing owners: explicit CLI/native environments, fresh per-type preflight outputs, preserved indexed evidence, current rows/assessment capture and authorization-pending results. Canonical catalog is a bound reference asset; write authorization/execution/readback and full release acceptance remain open."
+lastReviewedCommit: 03e7642ca44829fc19a011210abb144153d862f0
+lastReviewedNote: "Reviewed for Foundry #118 explicit public grant/evidence selection, locked current-finalization activation, competing-pointer refusal, current final-row handoff/capsule sealing and idempotent approval reuse. Prepared-row derivation, owner dispatch/readback and full release acceptance remain open; no new auth or mutation bypass."
 related:
   - docs/architecture.md
   - docs/safety-policy.md
@@ -53,6 +53,10 @@ The public facade does not authenticate during workspace initialization or task 
 The extended public workflow may authenticate for read-only identity preflight after local semantic preparation. Its task account intent and fresh CLI receipt select the read scope. Host authentication is explicit; OAuth configuration is public and headless tokens stay process-only. Query receipts and current-row identity reports are evidence, never an action grant. Preflight does not consume, reset or dispatch a mutation attempt; subsequent permission admission still requires its own current identity and approval checks.
 
 ## Required binding and evidence
+
+The public facade accepts explicit approval selection through `--authorization-input`, whose descriptor/schema is owned by `public-runtime-contract.md`. Finalization supplies reviewable bindings and current input digests, never an issued grant. Registration uses an internal current-state check under its metadata lock before activation, so an approval for an older finalization cannot replace current state. The existing expected-previous-pointer compare-and-swap remains mandatory.
+
+Ready final-row approval rebuilds the existing commit handoff and seals a capsule without dispatching it. Host evidence selections remain independent of grant text, and evidence paths are canonical. Prepared-row approval can be registered but its automatic re-finalization/derived activation is not yet connected to the public workflow. A registered or sealed report does not relax fresh identity/admission checks or clear consumed attempts.
 
 The exact v1 binding contains `workspace_id`, `task_id`, `actor_id`, `project_ref`, `user_id`, `profile_id`, `profile_sha256`, and `input_scope_sha256`. The profile digest is the stable, key-sorted JSON digest of the selected raw rule profile. Input scope is independently frozen by the task host; it must prove current source bytes and downstream lineage, rather than copying the digest from the grant. At a row-consuming permission boundary it is the SHA-256 of that exact input file; commit handoff checks the final-row artifact bytes again. A transformed row file needs a newly bound grant supported by the retained task approval and verified lineage, never silent reuse of the old digest. A binding mismatch invalidates every exception in that grant.
 

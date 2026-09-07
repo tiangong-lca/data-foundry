@@ -34,7 +34,7 @@ import {
   type ValidatedTaskAuthorization,
 } from "./task-authorization.ts";
 import { sha256Json } from "./identity-preflight-proof.ts";
-import type { LoadedTask } from "./foundry-task-types.ts";
+import type { LoadedTask, ArtifactEntry } from "./foundry-task-types.ts";
 
 export interface TaskApprovalEvidence {
   id: string;
@@ -203,13 +203,15 @@ export async function registerFoundryTaskAuthorization(
     grant: unknown;
     evidence: readonly TaskApprovalEvidence[];
     expectedPreviousSha256?: string | null;
+    validateCurrent?: (task: LoadedTask, index: readonly ArtifactEntry[]) => void;
   },
   qualification?: QualifiedFoundryRuntime,
 ): Promise<{ authorization_sha256: string; pointer_sha256: string }> {
   assertFoundryWorkspaceActive(context);
   assertVerifiedFoundryIdentity(context, identity, qualification);
-  return withFoundryTaskMetadata(context, (task) => {
+  return withFoundryTaskMetadata(context, (task, index) => {
     assertVerifiedFoundryIdentity(context, identity, qualification);
+    options.validateCurrent?.(task, index);
     const input = inputFact(context, options.inputFile);
     const result = validateTaskAuthorization(options.grant, binding(context, task, input));
     if (result.status !== "authorized")
@@ -279,6 +281,7 @@ export async function registerFoundryTaskAuthorization(
         "Authorization expired or changed before it could be activated.",
       );
     const registrationBytes = writeRegistration(context, registration);
+    options.validateCurrent?.(task, index);
     const pointer = bytes({
       schema: "tiangong-foundry.authorization-pointer.v1",
       authorization_sha256: authorization.authorization_sha256,

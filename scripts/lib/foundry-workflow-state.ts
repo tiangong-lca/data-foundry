@@ -7,6 +7,7 @@ import {
   type FoundryRuntimeContext,
 } from "./foundry-runtime-context.ts";
 import type { ArtifactEntry } from "./foundry-task-types.ts";
+import { readTaskBytes } from "./foundry-task-io.ts";
 
 export interface WorkflowRowSet {
   type: string;
@@ -216,5 +217,33 @@ export function currentWorkflowState(
       }
     }
   }
-  return { rows, assessment, identity, finalization };
+  let authorization: WorkflowArtifact<Record<string, unknown>> | null = null;
+  if (finalization && fs.existsSync(path.join(context.taskRoot!, "authorization.json"))) {
+    const pointer = createHash("sha256")
+      .update(readTaskBytes(context, "authorization.json"))
+      .digest("hex");
+    for (const entry of [...entries].reverse()) {
+      if (
+        entry.command !== "dataset-workflow-authorization" ||
+        path.basename(entry.path) !== "foundry-authorization.json"
+      )
+        continue;
+      const found = readWorkflowArtifact(context, entry);
+      if (found.value.schema !== "tiangong-foundry.authorization-stage.v1")
+        throw new FoundryContextError(
+          "workflow_authorization_invalid",
+          "Registered approval metadata is invalid.",
+        );
+      if (
+        found.value.finalization_sha256 === finalization.entry.sha256 &&
+        found.value.pointer_sha256 === pointer &&
+        typeof found.value.expires_at_utc === "string" &&
+        Date.parse(found.value.expires_at_utc) > Date.now()
+      ) {
+        authorization = found;
+        break;
+      }
+    }
+  }
+  return { rows, assessment, identity, finalization, authorization };
 }
