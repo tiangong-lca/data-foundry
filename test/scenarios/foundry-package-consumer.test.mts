@@ -332,6 +332,14 @@ test("packed Foundry installs twice and runs only the public facade from a read-
   };
   assert.equal(api.assertFoundryPackage(firstPackage).package.name, "@tiangong-lca/foundry");
   assert.equal(api.assertFoundryPackage(secondPackage).package.version, sourcePackageVersion);
+  const installedResolver = (await import(
+    pathToFileURL(path.join(firstPackage, "package-dist/scripts/lib/foundry-runtime-utils.js")).href
+  )) as {
+    resolveInstalledTiangongLcaCliPackage: () => { packageVersion: string; binPath: string };
+  };
+  const installedCli = installedResolver.resolveInstalledTiangongLcaCliPackage();
+  assert.equal(installedCli.packageVersion, "0.1.11");
+  assert.ok(fs.statSync(installedCli.binPath).isFile());
   await verifyManagedPackageCache(firstPackage, root);
   await verifyManagedPackageHost(firstPackage, root);
   const consumerModule = path.join(firstProject, "consumer.mjs");

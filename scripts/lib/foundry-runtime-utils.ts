@@ -96,7 +96,8 @@ export function resolveInstalledTiangongLcaCliPackage(): InstalledTiangongLcaCli
   let packageJsonPath = logicalPackageJsonPath;
   if (!fs.existsSync(packageJsonPath)) {
     try {
-      packageJsonPath = require.resolve(`${tiangongLcaCliPackageName}/package.json`);
+      const publicBin = require.resolve(`${tiangongLcaCliPackageName}/bin/tiangong-lca.js`);
+      packageJsonPath = path.resolve(path.dirname(publicBin), "../package.json");
     } catch (error) {
       throw new Error(
         `Unable to resolve installed ${tiangongLcaCliPackageName}@${tiangongLcaCliPackageVersion}; run pnpm install --frozen-lockfile.`,
