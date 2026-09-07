@@ -158,8 +158,8 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 4b027afad988467255c941eb8cec23741fc9ccbe
-lastReviewedNote: "Reviewed for Foundry #112 copied C1 bootstrap and final manifest workflow: isolated cached/public modes, actual system tools, tamper refusal and strict four-platform public proof before immutable manifest publication. Source-only tooling preserves runtime/task/account boundaries; actual versioned publication remains required."
+lastReviewedCommit: d2ec3d1b1f749a00266e0809870e821af0d8ca3f
+lastReviewedNote: "Reviewed for Foundry #116: executable zero-JavaScript ratchet remains required and tested; Docpact records document reviews without forcing test-comment edits into version-only releases. Runtime and release isolation are unchanged."
 ---
 
 # TianGong LCA Data Foundry

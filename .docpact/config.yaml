@@ -345,7 +345,7 @@ rules:
       - path: docs/env-surface-policy.md
         mode: must_exist
       - path: test/unit/zero-javascript-ratchet.test.mts
-        mode: review_or_update
+        mode: must_exist
       - path: specs/capability-ownership-rules.json
         mode: must_exist
     reason: Command wrappers, route plans, and capability ownership changes must preserve Foundry as task/workspace/profile/gate control.
