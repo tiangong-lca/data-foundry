@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 81450527dd1f0b0439ed1f385fb494f9c045eb93
-lastReviewedNote: "Reviewed for Foundry #118 public classification/location tasks and bound semantic submission. Existing domain owners, task lineage, package-only composition, credential boundaries and acceptance hooks remain enforced; identity/publication work remains open."
+lastReviewedCommit: 739843c62869cb6c3a6113730c9fc16624425486
+lastReviewedNote: "Reviewed for Foundry #118 public read-only identity preflight: existing owner algorithms and source-context helpers, explicit credential/executable boundary, captured current-row evidence, retry diagnostics and identity-aware reassessment. Identity decisions, write admission and release remain open."
 ---
 
 # Environment Surface Policy
@@ -120,6 +120,8 @@ Runtime qualification passes the same explicit isolated environment into both TI
 The W05 facade receives runtime expectations and the selected TIDAS executable only through an explicit process-local host argument. `FOUNDRY_CLI_EXPECTATION`, ambient `TIDAS_BIN`, task spec fields, ordinary argv and `.env` are not trust sources; unsupported public options are rejected before workspace mutation. The final CLI manager/manifest binding is W06/W08 work.
 
 Consumer doctor may receive expected project/user and an absolute private session reference. It verifies only that the reference is a bounded regular non-link file and reports `configured_unverified`; it never opens the file or claims server authentication. Missing reference metadata returns `needs_auth` with a human OAuth action. Task start does not authenticate or cache an identity. Restricted resume continues to require a fresh CLI-owned identity at the W04 boundary.
+
+Public read-only identity preflight shares `foundry-authentication-environment.ts` with fresh account verification. It takes explicit host OAuth/headless configuration, preserves required system launcher/session discovery keys, and omits ambient credentials, executable overrides, Node options and result-cache settings. Its expected project/user bindings come from the verified current task account. The receipt passed to the runner is temporary non-secret proof; headless tokens remain only in the child environment and are not registered as artifacts.
 
 ## Automatic Check
 

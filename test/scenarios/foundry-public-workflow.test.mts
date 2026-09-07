@@ -9,6 +9,9 @@ import { createFoundryFacade } from "../../scripts/public-api.ts";
 import { FOUNDRY_TIDAS_EXPECTATION_SCHEMA } from "../../scripts/lib/foundry-runtime-qualification.ts";
 import { flowRow, processRowWithInvalidLocation } from "../fixtures/row-builders.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "../../scripts/lib/foundry-runtime-utils.ts";
+import childProcess from "node:child_process";
+import { syncBuiltinESMExports } from "node:module";
+import { testAuthIdentityReceipt } from "../fixtures/auth-identity-receipt.ts";
 
 const digestFile = (file: string) =>
   createHash("sha256").update(fs.readFileSync(file)).digest("hex");
@@ -393,6 +396,12 @@ test("public semantic submission rejects stale evidence and re-assesses only suc
   );
   assert.ok(latest?.kind === "file");
   assert.notEqual(latest.sha256, assessmentFile.sha256);
+  const needsAccount = await facade.resume(invocation);
+  assert.equal(
+    needsAccount.status,
+    "needs_auth",
+    "remote identity work needs independently selected account intent",
+  );
   patch.patch_sets[0].operations[0].basis =
     "A different submission must not use the old assessment.";
   fs.writeFileSync(patchFile, JSON.stringify(patch));
@@ -565,6 +574,219 @@ test("public decisions bind their owner and context, preserve rows on refusal, a
     assert.equal(stale.status, "blocked");
     assert.equal(stale.blockers[0]?.code, "semantic_assessment_mismatch");
   }
+});
+
+test("public identity preflight uses current payloads and isolated CLI reads, then refreshes curation", async (t) => {
+  const { root, facade } = workflowFixture(t);
+  const id = "77777777-7777-4777-8777-777777777777";
+  const basic = flowRow(id);
+  const payload = {
+    flowDataSet: {
+      ...basic.flowDataSet,
+      flowInformation: {
+        dataSetInformation: {
+          ...basic.flowDataSet.flowInformation.dataSetInformation,
+          name: {
+            ...basic.flowDataSet.flowInformation.dataSetInformation.name,
+            mixAndLocationTypes: { "@xml:lang": "en", "#text": "Swiss market" },
+          },
+          classificationInformation: {
+            "common:classification": {
+              "common:class": [
+                { "@level": "0", "@classId": "06", "#text": "Crude petroleum and natural gas" },
+              ],
+            },
+          },
+        },
+      },
+      modellingAndValidation: { LCIMethod: { typeOfDataSet: "Product flow" } },
+      flowProperties: {
+        flowProperty: [
+          {
+            "@dataSetInternalID": "0",
+            referenceToFlowPropertyDataSet: {
+              "@refObjectId": "88888888-8888-4888-8888-888888888888",
+              "@version": "00.00.001",
+              "common:shortDescription": { "@xml:lang": "en", "#text": "Mass" },
+            },
+            meanValue: "1",
+          },
+        ],
+      },
+    },
+  };
+  const seed = path.join(root, "identity-seed.json"),
+    specFile = path.join(root, "identity-request.json");
+  const account = {
+    project_ref: "qgzvkongdjqiiamzbbts",
+    user_id: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+    session_reference: null,
+  };
+  fs.writeFileSync(seed, JSON.stringify({ rows: [{ id, version: "00.00.001", json: payload }] }));
+  fs.writeFileSync(
+    specFile,
+    JSON.stringify({
+      schema: "tiangong-foundry.task-start.v1",
+      request_id: "identity-cycle",
+      actor_id: "identity-actor",
+      lane: "source-evidence-dataset-development",
+      profile_id: "generic",
+      target_entities: ["flow"],
+      sources: [{ path: seed }],
+      seed: { path: seed },
+      account_intent: account,
+      preparation: null,
+    }),
+  );
+  const started = await facade.start({ specFile });
+  assert.ok(started.task_id);
+  const invocation = { taskId: started.task_id, actorId: "identity-actor" };
+  for (let step = 0; step < 3; step++) await facade.resume(invocation);
+  const previous = await facade.status(invocation);
+  assert.equal(previous.status, "ready", JSON.stringify(previous));
+  const assessment = previous.artifacts.findLast((item) => item.role === "foundry-assessment.json");
+  assert.ok(assessment?.kind === "file");
+  const ambient = {
+    TIANGONG_LCA_CLI_BIN: "/must-not-run",
+    TIANGONG_LCA_ACCESS_TOKEN: "ambient-test-secret",
+    BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE: path.join(root, "ambient-cache"),
+    NODE_OPTIONS: "--invalid-test-option",
+  };
+  const saved = Object.fromEntries(Object.keys(ambient).map((key) => [key, process.env[key]]));
+  Object.assign(process.env, ambient);
+  const restoreEnvironment = () => {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  };
+  const originalSpawn = childProcess.spawnSync;
+  let authCalls = 0,
+    preflightCalls = 0,
+    failRead = true;
+  let childFailure: unknown;
+  t.mock.method(childProcess, "spawnSync", (...args: Parameters<typeof childProcess.spawnSync>) => {
+    try {
+      const argv = args[1],
+        options = args[2];
+      if (
+        !Array.isArray(argv) ||
+        (!argv.includes("identity-receipt") && !argv.includes("identity-preflight"))
+      )
+        return Reflect.apply(originalSpawn, childProcess, args);
+      const environment = options?.env ?? {};
+      for (const key of Object.keys(ambient)) assert.equal(environment[key], undefined, key);
+      assert.equal(args[0], process.execPath);
+      assert.equal(argv[0], resolveInstalledTiangongLcaCliPackage().binPath);
+      let report: unknown;
+      if (argv.includes("identity-receipt")) {
+        authCalls++;
+        report = testAuthIdentityReceipt({
+          projectRef: account.project_ref,
+          userId: account.user_id,
+        });
+      } else {
+        preflightCalls++;
+        const requestFile = argv[argv.indexOf("--input") + 1],
+          outDir = argv[argv.indexOf("--out-dir") + 1];
+        const request = JSON.parse(fs.readFileSync(requestFile, "utf8")) as { target: unknown };
+        assert.deepEqual(
+          request.target,
+          payload,
+          "the canonical envelope is removed without changing the target payload",
+        );
+        assert.equal(environment.FOUNDRY_VERIFIED_USER_ID, account.user_id);
+        report = {
+          schema_version: 1,
+          status: "needs_review",
+          decision: "manual_review",
+          candidates: [],
+          ok: true,
+        };
+        fs.mkdirSync(path.join(outDir, "outputs"), { recursive: true });
+        fs.writeFileSync(
+          path.join(outDir, "outputs", "identity-decision.json"),
+          JSON.stringify(report) + "\n",
+        );
+        if (failRead)
+          return {
+            status: 1,
+            signal: null,
+            stdout: JSON.stringify(report),
+            stderr: "",
+            pid: 1,
+            output: [],
+          };
+      }
+      return {
+        status: 0,
+        signal: null,
+        stdout: JSON.stringify(report),
+        stderr: "",
+        pid: 1,
+        output: [],
+      };
+    } catch (error) {
+      childFailure = error;
+      throw error;
+    }
+  });
+  syncBuiltinESMExports();
+  t.after(() => {
+    restoreEnvironment();
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  });
+  const failed = await facade.resume(invocation);
+  if (childFailure) throw childFailure;
+  assert.equal(failed.status, "needs_input", JSON.stringify(failed));
+  assert.equal(failed.blockers[0]?.code, "identity_preflight_requires_input");
+  assert.equal((await facade.status(invocation)).status, "needs_input");
+  failRead = false;
+  const read = await facade.resume(invocation);
+  const evidence = read.artifacts.findLast((item) => item.role === "foundry-identity.json");
+  assert.equal(
+    read.status,
+    "ready",
+    evidence?.kind === "file"
+      ? fs.readFileSync(evidence.path, "utf8")
+      : JSON.stringify(read.blockers),
+  );
+  assert.ok(evidence?.kind === "file");
+  const report = JSON.parse(fs.readFileSync(evidence.path, "utf8")) as {
+    status: string;
+    index: string;
+  };
+  assert.equal(report.status, "completed");
+  for (const artifact of read.artifacts.filter(
+    (item) => item.kind === "file" && item.path.includes("/outputs/identity/"),
+  )) {
+    assert.ok(artifact.kind === "file");
+    assert.ok(!fs.readFileSync(artifact.path, "utf8").includes(ambient.TIANGONG_LCA_ACCESS_TOKEN));
+  }
+  const index = JSON.parse(fs.readFileSync(report.index, "utf8").trim()) as {
+    target_sha256: string;
+  };
+  assert.equal(
+    index.target_sha256,
+    createHash("sha256").update(JSON.stringify(payload)).digest("hex"),
+  );
+  restoreEnvironment();
+  const reviewed = await facade.resume(invocation);
+  assert.equal(reviewed.status, "needs_input", JSON.stringify(reviewed));
+  const latest = reviewed.artifacts.findLast((item) => item.role === "foundry-assessment.json");
+  assert.ok(latest?.kind === "file");
+  assert.notEqual(latest.sha256, assessment.sha256);
+  const current = JSON.parse(fs.readFileSync(latest.path, "utf8")) as {
+    identity_report: string;
+    sets: Array<{ decisions: Array<{ kind: string }> }>;
+  };
+  assert.equal(current.identity_report, evidence.path);
+  assert.ok(current.sets[0].decisions.some((item) => item.kind === "identity"));
+  assert.equal(preflightCalls, 2);
+  assert.equal(authCalls, 2);
+  await facade.status(invocation);
+  assert.equal(preflightCalls, 2, "status cannot repeat a remote search");
 });
 
 test("a failed native conversion remains blocked without preparing later context", async (t) => {

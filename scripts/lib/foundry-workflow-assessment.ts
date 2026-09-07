@@ -37,6 +37,7 @@ export function assessFoundryWorkflowRows(
   qualified: QualifiedFoundryRuntime,
   rowsReport: string,
   contextReports: readonly string[],
+  identityReport?: string,
 ) {
   assertQualifiedFoundryRuntime(context, qualified);
   resolveFoundryAsset(context, "specs/prewrite-content-policy.json");
@@ -45,7 +46,11 @@ export function assessFoundryWorkflowRows(
     context,
     {
       command: "dataset-workflow-assessment",
-      options: { rows_report: rowsReport, context_reports: contextReports },
+      options: {
+        rows_report: rowsReport,
+        context_reports: contextReports,
+        identity_report: identityReport ?? null,
+      },
     },
     (operation) => {
       for (const input of context.inputs) readFoundryInput(context, input.path);
@@ -54,6 +59,19 @@ export function assessFoundryWorkflowRows(
         throw new FoundryContextError(
           "workflow_rows_invalid",
           "Select the current registered row sets.",
+        );
+      const identity = identityReport
+        ? record(JSON.parse(readFoundryInput(context, identityReport).toString("utf8")))
+        : null;
+      if (
+        identity &&
+        (identity.status !== "completed" ||
+          identity.rows_report !== rowsReport ||
+          !Array.isArray(identity.sets))
+      )
+        throw new FoundryContextError(
+          "workflow_identity_invalid",
+          "Identity preflight must bind these current rows.",
         );
       const contracts = new Map<string, Record<string, unknown>>();
       for (const file of contextReports) {
@@ -173,6 +191,7 @@ export function assessFoundryWorkflowRows(
           const gate = runDatasetCurationGate({
             repoRoot: context.assetRoot,
             routeAction: routeFoundryDecisionAction,
+            requireIdentityPreflight: Boolean(identity),
             options: {
               type: set.type,
               rowsFile: set.file,
@@ -186,6 +205,7 @@ export function assessFoundryWorkflowRows(
               schemaFile: contractPath("schema"),
               yamlFile: contractPath("methodology"),
               rulesetFile: contractPath("ruleset"),
+              identityPreflightIndex: identity?.index,
             },
           });
           const gateReport = path.join(gateDir, "dataset-curation-gate-report.json");
@@ -227,6 +247,7 @@ export function assessFoundryWorkflowRows(
           status: "completed",
           owner_base: context.assetRoot,
           rows_report: rowsReport,
+          identity_report: identityReport ?? null,
           sets: assessed,
         };
         operation.writeJson(path.join(output, "foundry-assessment.json"), report);

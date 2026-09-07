@@ -106,6 +106,7 @@ interface CurationGateArgs {
   repoRoot?: string;
   options?: CurationGateOptions;
   routeAction?: (action: JsonRecord, datasetType: string, payload: unknown) => JsonRecord;
+  requireIdentityPreflight?: boolean;
 }
 
 function asJsonRecord(value: unknown): JsonRecord {
@@ -120,6 +121,7 @@ export function runDatasetCurationGate({
   repoRoot,
   options = {},
   routeAction,
+  requireIdentityPreflight = false,
 }: CurationGateArgs = {}): JsonRecord {
   const datasetType = datasetTypeFromOptions(options);
   if (options.help) {
@@ -313,7 +315,9 @@ export function runDatasetCurationGate({
       version: identity.version,
     });
     const identityPreflightGateItemsForEntity = identityPreflightGateItems({
-      required: Boolean(fullContextRequirement) && ["flow", "process"].includes(datasetType),
+      required:
+        (Boolean(fullContextRequirement) || requireIdentityPreflight) &&
+        ["flow", "process"].includes(datasetType),
       context: identityPreflightContext,
       authoringContext: identityPreflightAuthoringContext,
       datasetType,
@@ -322,7 +326,9 @@ export function runDatasetCurationGate({
       profile: profile as unknown as IdentityPreflightGateOptions["profile"],
     });
     const identityPreflightActionItems = identityPreflightAuthoringActionItems({
-      required: Boolean(fullContextRequirement) && ["flow", "process"].includes(datasetType),
+      required:
+        (Boolean(fullContextRequirement) || requireIdentityPreflight) &&
+        ["flow", "process"].includes(datasetType),
       authoringContext: identityPreflightAuthoringContext,
       datasetType,
       identity,

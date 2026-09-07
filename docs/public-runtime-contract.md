@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 81450527dd1f0b0439ed1f385fb494f9c045eb93
-lastReviewedNote: "Reviewed for Foundry #118 public classification/location tasks and bound semantic submission. Existing domain owners, task lineage, package-only composition, credential boundaries and acceptance hooks remain enforced; identity/publication work remains open."
+lastReviewedCommit: 739843c62869cb6c3a6113730c9fc16624425486
+lastReviewedNote: "Reviewed for Foundry #118 public read-only identity preflight: existing owner algorithms and source-context helpers, explicit credential/executable boundary, captured current-row evidence, retry diagnostics and identity-aware reassessment. Identity decisions, write admission and release remain open."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -53,7 +53,7 @@ This is the implemented v1 facade protocol for `@tiangong-lca/foundry` and its `
 | `tiangong-foundry doctor --workspace <path> [--expected-project-ref <ref> --expected-user-id <uuid> [--session-reference <path>]] --json` | Read-only runtime, asset, workspace and account-readiness diagnostics. It checks only bounded reference metadata, never session contents, repository maintenance, Git, login or download. |
 | `tiangong-foundry task start --workspace <path> --spec <file> --json` | Validate the strict `task-start.v1` spec and independently capture its selected sources/optional seed. A relative spec path resolves from the selected workspace root. Request ID, actor, lane, profile, account intent and preparation live in the reviewed spec. |
 | `tiangong-foundry task status --workspace <path> --task <id> --actor <id> --json` | Reconstruct the exact registered request revision and inspect its current task/index/attempt state. Actor intent is supplied independently on every call. |
-| `tiangong-foundry task resume --workspace <path> --task <id> --actor <id> [--semantic-input <file>] --json` | Continue registered local stages or accept a current work-item-bound semantic submission. Consumed/ambiguous mutation state is readback-only and never replayed. |
+| `tiangong-foundry task resume --workspace <path> --task <id> --actor <id> [--semantic-input <file>] --json` | Continue registered preparation, accept bound semantic input or run qualified read-only identity preflight. Consumed/ambiguous mutation state is readback-only and never replayed. |
 | `tiangong-foundry workspace migrate --workspace <path> --dry-run --json` | Inventory old state and produce a content-bound migration plan. Applying that plan is a separately explicit operation defined by W10. |
 
 The CLI-owned `tiangong-lca runtime ensure/status` manages qualified components only; it does not initialize a Foundry job or grant data permissions. Skills invoke the Foundry facade and its next actions rather than rebuilding its task state machine.
@@ -81,6 +81,10 @@ The assessment stage invokes native schema validation, CLI deterministic QA and 
 The compatibility report retains native diagnostic fields and supplies curation's `code` and JSON-pointer `path` from the native issue code/location. Row normalization uses the canonical `json` payload slot for typed API wrappers so native validation, curation and CLI patch application address the same domain payload while preserving row metadata and source lineage.
 
 Curation blockers or authoring tasks produce `needs_input` with references to the registered reports and task manifests. Active row, schema, QA, curation and authoring files are checked before presenting that state; changed bytes block continuation. Public authoring artifacts omit developer-runner execution commands and retain full source/context evidence plus the required English guidance. Assessment readiness is distinct from semantic input acceptance, write authorization and final completion.
+
+After local semantic work is ready, a further resume performs process/flow identity preflight through the qualified CLI. The task spec must already identify the intended project and user; otherwise the result is `needs_auth`. The host may supply explicit OAuth public configuration or process-only headless authentication through `FoundryFacadeOptions.authentication`. Initialization and task start remain credential-free. The facade never inherits ambient tokens, CLI overrides, Node options or preflight result caches.
+
+Preflight reuses the existing request builder, query audit, receipt-bound runner and index merger. Requests target current unwrapped payloads and retain source trace context. Remote reads finish before a local transaction registers their immutable evidence; that transaction cannot replay a remote operation. Registration rechecks current rows under the task lock. Failed reads remain visible as `needs_input` and a later resume may retry the read-only stage. Status never performs a search. Successful preflight invalidates the earlier assessment, and the next resume re-runs curation against its exact identity index. Manual review becomes dedicated identity work even for the generic profile. This read evidence does not authorize writes or implement the still-pending identity submission path.
 
 An executable next action contains Node/active source-or-emitted entry argv, `cwd=workspaceRoot` and purpose. Its verified binding digest covers every executable field; workspace, task and actor are explicit argv values, while task lookup revalidates the immutable revision fingerprint and current runtime/input facts before work. It has no `display` authority. A final restricted data CommandSpec still requires the W04 execution-context/identity/authorization gate; W05 does not dispatch it.
 

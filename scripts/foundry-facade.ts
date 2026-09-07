@@ -59,6 +59,8 @@ import type { TrustedRuntimeManifest } from "@tiangong-lca/cli/runtime";
 import { datasetTypePlural } from "./lib/import-curation/internal/dataset-types.ts";
 import { currentWorkflowState } from "./lib/foundry-workflow-state.ts";
 import { selectFoundrySemanticInput } from "./lib/foundry-semantic-input.ts";
+import { runFoundryWorkflowIdentity } from "./lib/foundry-workflow-identity.ts";
+import type { FoundryAuthentication } from "./lib/foundry-runtime-identity.ts";
 
 export interface FoundryFacadeRuntimeSelection {
   readonly cliExpectation: unknown;
@@ -74,6 +76,7 @@ export interface FoundryFacadeOptions {
   readonly environment?: NodeJS.ProcessEnv;
   readonly runtimeSelection?: FoundryFacadeRuntimeSelection;
   readonly accountIntent?: FoundryAccountIntent;
+  readonly authentication?: FoundryAuthentication;
   readonly signal?: AbortSignal;
   readonly workspaceAccess?: FoundryWorkspaceAccess;
   readonly runtimeManager?: FoundryRuntimeManagerOptions;
@@ -532,6 +535,29 @@ function taskProjection(
       });
   }
   const workflow = currentWorkflowState(context, inspected.artifacts);
+  if (workflow.identity?.value.status === "blocked")
+    return createFoundryOperationResult({
+      operation,
+      status: "needs_input",
+      taskId: record.task_id,
+      artifacts,
+      blockers: [
+        {
+          code: "identity_preflight_requires_input",
+          message:
+            "Review the identity preflight diagnostics. A subsequent resume retries this read-only stage against the same current rows.",
+          scope: record.task_id,
+        },
+      ],
+      nextActions: [
+        human(
+          "review_identity_preflight",
+          `Read ${workflow.identity.file} and resolve the reported query or execution failure before retrying.`,
+        ),
+      ],
+      runtimeIdentity: identity,
+      permissions: noPermission(),
+    });
   const assessment = workflow.assessment?.entry;
   if (assessment) {
     const report: unknown = JSON.parse(
@@ -1207,7 +1233,7 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
                 {
                   code: "semantic_input_rejected",
                   message:
-                    "Review the registered semantic result and correct the submitted patch; prior rows remain current.",
+                    "Review the registered semantic result and correct the submitted input; prior rows remain current.",
                   scope: record.task_id,
                 },
               ],
@@ -1281,9 +1307,12 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
           assertNotInterrupted(options.signal);
         } else if (!preparation && !workflow.assessment) {
           const selectedArtifacts = before.artifacts.filter((artifact) =>
-            ["dataset-workflow-rows", "dataset-context-pack", "dataset-semantic-apply"].includes(
-              artifact.command,
-            ),
+            [
+              "dataset-workflow-rows",
+              "dataset-context-pack",
+              "dataset-semantic-apply",
+              "dataset-workflow-identity",
+            ].includes(artifact.command),
           );
           const facts = selectedArtifacts.map((artifact) => ({
             path: path.join(context.taskRoot!, artifact.path),
@@ -1302,8 +1331,55 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
             .filter((fact) => path.basename(fact.path) === "contract-report.json")
             .map((fact) => fact.path);
           const selected = taskContext(options, current, record, facts);
-          await createFoundryRuntime(selected, qualified).assessRows(rows.path, contracts);
+          await createFoundryRuntime(selected, qualified).assessRows(
+            rows.path,
+            contracts,
+            workflow.identity?.value.status === "completed" ? workflow.identity.file : undefined,
+          );
           assertNotInterrupted(options.signal);
+        } else if (
+          !preparation &&
+          (existing.status === "ready" || workflow.identity?.value.status === "blocked") &&
+          (!workflow.identity || workflow.identity.value.status === "blocked") &&
+          workflow.rows?.value.sets.some((set) => ["flow", "process"].includes(set.type))
+        ) {
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Identity preflight requires qualified runtime owners.",
+            );
+          const facts = before.artifacts.map((artifact) => ({
+            path: path.join(context.taskRoot!, artifact.path),
+            bytes: artifact.bytes,
+            sha256: artifact.sha256,
+          }));
+          const selected = taskContext(options, current, record, facts);
+          const result = await runFoundryWorkflowIdentity(
+            selected,
+            qualified,
+            before.artifacts,
+            options.authentication,
+          );
+          if (result.status !== "completed") {
+            const after = await runtime.inspectTask();
+            return createFoundryOperationResult({
+              operation: "task.resume",
+              status: "needs_input",
+              taskId: record.task_id,
+              artifacts: taskArtifacts(context, after),
+              blockers: [
+                {
+                  code: "identity_preflight_requires_input",
+                  message:
+                    "Review the registered identity preflight diagnostics before continuing.",
+                  scope: record.task_id,
+                },
+              ],
+              nextActions: [],
+              runtimeIdentity: runtimeIdentity(context, qualified),
+              permissions: noPermission(),
+            });
+          }
         }
         if (preparation) {
           assertNotInterrupted(options.signal);

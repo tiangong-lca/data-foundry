@@ -16,17 +16,15 @@ import {
   parseFreshIntentBoundAuthReceipt,
   type AuthIdentityReceipt,
 } from "./identity-preflight-proof.ts";
-import { requirePrivateOAuthSessionFile } from "./oauth-session-reference.ts";
+import {
+  createFoundryAuthenticationEnvironment,
+  type FoundryAuthentication,
+} from "./foundry-authentication-environment.ts";
 
-export interface FoundryPublicOAuthConfiguration {
-  apiBaseUrl?: string;
-  publishableKey?: string;
-  oauthClientId?: string;
-  oauthRedirectUri?: string;
-}
-export type FoundryAuthentication =
-  | { mode: "oauth"; configuration?: FoundryPublicOAuthConfiguration }
-  | { mode: "headless"; accessToken: string; apiBaseUrl: string; publishableKey: string };
+export type {
+  FoundryPublicOAuthConfiguration,
+  FoundryAuthentication,
+} from "./foundry-authentication-environment.ts";
 
 export interface VerifiedFoundryIdentity {
   readonly receipt: AuthIdentityReceipt;
@@ -40,24 +38,6 @@ export interface VerifiedFoundryIdentity {
 }
 const verifiedIdentities = new WeakSet<object>();
 const maxAgeMs = 60_000;
-const systemKeys = [
-  "PATH",
-  "Path",
-  "PATHEXT",
-  "SystemRoot",
-  "SYSTEMROOT",
-  "WINDIR",
-  "ComSpec",
-  "COMSPEC",
-  "HOME",
-  "USERPROFILE",
-  "APPDATA",
-  "LOCALAPPDATA",
-  "XDG_CONFIG_HOME",
-  "TEMP",
-  "TMP",
-  "TMPDIR",
-] as const;
 
 function reject(code: string, message: string): never {
   throw new FoundryContextError(code, message);
@@ -86,34 +66,11 @@ export function verifyFoundryRuntimeIdentity(
       "Fresh task identity requires explicit workspace, task, actor, project and user intent.",
     );
   const cli = resolveInstalledTiangongLcaCliPackage();
-  const environment: NodeJS.ProcessEnv = {};
-  for (const key of systemKeys)
-    if (systemEnvironment[key] !== undefined) environment[key] = systemEnvironment[key];
-  if (authentication.mode === "oauth") {
-    const config = authentication.configuration ?? {};
-    environment.TIANGONG_LCA_API_BASE_URL = config.apiBaseUrl ?? "";
-    environment.TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY = config.publishableKey ?? "";
-    environment.TIANGONG_LCA_OAUTH_CLIENT_ID = config.oauthClientId ?? "";
-    environment.TIANGONG_LCA_OAUTH_REDIRECT_URI = config.oauthRedirectUri ?? "";
-    environment.TIANGONG_LCA_AUTH_MODE = "oauth";
-    environment.TIANGONG_LCA_FORCE_REAUTH = "false";
-    environment.TIANGONG_LCA_DISABLE_SESSION_CACHE = "false";
-    if (account.sessionReference) {
-      requirePrivateOAuthSessionFile(account.sessionReference);
-      environment.TIANGONG_LCA_SESSION_FILE = account.sessionReference;
-    }
-  } else {
-    if (!authentication.accessToken || !authentication.apiBaseUrl || !authentication.publishableKey)
-      reject(
-        "headless_target_required",
-        "Headless mode requires the existing CLI explicit target and process-only actor token.",
-      );
-    environment.TIANGONG_LCA_AUTH_MODE = "access_token";
-    environment.TIANGONG_LCA_ACCESS_TOKEN = authentication.accessToken;
-    environment.TIANGONG_LCA_API_BASE_URL = authentication.apiBaseUrl;
-    environment.TIANGONG_LCA_SUPABASE_PUBLISHABLE_KEY = authentication.publishableKey;
-    environment.TIANGONG_LCA_DISABLE_SESSION_CACHE = "true";
-  }
+  const environment = createFoundryAuthenticationEnvironment(
+    authentication,
+    account.sessionReference,
+    systemEnvironment,
+  );
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-identity-"));
   fs.chmodSync(cwd, 0o700);
   try {

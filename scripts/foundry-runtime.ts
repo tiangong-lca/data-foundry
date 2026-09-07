@@ -90,8 +90,8 @@ export function createFoundryRuntime(
       prepareFoundryWorkflowContext(context, requireQualification(), types),
     materializeRows: (sources: readonly string[]) =>
       materializeFoundryWorkflowRows(context, sources),
-    assessRows: (rows: string, contracts: readonly string[]) =>
-      assessFoundryWorkflowRows(context, requireQualification(), rows, contracts),
+    assessRows: (rows: string, contracts: readonly string[], identityReport?: string) =>
+      assessFoundryWorkflowRows(context, requireQualification(), rows, contracts, identityReport),
     applySemantic: (entries: readonly ArtifactEntry[], submission: SelectedSemanticInput) =>
       applyFoundrySemanticInput(context, requireQualification(), entries, submission),
     initializeWorkspace: () => initializeFoundryWorkspace(context),

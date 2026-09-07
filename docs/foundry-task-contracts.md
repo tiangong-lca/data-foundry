@@ -28,9 +28,9 @@ checkPaths:
   - specs/schemas/execution-context.schema.json
   - specs/import-profiles.json
   - tasks/**
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: 3db019d9a30d6b0458eb97da3d54ced7aa147be2
-lastReviewedNote: "Reviewed for Foundry #112 adoption of qualified public TIDAS0.3.0: full source-bound native notices and reviewed 0.2/0.3 runtime protocol admission. Source release helpers remain outside the public compiler closure; workspace/task/account authorization, no-replay and final F1 publication gates retain their existing owners."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: 739843c62869cb6c3a6113730c9fc16624425486
+lastReviewedNote: "Reviewed for Foundry #118 public read-only identity preflight: existing owner algorithms and source-context helpers, explicit credential/executable boundary, captured current-row evidence, retry diagnostics and identity-aware reassessment. Identity decisions, write admission and release remain open."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -79,6 +79,8 @@ Workspace registration retains the complete intended job/source/profile/seed met
 Local native-import and CLI context-pack stages use the existing operation plan, receipt and artifact index. A successful repeated stage reuses its checked receipt. Native output is inspected before registration; CLI context runs in a fresh task-contained generation so its file references remain valid. Interrupted unindexed generations are not accepted as completed stages. Neither conversion nor context readiness supplies content acceptance, identity or write authority.
 
 Row materialization and assessment also use this local transaction. Materialized rows preserve domain payloads and row metadata, normalize typed API payload wrappers to the CLI-compatible `json` slot, and retain a producer chain to the original selected seed or primary native dataset. Original wrappers remain in the frozen source; bundled copies are excluded from row selection. Assessment reads only selected indexed rows/context, then registers native validation, local QA, queue, curation and authoring outputs. Its report records the owner's resolution base for relative references. Pending work is a current artifact state, not permission to execute a rendered command or dispatch a remote write.
+
+Identity preflight runs its qualified, account-bound remote reads before a local transaction captures the resulting files. Each capture has a distinct invocation identity and rechecks current rows under the task lock; the receipt cannot replay a query. A completed identity report binds the current row manifest and its combined preflight index, invalidating earlier assessments until curation consumes that index. Failed reads retain diagnostics and can be retried by a later resume; status remains read-only over stored files. Current-account write admission still requires fresh identity and separate authorization.
 
 Facade request indexes map one explicit request id to retained task revisions. The request key binds workspace id plus request id; a revision fingerprint binds the strict task-start spec and ordered canonical source path/bytes/SHA facts. Task ids include the complete request SHA-256 plus the revision ordinal, avoiding a shorter cross-request namespace. A changed source path or content, actor/account, lane/profile/entity scope, seed or preparation creates a predecessor-bound task rather than editing the prior job. Same-fingerprint concurrent starts serialize through the CLI-owned lock and return the same task bytes. The immutable task pointer names one exact revision record; status never locates authority by scanning task directories. If a host stops after publishing a task but before appending its request revision, only the original spec can complete that interrupted registration; a different retry returns `facade_crash_recovery_conflict` and identifies the deterministic task id.
 

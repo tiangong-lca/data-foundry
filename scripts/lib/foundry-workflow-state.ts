@@ -28,6 +28,7 @@ export interface WorkflowAssessment {
   status: string;
   owner_base: string;
   rows_report?: string;
+  identity_report?: string | null;
   sets: Array<Record<string, unknown>>;
 }
 
@@ -102,6 +103,29 @@ export function currentWorkflowState(
       value: { schema: "tiangong-foundry.rows-stage.v1", status: "completed", sets },
     };
   }
+  let identity: WorkflowArtifact<Record<string, unknown>> | null = null;
+  if (rows) {
+    for (const entry of [...entries].reverse()) {
+      if (
+        entry.command !== "dataset-workflow-identity" ||
+        path.basename(entry.path) !== "foundry-identity.json"
+      )
+        continue;
+      const found = readWorkflowArtifact(context, entry);
+      if (
+        found.value.schema !== "tiangong-foundry.identity-stage.v1" ||
+        !Array.isArray(found.value.sets)
+      )
+        throw new FoundryContextError(
+          "workflow_identity_invalid",
+          "Registered identity metadata is invalid.",
+        );
+      if (found.value.rows_report === rows.file) {
+        identity = found;
+        break;
+      }
+    }
+  }
   let assessment: WorkflowArtifact<WorkflowAssessment> | null = null;
   if (rows) {
     for (const entry of [...entries].reverse()) {
@@ -127,7 +151,12 @@ export function currentWorkflowState(
         rows.value.sets.every((row) =>
           sets.some((set) => set.type === row.type && set.rows === row.file),
         );
-      if ((value.rows_report === undefined || value.rows_report === rows.file) && matchingRows) {
+      if (
+        (value.rows_report === undefined || value.rows_report === rows.file) &&
+        matchingRows &&
+        (value.identity_report ?? null) ===
+          (identity?.value.status === "completed" ? identity.file : null)
+      ) {
         assessment = {
           ...found,
           value: {
@@ -135,6 +164,7 @@ export function currentWorkflowState(
             status: String(value.status),
             owner_base: value.owner_base,
             rows_report: rows.file,
+            identity_report: identity?.value.status === "completed" ? identity.file : null,
             sets,
           },
         };
@@ -142,5 +172,5 @@ export function currentWorkflowState(
       }
     }
   }
-  return { rows, assessment };
+  return { rows, assessment, identity };
 }
