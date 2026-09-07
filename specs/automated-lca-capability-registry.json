@@ -53,7 +53,7 @@
       "input_contract": "Target TIDAS dataset type plus requested schema, methodology YAML, ruleset, and AI context artifacts.",
       "output_contract": "contract-report.json, contract-manifest.json, schema.json, methodology.yaml, runtime-ruleset.json, ai-context.json, and ai-context.md when available.",
       "remote_write_mode": "read-only",
-      "verification_gate": "contract manifest must include artifact hashes before AI authoring consumes the context. For schema validation, the context assets must describe the same stable tidas contract advertised by `tidas validate --describe`; the executable handshake accepts compatible 0.2.x releases rather than one patch.",
+      "verification_gate": "contract manifest must include artifact hashes before AI authoring consumes the context. For schema validation, the context assets must describe the same stable tidas contract advertised by `tidas validate --describe`; the executable handshake accepts compatible 0.2.x or 0.3.x releases rather than one patch.",
       "source_manifest_requirements": [
         "target TIDAS type",
         "CLI command record",

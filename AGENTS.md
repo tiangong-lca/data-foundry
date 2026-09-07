@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 6a0042fd3e368bf191bc32ab402aa6950be61e1b
-lastReviewedNote: "Reviewed for Foundry #112 Windows qualification: the TIDAS fixture now drains queued work and exits naturally with the exact protocol code. Production adapter exit checks, runtime authority, public command scope and permission boundaries remain unchanged; native crash statuses are not accepted as cancellation."
+lastReviewedCommit: 3db019d9a30d6b0458eb97da3d54ced7aa147be2
+lastReviewedNote: "Reviewed for Foundry #112 qualified TIDAS0.3.0 native notices and reviewed 0.2/0.3 runtime admission; TypeScript, ownership, task authorization and final release gates remain intact."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

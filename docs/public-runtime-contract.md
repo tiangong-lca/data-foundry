@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 0d80df8200029509b94e548f079d14604ace8c3a
-lastReviewedNote: "Reviewed for Foundry #112 component assembly and native qualification: source-candidate and verified-published inputs, complete declared file copies, intrinsic native metadata and empty-tool-PATH public lifecycle checks preserve ownership, workspace and permission boundaries. TIDAS185 supplies the missing complete third-party notice inventory before final publication."
+lastReviewedCommit: 3db019d9a30d6b0458eb97da3d54ced7aa147be2
+lastReviewedNote: "Reviewed for Foundry #112 adoption of qualified public TIDAS0.3.0: full source-bound native notices and reviewed 0.2/0.3 runtime protocol admission. Source release helpers remain outside the public compiler closure; workspace/task/account authorization, no-replay and final F1 publication gates retain their existing owners."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md

@@ -158,8 +158,8 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 6a0042fd3e368bf191bc32ab402aa6950be61e1b
-lastReviewedNote: "Reviewed for Foundry #112 fixture process shutdown: queued work drains before the exact cancellation/error exit. This changes test support only; production exit/report agreement, runtime/package/permission and ownership boundaries are unchanged."
+lastReviewedCommit: 3db019d9a30d6b0458eb97da3d54ced7aa147be2
+lastReviewedNote: "Reviewed for Foundry #112 adoption of qualified public TIDAS0.3.0: full source-bound native notices and reviewed 0.2/0.3 runtime protocol admission. Source release helpers remain outside the public compiler closure; workspace/task/account authorization, no-replay and final F1 publication gates retain their existing owners."
 ---
 
 # TianGong LCA Data Foundry

@@ -29,8 +29,8 @@ checkPaths:
   - specs/import-profiles.json
   - tasks/**
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 846cc25ada0f6bea300e37397a7e6e18e0629ec3
-lastReviewedNote: "Reviewed for Foundry #112 managed host admission: public CLI IPC and inventory-bound runtime metadata supply package/CLI/TIDAS identity, workspace read/write mode and target selection before operations. Workspace/task/actor/account, permissions, no-replay and source-only maintenance boundaries remain separate. Production F1 assembly, publication and final acceptance remain pending."
+lastReviewedCommit: 3db019d9a30d6b0458eb97da3d54ced7aa147be2
+lastReviewedNote: "Reviewed for Foundry #112 adoption of qualified public TIDAS0.3.0: full source-bound native notices and reviewed 0.2/0.3 runtime protocol admission. Source release helpers remain outside the public compiler closure; workspace/task/account authorization, no-replay and final F1 publication gates retain their existing owners."
 related:
   - AGENTS.md
   - WORKFLOW.md

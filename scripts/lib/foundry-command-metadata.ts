@@ -222,7 +222,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     ownerModule: tidasOwner,
     ownerExport: "createTidasWorkflowCommands().runTidasHandshake",
     inputs: ["Rust tidas executable", "optional TIDAS_CONFIG"],
-    outputs: ["compatible 0.2.x binary and tidas.operation-report.v1 handshake"],
+    outputs: ["compatible 0.2.x or 0.3.x binary and tidas.operation-report.v1 handshake"],
     keyTests: [
       nodeTest("test/unit/tidas-adapter.test.mts", "0.2.x version and operation-report handshake"),
     ],

@@ -100,6 +100,7 @@ export function selectFoundryNativeFiles(
     readonly format: "tar-gzip" | "zip" | "file";
     readonly sha256: string;
     readonly files: readonly string[];
+    readonly completeInventory?: boolean;
   },
 ): ReadonlyMap<string, Buffer> {
   const bytes = Buffer.from(input),
@@ -109,7 +110,7 @@ export function selectFoundryNativeFiles(
   checksum(bytes, expectation.sha256);
   if (
     !requested.length ||
-    requested.length > 32 ||
+    requested.length > (expectation.completeInventory ? 8192 : 32) ||
     new Set(requested.map((name) => name.toLowerCase())).size !== requested.length ||
     requested.some(
       (name) =>
@@ -134,12 +135,22 @@ export function selectFoundryNativeFiles(
   let count = 0,
     total = 0,
     selectedBytes = 0;
-  const admit = (name: string, size: number): boolean => {
+  const admit = (name: string, size: number, directory = false): boolean => {
     count++;
     total += size;
     if (count > 50000 || !Number.isSafeInteger(size) || size < 0 || total > 2 * 1024 * 1024 * 1024)
       throw new Error("Native archive exceeds its entry or unpacked byte bound.");
-    if (!wanted.has(name)) return false;
+    if (expectation.completeInventory && directory) {
+      const prefix = name.endsWith("/") ? name : `${name}/`;
+      if (size !== 0 || !requested.some((file) => file.startsWith(prefix)))
+        throw new Error("Native archive contains an unlisted directory.");
+      return false;
+    }
+    if (!wanted.has(name)) {
+      if (expectation.completeInventory)
+        throw new Error("Native archive contains an unlisted file.");
+      return false;
+    }
     if (seen.has(name)) throw new Error("Native archive contains a duplicate selected file.");
     seen.add(name);
     selectedBytes += size;
@@ -148,9 +159,10 @@ export function selectFoundryNativeFiles(
     return true;
   };
   if (expectation.format === "zip") {
+    if (expectation.completeInventory) verifyCompleteNativeZip(bytes);
     const unpacked = unzipSync(bytes, {
       filter(file) {
-        return admit(file.name, file.originalSize);
+        return admit(file.name, file.originalSize, file.name.endsWith("/"));
       },
     });
     for (const name of requested)
@@ -169,7 +181,12 @@ export function selectFoundryNativeFiles(
         strict: true,
         maxMetaEntrySize: 1024 * 1024,
         onReadEntry(entry) {
-          if (!admit(entry.path, entry.size)) return;
+          if (
+            expectation.completeInventory &&
+            !["File", "OldFile", "Directory"].includes(entry.type)
+          )
+            throw new Error("Complete native input requires regular files and directories.");
+          if (!admit(entry.path, entry.size, entry.type === "Directory")) return;
           if (entry.type !== "File" && entry.type !== "OldFile")
             throw new Error("Selected native input must be a regular file.");
           const chunks: Buffer[] = [];
@@ -192,4 +209,51 @@ export function selectFoundryNativeFiles(
   if (selected.size !== requested.length)
     throw new Error("Native archive is missing a complete selected file.");
   return selected;
+}
+
+// fflate owns decompression. Its public file filter does not expose Unix entry
+// types, so complete native ZIP inputs also inspect the bounded central records.
+function verifyCompleteNativeZip(bytes: Buffer): void {
+  const end = bytes.length - 22;
+  if (
+    end < 0 ||
+    bytes.readUInt32LE(end) !== 0x06054b50 ||
+    bytes.readUInt16LE(end + 4) !== 0 ||
+    bytes.readUInt16LE(end + 6) !== 0 ||
+    bytes.readUInt16LE(end + 20) !== 0
+  )
+    throw new Error("Complete native ZIP requires an ordinary single-disk archive.");
+  const count = bytes.readUInt16LE(end + 10);
+  let offset = bytes.readUInt32LE(end + 16);
+  if (
+    count < 1 ||
+    count > 8192 ||
+    count !== bytes.readUInt16LE(end + 8) ||
+    offset + bytes.readUInt32LE(end + 12) !== end
+  )
+    throw new Error("Complete native ZIP directory is invalid or oversized.");
+  const names = new Set<string>();
+  for (let index = 0; index < count; index++) {
+    if (offset + 46 > end || bytes.readUInt32LE(offset) !== 0x02014b50)
+      throw new Error("Complete native ZIP directory is truncated.");
+    const length = bytes.readUInt16LE(offset + 28);
+    const next =
+      offset + 46 + length + bytes.readUInt16LE(offset + 30) + bytes.readUInt16LE(offset + 32);
+    if (
+      next > end ||
+      bytes.readUInt16LE(offset + 34) !== 0 ||
+      (bytes.readUInt16LE(offset + 8) & 1) !== 0
+    )
+      throw new Error("Complete native ZIP entry is unsupported.");
+    const name = new TextDecoder("utf-8", { fatal: true }).decode(
+      bytes.subarray(offset + 46, offset + 46 + length),
+    );
+    const mode = (bytes.readUInt32LE(offset + 38) >>> 16) & 0o170000;
+    if (names.has(name.toLowerCase())) throw new Error("Native ZIP contains duplicate paths.");
+    names.add(name.toLowerCase());
+    if (name.endsWith("/") ? ![0, 0o040000].includes(mode) : ![0, 0o100000].includes(mode))
+      throw new Error("Complete native ZIP requires regular files and directories.");
+    offset = next;
+  }
+  if (offset !== end) throw new Error("Complete native ZIP has trailing directory data.");
 }

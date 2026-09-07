@@ -13,6 +13,36 @@ import {
 
 const digest = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 
+test("complete native inventories accept bounded large notice sets and reject extra files", () => {
+  const entries = Object.fromEntries(
+    Array.from({ length: 40 }, (_, index) => [
+      `release/texts/${index}.txt`,
+      Buffer.from(`notice ${index}`),
+    ]),
+  );
+  const bytes = Buffer.from(zipSync(entries));
+  const expectation = {
+    format: "zip" as const,
+    sha256: digest(bytes),
+    files: Object.keys(entries),
+    completeInventory: true,
+  };
+  assert.equal(selectFoundryNativeFiles(bytes, expectation).size, 40);
+  assert.throws(
+    () => selectFoundryNativeFiles(bytes, { ...expectation, files: expectation.files.slice(1) }),
+    /unlisted/u,
+  );
+  const linked = Buffer.from(bytes);
+  const central = linked.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]));
+  assert.ok(central >= 0);
+  linked.writeUInt16LE(3 << 8, central + 4);
+  linked.writeUInt32LE((0o120777 * 65536) >>> 0, central + 38);
+  assert.throws(
+    () => selectFoundryNativeFiles(linked, { ...expectation, sha256: digest(linked) }),
+    /regular/u,
+  );
+});
+
 test("native ZIP and raw inputs return only exact selected bytes after checksum verification", () => {
   const zipped = Buffer.from(
     zipSync({

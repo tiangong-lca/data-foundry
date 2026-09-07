@@ -7,6 +7,7 @@ import inputs from "../specs/release/runtime-inputs.json" with { type: "json" };
 import { readFoundryReleaseGit as git } from "./lib/foundry-release-contract.ts";
 import { sameFoundryReleaseDirectory } from "./lib/foundry-release-root.ts";
 import { fetchFoundryNativeBytes, selectFoundryNativeFiles } from "./lib/foundry-release-native.ts";
+import { selectFoundryTidasDistribution } from "./lib/foundry-release-tidas.ts";
 import {
   createFoundrySpdxDocument,
   type FoundrySbomPackage,
@@ -107,31 +108,29 @@ export async function prepareFoundryNativeInput(
   });
   if (node.license && !nodeFiles.get(node.license)?.equals(nodeLicense))
     throw new Error("Node archive and pinned source license differ.");
-  const tidasFiles = selectFoundryNativeFiles(tidasArchive, {
-    format: format(tidas.format),
+  const tidasFormat = format(tidas.format);
+  if (tidasFormat === "file") throw new Error("TIDAS input must be a complete native archive.");
+  const qualifiedTidas = selectFoundryTidasDistribution(tidasArchive, {
+    format: tidasFormat,
     sha256: tidas.sha256,
-    files: [tidas.executable, tidas.manifest, tidas.license],
-  });
-  const distributionBytes = tidasFiles.get(tidas.manifest)!;
-  const distribution: unknown = JSON.parse(distributionBytes.toString("utf8"));
-  const distributionExpected = {
-    schema_version: "tidas.distribution-manifest.v1",
-    product: "tidas",
     version: inputs.tidas.version,
     target: tidas.target,
-    executable: `bin/tidas${platform === "win32-x64" ? ".exe" : ""}`,
-    self_contained_native_xml: true,
-  };
-  if (
-    !distribution ||
-    typeof distribution !== "object" ||
-    Array.isArray(distribution) ||
-    Object.keys(distribution).length !== Object.keys(distributionExpected).length ||
-    Object.entries(distributionExpected).some(
-      ([key, value]) => (distribution as Record<string, unknown>)[key] !== value,
-    )
-  )
-    throw new Error("TIDAS distribution manifest differs from its qualified native target.");
+    sourceCommit: inputs.tidas.source_commit,
+  });
+  const tidasFiles = qualifiedTidas.files;
+  const distributionBytes = tidasFiles.get(tidas.manifest)!;
+  const tidasRoot = `tidas-v${inputs.tidas.version}-${tidas.target}/`;
+  const noticeFiles = [...tidasFiles].filter(([name]) =>
+    name.startsWith(`${tidasRoot}share/licenses/tidas/third-party-notices/`),
+  );
+  const tidasLicenseFiles = [
+    "share/licenses/tidas/LICENSE",
+    ...noticeFiles
+      .filter(([name]) =>
+        name.startsWith(`${tidasRoot}share/licenses/tidas/third-party-notices/texts/`),
+      )
+      .map(([name]) => name.slice(tidasRoot.length)),
+  ].sort();
   fs.mkdirSync(output, { mode: 0o700 });
   const created = fs.lstatSync(output, { bigint: true });
   try {
@@ -150,6 +149,11 @@ export async function prepareFoundryNativeInput(
         mode: 0o644 as const,
       },
       { path: "metadata/tidas-distribution.json", bytes: distributionBytes, mode: 0o644 as const },
+      ...noticeFiles.map(([name, bytes]) => ({
+        path: name.slice(tidasRoot.length),
+        bytes,
+        mode: 0o644 as const,
+      })),
     ];
     const files: ComponentFile[] = [];
     for (const file of nativeFiles) {
@@ -235,9 +239,9 @@ export async function prepareFoundryNativeInput(
         download_url: tidas.url,
         sha256: tidas.sha256,
         declared_license: "MIT",
-        license_files: ["share/licenses/tidas/LICENSE"],
+        license_files: tidasLicenseFiles,
         dependencies: [],
-        source_info: `Qualified TIDAS release ${inputs.tidas.tag}; actual release target ${inputs.tidas.source_commit}.`,
+        source_info: `Qualified TIDAS release ${inputs.tidas.tag}; actual release target ${inputs.tidas.source_commit}; complete owner notice inventory retained with Cargo, native and Rust source scope.`,
       },
     ];
     const version = (
@@ -335,13 +339,14 @@ export async function prepareFoundryNativeInput(
           version: inputs.tidas.version,
           tag: inputs.tidas.tag,
           artifact: { ...tidas, bytes: tidasArchive.length },
-          distribution: distributionExpected,
+          distribution: qualifiedTidas.distribution,
+          third_party_notices: qualifiedTidas.notice,
         },
       },
       observations: receipt.observations,
       licenseCoverage: {
         node: "vendor-distribution-notices" as const,
-        tidas: "project-license-only" as const,
+        tidas: "owner-inventory-verified" as const,
       },
     });
     preparedNative.add(prepared);

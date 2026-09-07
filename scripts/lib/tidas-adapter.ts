@@ -97,7 +97,7 @@ export const TIDAS_IMPORT_REPORT_SCHEMA = "tidas.import-execution-report.v1";
 export const TIDAS_VALIDATION_SUMMARY_SCHEMA = "tidas.validation-summary.v1";
 export const TIDAS_VALIDATION_DESCRIBE_SCHEMA = "tidas.validation-describe.v1";
 export const TIDAS_VALIDATION_BATCH_FINAL_SCHEMA = "tidas.validation-final-event.v1";
-export const TIDAS_SUPPORTED_VERSION_LINE = "0.2";
+export const TIDAS_SUPPORTED_VERSION_LINES: readonly string[] = Object.freeze(["0.2", "0.3"]);
 
 const EXIT_CODES = new Map([
   ["success", 0],
@@ -178,9 +178,9 @@ function assertCompatibleVersion(report: TidasOperationReport): string {
   const version = String(report?.summary?.binary_version ?? "");
   const match = /^(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?$/u.exec(version);
   if (!match) throw new Error(`tidas_version_invalid:${version || "missing"}`);
-  if (`${match[1]}.${match[2]}` !== TIDAS_SUPPORTED_VERSION_LINE) {
+  if (!TIDAS_SUPPORTED_VERSION_LINES.includes(`${match[1]}.${match[2]}`)) {
     throw new Error(
-      `tidas_version_unsupported:${version}:required=${TIDAS_SUPPORTED_VERSION_LINE}.x`,
+      `tidas_version_unsupported:${version}:required=${TIDAS_SUPPORTED_VERSION_LINES.map((line) => `${line}.x`).join("|")}`,
     );
   }
   return version;

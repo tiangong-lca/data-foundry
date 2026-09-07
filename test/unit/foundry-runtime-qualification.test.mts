@@ -16,6 +16,7 @@ import {
   assertQualifiedFoundryRuntime,
   foundryRuntimeQualificationIdentity,
   qualifyFoundryRuntime,
+  parseFoundryTidasRuntimeExpectation,
 } from "../../scripts/lib/foundry-runtime-qualification.ts";
 
 const moduleUrl = new URL("../../scripts/runtime-entry.ts", import.meta.url).href;
@@ -220,5 +221,32 @@ test("qualification rechecks immutable TIDAS bytes without replaying its handsha
   assert.throws(
     () => assertQualifiedFoundryRuntime(context, qualification),
     hasCode("runtime_tidas_unqualified"),
+  );
+});
+
+test("TIDAS runtime expectations accept the reviewed 0.3 contract without admitting future minors", () => {
+  const expectation = {
+    schema: FOUNDRY_TIDAS_EXPECTATION_SCHEMA,
+    platform: "darwin-arm64",
+    binary_version: "0.3.0",
+    executable: { bytes: 100, sha256: "a".repeat(64) },
+    validation: {
+      schema_version: "tidas.validation-describe.v1",
+      asset_fingerprint: "b".repeat(64),
+      protocols: ["document-validation-batch.v1"],
+      event_schema_versions: ["tidas.validation-final-event.v1"],
+    },
+  };
+  assert.equal(
+    parseFoundryTidasRuntimeExpectation(expectation, "darwin-arm64").binary_version,
+    "0.3.0",
+  );
+  assert.throws(
+    () =>
+      parseFoundryTidasRuntimeExpectation(
+        { ...expectation, binary_version: "0.4.0" },
+        "darwin-arm64",
+      ),
+    hasCode("runtime_qualification_invalid"),
   );
 });

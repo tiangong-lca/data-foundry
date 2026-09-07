@@ -19,6 +19,7 @@ import { sha256Json } from "./identity-preflight-proof.ts";
 import {
   runTidasHandshake,
   TIDAS_OPERATION_REPORT_SCHEMA,
+  TIDAS_SUPPORTED_VERSION_LINES,
   TIDAS_VALIDATION_BATCH_FINAL_SCHEMA,
   TIDAS_VALIDATION_DESCRIBE_SCHEMA,
 } from "./tidas-adapter.ts";
@@ -121,7 +122,7 @@ function parseTidasExpectation(value: unknown, platform: string): FoundryTidasRu
     item.platform !== platform ||
     typeof item.binary_version !== "string" ||
     !versionPattern.test(item.binary_version) ||
-    !item.binary_version.startsWith("0.2.") ||
+    !TIDAS_SUPPORTED_VERSION_LINES.includes(item.binary_version.split(".").slice(0, 2).join(".")) ||
     !Number.isSafeInteger(executable.bytes) ||
     Number(executable.bytes) < 1 ||
     Number(executable.bytes) > 512 * 1024 * 1024 ||
@@ -133,7 +134,7 @@ function parseTidasExpectation(value: unknown, platform: string): FoundryTidasRu
   )
     fail(
       "runtime_qualification_invalid",
-      "TIDAS expectation does not match the selected platform and v0.2 contract.",
+      "TIDAS expectation does not match the selected platform and reviewed v0.2/v0.3 contract.",
     );
   const protocols = strings(validation.protocols, "TIDAS protocols");
   const eventSchemaVersions = strings(validation.event_schema_versions, "TIDAS event schemas");

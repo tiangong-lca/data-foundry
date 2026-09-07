@@ -34,7 +34,7 @@
         "event_schema_versions"
       ],
       "properties": {
-        "binary_version": { "type": "string", "pattern": "^0\\.2\\.(0|[1-9][0-9]*)$" },
+        "binary_version": { "type": "string", "pattern": "^0\\.[23]\\.(0|[1-9][0-9]*)$" },
         "executable": {
           "type": "object",
           "additionalProperties": false,

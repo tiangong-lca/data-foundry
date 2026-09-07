@@ -24,5 +24,5 @@ test("runtime minimum hosts and intrinsic native dates bind the reviewed four-pl
     "win32-x64": { os_release: "10.0.0", glibc: null },
   });
   assert.equal(inputs.node.source_date, "2026-07-30T11:57:02.000Z");
-  assert.equal(inputs.tidas.source_date, "2026-09-06T12:10:24.000Z");
+  assert.equal(inputs.tidas.source_date, "2026-09-07T04:22:52.000Z");
 });
