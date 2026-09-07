@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 0d80df8200029509b94e548f079d14604ace8c3a
-lastReviewedNote: "Reviewed for Foundry #112 component assembly and native qualification: source-candidate and verified-published inputs, complete declared file copies, intrinsic native metadata and empty-tool-PATH public lifecycle checks preserve ownership, workspace and permission boundaries. TIDAS185 supplies the missing complete third-party notice inventory before final publication."
+lastReviewedCommit: 6a0042fd3e368bf191bc32ab402aa6950be61e1b
+lastReviewedNote: "Reviewed for Foundry #112 Windows qualification: the TIDAS fixture now drains queued work and exits naturally with the exact protocol code. Production adapter exit checks, runtime authority, public command scope and permission boundaries remain unchanged; native crash statuses are not accepted as cancellation."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

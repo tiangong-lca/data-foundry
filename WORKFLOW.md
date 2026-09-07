@@ -281,8 +281,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 0d80df8200029509b94e548f079d14604ace8c3a
-lastReviewedNote: "Reviewed for Foundry #112 component assembly and native qualification: source-candidate and verified-published inputs, complete declared file copies, intrinsic native metadata and empty-tool-PATH public lifecycle checks preserve ownership, workspace and permission boundaries. TIDAS185 supplies the missing complete third-party notice inventory before final publication."
+lastReviewedCommit: 6a0042fd3e368bf191bc32ab402aa6950be61e1b
+lastReviewedNote: "Reviewed for Foundry #112 fixture process shutdown: queued work drains before the exact cancellation/error exit. This changes test support only; production exit/report agreement, runtime/package/permission and ownership boundaries are unchanged."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

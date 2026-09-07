@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 0d80df8200029509b94e548f079d14604ace8c3a
-lastReviewedNote: "Reviewed for Foundry #112 complete component preparation: privately produced native/npm inputs, exact source or verified published package, intrinsic Node/TIDAS components, complete runtime lock/SPDX and native local-archive qualification. Source and publication scopes remain separate; TIDAS185 owns the missing complete third-party notice evidence before final distribution."
+lastReviewedCommit: 6a0042fd3e368bf191bc32ab402aa6950be61e1b
+lastReviewedNote: "Reviewed for Foundry #112 Windows qualification: the TIDAS fixture now drains queued work and exits naturally with the exact protocol code. Production adapter exit checks, runtime authority, public command scope and permission boundaries remain unchanged; native crash statuses are not accepted as cancellation."
 ---
 
 # Test Layout
@@ -289,6 +289,8 @@ lastReviewedNote: "Reviewed for Foundry #112 complete component preparation: pri
 The packed consumer scenario imports and runs the actual installed Foundry API from a CLI-verified application component. It checks owning-cache selection, rollback to another component set, restoration, retained leases, canonical aliases, workspace/package exclusions and corrupt/missing/foreign current-cache rejection without network calls during component management. Fixture archives declare their launch entry executable independently of host file-mode bits, including on Windows. The component metadata and older target are explicit fixtures, not final F1 release evidence. Separate runtime-selection cases keep source/developer-emitted and excluded migration roots outside the managed cache.
 
 The same packed-consumer scenario also launches the actual package bin through public CLI host IPC and real Node, using separate native/application fixture components. It checks managed init/qualified doctor, read-only refusal, an inventory-bound predecessor target, rollback/restoration, protected cache roots, bad metadata/CLI/TIDAS bindings, extra launch argv and mismatched product identity. TIDAS and the predecessor component remain explicit fixtures. POSIX additionally checks SIGINT while admission waits for its parent; portable adapter tests cover rejected, pending-cancelled and pre-cancelled initialization with one result, no workspace effects and listener cleanup. The shipped managed-runtime schema is tested independently as a structural contract; process tests prove cross-file and host relationships.
+
+The TIDAS process fixture returns its exact protocol exit through `process.exitCode` and lets queued work drain; it must not force termination immediately after writing a report. The adapter continues to reject every report/process exit mismatch, including native crash statuses.
 
 Source CI additionally runs `release:prepare-runtime` after the canonical gate. This separate native qualification assembles the real Foundry package, frozen public CLI dependency payload and official Node/TIDAS inputs, then runs the public lifecycle from an empty seeded cache and a warm cache with no global tools on PATH. Component I/O tests reject changed, missing, extra and linked input files, preserve existing destinations and verify native subset selection. Copied preparation receipts cannot create assembly/qualification authority. SPDX tests retain unpublished-candidate `NOASSERTION` and intrinsic upstream namespaces/creators. Successful execution is not final distribution readiness: missing TIDAS third-party notice evidence remains an explicit blocker for published-component mode.
 
