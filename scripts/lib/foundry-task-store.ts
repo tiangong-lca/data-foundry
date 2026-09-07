@@ -409,6 +409,7 @@ export async function runFoundryTaskOperation(
       | "dataset-workflow-execution-result"
       | "dataset-workflow-execution-consume"
       | "dataset-workflow-execution-observation"
+      | "dataset-workflow-reference-verify"
       | "dataset-semantic-apply";
     options: JsonRecord;
     task?: FoundryTaskOptions;

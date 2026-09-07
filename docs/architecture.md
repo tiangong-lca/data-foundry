@@ -152,8 +152,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 3514bcacdec59cb6b4d760e7d96c8f790d910a6c
-lastReviewedNote: "Reviewed for Foundry #118 public owner execution: sealed request, CLI batch one-shot dispatch, durable consumed marker, independent root/owner/state/payload readback, producer-backed completion, and no replay on recovery. Full workflow, live RC and formal release acceptance remain open."
+lastReviewedCommit: d96327ef43af418df731bf4e12387050339d7bb3
+lastReviewedNote: "Reviewed for Foundry #118 canonical reference verification: current identity partition/rewrite scope, qualified CLI visibility and exact-version checks, immutable producer-backed proof, read-only retry/reuse, and completion alongside verified write scopes. Full release/live acceptance remains open."
 ---
 
 # Architecture
@@ -170,7 +170,7 @@ The explicit workspace runtime is defined by `docs/runtime-context-contract.md`:
 
 Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel account overrides, QA waivers and the Worldsteel full-context relaxation grant no permission to a new task. `docs/task-authorization-contract.md` owns the separate workspace/task/actor/account/profile/input binding and exact action evidence. Local candidate preparation and checked public-reference proofs remain available; current final-row hashes, task permissions and all content/closure/no-replay gates are required before a restricted write handoff.
 
-The public task facade delegates sealed owner execution to `foundry-workflow-execution.ts`, request/attempt state to `foundry-owner-execution-store.ts`, and independent owner verification to `foundry-owner-readback.ts`. The existing closeout factory lives under `lib/finalize-owners` with its developer-command re-export preserved. Local operation receipts capture evidence only; the CLI batch boundary owns one-shot mutation and readback recovery. See [public execution and recovery](public-runtime-contract.md#owner-execution-and-recovery).
+The public task facade delegates sealed owner execution to `foundry-workflow-execution.ts`, request/attempt state to `foundry-owner-execution-store.ts`, and independent owner verification to `foundry-owner-readback.ts`. The existing closeout factory lives under `lib/finalize-owners` with its developer-command re-export preserved. Local operation receipts capture evidence only; the CLI batch boundary owns one-shot mutation and readback recovery. `foundry-workflow-reference-verify.ts` selects canonical targets from identity rewrite evidence and verifies them through the published CLI; it never turns retained original reference rows into mutation or payload-equality requirements. See [public execution and recovery](public-runtime-contract.md#owner-execution-and-recovery).
 
 ## OAuth identity boundary
 

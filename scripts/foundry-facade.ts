@@ -57,12 +57,16 @@ import {
 } from "./lib/foundry-runtime-selection.ts";
 import type { TrustedRuntimeManifest } from "@tiangong-lca/cli/runtime";
 import { datasetTypePlural } from "./lib/import-curation/internal/dataset-types.ts";
-import { currentWorkflowState, workflowObject } from "./lib/foundry-workflow-state.ts";
+import { currentWorkflowState } from "./lib/foundry-workflow-state.ts";
 import {
   completedOwnerScopes,
   prepareFoundryOwnerExecution,
 } from "./lib/foundry-owner-execution-store.ts";
 import { executeFoundryOwnerScope } from "./lib/foundry-workflow-execution.ts";
+import {
+  inspectFoundryReferences,
+  verifyFoundryReferences,
+} from "./lib/foundry-workflow-reference-verify.ts";
 import { selectFoundrySemanticInput } from "./lib/foundry-semantic-input.ts";
 import { runFoundryWorkflowIdentity } from "./lib/foundry-workflow-identity.ts";
 import { finalizeFoundryWorkflow } from "./lib/foundry-workflow-finalize.ts";
@@ -137,7 +141,7 @@ function human(code: string, instructions: string): FoundryOperationNextAction {
 function resumeCommand(
   context: ReturnType<typeof createFoundryRuntimeContext>,
   record: FoundryFacadeTaskRecord,
-  ownerStage?: "execution" | "readback",
+  ownerStage?: "execution" | "readback" | "reference_verification",
 ): FoundryOperationNextAction {
   const action = {
     kind: "command",
@@ -161,7 +165,9 @@ function resumeCommand(
         ? "Continue the approved owner scope using its exact sealed execution request."
         : ownerStage === "readback"
           ? "Read back the consumed owner scope using its retained request."
-          : "Resume the content-bound deterministic local preparation for this task revision.",
+          : ownerStage === "reference_verification"
+            ? "Verify the canonical references selected by the current semantic decisions."
+            : "Resume the content-bound deterministic local preparation for this task revision.",
   } as const;
   return Object.freeze({
     ...action,
@@ -560,15 +566,12 @@ function taskProjection(
       });
   }
   const workflow = currentWorkflowState(context, inspected.artifacts);
+  const references = inspectFoundryReferences(context, inspected.artifacts);
   const scopeComplete =
     workflow.rows &&
-    workflow.rows.value.sets.length > 0 &&
+    (workflow.rows.value.sets.length > 0 || references.scope) &&
     workflow.rows.value.sets.every((set) => execution.completed.has(set.type));
-  const referenceRows = (workflow.rows?.value.identity_reports ?? []).some((file) => {
-    const report = workflowObject(JSON.parse(fs.readFileSync(file, "utf8")));
-    return Number(workflowObject(report.counts).reference_rows ?? 0) > 0;
-  });
-  if (scopeComplete && !referenceRows)
+  if (scopeComplete && (!references.scope || references.verified) && workflow.finalization)
     return createFoundryOperationResult({
       operation,
       status: "completed",
@@ -576,6 +579,23 @@ function taskProjection(
       artifacts,
       blockers: [],
       nextActions: [],
+      runtimeIdentity: identity,
+      permissions: noPermission(),
+    });
+  if (workflow.finalization && references.scope && !references.verified)
+    return createFoundryOperationResult({
+      operation,
+      status: "needs_input",
+      taskId: record.task_id,
+      artifacts,
+      blockers: [
+        {
+          code: "reference_verification_required",
+          message: "Current canonical reference decisions require independent remote verification.",
+          scope: record.task_id,
+        },
+      ],
+      nextActions: [resumeCommand(context, record, "reference_verification")],
       runtimeIdentity: identity,
       permissions: noPermission(),
     });
@@ -1477,6 +1497,37 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
         }
         const preparation = record.spec.preparation;
         const workflow = currentWorkflowState(context, before.artifacts);
+        const references = inspectFoundryReferences(context, before.artifacts);
+        if (!preparation && workflow.finalization && references.scope && !references.verified) {
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Reference verification requires qualified runtime owners.",
+            );
+          const selected = taskContext(
+            options,
+            current,
+            record,
+            before.artifacts.map((entry) => ({
+              path: path.join(context.taskRoot!, entry.path),
+              bytes: entry.bytes,
+              sha256: entry.sha256,
+            })),
+          );
+          await verifyFoundryReferences(
+            selected,
+            qualified,
+            before.artifacts,
+            options.authentication,
+          );
+          return taskProjection(
+            "task.resume",
+            context,
+            record,
+            await runtime.inspectTask(),
+            runtimeIdentity(context, qualified),
+          );
+        }
         if (
           !preparation &&
           workflow.authorization?.value.status === "sealed" &&

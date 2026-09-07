@@ -158,8 +158,8 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 3514bcacdec59cb6b4d760e7d96c8f790d910a6c
-lastReviewedNote: "Reviewed for Foundry #118 public owner execution: sealed request, CLI batch one-shot dispatch, durable consumed marker, independent root/owner/state/payload readback, producer-backed completion, and no replay on recovery. Full workflow, live RC and formal release acceptance remain open."
+lastReviewedCommit: d96327ef43af418df731bf4e12387050339d7bb3
+lastReviewedNote: "Reviewed for Foundry #118 canonical reference verification: current identity partition/rewrite scope, qualified CLI visibility and exact-version checks, immutable producer-backed proof, read-only retry/reuse, and completion alongside verified write scopes. Full release/live acceptance remains open."
 ---
 
 # TianGong LCA Data Foundry
@@ -195,7 +195,7 @@ Identity-preflight candidate requests use the current Hybrid Search contract: on
 
 Remote verification is visibility-bound. A `missing_dataset` reference that is foreign or hidden by RLS remains a blocker and cannot be converted to passed from a trusted-key list or another account's observation. The only retained accepted-difference mechanism is exact root readback whose sole normalized difference is `tiangongfoundry:importTraceSummary.traceHash`; production-test account cases accept no difference at all.
 
-The packaged task facade now continues sealed approvals through registered owner execution and independent readback. It uses the published CLI batch engine, persists a consumed marker before dispatch, and resumes uncertain attempts only through the original readback request. Indexed execution evidence is verified against producer receipts and current file hashes. See [public execution and recovery](docs/public-runtime-contract.md#owner-execution-and-recovery).
+The packaged task facade now continues sealed approvals through registered owner execution and independent readback. It uses the published CLI batch engine, persists a consumed marker before dispatch, and resumes uncertain attempts only through the original readback request. Indexed execution evidence is verified against producer receipts and current file hashes. Reference-only tasks independently verify the semantic decisions’ canonical targets before completion, with zero writes. See [public execution and recovery](docs/public-runtime-contract.md#owner-execution-and-recovery).
 
 ## OAuth account execution
 

@@ -89,8 +89,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 3514bcacdec59cb6b4d760e7d96c8f790d910a6c
-lastReviewedNote: "Reviewed for Foundry #118 public owner execution: sealed request, CLI batch one-shot dispatch, durable consumed marker, independent root/owner/state/payload readback, producer-backed completion, and no replay on recovery. Full workflow, live RC and formal release acceptance remain open."
+lastReviewedCommit: d96327ef43af418df731bf4e12387050339d7bb3
+lastReviewedNote: "Reviewed for Foundry #118 canonical reference verification: current identity partition/rewrite scope, qualified CLI visibility and exact-version checks, immutable producer-backed proof, read-only retry/reuse, and completion alongside verified write scopes. Full release/live acceptance remains open."
 ---
 
 # Workspace Project Map

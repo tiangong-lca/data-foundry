@@ -691,6 +691,9 @@ for (const [identityDecision, approvalKind, trace] of [
       preflightCalls = 0,
       failRead = true;
     let finalizing = false;
+    let referenceQueries = 0;
+    let referenceResponse: "missing" | "duplicate" | "outdated" | "wrong_target" | "passed" =
+      "missing";
     let writes = 0,
       exactReadback = approvalKind !== "current_rows";
     let childFailure: unknown;
@@ -715,6 +718,62 @@ for (const [identityDecision, approvalKind, trace] of [
               argv[argv.indexOf(argv.includes("--input-file") ? "--input-file" : "--input") + 1];
             let report: Record<string, unknown>;
             if (argv.includes("verify-remote")) {
+              if (path.basename(input) === "canonical-references.jsonl") {
+                referenceQueries++;
+                assert.equal(argv[argv.indexOf("--root-policy") + 1], "existing");
+                assert.ok(!argv.includes("--commit") && !argv.includes("--compare-root-payload"));
+                const references = readRows(input) as Array<Record<string, string>>;
+                assert.equal(references.length, 1);
+                assert.equal(
+                  references[0]["@refObjectId"],
+                  "99999999-9999-4999-8999-999999999999",
+                  "verify the selected canonical target, not the original input identity",
+                );
+                const checks = references.map((ref, row_index) => ({
+                  role: "reference",
+                  row_index,
+                  path: "",
+                  table: "flows",
+                  id: ref["@refObjectId"],
+                  version: ref["@version"],
+                  exact_version: ref["@version"],
+                  latest_version: referenceResponse === "outdated" ? "00.00.002" : ref["@version"],
+                  status: referenceResponse === "missing" ? "missing_dataset" : "ok",
+                }));
+                if (referenceResponse === "duplicate") checks.push({ ...checks[0] });
+                if (referenceResponse === "wrong_target") checks[0].id = id;
+                const checksFile = path.join(outDir, "checks.jsonl");
+                fs.writeFileSync(
+                  checksFile,
+                  checks.map((check) => JSON.stringify(check)).join("\n") + "\n",
+                );
+                const blockers =
+                  referenceResponse === "missing" ? [{ code: "missing_dataset" }] : [];
+                const report = {
+                  status: blockers.length
+                    ? "blocked_remote_verification"
+                    : "passed_remote_verification",
+                  root_policy: "existing",
+                  input_path: input,
+                  counts: {
+                    rows: references.length,
+                    references: checks.length,
+                    checked: checks.length,
+                    blockers: blockers.length,
+                  },
+                  blockers,
+                  files: { report: file, checks: checksFile },
+                };
+                fs.writeFileSync(file, JSON.stringify(report));
+                return {
+                  status: blockers.length ? 2 : 0,
+                  signal: null,
+                  stdout: JSON.stringify(report),
+                  stderr: "",
+                  pid: 1,
+                  output: [],
+                };
+              }
               report = {
                 status: "passed_remote_verification",
                 input_path: input,
@@ -1101,7 +1160,7 @@ for (const [identityDecision, approvalKind, trace] of [
       finalized.blockers[0]?.code,
       identityDecision === "create_new"
         ? "task_authorization_required"
-        : "finalization_requires_input",
+        : "reference_verification_required",
       JSON.stringify(finalReport),
     );
     assert.equal(
@@ -1109,12 +1168,47 @@ for (const [identityDecision, approvalKind, trace] of [
       identityDecision === "create_new" ? "required" : "not_required",
     );
     const reads = [authCalls, preflightCalls];
-    assert.deepEqual((await facade.resume(invocation)).artifacts, finalized.artifacts);
+    if (identityDecision === "create_new")
+      assert.deepEqual((await facade.resume(invocation)).artifacts, finalized.artifacts);
     assert.deepEqual(
       [authCalls, preflightCalls],
       reads,
       "pending finalization cannot repeat remote reads",
     );
+    if (identityDecision === "reuse_existing_reference") {
+      const missing = await facade.resume(invocation);
+      assert.equal(missing.status, "needs_input", JSON.stringify(missing.blockers));
+      assert.equal(referenceQueries, 1);
+      await facade.status(invocation);
+      assert.equal(referenceQueries, 1, "status is read-only local projection");
+      for (const response of ["duplicate", "outdated", "wrong_target"] as const) {
+        referenceResponse = response;
+        assert.equal(
+          (await facade.resume(invocation)).status,
+          "needs_input",
+          `${response} checks cannot prove the reference scope`,
+        );
+      }
+      referenceResponse = "passed";
+      const complete = await facade.resume(invocation);
+      assert.equal(complete.status, "completed", JSON.stringify(complete.blockers));
+      assert.equal(referenceQueries, 5);
+      assert.equal(writes, 0, "reference reuse never mutates or asks for write approval");
+      assert.equal(complete.permissions.state, "not_required");
+      assert.equal((await facade.resume(invocation)).status, "completed");
+      assert.equal(referenceQueries, 5, "verified scope is reused without more network reads");
+      const result = complete.artifacts.findLast(
+        (item) => item.role === "foundry-reference-verification.json",
+      );
+      assert.ok(result?.kind === "file");
+      const proof = JSON.parse(fs.readFileSync(result.path, "utf8")) as {
+        checks: { path: string };
+      };
+      fs.appendFileSync(proof.checks.path, "{}\n");
+      assert.equal((await facade.resume(invocation)).status, "blocked");
+      assert.equal(writes, 0);
+      if (childFailure) throw childFailure;
+    }
     if (identityDecision === "create_new") {
       const input = finalReport.sets[0].authorization_inputs.find(
         (item) => item.input_kind === approvalKind,

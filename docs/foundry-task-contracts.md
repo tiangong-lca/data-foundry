@@ -29,8 +29,8 @@ checkPaths:
   - specs/import-profiles.json
   - tasks/**
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 3514bcacdec59cb6b4d760e7d96c8f790d910a6c
-lastReviewedNote: "Reviewed for Foundry #118 public owner execution: sealed request, CLI batch one-shot dispatch, durable consumed marker, independent root/owner/state/payload readback, producer-backed completion, and no replay on recovery. Full workflow, live RC and formal release acceptance remain open."
+lastReviewedCommit: d96327ef43af418df731bf4e12387050339d7bb3
+lastReviewedNote: "Reviewed for Foundry #118 canonical reference verification: current identity partition/rewrite scope, qualified CLI visibility and exact-version checks, immutable producer-backed proof, read-only retry/reuse, and completion alongside verified write scopes. Full release/live acceptance remains open."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -138,7 +138,7 @@ An expected account may be selected after local preparation. The first selection
 
 Before a restricted child handoff, the runtime stores a content-addressed `execution-context.v1` under task evidence. A new process must reconstruct the context, qualification and identity, then recheck source ancestry, final bytes, current authorization/QA exceptions, owner CLI path and CommandSpec operation semantics. Only the verified spec is returned to the existing no-replay executor. The execution context never carries credentials and never clears or retries an attempt.
 
-The public facade projects preparation, sealed approval, owner execution and independent readback through the result envelope. Before dispatch, the dedicated execution-consume operation registers an immutable `attempts/owner-v1/<scope>/consumed.json` output with producer evidence; other local operations cannot write task-control paths. Recognized consumed requests resume readback only, while unknown attempts remain blocked. Completion requires a current producer-backed completion report or verified current write scopes with no outstanding reference-only partition. Inspect revalidates completion, execution requests, consumed markers, observations and results against their exact producer plans, receipts and current bytes. A forged index entry borrowing another operation receipt cannot prove completion. No child command is inferred from a directory name.
+The public facade projects preparation, sealed approval, owner execution and independent readback through the result envelope. Before dispatch, the dedicated execution-consume operation registers an immutable `attempts/owner-v1/<scope>/consumed.json` output with producer evidence; other local operations cannot write task-control paths. Recognized consumed requests resume readback only, while unknown attempts remain blocked. Completion requires a current producer-backed completion report or verified current write scopes plus independent verification of all current canonical reference partitions. Inspect revalidates completion, execution requests, consumed markers, observations, owner results and canonical reference verification results against their exact producer plans, receipts and current bytes. A forged index entry borrowing another operation receipt cannot prove completion. No child command is inferred from a directory name.
 
 The request store revalidates every predecessor's retained job against its publication and indexed identity before admitting a new revision or returning a descendant for status/resume. A nonempty predecessor attempt directory blocks the descendant and directs recovery to the original owner; its declared success/unknown state never clears the guard. Missing or altered predecessor state is an audit condition, not permission to reconstruct an empty history. This facade guard does not by itself establish complete migration history, cross-request inheritance or restricted execution admission.
 

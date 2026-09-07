@@ -146,6 +146,7 @@ export function createFoundryRuntime(
             "dataset-workflow-execution-consume",
             "dataset-workflow-execution-result",
             "dataset-workflow-execution-observation",
+            "dataset-workflow-reference-verify",
           ],
         },
       ),

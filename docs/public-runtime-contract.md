@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 3514bcacdec59cb6b4d760e7d96c8f790d910a6c
-lastReviewedNote: "Reviewed for Foundry #118 public owner execution: sealed request, CLI batch one-shot dispatch, durable consumed marker, independent root/owner/state/payload readback, producer-backed completion, and no replay on recovery. Full workflow, live RC and formal release acceptance remain open."
+lastReviewedCommit: d96327ef43af418df731bf4e12387050339d7bb3
+lastReviewedNote: "Reviewed for Foundry #118 canonical reference verification: current identity partition/rewrite scope, qualified CLI visibility and exact-version checks, immutable producer-backed proof, read-only retry/reuse, and completion alongside verified write scopes. Full release/live acceptance remains open."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -90,7 +90,7 @@ An executable next action contains Node/active source-or-emitted entry argv, `cw
 
 After ready assessment and required identity preflight, resume invokes the existing finalize owner. It preserves reference/source/contact/canonical repair, cleanup, native schema, deterministic QA, location audit, curation, dry-run, remote reference verification and mutation/handoff report ordering. Each dataset type uses its own contract pack; Unit Group and Flow Property rows use the owner's support mode separately. Finalization dispatch accepts only local checks, explicit `--dry-run` operations and read-only remote verification, never `--commit`.
 
-Finalization gets a new output generation and fresh current-type identity requests, retaining dependency evidence without overwriting prior indexed reports. Selected producer lineage is verified before remote reads and current rows are rechecked under the capture lock. `foundry-finalize.json` binds the exact rows and assessment. A ready result becomes `needs_input` with `permissions.required` and a current-approval action; blocked results expose their owner reports. Repeating unchanged resume returns the same pending finalization without repeating remote reads. Reference-only scopes still require independent canonical verification. Sealed approval continues through the owner execution stages described below.
+Finalization gets a new output generation and fresh current-type identity requests, retaining dependency evidence without overwriting prior indexed reports. Selected producer lineage is verified before remote reads and current rows are rechecked under the capture lock. `foundry-finalize.json` binds the exact rows and assessment. A ready result becomes `needs_input` with `permissions.required` and a current-approval action; blocked results expose their owner reports. Repeating unchanged resume returns the same pending finalization without repeating remote reads. Reference-only scopes continue through independent canonical verification. Sealed approval continues through the owner execution stages described below.
 
 ## Owner execution and recovery
 
@@ -100,7 +100,17 @@ Before the first dispatch, the batch attempt-start event durably registers an im
 
 Each owner command is dispatched once as executable plus argv with explicit authentication and `shell=false`. Commit stdout must match its contained report. A confirmed success requires the existing closeout checks and fresh independent root, owner, state, payload and reference verification. Lost or unknown responses and narrowly recognized same-identity conflicts use independent readback; known business failures remain unresolved. Recovery does not require the old write grant to remain unexpired and cannot change the original request. The CLI batch item's verified/recovered result determines success; aggregate batch completion alone is insufficient.
 
-Every readback gets a fresh output directory. A verified result binds the exact input, report and JSONL check hashes. Completed scopes preserve their final rows while dependent scopes are finalized again after new verified progress. Reference-only partitions still require separate canonical verification, and semantic changes cannot replace consumed scope rows.
+Every readback gets a fresh output directory. A verified result binds the exact input, report and JSONL check hashes. Completed scopes preserve their final rows while dependent scopes are finalized again after new verified progress. Reference-only partitions use the separate canonical verification stage below; semantic changes cannot replace consumed scope rows.
+
+## Canonical reference verification
+
+Identity reuse retains original source rows in the reference partition and selects different canonical targets in its rewrite evidence. After current finalization, resume verifies those selected table/id/version targets through the qualified CLI `dataset verify-remote --root-policy existing`. Its generated query contains only reference descriptors. It does not compare the source payload with the reused dataset or construct a write candidate.
+
+The verification scope binds current row metadata, exact identity/partition/rewrite artifact facts, canonical targets and the current account. Each original reference row needs one matching canonical decision. A fresh CLI identity and explicit authentication environment provide the account's current read visibility; missing or hidden targets remain unresolved.
+
+Success requires matching fresh stdout/report bytes and exactly one successful JSONL check for each requested target, with matching row index, table, id, exact version and latest version. Missing, duplicate, substituted or outdated checks cannot establish completion even if the summary claims success. Each attempt has a new output directory; local capture rechecks the current scope under the task lock. No mutation or write grant is involved.
+
+Status performs local evidence verification only. Failed verification exposes `reference_verification_required` and a bound resume action for another read. A successful current result is reused without another remote query. Completion also requires every remaining write scope to have its independent owner readback. Changing an indexed report, query or check invalidates the proof and cannot preserve completed status.
 
 ## Authorization input
 
@@ -161,7 +171,7 @@ The process entry handles the first SIGINT/SIGTERM as a cooperative abort reques
 
 Unknown protocol/layout versions fail closed with `blocked` and a stable version blocker. Malformed public arguments/specs use `needs_input`. A child exit 0, empty queue, copied success report or successful download alone cannot produce `completed`.
 
-`completed` requires either a current indexed `dataset-import-completion-report`, or verified execution results covering every current write scope with no outstanding reference-only partition. The task store verifies producer plans, receipts and artifact hashes before either projection. A copied unindexed report cannot prove completion. Recognized consumed owner requests return `mutation_readback_required` and a bound readback continuation; unknown or malformed attempt state remains blocked. The facade never clears attempts or redispatches consumed mutations. Pre-observed cancellation returns `operation_interrupted` and exit 130 without creating state; installed-process signal qualification is repeated in W06.
+`completed` requires either a current indexed `dataset-import-completion-report`, or verified execution results covering every current write scope with every current reference-only partition independently verified. The task store verifies producer plans, receipts and artifact hashes before either projection. A copied unindexed report cannot prove completion. Recognized consumed owner requests return `mutation_readback_required` and a bound readback continuation; unknown or malformed attempt state remains blocked. The facade never clears attempts or redispatches consumed mutations. Pre-observed cancellation returns `operation_interrupted` and exit 130 without creating state; installed-process signal qualification is repeated in W06.
 
 Every facade revision also rechecks all retained predecessors in its request chain. Missing, changed or linked predecessor task/publication state blocks continuation. Any predecessor attempt blocks creating or resuming a descendant with `facade_predecessor_readback_required`, regardless of the attempt's declared outcome or changed input bytes/paths. The original task remains available for its owner status/readback. This guard checks current registered facade history; the migration owner additionally retains origin/scope evidence and rechecks it before execution admission across migrated workspaces and independently named requests.
 

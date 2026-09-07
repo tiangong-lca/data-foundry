@@ -1,7 +1,7 @@
 {
   "$schema": "../specs/schemas/file-location-registry.schema.json",
   "schema_version": 1,
-  "updated_at_utc": "2026-09-07T23:06:23Z",
+  "updated_at_utc": "2026-09-07T23:23:01Z",
   "policy_doc": "docs/file-organization.md",
   "entries": [
     {
@@ -213,11 +213,12 @@
         "scripts/lib/foundry-workflow-authorization.ts",
         "scripts/lib/foundry-workflow-approval-continuation.ts",
         "docs/public-runtime-contract.md",
-        "scripts/lib/foundry-owner-execution-store.ts"
+        "scripts/lib/foundry-owner-execution-store.ts",
+        "scripts/lib/foundry-workflow-reference-verify.ts"
       ],
       "sensitivity": "non-sensitive task ledger schema examples; contains no credentials and no private payloads",
       "tracked": true,
-      "notes": "Defines immutable source/input lineage, producer-backed operation receipts, current approval, and owner attempt/readback evidence. The dedicated consume operation owns attempts/owner-v1/<scope>/consumed.json; execution requests, observations and results remain registered under task outputs."
+      "notes": "Defines immutable source/input lineage, producer-backed operation receipts, current approval, and owner attempt/readback evidence. The dedicated consume operation owns attempts/owner-v1/<scope>/consumed.json; execution requests, observations and results remain registered under task outputs. Canonical reference query/check/result artifacts bind current identity decisions and are verified before reference-only completion."
     },
     {
       "id": "foundry-safety-policy",
