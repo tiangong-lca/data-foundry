@@ -152,8 +152,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 1ebc85d2cf103865bbbd8fc57614c6db45b6acf4
-lastReviewedNote: "Reviewed for Foundry #118 public semantic input: current task/actor/assessment/work-item bindings, immutable input snapshots, strict local collect/apply, concurrent-stale rejection and latest-row reassessment. Semantic input grants no remote permission; specialized decisions and final owner write/readback remain required."
+lastReviewedCommit: 2abb18121cf0ed7c828d3235ec68d48a2e3532dc
+lastReviewedNote: "Reviewed for Foundry #118 Golden installer cache reuse: only matching pnpm tool/content caches are reused, with frozen locks, disabled scripts and integrity checks. Comparison commands retain identical isolated environments; no runtime/task/auth boundary changes."
 ---
 
 # Architecture

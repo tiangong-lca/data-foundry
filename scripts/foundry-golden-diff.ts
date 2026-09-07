@@ -24,6 +24,7 @@ import {
   copyFoundryIsolatedExecutable,
   createFoundryIsolatedChildEnvironment,
 } from "./lib/foundry-runtime-environment.ts";
+import { resolvePackageManagerCommand } from "./lib/package-manager-command.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -500,15 +501,43 @@ function isolatedFakeTidasScript(): string {
   return targetPath;
 }
 
+let dependencyStore: string | null = null;
 function installBaselineDependencies(root: string): void {
-  const args = ["install", "--frozen-lockfile", "--ignore-scripts"];
-  if (process.platform === "win32") {
-    const commandProcessor = goldenProcessEnvironment.ComSpec ?? goldenProcessEnvironment.COMSPEC;
-    if (!commandProcessor) throw new Error("Windows Golden execution requires ComSpec.");
-    run(commandProcessor, ["/d", "/s", "/c", ["pnpm", ...args].join(" ")], { cwd: root });
-    return;
+  const args = ["install", "--frozen-lockfile", "--ignore-scripts", "--verify-store-integrity"];
+  const environment = { ...goldenProcessEnvironment };
+  const currentPackage = JSON.parse(
+    readFileSync(path.join(repoRoot, "package.json"), "utf8"),
+  ) as JsonRecord;
+  const selectedPackage = JSON.parse(
+    readFileSync(path.join(root, "package.json"), "utf8"),
+  ) as JsonRecord;
+  if (
+    typeof currentPackage.packageManager === "string" &&
+    selectedPackage.packageManager === currentPackage.packageManager
+  ) {
+    if (dependencyStore === null) {
+      const locator = resolvePackageManagerCommand("pnpm", ["store", "path"]);
+      const store = run(locator.executable, locator.argv, {
+        cwd: repoRoot,
+        env: process.env,
+      }).stdout.trim();
+      if (!path.isAbsolute(store) || /[\r\n\0]/u.test(store))
+        throw new Error("pnpm must report one absolute content-store path.");
+      dependencyStore = store;
+    }
+    args.push("--store-dir", dependencyStore);
+    // Reuse tool/package bytes only. Fixture HOME, config, credentials and outputs stay isolated.
+    environment.COREPACK_HOME =
+      process.env.COREPACK_HOME ??
+      path.join(
+        process.env.XDG_CACHE_HOME ??
+          process.env.LOCALAPPDATA ??
+          path.join(os.homedir(), process.platform === "win32" ? "AppData/Local" : ".cache"),
+        "node/corepack",
+      );
   }
-  run("pnpm", args, { cwd: root });
+  const invocation = resolvePackageManagerCommand("pnpm", args);
+  run(invocation.executable, invocation.argv, { cwd: root, env: environment });
 }
 
 function prepareCurrentSourceSnapshot(): void {

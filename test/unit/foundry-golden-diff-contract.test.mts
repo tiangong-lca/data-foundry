@@ -68,7 +68,10 @@ test("Golden baseline and current commands share one explicit credential-free en
   assert.match(source, /createFoundryIsolatedChildEnvironment/u);
   assert.match(source, /copyFoundryIsolatedExecutable/u);
   assert.match(source, /process\.platform\s*===\s*["']win32["']/u);
-  assert.match(source, /commandProcessor,\s*\["\/d",\s*"\/s",\s*"\/c"/u);
+  assert.match(source, /resolvePackageManagerCommand\("pnpm", args\)/u);
+  assert.match(source, /--verify-store-integrity/u);
+  assert.match(source, /--store-dir/u);
+  assert.doesNotMatch(source, /--no-verify-store-integrity|--prefer-offline/u);
   assert.match(source, /childEnvironmentSnapshot/u);
   assert.match(source, /runSide\("before",\s*beforeRoot,\s*fixture,\s*commandEnvironment\)/u);
   assert.match(source, /runSide\("after",\s*afterRoot,\s*fixture,\s*commandEnvironment\)/u);
