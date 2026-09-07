@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 0a71b3472c2b3c2deecfacf0f3c625d5c5393d5c
-lastReviewedNote: "Reviewed for Foundry #112: reuse existing upstream LICENSE, README and notice-manifest entrypoints within the CLI64-entry bound; retain all original text/source files and SPDX references without a duplicate aggregate. Runtime, authorization, compiler and final publication boundaries are unchanged."
+lastReviewedCommit: 24d1e9a9c85751a3e882aaa4889c53ef221e1494
+lastReviewedNote: "Reviewed for Foundry #112 four-platform aggregation: exact source/package/host contracts, actual archive verification through public CLI APIs and read-only CI artifact handoff. Candidate aggregation adds no publication, runtime task, credential or business authority."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -117,6 +117,16 @@ Verification uses regular-file, `O_NOFOLLOW`, fd size/inode/mtime and SHA checks
 `--apply` additionally requires a clean Git working tree at the script’s own repository root; inherited Git repository bindings are removed before that check. The private in-process plan binds the original file bytes and modes. Metadata must be regular files reached through real repository directories, and all inputs are rechecked before prepared files are renamed. Replacement is atomic per file, not a cross-file filesystem transaction; an I/O failure after a replacement reports the affected Git paths for review. This command creates no commit or tag and performs no registry operation. Release-only orchestration and publication remain separate W08 gates.
 
 Release tools compare native filesystem directory identity when binding the script root to Git's reported root. Different drive/path casing for the same directory is accepted; a parent, child or other directory is rejected. This applies to version preparation, exact Git inspection and workflow admission without weakening clean-tree or inherited-Git-environment guards.
+
+## Four-platform runtime aggregation
+
+`pnpm release:aggregate-runtime --input <absolute-platform-results> --output <new-absolute-directory>` consumes the four fixed platform directories from successful jobs at the executing clean source. The default requires `published-release` package inputs; explicit `--candidate` keeps source-only qualification separate. There is no source, version, platform, registry or publication override.
+
+Each platform manifest must match its preparation and native-qualification facts, exact source/tree/date, package archive/inventory, owner versions and validation fingerprint. Every platform supplies the same product and workspace read/write contract, its reviewed minimum host, exactly three components and both managed Foundry launch modes. Missing, duplicate, mixed-source, failed, blocked or mismatched results fail. Input order cannot change the combined manifest.
+
+The command checks each actual archive's digest and byte length, then uses the public CLI manager to verify its complete regular-file archive inventory from local seeds. Foreign host selectors here perform structural verification only; they never execute another platform's binary or replace the prior native job. The output contains twelve verified archives, one combined runtime-manifest.json and diagnostic runtime-aggregate.json. These files are a handoff, not independent publication authority; final release jobs must bind their inputs to the qualified workflow/source and complete public-download verification.
+
+Source CI preserves each successful native result under a run-attempt-specific artifact name. The aggregation job needs all four native jobs, downloads those exact current-attempt artifacts outside the source checkout, and retains the combined candidate contract after verification. It has read-only GitHub permissions and cannot publish packages, tags or release assets.
 
 ## Release diff and published-source verification
 

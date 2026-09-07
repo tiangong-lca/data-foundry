@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 0a71b3472c2b3c2deecfacf0f3c625d5c5393d5c
-lastReviewedNote: "Reviewed for Foundry #112: reuse existing upstream LICENSE, README and notice-manifest entrypoints within the CLI64-entry bound; retain all original text/source files and SPDX references without a duplicate aggregate. Runtime, authorization, compiler and final publication boundaries are unchanged."
+lastReviewedCommit: 24d1e9a9c85751a3e882aaa4889c53ef221e1494
+lastReviewedNote: "Reviewed for Foundry #112 four-platform aggregation: exact source/package/host contracts, actual archive verification through public CLI APIs and read-only CI artifact handoff. Candidate aggregation adds no publication, runtime task, credential or business authority."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

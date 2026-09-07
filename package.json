@@ -133,7 +133,8 @@
     "install:frozen": "pnpm install --frozen-lockfile",
     "audit:high": "pnpm audit --audit-level high",
     "prepush:gate": "pnpm lint && pnpm test:toolchain && pnpm test && pnpm golden:diff && pnpm surface:audit && pnpm build && pnpm package:build && pnpm package:check && pnpm audit:high",
-    "release:prepare-runtime": "node scripts/release-prepare-runtime.ts"
+    "release:prepare-runtime": "node scripts/release-prepare-runtime.ts",
+    "release:aggregate-runtime": "node scripts/release-aggregate-runtime.ts"
   },
   "engines": {
     "node": ">=24.19.0 <25",

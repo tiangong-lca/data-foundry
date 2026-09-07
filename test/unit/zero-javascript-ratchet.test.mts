@@ -14,7 +14,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // signing/verification, prepared-artifact handoff, OIDC publication/readback and tag admission,
 // version-aware fixtures native TypeScript.
 // Frozen registry payload, upstream extraction and SPDX/license assembly remain source-only TS.
-// Complete component assembly and native qualification remain source-only TypeScript owners.
+// Complete component assembly, native qualification and four-platform aggregation remain source-only TypeScript owners.
 // Native selection, inspection and gracefully drained process fixtures remain native TypeScript.
 // CLI 0.1.11 runtime/host adoption remains native TypeScript and uses only public package exports.
 // Managed host admission and owning-cache verification retain full trusted selection in native TypeScript.

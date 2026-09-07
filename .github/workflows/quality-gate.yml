@@ -23,12 +23,16 @@ jobs:
         include:
           - os: ubuntu-latest
             arch: x64
+            platform: linux-x64
           - os: windows-latest
             arch: x64
+            platform: win32-x64
           - os: macos-latest
             arch: arm64
+            platform: darwin-arm64
           - os: ubuntu-24.04-arm
             arch: arm64
+            platform: linux-arm64
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -52,3 +56,71 @@ jobs:
 
       - name: Qualify assembled native runtime candidate
         run: pnpm release:prepare-runtime --output "${{ runner.temp }}/foundry-runtime-candidate"
+
+      - name: Preserve qualified platform artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: foundry-runtime-${{ github.run_attempt }}-${{ matrix.platform }}
+          path: ${{ runner.temp }}/foundry-runtime-candidate/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  aggregate-runtime:
+    name: Verify the complete four-platform runtime set
+    needs: quality-gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the same qualified source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.source_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up pnpm and Node.js
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        with:
+          runtime: node@24.19.0
+          install: false
+          cache: true
+
+      - name: Install frozen aggregation dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Download linux-x64 from this run attempt
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: foundry-runtime-${{ github.run_attempt }}-linux-x64
+          path: ${{ runner.temp }}/foundry-platforms/linux-x64
+
+      - name: Download linux-arm64 from this run attempt
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: foundry-runtime-${{ github.run_attempt }}-linux-arm64
+          path: ${{ runner.temp }}/foundry-platforms/linux-arm64
+
+      - name: Download darwin-arm64 from this run attempt
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: foundry-runtime-${{ github.run_attempt }}-darwin-arm64
+          path: ${{ runner.temp }}/foundry-platforms/darwin-arm64
+
+      - name: Download win32-x64 from this run attempt
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: foundry-runtime-${{ github.run_attempt }}-win32-x64
+          path: ${{ runner.temp }}/foundry-platforms/win32-x64
+
+      - name: Verify all archives and aggregate the candidate contract
+        run: pnpm release:aggregate-runtime --input "${{ runner.temp }}/foundry-platforms" --output "${{ runner.temp }}/foundry-runtime-set" --candidate
+
+      - name: Preserve the verified combined contract
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: foundry-runtime-set-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/foundry-runtime-set/runtime-manifest.json
+            ${{ runner.temp }}/foundry-runtime-set/runtime-aggregate.json
+          if-no-files-found: error
+          retention-days: 7
