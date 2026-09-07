@@ -127,7 +127,7 @@ test("identity reuse partitions local rows and rewrites dependent process refere
       closes_action_items: ["identity_preflight_manual_review"],
     },
   ];
-  const result = applyFoundryIdentityDecisions(context, qualified, root, {
+  const request = {
     task,
     decisions,
     sets: [
@@ -135,7 +135,14 @@ test("identity reuse partitions local rows and rewrites dependent process refere
       { type: "process", file: processFile, count: 1 },
     ],
     output: path.join(context.taskRoot!, "outputs", "identity"),
-  });
+  };
+  const wrongTable = structuredClone(request);
+  wrongTable.decisions[0].canonical.table = "processes";
+  assert.throws(
+    () => applyFoundryIdentityDecisions(context, qualified, root, wrongTable),
+    /matching dataset table/u,
+  );
+  const result = applyFoundryIdentityDecisions(context, qualified, root, request);
   assert.deepEqual(result.blockers, []);
   assert.equal(result.sets.find((set) => set.type === "flow")?.count, 0);
   assert.equal(result.rewriteReports.length, 1);

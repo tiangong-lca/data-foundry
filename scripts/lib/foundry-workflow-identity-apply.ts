@@ -59,6 +59,24 @@ export function applyFoundryIdentityDecisions(
     if (!selected || seen.has(key(decision)))
       invalid("Identity submission scope differs from its task.");
     seen.add(key(decision));
+    if (
+      !["flow", "process"].includes(String(decision.dataset_type)) ||
+      !["reuse_existing_reference", "create_new", "block_unresolved"].includes(
+        String(decision.identity_decision),
+      )
+    )
+      invalid("Use the identity task's explicit dataset type and decision values.");
+    if (decision.identity_decision === "reuse_existing_reference") {
+      const canonical = workflowObject(decision.canonical);
+      if (
+        canonical.table !== (decision.dataset_type === "flow" ? "flows" : "processes") ||
+        typeof canonical.ref_object_id !== "string" ||
+        !canonical.ref_object_id.trim() ||
+        typeof canonical.version !== "string" ||
+        !canonical.version.trim()
+      )
+        invalid("Canonical identity must name the matching dataset table, id and version.");
+    }
     const authoring = workflowObject(decision.authoring_context);
     if (authoring.context_bundle_sha256 !== expectedContext)
       invalid("Identity decision context bundle differs from the current task.");
