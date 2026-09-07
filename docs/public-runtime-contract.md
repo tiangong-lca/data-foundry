@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: f6abf733721a95ce50be76b6e5295d41843274a2
-lastReviewedNote: "Reviewed for Foundry #118 bound public identity submission, preserved identity partitions and dependent reference rewrites, retained report lineage, and verification-local producer indexing. Unresolved diagnostics do not activate rows; authorization/finalize/write/readback and release remain open."
+lastReviewedCommit: b8f2873d0def1bbf446bf214e3b773c91bca460e
+lastReviewedNote: "Reviewed for Foundry #118 public finalization through existing owners: explicit CLI/native environments, fresh per-type preflight outputs, preserved indexed evidence, current rows/assessment capture and authorization-pending results. Canonical catalog is a bound reference asset; write authorization/execution/readback and full release acceptance remain open."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -87,6 +87,10 @@ After local semantic work is ready, a further resume performs process/flow ident
 Preflight reuses the existing request builder, query audit, receipt-bound runner and index merger. Requests target current unwrapped payloads and retain source trace context. Remote reads finish before a local transaction registers their immutable evidence; that transaction cannot replay a remote operation. Registration rechecks current rows under the task lock. Failed reads remain visible as `needs_input` and a later resume may retry the read-only stage. Status never performs a search. Successful preflight invalidates the earlier assessment, and the next resume re-runs curation against its exact identity index. Manual review becomes dedicated identity work even for the generic profile. This read evidence supplies decision context; submitting a bound identity decision remains separate from write authorization.
 
 An executable next action contains Node/active source-or-emitted entry argv, `cwd=workspaceRoot` and purpose. Its verified binding digest covers every executable field; workspace, task and actor are explicit argv values, while task lookup revalidates the immutable revision fingerprint and current runtime/input facts before work. It has no `display` authority. A final restricted data CommandSpec still requires the W04 execution-context/identity/authorization gate; W05 does not dispatch it.
+
+After ready assessment and required identity preflight, resume invokes the existing finalize owner. It preserves reference/source/contact/canonical repair, cleanup, native schema, deterministic QA, location audit, curation, dry-run, remote reference verification and mutation/handoff report ordering. Each dataset type uses its own contract pack; Unit Group and Flow Property rows use the owner's support mode separately. Finalization dispatch accepts only local checks, explicit `--dry-run` operations and read-only remote verification, never `--commit`.
+
+Finalization gets a new output generation and fresh current-type identity requests, retaining dependency evidence without overwriting prior indexed reports. Selected producer lineage is verified before remote reads and current rows are rechecked under the capture lock. `foundry-finalize.json` binds the exact rows and assessment. A ready result becomes `needs_input` with `permissions.required` and a current-approval action; blocked results expose their owner reports. Repeating unchanged resume returns the same pending finalization without repeating remote reads. Reference-only scopes still require independent canonical verification. Authorization submission, owner execution and final readback integration remain separate pending work.
 
 ## Single-result envelope
 

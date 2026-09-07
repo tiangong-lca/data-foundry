@@ -81,7 +81,9 @@ export function runWorkflowLocalCliResult(
   const local =
     (argv[0] === "qa" && ["flow", "process", "lifecyclemodel"].includes(argv[1])) ||
     (argv[0] === "dataset" && argv[1] === "curation-queue" && argv[2] === "build") ||
-    (argv[0] === "dataset" && argv[1] === "classification" && argv[2] === "apply") ||
+    (argv[0] === "dataset" &&
+      argv[1] === "classification" &&
+      ["apply", "audit"].includes(argv[2])) ||
     (argv[0] === "dataset" && argv[1] === "patch" && argv[2] === "apply");
   if (!local)
     throw new FoundryContextError(

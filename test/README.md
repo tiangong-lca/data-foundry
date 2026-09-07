@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: f6abf733721a95ce50be76b6e5295d41843274a2
-lastReviewedNote: "Reviewed for Foundry #118 bound public identity submission, preserved identity partitions and dependent reference rewrites, retained report lineage, and verification-local producer indexing. Unresolved diagnostics do not activate rows; authorization/finalize/write/readback and release remain open."
+lastReviewedCommit: b8f2873d0def1bbf446bf214e3b773c91bca460e
+lastReviewedNote: "Reviewed for Foundry #118 public finalization through existing owners: explicit CLI/native environments, fresh per-type preflight outputs, preserved indexed evidence, current rows/assessment capture and authorization-pending results. Canonical catalog is a bound reference asset; write authorization/execution/readback and full release acceptance remain open."
 ---
 
 # Test Layout
@@ -295,6 +295,8 @@ Classification/location coverage includes task generation, mismatched submission
 The public identity regression uses the real installed request/context/curation owners with intercepted read-only CLI responses. It checks exact unwrapped target hashes, rejection of ambient credentials/executable/cache overrides, failed-read diagnostics, explicit retry, account receipts, evidence registration, fresh curation and manual-review task generation. Status cannot repeat a query. Authentication environment tests cover explicit OAuth/headless projection. These fixtures do not prove live account, search or final RC acceptance.
 
 Public identity submission covers `create_new` and `reuse_existing_reference`, wrong snapshot/context refusal, unresolved diagnostics with unchanged rows, duplicate reuse and preserved report lineage. A reference-rewrite case verifies flow partition cardinality and dependent process IDs while retaining canonical row metadata. Source/receipt/lineage tamper checks remain required after producer lookup is indexed; no timing threshold substitutes for correctness checks.
+
+Public finalization tests continue the create-new case through original owner dry-run/reference-report formats to `permissions.required`, and retain an explicit verification blocker for reference-only scope. Remote responses are intercepted; commit flags are forbidden in the test transport. Repeated pending resume must return the same artifacts without more reads. Legacy finalize ready/blocked/order tests continue through thin command adapters. A separate actual TIDAS 0.3.0/CLI 0.1.11 local probe checks report generation and precise missing identity/reference/owner blockers on the frozen reference sample; it performs no real account query or write and is not final live acceptance.
 
 The public-workflow regression now covers primary-tree selection without process-bundle double counting, typed API seed wrappers, schema data-issue reports, local QA/queue/curation, concrete semantic manifests, disabled developer commands and changed-assessment refusal. Queue tests verify concrete support-type matching without attaching a different dataset type. Real installed candidates are additionally checked with the valid ILCD fixture, retained valid Flow sample and a derived missing-name sample; only the latter requires semantic repair.
 

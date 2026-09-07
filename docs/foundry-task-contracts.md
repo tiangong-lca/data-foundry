@@ -29,8 +29,8 @@ checkPaths:
   - specs/import-profiles.json
   - tasks/**
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: f6abf733721a95ce50be76b6e5295d41843274a2
-lastReviewedNote: "Reviewed for Foundry #118 bound public identity submission, preserved identity partitions and dependent reference rewrites, retained report lineage, and verification-local producer indexing. Unresolved diagnostics do not activate rows; authorization/finalize/write/readback and release remain open."
+lastReviewedCommit: b8f2873d0def1bbf446bf214e3b773c91bca460e
+lastReviewedNote: "Reviewed for Foundry #118 public finalization through existing owners: explicit CLI/native environments, fresh per-type preflight outputs, preserved indexed evidence, current rows/assessment capture and authorization-pending results. Canonical catalog is a bound reference asset; write authorization/execution/readback and full release acceptance remain open."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -91,6 +91,8 @@ Semantic submissions bind current assessment and work-item digests independently
 Identity application adds retained `identity_reports` and `identity_rewrite_reports` to current row manifests. These reports preserve source rows, reference-only partitions and dependent rewrites when local write candidates shrink to zero; zero candidates alone never proves completion. Failed/unresolved application keeps its diagnostic artifacts without replacing current rows. Assessment reads only selected report facts and passes their existing owner evidence into curation.
 
 Producer lookup builds a verification-local index keyed by resolved path, content digest and byte count. It retains original index order and the strict earlier-sequence requirement. Paths, original source bytes, producer receipts/plans and selected artifact bytes are still validated; the lookup is discarded after each verification and is not a cross-operation trust cache.
+
+Finalization captures existing owner outputs in a distinct generation after read-only work. It uses current row-manifest ancestry to select semantic reports and retains their originals. Fresh per-type identity request/output paths prevent legacy refresh logic from rewriting already indexed evidence; dependency entries are preserved and execution is limited to the current type. The capture verifies selected lineage before reads and current rows under the lock. A `foundry-finalize.json` record is current only for its exact rows and assessment, and repeated pending resume does not rerun finalization. A ready record requests authorization and is not a completed task or mutation receipt.
 
 `foundry-job.json` uses `tiangong-foundry.job.v2`. It binds workspace/task/actor/request identity, lane, target profile/entity types, source/profile/optional seed content references, current runtime manifest/entry identity, UTC creation time, and the default `write_policy` of `dry-run` with remote state 0. Task metadata cannot enable a remote write by changing that policy object. Actual permission requires the separate reviewed authorization/execution boundary.
 

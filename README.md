@@ -158,8 +158,8 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: f6abf733721a95ce50be76b6e5295d41843274a2
-lastReviewedNote: "Reviewed for Foundry #118 bound public identity submission, preserved identity partitions and dependent reference rewrites, retained report lineage, and verification-local producer indexing. Unresolved diagnostics do not activate rows; authorization/finalize/write/readback and release remain open."
+lastReviewedCommit: b8f2873d0def1bbf446bf214e3b773c91bca460e
+lastReviewedNote: "Reviewed for Foundry #118 public finalization through existing owners: explicit CLI/native environments, fresh per-type preflight outputs, preserved indexed evidence, current rows/assessment capture and authorization-pending results. Canonical catalog is a bound reference asset; write authorization/execution/readback and full release acceptance remain open."
 ---
 
 # TianGong LCA Data Foundry

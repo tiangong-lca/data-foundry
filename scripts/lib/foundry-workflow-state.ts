@@ -189,5 +189,32 @@ export function currentWorkflowState(
       }
     }
   }
-  return { rows, assessment, identity };
+  let finalization: WorkflowArtifact<Record<string, unknown>> | null = null;
+  if (rows && assessment) {
+    for (const entry of [...entries].reverse()) {
+      if (
+        entry.command !== "dataset-workflow-finalize" ||
+        path.basename(entry.path) !== "foundry-finalize.json"
+      )
+        continue;
+      const found = readWorkflowArtifact(context, entry);
+      if (
+        found.value.schema !== "tiangong-foundry.finalize-stage.v1" ||
+        !Array.isArray(found.value.sets) ||
+        !Array.isArray(found.value.blockers)
+      )
+        throw new FoundryContextError(
+          "workflow_finalize_invalid",
+          "Registered finalization metadata is invalid.",
+        );
+      if (
+        found.value.rows_report === rows.file &&
+        found.value.assessment_report === assessment.file
+      ) {
+        finalization = found;
+        break;
+      }
+    }
+  }
+  return { rows, assessment, identity, finalization };
 }

@@ -278,7 +278,11 @@ test("CLI wrapper exists only as zero-escape native TypeScript with no shell-str
   const typedPath = path.join(repoRoot, "scripts/commands/cli-wrappers.ts");
   assert.equal(fs.existsSync(typedPath), true);
   assert.equal(fs.existsSync(typedPath.replace(/\.ts$/u, ".mjs")), false);
-  const source = fs.readFileSync(typedPath, "utf8");
+  assert.match(fs.readFileSync(typedPath, "utf8"), /finalize-owners\/cli-wrappers\.ts/u);
+  const source = fs.readFileSync(
+    path.join(repoRoot, "scripts/lib/finalize-owners/cli-wrappers.ts"),
+    "utf8",
+  );
   assert.doesNotMatch(source, /\bas\s+any\b|:\s*any\b|\bany\s*\[\]|<\s*any\b|,\s*any\s*>/u);
   assert.doesNotMatch(source, /@ts-(?:no)?check|@ts-ignore/u);
   assert.doesNotMatch(source, /execSync|execFileSync|shell\s*:\s*true|\bdisplay\s*\)/u);

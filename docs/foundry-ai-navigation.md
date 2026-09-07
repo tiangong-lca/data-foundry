@@ -144,8 +144,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 739843c62869cb6c3a6113730c9fc16624425486
-lastReviewedNote: "Reviewed for Foundry #118 public read-only identity preflight: existing owner algorithms and source-context helpers, explicit credential/executable boundary, captured current-row evidence, retry diagnostics and identity-aware reassessment. Identity decisions, write admission and release remain open."
+lastReviewedCommit: b8f2873d0def1bbf446bf214e3b773c91bca460e
+lastReviewedNote: "Reviewed for Foundry #118 public finalization through existing owners: explicit CLI/native environments, fresh per-type preflight outputs, preserved indexed evidence, current rows/assessment capture and authorization-pending results. Canonical catalog is a bound reference asset; write authorization/execution/readback and full release acceptance remain open."
 ---
 
 # Foundry AI Navigation

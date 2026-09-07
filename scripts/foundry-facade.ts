@@ -60,6 +60,7 @@ import { datasetTypePlural } from "./lib/import-curation/internal/dataset-types.
 import { currentWorkflowState } from "./lib/foundry-workflow-state.ts";
 import { selectFoundrySemanticInput } from "./lib/foundry-semantic-input.ts";
 import { runFoundryWorkflowIdentity } from "./lib/foundry-workflow-identity.ts";
+import { finalizeFoundryWorkflow } from "./lib/foundry-workflow-finalize.ts";
 import type { FoundryAuthentication } from "./lib/foundry-runtime-identity.ts";
 
 export interface FoundryFacadeRuntimeSelection {
@@ -535,6 +536,35 @@ function taskProjection(
       });
   }
   const workflow = currentWorkflowState(context, inspected.artifacts);
+  if (workflow.finalization) {
+    const ready = workflow.finalization.value.status === "ready_for_authorization";
+    const found = workflow.finalization;
+    return createFoundryOperationResult({
+      operation,
+      status: "needs_input",
+      taskId: record.task_id,
+      artifacts,
+      blockers: [
+        {
+          code: ready ? "task_authorization_required" : "finalization_requires_input",
+          message: ready
+            ? "Final rows are prepared. Register current task approval before owner draft execution."
+            : "Resolve the registered finalization blockers before owner draft execution.",
+          scope: record.task_id,
+        },
+      ],
+      nextActions: [
+        human(
+          ready ? "authorize_final_rows" : "review_finalization",
+          `Read the current finalization report ${found.file} and its per-scope owner reports.`,
+        ),
+      ],
+      runtimeIdentity: identity,
+      permissions: ready
+        ? { state: "required", requested_actions: [], approval_reference: null }
+        : noPermission(),
+    });
+  }
   if (workflow.identity?.value.status === "blocked")
     return createFoundryOperationResult({
       operation,
@@ -1378,6 +1408,33 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
               permissions: noPermission(),
             });
           }
+        }
+        if (
+          !preparation &&
+          existing.status === "ready" &&
+          workflow.assessment &&
+          !workflow.finalization &&
+          (workflow.identity?.value.status === "completed" ||
+            !workflow.rows?.value.sets.some((set) => ["flow", "process"].includes(set.type)))
+        ) {
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Finalization requires qualified runtime owners.",
+            );
+          const facts = before.artifacts.map((artifact) => ({
+            path: path.join(context.taskRoot!, artifact.path),
+            bytes: artifact.bytes,
+            sha256: artifact.sha256,
+          }));
+          const selected = taskContext(options, current, record, facts);
+          await finalizeFoundryWorkflow(
+            selected,
+            qualified,
+            before.artifacts,
+            options.authentication,
+          );
+          assertNotInterrupted(options.signal);
         }
         if (preparation) {
           assertNotInterrupted(options.signal);

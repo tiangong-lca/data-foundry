@@ -606,8 +606,8 @@ for (const identityDecision of ["create_new", "reuse_existing_reference"] as con
             {
               "@dataSetInternalID": "0",
               referenceToFlowPropertyDataSet: {
-                "@refObjectId": "88888888-8888-4888-8888-888888888888",
-                "@version": "00.00.001",
+                "@refObjectId": "93a60a56-a3c8-11da-a746-0800200b9a66",
+                "@version": "03.00.003",
                 "common:shortDescription": { "@xml:lang": "en", "#text": "Mass" },
               },
               meanValue: "1",
@@ -667,6 +667,7 @@ for (const identityDecision of ["create_new", "reuse_existing_reference"] as con
     let authCalls = 0,
       preflightCalls = 0,
       failRead = true;
+    let finalizing = false;
     let childFailure: unknown;
     t.mock.method(
       childProcess,
@@ -675,6 +676,63 @@ for (const identityDecision of ["create_new", "reuse_existing_reference"] as con
         try {
           const argv = args[1],
             options = args[2];
+          if (
+            Array.isArray(argv) &&
+            ["publish-version", "save-draft", "verify-remote"].some((name) => argv.includes(name))
+          ) {
+            assert.ok(!argv.includes("--commit"));
+            if (!argv.includes("verify-remote")) assert.ok(argv.includes("--dry-run"));
+            const outDir = argv[argv.indexOf("--out-dir") + 1];
+            fs.mkdirSync(outDir, { recursive: true });
+            const file = path.join(outDir, "controlled-read-report.json");
+            const input =
+              argv[argv.indexOf(argv.includes("--input-file") ? "--input-file" : "--input") + 1];
+            let report: Record<string, unknown>;
+            if (argv.includes("verify-remote")) {
+              report = {
+                status: "passed_remote_verification",
+                input_path: input,
+                blockers: [],
+                counts: { blockers: 0 },
+                checks: [
+                  {
+                    role: "reference",
+                    table: "flowproperties",
+                    id: "93a60a56-a3c8-11da-a746-0800200b9a66",
+                    version: "03.00.003",
+                    status: "ok",
+                  },
+                ],
+                files: { report: file },
+              };
+            } else {
+              const success = path.join(outDir, "success.json"),
+                failed = path.join(outDir, "failed.jsonl");
+              fs.writeFileSync(
+                success,
+                JSON.stringify([{ id, version: "00.00.001", operation: "would_insert" }]),
+              );
+              fs.writeFileSync(failed, "");
+              report = {
+                status: "completed_flow_publish_version",
+                mode: "dry_run",
+                dry_run: true,
+                commit: false,
+                input_path: input,
+                target_user_id_override: account.user_id,
+                files: { report: file, success_list: success, remote_failed: failed },
+              };
+            }
+            fs.writeFileSync(file, JSON.stringify(report));
+            return {
+              status: 0,
+              signal: null,
+              stdout: JSON.stringify(report),
+              stderr: "",
+              pid: 1,
+              output: [],
+            };
+          }
           if (
             !Array.isArray(argv) ||
             (!argv.includes("identity-receipt") && !argv.includes("identity-preflight"))
@@ -696,11 +754,18 @@ for (const identityDecision of ["create_new", "reuse_existing_reference"] as con
             const requestFile = argv[argv.indexOf("--input") + 1],
               outDir = argv[argv.indexOf("--out-dir") + 1];
             const request = JSON.parse(fs.readFileSync(requestFile, "utf8")) as { target: unknown };
-            assert.deepEqual(
-              request.target,
-              payload,
-              "the canonical envelope is removed without changing the target payload",
-            );
+            if (!finalizing)
+              assert.deepEqual(
+                request.target,
+                payload,
+                "the canonical envelope is removed without changing the target payload",
+              );
+            else
+              assert.ok(
+                request.target &&
+                  typeof request.target === "object" &&
+                  "flowDataSet" in request.target,
+              );
             assert.equal(environment.FOUNDRY_VERIFIED_USER_ID, account.user_id);
             report = {
               schema_version: 1,
@@ -928,6 +993,37 @@ for (const identityDecision of ["create_new", "reuse_existing_reference"] as con
       finished.status,
       "completed",
       "local identity resolution is not final delivery",
+    );
+    finalizing = true;
+    const finalized = await facade.resume(invocation);
+    if (childFailure) throw childFailure;
+    assert.equal(finalized.status, "needs_input", JSON.stringify(finalized.blockers));
+    const finalizeArtifact = finalized.artifacts.findLast(
+      (item) => item.role === "foundry-finalize.json",
+    );
+    assert.ok(finalizeArtifact?.kind === "file");
+    const finalReport = JSON.parse(fs.readFileSync(finalizeArtifact.path, "utf8")) as {
+      sets: Array<{ report: string }>;
+      blockers: unknown[];
+    };
+    assert.equal(finalReport.sets.length, identityDecision === "create_new" ? 1 : 0);
+    assert.equal(
+      finalized.blockers[0]?.code,
+      identityDecision === "create_new"
+        ? "task_authorization_required"
+        : "finalization_requires_input",
+      JSON.stringify(finalReport),
+    );
+    assert.equal(
+      finalized.permissions.state,
+      identityDecision === "create_new" ? "required" : "not_required",
+    );
+    const reads = [authCalls, preflightCalls];
+    assert.deepEqual((await facade.resume(invocation)).artifacts, finalized.artifacts);
+    assert.deepEqual(
+      [authCalls, preflightCalls],
+      reads,
+      "pending finalization cannot repeat remote reads",
     );
   });
 }

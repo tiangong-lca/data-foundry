@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: f6abf733721a95ce50be76b6e5295d41843274a2
-lastReviewedNote: "Reviewed for Foundry #118 bound public identity submission, preserved identity partitions and dependent reference rewrites, retained report lineage, and verification-local producer indexing. Unresolved diagnostics do not activate rows; authorization/finalize/write/readback and release remain open."
+lastReviewedCommit: b8f2873d0def1bbf446bf214e3b773c91bca460e
+lastReviewedNote: "Reviewed for Foundry #118 public finalization through existing owners: explicit CLI/native environments, fresh per-type preflight outputs, preserved indexed evidence, current rows/assessment capture and authorization-pending results. Canonical catalog is a bound reference asset; write authorization/execution/readback and full release acceptance remain open."
 ---
 
 # Environment Surface Policy
@@ -122,6 +122,8 @@ The W05 facade receives runtime expectations and the selected TIDAS executable o
 Consumer doctor may receive expected project/user and an absolute private session reference. It verifies only that the reference is a bounded regular non-link file and reports `configured_unverified`; it never opens the file or claims server authentication. Missing reference metadata returns `needs_auth` with a human OAuth action. Task start does not authenticate or cache an identity. Restricted resume continues to require a fresh CLI-owned identity at the W04 boundary.
 
 Public read-only identity preflight shares `foundry-authentication-environment.ts` with fresh account verification. It takes explicit host OAuth/headless configuration, preserves required system launcher/session discovery keys, and omits ambient credentials, executable overrides, Node options and result-cache settings. Its expected project/user bindings come from the verified current task account. The receipt passed to the runner is temporary non-secret proof; headless tokens remain only in the child environment and are not registered as artifacts.
+
+The public finalize composition injects explicit environments into queue, handoff and preflight helpers. Local checks remain credential-free; remote read/dry-run stages use current task account configuration. Ambient preflight concurrency/reuse-map settings and source-runner shard dispatch do not enter this path. Native validation runs the copied, rehashed qualified executable. Finalize rejects mutation flags and cannot dispatch a commit.
 
 ## Automatic Check
 

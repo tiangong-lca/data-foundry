@@ -18,7 +18,7 @@ import {
 import { createFoundryAuthenticationEnvironment } from "./foundry-authentication-environment.ts";
 import { createFoundryIdentityOwners } from "./foundry-identity-owners.ts";
 import { currentWorkflowState, workflowObject } from "./foundry-workflow-state.ts";
-import { runFoundryTaskOperation } from "./foundry-task-store.ts";
+import { runFoundryTaskOperation, withFoundryTaskMetadata } from "./foundry-task-store.ts";
 import { registerWorkflowStageFiles } from "./foundry-workflow-io.ts";
 import { datasetIdentity } from "./import-curation/internal/dataset-payload.ts";
 import { readRows } from "./import-curation/internal/runtime-io.ts";
@@ -44,6 +44,13 @@ export async function runFoundryWorkflowIdentity(
       "needs_auth",
       "Identity preflight requires a task spec with the intended project and user account.",
     );
+  await withFoundryTaskMetadata(context, (_, index) => {
+    if (currentWorkflowState(context, index).rows?.entry.sha256 !== rows.entry.sha256)
+      throw new FoundryContextError(
+        "workflow_identity_rows_changed",
+        "Current rows changed before identity preflight.",
+      );
+  });
   const identity = verifyFoundryRuntimeIdentity(context, authentication, process.env, qualified);
   const nonce = randomUUID();
   const output = resolveFoundryOutput(context, `outputs/identity/${nonce}`);

@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 739843c62869cb6c3a6113730c9fc16624425486
-lastReviewedNote: "Reviewed for Foundry #118 public read-only identity preflight: existing owner algorithms and source-context helpers, explicit credential/executable boundary, captured current-row evidence, retry diagnostics and identity-aware reassessment. Identity decisions, write admission and release remain open."
+lastReviewedCommit: b8f2873d0def1bbf446bf214e3b773c91bca460e
+lastReviewedNote: "Reviewed for Foundry #118 public finalization through existing owners: explicit CLI/native environments, fresh per-type preflight outputs, preserved indexed evidence, current rows/assessment capture and authorization-pending results. Canonical catalog is a bound reference asset; write authorization/execution/readback and full release acceptance remain open."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -103,6 +103,8 @@ The package compiler sets LF output and disables source maps, declaration maps a
 The public compiler closure includes the native-import and contract-context adapters reached through the facade. They reuse qualified TIDAS and the exact CLI, persist only user-workspace stage artifacts, and add no public flat command or source-checkout requirement. Package installation and these local stages do not establish complete task or release acceptance.
 
 Indexed row preparation and local assessment include the existing curation and authoring library owners in that closure. `specs/prewrite-content-policy.json` is an explicit required asset; the packaged path must not fall back to an absent content policy. Native validation data issues remain available to curation. Public authoring output disables legacy source-runner commands while the developer producer retains its default command rendering.
+
+Finalization includes the reused library owner closure and the existing public canonical support reference catalog at `specs/canonical-support/flow-properties-unit-groups.json`. The catalog is an explicit allowlisted, descriptor-bound asset; it supplies reference choices and does not grant write permission or replace current remote verification. Queue, dry-run and verification calls use the qualified CLI with explicit environments. Developer command modules remain outside the compiled package.
 
 The package includes `foundry-semantic-input.schema.json` and exports its schema identifier and input types. Public semantic submission reuses the existing collector and exact CLI local patch owner. Selected bytes are captured without exposing a caller-selected runtime or an arbitrary executable, and only a successful local apply advances the indexed row version.
 
