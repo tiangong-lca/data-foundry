@@ -30,8 +30,8 @@ checkPaths:
   - test/unit/task-profile-authority.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 03e7642ca44829fc19a011210abb144153d862f0
-lastReviewedNote: "Reviewed for Foundry #118 explicit public grant/evidence selection, locked current-finalization activation, competing-pointer refusal, current final-row handoff/capsule sealing and idempotent approval reuse. Prepared-row derivation, owner dispatch/readback and full release acceptance remain open; no new auth or mutation bypass."
+lastReviewedCommit: db62b65202d3e40beb5e57d6dec990d6b584372d
+lastReviewedNote: "Reviewed for Foundry #118 current-row approval continuation: original-grant re-finalization, exact derived activation, equal-byte descendant proof, unchanged authority/expiry, and recovery after interrupted capture. Input/lineage lookup preserves ordered verified producers. Actual owner dispatch/readback and full release acceptance remain open."
 related:
   - docs/architecture.md
   - docs/safety-policy.md
@@ -56,7 +56,7 @@ The extended public workflow may authenticate for read-only identity preflight a
 
 The public facade accepts explicit approval selection through `--authorization-input`, whose descriptor/schema is owned by `public-runtime-contract.md`. Finalization supplies reviewable bindings and current input digests, never an issued grant. Registration uses an internal current-state check under its metadata lock before activation, so an approval for an older finalization cannot replace current state. The existing expected-previous-pointer compare-and-swap remains mandatory.
 
-Ready final-row approval rebuilds the existing commit handoff and seals a capsule without dispatching it. Host evidence selections remain independent of grant text, and evidence paths are canonical. Prepared-row approval can be registered but its automatic re-finalization/derived activation is not yet connected to the public workflow. A registered or sealed report does not relax fresh identity/admission checks or clear consumed attempts.
+Ready final-row approval rebuilds the existing commit handoff and seals a capsule without dispatching it. Host evidence selections remain independent of grant text, and evidence paths are canonical. Prepared-row approval is continued through current-grant re-finalization and the existing derived-grant helper. Activation uses its returned pointer guard; sealing retains the original approved ancestor. Interrupted post-activation capture verifies the active grant against that original approval before recovering. A registered or sealed report does not relax fresh identity/admission checks or clear consumed attempts.
 
 The exact v1 binding contains `workspace_id`, `task_id`, `actor_id`, `project_ref`, `user_id`, `profile_id`, `profile_sha256`, and `input_scope_sha256`. The profile digest is the stable, key-sorted JSON digest of the selected raw rule profile. Input scope is independently frozen by the task host; it must prove current source bytes and downstream lineage, rather than copying the digest from the grant. At a row-consuming permission boundary it is the SHA-256 of that exact input file; commit handoff checks the final-row artifact bytes again. A transformed row file needs a newly bound grant supported by the retained task approval and verified lineage, never silent reuse of the old digest. A binding mismatch invalidates every exception in that grant.
 
@@ -79,6 +79,8 @@ Grant issue/expiry timestamps use exact millisecond UTC format. A grant must be 
 A single action never enables another. A mixed support handoff checks the actual final rows, not just the report's declared `support` type. A ready legacy finalize/mutation report cannot bypass this check. Non-generic handoffs require the mutation manifest to record the current `profile_rules_sha256`; used QA exceptions carry `required_qa_waiver_codes` and must still be authorized at handoff. No action grants publication, deletion, foreign-row visibility, review completion, full-context relaxation or replay.
 
 ## Derived input and execution admission
+
+When a selected derived artifact has identical bytes to the registered input, the loader may reuse that same content-bound grant after proving the registered input's producer lineage to the selected path. It rechecks the active pointer, current identity, binding and expiry after the lineage check. An independent equal-byte copy without an indexed derivation is rejected; grant/registration bytes are not rewritten merely to accommodate a new path.
 
 `prepareDerivedFoundryTaskAuthorization` may reuse a current approval only after the indexed receipt/plan graph proves that the selected final rows descend from the approved input. It requires the exact qualified runtime and identity. The successor changes only `input_scope_sha256`; task/account/profile binding, issue and expiry times, actions, QA waivers and evidence remain byte-equivalent in authority. The active pointer must still name the parent before and after preparation, and later activation uses its captured digest as the compare-and-swap base. `authorization-derivation.schema.json` records both content facts and parent/successor digests. It does not activate the successor.
 

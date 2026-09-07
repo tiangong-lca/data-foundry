@@ -30,6 +30,7 @@ import {
 import {
   validateTaskAuthorization,
   deriveTaskAuthorizationGrant,
+  taskAuthorizationMatches,
   type TaskAuthorizationBinding,
   type ValidatedTaskAuthorization,
 } from "./task-authorization.ts";
@@ -302,7 +303,7 @@ export async function loadFoundryTaskAuthorization(
   qualification?: QualifiedFoundryRuntime,
 ): Promise<ValidatedTaskAuthorization> {
   assertVerifiedFoundryIdentity(context, identity, qualification);
-  return withFoundryTaskMetadata(context, (task) => {
+  const loaded = await withFoundryTaskMetadata(context, (task) => {
     assertVerifiedFoundryIdentity(context, identity, qualification);
     const input = inputFact(context, inputFile);
     if (!fs.existsSync(taskPath(context, "authorization.json")))
@@ -339,11 +340,15 @@ export async function loadFoundryTaskAuthorization(
       "evidence",
       "identity",
     ]);
+    const registeredInput = object(registration.input);
+    exact(registeredInput, ["path", "bytes", "sha256"]);
     if (
       registration.schema !== "tiangong-foundry.authorization-registration.v1" ||
       registration.job_sha256 !== task.jobSha256 ||
       registration.authorization_sha256 !== pointer.authorization_sha256 ||
-      sha256Json(registration.input) !== sha256Json(input) ||
+      typeof registeredInput.path !== "string" ||
+      registeredInput.bytes !== input.bytes ||
+      registeredInput.sha256 !== input.sha256 ||
       sha256Json(registration.identity) !==
         sha256Json({
           project_ref: identity.receipt.project.project_ref,
@@ -428,8 +433,36 @@ export async function loadFoundryTaskAuthorization(
         "task_authorization_invalid",
         "Task authorization expired during evidence verification.",
       );
-    return refreshed.authorization;
+    return {
+      authorization: refreshed.authorization,
+      registeredInput: registeredInput.path,
+      pointerSha256: digest(readTaskBytes(context, "authorization.json")),
+      inputPath: input.path,
+    };
   });
+  if (loaded.registeredInput !== loaded.inputPath) {
+    await assertFoundryTaskInputLineage(context, loaded.registeredInput, loaded.inputPath);
+    return withFoundryTaskMetadata(context, (task) => {
+      assertVerifiedFoundryIdentity(context, identity, qualification);
+      if (digest(readTaskBytes(context, "authorization.json")) !== loaded.pointerSha256)
+        fail(
+          "authorization_update_conflict",
+          "Approval changed during equivalent-content lineage verification.",
+        );
+      if (
+        !taskAuthorizationMatches(
+          loaded.authorization,
+          binding(context, task, inputFact(context, inputFile)),
+        )
+      )
+        fail(
+          "task_authorization_invalid",
+          "Approval expired during equivalent-content lineage verification.",
+        );
+      return loaded.authorization;
+    });
+  }
+  return loaded.authorization;
 }
 
 /** Prepare, but do not activate, an exact successor grant for a verified derived task artifact. */

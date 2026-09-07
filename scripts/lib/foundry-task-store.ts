@@ -85,6 +85,23 @@ function selectedInput(context: FoundryRuntimeContext, file: string): FoundryInp
   return context.inputs.find((fact) => fact.path === resolved)!;
 }
 
+function producerLookup(context: FoundryRuntimeContext, index: readonly ArtifactEntry[]) {
+  const key = (fact: FoundryInputFact) => JSON.stringify([fact.path, fact.sha256, fact.bytes]);
+  const byFact = new Map<string, ArtifactEntry[]>();
+  for (const entry of index) {
+    const id = key({
+      path: taskPath(context, entry.path),
+      sha256: entry.sha256,
+      bytes: entry.bytes,
+    });
+    const candidates = byFact.get(id) ?? [];
+    candidates.push(entry);
+    byFact.set(id, candidates);
+  }
+  return (fact: FoundryInputFact, before = Number.POSITIVE_INFINITY) =>
+    (byFact.get(key(fact)) ?? []).filter((entry) => entry.sequence < before);
+}
+
 /** Prove a selected derived input descends from a selected approved input in the same verified index. */
 export async function assertFoundryTaskInputLineage(
   context: FoundryRuntimeContext,
@@ -96,14 +113,7 @@ export async function assertFoundryTaskInputLineage(
   if (sameFact(ancestor, derived))
     fail("task_lineage_not_derived", "A derived authorization requires a distinct indexed output.");
   return withFoundryTaskMetadata(context, (task, index) => {
-    const findProducers = (fact: FoundryInputFact, before = Number.POSITIVE_INFINITY) =>
-      index.filter(
-        (entry) =>
-          entry.sequence < before &&
-          taskPath(context, entry.path) === fact.path &&
-          entry.sha256 === fact.sha256 &&
-          entry.bytes === fact.bytes,
-      );
+    const findProducers = producerLookup(context, index);
     const first = findProducers(derived);
     if (!first.length) fail("task_lineage_invalid", "Derived input has no indexed producer.");
     const pending = [...first];
@@ -260,21 +270,9 @@ function verifyInputs(
     );
   }
   const verified = new Set<string>();
-  const producerKey = (fact: FoundryInputFact) =>
-    JSON.stringify([fact.path, fact.sha256, fact.bytes]);
-  const producers = new Map<string, ArtifactEntry[]>();
-  for (const entry of index) {
-    const key = producerKey({
-      path: taskPath(context, entry.path),
-      sha256: entry.sha256,
-      bytes: entry.bytes,
-    });
-    const candidates = producers.get(key) ?? [];
-    candidates.push(entry);
-    producers.set(key, candidates);
-  }
+  const producers = producerLookup(context, index);
   const findProducer = (fact: FoundryInputFact, before = Number.POSITIVE_INFINITY) =>
-    producers.get(producerKey(fact))?.find((entry) => entry.sequence < before);
+    producers(fact, before)[0];
   for (const fact of context.inputs) {
     if (!task.sources.some((source) => sameFact(source, fact))) {
       const first = findProducer(fact);

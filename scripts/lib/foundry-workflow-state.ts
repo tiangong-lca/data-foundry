@@ -218,6 +218,7 @@ export function currentWorkflowState(
     }
   }
   let authorization: WorkflowArtifact<Record<string, unknown>> | null = null;
+  let preparedApproval: WorkflowArtifact<Record<string, unknown>> | null = null;
   if (finalization && fs.existsSync(path.join(context.taskRoot!, "authorization.json"))) {
     const pointer = createHash("sha256")
       .update(readTaskBytes(context, "authorization.json"))
@@ -234,8 +235,12 @@ export function currentWorkflowState(
           "workflow_authorization_invalid",
           "Registered approval metadata is invalid.",
         );
+      const prepared =
+        finalization.value.approval_source_sha256 === entry.sha256 &&
+        found.value.input_kind === "current_rows";
+      if (prepared) preparedApproval = found;
       if (
-        found.value.finalization_sha256 === finalization.entry.sha256 &&
+        (found.value.finalization_sha256 === finalization.entry.sha256 || prepared) &&
         found.value.pointer_sha256 === pointer &&
         typeof found.value.expires_at_utc === "string" &&
         Date.parse(found.value.expires_at_utc) > Date.now()
@@ -245,5 +250,5 @@ export function currentWorkflowState(
       }
     }
   }
-  return { rows, assessment, identity, finalization, authorization };
+  return { rows, assessment, identity, finalization, authorization, preparedApproval };
 }

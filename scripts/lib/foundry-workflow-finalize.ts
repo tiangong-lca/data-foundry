@@ -31,12 +31,22 @@ import { runFoundryTaskOperation, withFoundryTaskMetadata } from "./foundry-task
 import { registerWorkflowStageFiles } from "./foundry-workflow-io.ts";
 import type { ArtifactEntry } from "./foundry-task-types.ts";
 import { readTaskBytes } from "./foundry-task-io.ts";
+import { loadFoundryTaskAuthorization } from "./foundry-task-authorization.ts";
+import type { ValidatedTaskAuthorization } from "./task-authorization.ts";
+import { taskAuthorizationMatches } from "./task-authorization.ts";
+import { createHash } from "node:crypto";
 
 export async function finalizeFoundryWorkflow(
   context: FoundryRuntimeContext,
   qualified: QualifiedFoundryRuntime,
   entries: readonly ArtifactEntry[],
   authentication: FoundryAuthentication = { mode: "oauth" },
+  approval?: {
+    sourceSha256: string;
+    authorizationSha256: string;
+    datasetType: string;
+    inputFile: string;
+  },
 ) {
   assertQualifiedFoundryRuntime(context, qualified);
   const state = currentWorkflowState(context, entries),
@@ -66,6 +76,8 @@ export async function finalizeFoundryWorkflow(
   const sets: Array<Record<string, unknown>> = [],
     blockers: Array<Record<string, unknown>> = [];
   let receiptFile: string | undefined;
+  let authorization: ValidatedTaskAuthorization | undefined;
+  let approvalPointer: string | undefined;
   try {
     if (context.accountIntent && rows.value.sets.length) {
       const identity = verifyFoundryRuntimeIdentity(
@@ -74,6 +86,22 @@ export async function finalizeFoundryWorkflow(
         process.env,
         qualified,
       );
+      if (approval) {
+        authorization = await loadFoundryTaskAuthorization(
+          context,
+          identity,
+          approval.inputFile,
+          qualified,
+        );
+        if (authorization.authorization_sha256 !== approval.authorizationSha256)
+          throw new FoundryContextError(
+            "authorization_update_conflict",
+            "Preparation approval changed before re-finalization.",
+          );
+        approvalPointer = createHash("sha256")
+          .update(readTaskBytes(context, "authorization.json"))
+          .digest("hex");
+      }
       Object.assign(
         environment,
         createFoundryAuthenticationEnvironment(
@@ -201,6 +229,15 @@ export async function finalizeFoundryWorkflow(
             rowsFile: set.file,
             outDir: path.join(output, set.type),
             profile,
+            ...(approval?.datasetType === set.type && authorization
+              ? {
+                  taskAuthorization: authorization,
+                  taskAuthorizationBinding: authorization.binding,
+                  mintUnmatchedFpUgSupport:
+                    ["unitgroup", "flowproperty"].includes(set.type) &&
+                    authorization.allowed_actions.includes("canonical_support_local_mint"),
+                }
+              : {}),
             schemaFile: contract.schema,
             yamlFile: contract.methodology,
             rulesetFile: contract.ruleset,
@@ -301,6 +338,17 @@ export async function finalizeFoundryWorkflow(
               "workflow_rows_changed",
               "Rows changed during finalization.",
             );
+          if (
+            authorization &&
+            (createHash("sha256")
+              .update(readTaskBytes(context, "authorization.json"))
+              .digest("hex") !== approvalPointer ||
+              !taskAuthorizationMatches(authorization, authorization.binding))
+          )
+            throw new FoundryContextError(
+              "authorization_update_conflict",
+              "Preparation approval expired or changed during finalization.",
+            );
         },
       },
       (operation) => {
@@ -311,6 +359,7 @@ export async function finalizeFoundryWorkflow(
           rows_report: rows.file,
           assessment_report: state.assessment!.file,
           owner_base: context.assetRoot,
+          approval_source_sha256: approval?.sourceSha256 ?? null,
           sets,
           blockers,
         };

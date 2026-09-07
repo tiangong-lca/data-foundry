@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 03e7642ca44829fc19a011210abb144153d862f0
-lastReviewedNote: "Reviewed for Foundry #118 explicit public grant/evidence selection, locked current-finalization activation, competing-pointer refusal, current final-row handoff/capsule sealing and idempotent approval reuse. Prepared-row derivation, owner dispatch/readback and full release acceptance remain open; no new auth or mutation bypass."
+lastReviewedCommit: db62b65202d3e40beb5e57d6dec990d6b584372d
+lastReviewedNote: "Reviewed for Foundry #118 current-row approval continuation: original-grant re-finalization, exact derived activation, equal-byte descendant proof, unchanged authority/expiry, and recovery after interrupted capture. Input/lineage lookup preserves ordered verified producers. Actual owner dispatch/readback and full release acceptance remain open."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -98,7 +98,7 @@ Finalization gets a new output generation and fresh current-type identity reques
 
 Finalization exposes per-scope `authorization_inputs` with independently computed bindings and input digests. These are review metadata, not grants. The trusted caller must select approval evidence from actual current user authorization; task output or grant text alone cannot supply approval. The existing validator checks the grant, current CLI identity and scope; registration rechecks current finalization while holding the task lock and uses the existing compare-and-swap pointer. Concurrent distinct initial grants cannot both activate.
 
-For a ready `final_rows` scope, the runtime rebuilds the original owner handoff under the validated grant, binds CommandSpec artifacts to absolute final-row paths, and creates the existing execution capsule. It registers a `foundry-authorization.json` result; identical current submissions reuse it without re-authentication or another capsule. Projection requires the matching current finalization, active pointer digest and unexpired record. A sealed result is explicitly pending execution and never dispatches a mutation. `current_rows` registration records preparation approval; automatic re-finalization/derivation from that approval remains pending integration. Existing authorization, capsule and no-replay rules remain authoritative for subsequent execution.
+For a ready `final_rows` scope, the runtime rebuilds the original owner handoff under the validated grant, binds CommandSpec artifacts to absolute final-row paths, and creates the existing execution capsule. It registers a `foundry-authorization.json` result; identical current submissions reuse it without re-authentication or another capsule. Projection requires the matching current finalization, active pointer digest and unexpired record. A sealed result is explicitly pending execution and never dispatches a mutation. `current_rows` registration records preparation approval. Subsequent resume re-finalizes the selected type under that current grant, then proves final-row lineage and derives/activates the exact successor before sealing. Actions, evidence, account/profile binding and expiry are unchanged. Equal-byte derived files reuse the original grant only after lineage proof. A capture interruption after activation resumes from the retained preparation approval and verifies the active grant is its exact derivation; it does not request another approval. Blocked re-finalization retains its reports without repeating remote reads. Existing authorization, capsule and no-replay rules remain authoritative for subsequent execution.
 
 ## Single-result envelope
 

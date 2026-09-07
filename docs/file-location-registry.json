@@ -1,7 +1,7 @@
 {
   "$schema": "../specs/schemas/file-location-registry.schema.json",
   "schema_version": 1,
-  "updated_at_utc": "2026-09-07T20:58:52Z",
+  "updated_at_utc": "2026-09-07T21:55:37Z",
   "policy_doc": "docs/file-organization.md",
   "entries": [
     {
@@ -210,11 +210,12 @@
         "scripts/lib/foundry-workflow-identity-apply.ts",
         "scripts/lib/foundry-workflow-finalize.ts",
         "scripts/lib/foundry-authorization-input.ts",
-        "scripts/lib/foundry-workflow-authorization.ts"
+        "scripts/lib/foundry-workflow-authorization.ts",
+        "scripts/lib/foundry-workflow-approval-continuation.ts"
       ],
       "sensitivity": "non-sensitive task ledger schema examples; contains no credentials and no private payloads",
       "tracked": true,
-      "notes": "Owns implemented v2 registered jobs/source/profile snapshots, account intent, operation receipts and artifact-index lineage. Workspace state anchors task identity; authorization registers independent evidence. Legacy v1 files and consumed attempts require explicit migration/recovery. Native import and CLI context generations publish outputs through the same task receipt/index; interrupted unindexed context output is not stage authority. Indexed rows and assessment bind native/QA/queue/curation/authoring evidence and preserve owner reference bases. Semantic snapshots and current row/assessment selection retain immutable predecessor evidence and reject stale concurrent work. Identity preflight captures qualified account-bound reads before a local receipt/index transaction; current-row registration invalidates earlier assessment, and read failures stay diagnostic without granting write authority. Identity submission retains partition and dependent-reference rewrite reports when local write candidates shrink; unresolved outcomes remain diagnostic. Producer lookup indexes content facts per verification while retaining hash, path and earlier-sequence checks. Finalization captures isolated owner generations against exact current rows and assessment; pending resume does not replay reads, and readiness requests current authorization rather than dispatching a mutation. Explicit approval input selects grant/evidence independently, activates only against current finalization under the existing pointer guard, and records sealed final-row intent without executing it."
+      "notes": "Owns implemented v2 registered jobs/source/profile snapshots, account intent, operation receipts and artifact-index lineage. Workspace state anchors task identity; authorization registers independent evidence. Legacy v1 files and consumed attempts require explicit migration/recovery. Native import and CLI context generations publish outputs through the same task receipt/index; interrupted unindexed context output is not stage authority. Indexed rows and assessment bind native/QA/queue/curation/authoring evidence and preserve owner reference bases. Semantic snapshots and current row/assessment selection retain immutable predecessor evidence and reject stale concurrent work. Identity preflight captures qualified account-bound reads before a local receipt/index transaction; current-row registration invalidates earlier assessment, and read failures stay diagnostic without granting write authority. Identity submission retains partition and dependent-reference rewrite reports when local write candidates shrink; unresolved outcomes remain diagnostic. Producer lookup indexes content facts per verification while retaining hash, path and earlier-sequence checks. Finalization captures isolated owner generations against exact current rows and assessment; pending resume does not replay reads, and readiness requests current authorization rather than dispatching a mutation. Explicit approval input selects grant/evidence independently, activates only against current finalization under the existing pointer guard, and records sealed final-row intent without executing it. Prepared approvals retain an origin link through re-finalization, exact derived activation and interrupted-capture recovery; equal-byte paths require indexed lineage and do not rewrite consent."
     },
     {
       "id": "foundry-safety-policy",

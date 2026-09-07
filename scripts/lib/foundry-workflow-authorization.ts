@@ -22,6 +22,7 @@ import { runFoundryTaskOperation } from "./foundry-task-store.ts";
 import {
   verifyFoundryRuntimeIdentity,
   type FoundryAuthentication,
+  type VerifiedFoundryIdentity,
 } from "./foundry-runtime-identity.ts";
 import {
   registerFoundryTaskAuthorization,
@@ -33,6 +34,7 @@ import { createFoundryExecutionCapsule } from "./foundry-execution-admission.ts"
 import { registerWorkflowStageFiles } from "./foundry-workflow-io.ts";
 import { createFoundryCommandSpec, createFileArtifactFact } from "./foundry-command-spec.ts";
 import { parseFoundryCommandSpec } from "@tiangong-lca/cli/command-spec";
+import type { ValidatedTaskAuthorization } from "./task-authorization.ts";
 import type { ArtifactEntry } from "./foundry-task-types.ts";
 
 export async function authorizeFoundryWorkflow(
@@ -47,13 +49,13 @@ export async function authorizeFoundryWorkflow(
   const state = currentWorkflowState(context, entries),
     spec = selected.spec;
   const finalization = state.finalization;
+  if (state.authorization?.value.submission_sha256 === selected.descriptor.sha256)
+    return state.authorization.value;
   if (!finalization || finalization.entry.sha256 !== spec.finalization_sha256)
     throw new FoundryContextError(
       "authorization_finalization_mismatch",
       "Approval must select the current finalization report.",
     );
-  if (state.authorization?.value.submission_sha256 === selected.descriptor.sha256)
-    return state.authorization.value;
   const scope = (finalization.value.sets as unknown[])
     .map(workflowObject)
     .find((item) => item.type === spec.dataset_type);
@@ -103,6 +105,53 @@ export async function authorizeFoundryWorkflow(
     qualified,
   );
   const authorization = await loadFoundryTaskAuthorization(context, identity, inputFile, qualified);
+  return recordFoundryWorkflowAuthorization(
+    context,
+    qualified,
+    identity,
+    authorization,
+    authentication,
+    {
+      inputFile,
+      approvedInputFile: inputFile,
+      scope,
+      finalizationSha256: spec.finalization_sha256,
+      datasetType: spec.dataset_type,
+      inputKind: spec.input_kind,
+      registration,
+      submissionSha256: selected.descriptor.sha256,
+      validateCurrent: current,
+      operationOptions: {
+        submission: selected.descriptor,
+        grant: selected.grant,
+        evidence: selected.evidence,
+        finalization: spec.finalization_sha256,
+        authorization: registration.authorization_sha256,
+      },
+    },
+  );
+}
+
+export async function recordFoundryWorkflowAuthorization(
+  context: FoundryRuntimeContext,
+  qualified: QualifiedFoundryRuntime,
+  identity: VerifiedFoundryIdentity,
+  authorization: ValidatedTaskAuthorization,
+  authentication: FoundryAuthentication,
+  request: {
+    inputFile: string;
+    approvedInputFile: string;
+    scope: Record<string, unknown>;
+    finalizationSha256: string;
+    datasetType: string;
+    inputKind: "current_rows" | "final_rows";
+    registration: { authorization_sha256: string; pointer_sha256: string };
+    submissionSha256: string;
+    operationOptions: Record<string, unknown>;
+    validateCurrent: (index: readonly ArtifactEntry[]) => void;
+  },
+) {
+  const { inputFile, scope, registration } = request;
   const nonce = randomUUID(),
     output = resolveFoundryOutput(context, `outputs/authorization/${nonce}`);
   const temporary = resolveFoundryOutput(context, `tmp/authorization-${nonce}`);
@@ -116,7 +165,7 @@ export async function authorizeFoundryWorkflow(
     process.env,
   );
   try {
-    if (spec.input_kind === "final_rows") {
+    if (request.inputKind === "final_rows") {
       environment.FOUNDRY_VERIFIED_PROJECT_REF = context.accountIntent!.projectRef;
       environment.FOUNDRY_VERIFIED_USER_ID = context.accountIntent!.userId;
       const owners = createFoundryFinalizeOwners(context, qualified, temporary, {
@@ -156,20 +205,21 @@ export async function authorizeFoundryWorkflow(
       const command = commands.commit;
       if (command) {
         const requiredActions = authorization.allowed_actions.filter((action) =>
-          spec.dataset_type === "flow"
+          request.datasetType === "flow"
             ? action === "elementary_flow_write" || action === "elementary_flow_create_new"
-            : ["unitgroup", "flowproperty"].includes(spec.dataset_type)
-              ? action === `${spec.dataset_type}_write` || action === "canonical_support_local_mint"
+            : ["unitgroup", "flowproperty"].includes(request.datasetType)
+              ? action === `${request.datasetType}_write` ||
+                action === "canonical_support_local_mint"
               : false,
         );
         capsule = await createFoundryExecutionCapsule(context, qualified, identity, {
           command: "dataset-commit-handoff-plan",
-          approvedInputFile: inputFile,
+          approvedInputFile: request.approvedInputFile,
           finalRowsFile: inputFile,
           commandSpec: command,
           requiredActions,
           requiredQaWaivers: authorization.qa_waivers
-            .filter((item) => item.dataset_type === spec.dataset_type)
+            .filter((item) => item.dataset_type === request.datasetType)
             .map((item) => item.code),
         });
       }
@@ -178,14 +228,8 @@ export async function authorizeFoundryWorkflow(
       context,
       {
         command: "dataset-workflow-authorization",
-        options: {
-          submission: selected.descriptor,
-          grant: selected.grant,
-          evidence: selected.evidence,
-          finalization: spec.finalization_sha256,
-          authorization: registration.authorization_sha256,
-        },
-        validateCurrent: current,
+        options: request.operationOptions,
+        validateCurrent: request.validateCurrent,
       },
       (operation) => {
         registerWorkflowStageFiles(context, operation, output);
@@ -193,12 +237,12 @@ export async function authorizeFoundryWorkflow(
           schema: "tiangong-foundry.authorization-stage.v1",
           status: capsule
             ? "sealed"
-            : spec.input_kind === "current_rows"
+            : request.inputKind === "current_rows"
               ? "authorized_current_rows"
               : "handoff_blocked",
-          finalization_sha256: spec.finalization_sha256,
-          dataset_type: spec.dataset_type,
-          input_kind: spec.input_kind,
+          finalization_sha256: request.finalizationSha256,
+          dataset_type: request.datasetType,
+          input_kind: request.inputKind,
           input: captureFoundryInput(inputFile),
           authorization_sha256: registration.authorization_sha256,
           pointer_sha256: registration.pointer_sha256,
@@ -206,7 +250,7 @@ export async function authorizeFoundryWorkflow(
           allowed_actions: [...authorization.allowed_actions],
           capsule,
           handoff,
-          submission_sha256: selected.descriptor.sha256,
+          submission_sha256: request.submissionSha256,
         };
         operation.writeJson(path.join(output, "foundry-authorization.json"), result);
         return result;

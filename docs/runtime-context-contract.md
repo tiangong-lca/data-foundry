@@ -41,8 +41,8 @@ checkPaths:
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 03e7642ca44829fc19a011210abb144153d862f0
-lastReviewedNote: "Reviewed for Foundry #118 explicit public grant/evidence selection, locked current-finalization activation, competing-pointer refusal, current final-row handoff/capsule sealing and idempotent approval reuse. Prepared-row derivation, owner dispatch/readback and full release acceptance remain open; no new auth or mutation bypass."
+lastReviewedCommit: db62b65202d3e40beb5e57d6dec990d6b584372d
+lastReviewedNote: "Reviewed for Foundry #118 current-row approval continuation: original-grant re-finalization, exact derived activation, equal-byte descendant proof, unchanged authority/expiry, and recovery after interrupted capture. Input/lineage lookup preserves ordered verified producers. Actual owner dispatch/readback and full release acceptance remain open."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md

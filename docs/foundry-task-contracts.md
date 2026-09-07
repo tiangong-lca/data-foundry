@@ -29,8 +29,8 @@ checkPaths:
   - specs/import-profiles.json
   - tasks/**
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 03e7642ca44829fc19a011210abb144153d862f0
-lastReviewedNote: "Reviewed for Foundry #118 explicit public grant/evidence selection, locked current-finalization activation, competing-pointer refusal, current final-row handoff/capsule sealing and idempotent approval reuse. Prepared-row derivation, owner dispatch/readback and full release acceptance remain open; no new auth or mutation bypass."
+lastReviewedCommit: db62b65202d3e40beb5e57d6dec990d6b584372d
+lastReviewedNote: "Reviewed for Foundry #118 current-row approval continuation: original-grant re-finalization, exact derived activation, equal-byte descendant proof, unchanged authority/expiry, and recovery after interrupted capture. Input/lineage lookup preserves ordered verified producers. Actual owner dispatch/readback and full release acceptance remain open."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -87,6 +87,8 @@ Facade request indexes map one explicit request id to retained task revisions. T
 ## Task creation and recovery
 
 Public authorization result records identify the current finalization, concrete input scope, grant/pointer digests, expiry and optional sealed handoff/capsule. The grant and approval snapshots remain owned by the existing authorization registry. State projection uses only a matching active pointer, current finalization and unexpired result; it is not execution admission. Registration and snapshot sealing never run a database command, and duplicate current approval reuses the recorded result.
+
+An approved preparation continuation records its source approval digest in the new finalization. This retained relationship permits recovery when the derived grant has activated but the sealed-result capture was interrupted. The continuation independently reloads current authority, validates the original grant and exact successor content, and proves row lineage before sealing. A stale or unrelated active grant cannot be substituted. Producer indexing is shared by input verification and explicit ancestry proof, retaining all candidate order and earlier-sequence checks within each call.
 
 Semantic submissions bind current assessment and work-item digests independently of their supplied files. Accepted input, its projected collection manifest, local CLI result and new row manifest enter the same receipt/index lineage. A blocked application may retain a diagnostic output but publishes no new current-row manifest. Current row selection follows the latest registered row-manifest producer, and an assessment is current only for those row files. The semantic transaction checks current selection again while holding the task lock; it cannot publish a stale result after another submission advanced the task.
 

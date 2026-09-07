@@ -152,8 +152,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 03e7642ca44829fc19a011210abb144153d862f0
-lastReviewedNote: "Reviewed for Foundry #118 explicit public grant/evidence selection, locked current-finalization activation, competing-pointer refusal, current final-row handoff/capsule sealing and idempotent approval reuse. Prepared-row derivation, owner dispatch/readback and full release acceptance remain open; no new auth or mutation bypass."
+lastReviewedCommit: db62b65202d3e40beb5e57d6dec990d6b584372d
+lastReviewedNote: "Reviewed for Foundry #118 current-row approval continuation: original-grant re-finalization, exact derived activation, equal-byte descendant proof, unchanged authority/expiry, and recovery after interrupted capture. Input/lineage lookup preserves ordered verified producers. Actual owner dispatch/readback and full release acceptance remain open."
 ---
 
 # Architecture
@@ -196,7 +196,7 @@ Request and task records form a two-level index: one request retains monotonic r
 
 Runtime selection is an injected host capability. Direct/unqualified use can initialize, diagnose, create, inspect and locally prepare tasks; child-required stages need a CLI-manager selection that W06/W08 will derive from an immutable product manifest. No environment variable or task document can choose the CLI/TIDAS trust anchor.
 
-`foundry-authorization-input.ts` captures explicit grant/evidence selections. `foundry-workflow-authorization.ts` binds them to a current finalization scope, calls the existing fresh-identity registration/loader, rebuilds the owner handoff and seals exact final-row intent through the existing execution-admission API. It records approval metadata without executing the command. Prepared-row re-finalization/derivation and mutation/readback dispatch remain separate work.
+`foundry-authorization-input.ts` captures explicit grant/evidence selections. `foundry-workflow-authorization.ts` binds them to a current finalization scope, calls the existing fresh-identity registration/loader, rebuilds the owner handoff and seals exact final-row intent through the existing execution-admission API. It records approval metadata without executing the command. `foundry-workflow-approval-continuation.ts` re-finalizes prepared-row approval, activates the original owner’s exact derived grant or reuses a proven equal-byte descendant, and recovers interrupted sealing against the active pointer. Mutation/readback dispatch remains separate work.
 
 ## Package boundary
 

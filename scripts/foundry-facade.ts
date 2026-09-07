@@ -63,6 +63,7 @@ import { runFoundryWorkflowIdentity } from "./lib/foundry-workflow-identity.ts";
 import { finalizeFoundryWorkflow } from "./lib/foundry-workflow-finalize.ts";
 import { selectFoundryAuthorizationInput } from "./lib/foundry-authorization-input.ts";
 import { authorizeFoundryWorkflow } from "./lib/foundry-workflow-authorization.ts";
+import { continueFoundryPreparedApproval } from "./lib/foundry-workflow-approval-continuation.ts";
 import type { FoundryAuthentication } from "./lib/foundry-runtime-identity.ts";
 
 export interface FoundryFacadeRuntimeSelection {
@@ -576,6 +577,30 @@ function taskProjection(
           : [],
         approval_reference: String(report.authorization_sha256),
       },
+    });
+  }
+  if (workflow.preparedApproval) {
+    return createFoundryOperationResult({
+      operation,
+      status: "needs_input",
+      taskId: record.task_id,
+      artifacts,
+      blockers: [
+        {
+          code: "authorization_continuation_pending",
+          message:
+            "Resume to verify the retained preparation approval and complete its current final-row derivation.",
+          scope: record.task_id,
+        },
+      ],
+      nextActions: [
+        human(
+          "resume_approval_continuation",
+          `Retained preparation approval: ${workflow.preparedApproval.file}.`,
+        ),
+      ],
+      runtimeIdentity: identity,
+      permissions: noPermission(),
     });
   }
   if (workflow.finalization) {
@@ -1360,6 +1385,37 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
         }
         const preparation = record.spec.preparation;
         const workflow = currentWorkflowState(context, before.artifacts);
+        const preparedApproval =
+          workflow.authorization?.value.status === "authorized_current_rows"
+            ? workflow.authorization
+            : workflow.preparedApproval;
+        if (!preparation && preparedApproval && workflow.authorization?.value.status !== "sealed") {
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Approval continuation requires qualified runtime owners.",
+            );
+          const facts = before.artifacts.map((artifact) => ({
+            path: path.join(context.taskRoot!, artifact.path),
+            bytes: artifact.bytes,
+            sha256: artifact.sha256,
+          }));
+          const selected = taskContext(options, current, record, facts);
+          await continueFoundryPreparedApproval(
+            selected,
+            qualified,
+            before.artifacts,
+            preparedApproval,
+            options.authentication,
+          );
+          return taskProjection(
+            "task.resume",
+            context,
+            record,
+            await runtime.inspectTask(),
+            runtimeIdentity(context, qualified),
+          );
+        }
         const imported = before.artifacts.some(
           (artifact) => artifact.command === "dataset-tidas-import",
         );

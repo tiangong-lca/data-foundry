@@ -577,8 +577,13 @@ test("public decisions bind their owner and context, preserve rows on refusal, a
   }
 });
 
-for (const identityDecision of ["create_new", "reuse_existing_reference"] as const) {
-  test(`public identity preflight and ${identityDecision} submission preserve current scope and evidence`, async (t) => {
+for (const [identityDecision, approvalKind, trace] of [
+  ["create_new", "final_rows", false],
+  ["reuse_existing_reference", "final_rows", false],
+  ["create_new", "current_rows", false],
+  ["create_new", "current_rows", true],
+] as const) {
+  test(`public identity preflight and ${identityDecision} ${approvalKind}${trace ? " with_trace" : ""} submission preserve current scope and evidence`, async (t) => {
     const { root, workspace, facade, runtimeSelection } = workflowFixture(t);
     const id = "77777777-7777-4777-8777-777777777777";
     const basic = flowRow(id);
@@ -617,6 +622,20 @@ for (const identityDecision of ["create_new", "reuse_existing_reference"] as con
         },
       },
     };
+    if (trace)
+      Object.assign(payload.flowDataSet.flowInformation.dataSetInformation, {
+        "common:other": {
+          "@xmlns:tidasimport": "https://example.invalid/tidas-import",
+          "tidasimport:sourceTrace": {
+            payload: {
+              attributes: [
+                { name: "name", value: "Natural gas" },
+                { name: "location", value: "CH" },
+              ],
+            },
+          },
+        },
+      });
     const seed = path.join(root, "identity-seed.json"),
       specFile = path.join(root, "identity-request.json");
     const account = {
@@ -1035,7 +1054,7 @@ for (const identityDecision of ["create_new", "reuse_existing_reference"] as con
     );
     if (identityDecision === "create_new") {
       const input = finalReport.sets[0].authorization_inputs.find(
-        (item) => item.input_kind === "final_rows",
+        (item) => item.input_kind === approvalKind,
       );
       assert.ok(input);
       const evidenceFile = path.join(root, "approval-evidence.txt"),
@@ -1072,7 +1091,7 @@ for (const identityDecision of ["create_new", "reuse_existing_reference"] as con
             actor_id: invocation.actorId,
             finalization_sha256: finalizationSha,
             dataset_type: "flow",
-            input_kind: "final_rows",
+            input_kind: approvalKind,
             input_sha256: input.sha256,
             expected_previous_sha256: null,
             grant: { file: grantFile, sha256: digestFile(grantFile) },
@@ -1120,8 +1139,44 @@ for (const identityDecision of ["create_new", "reuse_existing_reference"] as con
         JSON.stringify(raced.map((value) => value.blockers)),
       );
       const winner = raced.findIndex((value) => value.permissions.state === "granted");
-      const approved = raced[winner],
-        acceptedApproval = [approvalFile, otherApproval][winner];
+      let approved = raced[winner];
+      const acceptedApproval = [approvalFile, otherApproval][winner];
+      if (approvalKind === "current_rows") {
+        assert.equal(approved.blockers[0]?.code, "authorized_refinalization_pending");
+        assert.deepEqual(
+          (await facade.resume({ ...invocation, authorizationInputFile: acceptedApproval }))
+            .artifacts,
+          approved.artifacts,
+        );
+        await facade.resume(invocation);
+        if (trace) {
+          const pointerFile = path.join(
+            workspace,
+            ".foundry",
+            "workspaces",
+            invocation.taskId,
+            "authorization.json",
+          );
+          const beforePointer = digestFile(pointerFile);
+          const originalLink = fs.linkSync;
+          let interruptCapture = true;
+          t.mock.method(fs, "linkSync", (...args: Parameters<typeof fs.linkSync>) => {
+            if (interruptCapture && String(args[1]).endsWith("foundry-authorization.json")) {
+              interruptCapture = false;
+              throw new Error("Controlled interruption after derived activation, before capture.");
+            }
+            return Reflect.apply(originalLink, fs, args);
+          });
+          const interrupted = await facade.resume(invocation);
+          assert.equal(interrupted.status, "failed");
+          assert.notEqual(
+            digestFile(pointerFile),
+            beforePointer,
+            "the exact derived grant activated before interrupted capture",
+          );
+        }
+        approved = await facade.resume(invocation);
+      }
       assert.equal(approved.permissions.state, "granted", JSON.stringify(approved.blockers));
       assert.equal(
         approved.blockers[0]?.code,
@@ -1134,10 +1189,26 @@ for (const identityDecision of ["create_new", "reuse_existing_reference"] as con
       assert.ok(recorded?.kind === "file");
       const authorization = JSON.parse(fs.readFileSync(recorded.path, "utf8")) as {
         status: string;
-        capsule: { capsule_file: string };
+        expires_at_utc: string;
+        capsule: {
+          capsule_file: string;
+          capsule: { approved_input: { sha256: string }; final_rows: { sha256: string } };
+        };
         handoff: { commands: { commit: { argv: string[] } } };
       };
       assert.equal(authorization.status, "sealed");
+      assert.equal(
+        authorization.expires_at_utc,
+        grant.expires_at_utc,
+        "continuation does not extend the approved lifetime",
+      );
+      assert.equal(authorization.capsule.capsule.approved_input.sha256, input.sha256);
+      if (trace)
+        assert.notEqual(
+          authorization.capsule.capsule.final_rows.sha256,
+          input.sha256,
+          "real cleanup changes the prepared input digest",
+        );
       assert.ok(fs.existsSync(authorization.capsule.capsule_file));
       assert.ok(
         authorization.handoff.commands.commit.argv.includes("--commit"),
