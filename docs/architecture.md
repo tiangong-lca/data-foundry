@@ -152,8 +152,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: d2ec3d1b1f749a00266e0809870e821af0d8ca3f
-lastReviewedNote: "Reviewed for Foundry #116: executable zero-JavaScript ratchet remains required and tested; Docpact records document reviews without forcing test-comment edits into version-only releases. Runtime and release isolation are unchanged."
+lastReviewedCommit: 618c18f08a0ea968fc649a0f71a4f6e03e8e9b2e
+lastReviewedNote: "Reviewed for Foundry #118 native conversion and CLI contract-context stages: qualified isolated owner calls publish through the existing task transaction. Actor/input lineage and authorization boundaries remain enforced; later semantic/write stages and formal F1 acceptance remain tracked."
 ---
 
 # Architecture
@@ -182,7 +182,7 @@ Foundry selects a private session reference and exact project/user intent, then 
 
 ## Public facade composition
 
-`foundry-facade.ts` is the public orchestration boundary. `foundry-operation-result.ts` owns the strict single-result envelope and exits; `foundry-task-start-spec.ts` owns bounded user intent; `foundry-facade-store.ts` owns deterministic request/revision indexes and task pointers; `foundry-migration-inventory.ts` owns the read-only W10 input plan. The facade calls `createFoundryRuntime` for task creation, inspection and deterministic cleanup. It does not instantiate the legacy command graph for public requests.
+`foundry-facade.ts` is the public orchestration boundary. `foundry-operation-result.ts` owns the strict single-result envelope and exits; `foundry-task-start-spec.ts` owns bounded user intent; `foundry-facade-store.ts` owns deterministic request/revision indexes and task pointers; `foundry-migration-inventory.ts` owns the read-only W10 input plan. The facade calls `createFoundryRuntime` for task creation, inspection, deterministic cleanup, qualified native conversion and CLI contract-context preparation. Each local stage uses the existing task transaction. It does not instantiate the legacy command graph for public requests.
 
 Request and task records form a two-level index: one request retains monotonic revisions, while each revision points to one immutable v2 task. The latest identical fingerprint is reused; a changed canonical path or byte hash produces a new task with a predecessor. This preserves old attempts and avoids using user-visible filenames or current directories as identity. Status resolves through the task pointer and requires actor intent before loading task content.
 

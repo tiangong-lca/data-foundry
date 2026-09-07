@@ -93,8 +93,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 4b027afad988467255c941eb8cec23741fc9ccbe
-lastReviewedNote: "Reviewed for Foundry #112 copied C1 bootstrap and final manifest workflow: isolated cached/public modes, actual system tools, tamper refusal and strict four-platform public proof before immutable manifest publication. Source-only tooling preserves runtime/task/account boundaries; actual versioned publication remains required."
+lastReviewedCommit: 618c18f08a0ea968fc649a0f71a4f6e03e8e9b2e
+lastReviewedNote: "Reviewed for Foundry #118 native conversion and CLI contract-context stages: qualified isolated owner calls publish through the existing task transaction. Actor/input lineage and authorization boundaries remain enforced; later semantic/write stages and formal F1 acceptance remain tracked."
 ---
 
 # Capability Ownership Policy

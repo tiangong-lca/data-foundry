@@ -474,6 +474,49 @@ function taskProjection(
   const prepared = inspected.artifacts.some(
     (entry) => entry.command === "dataset-curation-cleanup",
   );
+  const nativeReport = artifacts.find(
+    (artifact) =>
+      artifact.kind === "file" && path.basename(artifact.path) === "foundry-native-import.json",
+  );
+  if (nativeReport?.kind === "file") {
+    const result: unknown = JSON.parse(
+      readCaptured(nativeReport, maxSeedBytes, "native_import_report_invalid").toString("utf8"),
+    );
+    if (
+      !result ||
+      typeof result !== "object" ||
+      !("schema" in result) ||
+      result.schema !== "tiangong-foundry.native-import-stage.v1" ||
+      !("status" in result)
+    )
+      throw new FoundryContextError(
+        "native_import_report_invalid",
+        "The registered native stage report is invalid.",
+      );
+    if (result.status !== "completed")
+      return createFoundryOperationResult({
+        operation,
+        status: "blocked",
+        taskId: record.task_id,
+        artifacts,
+        blockers: [
+          {
+            code: "native_import_blocked",
+            message:
+              "Inspect the registered conversion report before continuing this source package.",
+            scope: record.task_id,
+          },
+        ],
+        nextActions: [
+          human(
+            "review_conversion_report",
+            "Resolve the conversion findings for the selected source before continuing.",
+          ),
+        ],
+        runtimeIdentity: identity,
+        permissions: noPermission(),
+      });
+  }
   const nextActions = prepared
     ? [
         human(
@@ -481,12 +524,13 @@ function taskProjection(
           "Review the current prepared artifacts and continue the returned task workflow.",
         ),
       ]
-    : record.spec.preparation
+    : record.spec.preparation ||
+        !inspected.artifacts.some((entry) => entry.command === "dataset-context-pack")
       ? [resumeCommand(context, record)]
       : [
           human(
-            "continue_task_authoring",
-            "Continue authoring from the frozen task sources and seed evidence.",
+            "review_contract_context",
+            "Review the registered contract context and frozen source evidence before semantic authoring; context preparation is not content acceptance.",
           ),
         ];
   return createFoundryOperationResult({
@@ -998,15 +1042,33 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
         const before = await runtime.inspectTask();
         assertNotInterrupted(options.signal);
         loadFoundryFacadeTaskRecord(current, record.task_id, record.spec.actor_id);
-        if (before.attempts_present)
-          return taskProjection(
-            "task.resume",
-            context,
-            record,
-            before,
-            runtimeIdentity(context, qualified),
-          );
+        const existing = taskProjection(
+          "task.resume",
+          context,
+          record,
+          before,
+          runtimeIdentity(context, qualified),
+        );
+        if (existing.status === "completed" || existing.status === "blocked") return existing;
         const preparation = record.spec.preparation;
+        const imported = before.artifacts.some(
+          (artifact) => artifact.command === "dataset-tidas-import",
+        );
+        const contextPrepared = before.artifacts.some(
+          (artifact) => artifact.command === "dataset-context-pack",
+        );
+        if (!preparation && record.spec.lane === "external-dataset-curated-import" && !imported) {
+          if (record.inputs.length !== 1)
+            throw new FoundryContextError(
+              "task_import_source_required",
+              "Select one complete packaged input for native conversion.",
+            );
+          await runtime.importPackage(record.inputs[0].path);
+          assertNotInterrupted(options.signal);
+        } else if (!preparation && !contextPrepared) {
+          await runtime.prepareContext(record.spec.target_entities);
+          assertNotInterrupted(options.signal);
+        }
         if (preparation) {
           assertNotInterrupted(options.signal);
           await runtime.cleanup({

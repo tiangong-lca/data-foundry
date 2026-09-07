@@ -281,8 +281,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: d2ec3d1b1f749a00266e0809870e821af0d8ca3f
-lastReviewedNote: "Reviewed for Foundry #116: executable zero-JavaScript ratchet remains required and tested; Docpact records document reviews without forcing test-comment edits into version-only releases. Runtime and release isolation are unchanged."
+lastReviewedCommit: 618c18f08a0ea968fc649a0f71a4f6e03e8e9b2e
+lastReviewedNote: "Reviewed for Foundry #118 native conversion and CLI contract-context stages: qualified isolated owner calls publish through the existing task transaction. Actor/input lineage and authorization boundaries remain enforced; later semantic/write stages and formal F1 acceptance remain tracked."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

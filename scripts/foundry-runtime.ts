@@ -45,6 +45,8 @@ import { foundryPublicOperations } from "./lib/foundry-operation-result.ts";
 import { listImportProfiles } from "./lib/import-curation/profiles.ts";
 import { runDatasetCurationCleanup } from "./lib/import-curation/curation-cleanup.ts";
 import { readRows } from "./lib/import-curation/internal/runtime-io.ts";
+import { importFoundryWorkflowPackage } from "./lib/foundry-workflow-import.ts";
+import { prepareFoundryWorkflowContext } from "./lib/foundry-workflow-context.ts";
 
 export interface FoundryCleanupRequest {
   input: string;
@@ -73,6 +75,14 @@ export function createFoundryRuntime(
   return Object.freeze({
     context,
     qualification: qualification ?? null,
+    importPackage: (input: string) =>
+      importFoundryWorkflowPackage(
+        context,
+        requireQualification(),
+        resolveFoundryInputPath(context, input),
+      ),
+    prepareContext: (types: readonly string[]) =>
+      prepareFoundryWorkflowContext(context, requireQualification(), types),
     initializeWorkspace: () => initializeFoundryWorkspace(context),
     startTask: (options: FoundryTaskOptions = {}) => {
       assertFoundryWorkspaceWrite(context);

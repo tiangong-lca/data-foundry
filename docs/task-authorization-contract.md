@@ -30,8 +30,8 @@ checkPaths:
   - test/unit/task-profile-authority.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 3db019d9a30d6b0458eb97da3d54ced7aa147be2
-lastReviewedNote: "Reviewed for Foundry #112 adoption of qualified public TIDAS0.3.0: full source-bound native notices and reviewed 0.2/0.3 runtime protocol admission. Source release helpers remain outside the public compiler closure; workspace/task/account authorization, no-replay and final F1 publication gates retain their existing owners."
+lastReviewedCommit: 618c18f08a0ea968fc649a0f71a4f6e03e8e9b2e
+lastReviewedNote: "Reviewed for Foundry #118 native conversion and CLI contract-context stages: qualified isolated owner calls publish through the existing task transaction. Actor/input lineage and authorization boundaries remain enforced; later semantic/write stages and formal F1 acceptance remain tracked."
 related:
   - docs/architecture.md
   - docs/safety-policy.md

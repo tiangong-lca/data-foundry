@@ -381,7 +381,11 @@ function replaceIndex(
 /** Short local preparation transaction. Remote mutation/batch execution must not use this replay path. */
 export async function runFoundryTaskOperation(
   context: FoundryRuntimeContext,
-  input: { command: "dataset-curation-cleanup"; options: JsonRecord; task?: FoundryTaskOptions },
+  input: {
+    command: "dataset-curation-cleanup" | "dataset-tidas-import" | "dataset-context-pack";
+    options: JsonRecord;
+    task?: FoundryTaskOptions;
+  },
   operation: (transaction: FoundryTaskOperation) => JsonRecord,
 ): Promise<JsonRecord> {
   assertFoundryWorkspaceWrite(context);

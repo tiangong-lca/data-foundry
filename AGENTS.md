@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: d2ec3d1b1f749a00266e0809870e821af0d8ca3f
-lastReviewedNote: "Reviewed for Foundry #116: executable zero-JavaScript ratchet remains required and tested; Docpact records document reviews without forcing test-comment edits into version-only releases. Runtime and release isolation are unchanged."
+lastReviewedCommit: 618c18f08a0ea968fc649a0f71a4f6e03e8e9b2e
+lastReviewedNote: "Reviewed for Foundry #118 native conversion and CLI context stages: qualified local owner calls register outputs through existing task lineage. Runtime/input/actor boundaries remain enforced; complete semantic/write workflow and final F1 qualification remain required."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
