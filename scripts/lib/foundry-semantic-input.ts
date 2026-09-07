@@ -11,18 +11,22 @@ import { assertNotFoundrySessionFile, migrationCredentialPath } from "./foundry-
 import { workflowObject } from "./foundry-workflow-state.ts";
 
 export const FOUNDRY_SEMANTIC_INPUT_SCHEMA = "tiangong-foundry.semantic-input.v1" as const;
-export interface SemanticPatchInput {
-  readonly kind: "patch";
+export interface SemanticSubmission {
+  readonly kind: "patch" | "classification" | "location";
   readonly authoring_task_sha256: string;
   readonly file: string;
   readonly sha256: string;
 }
+export type SemanticPatchInput = SemanticSubmission & { readonly kind: "patch" };
+export type SemanticDecisionInput = SemanticSubmission & {
+  readonly kind: "classification" | "location";
+};
 export interface FoundrySemanticInput {
   schema: typeof FOUNDRY_SEMANTIC_INPUT_SCHEMA;
   task_id: string;
   actor_id: string;
   assessment_sha256: string;
-  submissions: readonly SemanticPatchInput[];
+  submissions: readonly SemanticSubmission[];
 }
 export interface SelectedSemanticInput {
   readonly spec: FoundrySemanticInput;
@@ -54,12 +58,12 @@ export function parseFoundrySemanticInput(value: unknown): FoundrySemanticInput 
     !data.submissions.length ||
     data.submissions.length > 1000
   )
-    invalid("Semantic input must bind a task, actor, assessment and bounded patch selection.");
+    invalid("Semantic input must bind a task, actor, assessment and bounded submission selection.");
   const submissions = data.submissions.map((item) => {
     const part = workflowObject(item);
     exact(part, ["kind", "authoring_task_sha256", "file", "sha256"]);
     if (
-      part.kind !== "patch" ||
+      (part.kind !== "patch" && part.kind !== "classification" && part.kind !== "location") ||
       typeof part.authoring_task_sha256 !== "string" ||
       !sha.test(part.authoring_task_sha256) ||
       typeof part.sha256 !== "string" ||
@@ -69,9 +73,9 @@ export function parseFoundrySemanticInput(value: unknown): FoundrySemanticInput 
       part.file.length > 4096 ||
       /[\0\r\n]/u.test(part.file)
     )
-      invalid("A semantic patch reference is invalid.");
+      invalid("A semantic submission reference is invalid.");
     return Object.freeze({
-      kind: "patch" as const,
+      kind: part.kind,
       authoring_task_sha256: part.authoring_task_sha256,
       file: part.file,
       sha256: part.sha256,

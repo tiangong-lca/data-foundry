@@ -29,6 +29,8 @@ import {
   runWorkflowLocalCliResult,
 } from "./foundry-workflow-io.ts";
 import { runDatasetAuthoringPatchCollect } from "./import-curation/patch-collect.ts";
+import { readJsonOrJsonl, ensureArray, readRows } from "./import-curation/internal/runtime-io.ts";
+import { createFoundryDecisionOwners } from "./foundry-decision-owners.ts";
 import {
   operationFullContextEvidenceBlockers,
   operationUsedContextKinds,
@@ -89,6 +91,15 @@ export async function applyFoundrySemanticInput(
     ]),
   );
   const used = new Set<string>();
+  const decisionWork: Array<{
+    kind: "classification" | "location";
+    type: string;
+    rows: string;
+    task: string;
+    queue: string;
+    sha: string;
+    fact: typeof submission.descriptor;
+  }> = [];
   const work: Array<{
     set: Record<string, unknown>;
     manifest: Record<string, unknown>;
@@ -120,7 +131,7 @@ export async function applyFoundrySemanticInput(
       if (!entry)
         fail("semantic_work_unregistered", "Authoring work is not registered in this task.");
       const chosen = selected.get(entry.sha256);
-      if (!chosen) continue;
+      if (!chosen || chosen.part.kind !== "patch") continue;
       readFoundryInput(context, taskFile);
       if (task.status !== "ready_for_ai_authoring" || Number(task.action_item_count ?? 0) < 1)
         fail(
@@ -133,12 +144,49 @@ export async function applyFoundrySemanticInput(
       tasks.push({ task, sha: entry.sha256, fact: chosen.fact });
     }
     if (tasks.length) work.push({ set, manifest, manifestFile, tasks });
+    for (const raw of Array.isArray(set.decisions) ? set.decisions : []) {
+      const decision = workflowObject(raw);
+      if (decision.kind !== "classification" && decision.kind !== "location") continue;
+      const taskFile = text(decision.task, "Decision task");
+      const entry = entries.find(
+        (candidate) => resolveFoundryOutput(context, candidate.path) === taskFile,
+      );
+      if (!entry) fail("semantic_work_unregistered", "Decision work is not registered.");
+      const chosen = selected.get(entry.sha256);
+      if (!chosen) continue;
+      if (chosen.part.kind !== decision.kind || used.has(entry.sha256))
+        fail("semantic_work_mismatch", "Submission kind differs from the current decision owner.");
+      if (decision.status !== `ready_for_ai_${decision.kind}_decisions`)
+        fail(
+          "semantic_work_not_ready",
+          "Decision work requires its missing context before submission.",
+        );
+      used.add(entry.sha256);
+      decisionWork.push({
+        kind: decision.kind,
+        type: text(set.type, "Dataset type"),
+        rows: text(set.rows, "Rows"),
+        task: taskFile,
+        queue: text(decision.queue, "Decision queue"),
+        sha: entry.sha256,
+        fact: chosen.fact,
+      });
+    }
   }
   if (used.size !== selected.size)
     fail(
       "semantic_work_mismatch",
       "Every submitted digest must identify current registered authoring work.",
     );
+  const rowOwners = new Set(work.map((group) => text(group.set.type, "Dataset type")));
+  for (const item of decisionWork) {
+    if (rowOwners.has(item.type))
+      fail(
+        "task_semantic_owner_conflict",
+        "Submit one decision/patch owner per row set, then reassess before the next owner.",
+      );
+    rowOwners.add(item.type);
+  }
   return runFoundryTaskOperation(
     context,
     {
@@ -295,6 +343,88 @@ export async function applyFoundrySemanticInput(
             repaired_rows: repaired,
             applied_operations: applied.report.applied_operation_count,
             closed_actions: applied.report.closed_action_item_count,
+          });
+        }
+        const decisionOwners = createFoundryDecisionOwners(context, qualified, temporary);
+        for (const item of decisionWork) {
+          const beforeCount = blockers.length;
+          const bytes = readSelectedSemanticBytes(item.fact);
+          operation.writeText(path.join(output, "inputs", `${item.sha}.submitted`), bytes);
+          const task = workflowObject(
+            JSON.parse(readFoundryInput(context, item.task).toString("utf8")),
+          );
+          const requiredKinds = taskRequiredContextKinds({
+            context: { contract_context_files: task.contract_context_files },
+          });
+          let decisions: unknown[] = [];
+          try {
+            decisions = ensureArray(readJsonOrJsonl(item.fact.path, () => bytes.toString("utf8")));
+          } catch {
+            blockers.push({ code: "semantic_decisions_invalid_json", type: item.type });
+          }
+          for (const value of decisions) {
+            const decision = workflowObject(value);
+            blockers.push(
+              ...operationFullContextEvidenceBlockers({
+                operation: decision,
+                task: { context: { full_context_ai_completion: { required: true } } },
+              }),
+            );
+            const kinds = Array.isArray(decision.used_context_kinds)
+              ? decision.used_context_kinds
+              : [];
+            if (requiredKinds.some((kind) => !kinds.includes(kind)))
+              blockers.push({ code: "semantic_context_evidence_missing", type: item.type });
+          }
+          if (blockers.length !== beforeCount) continue;
+          const decisionFile = path.join(output, item.type, `${item.kind}-decisions.jsonl`);
+          operation.writeText(
+            decisionFile,
+            decisions.map((value) => JSON.stringify(value)).join("\n") + "\n",
+          );
+          const repaired = path.join(output, item.type, "repaired.rows.jsonl");
+          const options = {
+            [`${item.kind}Queue`]: item.queue,
+            decisions: decisionFile,
+            decisionTask: item.task,
+            rowsFile: item.rows,
+            out: repaired,
+            outDir: path.join(output, item.type, item.kind),
+          };
+          const applied = workflowObject(
+            decisionOwners.invoke(() =>
+              item.kind === "classification"
+                ? decisionOwners.classification.runDatasetClassificationDecisionsApply(
+                    options as never,
+                  )
+                : decisionOwners.location.runDatasetLocationDecisionsApply(options as never),
+            ),
+          );
+          if (
+            applied.status !== "completed" ||
+            !Array.isArray(applied.blockers) ||
+            applied.blockers.length
+          ) {
+            blockers.push({
+              code: "semantic_decision_apply_blocked",
+              type: item.type,
+              kind: item.kind,
+              report: applied,
+            });
+            continue;
+          }
+          const original = rows.value.sets.find(
+            (set) => set.type === item.type && set.file === item.rows,
+          );
+          if (!original || !fs.existsSync(repaired) || readRows(repaired).length !== original.count)
+            fail("semantic_row_scope_changed", "Decision application changed row scope.");
+          updated.set(item.type, { ...original, file: repaired });
+          results.push({
+            kind: item.kind,
+            type: item.type,
+            original_rows: item.rows,
+            repaired_rows: repaired,
+            report: applied,
           });
         }
         assertSelectedSemanticInput(submission);

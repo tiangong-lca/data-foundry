@@ -607,7 +607,12 @@ function taskProjection(
           );
       }
       return Number(curation.blocking_items ?? 0) > 0 || Number(authoring.tasks ?? 0) > 0;
-    }) as Array<{ type: string; curation_report: string; authoring_manifest: string }>;
+    }) as Array<{
+      type: string;
+      curation_report: string;
+      authoring_manifest: string;
+      decisions?: Array<{ kind: string; task: string; status: string }>;
+    }>;
     if (pending.length)
       return createFoundryOperationResult({
         operation,
@@ -619,12 +624,20 @@ function taskProjection(
           message: `Resolve the current ${set.type} curation and authoring work before a write handoff.`,
           scope: record.task_id,
         })),
-        nextActions: pending.map((set) =>
+        nextActions: pending.flatMap((set) => [
           human(
             "review_semantic_work",
             `Read the registered curation report ${set.curation_report} and authoring manifest ${set.authoring_manifest}. Use their bound source/context evidence; no write permission is implied.`,
           ),
-        ),
+          ...(set.decisions ?? []).map((work) =>
+            human(
+              `review_${work.kind}_decisions`,
+              work.kind === "identity"
+                ? `Read registered identity task ${work.task} (${work.status}) and resolve its required preflight evidence. Public identity submission is not yet available.`
+                : `Read registered ${work.kind} task ${work.task} (${work.status}). Complete its bound decision template and submit it with semantic-input kind=${work.kind}.`,
+            ),
+          ),
+        ]),
         runtimeIdentity: identity,
         permissions: noPermission(),
       });

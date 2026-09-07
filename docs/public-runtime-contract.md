@@ -32,9 +32,9 @@ checkPaths:
   - test/scenarios/foundry-facade-request-store.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: 4b027afad988467255c941eb8cec23741fc9ccbe
-lastReviewedNote: "Reviewed for Foundry #112 copied C1 bootstrap and final manifest workflow: isolated cached/public modes, actual system tools, tamper refusal and strict four-platform public proof before immutable manifest publication. Source-only tooling preserves runtime/task/account boundaries; actual versioned publication remains required."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: 81450527dd1f0b0439ed1f385fb494f9c045eb93
+lastReviewedNote: "Reviewed for Foundry #118 public classification/location tasks and bound semantic submission. Existing domain owners, task lineage, package-only composition, credential boundaries and acceptance hooks remain enforced; identity/publication work remains open."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -88,13 +88,15 @@ An executable next action contains Node/active source-or-emitted entry argv, `cw
 
 ### Semantic input
 
-`--semantic-input` selects a `tiangong-foundry.semantic-input.v1` JSON descriptor. The descriptor binds the same task and actor, the current assessment artifact SHA-256, and a bounded `submissions` array. Each entry has `kind=patch`, the registered authoring task's SHA-256, a selected patch file and its SHA-256. File paths resolve from the explicit workspace. Duplicate work-item digests, unknown fields, credential paths and changed bytes are rejected. Each file is limited to 8 MiB and the complete selection to 64 MiB.
+`--semantic-input` selects a `tiangong-foundry.semantic-input.v1` JSON descriptor. The descriptor binds the same task and actor, the current assessment artifact SHA-256, and a bounded `submissions` array. Each entry has `kind=patch`, `classification` or `location`, the registered owner task's SHA-256, a selected input file and its SHA-256. File paths resolve from the explicit workspace. Duplicate work-item digests, unknown fields, credential paths and changed bytes are rejected. Each file is limited to 8 MiB and the complete selection to 64 MiB.
 
 The public runtime independently resolves work through the current task index; a caller cannot supply a replacement manifest or runtime trust anchor. It snapshots the descriptor and selected patch bytes into a new task-owned generation, then uses a projection of the trusted authoring manifest to collect only the selected tasks. Original work items are unchanged. Public acceptance requires structured evidence, basis and the available required context kinds even when the historical profile did not demand them.
 
-Only the exact CLI's local `dataset patch apply` runs here, with authoring-package and action-item closure checks. An output file alone is insufficient: only exit 0, `status=completed`, zero blockers and preserved row count can select repaired rows. Invalid proposals retain diagnostics and leave the current rows unchanged. A successful submission publishes a new indexed row manifest, preserves the predecessor, and makes a subsequent resume assess that new version. Identical accepted submissions are idempotent; different submissions against an old assessment are rejected. The current assessment is revalidated under the task lock before publication so concurrent submissions cannot overwrite each other.
+Patch inputs use the exact CLI's local `dataset patch apply`, with authoring-package and action-item closure checks. Classification and location inputs use their existing dedicated deterministic owners and exact task context-bundle checks. Assessment prepares their task, schema context, queue and template from current row findings; it does not select codes. Decision files accept the owner's JSON/JSONL forms. One submission may select only one owner per row type, requiring reassessment before another owner uses the changed rows. Public tasks omit developer-runner commands.
 
-This patch input is local preparation. It does not grant write permission, clear attempts or replace specialized identity/classification/location decision protocols.
+An output file alone is insufficient: only successful owner execution, `status=completed`, zero blockers and preserved row count can select repaired rows. Invalid proposals retain diagnostics and leave the current rows unchanged. A successful submission publishes a new indexed row manifest, preserves the predecessor, and makes a subsequent resume assess that new version. Identical accepted submissions are idempotent; different submissions against an old assessment are rejected. The current assessment is revalidated under the task lock before publication so concurrent submissions cannot overwrite each other.
+
+Semantic input is local preparation. It does not grant write permission or clear attempts. Identity task evidence remains separately visible when required, but public identity submission is not yet supported and cannot use a generic patch as a substitute.
 
 `--json` emits exactly one JSON object on stdout, followed by a newline. Progress goes to stderr. The schema identifier is `tiangong-foundry.operation-result.v1`; required fields are:
 

@@ -151,9 +151,9 @@ checkPaths:
   - test/unit/foundry-runtime-environment.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: 2abb18121cf0ed7c828d3235ec68d48a2e3532dc
-lastReviewedNote: "Reviewed for Foundry #118 Golden installer cache reuse: only matching pnpm tool/content caches are reused, with frozen locks, disabled scripts and integrity checks. Comparison commands retain identical isolated environments; no runtime/task/auth boundary changes."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: 81450527dd1f0b0439ed1f385fb494f9c045eb93
+lastReviewedNote: "Reviewed for Foundry #118 public classification/location tasks and bound semantic submission. Existing domain owners, task lineage, package-only composition, credential boundaries and acceptance hooks remain enforced; identity/publication work remains open."
 ---
 
 # Architecture
@@ -183,6 +183,8 @@ Foundry selects a private session reference and exact project/user intent, then 
 ## Public facade composition
 
 `foundry-facade.ts` is the public orchestration boundary. `foundry-operation-result.ts` owns the strict single-result envelope and exits; `foundry-task-start-spec.ts` owns bounded user intent; `foundry-facade-store.ts` owns deterministic request/revision indexes and task pointers; `foundry-migration-inventory.ts` owns the read-only W10 input plan. The facade calls `createFoundryRuntime` for task creation, inspection, deterministic cleanup, qualified native conversion and CLI contract-context preparation. Each local stage uses the existing task transaction. It does not instantiate the legacy command graph for public requests.
+
+`foundry-workflow-decisions.ts` prepares classification/location work through the reusable factories in `lib/decision-owners/`; the original flat command modules remain thin adapters. `foundry-decision-owners.ts` composes these factories with installed CLI schemas, canonical row helpers and isolated local CLI execution. Semantic submission dispatches the selected owner against its exact current task context, publishes successful rows and requires reassessment before another owner consumes them. Identity task preparation is visible, while public identity submission and its fresh preflight remain pending.
 
 Request and task records form a two-level index: one request retains monotonic revisions, while each revision points to one immutable v2 task. The latest identical fingerprint is reused; a changed canonical path or byte hash produces a new task with a predecessor. This preserves old attempts and avoids using user-visible filenames or current directories as identity. Status resolves through the task pointer and requires actor intent before loading task content.
 

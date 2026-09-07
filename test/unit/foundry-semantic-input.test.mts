@@ -27,6 +27,17 @@ test("semantic input binds immutable task/work-item and patch content facts", ()
   assert.equal(Object.isFrozen(parsed.submissions[0]), true);
 });
 
+test("semantic submission kinds admit supported owners and reject unsupported identity input", () => {
+  for (const kind of ["patch", "classification", "location"]) {
+    const value = input();
+    value.submissions[0].kind = kind;
+    assert.equal(parseFoundrySemanticInput(value).submissions[0].kind, kind);
+  }
+  const unsupported = input();
+  unsupported.submissions[0].kind = "identity";
+  assert.throws(() => parseFoundrySemanticInput(unsupported));
+});
+
 test("semantic input rejects duplicate work, source overrides and unbounded selectors", () => {
   const duplicate = input();
   duplicate.submissions.push({ ...duplicate.submissions[0] });
@@ -53,6 +64,11 @@ test("semantic input schema agrees with the supported file and identity forms", 
   );
   const validate = new Ajv({ strict: true }).compile(schema);
   assert.equal(validate(input()), true);
+  for (const kind of ["classification", "location", "identity"]) {
+    const value = input();
+    value.submissions[0].kind = kind;
+    assert.equal(validate(value), kind !== "identity");
+  }
   const invalid = input();
   invalid.submissions[0].file = "patch\n.json";
   assert.equal(validate(invalid), false);

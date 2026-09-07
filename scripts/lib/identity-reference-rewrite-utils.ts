@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   canonicalDescriptionPair,
   cloneCanonicalDescription,
+  referenceDescriptionText,
   type CanonicalDescription,
 } from "./canonical-description.ts";
 
@@ -185,15 +186,7 @@ export function createIdentityReferenceRewriteUtils({
   }
 
   function referenceShortDescription(reference: unknown) {
-    const referenceRecord = reference as FlowReference | null | undefined;
-    const description =
-      referenceRecord?.["common:shortDescription"] ?? referenceRecord?.shortDescription;
-    if (typeof description === "string") return description.trim();
-    if (description && typeof description === "object" && !Array.isArray(description)) {
-      const descriptionRecord = description as UnknownRecord;
-      return asText(descriptionRecord["#text"] ?? descriptionRecord.value);
-    }
-    return "";
+    return referenceDescriptionText(reference, asText);
   }
 
   function duplicateFlowCandidateFromReport(report: UnknownRecord | null | undefined) {

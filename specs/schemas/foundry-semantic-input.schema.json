@@ -19,7 +19,7 @@
         "additionalProperties": false,
         "required": ["kind", "authoring_task_sha256", "file", "sha256"],
         "properties": {
-          "kind": { "const": "patch" },
+          "kind": { "enum": ["patch", "classification", "location"] },
           "authoring_task_sha256": { "$ref": "#/$defs/sha" },
           "file": {
             "type": "string",

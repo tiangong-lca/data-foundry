@@ -28,6 +28,8 @@ export {
   FOUNDRY_SEMANTIC_INPUT_SCHEMA,
   type FoundrySemanticInput,
   type SemanticPatchInput,
+  type SemanticDecisionInput,
+  type SemanticSubmission,
 } from "./lib/foundry-semantic-input.ts";
 export type { FoundryWorkspaceAccess } from "./lib/foundry-runtime-context.ts";
 export {

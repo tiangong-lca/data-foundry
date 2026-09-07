@@ -18,6 +18,8 @@ import { runFoundryTaskOperation } from "./foundry-task-store.ts";
 import { runTidasRowsValidation } from "./tidas-adapter.ts";
 import { runDatasetCurationGate } from "./import-curation/curation-gate.ts";
 import { runDatasetAuthoringTaskBuild } from "./import-curation/authoring-packages.ts";
+import { routeFoundryDecisionAction } from "./foundry-decision-routing.ts";
+import { prepareFoundryDecisionWork } from "./foundry-workflow-decisions.ts";
 import {
   createWorkflowStageDirectory,
   registerWorkflowStageFiles,
@@ -170,6 +172,7 @@ export function assessFoundryWorkflowRows(
           const gateDir = path.join(output, set.type, "curation");
           const gate = runDatasetCurationGate({
             repoRoot: context.assetRoot,
+            routeAction: routeFoundryDecisionAction,
             options: {
               type: set.type,
               rowsFile: set.file,
@@ -186,6 +189,13 @@ export function assessFoundryWorkflowRows(
             },
           });
           const gateReport = path.join(gateDir, "dataset-curation-gate-report.json");
+          const decisionWork = prepareFoundryDecisionWork(context, qualified, temporary, {
+            type: set.type,
+            rows: set.file,
+            gateReport,
+            contract,
+            outDir: path.join(output, set.type, "decisions"),
+          });
           const authoringDir = path.join(output, set.type, "authoring");
           const authoring = runDatasetAuthoringTaskBuild({
             repoRoot: context.assetRoot,
@@ -206,6 +216,7 @@ export function assessFoundryWorkflowRows(
             authoring_manifest: path.join(authoringDir, "authoring-task-manifest.json"),
             authoring_status: authoring.status,
             authoring_counts: authoring.counts,
+            decisions: decisionWork,
           });
         }
         for (const input of context.inputs) readFoundryInput(context, input.path);

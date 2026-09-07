@@ -105,6 +105,7 @@ interface CurationGateOptions extends JsonRecord {
 interface CurationGateArgs {
   repoRoot?: string;
   options?: CurationGateOptions;
+  routeAction?: (action: JsonRecord, datasetType: string, payload: unknown) => JsonRecord;
 }
 
 function asJsonRecord(value: unknown): JsonRecord {
@@ -118,6 +119,7 @@ type SemanticActionOptions = Parameters<typeof collectProfileSemanticActionItems
 export function runDatasetCurationGate({
   repoRoot,
   options = {},
+  routeAction,
 }: CurationGateArgs = {}): JsonRecord {
   const datasetType = datasetTypeFromOptions(options);
   if (options.help) {
@@ -376,7 +378,9 @@ export function runDatasetCurationGate({
       ...classificationQueueActionItems,
       ...locationQueueActionItems,
       ...semanticActionItems,
-    ];
+    ].map((item) =>
+      routeAction ? routeAction(asJsonRecord(item), datasetType, identity.payload) : item,
+    );
     const queueGateItems = [];
     if (requireQueueContext && !queueContext) {
       queueGateItems.push({

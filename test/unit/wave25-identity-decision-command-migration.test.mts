@@ -40,12 +40,16 @@ test("identity decision static consumers and metadata target the typed factory",
 });
 
 test("identity decision factory retains one zero-escape export", () => {
-  const source = readRepoFile("scripts/commands/identity-decisions.ts");
+  const source = readRepoFile("scripts/lib/decision-owners/identity.ts");
   assert.doesNotMatch(source, /\bany\b/u);
   assert.doesNotMatch(source, /@ts-(?:ignore|nocheck|expect-error)/u);
   assert.deepEqual(
     [...source.matchAll(/export function\s+([A-Za-z0-9_]+)/gu)].map((match) => match[1]),
     ["createIdentityDecisionCommands"],
+  );
+  assert.match(
+    readRepoFile("scripts/commands/identity-decisions.ts"),
+    /export \{ createIdentityDecisionCommands \} from/u,
   );
 });
 

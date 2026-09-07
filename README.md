@@ -157,9 +157,9 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: 2abb18121cf0ed7c828d3235ec68d48a2e3532dc
-lastReviewedNote: "Reviewed for Foundry #118 Golden installer cache reuse: only matching pnpm tool/content caches are reused, with frozen locks, disabled scripts and integrity checks. Comparison commands retain identical isolated environments; no runtime/task/auth boundary changes."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: 81450527dd1f0b0439ed1f385fb494f9c045eb93
+lastReviewedNote: "Reviewed for Foundry #118 public classification/location tasks and bound semantic submission. Existing domain owners, task lineage, package-only composition, credential boundaries and acceptance hooks remain enforced; identity/publication work remains open."
 ---
 
 # TianGong LCA Data Foundry

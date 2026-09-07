@@ -7,7 +7,8 @@ import test, { type TestContext } from "node:test";
 import { CLI_RUNTIME_EXPECTATION_SCHEMA, describeCliRuntime } from "@tiangong-lca/cli/runtime";
 import { createFoundryFacade } from "../../scripts/public-api.ts";
 import { FOUNDRY_TIDAS_EXPECTATION_SCHEMA } from "../../scripts/lib/foundry-runtime-qualification.ts";
-import { flowRow } from "../fixtures/row-builders.ts";
+import { flowRow, processRowWithInvalidLocation } from "../fixtures/row-builders.ts";
+import { resolveInstalledTiangongLcaCliPackage } from "../../scripts/lib/foundry-runtime-utils.ts";
 
 const digestFile = (file: string) =>
   createHash("sha256").update(fs.readFileSync(file)).digest("hex");
@@ -15,7 +16,7 @@ const digestFile = (file: string) =>
 function workflowFixture(
   t: TestContext,
   importFails = false,
-  validationFails: boolean | "missing-name" = false,
+  validationFails: boolean | "missing-name" | "decisions" = false,
 ) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-public-workflow-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -66,9 +67,42 @@ function workflowFixture(
           'process.env.FAKE_TIDAS_INVALID === "1"',
           validationFails === "missing-name"
             ? '!JSON.parse(fs.readFileSync(path.join(args[1], manifest[0].relative_path), "utf8")).flowDataSet?.flowInformation?.dataSetInformation?.name'
-            : "true",
+            : validationFails === "decisions"
+              ? "false"
+              : "true",
         )
         .replace('process.env.FAKE_TIDAS_BATCH_DATA_ISSUES === "1"', "true"),
+    );
+  }
+  if (validationFails === "decisions") {
+    const before = fs.readFileSync(binary, "utf8");
+    const marker = "    const final = {";
+    assert.ok(before.includes(marker));
+    fs.writeFileSync(
+      binary,
+      before.replace(
+        marker,
+        `
+    const payload = JSON.parse(fs.readFileSync(path.join(args[1], manifest[0].relative_path), "utf8"));
+    const info = payload.processDataSet.processInformation;
+    const failures = [
+      [info.dataSetInformation.classificationInformation["common:classification"]["common:class"][0]["@classId"] === "INVALID",
+        "/processDataSet/processInformation/dataSetInformation/classificationInformation"],
+      [info.geography.locationOfOperationSupplyOrProduction["@location"] === "Invalid region",
+        "/processDataSet/processInformation/geography/locationOfOperationSupplyOrProduction/@location"],
+    ];
+    for (const [invalid, location] of failures) {
+      if (!invalid) continue;
+      events.push({ type: "issue", schema_version: "tidas.validation-issue-event.v1",
+        protocol: "document-validation-batch.v1", profile: "tidas-document-conformance.v1",
+        document_key: manifest[0].document_key, document_ordinal: 0, issue_ordinal: events.length,
+        identity: manifest[0].identity, issue: { issue_code: "fixture_invalid", severity: "error",
+          category: manifest[0].category, file_path: manifest[0].relative_path, location,
+          message: "Controlled invalid code", context: {} },
+      });
+    }
+${marker}`,
+      ),
     );
   }
   const cli = describeCliRuntime();
@@ -366,6 +400,171 @@ test("public semantic submission rejects stale evidence and re-assesses only suc
   const stale = await facade.resume({ ...invocation, semanticInputFile: submissionFile });
   assert.equal(stale.status, "blocked");
   assert.equal(stale.blockers[0]?.code, "semantic_assessment_mismatch");
+});
+
+test("public decisions bind their owner and context, preserve rows on refusal, and reassess between owners", async (t) => {
+  const { root, facade } = workflowFixture(t, false, "decisions");
+  const id = "66666666-6666-4666-8666-666666666666";
+  const row = processRowWithInvalidLocation(id);
+  row.processDataSet.processInformation.dataSetInformation.classificationInformation[
+    "common:classification"
+  ]["common:class"][0]["@classId"] = "INVALID";
+  const seed = path.join(root, "seed.json"),
+    specFile = path.join(root, "request.json");
+  fs.writeFileSync(seed, JSON.stringify({ rows: [{ id, version: "00.00.001", json: row }] }));
+  fs.writeFileSync(
+    specFile,
+    JSON.stringify({
+      schema: "tiangong-foundry.task-start.v1",
+      request_id: "decision-cycle",
+      actor_id: "decision-actor",
+      lane: "source-evidence-dataset-development",
+      profile_id: "generic",
+      target_entities: ["process"],
+      sources: [{ path: seed }],
+      seed: { path: seed },
+      account_intent: null,
+      preparation: null,
+    }),
+  );
+  const started = await facade.start({ specFile });
+  assert.ok(started.task_id);
+  const invocation = { taskId: started.task_id, actorId: "decision-actor" };
+  await facade.resume(invocation);
+  await facade.resume(invocation);
+  let result = await facade.resume(invocation);
+  const classes = JSON.parse(
+    fs.readFileSync(
+      path.join(resolveInstalledTiangongLcaCliPackage().schemaDir, "tidas_processes_category.json"),
+      "utf8",
+    ),
+  ) as { oneOf: Array<{ properties?: { "@classId"?: { const?: string } } }> };
+  const code = classes.oneOf
+    .map((value) => value.properties?.["@classId"]?.const)
+    .filter((value): value is string => typeof value === "string" && value.startsWith("351"))
+    .sort((left, right) => right.length - left.length)[0];
+  assert.ok(code, "the classification comes from the installed owner's schema");
+  for (const kind of ["classification", "location"] as const) {
+    const artifact = result.artifacts.findLast((value) => value.role === "foundry-assessment.json");
+    assert.ok(artifact?.kind === "file");
+    const assessment = JSON.parse(fs.readFileSync(artifact.path, "utf8")) as {
+      owner_base: string;
+      sets: Array<{
+        rows: string;
+        decisions: Array<{ kind: string; task: string; status: string }>;
+      }>;
+    };
+    const set = assessment.sets[0],
+      work = set.decisions.find((value) => value.kind === kind);
+    assert.ok(work);
+    assert.equal(work.status, `ready_for_ai_${kind}_decisions`);
+    const task = JSON.parse(fs.readFileSync(work.task, "utf8")) as {
+      commands: { apply_decisions: null };
+      files: { template: string };
+    };
+    assert.equal(task.commands.apply_decisions, null);
+    const decisions = fs
+      .readFileSync(path.resolve(assessment.owner_base, task.files.template), "utf8")
+      .trim()
+      .split("\n")
+      .map(
+        (line) =>
+          JSON.parse(line) as {
+            code: string;
+            basis: string;
+            used_context_kinds: string[];
+            evidence: Record<string, unknown>;
+            authoring_context: { context_bundle_sha256: string };
+          },
+      );
+    for (const value of decisions) {
+      value.code = kind === "classification" ? code : "CH";
+      value.basis = "Controlled fixture with an explicitly selected schema-valid code.";
+      value.used_context_kinds = [
+        "schema",
+        "methodology_yaml",
+        "ruleset",
+        "classification_schema",
+        "location_schema",
+      ];
+      value.evidence = {
+        ...value.evidence,
+        source: seed,
+        quote_or_trace: "Controlled schema fixture.",
+      };
+    }
+    const file = path.join(root, `${kind}.jsonl`),
+      descriptor = path.join(root, `${kind}-submission.json`);
+    const part = () => ({
+      kind: String(kind),
+      authoring_task_sha256: digestFile(work.task),
+      file,
+      sha256: digestFile(file),
+    });
+    const write = (values = decisions, parts?: ReturnType<typeof part>[]) => {
+      fs.writeFileSync(file, values.map((value) => JSON.stringify(value)).join("\n") + "\n");
+      fs.writeFileSync(
+        descriptor,
+        JSON.stringify({
+          schema: "tiangong-foundry.semantic-input.v1",
+          task_id: invocation.taskId,
+          actor_id: invocation.actorId,
+          assessment_sha256: artifact.sha256,
+          submissions: parts ?? [part()],
+        }),
+      );
+    };
+    const original = fs.readFileSync(set.rows);
+    const originalManifest = result.artifacts.findLast(
+      (value) => value.role === "foundry-rows.json",
+    );
+    write();
+    write(decisions, [
+      { ...part(), kind: kind === "classification" ? "location" : "classification" },
+    ]);
+    const wrongOwner = await facade.resume({ ...invocation, semanticInputFile: descriptor });
+    assert.equal(wrongOwner.status, "blocked");
+    assert.equal(wrongOwner.blockers[0]?.code, "semantic_work_mismatch");
+    if (kind === "classification") {
+      const location = set.decisions.find((value) => value.kind === "location");
+      assert.ok(location);
+      write(decisions, [
+        part(),
+        { ...part(), kind: "location", authoring_task_sha256: digestFile(location.task) },
+      ]);
+      const mixed = await facade.resume({ ...invocation, semanticInputFile: descriptor });
+      assert.equal(mixed.status, "needs_input");
+      assert.equal(mixed.blockers[0]?.code, "task_semantic_owner_conflict");
+    }
+    const invalid = structuredClone(decisions);
+    invalid[0].authoring_context.context_bundle_sha256 = "0".repeat(64);
+    write(invalid);
+    const refused = await facade.resume({ ...invocation, semanticInputFile: descriptor });
+    assert.equal(refused.status, "needs_input", JSON.stringify(refused));
+    assert.equal(refused.blockers[0]?.code, "semantic_input_rejected");
+    const afterRefusal = await facade.status(invocation);
+    assert.deepEqual(
+      afterRefusal.artifacts.findLast((value) => value.role === "foundry-rows.json"),
+      originalManifest,
+    );
+    assert.deepEqual(fs.readFileSync(set.rows), original);
+    write();
+    const applied = await facade.resume({ ...invocation, semanticInputFile: descriptor });
+    assert.equal(applied.status, "ready", JSON.stringify(applied));
+    const duplicate = await facade.resume({ ...invocation, semanticInputFile: descriptor });
+    assert.deepEqual(duplicate.artifacts, applied.artifacts);
+    assert.deepEqual(fs.readFileSync(set.rows), original);
+    result = await facade.resume(invocation);
+    const latest = result.artifacts.findLast((value) => value.role === "foundry-assessment.json");
+    assert.ok(latest?.kind === "file");
+    const reviewed = JSON.parse(fs.readFileSync(latest.path, "utf8")) as typeof assessment;
+    assert.ok(!reviewed.sets[0].decisions.some((value) => value.kind === kind));
+    decisions[0].basis = "A distinct late submission against the original assessment.";
+    write();
+    const stale = await facade.resume({ ...invocation, semanticInputFile: descriptor });
+    assert.equal(stale.status, "blocked");
+    assert.equal(stale.blockers[0]?.code, "semantic_assessment_mismatch");
+  }
 });
 
 test("a failed native conversion remains blocked without preparing later context", async (t) => {

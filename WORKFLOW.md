@@ -280,9 +280,9 @@ checkPaths:
   - test/unit/foundry-runtime-environment.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: 1ebc85d2cf103865bbbd8fc57614c6db45b6acf4
-lastReviewedNote: "Reviewed for Foundry #118 public semantic input: current task/actor/assessment/work-item bindings, immutable input snapshots, strict local collect/apply, concurrent-stale rejection and latest-row reassessment. Semantic input grants no remote permission; specialized decisions and final owner write/readback remain required."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: 81450527dd1f0b0439ed1f385fb494f9c045eb93
+lastReviewedNote: "Reviewed for Foundry #118 public classification/location tasks and bound semantic submission. Existing domain owners, task lineage, package-only composition, credential boundaries and acceptance hooks remain enforced; identity/publication work remains open."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
