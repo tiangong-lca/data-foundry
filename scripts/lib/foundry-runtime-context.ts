@@ -3,7 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { AsyncLocalStorage } from "node:async_hooks";
-import { assertWorkspaceCompatibility } from "@tiangong-lca/cli/runtime";
+import {
+  assertWorkspaceCompatibility,
+  type TrustedRuntimeManifest,
+} from "@tiangong-lca/cli/runtime";
 import { describeFoundryRuntime } from "./foundry-runtime-paths.ts";
 import { FoundryContextError } from "./foundry-runtime-error.ts";
 export { FoundryContextError } from "./foundry-runtime-error.ts";
@@ -16,6 +19,10 @@ import { transferRead, transferHash } from "./foundry-migration-transfer-io.ts";
 import { sha256Json } from "./identity-preflight-proof.ts";
 import { assertNotFoundrySessionFile } from "./foundry-private-path.ts";
 import { readFoundryRuntimeSelection } from "./foundry-runtime-selection-record.ts";
+import {
+  canonicalFoundryCachePath,
+  assertFoundryCacheRootSeparated,
+} from "./foundry-runtime-cache.ts";
 
 import type {
   FoundryInputFact,
@@ -33,6 +40,7 @@ export type {
 
 const contexts = new WeakSet<object>();
 const workspaceSelections = new WeakMap<object, FoundryWorkspaceAccess>();
+const managedCacheRoots = new WeakMap<object, string>();
 const migratedMarkerHashes = new WeakMap<object, string>();
 interface PendingAdoptionScope {
   workspaceRoot: string;
@@ -299,6 +307,11 @@ export function createFoundryRuntimeContext(
   }
   if (fs.existsSync(workspaceRoot) && !fs.statSync(workspaceRoot).isDirectory())
     fail("root_not_directory", "Workspace root must be a directory.");
+  const managedCacheRoot =
+    options.managedCacheRoot === undefined
+      ? null
+      : canonicalFoundryCachePath(options.managedCacheRoot);
+  if (managedCacheRoot) assertFoundryCacheRootSeparated(managedCacheRoot, workspaceRoot);
   let workspaceId = readWorkspaceId(workspaceRoot, options.accountIntent?.sessionReference);
   const activeAdoption = adoptionScopes.getStore();
   const pending =
@@ -449,6 +462,7 @@ export function createFoundryRuntimeContext(
     inputs: Object.freeze(inputs),
   });
   contexts.add(context);
+  if (managedCacheRoot) managedCacheRoots.set(context, managedCacheRoot);
   if (selection) workspaceSelections.set(context, Object.freeze({ ...selection }));
   if (migrated && markerBytes) migratedMarkerHashes.set(context, transferHash(markerBytes));
   if (pending) pendingContexts.set(context, pending);
@@ -461,6 +475,8 @@ export function assertFoundryRuntimeContext(context: FoundryRuntimeContext): voi
       "runtime_context_unverified",
       "Use the runtime context constructor; serialized context is not authority.",
     );
+  const managedCacheRoot = managedCacheRoots.get(context);
+  if (managedCacheRoot) assertFoundryCacheRootSeparated(managedCacheRoot, context.workspaceRoot);
   const pending = pendingContexts.get(context);
   if (pending) {
     if (
@@ -518,6 +534,14 @@ export function assertFoundryRuntimeContext(context: FoundryRuntimeContext): voi
       false,
       context.accountIntent?.sessionReference,
     );
+}
+
+/** Current host authority, never the persisted workspace pointer or a rollback target. */
+export function currentFoundryRuntimeManifest(
+  context: FoundryRuntimeContext,
+): TrustedRuntimeManifest | null {
+  assertFoundryRuntimeContext(context);
+  return workspaceSelections.get(context)?.manifest ?? null;
 }
 
 export function assertFoundryWorkspaceWrite(context: FoundryRuntimeContext): void {

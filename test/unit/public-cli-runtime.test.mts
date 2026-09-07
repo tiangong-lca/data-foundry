@@ -3,6 +3,9 @@ import test from "node:test";
 import {
   CLI_RUNTIME_EXPECTATION_SCHEMA,
   RUNTIME_PLATFORMS,
+  RUNTIME_HOST_CONTEXT_PROTOCOL,
+  receiveRuntimeHostContext,
+  copyTrustedRuntimeManifestBytes,
   assertCliRuntimeMatches,
   describeCliRuntime,
   ensureRuntimeComponents,
@@ -13,10 +16,12 @@ import {
   pruneRuntimeComponents,
 } from "@tiangong-lca/cli/runtime";
 
-test("Foundry consumes the exact published CLI C1 runtime boundary", () => {
+test("Foundry consumes the exact published CLI C1 runtime boundary", async () => {
   const descriptor = describeCliRuntime();
   assert.equal(descriptor.package.name, "@tiangong-lca/cli");
-  assert.equal(descriptor.package.version, "0.1.10");
+  assert.equal(descriptor.package.version, "0.1.11");
+  assert.equal(RUNTIME_HOST_CONTEXT_PROTOCOL, "tiangong-lca.runtime-host.v1");
+  await assert.rejects(receiveRuntimeHostContext(), /inherited manager IPC channel/u);
   assert.deepEqual(
     [...RUNTIME_PLATFORMS],
     ["darwin-arm64", "linux-x64", "linux-arm64", "win32-x64"],
@@ -43,6 +48,7 @@ test("Foundry consumes the exact published CLI C1 runtime boundary", () => {
     inspectRuntimeComponents,
     pruneRuntimeComponents,
     executeRuntimeLaunch,
+    copyTrustedRuntimeManifestBytes,
   ]) {
     assert.equal(typeof value, "function");
   }

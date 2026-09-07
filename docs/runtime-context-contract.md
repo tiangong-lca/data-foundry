@@ -40,9 +40,9 @@ checkPaths:
   - test/scenarios/runtime-workspace.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
-lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
-lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
+lastReviewedAt: 2026-09-07
+lastReviewedCommit: 4b027afad988467255c941eb8cec23741fc9ccbe
+lastReviewedNote: "Reviewed for Foundry #112 copied C1 bootstrap and final manifest workflow: isolated cached/public modes, actual system tools, tamper refusal and strict four-platform public proof before immutable manifest publication. Source-only tooling preserves runtime/task/account boundaries; actual versioned publication remains required."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
@@ -60,7 +60,7 @@ The runtime entry now exposes the six W05 hierarchical operations described in `
 
 ## Runtime qualification and child admission
 
-`qualifyFoundryRuntime` compares an independently selected CLI expectation with the exact installed `@tiangong-lca/cli@0.1.10` runtime descriptor. It also compares a strict TIDAS expectation with the selected platform, executable bytes, compatible 0.2.x version, validation protocols, event schemas and asset fingerprint. The selected TIDAS executable is copied into a private temporary directory, rehashed there and invoked with the credential-free child environment; both handshake calls must be silent. Qualification uses a process-local brand. The portable identity described by `runtime-qualification.schema.json` is diagnostic evidence and cannot be deserialized into authority.
+`qualifyFoundryRuntime` compares an independently selected CLI expectation with the exact installed `@tiangong-lca/cli@0.1.11` runtime descriptor. It also compares a strict TIDAS expectation with the selected platform, executable bytes, compatible 0.2.x or 0.3.x version, validation protocols, event schemas and asset fingerprint. The selected TIDAS executable is copied into a private temporary directory, rehashed there and invoked with the credential-free child environment; both handshake calls must be silent. Qualification uses a process-local brand. The portable identity described by `runtime-qualification.schema.json` is diagnostic evidence and cannot be deserialized into authority.
 
 The TIDAS expectation admits only `linux-x64`, `linux-arm64`, `darwin-arm64` and `win32-x64`; `darwin-x64` cannot enter the schema or runtime context. `tidas-runtime-expectation.schema.json` is the reviewed machine shape. Qualification creation performs the isolated version/protocol/assets handshake once. Every later assertion reopens and hashes the selected executable and rejects any byte drift before child admission; identical immutable bytes do not replay the handshake. This keeps the original observed behavior bound to exact content while avoiding repeated child-process creation inside one admission call.
 
@@ -118,3 +118,9 @@ Facade revision lookup validates retained predecessor jobs/publications without 
 Migrated `workspace.v2` state binds an activation receipt, required features and an extension object. Construction validates the anchored migration documents and requires an independently trusted host selection. Write access must qualify the executing Foundry version and every required feature; unknown write features fail closed. The internal pending-adoption scope supplies a future id only during the bounded local callback and cannot survive it or create authorization/execution admission. Read-only task inspection skips write locks and cannot repair missing records. Read-compatible inspection may verify retained older runtime/profile snapshots without treating them as current write rules.
 
 `state/runtime-selection.json` records an explicit component selection and read/write mode. Ordinary writes must match it. The dedicated selector requires an independently qualified current writer, verifies/pins both component versions through the public CLI manager, and records selection history without rewriting the workspace marker or business state. An explicit CLI session reference cannot be read as marker or protected migration metadata.
+
+An installed package may retain the component cache that contains it only when its current host manifest is still independently trusted, the public CLI inspection verifies the complete current component set, and the installed package verifier proves its identity inside one of those components. The context retains that host manifest privately; the persisted selection pointer and rollback target cannot substitute for it. Workspace and excluded migration roots remain disjoint from the cache in both directions, and the cache cannot sit inside the runtime root. Source and developer-emitted roots receive no package exception. Existing parent directories are canonicalized even for missing descendants, so filesystem aliases cannot bypass those boundaries.
+
+Managed facade construction passes the independently selected component-cache root through the internal context options. The context rejects workspace overlap before reading its marker and privately retains that root for subsequent assertions. Overridden migration destinations inherit the same exclusion. `foundry-runtime-cache.ts` owns this shared canonical-path boundary; it does not create a cache or grant installed-package ownership.
+
+The package-owned managed initializer receives the public CLI IPC context before public operations, verifies the installed entry and component metadata, and supplies the existing CLI/TIDAS qualification, workspace-access and runtime-target interfaces. It reads no `.env` or task-selected trust anchor. The metadata schema and exact admission sequence are defined by `package-distribution-contract.md`; native qualification and task/identity authorization retain their existing owners.

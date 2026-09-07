@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { assertFoundryCacheRootSeparated } from "./lib/foundry-runtime-cache.ts";
 import { createFoundryRuntime } from "./foundry-runtime.ts";
 import {
   captureFoundryInput,
@@ -165,10 +166,16 @@ function assertNotInterrupted(signal: AbortSignal | undefined): void {
 }
 
 function contextOptions(options: FoundryFacadeOptions): FoundryRuntimeContextOptions {
+  if (options.runtimeManager?.cacheDir !== undefined)
+    assertFoundryCacheRootSeparated(
+      options.runtimeManager.cacheDir,
+      path.resolve(options.cwd ?? process.cwd(), options.workspace),
+    );
   return {
     moduleUrl: options.moduleUrl,
     workspace: options.workspace,
     cacheBase: options.cacheBase,
+    managedCacheRoot: options.runtimeManager?.cacheDir,
     cwd: options.cwd,
     environment: options.environment,
     accountIntent: options.accountIntent,
@@ -631,6 +638,11 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
       try {
         assertNotInterrupted(options.signal);
         assertFoundryRuntimeHost();
+        if (options.runtimeManager?.cacheDir !== undefined)
+          assertFoundryCacheRootSeparated(
+            options.runtimeManager.cacheDir,
+            path.resolve(options.cwd ?? process.cwd(), options.workspace),
+          );
         const plan = input
           ? planFoundryWorkspaceMigration(
               createFoundryRuntimeContext({

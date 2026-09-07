@@ -143,9 +143,9 @@ checkPaths:
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
-lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
+lastReviewedAt: 2026-09-07
+lastReviewedCommit: 6a0042fd3e368bf191bc32ab402aa6950be61e1b
+lastReviewedNote: "Reviewed for Foundry #112 Windows qualification: the TIDAS fixture now drains queued work and exits naturally with the exact protocol code. Production adapter exit checks, runtime authority, public command scope and permission boundaries remain unchanged; native crash statuses are not accepted as cancellation."
 ---
 
 # Foundry AI Navigation

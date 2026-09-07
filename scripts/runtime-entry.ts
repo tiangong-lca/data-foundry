@@ -7,6 +7,7 @@ import { migrationCredentialPath } from "./lib/foundry-migration-inventory.ts";
 import { createFoundryFacade, type FoundryFacadeRuntimeSelection } from "./foundry-facade.ts";
 import { createFoundryRuntime } from "./foundry-runtime.ts";
 import { parseArgs, type ParsedArgs } from "./lib/foundry-args.ts";
+import { assertFoundryCacheRootSeparated } from "./lib/foundry-runtime-cache.ts";
 import {
   captureFoundryInput,
   createFoundryRuntimeContext,
@@ -33,6 +34,10 @@ export interface FoundryRuntimeCommandHost {
   readonly writeStdout?: (text: string) => void;
   readonly setExitCode?: (code: number) => void;
 }
+
+type PrepareRuntimeHost = (
+  signal: AbortSignal,
+) => Promise<Omit<FoundryRuntimeCommandHost, "signal" | "writeStdout" | "setExitCode">>;
 
 interface ParsedPublicCommand {
   operation: FoundryPublicOperation;
@@ -119,10 +124,11 @@ function failedResult(
   taskId: string | null,
   code: string,
   message: string,
+  status: "failed" | "blocked" = "failed",
 ): FoundryOperationResult {
   return createFoundryOperationResult({
     operation,
-    status: "failed",
+    status,
     taskId,
     artifacts: [],
     blockers: [{ code, message, scope: taskId }],
@@ -205,6 +211,8 @@ async function runPublicCommand(
       "argument_workspace_required",
       "Public Foundry operations require an explicit --workspace.",
     );
+  if (host.runtimeManager?.cacheDir !== undefined)
+    assertFoundryCacheRootSeparated(host.runtimeManager.cacheDir, path.resolve(workspace));
   const facade = createFoundryFacade({
     moduleUrl: import.meta.url,
     workspace,
@@ -513,6 +521,7 @@ async function runLegacyWorkspaceRuntimeCommand(argv: string[]): Promise<void> {
 export async function runFoundryRuntimeCommand(
   argv: string[] = process.argv,
   host: FoundryRuntimeCommandHost = {},
+  prepareHost?: PrepareRuntimeHost,
 ): Promise<void> {
   const controller = host.signal ? null : new AbortController();
   const abort = () => controller?.abort("host-signal");
@@ -536,10 +545,17 @@ export async function runFoundryRuntimeCommand(
   const setExitCode = host.setExitCode ?? ((code: number) => (process.exitCode = code));
   let result: FoundryOperationResult;
   try {
-    result = await runPublicCommand(parsed, effectiveHost);
+    const prepared =
+      prepareHost && !effectiveHost.signal?.aborted ? await prepareHost(effectiveHost.signal!) : {};
+    result = await runPublicCommand(parsed, {
+      ...effectiveHost,
+      ...prepared,
+      signal: effectiveHost.signal,
+    });
   } catch (error) {
-    result =
-      error instanceof FoundryContextError && error.code.startsWith("argument_")
+    result = effectiveHost.signal?.aborted
+      ? interruptedResult(parsed.operation, null)
+      : error instanceof FoundryContextError && error.code.startsWith("argument_")
         ? invalidResult(parsed.operation, null, error.code, error.message)
         : failedResult(
             parsed.operation,
@@ -548,6 +564,9 @@ export async function runFoundryRuntimeCommand(
             error instanceof FoundryContextError
               ? error.message
               : "Foundry public operation failed before changing task state.",
+            error instanceof FoundryContextError && error.code === "managed_runtime_unsupported"
+              ? "blocked"
+              : "failed",
           );
   }
   try {
@@ -565,8 +584,9 @@ export async function runFoundryRuntimeCommand(
 export async function runFoundryPublicCommand(
   argv: string[] = process.argv,
   host: FoundryRuntimeCommandHost = {},
+  prepareHost?: PrepareRuntimeHost,
 ): Promise<void> {
-  if (publicCommand(argv)) return runFoundryRuntimeCommand(argv, host);
+  if (publicCommand(argv)) return runFoundryRuntimeCommand(argv, host, prepareHost);
   return runFoundryRuntimeCommand(
     [
       argv[0] ?? process.execPath,
@@ -576,6 +596,7 @@ export async function runFoundryPublicCommand(
       ...argv.slice(2),
     ],
     host,
+    prepareHost,
   );
 }
 

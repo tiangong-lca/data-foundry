@@ -47,8 +47,8 @@ test("installed CLI resolution and runtime command precedence stay package-pinne
   withTempRoot("foundry-runtime-command", (root) => {
     const installed = resolveInstalledTiangongLcaCliPackage();
     assert.equal(installed.packageName, "@tiangong-lca/cli");
-    assert.equal(installed.packageVersion, "0.1.10");
-    assert.equal(installed.packageSpec, "@tiangong-lca/cli@0.1.10");
+    assert.equal(installed.packageVersion, "0.1.11");
+    assert.equal(installed.packageSpec, "@tiangong-lca/cli@0.1.11");
     assert.equal(path.basename(installed.packageJsonPath), "package.json");
     assert.equal(fs.statSync(installed.binPath).isFile(), true);
     assert.equal(fs.statSync(installed.schemaDir).isDirectory(), true);
@@ -57,8 +57,8 @@ test("installed CLI resolution and runtime command precedence stay package-pinne
     assert.equal(defaultCommand.command, process.execPath);
     assert.deepEqual(defaultCommand.args, [installed.binPath]);
     assert.equal(defaultCommand.source, "installed_package");
-    assert.equal(defaultCommand.package, "@tiangong-lca/cli@0.1.10");
-    assert.equal(defaultCommand.package_version, "0.1.10");
+    assert.equal(defaultCommand.package, "@tiangong-lca/cli@0.1.11");
+    assert.equal(defaultCommand.package_version, "0.1.11");
     assert.equal(defaultCommand.bin_path, installed.binPath);
 
     const overridePath = path.join(root, "CLI folder", "owner-cli.mjs");

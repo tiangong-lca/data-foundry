@@ -46,6 +46,7 @@
     "specs/schemas/foundry-migration-activation.schema.json",
     "specs/schemas/foundry-workspace-v2.schema.json",
     "specs/schemas/foundry-runtime-selection.schema.json",
+    "specs/schemas/foundry-managed-runtime.schema.json",
     "specs/schemas/runtime-qualification.schema.json",
     "specs/schemas/task-authorization.schema.json",
     "specs/schemas/tidas-runtime-expectation.schema.json",
@@ -101,6 +102,16 @@
     "package:build": "node scripts/build-foundry-package.ts",
     "package:check": "node scripts/verify-foundry-package.ts",
     "package:pack": "node scripts/pack-foundry-package.ts",
+    "release:version": "node scripts/release-version.ts",
+    "release:inspect": "node scripts/release-inspect.ts",
+    "release:context": "node scripts/release-workflow-context.ts",
+    "release:tag": "node scripts/release-create-tag.ts",
+    "release:prepare-package": "node scripts/release-prepare-package.ts",
+    "release:verify-prepared": "node scripts/release-verify-prepared.ts",
+    "release:publish-package": "node scripts/release-publish-package.ts",
+    "release:prepare-production": "node scripts/release-prepare-production.ts",
+    "release:prepare-native": "node scripts/release-prepare-native.ts",
+    "release:verify-npm": "node scripts/release-verify-npm.ts",
     "skills:list": "pnpm dlx skills@latest list --json",
     "skills:update": "pnpm dlx skills@latest update --project --yes",
     "skills:install:shared": "pnpm dlx skills@latest add ../tiangong-lca-skills --skill external-dataset-curated-import source-evidence-dataset-development dataset-rls-maintenance --agent '*' --yes --full-depth && pnpm dlx skills@latest add https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search document-granular-decompose --agent '*' --yes --full-depth",
@@ -121,7 +132,12 @@
     "task:complete": "node scripts/foundry.ts task-complete",
     "install:frozen": "pnpm install --frozen-lockfile",
     "audit:high": "pnpm audit --audit-level high",
-    "prepush:gate": "pnpm lint && pnpm test:toolchain && pnpm test && pnpm golden:diff && pnpm surface:audit && pnpm build && pnpm package:build && pnpm package:check && pnpm audit:high"
+    "prepush:gate": "pnpm lint && pnpm test:toolchain && pnpm test && pnpm golden:diff && pnpm surface:audit && pnpm build && pnpm package:build && pnpm package:check && pnpm audit:high",
+    "release:prepare-runtime": "node scripts/release-prepare-runtime.ts",
+    "release:aggregate-runtime": "node scripts/release-aggregate-runtime.ts",
+    "release:publish-components": "node scripts/release-publish-components.ts",
+    "release:qualify-bootstrap": "node scripts/release-qualify-bootstrap.ts",
+    "release:publish-runtime-manifest": "node scripts/release-publish-runtime-manifest.ts"
   },
   "engines": {
     "node": ">=24.19.0 <25",
@@ -130,14 +146,18 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "24.13.3",
+    "ajv": "8.20.0",
+    "fflate": "0.8.3",
     "husky": "9.1.7",
     "lint-staged": "17.3.0",
     "npm-check-updates": "23.1.0",
     "oxlint": "1.80.0",
     "oxlint-tsgolint": "7.0.2001",
     "prettier": "3.9.6",
+    "sigstore": "5.0.0",
+    "tar": "7.5.22",
     "typescript": "7.0.2",
-    "ajv": "8.20.0"
+    "yaml": "2.9.0"
   },
   "lint-staged": {
     "*.{ts,mts,cts,tsx}": [
@@ -149,7 +169,7 @@
     ]
   },
   "dependencies": {
-    "@tiangong-lca/cli": "0.1.10"
+    "@tiangong-lca/cli": "0.1.11"
   },
   "foundryRuntime": {
     "schema": "tiangong-foundry.runtime-layout.v2",

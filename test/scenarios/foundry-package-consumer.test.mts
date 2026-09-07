@@ -7,9 +7,17 @@ import path from "node:path";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
 import { resolvePackageManagerCommand } from "../../scripts/lib/package-manager-command.ts";
+import { canonicalizeFoundryPackageArchive } from "../../scripts/pack-foundry-package.ts";
+import { verifyManagedPackageCache } from "../helpers/managed-package-cache.mts";
+import { verifyManagedPackageHost } from "../helpers/managed-package-host.mts";
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 const stageRoot = path.join(repoRoot, "package-stage");
+const sourceManifest = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8")) as {
+  version: string;
+  packageManager: string;
+};
+const sourcePackageVersion = sourceManifest.version;
 const secretKey = /(?:PASSWORD|PASSWD|TOKEN|SECRET|COOKIE|CREDENTIAL|API_?KEY|PRIVATE_?KEY)/iu;
 
 function isolatedEnvironment(home: string, extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
@@ -21,6 +29,9 @@ function isolatedEnvironment(home: string, extra: NodeJS.ProcessEnv = {}): NodeJ
     NPM_CONFIG_UPDATE_NOTIFIER: "false",
     NPM_CONFIG_FUND: "false",
     NPM_CONFIG_AUDIT: "false",
+    COREPACK_HOME: path.join(path.dirname(home), "corepack-cache"),
+    COREPACK_DEFAULT_TO_LATEST: "0",
+    COREPACK_ENABLE_NETWORK: "0",
     ...extra,
   };
   for (const key of [
@@ -58,14 +69,20 @@ function isolatedEnvironment(home: string, extra: NodeJS.ProcessEnv = {}): NodeJ
   return environment;
 }
 
-function command(executable: string, args: string[], cwd: string, environment: NodeJS.ProcessEnv) {
+function command(
+  executable: string,
+  args: string[],
+  cwd: string,
+  environment: NodeJS.ProcessEnv,
+  timeout = 120_000,
+) {
   const result = spawnSync(executable, args, {
     shell: false,
     cwd,
     env: environment,
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
-    timeout: 120_000,
+    timeout,
   });
   if (result.error) throw result.error;
   return result;
@@ -76,9 +93,10 @@ function packageManagerCommand(
   args: string[],
   cwd: string,
   environment: NodeJS.ProcessEnv,
+  timeout = 120_000,
 ) {
   const invocation = resolvePackageManagerCommand(manager, args);
-  return command(invocation.executable, invocation.argv, cwd, environment);
+  return command(invocation.executable, invocation.argv, cwd, environment, timeout);
 }
 
 function packageFiles(root: string): Array<{ path: string; bytes: number; sha256: string }> {
@@ -162,6 +180,7 @@ function installConsumer(
     ],
     project,
     isolatedEnvironment(cacheHome),
+    offline ? 120_000 : 300_000,
   );
   assert.equal(result.status, 0, result.stderr || result.stdout);
   return project;
@@ -174,6 +193,19 @@ test("packed Foundry installs twice and runs only the public facade from a read-
     for (const installed of installedRoots) restoreWritable(installed);
     fs.rmSync(root, { recursive: true, force: true });
   });
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({ private: true, packageManager: sourceManifest.packageManager }),
+  );
+  const packageManager = packageManagerCommand(
+    "pnpm",
+    ["--version"],
+    root,
+    isolatedEnvironment(path.join(root, "toolchain-home"), { COREPACK_ENABLE_NETWORK: "1" }),
+    300_000,
+  );
+  assert.equal(packageManager.status, 0, packageManager.stderr || packageManager.stdout);
+  assert.equal(`pnpm@${packageManager.stdout.trim()}`, sourceManifest.packageManager);
   const build = command(
     process.execPath,
     [path.join(repoRoot, "scripts", "build-foundry-package.ts")],
@@ -235,19 +267,22 @@ test("packed Foundry installs twice and runs only the public facade from a read-
   assert.equal(JSON.parse(verified.stdout).status, "passed");
   const packDriver = pathToFileURL(path.join(repoRoot, "scripts/pack-foundry-package.ts")).href;
   const driverDestination = path.join(root, "pack driver 中文");
+  const canonicalBytes = canonicalizeFoundryPackageArchive(fs.readFileSync(tarball));
+  let publishedTarball = tarball;
   for (const attempt of ["first", "reuse"]) {
     const archived = command(
       process.execPath,
       [
         "--input-type=module",
         "-e",
-        `import { packFoundryPackage } from ${JSON.stringify(packDriver)}; packFoundryPackage(${JSON.stringify(driverDestination)});`,
+        `import { packFoundryPackage } from ${JSON.stringify(packDriver)}; const packed = packFoundryPackage(${JSON.stringify(driverDestination)}); process.stdout.write(packed.path);`,
       ],
       repoRoot,
       isolatedEnvironment(path.join(root, `archive-${attempt}-home`)),
     );
     assert.equal(archived.status, 0, archived.stderr || archived.stdout);
-    assert.deepEqual(fs.readFileSync(archived.stdout.trim()), fs.readFileSync(tarball));
+    publishedTarball = archived.stdout.trim();
+    assert.deepEqual(fs.readFileSync(publishedTarball), canonicalBytes);
   }
   assert.equal(
     packReport[0].files.some(
@@ -260,8 +295,18 @@ test("packed Foundry installs twice and runs only the public facade from a read-
   );
 
   const sharedCache = path.join(root, "shared-npm-home");
-  const firstProject = installConsumer(path.join(root, "first"), tarball, sharedCache, false);
-  const secondProject = installConsumer(path.join(root, "second"), tarball, sharedCache, true);
+  const firstProject = installConsumer(
+    path.join(root, "first"),
+    publishedTarball,
+    sharedCache,
+    false,
+  );
+  const secondProject = installConsumer(
+    path.join(root, "second"),
+    publishedTarball,
+    sharedCache,
+    true,
+  );
   const firstPackage = path.join(firstProject, "node_modules", "@tiangong-lca", "foundry");
   const secondPackage = path.join(secondProject, "node_modules", "@tiangong-lca", "foundry");
   installedRoots.push(firstPackage, secondPackage);
@@ -286,7 +331,9 @@ test("packed Foundry installs twice and runs only the public facade from a read-
     assertFoundryPackageDescriptor: (value: unknown) => unknown;
   };
   assert.equal(api.assertFoundryPackage(firstPackage).package.name, "@tiangong-lca/foundry");
-  assert.equal(api.assertFoundryPackage(secondPackage).package.version, "0.1.0");
+  assert.equal(api.assertFoundryPackage(secondPackage).package.version, sourcePackageVersion);
+  await verifyManagedPackageCache(firstPackage, root);
+  await verifyManagedPackageHost(firstPackage, root);
   const consumerModule = path.join(firstProject, "consumer.mjs");
   const apiWorkspace = path.join(root, "api workspace");
   fs.writeFileSync(
@@ -331,7 +378,7 @@ test("packed Foundry installs twice and runs only the public facade from a read-
     "parseFoundryTaskStartSpec",
     "runFoundryPublicCommand",
   ]);
-  assert.deepEqual(importedResult.cli, { name: "@tiangong-lca/cli", version: "0.1.10" });
+  assert.deepEqual(importedResult.cli, { name: "@tiangong-lca/cli", version: "0.1.11" });
   assert.equal(importedResult.doctor, "ready");
 
   const typeSource = path.join(firstProject, "consumer.ts");
@@ -571,6 +618,8 @@ test("packed Foundry installs twice and runs only the public facade from a read-
   );
   assert.notEqual(absentCli.status, 0);
   assert.equal(fs.existsSync(forbiddenWorkspace), false);
-  const tarballSha256 = createHash("sha256").update(fs.readFileSync(tarball)).digest("hex");
+  const tarballSha256 = createHash("sha256")
+    .update(fs.readFileSync(publishedTarball))
+    .digest("hex");
   assert.match(tarballSha256, /^[0-9a-f]{64}$/u);
 });

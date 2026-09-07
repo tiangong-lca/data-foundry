@@ -62,7 +62,7 @@ export function testAuthIdentityReceipt({
   projectRef = "qgzvkongdjqiiamzbbts",
   userId = "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
   capturedAtUtc = new Date().toISOString(),
-  packageVersion = "0.1.10",
+  packageVersion = "0.1.11",
   displayEmail = "te****@example.com",
   scopeOverrides = {},
 }: TestAuthIdentityReceiptOptions = {}): AuthIdentityReceipt {

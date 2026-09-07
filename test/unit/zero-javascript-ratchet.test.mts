@@ -10,6 +10,16 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 
 // Explicit TypeScript AnyKeyword closures are enforced by Oxlint; this suite remains the
 // permanent boundary against reintroducing first-party JavaScript compatibility paths.
+// Issue #112 keeps archive/version preparation, exact Git inspection, Sigstore provenance
+// signing/verification, prepared-artifact handoff, OIDC publication/readback and tag admission,
+// version-aware fixtures native TypeScript.
+// Frozen registry payload, upstream extraction and SPDX/license assembly remain source-only TS.
+// Complete components, Node/CLI bootstrap base, lock data, native qualification, aggregation and asset publication remain source-only TypeScript owners.
+// Portable gzip headers, copied-script qualification and final manifest publication remain native TypeScript release tooling.
+// Native selection, inspection and gracefully drained process fixtures remain native TypeScript.
+// CLI 0.1.11 runtime/host adoption remains native TypeScript and uses only public package exports.
+// Managed host admission and owning-cache verification retain full trusted selection in native TypeScript.
+// TIDAS 0.3.0 complete-notice intake, upstream notice entrypoints and exact Golden migration retain that boundary.
 // Issue #110's tool-policy retirement preserves Node 24 and the native TypeScript graph.
 // Issue #108's migration adoption, compatibility and replay guards remain native TypeScript.
 // Issue #68's Worldsteel profile-truth contract is native .mts and adds no compatibility path.

@@ -29,9 +29,9 @@ checkPaths:
   - test/unit/task-authorization.test.mts
   - test/unit/task-profile-authority.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
-lastReviewedAt: 2026-09-05
-lastReviewedCommit: 9e0cb37ddfa3f5b6f3569948d880a827b9bd2d1e
-lastReviewedNote: "Reviewed for #108: explicit adoption and audited v2 activation preserve original task evidence; no-replay scope and independently qualified read/write runtime selection remain separate from business authorization and F1 release qualification."
+lastReviewedAt: 2026-09-07
+lastReviewedCommit: 3db019d9a30d6b0458eb97da3d54ced7aa147be2
+lastReviewedNote: "Reviewed for Foundry #112 adoption of qualified public TIDAS0.3.0: full source-bound native notices and reviewed 0.2/0.3 runtime protocol admission. Source release helpers remain outside the public compiler closure; workspace/task/account authorization, no-replay and final F1 publication gates retain their existing owners."
 related:
   - docs/architecture.md
   - docs/safety-policy.md

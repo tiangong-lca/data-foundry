@@ -43,7 +43,7 @@ function binding() {
     semanticArgv: ["flow", "identity-preflight", "--json", "--timeout-ms", "60000"],
     cli: {
       packageName: "@tiangong-lca/cli",
-      packageVersion: "0.1.10",
+      packageVersion: "0.1.11",
       packageIntegrity: "sha512-test",
     },
     authReceipt: parsedReceipt(),

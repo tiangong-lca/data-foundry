@@ -88,13 +88,24 @@ test("script-backed TIDAS commands execute through Node on every platform", () =
   });
 });
 
-test("handshake accepts compatible 0.2.x and rejects another minor line", () => {
+test("handshake accepts reviewed 0.2.x and 0.3.x contracts and rejects other minor lines", () => {
   const { root, bin } = isolatedFixture();
   try {
     const accepted = withEnvironment({ TIDAS_BIN: bin, FAKE_TIDAS_VERSION: "0.2.99" }, () =>
       runTidasHandshake({ repoRoot: root }),
     );
     assert.equal(accepted.binary_version, "0.2.99");
+    const current = withEnvironment({ TIDAS_BIN: bin, FAKE_TIDAS_VERSION: "0.3.0" }, () =>
+      runTidasHandshake({ repoRoot: root }),
+    );
+    assert.equal(current.binary_version, "0.3.0");
+    assert.throws(
+      () =>
+        withEnvironment({ TIDAS_BIN: bin, FAKE_TIDAS_VERSION: "0.4.0" }, () =>
+          runTidasHandshake({ repoRoot: root }),
+        ),
+      /tidas_version_unsupported/u,
+    );
     assert.equal(accepted.validation_describe.schema_version, "tidas.validation-describe.v1");
     assert.ok(accepted.validation_describe.protocols);
     assert.ok(accepted.validation_describe.protocols.includes("document-validation-batch.v1"));

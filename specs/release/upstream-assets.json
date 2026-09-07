@@ -1,0 +1,28 @@
+{
+  "schema": "tiangong-foundry.release-upstream-assets.v1",
+  "spdx_schema": {
+    "file": "spdx-2.3.schema.json",
+    "bytes": 45312,
+    "sha256": "239208b7ac287b3cf5d9a9af23f9d69863971102a5e1587a27a398b43490b89b",
+    "source_url": "https://raw.githubusercontent.com/spdx/spdx-spec/aadf3b0b8dbbabdb4d880b0fc714255fea436ff7/schemas/spdx-schema.json",
+    "source_commit": "aadf3b0b8dbbabdb4d880b0fc714255fea436ff7",
+    "source_tag": "v2.3",
+    "attribution": "SPDX Specification contributors, SPDX 2.3 JSON Schema; reproduced without modification.",
+    "upstream_license": "CC-BY-3.0",
+    "license_url": "https://creativecommons.org/licenses/by/3.0/"
+  },
+  "license_supplements": [
+    {
+      "package_id": "saxes@6.0.0",
+      "package_integrity": "sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==",
+      "file": "saxes-6.0.0.LICENSE",
+      "bytes": 3011,
+      "sha256": "0fac2374380621b22e6b50451057721a9c52935b02d16d106a9f04897f061d0e",
+      "source_url": "https://raw.githubusercontent.com/lddubeau/saxes/211fa0ebec9b628affc09219199639887174bfc3/LICENSE",
+      "source_commit": "211fa0ebec9b628affc09219199639887174bfc3",
+      "source_tag": "v6.0.0",
+      "registry_git_head": "211fa0ebec9b628affc09219199639887174bfc3",
+      "note": "The npm 6.0.0 tarball declares ISC but omits LICENSE. The registry gitHead and the dereferenced upstream v6.0.0 tag agree; retain the full upstream text including historical notices."
+    }
+  ]
+}

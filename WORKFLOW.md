@@ -280,9 +280,9 @@ checkPaths:
   - test/unit/foundry-runtime-environment.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
-lastReviewedAt: 2026-09-06
-lastReviewedCommit: 7f600bc2db0c60a946a8609bfdc1cc41bc1125a2
-lastReviewedNote: "Reviewed for #110 / workspace #980 W11: remove the owned macOS Intel Oxlint age exception while preserving the frozen toolchain, supported platforms, public package closure and runtime/authorization boundaries. The package descriptor owns the current closure inventory."
+lastReviewedAt: 2026-09-07
+lastReviewedCommit: 4b027afad988467255c941eb8cec23741fc9ccbe
+lastReviewedNote: "Reviewed for Foundry #112 copied C1 bootstrap and final manifest workflow: isolated cached/public modes, actual system tools, tamper refusal and strict four-platform public proof before immutable manifest publication. Source-only tooling preserves runtime/task/account boundaries; actual versioned publication remains required."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -314,9 +314,11 @@ Body: {{ issue.description }}
 
 ## Classify
 
+CLI-managed package execution now completes trusted host admission before workspace operations. Runtime launch policy selects workspace read/write access and an independently bound runtime target; task/actor/account intent and restricted-action permission checks remain separate. Direct installed calls without a managed host keep their existing local preparation behavior.
+
 Migration transfer planning is governed by [the workspace migration contract](docs/workspace-migration-contract.md). W10 provides explicit source/queue/input staging, current-owner task adoption, audited v2 activation and separate runtime read/write selection. Preserved history blocks replay across requests and migrations; none of these records grants business permission. Operational qualification and release integration remain tracked in #108/#980.
 
-The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 still owns the published package. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
+The v2 task store persists registered job/source/profile identity, account intent, producer receipts and artifact lineage; deterministic local retries reuse verified results. Exact C1/TIDAS qualification, all-command disposition, derived authorization and child admission form the W04 authority boundary. The W05 hierarchical facade adds strict result/task schemas, deterministic request revisions, actor-bound status/resume, local preparation and read-only migration inventory. W06 owns the installable candidate closure; W08 owns F1 publication and platform components. See `docs/public-runtime-contract.md`, `docs/runtime-context-contract.md`, `docs/task-authorization-contract.md` and `docs/foundry-task-contracts.md`.
 
 For consumer workspace execution, follow `docs/public-runtime-contract.md`. Use `workspace init`, `doctor`, `task start`, `task status`, `task resume` and `workspace migrate --dry-run` with `--json`. Task specs own request/actor/lane/profile/source/seed/account/preparation intent; status and resume require the same explicit actor. Start and local preparation require no login. Execute only returned structured argv actions with their recorded CWD/binding; never run display text. A nonempty attempt state is readback-only, and W10 alone may apply a migration plan.
 
@@ -405,7 +407,7 @@ All scenario suites are native `.test.mts`. Preserve every multi-command artifac
 
 Do not parse or execute rendered command strings. `tiangong-foundry.command-spec.v1` makes `executable` plus `argv` authoritative and keeps `display` reader-only. Its SHA-256 binds the authoritative command and exact artifact facts; commit and verify both bind the final rows path, bytes, and SHA-256, and runners reject same-path drift before `shell=false` spawn. Artifact-to-scope matching still normalizes platform separators. Durable writers fsync writable file descriptors, not read-only reopened handles.
 
-Use the exact installed project dependency as `pnpm exec tiangong-lca ...`. Foundry runtime adapters resolve that same `@tiangong-lca/cli@0.1.10` manifest and bin directly; only the external `skills@latest` source-evidence resolver remains intentionally floating, with the resolved ref recorded in task artifacts.
+Use the exact installed project dependency as `pnpm exec tiangong-lca ...`. Foundry runtime adapters resolve that same `@tiangong-lca/cli@0.1.11` manifest and bin directly; only the external `skills@latest` source-evidence resolver remains intentionally floating, with the resolved ref recorded in task artifacts.
 
 The npm candidate is built through `pnpm package:build` and checked through `pnpm package:check`; `pnpm package:pack` archives only the generated sanitized stage. The installed `tiangong-foundry` bin accepts the six public facade operations and never routes a flat developer command. Package installation performs no initialization, login, component download or hook setup. Treat the W06 tarball as a local candidate until W08 publishes the exact F1 release and product manifest.
 
@@ -427,7 +429,7 @@ pnpm exec tiangong-lca dataset context-pack \
   --json
 ```
 
-4. For packaged imports, convert with `node scripts/foundry.ts dataset-tidas-import --input <source> --output <conversion-dir>`. The adapter delegates format detection/import/conversion to Rust `tidas`, accepts compatible 0.2.x binaries, and enforces the stable operation report and exit contract. Keep the generated `process-bundles/index.json`; this is the generic package-level process-closure manifest used to build or shard downstream entity queues. Bundle `manifest` and `tidas_dir` entries may be relative to the bundle index directory and must be resolved before scope execution.
+4. For packaged imports, convert with `node scripts/foundry.ts dataset-tidas-import --input <source> --output <conversion-dir>`. The adapter delegates format detection/import/conversion to Rust `tidas`, accepts compatible 0.2.x or 0.3.x binaries, and enforces the stable operation report and exit contract. Keep the generated `process-bundles/index.json`; this is the generic package-level process-closure manifest used to build or shard downstream entity queues. Bundle `manifest` and `tidas_dir` entries may be relative to the bundle index directory and must be resolved before scope execution.
 5. For source-document authoring, extract source evidence first and keep unresolved assumptions explicit. For document fulltext extraction, resolve the latest `document-granular-decompose` skill from `https://github.com/tiangong-ai/skills` with `pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth` before parsing the source file. For SCI paper or scientific journal evidence, resolve the latest `tiangong-kb-sci-search` skill from the same repository before retrieval. Then write `.foundry/workspaces/<task-id>/runtime-skills/runtime-skill-resolution.json` with the `pnpm dlx skills` command, the `git ls-remote https://github.com/tiangong-ai/skills.git refs/heads/main` commit, skill name, timestamp, and evidence channel. Runtime-installed shared skills may live under `.agents/skills`, but their directories and `skills-lock.json` stay untracked unless the task explicitly chooses pinned reproducibility.
 6. Validate generated rows with `node scripts/foundry.ts dataset-tidas-validate --rows-file <rows> --type <type> --out-dir <schema-dir>`.
 7. Run deterministic QA with `pnpm exec tiangong-lca qa <type>`.
