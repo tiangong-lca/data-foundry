@@ -796,6 +796,17 @@ function normalizeKnownContractMigration(value: JsonRecord): JsonRecord {
     )
       return { ...value, variable_count: "<oauth-env-contract>" };
   }
+  // #112 admits only the exact reviewed native-version wording transition.
+  // All other capability fields and every unreviewed gate text remain compared.
+  if (
+    value.id === "cli.dataset.contract-context" &&
+    typeof value.verification_gate === "string" &&
+    [
+      "a013b31338bc5ac996c1a0b95bf43003836e10181d8075c4e1372c7398e95714",
+      "8747c9ebb10457b9be9b7e4686d6466a469021aac1ecc74b0c0ce2c879b01533",
+    ].includes(createHash("sha256").update(value.verification_gate).digest("hex"))
+  )
+    return { ...value, verification_gate: "<reviewed-tidas-version-admission>" };
   const normalizedWorldsteelProfile = normalizeWorldsteelProfileContract(value);
   if (normalizedWorldsteelProfile) return normalizedWorldsteelProfile;
   const capabilityHashes = capabilityContractMigrationHashes.get(String(value.id ?? ""));

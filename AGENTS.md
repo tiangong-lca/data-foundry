@@ -263,7 +263,7 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 3db019d9a30d6b0458eb97da3d54ced7aa147be2
+lastReviewedCommit: a229230d120abdbad809bbbc52516537624c1ea0
 lastReviewedNote: "Reviewed for Foundry #112 qualified TIDAS0.3.0 native notices and reviewed 0.2/0.3 runtime admission; TypeScript, ownership, task authorization and final release gates remain intact."
 ---
 

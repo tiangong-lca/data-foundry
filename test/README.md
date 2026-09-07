@@ -280,7 +280,7 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 3db019d9a30d6b0458eb97da3d54ced7aa147be2
+lastReviewedCommit: a229230d120abdbad809bbbc52516537624c1ea0
 lastReviewedNote: "Reviewed for Foundry #112 adoption of qualified public TIDAS0.3.0: full source-bound native notices and reviewed 0.2/0.3 runtime protocol admission. Source release helpers remain outside the public compiler closure; workspace/task/account authorization, no-replay and final F1 publication gates retain their existing owners."
 ---
 
@@ -345,7 +345,7 @@ Test files should name the behavior surface they cover, for example `post-author
 
 ## OAuth and private qualification
 
-`unit/oauth-identity-contract.test.mts` preserves the real RC01 failure shape with synthetic identities: persisted OAuth sessions pass fresh live identity admission, while wrong project/user, stale/future/tampered receipts and non-OAuth sessions fail. Account wrapper tests protect session references and exact child dispatch. Historical attempt/resume fixtures keep their original CLI fingerprints and hashes. Golden compares isolated baseline and Git-visible candidate snapshots; the only #97 metadata normalization is the two SHA-bound public env-surface reports for the deliberate 42-to-44-variable OAuth migration.
+`unit/oauth-identity-contract.test.mts` preserves the real RC01 failure shape with synthetic identities: persisted OAuth sessions pass fresh live identity admission, while wrong project/user, stale/future/tampered receipts and non-OAuth sessions fail. Account wrapper tests protect session references and exact child dispatch. Historical attempt/resume fixtures keep their original CLI fingerprints and hashes. Golden compares isolated baseline and Git-visible candidate snapshots. The #112 TIDAS0.3 admission change normalizes only the two exact reviewed verification-gate text hashes for `cli.dataset.contract-context`; other fields and unreviewed text still compare. For OAuth, the only #97 metadata normalization is the two SHA-bound public env-surface reports for the deliberate 42-to-44-variable OAuth migration.
 
 ## TDD And TypeScript Migration
 
