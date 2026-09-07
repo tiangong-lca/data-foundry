@@ -92,7 +92,6 @@ export function selectFoundryTidasDistribution(
   readonly distribution: FoundryTidasDistribution;
   readonly notice: Readonly<ObjectValue>;
   readonly files: ReadonlyMap<string, Buffer>;
-  readonly noticeText: Buffer;
 } {
   if (
     !Object.hasOwn(targets, expectation.target) ||
@@ -198,19 +197,6 @@ export function selectFoundryTidasDistribution(
     },
     notice,
     files,
-    noticeText: Buffer.concat([
-      Buffer.from(
-        "TIDAS third-party notices\n\nOriginal text bytes follow in inventory path order. Package, source, license and reference roles are recorded in third-party-notices/notice-manifest.json.\n",
-      ),
-      ...names
-        .filter((name) => name.startsWith("texts/"))
-        .sort()
-        .flatMap((name) => [
-          Buffer.from(`\n===== ${name} =====\n`),
-          files.get(prefix + name)!,
-          Buffer.from("\n"),
-        ]),
-    ]),
   };
 }
 

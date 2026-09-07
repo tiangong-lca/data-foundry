@@ -89,8 +89,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 67c16d5735cf909de474a0a69b555ffd4f1d539c
-lastReviewedNote: "Reviewed for Foundry #112 complete TIDAS0.3 notices: deterministic full-text aggregate entrypoint fits the published CLI64-entry bound while every original text, source record and SPDX reference remains retained. Runtime, authorization, compiler and final publication boundaries are unchanged."
+lastReviewedCommit: 0a71b3472c2b3c2deecfacf0f3c625d5c5393d5c
+lastReviewedNote: "Reviewed for Foundry #112: reuse existing upstream LICENSE, README and notice-manifest entrypoints within the CLI64-entry bound; retain all original text/source files and SPDX references without a duplicate aggregate. Runtime, authorization, compiler and final publication boundaries are unchanged."
 ---
 
 # Workspace Project Map

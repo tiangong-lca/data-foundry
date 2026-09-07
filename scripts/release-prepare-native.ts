@@ -149,11 +149,6 @@ export async function prepareFoundryNativeInput(
         mode: 0o644 as const,
       },
       { path: "metadata/tidas-distribution.json", bytes: distributionBytes, mode: 0o644 as const },
-      {
-        path: "share/licenses/tidas/THIRD-PARTY-NOTICES.txt",
-        bytes: qualifiedTidas.noticeText,
-        mode: 0o644 as const,
-      },
       ...noticeFiles.map(([name, bytes]) => ({
         path: name.slice(tidasRoot.length),
         bytes,
