@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 9cd06710f8aea82b5ebf3ceff3adfa796d817ea2
-lastReviewedNote: "Reviewed for Foundry #112 C1-compatible Node/CLI bootstrap base and adjacent lock: frozen production bytes, both upstream sources, complete licenses/SPDX/checksum inventory and manager key reuse. Source-only preparation adds no task, account or publication authority; actual public/bootstrap qualification remains required."
+lastReviewedCommit: 3d2bc40085df1fb178ad00683df1123470ce4b6a
+lastReviewedNote: "Reviewed for Foundry #112 native base CLI cache adoption and warm reuse: the qualifier executes the actual packaged Node/CLI pair and aggregation requires its13-call evidence. All changes remain source-only; public download/copied-script/final-manifest gates and task/account boundaries remain separate."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -120,7 +120,7 @@ Release tools compare native filesystem directory identity when binding the scri
 
 ## Bootstrap base and adjacent lock
 
-The released C1 bootstrap installs one complete base component containing both Node and the public CLI entry before running the manager. Foundry supplies that format in its existing Node component, including the CLI's verified production dependencies and original licenses. The application keeps its exact CLI dependency closure for ordinary package resolution. Node is downloaded once: the bootstrap's component key equals the manager's key, and the manager verifies and adopts the complete installed base before creating its receipt.
+The released C1 bootstrap installs one complete base component containing both Node and the public CLI entry before running the manager. Foundry supplies that format in its existing Node component, including the CLI's verified production dependencies and original licenses. The application keeps its exact CLI dependency closure for ordinary package resolution. The bootstrap component key equals the manager key, allowing the manager to verify and adopt the complete installed base before creating its receipt. Native qualification removes only the Node receipt in its isolated test cache, invokes the actual base Node/CLI pair, verifies receipt adoption, and repeats a warm call. The thirteen-call report includes these two base invocations; copied-script and public-download proof remain separate.
 
 `metadata/bootstrap-sha256.txt` lists every other base file in stable path order with its actual SHA256. The checksum file is itself included in the component inventory and independently bound by the adjacent lock. Missing, extra, aliased, unsafe or changed files fail. Bootstrap file_count excludes the checksum file, so archive entries equal file_count+1.
 

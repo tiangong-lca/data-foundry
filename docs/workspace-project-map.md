@@ -89,8 +89,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 9cd06710f8aea82b5ebf3ceff3adfa796d817ea2
-lastReviewedNote: "Reviewed for Foundry #112 C1-compatible Node/CLI bootstrap base and adjacent lock: frozen production bytes, both upstream sources, complete licenses/SPDX/checksum inventory and manager key reuse. Source-only preparation adds no task, account or publication authority; actual public/bootstrap qualification remains required."
+lastReviewedCommit: 3d2bc40085df1fb178ad00683df1123470ce4b6a
+lastReviewedNote: "Reviewed for Foundry #112 native base CLI cache adoption and warm reuse: the qualifier executes the actual packaged Node/CLI pair and aggregation requires its13-call evidence. All changes remain source-only; public download/copied-script/final-manifest gates and task/account boundaries remain separate."
 ---
 
 # Workspace Project Map

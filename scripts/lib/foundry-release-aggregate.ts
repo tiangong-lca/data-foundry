@@ -96,12 +96,19 @@ export function aggregateFoundryRuntimeManifests(
       qualification.manifest_sha256 !== digest ||
       qualification.manager_download_calls !== 0 ||
       qualification.global_node_or_package_manager_required !== false ||
-      qualification.launches !== 11 ||
+      qualification.launches !== 13 ||
       !Array.isArray(qualification.checks) ||
       qualification.checks.length !== qualification.launches ||
       !empty(qualification.release_blockers)
     )
       return fail("requires successful matching native qualification");
+    const bootstrapBase = record(qualification.bootstrap_base);
+    if (
+      bootstrapBase.status !== "passed" ||
+      bootstrapBase.receipt_adopted !== true ||
+      bootstrapBase.warm_verified !== true
+    )
+      return fail("requires actual base CLI adoption and warm qualification");
     const runtime = record(qualification.runtime_identity),
       foundry = record(runtime.foundry),
       qualified = record(runtime.qualification),

@@ -109,8 +109,9 @@ function samples() {
       platform,
       manifest_sha256: sha(manifestBytes),
       package_source: "published-release",
-      launches: 11,
-      checks: Array.from({ length: 11 }, () => ({ status: "ready", exit: 0 })),
+      launches: 13,
+      checks: Array.from({ length: 13 }, () => ({ status: "ready", exit: 0 })),
+      bootstrap_base: { status: "passed", receipt_adopted: true, warm_verified: true },
       manager_download_calls: 0,
       global_node_or_package_manager_required: false,
       release_blockers: [],
@@ -151,6 +152,7 @@ test("missing, duplicate, mixed source, failed and candidate results cannot form
     "package",
     "workspace",
     "manifest",
+    "bootstrap",
   ] as const) {
     const values = samples();
     if (kind === "missing") values.pop();
@@ -167,6 +169,7 @@ test("missing, duplicate, mixed source, failed and candidate results cannot form
       values[0].qualification.manifest_sha256 = sha(values[0].manifestBytes);
     }
     if (kind === "manifest") values[0].manifestBytes = Buffer.from("{}");
+    if (kind === "bootstrap") values[0].qualification.bootstrap_base.receipt_adopted = false;
     assert.throws(() => aggregateFoundryRuntimeManifests(values, expectation), Error, kind);
   }
 });

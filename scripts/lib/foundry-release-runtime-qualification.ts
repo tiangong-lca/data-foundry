@@ -2,7 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
+import { spawnSync } from "node:child_process";
 import { executeRuntimeLaunch, inspectRuntimeComponents } from "@tiangong-lca/cli/runtime";
+import { FOUNDRY_BOOTSTRAP_CLI } from "./foundry-release-bootstrap.ts";
 import { assertFoundryOperationResult } from "./foundry-operation-result.ts";
 import {
   preparedFoundryRuntimeAuthority,
@@ -194,6 +196,75 @@ export async function qualifyFoundryRuntimeComponents(prepared: PreparedFoundryR
       inspectRuntimeComponents(authority.manifest, { cacheDir: cache }).status !== "ready"
     )
       throw new Error("Warm runtime qualification downloaded or changed its verified components.");
+    const nodeBase = inspectRuntimeComponents(authority.manifest, {
+      cacheDir: cache,
+    }).components.find((component) => component.id === "node");
+    if (!nodeBase) throw new Error("Bootstrap base is missing after native qualification.");
+    const receipt = path.join(path.dirname(nodeBase.root), "receipt.json");
+    fs.unlinkSync(receipt);
+    for (const phase of ["bootstrap-adoption", "bootstrap-warm"]) {
+      const started = performance.now();
+      const output = spawnSync(
+        path.join(nodeBase.root, `bin/node${prepared.platform === "win32-x64" ? ".exe" : ""}`),
+        [
+          path.join(nodeBase.root, FOUNDRY_BOOTSTRAP_CLI),
+          "runtime",
+          "exec",
+          "--manifest",
+          path.join(prepared.output, prepared.manifest.file),
+          "--manifest-sha256",
+          prepared.manifest.sha256,
+          "--cache-dir",
+          cache,
+          "--entry",
+          "foundry",
+          "--cwd",
+          workspace,
+          "--",
+          "doctor",
+          "--workspace",
+          workspace,
+          "--json",
+        ],
+        {
+          cwd: workspace,
+          env: environment,
+          encoding: "utf8",
+          timeout: 120_000,
+          maxBuffer: 8 * 1024 * 1024,
+        },
+      );
+      if (
+        output.status !== 0 ||
+        output.signal ||
+        output.error ||
+        output.stderr ||
+        output.stdout.trimEnd().split("\n").length !== 1
+      )
+        throw new Error(`Bootstrap base CLI failed ${phase}.`);
+      const result = assertFoundryOperationResult(JSON.parse(output.stdout));
+      const identity = object(object(object(result.runtime_identity).qualification).identity);
+      if (
+        result.status !== "ready" ||
+        object(identity.cli).package_version !== authority.expected.cli ||
+        object(identity.cli).node_version !== authority.expected.node ||
+        object(identity.tidas).binary_version !== authority.expected.tidas ||
+        !fs.existsSync(receipt)
+      )
+        throw new Error(
+          "Bootstrap base identity or cache adoption differs from its expected runtime.",
+        );
+      launches += 1;
+      checks.push({
+        operation: result.operation,
+        entry: phase,
+        exit: 0,
+        status: result.status,
+        milliseconds: Math.round(performance.now() - started),
+      });
+    }
+    if (inspectRuntimeComponents(authority.manifest, { cacheDir: cache }).status !== "ready")
+      throw new Error("Bootstrap base did not leave a verified warm cache.");
     preparedFoundryRuntimeAuthority(prepared);
     const report = freezeFoundryReleaseValue({
       schema: "tiangong-foundry.runtime-component-qualification.v1",
@@ -206,6 +277,7 @@ export async function qualifyFoundryRuntimeComponents(prepared: PreparedFoundryR
       runtime_identity: doctor.runtime_identity,
       manager_download_calls: downloads,
       launches,
+      bootstrap_base: { status: "passed", receipt_adopted: true, warm_verified: true },
       checks,
       global_node_or_package_manager_required: false,
       release_blockers: prepared.release_blockers,

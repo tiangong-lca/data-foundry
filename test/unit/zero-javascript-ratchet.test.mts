@@ -15,7 +15,7 @@ import { auditTrackedTypeScriptSuppressions } from "../../scripts/check-lint-sup
 // version-aware fixtures native TypeScript.
 // Frozen registry payload, upstream extraction and SPDX/license assembly remain source-only TS.
 // Complete components, Node/CLI bootstrap base, lock data, native qualification, aggregation and asset publication remain source-only TypeScript owners.
-// Portable gzip headers retain pnpm payload bytes and stay in native TypeScript release tooling.
+// Portable gzip headers and actual base-CLI adoption checks remain native TypeScript release tooling.
 // Native selection, inspection and gracefully drained process fixtures remain native TypeScript.
 // CLI 0.1.11 runtime/host adoption remains native TypeScript and uses only public package exports.
 // Managed host admission and owning-cache verification retain full trusted selection in native TypeScript.
