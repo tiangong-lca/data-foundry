@@ -8,7 +8,7 @@ import {
   unwrapDatasetPayload,
 } from "./import-curation/internal/dataset-payload.ts";
 import { profileFor } from "./import-curation/profiles.ts";
-import { referenceDescriptionText } from "./canonical-description.ts";
+import { referenceDescriptionText } from "./reference-description-text.ts";
 import { ensureArray } from "./import-curation/internal/runtime-io.ts";
 import { workflowObject } from "./foundry-workflow-state.ts";
 import { createClassificationDecisionCommands } from "./decision-owners/classification.ts";

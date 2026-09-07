@@ -4,9 +4,9 @@ import path from "node:path";
 import {
   canonicalDescriptionPair,
   cloneCanonicalDescription,
-  referenceDescriptionText,
   type CanonicalDescription,
 } from "./canonical-description.ts";
+import { referenceDescriptionText } from "./reference-description-text.ts";
 
 type UnknownRecord = Record<string, unknown>;
 type PathSegment = string | number;
