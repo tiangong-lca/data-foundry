@@ -7,7 +7,9 @@ import test, { type TestContext } from "node:test";
 import { CLI_RUNTIME_EXPECTATION_SCHEMA, describeCliRuntime } from "@tiangong-lca/cli/runtime";
 import { createFoundryFacade, runFoundryPublicCommand } from "../../scripts/public-api.ts";
 import { FOUNDRY_TIDAS_EXPECTATION_SCHEMA } from "../../scripts/lib/foundry-runtime-qualification.ts";
-import { flowRow, processRowWithInvalidLocation } from "../fixtures/row-builders.ts";
+import { flowRow, sourceRow, processRowWithInvalidLocation } from "../fixtures/row-builders.ts";
+import { datasetIdentity } from "../../scripts/lib/import-curation/internal/dataset-payload.ts";
+import { bundleRowTypes, type BundleRowType } from "../../scripts/lib/bundle-row-types.ts";
 import { resolveInstalledTiangongLcaCliPackage } from "../../scripts/lib/foundry-runtime-utils.ts";
 import childProcess from "node:child_process";
 import { syncBuiltinESMExports } from "node:module";
@@ -580,13 +582,14 @@ test("public decisions bind their owner and context, preserve rows on refusal, a
   }
 });
 
-for (const [identityDecision, approvalKind, trace] of [
-  ["create_new", "final_rows", false],
-  ["reuse_existing_reference", "final_rows", false],
-  ["create_new", "current_rows", false],
-  ["create_new", "current_rows", true],
+for (const [identityDecision, approvalKind, trace, mixed] of [
+  ["create_new", "final_rows", false, false],
+  ["reuse_existing_reference", "final_rows", false, false],
+  ["create_new", "current_rows", false, false],
+  ["create_new", "current_rows", true, false],
+  ["create_new", "final_rows", false, true],
 ] as const) {
-  test(`public identity preflight and ${identityDecision} ${approvalKind}${trace ? " with_trace" : ""} submission preserve current scope and evidence`, async (t) => {
+  test(`public identity preflight and ${identityDecision} ${approvalKind}${trace ? " with_trace" : ""}${mixed ? " mixed_reuse" : ""} submission preserve current scope and evidence`, async (t) => {
     const { root, workspace, facade, runtimeSelection } = workflowFixture(t);
     const id = "77777777-7777-4777-8777-777777777777";
     const basic = flowRow(id);
@@ -646,7 +649,14 @@ for (const [identityDecision, approvalKind, trace] of [
       user_id: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
       session_reference: null,
     };
-    fs.writeFileSync(seed, JSON.stringify({ rows: [{ id, version: "00.00.001", json: payload }] }));
+    const reusedId = "88888888-8888-4888-8888-888888888888";
+    const reusedPayload = structuredClone(payload);
+    reusedPayload.flowDataSet.flowInformation.dataSetInformation["common:UUID"] = reusedId;
+    const seedRows = [
+      { id, version: "00.00.001", json: payload },
+      ...(mixed ? [{ id: reusedId, version: "00.00.001", json: reusedPayload }] : []),
+    ];
+    fs.writeFileSync(seed, JSON.stringify({ rows: seedRows }));
     fs.writeFileSync(
       specFile,
       JSON.stringify({
@@ -890,6 +900,7 @@ for (const [identityDecision, approvalKind, trace] of [
             report = testAuthIdentityReceipt({
               projectRef: account.project_ref,
               userId: account.user_id,
+              capturedAtUtc: new Date(Date.now()).toISOString(),
             });
           } else {
             preflightCalls++;
@@ -899,7 +910,9 @@ for (const [identityDecision, approvalKind, trace] of [
             if (!finalizing)
               assert.deepEqual(
                 request.target,
-                payload,
+                mixed && JSON.stringify(request.target).includes(reusedId)
+                  ? reusedPayload
+                  : payload,
                 "the canonical envelope is removed without changing the target payload",
               );
             else
@@ -980,12 +993,14 @@ for (const [identityDecision, approvalKind, trace] of [
         !fs.readFileSync(artifact.path, "utf8").includes(ambient.TIANGONG_LCA_ACCESS_TOKEN),
       );
     }
-    const index = JSON.parse(fs.readFileSync(report.index, "utf8").trim()) as {
+    const index = readRows(report.index) as Array<{
       target_sha256: string;
-    };
-    assert.equal(
-      index.target_sha256,
-      createHash("sha256").update(JSON.stringify(payload)).digest("hex"),
+    }>;
+    assert.deepEqual(
+      index.map((item) => item.target_sha256).sort(),
+      seedRows
+        .map((row) => createHash("sha256").update(JSON.stringify(row.json)).digest("hex"))
+        .sort(),
     );
     restoreEnvironment();
     const reviewed = await facade.resume(invocation);
@@ -1003,10 +1018,11 @@ for (const [identityDecision, approvalKind, trace] of [
     };
     assert.equal(current.identity_report, evidence.path);
     assert.ok(current.sets[0].decisions.some((item) => item.kind === "identity"));
-    assert.equal(preflightCalls, 2);
+    if (!mixed) assert.equal(preflightCalls, 2);
+    const initialPreflightCalls = preflightCalls;
     assert.equal(authCalls, 2);
     await facade.status(invocation);
-    assert.equal(preflightCalls, 2, "status cannot repeat a remote search");
+    assert.equal(preflightCalls, initialPreflightCalls, "status cannot repeat a remote search");
     const work = current.sets[0].decisions.find((item) => item.kind === "identity");
     assert.ok(work);
     assert.equal(work.status, "ready_for_ai_identity_decisions");
@@ -1017,9 +1033,10 @@ for (const [identityDecision, approvalKind, trace] of [
       .split("\n")
       .map((line) => JSON.parse(line) as Record<string, unknown>);
     for (const decision of template) {
-      decision.identity_decision = identityDecision;
+      decision.identity_decision =
+        mixed && decision.dataset_id === reusedId ? "reuse_existing_reference" : identityDecision;
       decision.canonical =
-        identityDecision === "create_new"
+        decision.identity_decision === "create_new"
           ? null
           : {
               table: "flows",
@@ -1117,8 +1134,11 @@ for (const [identityDecision, approvalKind, trace] of [
       counts: { input_rows: number; output_rows: number; reference_rows: number };
       files: { reference_rows: string };
     };
-    assert.equal(ownerReport.counts.input_rows, 1);
-    assert.equal(ownerReport.counts.reference_rows, identityDecision === "create_new" ? 0 : 1);
+    assert.equal(ownerReport.counts.input_rows, mixed ? 2 : 1);
+    assert.equal(
+      ownerReport.counts.reference_rows,
+      identityDecision === "create_new" && !mixed ? 0 : 1,
+    );
     assert.equal(resolved.sets.length, identityDecision === "create_new" ? 1 : 0);
     let finished = await facade.resume(invocation);
     if (identityDecision === "create_new") {
@@ -1126,7 +1146,7 @@ for (const [identityDecision, approvalKind, trace] of [
       finished = await facade.resume(invocation);
       assert.equal(
         preflightCalls,
-        3,
+        initialPreflightCalls + 1,
         "new row lineage needs current preflight before write planning",
       );
     }
@@ -1158,18 +1178,32 @@ for (const [identityDecision, approvalKind, trace] of [
     assert.equal(finalReport.sets.length, identityDecision === "create_new" ? 1 : 0);
     assert.equal(
       finalized.blockers[0]?.code,
-      identityDecision === "create_new"
+      identityDecision === "create_new" && !mixed
         ? "task_authorization_required"
         : "reference_verification_required",
       JSON.stringify(finalReport),
     );
     assert.equal(
       finalized.permissions.state,
-      identityDecision === "create_new" ? "required" : "not_required",
+      identityDecision === "create_new" && !mixed ? "required" : "not_required",
     );
+    let readyFinalization = finalized;
+    if (mixed) {
+      referenceResponse = "passed";
+      readyFinalization = await facade.resume(invocation);
+      assert.equal(
+        readyFinalization.status,
+        "needs_input",
+        "reference success cannot complete an unwritten scope",
+      );
+      assert.equal(readyFinalization.blockers[0]?.code, "task_authorization_required");
+      assert.equal(readyFinalization.permissions.state, "required");
+      assert.equal(referenceQueries, 1);
+      assert.equal(writes, 0);
+    }
     const reads = [authCalls, preflightCalls];
     if (identityDecision === "create_new")
-      assert.deepEqual((await facade.resume(invocation)).artifacts, finalized.artifacts);
+      assert.deepEqual((await facade.resume(invocation)).artifacts, readyFinalization.artifacts);
     assert.deepEqual(
       [authCalls, preflightCalls],
       reads,
@@ -1419,6 +1453,24 @@ for (const [identityDecision, approvalKind, trace] of [
         JSON.stringify(preparedExecution.blockers),
       );
       assert.equal(writes, 0, "request preparation is local");
+      if (approvalKind === "final_rows") {
+        const expiredClock = t.mock.method(
+          Date,
+          "now",
+          () => Date.parse(grant.expires_at_utc) + 1000,
+        );
+        const expired = await facade.resume(invocation);
+        expiredClock.mock.restore();
+        assert.equal(expired.status, "needs_input", JSON.stringify(expired.blockers));
+        assert.equal(expired.blockers[0]?.code, "task_authorization_required");
+        assert.notEqual(
+          expired.permissions.state,
+          "granted",
+          "an unattempted expired grant cannot permit dispatch",
+        );
+        assert.equal(writes, 0);
+        assert.ok(!expired.artifacts.some((item) => item.role === "consumed.json"));
+      }
       let executed = await facade.resume(invocation);
       assert.equal(writes, 1, JSON.stringify(executed.blockers));
       if (approvalKind === "current_rows") {
@@ -1438,6 +1490,8 @@ for (const [identityDecision, approvalKind, trace] of [
           }
         }
         exactReadback = true;
+        t.mock.method(Date, "now", () => Date.parse(grant.expires_at_utc) + 1000);
+        assert.ok(Date.now() > Date.parse(authorization.expires_at_utc));
         executed = await facade.resume(invocation);
       }
       const executionReport = executed.artifacts.findLast(
@@ -1452,6 +1506,8 @@ for (const [identityDecision, approvalKind, trace] of [
           : JSON.stringify(executed.blockers),
       );
       assert.equal(writes, 1, "lost write response recovery never dispatches another write");
+      if (mixed)
+        assert.equal(referenceQueries, 1, "write completion reuses the verified canonical scope");
       assert.equal((await facade.resume(invocation)).status, "completed");
       assert.equal(writes, 1);
       assert.ok(executionReport?.kind === "file");
@@ -1469,6 +1525,327 @@ for (const [identityDecision, approvalKind, trace] of [
     }
   });
 }
+
+test("public dependent source scope continues after contact write and readback", async (t) => {
+  const { root, workspace, facade } = workflowFixture(t);
+  const contactId = "66666666-6666-4666-8666-666666666666",
+    sourceId = "55555555-5555-4555-8555-555555555555";
+  const account = {
+    project_ref: "qgzvkongdjqiiamzbbts",
+    user_id: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+    session_reference: null,
+  };
+  const contact = {
+    contactDataSet: {
+      contactInformation: {
+        dataSetInformation: {
+          "common:UUID": contactId,
+          "common:shortName": { "@xml:lang": "en", "#text": "Fixture institute" },
+          name: { "@xml:lang": "en", "#text": "Fixture institute" },
+          email: "contact@example.invalid",
+        },
+      },
+      administrativeInformation: {
+        publicationAndOwnership: { "common:dataSetVersion": "00.00.001" },
+      },
+    },
+  };
+  const source = sourceRow(sourceId);
+  Object.assign(source.sourceDataSet.administrativeInformation.publicationAndOwnership, {
+    "common:referenceToOwnershipOfDataSet": {
+      "@type": "contact data set",
+      "@refObjectId": contactId,
+      "@version": "00.00.001",
+      "common:shortDescription": { "@xml:lang": "en", "#text": "Fixture institute" },
+    },
+  });
+  const input = path.join(root, "dependent-seed.json"),
+    specFile = path.join(root, "dependent-request.json");
+  fs.writeFileSync(input, JSON.stringify({ rows: [contact, source] }));
+  fs.writeFileSync(
+    specFile,
+    JSON.stringify({
+      schema: "tiangong-foundry.task-start.v1",
+      request_id: "dependent-owner-scopes",
+      actor_id: "scope-actor",
+      lane: "source-evidence-dataset-development",
+      profile_id: "generic",
+      target_entities: ["contact", "source"],
+      sources: [{ path: input }],
+      seed: { path: input },
+      account_intent: account,
+      preparation: null,
+    }),
+  );
+  const writes: string[] = [],
+    readbacks: string[] = [],
+    remote = new Set<string>();
+  const originalSpawn = childProcess.spawnSync;
+  let childFailure: unknown;
+  t.mock.method(childProcess, "spawnSync", (...args: Parameters<typeof childProcess.spawnSync>) => {
+    try {
+      const argv = args[1];
+      if (!Array.isArray(argv)) return Reflect.apply(originalSpawn, childProcess, args);
+      if (argv.includes("identity-receipt"))
+        return {
+          status: 0,
+          signal: null,
+          stdout: JSON.stringify(
+            testAuthIdentityReceipt({ projectRef: account.project_ref, userId: account.user_id }),
+          ),
+          stderr: "",
+          pid: 1,
+          output: [],
+        };
+      if (!argv.includes("save-draft") && !argv.includes("verify-remote"))
+        return Reflect.apply(originalSpawn, childProcess, args);
+      assert.equal(args[0], process.execPath);
+      assert.equal(argv[0], resolveInstalledTiangongLcaCliPackage().binPath);
+      const file =
+        argv[argv.indexOf(argv.includes("--input-file") ? "--input-file" : "--input") + 1];
+      const out = argv[argv.indexOf("--out-dir") + 1];
+      fs.mkdirSync(out, { recursive: true });
+      const rows = readRows(file).map((row) => {
+        const payload = unwrapDatasetPayload(row, "");
+        assert.ok(payload && typeof payload === "object");
+        return payload;
+      });
+      const type = Object.keys(bundleRowTypes).find(
+        (key) => bundleRowTypes[key as BundleRowType].rootKey in rows[0],
+      ) as BundleRowType;
+      const table = bundleRowTypes[type].plural,
+        reportFile = argv.includes("save-draft")
+          ? path.join(out, "outputs", "dataset-save-draft", "summary.json")
+          : path.join(out, "outputs", "remote-verification-report.json");
+      fs.mkdirSync(path.dirname(reportFile), { recursive: true });
+      const identities = rows.map((row, index) => datasetIdentity(row, index, type));
+      let report: Record<string, unknown>;
+      if (argv.includes("save-draft")) {
+        const commit = argv.includes("--commit");
+        assert.ok(commit || argv.includes("--dry-run"));
+        if (commit) {
+          if (type === "source")
+            assert.ok(
+              remote.has(contactId) && readbacks.includes("contact"),
+              "contact must be independently read back before dependent source dispatch",
+            );
+          writes.push(type);
+          identities.forEach((item) => remote.add(item.id));
+        }
+        const progress = path.join(out, "progress.jsonl"),
+          failures = path.join(out, "failures.jsonl");
+        fs.writeFileSync(
+          progress,
+          identities
+            .map((item) =>
+              JSON.stringify({
+                id: item.id,
+                version: item.version,
+                status: "prepared",
+                operation: "would_insert",
+              }),
+            )
+            .join("\n") + "\n",
+        );
+        fs.writeFileSync(failures, "");
+        report = {
+          status: "completed_dataset_save_draft",
+          mode: commit ? "commit" : "dry_run",
+          dry_run: !commit,
+          commit,
+          input_path: file,
+          counts: { selected: rows.length, executed: commit ? rows.length : 0, failed: 0 },
+          files: { summary_json: reportFile, progress_jsonl: progress, failures_jsonl: failures },
+        };
+      } else {
+        const compare = argv.includes("--compare-root-payload");
+        if (compare) readbacks.push(type);
+        const checks: Array<Record<string, unknown>> = [];
+        if (type === "source")
+          checks.push({
+            role: "reference",
+            table: "contacts",
+            id: contactId,
+            version: "00.00.001",
+            status: remote.has(contactId) ? "ok" : "missing_dataset",
+            remote_user_id: account.user_id,
+            remote_state_code: 0,
+          });
+        if (compare)
+          for (const [index, item] of identities.entries())
+            checks.push({
+              role: "root",
+              row_index: index,
+              path: `${file}#readback`,
+              table,
+              id: item.id,
+              version: item.version,
+              status: remote.has(item.id) ? "ok" : "missing_dataset",
+              local_payload_sha256: canonicalPayloadSha256(rows[index]),
+              remote_payload_sha256: canonicalPayloadSha256(rows[index]),
+              remote_user_id: account.user_id,
+              remote_state_code: 0,
+            });
+        const blockers = checks
+          .filter((check) => check.status !== "ok")
+          .map((check) => ({ ...check, code: check.status }));
+        const checksFile = path.join(out, "checks.jsonl");
+        fs.writeFileSync(
+          checksFile,
+          checks.map((check) => JSON.stringify(check)).join("\n") + (checks.length ? "\n" : ""),
+        );
+        report = {
+          status: blockers.length ? "blocked_remote_verification" : "passed_remote_verification",
+          input_path: file,
+          blockers,
+          counts: {
+            blockers: blockers.length,
+            root_readback_checks: compare ? rows.length : 0,
+            root_payload_mismatches: 0,
+          },
+          checks,
+          files: { report: reportFile, checks: checksFile },
+        };
+      }
+      fs.writeFileSync(reportFile, JSON.stringify(report));
+      return {
+        status: report.status === "blocked_remote_verification" ? 2 : 0,
+        signal: null,
+        stdout: JSON.stringify(report),
+        stderr: "",
+        pid: 1,
+        output: [],
+      };
+    } catch (error) {
+      childFailure = error;
+      throw error;
+    }
+  });
+  syncBuiltinESMExports();
+  t.after(() => {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  });
+  const started = await facade.start({ specFile });
+  assert.ok(started.task_id, JSON.stringify(started));
+  const invocation = { taskId: started.task_id, actorId: "scope-actor" };
+  let current = started;
+  for (let step = 0; step < 4; step++) current = await facade.resume(invocation);
+  const loadFinalize = (result: typeof current) => {
+    const artifact = result.artifacts.findLast((item) => item.role === "foundry-finalize.json");
+    assert.ok(artifact?.kind === "file", JSON.stringify(result));
+    const report = JSON.parse(fs.readFileSync(artifact.path, "utf8")) as {
+      sets: Array<{
+        type: string;
+        status: string;
+        final_rows: string;
+        authorization_inputs: Array<{
+          input_kind: string;
+          sha256: string;
+          binding: Record<string, string>;
+        }>;
+      }>;
+    };
+    return { artifact, report };
+  };
+  let finalized = loadFinalize(current);
+  assert.equal(
+    finalized.report.sets.find((item) => item.type === "contact")?.status,
+    "ready_for_remote_write",
+    JSON.stringify(finalized.report),
+  );
+  assert.notEqual(
+    finalized.report.sets.find((item) => item.type === "source")?.status,
+    "ready_for_remote_write",
+  );
+  const contactRows = finalized.report.sets.find((item) => item.type === "contact")!.final_rows;
+  const approve = async (type: "contact" | "source") => {
+    const scope = finalized.report.sets.find((item) => item.type === type)!;
+    const selected = scope.authorization_inputs.find((item) => item.input_kind === "final_rows")!;
+    const evidenceFile = path.join(root, `${type}-evidence.txt`),
+      grantFile = path.join(root, `${type}-grant.json`),
+      descriptor = path.join(root, `${type}-approval.json`);
+    fs.writeFileSync(
+      evidenceFile,
+      "Controlled approval for the exact fixture scope; no live write.",
+    );
+    fs.writeFileSync(
+      grantFile,
+      JSON.stringify({
+        schema: "tiangong-foundry.task-authorization.v1",
+        binding: selected.binding,
+        issued_at_utc: new Date(Date.now() - 1000).toISOString(),
+        expires_at_utc: new Date(Date.now() + 3600000).toISOString(),
+        remote_state_code: 0,
+        allowed_actions: [],
+        qa_waivers: [],
+        evidence: [
+          {
+            id: "approval",
+            kind: "user-decision",
+            reference: fs.realpathSync(evidenceFile),
+            sha256: digestFile(evidenceFile),
+          },
+        ],
+      }),
+    );
+    const pointer = path.join(
+      workspace,
+      ".foundry",
+      "workspaces",
+      invocation.taskId,
+      "authorization.json",
+    );
+    fs.writeFileSync(
+      descriptor,
+      JSON.stringify({
+        schema: "tiangong-foundry.authorization-input.v1",
+        task_id: invocation.taskId,
+        actor_id: invocation.actorId,
+        finalization_sha256: finalized.artifact.sha256,
+        dataset_type: type,
+        input_kind: "final_rows",
+        input_sha256: selected.sha256,
+        expected_previous_sha256: fs.existsSync(pointer) ? digestFile(pointer) : null,
+        grant: { file: grantFile, sha256: digestFile(grantFile) },
+        evidence: [
+          {
+            id: "approval",
+            kind: "user-decision",
+            file: evidenceFile,
+            sha256: digestFile(evidenceFile),
+          },
+        ],
+      }),
+    );
+    const result = await facade.resume({ ...invocation, authorizationInputFile: descriptor });
+    assert.equal(result.permissions.state, "granted", JSON.stringify(result));
+    await facade.resume(invocation);
+    return facade.resume(invocation);
+  };
+  current = await approve("contact");
+  assert.deepEqual(writes, ["contact"], JSON.stringify(current));
+  assert.notEqual(current.status, "completed");
+  current = await facade.resume(invocation);
+  finalized = loadFinalize(current);
+  assert.equal(
+    finalized.report.sets.find((item) => item.type === "contact")?.final_rows,
+    contactRows,
+    "completed scope retains its exact generation",
+  );
+  assert.equal(
+    finalized.report.sets.find((item) => item.type === "source")?.status,
+    "ready_for_remote_write",
+    JSON.stringify(finalized.report),
+  );
+  current = await approve("source");
+  if (childFailure) throw childFailure;
+  assert.deepEqual(writes, ["contact", "source"], JSON.stringify(current));
+  assert.deepEqual(readbacks, ["contact", "source"]);
+  assert.equal(current.status, "completed", JSON.stringify(current));
+  assert.equal((await facade.resume(invocation)).status, "completed");
+  assert.deepEqual(writes, ["contact", "source"]);
+});
 
 test("a failed native conversion remains blocked without preparing later context", async (t) => {
   const { root, facade } = workflowFixture(t, true);
