@@ -152,8 +152,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 739843c62869cb6c3a6113730c9fc16624425486
-lastReviewedNote: "Reviewed for Foundry #118 public read-only identity preflight: existing owner algorithms and source-context helpers, explicit credential/executable boundary, captured current-row evidence, retry diagnostics and identity-aware reassessment. Identity decisions, write admission and release remain open."
+lastReviewedCommit: f6abf733721a95ce50be76b6e5295d41843274a2
+lastReviewedNote: "Reviewed for Foundry #118 bound public identity submission, preserved identity partitions and dependent reference rewrites, retained report lineage, and verification-local producer indexing. Unresolved diagnostics do not activate rows; authorization/finalize/write/readback and release remain open."
 ---
 
 # Architecture
@@ -186,7 +186,9 @@ Foundry selects a private session reference and exact project/user intent, then 
 
 `foundry-workflow-decisions.ts` prepares classification/location work through the reusable factories in `lib/decision-owners/`; the original flat command modules remain thin adapters. `foundry-decision-owners.ts` composes these factories with installed CLI schemas, canonical row helpers and isolated local CLI execution. Semantic submission dispatches the selected owner against its exact current task context, publishes successful rows and requires reassessment before another owner consumes them.
 
-`foundry-workflow-identity.ts` performs fresh account verification and read-only CLI preflight before locally registering captured evidence. `foundry-identity-owners.ts` composes the existing query/request/runner owners with explicit executable/environment facts; `bundle-source-context.ts` shares unchanged source-trace and name extraction. `foundry-authentication-environment.ts` supplies the narrow authentication environment used by verification and preflight. A current preflight report invalidates the earlier assessment so manual-review findings become identity tasks. Public identity submission and subsequent write admission remain pending.
+`foundry-workflow-identity.ts` performs fresh account verification and read-only CLI preflight before locally registering captured evidence. `foundry-identity-owners.ts` composes the existing query/request/runner owners with explicit executable/environment facts; `bundle-source-context.ts` shares unchanged source-trace and name extraction. `foundry-authentication-environment.ts` supplies the narrow authentication environment used by verification and preflight. A current preflight report invalidates the earlier assessment so manual-review findings become identity tasks.
+
+`foundry-workflow-identity-apply.ts` admits exact task/snapshot/context-bound decisions, delegates identity partitioning and dependent process-reference rewrites to existing owners, and verifies that partition contents preserve current scope. The semantic transaction activates only successful resolved output, retaining identity/rewrite report lineage. Unresolved partitions remain diagnostic with unchanged current rows. Subsequent authorization, finalize, owner write and readback integration remain pending.
 
 Request and task records form a two-level index: one request retains monotonic revisions, while each revision points to one immutable v2 task. The latest identical fingerprint is reused; a changed canonical path or byte hash produces a new task with a predecessor. This preserves old attempts and avoids using user-visible filenames or current directories as identity. Status resolves through the task pointer and requires actor intent before loading task content.
 

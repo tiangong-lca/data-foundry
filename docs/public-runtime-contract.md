@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 739843c62869cb6c3a6113730c9fc16624425486
-lastReviewedNote: "Reviewed for Foundry #118 public read-only identity preflight: existing owner algorithms and source-context helpers, explicit credential/executable boundary, captured current-row evidence, retry diagnostics and identity-aware reassessment. Identity decisions, write admission and release remain open."
+lastReviewedCommit: f6abf733721a95ce50be76b6e5295d41843274a2
+lastReviewedNote: "Reviewed for Foundry #118 bound public identity submission, preserved identity partitions and dependent reference rewrites, retained report lineage, and verification-local producer indexing. Unresolved diagnostics do not activate rows; authorization/finalize/write/readback and release remain open."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -84,7 +84,7 @@ Curation blockers or authoring tasks produce `needs_input` with references to th
 
 After local semantic work is ready, a further resume performs process/flow identity preflight through the qualified CLI. The task spec must already identify the intended project and user; otherwise the result is `needs_auth`. The host may supply explicit OAuth public configuration or process-only headless authentication through `FoundryFacadeOptions.authentication`. Initialization and task start remain credential-free. The facade never inherits ambient tokens, CLI overrides, Node options or preflight result caches.
 
-Preflight reuses the existing request builder, query audit, receipt-bound runner and index merger. Requests target current unwrapped payloads and retain source trace context. Remote reads finish before a local transaction registers their immutable evidence; that transaction cannot replay a remote operation. Registration rechecks current rows under the task lock. Failed reads remain visible as `needs_input` and a later resume may retry the read-only stage. Status never performs a search. Successful preflight invalidates the earlier assessment, and the next resume re-runs curation against its exact identity index. Manual review becomes dedicated identity work even for the generic profile. This read evidence does not authorize writes or implement the still-pending identity submission path.
+Preflight reuses the existing request builder, query audit, receipt-bound runner and index merger. Requests target current unwrapped payloads and retain source trace context. Remote reads finish before a local transaction registers their immutable evidence; that transaction cannot replay a remote operation. Registration rechecks current rows under the task lock. Failed reads remain visible as `needs_input` and a later resume may retry the read-only stage. Status never performs a search. Successful preflight invalidates the earlier assessment, and the next resume re-runs curation against its exact identity index. Manual review becomes dedicated identity work even for the generic profile. This read evidence supplies decision context; submitting a bound identity decision remains separate from write authorization.
 
 An executable next action contains Node/active source-or-emitted entry argv, `cwd=workspaceRoot` and purpose. Its verified binding digest covers every executable field; workspace, task and actor are explicit argv values, while task lookup revalidates the immutable revision fingerprint and current runtime/input facts before work. It has no `display` authority. A final restricted data CommandSpec still requires the W04 execution-context/identity/authorization gate; W05 does not dispatch it.
 
@@ -92,7 +92,7 @@ An executable next action contains Node/active source-or-emitted entry argv, `cw
 
 ### Semantic input
 
-`--semantic-input` selects a `tiangong-foundry.semantic-input.v1` JSON descriptor. The descriptor binds the same task and actor, the current assessment artifact SHA-256, and a bounded `submissions` array. Each entry has `kind=patch`, `classification` or `location`, the registered owner task's SHA-256, a selected input file and its SHA-256. File paths resolve from the explicit workspace. Duplicate work-item digests, unknown fields, credential paths and changed bytes are rejected. Each file is limited to 8 MiB and the complete selection to 64 MiB.
+`--semantic-input` selects a `tiangong-foundry.semantic-input.v1` JSON descriptor. The descriptor binds the same task and actor, the current assessment artifact SHA-256, and a bounded `submissions` array. Each entry has `kind=patch`, `classification`, `location` or `identity`, the registered owner task's SHA-256, a selected input file and its SHA-256. File paths resolve from the explicit workspace. Duplicate work-item digests, unknown fields, credential paths and changed bytes are rejected. Each file is limited to 8 MiB and the complete selection to 64 MiB.
 
 The public runtime independently resolves work through the current task index; a caller cannot supply a replacement manifest or runtime trust anchor. It snapshots the descriptor and selected patch bytes into a new task-owned generation, then uses a projection of the trusted authoring manifest to collect only the selected tasks. Original work items are unchanged. Public acceptance requires structured evidence, basis and the available required context kinds even when the historical profile did not demand them.
 
@@ -100,7 +100,9 @@ Patch inputs use the exact CLI's local `dataset patch apply`, with authoring-pac
 
 An output file alone is insufficient: only successful owner execution, `status=completed`, zero blockers and preserved row count can select repaired rows. Invalid proposals retain diagnostics and leave the current rows unchanged. A successful submission publishes a new indexed row manifest, preserves the predecessor, and makes a subsequent resume assess that new version. Identical accepted submissions are idempotent; different submissions against an old assessment are rejected. The current assessment is revalidated under the task lock before publication so concurrent submissions cannot overwrite each other.
 
-Semantic input is local preparation. It does not grant write permission or clear attempts. Identity task evidence remains separately visible when required, but public identity submission is not yet supported and cannot use a generic patch as a substitute.
+Identity submission selects one task per call because reuse can affect other row types. Every decision must match a current task identity, its exact context bundle and its registered authoring-package snapshot and digest. Snapshot paths are checked before the owner may read them. The existing identity owner produces output, reference-reuse and unresolved partitions; their combined row contents must exactly preserve the input scope. A completed reuse also runs the existing process-reference rewrite owner, retaining original row metadata. Current row manifests retain identity and rewrite report references even when all local write candidates become reference reuse. A later assessment consumes those reports; changed row lineage requires a fresh preflight before write planning.
+
+Unresolved or failed identity application retains its diagnostic partitions and leaves the previous rows current. Resolving or externalizing unresolved references remains necessary before a write handoff. Semantic input is local preparation: it grants no write permission and clears no attempts. Reference-only local resolution is not final task completion.
 
 `--json` emits exactly one JSON object on stdout, followed by a newline. Progress goes to stderr. The schema identifier is `tiangong-foundry.operation-result.v1`; required fields are:
 

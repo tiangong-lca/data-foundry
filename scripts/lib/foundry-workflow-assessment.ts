@@ -74,6 +74,22 @@ export function assessFoundryWorkflowRows(
           "Identity preflight must bind these current rows.",
         );
       const contracts = new Map<string, Record<string, unknown>>();
+      const retainedReports = (key: string) => {
+        const value = rows[key] ?? [];
+        if (!Array.isArray(value) || value.some((file) => typeof file !== "string"))
+          throw new FoundryContextError(
+            "workflow_rows_invalid",
+            "Retained identity reports are invalid.",
+          );
+        return value.map((file) => {
+          readFoundryInput(context, file);
+          return String(file);
+        });
+      };
+      const identityApplyReports = retainedReports("identity_reports");
+      const identityRewriteReports = retainedReports("identity_rewrite_reports").map((file) =>
+        record(JSON.parse(readFoundryInput(context, file).toString("utf8"))),
+      );
       for (const file of contextReports) {
         const value = record(JSON.parse(readFoundryInput(context, file).toString("utf8")));
         if (value.status !== "completed" || typeof value.type !== "string")
@@ -188,6 +204,9 @@ export function assessFoundryWorkflowRows(
             });
           }
           const gateDir = path.join(output, set.type, "curation");
+          const rewrite = identityRewriteReports.findLast(
+            (report) => report.dataset_type === set.type,
+          );
           const gate = runDatasetCurationGate({
             repoRoot: context.assetRoot,
             routeAction: routeFoundryDecisionAction,
@@ -206,6 +225,11 @@ export function assessFoundryWorkflowRows(
               yamlFile: contractPath("methodology"),
               rulesetFile: contractPath("ruleset"),
               identityPreflightIndex: identity?.index,
+              identityDecisionApplyReport: identityApplyReports,
+              identityReferenceRewrites: rewrite?.rewrite_file,
+              identityReferenceRewriteStatus: rewrite?.status,
+              identityReferenceRewriteInputRows: rewrite?.rows_file,
+              identityReferenceRewriteOutputRows: rewrite?.output_rows_file,
             },
           });
           const gateReport = path.join(gateDir, "dataset-curation-gate-report.json");

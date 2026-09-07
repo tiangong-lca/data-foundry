@@ -12,14 +12,14 @@ import { workflowObject } from "./foundry-workflow-state.ts";
 
 export const FOUNDRY_SEMANTIC_INPUT_SCHEMA = "tiangong-foundry.semantic-input.v1" as const;
 export interface SemanticSubmission {
-  readonly kind: "patch" | "classification" | "location";
+  readonly kind: "patch" | "classification" | "location" | "identity";
   readonly authoring_task_sha256: string;
   readonly file: string;
   readonly sha256: string;
 }
 export type SemanticPatchInput = SemanticSubmission & { readonly kind: "patch" };
 export type SemanticDecisionInput = SemanticSubmission & {
-  readonly kind: "classification" | "location";
+  readonly kind: "classification" | "location" | "identity";
 };
 export interface FoundrySemanticInput {
   schema: typeof FOUNDRY_SEMANTIC_INPUT_SCHEMA;
@@ -63,7 +63,10 @@ export function parseFoundrySemanticInput(value: unknown): FoundrySemanticInput 
     const part = workflowObject(item);
     exact(part, ["kind", "authoring_task_sha256", "file", "sha256"]);
     if (
-      (part.kind !== "patch" && part.kind !== "classification" && part.kind !== "location") ||
+      (part.kind !== "patch" &&
+        part.kind !== "classification" &&
+        part.kind !== "location" &&
+        part.kind !== "identity") ||
       typeof part.authoring_task_sha256 !== "string" ||
       !sha.test(part.authoring_task_sha256) ||
       typeof part.sha256 !== "string" ||

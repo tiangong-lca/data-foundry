@@ -576,218 +576,361 @@ test("public decisions bind their owner and context, preserve rows on refusal, a
   }
 });
 
-test("public identity preflight uses current payloads and isolated CLI reads, then refreshes curation", async (t) => {
-  const { root, facade } = workflowFixture(t);
-  const id = "77777777-7777-4777-8777-777777777777";
-  const basic = flowRow(id);
-  const payload = {
-    flowDataSet: {
-      ...basic.flowDataSet,
-      flowInformation: {
-        dataSetInformation: {
-          ...basic.flowDataSet.flowInformation.dataSetInformation,
-          name: {
-            ...basic.flowDataSet.flowInformation.dataSetInformation.name,
-            mixAndLocationTypes: { "@xml:lang": "en", "#text": "Swiss market" },
-          },
-          classificationInformation: {
-            "common:classification": {
-              "common:class": [
-                { "@level": "0", "@classId": "06", "#text": "Crude petroleum and natural gas" },
-              ],
+for (const identityDecision of ["create_new", "reuse_existing_reference"] as const) {
+  test(`public identity preflight and ${identityDecision} submission preserve current scope and evidence`, async (t) => {
+    const { root, facade } = workflowFixture(t);
+    const id = "77777777-7777-4777-8777-777777777777";
+    const basic = flowRow(id);
+    const payload = {
+      flowDataSet: {
+        ...basic.flowDataSet,
+        flowInformation: {
+          dataSetInformation: {
+            ...basic.flowDataSet.flowInformation.dataSetInformation,
+            name: {
+              ...basic.flowDataSet.flowInformation.dataSetInformation.name,
+              mixAndLocationTypes: { "@xml:lang": "en", "#text": "Swiss market" },
+            },
+            classificationInformation: {
+              "common:classification": {
+                "common:class": [
+                  { "@level": "0", "@classId": "06", "#text": "Crude petroleum and natural gas" },
+                ],
+              },
             },
           },
         },
-      },
-      modellingAndValidation: { LCIMethod: { typeOfDataSet: "Product flow" } },
-      flowProperties: {
-        flowProperty: [
-          {
-            "@dataSetInternalID": "0",
-            referenceToFlowPropertyDataSet: {
-              "@refObjectId": "88888888-8888-4888-8888-888888888888",
-              "@version": "00.00.001",
-              "common:shortDescription": { "@xml:lang": "en", "#text": "Mass" },
+        modellingAndValidation: { LCIMethod: { typeOfDataSet: "Product flow" } },
+        flowProperties: {
+          flowProperty: [
+            {
+              "@dataSetInternalID": "0",
+              referenceToFlowPropertyDataSet: {
+                "@refObjectId": "88888888-8888-4888-8888-888888888888",
+                "@version": "00.00.001",
+                "common:shortDescription": { "@xml:lang": "en", "#text": "Mass" },
+              },
+              meanValue: "1",
             },
-            meanValue: "1",
-          },
-        ],
+          ],
+        },
       },
-    },
-  };
-  const seed = path.join(root, "identity-seed.json"),
-    specFile = path.join(root, "identity-request.json");
-  const account = {
-    project_ref: "qgzvkongdjqiiamzbbts",
-    user_id: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
-    session_reference: null,
-  };
-  fs.writeFileSync(seed, JSON.stringify({ rows: [{ id, version: "00.00.001", json: payload }] }));
-  fs.writeFileSync(
-    specFile,
-    JSON.stringify({
-      schema: "tiangong-foundry.task-start.v1",
-      request_id: "identity-cycle",
-      actor_id: "identity-actor",
-      lane: "source-evidence-dataset-development",
-      profile_id: "generic",
-      target_entities: ["flow"],
-      sources: [{ path: seed }],
-      seed: { path: seed },
-      account_intent: account,
-      preparation: null,
-    }),
-  );
-  const started = await facade.start({ specFile });
-  assert.ok(started.task_id);
-  const invocation = { taskId: started.task_id, actorId: "identity-actor" };
-  for (let step = 0; step < 3; step++) await facade.resume(invocation);
-  const previous = await facade.status(invocation);
-  assert.equal(previous.status, "ready", JSON.stringify(previous));
-  const assessment = previous.artifacts.findLast((item) => item.role === "foundry-assessment.json");
-  assert.ok(assessment?.kind === "file");
-  const ambient = {
-    TIANGONG_LCA_CLI_BIN: "/must-not-run",
-    TIANGONG_LCA_ACCESS_TOKEN: "ambient-test-secret",
-    BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE: path.join(root, "ambient-cache"),
-    NODE_OPTIONS: "--invalid-test-option",
-  };
-  const saved = Object.fromEntries(Object.keys(ambient).map((key) => [key, process.env[key]]));
-  Object.assign(process.env, ambient);
-  const restoreEnvironment = () => {
-    for (const [key, value] of Object.entries(saved)) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
-  };
-  const originalSpawn = childProcess.spawnSync;
-  let authCalls = 0,
-    preflightCalls = 0,
-    failRead = true;
-  let childFailure: unknown;
-  t.mock.method(childProcess, "spawnSync", (...args: Parameters<typeof childProcess.spawnSync>) => {
-    try {
-      const argv = args[1],
-        options = args[2];
-      if (
-        !Array.isArray(argv) ||
-        (!argv.includes("identity-receipt") && !argv.includes("identity-preflight"))
-      )
-        return Reflect.apply(originalSpawn, childProcess, args);
-      const environment = options?.env ?? {};
-      for (const key of Object.keys(ambient)) assert.equal(environment[key], undefined, key);
-      assert.equal(args[0], process.execPath);
-      assert.equal(argv[0], resolveInstalledTiangongLcaCliPackage().binPath);
-      let report: unknown;
-      if (argv.includes("identity-receipt")) {
-        authCalls++;
-        report = testAuthIdentityReceipt({
-          projectRef: account.project_ref,
-          userId: account.user_id,
-        });
-      } else {
-        preflightCalls++;
-        const requestFile = argv[argv.indexOf("--input") + 1],
-          outDir = argv[argv.indexOf("--out-dir") + 1];
-        const request = JSON.parse(fs.readFileSync(requestFile, "utf8")) as { target: unknown };
-        assert.deepEqual(
-          request.target,
-          payload,
-          "the canonical envelope is removed without changing the target payload",
-        );
-        assert.equal(environment.FOUNDRY_VERIFIED_USER_ID, account.user_id);
-        report = {
-          schema_version: 1,
-          status: "needs_review",
-          decision: "manual_review",
-          candidates: [],
-          ok: true,
-        };
-        fs.mkdirSync(path.join(outDir, "outputs"), { recursive: true });
-        fs.writeFileSync(
-          path.join(outDir, "outputs", "identity-decision.json"),
-          JSON.stringify(report) + "\n",
-        );
-        if (failRead)
+    };
+    const seed = path.join(root, "identity-seed.json"),
+      specFile = path.join(root, "identity-request.json");
+    const account = {
+      project_ref: "qgzvkongdjqiiamzbbts",
+      user_id: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
+      session_reference: null,
+    };
+    fs.writeFileSync(seed, JSON.stringify({ rows: [{ id, version: "00.00.001", json: payload }] }));
+    fs.writeFileSync(
+      specFile,
+      JSON.stringify({
+        schema: "tiangong-foundry.task-start.v1",
+        request_id: "identity-cycle",
+        actor_id: "identity-actor",
+        lane: "source-evidence-dataset-development",
+        profile_id: "generic",
+        target_entities: ["flow"],
+        sources: [{ path: seed }],
+        seed: { path: seed },
+        account_intent: account,
+        preparation: null,
+      }),
+    );
+    const started = await facade.start({ specFile });
+    assert.ok(started.task_id);
+    const invocation = { taskId: started.task_id, actorId: "identity-actor" };
+    for (let step = 0; step < 3; step++) await facade.resume(invocation);
+    const previous = await facade.status(invocation);
+    assert.equal(previous.status, "ready", JSON.stringify(previous));
+    const assessment = previous.artifacts.findLast(
+      (item) => item.role === "foundry-assessment.json",
+    );
+    assert.ok(assessment?.kind === "file");
+    const ambient = {
+      TIANGONG_LCA_CLI_BIN: "/must-not-run",
+      TIANGONG_LCA_ACCESS_TOKEN: "ambient-test-secret",
+      BAFU_IDENTITY_PREFLIGHT_RESULT_CACHE: path.join(root, "ambient-cache"),
+      NODE_OPTIONS: "--invalid-test-option",
+    };
+    const saved = Object.fromEntries(Object.keys(ambient).map((key) => [key, process.env[key]]));
+    Object.assign(process.env, ambient);
+    const restoreEnvironment = () => {
+      for (const [key, value] of Object.entries(saved)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    };
+    const originalSpawn = childProcess.spawnSync;
+    let authCalls = 0,
+      preflightCalls = 0,
+      failRead = true;
+    let childFailure: unknown;
+    t.mock.method(
+      childProcess,
+      "spawnSync",
+      (...args: Parameters<typeof childProcess.spawnSync>) => {
+        try {
+          const argv = args[1],
+            options = args[2];
+          if (
+            !Array.isArray(argv) ||
+            (!argv.includes("identity-receipt") && !argv.includes("identity-preflight"))
+          )
+            return Reflect.apply(originalSpawn, childProcess, args);
+          const environment = options?.env ?? {};
+          for (const key of Object.keys(ambient)) assert.equal(environment[key], undefined, key);
+          assert.equal(args[0], process.execPath);
+          assert.equal(argv[0], resolveInstalledTiangongLcaCliPackage().binPath);
+          let report: unknown;
+          if (argv.includes("identity-receipt")) {
+            authCalls++;
+            report = testAuthIdentityReceipt({
+              projectRef: account.project_ref,
+              userId: account.user_id,
+            });
+          } else {
+            preflightCalls++;
+            const requestFile = argv[argv.indexOf("--input") + 1],
+              outDir = argv[argv.indexOf("--out-dir") + 1];
+            const request = JSON.parse(fs.readFileSync(requestFile, "utf8")) as { target: unknown };
+            assert.deepEqual(
+              request.target,
+              payload,
+              "the canonical envelope is removed without changing the target payload",
+            );
+            assert.equal(environment.FOUNDRY_VERIFIED_USER_ID, account.user_id);
+            report = {
+              schema_version: 1,
+              status: "needs_review",
+              decision: "manual_review",
+              candidates: [],
+              ok: true,
+            };
+            fs.mkdirSync(path.join(outDir, "outputs"), { recursive: true });
+            fs.writeFileSync(
+              path.join(outDir, "outputs", "identity-decision.json"),
+              JSON.stringify(report) + "\n",
+            );
+            if (failRead)
+              return {
+                status: 1,
+                signal: null,
+                stdout: JSON.stringify(report),
+                stderr: "",
+                pid: 1,
+                output: [],
+              };
+          }
           return {
-            status: 1,
+            status: 0,
             signal: null,
             stdout: JSON.stringify(report),
             stderr: "",
             pid: 1,
             output: [],
           };
-      }
-      return {
-        status: 0,
-        signal: null,
-        stdout: JSON.stringify(report),
-        stderr: "",
-        pid: 1,
-        output: [],
-      };
-    } catch (error) {
-      childFailure = error;
-      throw error;
-    }
-  });
-  syncBuiltinESMExports();
-  t.after(() => {
-    restoreEnvironment();
-    t.mock.restoreAll();
+        } catch (error) {
+          childFailure = error;
+          throw error;
+        }
+      },
+    );
     syncBuiltinESMExports();
+    t.after(() => {
+      restoreEnvironment();
+      t.mock.restoreAll();
+      syncBuiltinESMExports();
+    });
+    const failed = await facade.resume(invocation);
+    if (childFailure) throw childFailure;
+    assert.equal(failed.status, "needs_input", JSON.stringify(failed));
+    assert.equal(failed.blockers[0]?.code, "identity_preflight_requires_input");
+    assert.equal((await facade.status(invocation)).status, "needs_input");
+    failRead = false;
+    const read = await facade.resume(invocation);
+    const evidence = read.artifacts.findLast((item) => item.role === "foundry-identity.json");
+    assert.equal(
+      read.status,
+      "ready",
+      evidence?.kind === "file"
+        ? fs.readFileSync(evidence.path, "utf8")
+        : JSON.stringify(read.blockers),
+    );
+    assert.ok(evidence?.kind === "file");
+    const report = JSON.parse(fs.readFileSync(evidence.path, "utf8")) as {
+      status: string;
+      index: string;
+    };
+    assert.equal(report.status, "completed");
+    for (const artifact of read.artifacts.filter(
+      (item) => item.kind === "file" && item.path.includes("/outputs/identity/"),
+    )) {
+      assert.ok(artifact.kind === "file");
+      assert.ok(
+        !fs.readFileSync(artifact.path, "utf8").includes(ambient.TIANGONG_LCA_ACCESS_TOKEN),
+      );
+    }
+    const index = JSON.parse(fs.readFileSync(report.index, "utf8").trim()) as {
+      target_sha256: string;
+    };
+    assert.equal(
+      index.target_sha256,
+      createHash("sha256").update(JSON.stringify(payload)).digest("hex"),
+    );
+    restoreEnvironment();
+    const reviewed = await facade.resume(invocation);
+    assert.equal(reviewed.status, "needs_input", JSON.stringify(reviewed));
+    const latest = reviewed.artifacts.findLast((item) => item.role === "foundry-assessment.json");
+    assert.ok(latest?.kind === "file");
+    assert.notEqual(latest.sha256, assessment.sha256);
+    const current = JSON.parse(fs.readFileSync(latest.path, "utf8")) as {
+      identity_report: string;
+      owner_base: string;
+      sets: Array<{
+        rows: string;
+        decisions: Array<{ kind: string; task: string; status: string }>;
+      }>;
+    };
+    assert.equal(current.identity_report, evidence.path);
+    assert.ok(current.sets[0].decisions.some((item) => item.kind === "identity"));
+    assert.equal(preflightCalls, 2);
+    assert.equal(authCalls, 2);
+    await facade.status(invocation);
+    assert.equal(preflightCalls, 2, "status cannot repeat a remote search");
+    const work = current.sets[0].decisions.find((item) => item.kind === "identity");
+    assert.ok(work);
+    assert.equal(work.status, "ready_for_ai_identity_decisions");
+    const task = JSON.parse(fs.readFileSync(work.task, "utf8")) as { files: { template: string } };
+    const template = fs
+      .readFileSync(path.resolve(current.owner_base, task.files.template), "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    for (const decision of template) {
+      decision.identity_decision = identityDecision;
+      decision.canonical =
+        identityDecision === "create_new"
+          ? null
+          : {
+              table: "flows",
+              ref_object_id: "99999999-9999-4999-8999-999999999999",
+              version: "00.00.001",
+              short_description: [{ "@xml:lang": "en", "#text": "Verified fixture natural gas" }],
+            };
+      decision.basis = "Controlled identity choice from the current task.";
+      decision.used_context_kinds = [
+        "schema",
+        "methodology_yaml",
+        "ruleset",
+        "classification_schema",
+        "location_schema",
+      ];
+      decision.evidence = {
+        ...(decision.evidence as Record<string, unknown>),
+        quote_or_trace: "Controlled identity fixture with retained preflight context.",
+      };
+    }
+    const file = path.join(root, "identity-decisions.jsonl"),
+      descriptor = path.join(root, "identity-submission.json");
+    const write = (decisions = template) => {
+      fs.writeFileSync(file, decisions.map((value) => JSON.stringify(value)).join("\n") + "\n");
+      fs.writeFileSync(
+        descriptor,
+        JSON.stringify({
+          schema: "tiangong-foundry.semantic-input.v1",
+          task_id: invocation.taskId,
+          actor_id: invocation.actorId,
+          assessment_sha256: latest.sha256,
+          submissions: [
+            {
+              kind: "identity",
+              authoring_task_sha256: digestFile(work.task),
+              file,
+              sha256: digestFile(file),
+            },
+          ],
+        }),
+      );
+    };
+    const oldRows = fs.readFileSync(current.sets[0].rows);
+    const wrong = structuredClone(template);
+    wrong[0].authoring_package = path.join(root, "unselected-snapshot.json");
+    fs.writeFileSync(
+      String(wrong[0].authoring_package),
+      "This file must never be read by the owner.",
+    );
+    write(wrong);
+    const invalid = await facade.resume({ ...invocation, semanticInputFile: descriptor });
+    assert.equal(invalid.blockers[0]?.code, "task_semantic_identity_invalid");
+    const badContext = structuredClone(template);
+    (badContext[0].authoring_context as Record<string, unknown>).context_bundle_sha256 = "0".repeat(
+      64,
+    );
+    write(badContext);
+    assert.equal(
+      (await facade.resume({ ...invocation, semanticInputFile: descriptor })).blockers[0]?.code,
+      "task_semantic_identity_invalid",
+    );
+    const unresolved = structuredClone(template);
+    unresolved[0].identity_decision = "block_unresolved";
+    unresolved[0].canonical = null;
+    write(unresolved);
+    const refused = await facade.resume({ ...invocation, semanticInputFile: descriptor });
+    assert.equal(refused.status, "needs_input");
+    assert.equal(refused.blockers[0]?.code, "semantic_input_rejected");
+    assert.deepEqual(fs.readFileSync(current.sets[0].rows), oldRows);
+    write();
+    const applied = await facade.resume({ ...invocation, semanticInputFile: descriptor });
+    const semanticReport = applied.artifacts.findLast(
+      (item) => item.role === "semantic-result.json",
+    );
+    assert.equal(
+      applied.status,
+      "ready",
+      semanticReport?.kind === "file"
+        ? fs.readFileSync(semanticReport.path, "utf8")
+        : JSON.stringify(applied.blockers),
+    );
+    assert.deepEqual(
+      (await facade.resume({ ...invocation, semanticInputFile: descriptor })).artifacts,
+      applied.artifacts,
+    );
+    assert.deepEqual(fs.readFileSync(current.sets[0].rows), oldRows);
+    const manifest = applied.artifacts.findLast((item) => item.role === "foundry-rows.json");
+    assert.ok(manifest?.kind === "file");
+    const resolved = JSON.parse(fs.readFileSync(manifest.path, "utf8")) as {
+      sets: Array<{ file: string; count: number }>;
+      identity_reports: string[];
+    };
+    assert.equal(resolved.identity_reports.length, 1);
+    const ownerReport = JSON.parse(fs.readFileSync(resolved.identity_reports[0], "utf8")) as {
+      counts: { input_rows: number; output_rows: number; reference_rows: number };
+      files: { reference_rows: string };
+    };
+    assert.equal(ownerReport.counts.input_rows, 1);
+    assert.equal(ownerReport.counts.reference_rows, identityDecision === "create_new" ? 0 : 1);
+    assert.equal(resolved.sets.length, identityDecision === "create_new" ? 1 : 0);
+    let finished = await facade.resume(invocation);
+    if (identityDecision === "create_new") {
+      await facade.resume(invocation);
+      finished = await facade.resume(invocation);
+      assert.equal(
+        preflightCalls,
+        3,
+        "new row lineage needs current preflight before write planning",
+      );
+    }
+    assert.equal(finished.status, "ready", JSON.stringify(finished.blockers));
+    assert.notEqual(
+      finished.status,
+      "completed",
+      "local identity resolution is not final delivery",
+    );
   });
-  const failed = await facade.resume(invocation);
-  if (childFailure) throw childFailure;
-  assert.equal(failed.status, "needs_input", JSON.stringify(failed));
-  assert.equal(failed.blockers[0]?.code, "identity_preflight_requires_input");
-  assert.equal((await facade.status(invocation)).status, "needs_input");
-  failRead = false;
-  const read = await facade.resume(invocation);
-  const evidence = read.artifacts.findLast((item) => item.role === "foundry-identity.json");
-  assert.equal(
-    read.status,
-    "ready",
-    evidence?.kind === "file"
-      ? fs.readFileSync(evidence.path, "utf8")
-      : JSON.stringify(read.blockers),
-  );
-  assert.ok(evidence?.kind === "file");
-  const report = JSON.parse(fs.readFileSync(evidence.path, "utf8")) as {
-    status: string;
-    index: string;
-  };
-  assert.equal(report.status, "completed");
-  for (const artifact of read.artifacts.filter(
-    (item) => item.kind === "file" && item.path.includes("/outputs/identity/"),
-  )) {
-    assert.ok(artifact.kind === "file");
-    assert.ok(!fs.readFileSync(artifact.path, "utf8").includes(ambient.TIANGONG_LCA_ACCESS_TOKEN));
-  }
-  const index = JSON.parse(fs.readFileSync(report.index, "utf8").trim()) as {
-    target_sha256: string;
-  };
-  assert.equal(
-    index.target_sha256,
-    createHash("sha256").update(JSON.stringify(payload)).digest("hex"),
-  );
-  restoreEnvironment();
-  const reviewed = await facade.resume(invocation);
-  assert.equal(reviewed.status, "needs_input", JSON.stringify(reviewed));
-  const latest = reviewed.artifacts.findLast((item) => item.role === "foundry-assessment.json");
-  assert.ok(latest?.kind === "file");
-  assert.notEqual(latest.sha256, assessment.sha256);
-  const current = JSON.parse(fs.readFileSync(latest.path, "utf8")) as {
-    identity_report: string;
-    sets: Array<{ decisions: Array<{ kind: string }> }>;
-  };
-  assert.equal(current.identity_report, evidence.path);
-  assert.ok(current.sets[0].decisions.some((item) => item.kind === "identity"));
-  assert.equal(preflightCalls, 2);
-  assert.equal(authCalls, 2);
-  await facade.status(invocation);
-  assert.equal(preflightCalls, 2, "status cannot repeat a remote search");
-});
+}
 
 test("a failed native conversion remains blocked without preparing later context", async (t) => {
   const { root, facade } = workflowFixture(t, true);

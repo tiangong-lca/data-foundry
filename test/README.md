@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 739843c62869cb6c3a6113730c9fc16624425486
-lastReviewedNote: "Reviewed for Foundry #118 public read-only identity preflight: existing owner algorithms and source-context helpers, explicit credential/executable boundary, captured current-row evidence, retry diagnostics and identity-aware reassessment. Identity decisions, write admission and release remain open."
+lastReviewedCommit: f6abf733721a95ce50be76b6e5295d41843274a2
+lastReviewedNote: "Reviewed for Foundry #118 bound public identity submission, preserved identity partitions and dependent reference rewrites, retained report lineage, and verification-local producer indexing. Unresolved diagnostics do not activate rows; authorization/finalize/write/readback and release remain open."
 ---
 
 # Test Layout
@@ -293,6 +293,8 @@ Semantic-input tests cover strict schema/identity/file selection, wrong actor an
 Classification/location coverage includes task generation, mismatched submission kinds, mixed owners on the same rows, incorrect context-bundle hashes, refusal without new active rows, successful apply, idempotent repeats and reassessment between owners. The native fixture emits controlled invalid-code findings; the actual installed-package roundtrip separately uses qualified TIDAS and CLI owners. Selected codes come from published schema context and represent fixture decisions only.
 
 The public identity regression uses the real installed request/context/curation owners with intercepted read-only CLI responses. It checks exact unwrapped target hashes, rejection of ambient credentials/executable/cache overrides, failed-read diagnostics, explicit retry, account receipts, evidence registration, fresh curation and manual-review task generation. Status cannot repeat a query. Authentication environment tests cover explicit OAuth/headless projection. These fixtures do not prove live account, search or final RC acceptance.
+
+Public identity submission covers `create_new` and `reuse_existing_reference`, wrong snapshot/context refusal, unresolved diagnostics with unchanged rows, duplicate reuse and preserved report lineage. A reference-rewrite case verifies flow partition cardinality and dependent process IDs while retaining canonical row metadata. Source/receipt/lineage tamper checks remain required after producer lookup is indexed; no timing threshold substitutes for correctness checks.
 
 The public-workflow regression now covers primary-tree selection without process-bundle double counting, typed API seed wrappers, schema data-issue reports, local QA/queue/curation, concrete semantic manifests, disabled developer commands and changed-assessment refusal. Queue tests verify concrete support-type matching without attaching a different dataset type. Real installed candidates are additionally checked with the valid ILCD fixture, retained valid Flow sample and a derived missing-name sample; only the latter requires semantic repair.
 

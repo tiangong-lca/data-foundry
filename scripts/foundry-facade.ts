@@ -658,9 +658,7 @@ function taskProjection(
           ...(set.decisions ?? []).map((work) =>
             human(
               `review_${work.kind}_decisions`,
-              work.kind === "identity"
-                ? `Read registered identity task ${work.task} (${work.status}) and resolve its required preflight evidence. Public identity submission is not yet available.`
-                : `Read registered ${work.kind} task ${work.task} (${work.status}). Complete its bound decision template and submit it with semantic-input kind=${work.kind}.`,
+              `Read registered ${work.kind} task ${work.task} (${work.status}). Complete its bound decision template and submit it with semantic-input kind=${work.kind}.`,
             ),
           ),
         ]),

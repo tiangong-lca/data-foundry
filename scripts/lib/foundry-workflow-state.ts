@@ -22,6 +22,8 @@ export interface WorkflowRows {
   schema: "tiangong-foundry.rows-stage.v1";
   status: "completed";
   sets: WorkflowRowSet[];
+  identity_reports: string[];
+  identity_rewrite_reports: string[];
 }
 export interface WorkflowAssessment {
   schema: "tiangong-foundry.assessment-stage.v1";
@@ -98,9 +100,24 @@ export function currentWorkflowState(
         throw new FoundryContextError("workflow_rows_invalid", "A registered row set is invalid.");
       return { type: set.type, file: set.file, count: Number(set.count) };
     });
+    const retainedReports = (key: string): string[] => {
+      const value = found.value[key] ?? [];
+      if (!Array.isArray(value) || value.some((item) => typeof item !== "string"))
+        throw new FoundryContextError(
+          "workflow_rows_invalid",
+          "Identity report references are invalid.",
+        );
+      return value as string[];
+    };
     rows = {
       ...found,
-      value: { schema: "tiangong-foundry.rows-stage.v1", status: "completed", sets },
+      value: {
+        schema: "tiangong-foundry.rows-stage.v1",
+        status: "completed",
+        sets,
+        identity_reports: retainedReports("identity_reports"),
+        identity_rewrite_reports: retainedReports("identity_rewrite_reports"),
+      },
     };
   }
   let identity: WorkflowArtifact<Record<string, unknown>> | null = null;

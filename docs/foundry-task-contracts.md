@@ -29,8 +29,8 @@ checkPaths:
   - specs/import-profiles.json
   - tasks/**
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 739843c62869cb6c3a6113730c9fc16624425486
-lastReviewedNote: "Reviewed for Foundry #118 public read-only identity preflight: existing owner algorithms and source-context helpers, explicit credential/executable boundary, captured current-row evidence, retry diagnostics and identity-aware reassessment. Identity decisions, write admission and release remain open."
+lastReviewedCommit: f6abf733721a95ce50be76b6e5295d41843274a2
+lastReviewedNote: "Reviewed for Foundry #118 bound public identity submission, preserved identity partitions and dependent reference rewrites, retained report lineage, and verification-local producer indexing. Unresolved diagnostics do not activate rows; authorization/finalize/write/readback and release remain open."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -87,6 +87,10 @@ Facade request indexes map one explicit request id to retained task revisions. T
 ## Task creation and recovery
 
 Semantic submissions bind current assessment and work-item digests independently of their supplied files. Accepted input, its projected collection manifest, local CLI result and new row manifest enter the same receipt/index lineage. A blocked application may retain a diagnostic output but publishes no new current-row manifest. Current row selection follows the latest registered row-manifest producer, and an assessment is current only for those row files. The semantic transaction checks current selection again while holding the task lock; it cannot publish a stale result after another submission advanced the task.
+
+Identity application adds retained `identity_reports` and `identity_rewrite_reports` to current row manifests. These reports preserve source rows, reference-only partitions and dependent rewrites when local write candidates shrink to zero; zero candidates alone never proves completion. Failed/unresolved application keeps its diagnostic artifacts without replacing current rows. Assessment reads only selected report facts and passes their existing owner evidence into curation.
+
+Producer lookup builds a verification-local index keyed by resolved path, content digest and byte count. It retains original index order and the strict earlier-sequence requirement. Paths, original source bytes, producer receipts/plans and selected artifact bytes are still validated; the lookup is discarded after each verification and is not a cross-operation trust cache.
 
 `foundry-job.json` uses `tiangong-foundry.job.v2`. It binds workspace/task/actor/request identity, lane, target profile/entity types, source/profile/optional seed content references, current runtime manifest/entry identity, UTC creation time, and the default `write_policy` of `dry-run` with remote state 0. Task metadata cannot enable a remote write by changing that policy object. Actual permission requires the separate reviewed authorization/execution boundary.
 

@@ -260,14 +260,21 @@ function verifyInputs(
     );
   }
   const verified = new Set<string>();
+  const producerKey = (fact: FoundryInputFact) =>
+    JSON.stringify([fact.path, fact.sha256, fact.bytes]);
+  const producers = new Map<string, ArtifactEntry[]>();
+  for (const entry of index) {
+    const key = producerKey({
+      path: taskPath(context, entry.path),
+      sha256: entry.sha256,
+      bytes: entry.bytes,
+    });
+    const candidates = producers.get(key) ?? [];
+    candidates.push(entry);
+    producers.set(key, candidates);
+  }
   const findProducer = (fact: FoundryInputFact, before = Number.POSITIVE_INFINITY) =>
-    index.find(
-      (entry) =>
-        entry.sequence < before &&
-        taskPath(context, entry.path) === fact.path &&
-        entry.sha256 === fact.sha256 &&
-        entry.bytes === fact.bytes,
-    );
+    producers.get(producerKey(fact))?.find((entry) => entry.sequence < before);
   for (const fact of context.inputs) {
     if (!task.sources.some((source) => sameFact(source, fact))) {
       const first = findProducer(fact);

@@ -31,6 +31,7 @@ import {
 import { runDatasetAuthoringPatchCollect } from "./import-curation/patch-collect.ts";
 import { readJsonOrJsonl, ensureArray, readRows } from "./import-curation/internal/runtime-io.ts";
 import { createFoundryDecisionOwners } from "./foundry-decision-owners.ts";
+import { applyFoundryIdentityDecisions } from "./foundry-workflow-identity-apply.ts";
 import {
   operationFullContextEvidenceBlockers,
   operationUsedContextKinds,
@@ -92,11 +93,11 @@ export async function applyFoundrySemanticInput(
   );
   const used = new Set<string>();
   const decisionWork: Array<{
-    kind: "classification" | "location";
+    kind: "classification" | "location" | "identity";
     type: string;
     rows: string;
     task: string;
-    queue: string;
+    queue: string | null;
     sha: string;
     fact: typeof submission.descriptor;
   }> = [];
@@ -146,7 +147,12 @@ export async function applyFoundrySemanticInput(
     if (tasks.length) work.push({ set, manifest, manifestFile, tasks });
     for (const raw of Array.isArray(set.decisions) ? set.decisions : []) {
       const decision = workflowObject(raw);
-      if (decision.kind !== "classification" && decision.kind !== "location") continue;
+      if (
+        decision.kind !== "classification" &&
+        decision.kind !== "location" &&
+        decision.kind !== "identity"
+      )
+        continue;
       const taskFile = text(decision.task, "Decision task");
       const entry = entries.find(
         (candidate) => resolveFoundryOutput(context, candidate.path) === taskFile,
@@ -167,7 +173,7 @@ export async function applyFoundrySemanticInput(
         type: text(set.type, "Dataset type"),
         rows: text(set.rows, "Rows"),
         task: taskFile,
-        queue: text(decision.queue, "Decision queue"),
+        queue: decision.kind === "identity" ? null : text(decision.queue, "Decision queue"),
         sha: entry.sha256,
         fact: chosen.fact,
       });
@@ -179,6 +185,14 @@ export async function applyFoundrySemanticInput(
       "Every submitted digest must identify current registered authoring work.",
     );
   const rowOwners = new Set(work.map((group) => text(group.set.type, "Dataset type")));
+  if (
+    decisionWork.some((item) => item.kind === "identity") &&
+    (decisionWork.length !== 1 || work.length)
+  )
+    fail(
+      "task_semantic_owner_conflict",
+      "Submit one identity task at a time; reference rewrites may affect multiple row types.",
+    );
   for (const item of decisionWork) {
     if (rowOwners.has(item.type))
       fail(
@@ -216,6 +230,8 @@ export async function applyFoundrySemanticInput(
       fs.mkdirSync(resolveFoundryOutput(context, "tmp"), { recursive: true, mode: 0o700 });
       const temporary = fs.mkdtempSync(path.join(context.tempRoot, "semantic-"));
       const updated = new Map<string, WorkflowRowSet>();
+      const identityReports = [...rows.value.identity_reports],
+        rewriteReports = [...rows.value.identity_rewrite_reports];
       const results: Array<Record<string, unknown>> = [];
       const blockers: Array<Record<string, unknown>> = [];
       try {
@@ -377,6 +393,24 @@ export async function applyFoundrySemanticInput(
               blockers.push({ code: "semantic_context_evidence_missing", type: item.type });
           }
           if (blockers.length !== beforeCount) continue;
+          if (item.kind === "identity") {
+            const applied = applyFoundryIdentityDecisions(context, qualified, temporary, {
+              task,
+              decisions,
+              sets: rows.value.sets,
+              output: path.join(output, "identity"),
+            });
+            blockers.push(...applied.blockers);
+            identityReports.push(...applied.reports);
+            rewriteReports.push(...applied.rewriteReports);
+            for (const set of applied.sets) updated.set(set.type, set);
+            results.push({
+              kind: "identity",
+              reports: applied.reports,
+              rewrite_reports: applied.rewriteReports,
+            });
+            continue;
+          }
           const decisionFile = path.join(output, item.type, `${item.kind}-decisions.jsonl`);
           operation.writeText(
             decisionFile,
@@ -436,7 +470,11 @@ export async function applyFoundrySemanticInput(
             schema: "tiangong-foundry.rows-stage.v1",
             status: "completed",
             predecessor: rows.file,
-            sets: rows.value.sets.map((set) => updated.get(set.type) ?? set),
+            sets: rows.value.sets
+              .map((set) => updated.get(set.type) ?? set)
+              .filter((set) => set.count > 0),
+            identity_reports: identityReports,
+            identity_rewrite_reports: rewriteReports,
           });
         const report = {
           schema: "tiangong-foundry.semantic-result.v1",
