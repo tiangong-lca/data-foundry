@@ -7,6 +7,7 @@ import path from "node:path";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
 import { resolvePackageManagerCommand } from "../../scripts/lib/package-manager-command.ts";
+import { canonicalizeFoundryPackageArchive } from "../../scripts/pack-foundry-package.ts";
 import { verifyManagedPackageCache } from "../helpers/managed-package-cache.mts";
 import { verifyManagedPackageHost } from "../helpers/managed-package-host.mts";
 
@@ -266,6 +267,8 @@ test("packed Foundry installs twice and runs only the public facade from a read-
   assert.equal(JSON.parse(verified.stdout).status, "passed");
   const packDriver = pathToFileURL(path.join(repoRoot, "scripts/pack-foundry-package.ts")).href;
   const driverDestination = path.join(root, "pack driver 中文");
+  const canonicalBytes = canonicalizeFoundryPackageArchive(fs.readFileSync(tarball));
+  let publishedTarball = tarball;
   for (const attempt of ["first", "reuse"]) {
     const archived = command(
       process.execPath,
@@ -278,7 +281,8 @@ test("packed Foundry installs twice and runs only the public facade from a read-
       isolatedEnvironment(path.join(root, `archive-${attempt}-home`)),
     );
     assert.equal(archived.status, 0, archived.stderr || archived.stdout);
-    assert.deepEqual(fs.readFileSync(archived.stdout.trim()), fs.readFileSync(tarball));
+    publishedTarball = archived.stdout.trim();
+    assert.deepEqual(fs.readFileSync(publishedTarball), canonicalBytes);
   }
   assert.equal(
     packReport[0].files.some(
@@ -291,8 +295,18 @@ test("packed Foundry installs twice and runs only the public facade from a read-
   );
 
   const sharedCache = path.join(root, "shared-npm-home");
-  const firstProject = installConsumer(path.join(root, "first"), tarball, sharedCache, false);
-  const secondProject = installConsumer(path.join(root, "second"), tarball, sharedCache, true);
+  const firstProject = installConsumer(
+    path.join(root, "first"),
+    publishedTarball,
+    sharedCache,
+    false,
+  );
+  const secondProject = installConsumer(
+    path.join(root, "second"),
+    publishedTarball,
+    sharedCache,
+    true,
+  );
   const firstPackage = path.join(firstProject, "node_modules", "@tiangong-lca", "foundry");
   const secondPackage = path.join(secondProject, "node_modules", "@tiangong-lca", "foundry");
   installedRoots.push(firstPackage, secondPackage);
@@ -604,6 +618,8 @@ test("packed Foundry installs twice and runs only the public facade from a read-
   );
   assert.notEqual(absentCli.status, 0);
   assert.equal(fs.existsSync(forbiddenWorkspace), false);
-  const tarballSha256 = createHash("sha256").update(fs.readFileSync(tarball)).digest("hex");
+  const tarballSha256 = createHash("sha256")
+    .update(fs.readFileSync(publishedTarball))
+    .digest("hex");
   assert.match(tarballSha256, /^[0-9a-f]{64}$/u);
 });

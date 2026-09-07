@@ -93,8 +93,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: e0edc2f2b3b399ae0aae5f70aa2b22fab6744222
-lastReviewedNote: "Reviewed for Foundry #112 portable npm archives and create-only component publication: exact public package/source proof, native jobs and archive attestations, in-process aggregation, bounded draft recovery and immutable asset checks. Public-download/bootstrap/final-manifest qualification remains required; task/account/runtime authority is unchanged."
+lastReviewedCommit: 083925c1f714d1e459694afeb501c3d112fea311
+lastReviewedNote: "Reviewed for Foundry #112 canonical gzip consumer verification: online/offline clean consumers install the actual pack-driver archive, while raw pnpm payload comparison preserves content identity. Package, environment, runtime and permission boundaries remain unchanged."
 ---
 
 # Capability Ownership Policy
