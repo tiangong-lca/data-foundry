@@ -253,7 +253,9 @@ test("source-evidence resume prepares an indexed SDK context before semantic wor
     (artifact) => artifact.kind === "file" && path.basename(artifact.path) === "flow.rows.json",
   );
   assert.ok(rowFile?.kind === "file", "the next stage must materialize the selected rows");
-  assert.deepEqual(JSON.parse(fs.readFileSync(rowFile.path, "utf8")), [sourceRow]);
+  assert.deepEqual(JSON.parse(fs.readFileSync(rowFile.path, "utf8")), [
+    { id: sourceRow.id, version: sourceRow.version, json: sourceRow.flow },
+  ]);
   const assessed = await facade.resume({ taskId: started.task_id, actorId: "source-actor" });
   assert.ok(
     assessed.artifacts.some(

@@ -40,7 +40,14 @@ export function materializeFoundryWorkflowRows(
               "A selected row has no recognized TIDAS dataset type.",
             );
           const values = grouped.get(type) ?? [];
-          values.push(row);
+          const payload = unwrapDatasetPayload(row, type);
+          if (payload !== row && row && typeof row === "object" && !Array.isArray(row)) {
+            const normalized = { ...(row as Record<string, unknown>) };
+            for (const key of [type, "json_ordered", "jsonOrdered", "json", "payload"])
+              delete normalized[key];
+            normalized.json = payload;
+            values.push(normalized);
+          } else values.push(row);
           grouped.set(type, values);
         }
       }

@@ -245,6 +245,36 @@ test("row validation maps official batch evidence into Foundry compatibility rep
       blockers: 1,
     });
     const invalidReport = invalid.report as Record<string, Record<string, unknown>>;
+    const invalidIssues = (
+      invalid.report.rows as Array<{
+        issues: Array<{ code: string; path: string; issue_code: string }>;
+      }>
+    )[0].issues;
+    assert.equal(invalidIssues[0].code, "fixture_invalid");
+    assert.equal(invalidIssues[0].issue_code, "fixture_invalid");
+    assert.equal(invalidIssues[0].path, "/");
+    const wrappedRows = path.join(root, "wrapped-processes.json");
+    fs.writeFileSync(
+      wrappedRows,
+      JSON.stringify([{ id: "11111111-1111-4111-8111-111111111111", json: processRow() }]),
+    );
+    const wrapped = withEnvironment(
+      { TIDAS_BIN: bin, FAKE_TIDAS_INVALID: "1", FAKE_TIDAS_EXIT_CLASS: undefined },
+      () =>
+        runTidasRowsValidation({
+          repoRoot: root,
+          options: {
+            rowsFile: wrappedRows,
+            type: "process",
+            outDir: path.join(root, "wrapped-validation"),
+          },
+        }),
+    );
+    const wrappedIssues = (
+      wrapped.report.rows as Array<{ issues: Array<{ path: string; location: string }> }>
+    )[0].issues;
+    assert.equal(wrappedIssues[0].path, "/json/");
+    assert.equal(wrappedIssues[0].location, "/", "retain the original native location separately");
     assert.equal(invalidReport.rust_contract.batch_final_schema, "tidas.validation-final-event.v1");
     const nativeIssues = withEnvironment(
       {
