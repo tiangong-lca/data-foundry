@@ -57,7 +57,12 @@ import {
 } from "./lib/foundry-runtime-selection.ts";
 import type { TrustedRuntimeManifest } from "@tiangong-lca/cli/runtime";
 import { datasetTypePlural } from "./lib/import-curation/internal/dataset-types.ts";
-import { currentWorkflowState } from "./lib/foundry-workflow-state.ts";
+import { currentWorkflowState, workflowObject } from "./lib/foundry-workflow-state.ts";
+import {
+  completedOwnerScopes,
+  prepareFoundryOwnerExecution,
+} from "./lib/foundry-owner-execution-store.ts";
+import { executeFoundryOwnerScope } from "./lib/foundry-workflow-execution.ts";
 import { selectFoundrySemanticInput } from "./lib/foundry-semantic-input.ts";
 import { runFoundryWorkflowIdentity } from "./lib/foundry-workflow-identity.ts";
 import { finalizeFoundryWorkflow } from "./lib/foundry-workflow-finalize.ts";
@@ -132,10 +137,11 @@ function human(code: string, instructions: string): FoundryOperationNextAction {
 function resumeCommand(
   context: ReturnType<typeof createFoundryRuntimeContext>,
   record: FoundryFacadeTaskRecord,
+  ownerStage?: "execution" | "readback",
 ): FoundryOperationNextAction {
   const action = {
     kind: "command",
-    code: "resume_local_preparation",
+    code: ownerStage ? `resume_owner_${ownerStage}` : "resume_local_preparation",
     executable: process.execPath,
     argv: [
       context.runtime.entryPath,
@@ -150,7 +156,12 @@ function resumeCommand(
       "--json",
     ],
     cwd: context.workspaceRoot,
-    purpose: "Resume the content-bound deterministic local preparation for this task revision.",
+    purpose:
+      ownerStage === "execution"
+        ? "Continue the approved owner scope using its exact sealed execution request."
+        : ownerStage === "readback"
+          ? "Read back the consumed owner scope using its retained request."
+          : "Resume the content-bound deterministic local preparation for this task revision.",
   } as const;
   return Object.freeze({
     ...action,
@@ -464,10 +475,17 @@ function taskProjection(
       runtimeIdentity: identity,
       permissions: noPermission(),
     });
-  if (inspected.attempts_present)
+  let execution: ReturnType<typeof completedOwnerScopes> | null = null;
+  try {
+    execution = completedOwnerScopes(context, inspected.artifacts);
+  } catch (error) {
+    if (!(error instanceof FoundryContextError) || error.code !== "execution_legacy_attempts")
+      throw error;
+  }
+  if (!execution || execution.pending.length)
     return createFoundryOperationResult({
       operation,
-      status: "blocked",
+      status: execution ? "needs_input" : "blocked",
       taskId: record.task_id,
       artifacts,
       blockers: [
@@ -478,12 +496,14 @@ function taskProjection(
           scope: record.task_id,
         },
       ],
-      nextActions: [
-        human(
-          "resume_owner_readback",
-          "Use the retained owner attempt and readback evidence; do not dispatch another mutation.",
-        ),
-      ],
+      nextActions: execution
+        ? [resumeCommand(context, record, "readback")]
+        : [
+            human(
+              "resume_owner_readback",
+              "Use the retained owner attempt and readback evidence; do not dispatch another mutation.",
+            ),
+          ],
       runtimeIdentity: identity,
       permissions: noPermission(),
     });
@@ -540,7 +560,29 @@ function taskProjection(
       });
   }
   const workflow = currentWorkflowState(context, inspected.artifacts);
-  if (workflow.authorization) {
+  const scopeComplete =
+    workflow.rows &&
+    workflow.rows.value.sets.length > 0 &&
+    workflow.rows.value.sets.every((set) => execution.completed.has(set.type));
+  const referenceRows = (workflow.rows?.value.identity_reports ?? []).some((file) => {
+    const report = workflowObject(JSON.parse(fs.readFileSync(file, "utf8")));
+    return Number(workflowObject(report.counts).reference_rows ?? 0) > 0;
+  });
+  if (scopeComplete && !referenceRows)
+    return createFoundryOperationResult({
+      operation,
+      status: "completed",
+      taskId: record.task_id,
+      artifacts,
+      blockers: [],
+      nextActions: [],
+      runtimeIdentity: identity,
+      permissions: noPermission(),
+    });
+  if (
+    workflow.authorization &&
+    !execution.completed.has(String(workflow.authorization.value.dataset_type))
+  ) {
     const report = workflow.authorization.value;
     const code =
       report.status === "sealed"
@@ -563,12 +605,15 @@ function taskProjection(
           scope: record.task_id,
         },
       ],
-      nextActions: [
-        human(
-          code,
-          `Read the registered approval result ${workflow.authorization.file}. Existing approval does not permit replay of any consumed attempt.`,
-        ),
-      ],
+      nextActions:
+        report.status === "sealed"
+          ? [resumeCommand(context, record, "execution")]
+          : [
+              human(
+                code,
+                `Read the registered approval result ${workflow.authorization.file}. Existing approval does not permit replay of any consumed attempt.`,
+              ),
+            ],
       runtimeIdentity: identity,
       permissions: {
         state: "granted",
@@ -1300,6 +1345,43 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
           runtimeIdentity(context, qualified),
         );
         if (existing.status === "completed" || existing.status === "blocked") return existing;
+        const execution = completedOwnerScopes(context, before.artifacts);
+        if (execution.pending.length) {
+          if (input.authorizationInputFile || input.semanticInputFile)
+            throw new FoundryContextError(
+              "execution_recovery_required",
+              "Recover the consumed request before submitting changes.",
+            );
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Owner readback requires qualified runtime owners.",
+            );
+          const selected = taskContext(
+            options,
+            current,
+            record,
+            before.artifacts.map((entry) => ({
+              path: path.join(context.taskRoot!, entry.path),
+              bytes: entry.bytes,
+              sha256: entry.sha256,
+            })),
+          );
+          await executeFoundryOwnerScope(
+            selected,
+            qualified,
+            before.artifacts,
+            execution.pending[0],
+            options.authentication,
+          );
+          return taskProjection(
+            "task.resume",
+            context,
+            record,
+            await runtime.inspectTask(),
+            runtimeIdentity(context, qualified),
+          );
+        }
         if (input.authorizationInputFile) {
           if (input.semanticInputFile || record.spec.preparation)
             throw new FoundryContextError(
@@ -1312,6 +1394,11 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
               "Approval admission requires qualified runtime owners.",
             );
           const submission = selectFoundryAuthorizationInput(context, input.authorizationInputFile);
+          if (execution.completed.has(submission.spec.dataset_type))
+            throw new FoundryContextError(
+              "execution_scope_completed",
+              "A verified scope cannot receive new write approval.",
+            );
           const facts = before.artifacts.map((artifact) => ({
             path: path.join(context.taskRoot!, artifact.path),
             bytes: artifact.bytes,
@@ -1334,6 +1421,11 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
           );
         }
         if (input.semanticInputFile) {
+          if (execution.consumed.size)
+            throw new FoundryContextError(
+              "execution_scope_consumed",
+              "Retain consumed scope rows and their execution evidence.",
+            );
           if (record.spec.preparation)
             throw new FoundryContextError(
               "task_semantic_input_invalid",
@@ -1385,6 +1477,82 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
         }
         const preparation = record.spec.preparation;
         const workflow = currentWorkflowState(context, before.artifacts);
+        if (
+          !preparation &&
+          workflow.authorization?.value.status === "sealed" &&
+          !execution.completed.has(String(workflow.authorization.value.dataset_type))
+        ) {
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Owner execution requires qualified runtime owners.",
+            );
+          const selected = taskContext(
+            options,
+            current,
+            record,
+            before.artifacts.map((entry) => ({
+              path: path.join(context.taskRoot!, entry.path),
+              bytes: entry.bytes,
+              sha256: entry.sha256,
+            })),
+          );
+          const request = execution.requests.find(
+            (item) => item.request.content.authorization === workflow.authorization!.entry.sha256,
+          );
+          if (request)
+            await executeFoundryOwnerScope(
+              selected,
+              qualified,
+              before.artifacts,
+              request,
+              options.authentication,
+            );
+          else await prepareFoundryOwnerExecution(selected, before.artifacts);
+          return taskProjection(
+            "task.resume",
+            context,
+            record,
+            await runtime.inspectTask(),
+            runtimeIdentity(context, qualified),
+          );
+        }
+        if (
+          !preparation &&
+          execution.completed.size &&
+          workflow.finalization?.value.execution_progress_sha256 !== execution.progressSha256
+        ) {
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Dependency finalization requires qualified runtime owners.",
+            );
+          const selected = taskContext(
+            options,
+            current,
+            record,
+            before.artifacts.map((entry) => ({
+              path: path.join(context.taskRoot!, entry.path),
+              bytes: entry.bytes,
+              sha256: entry.sha256,
+            })),
+          );
+          await finalizeFoundryWorkflow(
+            selected,
+            qualified,
+            before.artifacts,
+            options.authentication,
+            undefined,
+            { sha256: execution.progressSha256, scopes: execution.completed },
+          );
+          return taskProjection(
+            "task.resume",
+            context,
+            record,
+            await runtime.inspectTask(),
+            runtimeIdentity(context, qualified),
+          );
+        }
         const preparedApproval =
           workflow.authorization?.value.status === "authorized_current_rows"
             ? workflow.authorization

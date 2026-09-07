@@ -18,6 +18,7 @@ import { createFoundryIdentityOwners } from "./foundry-identity-owners.ts";
 import { createCliWrapperCommands } from "./finalize-owners/cli-wrappers.ts";
 import { createCommitHandoffCommands } from "./finalize-owners/commit-handoff.ts";
 import { createPostAuthoringFinalizeCommands } from "./finalize-owners/post-authoring.ts";
+import { createPostWriteCloseoutCommands } from "./finalize-owners/post-write-closeout.ts";
 import { listImportProfiles, profileFor } from "./import-curation/profiles.ts";
 import { foundryTraceSummary } from "./import-curation/trace-summary.ts";
 import { runDatasetCurationCleanup } from "./import-curation/curation-cleanup.ts";
@@ -50,6 +51,7 @@ interface FoundryFinalizeOwners {
   finalize: ReturnType<typeof createPostAuthoringFinalizeCommands>;
   handoff: ReturnType<typeof createCommitHandoffCommands>;
   preflight: ReturnType<typeof createFoundryIdentityOwners>["preflight"];
+  closeout: ReturnType<typeof createPostWriteCloseoutCommands>;
   invoke<T>(action: () => T): T;
 }
 
@@ -134,6 +136,15 @@ export function createFoundryFinalizeOwners(
     ...trace,
     profileFor,
     executionEnvironment: execution.environment,
+  });
+  const closeout = bind(createPostWriteCloseoutCommands, {
+    ...base,
+    ...proofs,
+    ...trace,
+    executionEnvironment: execution.environment,
+    writeCloseoutImportLedger: undefined,
+    readRowsFile: (file: string) =>
+      runtime.readRowsFile(file).map((row) => unwrapDatasetPayload(row, "")),
   });
   const runTiangongJsonStage = (stage: string, argv: string[]) => {
     assertQualifiedFoundryRuntime(context, qualified);
@@ -230,6 +241,7 @@ export function createFoundryFinalizeOwners(
   return {
     finalize,
     handoff,
+    closeout,
     preflight: identityCommands,
     invoke<T>(action: () => T): T {
       const previous = process.exitCode;

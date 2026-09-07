@@ -152,8 +152,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: db62b65202d3e40beb5e57d6dec990d6b584372d
-lastReviewedNote: "Reviewed for Foundry #118 current-row approval continuation: original-grant re-finalization, exact derived activation, equal-byte descendant proof, unchanged authority/expiry, and recovery after interrupted capture. Input/lineage lookup preserves ordered verified producers. Actual owner dispatch/readback and full release acceptance remain open."
+lastReviewedCommit: 3514bcacdec59cb6b4d760e7d96c8f790d910a6c
+lastReviewedNote: "Reviewed for Foundry #118 public owner execution: sealed request, CLI batch one-shot dispatch, durable consumed marker, independent root/owner/state/payload readback, producer-backed completion, and no replay on recovery. Full workflow, live RC and formal release acceptance remain open."
 ---
 
 # Architecture
@@ -169,6 +169,8 @@ The explicit workspace runtime is defined by `docs/runtime-context-contract.md`:
 `createFoundryApplication` constructs the existing command factories for one explicit root and optional injected runtime utilities. Its `execute` method uses the same `createFoundryCommandDispatcher` registry as the CLI and returns a promise without the dispatcher printing or exiting the host. Construction does not load `.env` or discover operator state; independent applications retain independent root bindings. The developer `main(argv)` alone loads its environment and chooses the process adapter under `import.meta.main`. Consumer commands still require individual task/I/O admission through `runtime-entry.ts`; this internal composition API does not make every legacy owner safe for an installed consumer or authorize a write.
 
 Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel account overrides, QA waivers and the Worldsteel full-context relaxation grant no permission to a new task. `docs/task-authorization-contract.md` owns the separate workspace/task/actor/account/profile/input binding and exact action evidence. Local candidate preparation and checked public-reference proofs remain available; current final-row hashes, task permissions and all content/closure/no-replay gates are required before a restricted write handoff.
+
+The public task facade delegates sealed owner execution to `foundry-workflow-execution.ts`, request/attempt state to `foundry-owner-execution-store.ts`, and independent owner verification to `foundry-owner-readback.ts`. The existing closeout factory lives under `lib/finalize-owners` with its developer-command re-export preserved. Local operation receipts capture evidence only; the CLI batch boundary owns one-shot mutation and readback recovery. See [public execution and recovery](public-runtime-contract.md#owner-execution-and-recovery).
 
 ## OAuth identity boundary
 

@@ -52,14 +52,14 @@ test("post-write closeout help is exact and invokes no artifact or verification 
 });
 
 test("post-write closeout keeps accepted-diff and unique-root proof in typed owner modules", () => {
-  const source = readRepoFile("scripts/commands/post-write-closeout.ts");
+  const source = readRepoFile("scripts/lib/finalize-owners/post-write-closeout.ts");
   assert.match(
     source,
-    /normalizeAllowedTraceHashDifference\s*\}\s*from\s*["']\.\.\/lib\/remote-verification-accepted-diff\.ts["']/u,
+    /normalizeAllowedTraceHashDifference\s*\}\s*from\s*["']\.\.\/remote-verification-accepted-diff\.ts["']/u,
   );
   assert.match(
     source,
-    /canonicalPayloadSha256,[\s\S]*validateUniqueRootReadbacks,[\s\S]*from\s*["']\.\.\/lib\/post-write-root-proof\.ts["']/u,
+    /canonicalPayloadSha256,[\s\S]*validateUniqueRootReadbacks[\s\S]*from\s*["']\.\.\/post-write-root-proof\.ts["']/u,
   );
   assert.match(source, /allowTraceHashOnlyNormalization:\s*!productionTestAccount/u);
   assert.match(source, /rootReadbackCount\s*!==\s*expectedRows/u);
@@ -68,7 +68,7 @@ test("post-write closeout keeps accepted-diff and unique-root proof in typed own
 });
 
 test("post-write closeout exists only as zero-escape native TypeScript", () => {
-  const typedPath = path.join(repoRoot, "scripts/commands/post-write-closeout.ts");
+  const typedPath = path.join(repoRoot, "scripts/lib/finalize-owners/post-write-closeout.ts");
   assert.equal(fs.existsSync(typedPath), true);
   assert.equal(fs.existsSync(typedPath.replace(/\.ts$/u, ".mjs")), false);
   const source = fs.readFileSync(typedPath, "utf8");

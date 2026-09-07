@@ -158,8 +158,8 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: db62b65202d3e40beb5e57d6dec990d6b584372d
-lastReviewedNote: "Reviewed for Foundry #118 current-row approval continuation: original-grant re-finalization, exact derived activation, equal-byte descendant proof, unchanged authority/expiry, and recovery after interrupted capture. Input/lineage lookup preserves ordered verified producers. Actual owner dispatch/readback and full release acceptance remain open."
+lastReviewedCommit: 3514bcacdec59cb6b4d760e7d96c8f790d910a6c
+lastReviewedNote: "Reviewed for Foundry #118 public owner execution: sealed request, CLI batch one-shot dispatch, durable consumed marker, independent root/owner/state/payload readback, producer-backed completion, and no replay on recovery. Full workflow, live RC and formal release acceptance remain open."
 ---
 
 # TianGong LCA Data Foundry
@@ -194,6 +194,8 @@ Foundry is intentionally thin. It owns task routing, local workspaces, import pr
 Identity-preflight candidate requests use the current Hybrid Search contract: one `lexical_weight` for the database `extracted_md` branch and one `semantic_weight` for `embedding_ft`.
 
 Remote verification is visibility-bound. A `missing_dataset` reference that is foreign or hidden by RLS remains a blocker and cannot be converted to passed from a trusted-key list or another account's observation. The only retained accepted-difference mechanism is exact root readback whose sole normalized difference is `tiangongfoundry:importTraceSummary.traceHash`; production-test account cases accept no difference at all.
+
+The packaged task facade now continues sealed approvals through registered owner execution and independent readback. It uses the published CLI batch engine, persists a consumed marker before dispatch, and resumes uncertain attempts only through the original readback request. Indexed execution evidence is verified against producer receipts and current file hashes. See [public execution and recovery](docs/public-runtime-contract.md#owner-execution-and-recovery).
 
 ## OAuth account execution
 

@@ -47,6 +47,7 @@ export async function finalizeFoundryWorkflow(
     datasetType: string;
     inputFile: string;
   },
+  executionProgress?: { sha256: string; scopes: ReadonlyMap<string, Record<string, unknown>> },
 ) {
   assertQualifiedFoundryRuntime(context, qualified);
   const state = currentWorkflowState(context, entries),
@@ -178,6 +179,11 @@ export async function finalizeFoundryWorkflow(
       (a, b) => order.indexOf(a.type) - order.indexOf(b.type),
     );
     for (const set of scope) {
+      const completed = executionProgress?.scopes.get(set.type);
+      if (completed) {
+        sets.push(completed);
+        continue;
+      }
       const owners = createFoundryFinalizeOwners(context, qualified, temporary, {
         environment,
         tidasExecutable,
@@ -262,7 +268,9 @@ export async function finalizeFoundryWorkflow(
             patchCollectReport: reportFor("authoring-patch-collect-report.json", set.type),
             patchApplyReport: reportFor("dataset-patch-apply-report.json", set.type),
             processes: rows.value.sets.find((item) => item.type === "process")?.file,
-            flows: rows.value.sets.find((item) => item.type === "flow")?.file,
+            flows:
+              executionProgress?.scopes.get("flow")?.final_rows ??
+              rows.value.sets.find((item) => item.type === "flow")?.file,
             verifyRemote: Boolean(context.accountIntent),
             remoteStateCode: "0",
             remoteRootPolicy: "candidate",
@@ -360,6 +368,7 @@ export async function finalizeFoundryWorkflow(
           assessment_report: state.assessment!.file,
           owner_base: context.assetRoot,
           approval_source_sha256: approval?.sourceSha256 ?? null,
+          execution_progress_sha256: executionProgress?.sha256 ?? null,
           sets,
           blockers,
         };

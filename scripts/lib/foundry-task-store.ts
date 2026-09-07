@@ -55,13 +55,21 @@ export type {
 export async function withFoundryTaskMetadata<T>(
   context: FoundryRuntimeContext,
   inspect: (task: LoadedTask, index: readonly ArtifactEntry[]) => T,
+  options: { verifyCommands?: readonly string[] } = {},
 ): Promise<T> {
   requiredTask(context);
   const inspectCurrent = () => {
     const task = loadTask(context, {});
     bindAccountIntent(context);
     const index = readIndex(context);
-    verifyInputs(context, task, index);
+    const extra = index
+      .filter((entry) => options.verifyCommands?.includes(entry.command))
+      .map((entry) => ({
+        path: taskPath(context, entry.path),
+        bytes: entry.bytes,
+        sha256: entry.sha256,
+      }));
+    verifyInputs(context, task, index, [...context.inputs, ...extra]);
     return inspect(task, index);
   };
   if (context.workspaceAccess === "read") return inspectCurrent();
@@ -257,6 +265,7 @@ function verifyInputs(
   context: FoundryRuntimeContext,
   task: LoadedTask,
   index: ArtifactEntry[],
+  inputs: readonly FoundryInputFact[] = context.inputs,
 ): void {
   for (const source of task.sources) {
     try {
@@ -273,7 +282,7 @@ function verifyInputs(
   const producers = producerLookup(context, index);
   const findProducer = (fact: FoundryInputFact, before = Number.POSITIVE_INFINITY) =>
     producers(fact, before)[0];
-  for (const fact of context.inputs) {
+  for (const fact of inputs) {
     if (!task.sources.some((source) => sameFact(source, fact))) {
       const first = findProducer(fact);
       if (!first)
@@ -396,6 +405,10 @@ export async function runFoundryTaskOperation(
       | "dataset-workflow-identity"
       | "dataset-workflow-finalize"
       | "dataset-workflow-authorization"
+      | "dataset-workflow-execution-prepare"
+      | "dataset-workflow-execution-result"
+      | "dataset-workflow-execution-consume"
+      | "dataset-workflow-execution-observation"
       | "dataset-semantic-apply";
     options: JsonRecord;
     task?: FoundryTaskOptions;
@@ -514,7 +527,10 @@ export async function runFoundryTaskOperation(
             fail("task_operation_closed", "Operation writers cannot escape the task transaction.");
           loadTask(context, input.task ?? {});
           const relativePath = relative(context, file);
-          if (!/^(?:outputs|evidence)\//u.test(relativePath))
+          const consumedMarker =
+            input.command === "dataset-workflow-execution-consume" &&
+            /^attempts\/owner-v1\/[0-9a-f]{64}\/consumed\.json$/u.test(relativePath);
+          if (!/^(?:outputs|evidence)\//u.test(relativePath) && !consumedMarker)
             fail(
               "task_output_role_invalid",
               "Command output cannot overwrite task control records.",

@@ -41,8 +41,8 @@ checkPaths:
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: db62b65202d3e40beb5e57d6dec990d6b584372d
-lastReviewedNote: "Reviewed for Foundry #118 current-row approval continuation: original-grant re-finalization, exact derived activation, equal-byte descendant proof, unchanged authority/expiry, and recovery after interrupted capture. Input/lineage lookup preserves ordered verified producers. Actual owner dispatch/readback and full release acceptance remain open."
+lastReviewedCommit: 3514bcacdec59cb6b4d760e7d96c8f790d910a6c
+lastReviewedNote: "Reviewed for Foundry #118 public owner execution: sealed request, CLI batch one-shot dispatch, durable consumed marker, independent root/owner/state/payload readback, producer-backed completion, and no replay on recovery. Full workflow, live RC and formal release acceptance remain open."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
@@ -57,6 +57,8 @@ Local preparation enters the registered v2 task store in `foundry-task-store.ts`
 The consumer runtime receives an explicit `FoundryRuntimeContext`. Construction reads package identity and an explicitly selected/discovered workspace marker, but never loads `.env`, creates state, changes CWD or performs authentication. A process-local brand prevents serialized context data from becoming an executable context. `accountIntent` is expected identity, not proof of login or permission; `actorId` is caller intent and must also be checked against durable task state before execution.
 
 The runtime entry now exposes the six W05 hierarchical operations described in `public-runtime-contract.md`, while retaining the old source developer commands. The facade delegates cleanup and native import to their existing owners, and contract context to the exact published CLI. Their local outputs are registered through the same task transaction. All 63 internal commands keep their explicit disposition in `foundry-runtime-command-policy.ts`; the six public operations are a separate orchestration surface over those owners. Repository maintenance remains excluded, and task/native families remain internal with declared asset/input/output roots, child-process ownership, qualification and authorization requirements.
+
+The public task facade delegates sealed owner execution to `foundry-workflow-execution.ts`, request/attempt state to `foundry-owner-execution-store.ts`, and independent owner verification to `foundry-owner-readback.ts`. The existing closeout factory lives under `lib/finalize-owners` with its developer-command re-export preserved. Local operation receipts capture evidence only; the CLI batch boundary owns one-shot mutation and readback recovery. See [public execution and recovery](public-runtime-contract.md#owner-execution-and-recovery).
 
 ## Runtime qualification and child admission
 

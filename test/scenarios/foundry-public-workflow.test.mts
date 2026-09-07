@@ -12,6 +12,9 @@ import { resolveInstalledTiangongLcaCliPackage } from "../../scripts/lib/foundry
 import childProcess from "node:child_process";
 import { syncBuiltinESMExports } from "node:module";
 import { testAuthIdentityReceipt } from "../fixtures/auth-identity-receipt.ts";
+import { canonicalPayloadSha256 } from "../../scripts/lib/post-write-root-proof.ts";
+import { readRows } from "../../scripts/lib/import-curation/internal/runtime-io.ts";
+import { unwrapDatasetPayload } from "../../scripts/lib/import-curation/internal/dataset-payload.ts";
 
 const digestFile = (file: string) =>
   createHash("sha256").update(fs.readFileSync(file)).digest("hex");
@@ -688,6 +691,8 @@ for (const [identityDecision, approvalKind, trace] of [
       preflightCalls = 0,
       failRead = true;
     let finalizing = false;
+    let writes = 0,
+      exactReadback = approvalKind !== "current_rows";
     let childFailure: unknown;
     t.mock.method(
       childProcess,
@@ -700,8 +705,9 @@ for (const [identityDecision, approvalKind, trace] of [
             Array.isArray(argv) &&
             ["publish-version", "save-draft", "verify-remote"].some((name) => argv.includes(name))
           ) {
-            assert.ok(!argv.includes("--commit"));
-            if (!argv.includes("verify-remote")) assert.ok(argv.includes("--dry-run"));
+            const committing = argv.includes("--commit");
+            if (!argv.includes("verify-remote") && !committing)
+              assert.ok(argv.includes("--dry-run"));
             const outDir = argv[argv.indexOf("--out-dir") + 1];
             fs.mkdirSync(outDir, { recursive: true });
             const file = path.join(outDir, "controlled-read-report.json");
@@ -725,7 +731,63 @@ for (const [identityDecision, approvalKind, trace] of [
                 ],
                 files: { report: file },
               };
+              if (argv.includes("--compare-root-payload")) {
+                const rows = readRows(input);
+                const checks = [
+                  ...(report.checks as Array<Record<string, unknown>>),
+                  ...rows.map((row, row_index) => ({
+                    role: "root",
+                    path: `${input}#readback`,
+                    table: "flows",
+                    id,
+                    version: "00.00.001",
+                    row_index,
+                    status: "ok",
+                    local_payload_sha256: canonicalPayloadSha256(unwrapDatasetPayload(row, "flow")),
+                    remote_payload_sha256: canonicalPayloadSha256(
+                      unwrapDatasetPayload(row, "flow"),
+                    ),
+                    remote_user_id: exactReadback || trace ? account.user_id : "another-owner",
+                    remote_state_code: !exactReadback && trace ? 20 : 0,
+                  })),
+                ];
+                const checksFile = path.join(outDir, "checks.jsonl");
+                fs.writeFileSync(
+                  checksFile,
+                  checks.map((check) => JSON.stringify(check)).join("\n") + "\n",
+                );
+                Object.assign(report, {
+                  checks,
+                  counts: {
+                    blockers: 0,
+                    root_readback_checks: rows.length,
+                    root_payload_mismatches: 0,
+                  },
+                  files: { report: file, checks: checksFile },
+                });
+              }
             } else {
+              if (committing) {
+                const taskRoot = path.join(workspace, ".foundry", "workspaces", invocation.taskId);
+                const markers = fs.readdirSync(path.join(taskRoot, "attempts", "owner-v1"));
+                assert.equal(markers.length, 1);
+                assert.ok(
+                  fs.existsSync(
+                    path.join(taskRoot, "attempts", "owner-v1", markers[0], "consumed.json"),
+                  ),
+                  "attempt is durable before dispatch",
+                );
+                writes++;
+                if (approvalKind === "current_rows")
+                  return {
+                    status: null,
+                    signal: "SIGTERM",
+                    stdout: "",
+                    stderr: "response lost after write",
+                    pid: 1,
+                    output: [],
+                  };
+              }
               const success = path.join(outDir, "success.json"),
                 failed = path.join(outDir, "failed.jsonl");
               fs.writeFileSync(
@@ -735,9 +797,10 @@ for (const [identityDecision, approvalKind, trace] of [
               fs.writeFileSync(failed, "");
               report = {
                 status: "completed_flow_publish_version",
-                mode: "dry_run",
-                dry_run: true,
-                commit: false,
+                mode: committing ? "commit" : "dry_run",
+                dry_run: !committing,
+                commit: committing,
+                counts: { selected: 1, success_count: committing ? 1 : 0, failed: 0 },
                 input_path: input,
                 target_user_id_override: account.user_id,
                 files: { report: file, success_list: success, remote_failed: failed },
@@ -1256,6 +1319,59 @@ for (const [identityDecision, approvalKind, trace] of [
         "granted",
       );
       assert.equal(exitCode, 2, "sealed execution still requires the subsequent execution stage");
+      const preparedExecution = await facade.resume(invocation);
+      assert.ok(
+        preparedExecution.artifacts.some((item) => item.role === "owner-execution-request.json"),
+        JSON.stringify(preparedExecution.blockers),
+      );
+      assert.equal(writes, 0, "request preparation is local");
+      let executed = await facade.resume(invocation);
+      assert.equal(writes, 1, JSON.stringify(executed.blockers));
+      if (approvalKind === "current_rows") {
+        assert.equal(executed.status, "needs_input", JSON.stringify(executed));
+        assert.equal(executed.blockers[0]?.code, "mutation_readback_required");
+        const attemptsRoot = path.join(
+          workspace,
+          ".foundry",
+          "workspaces",
+          invocation.taskId,
+          "attempts",
+          "owner-v1",
+        );
+        for (const scope of fs.readdirSync(attemptsRoot)) {
+          for (const name of fs.readdirSync(path.join(attemptsRoot, scope))) {
+            if (name.endsWith(".jsonl")) fs.unlinkSync(path.join(attemptsRoot, scope, name));
+          }
+        }
+        exactReadback = true;
+        executed = await facade.resume(invocation);
+      }
+      const executionReport = executed.artifacts.findLast(
+        (item) => item.role === "owner-execution-result.json",
+      );
+      if (childFailure) throw childFailure;
+      assert.equal(
+        executed.status,
+        "completed",
+        executionReport?.kind === "file"
+          ? fs.readFileSync(executionReport.path, "utf8")
+          : JSON.stringify(executed.blockers),
+      );
+      assert.equal(writes, 1, "lost write response recovery never dispatches another write");
+      assert.equal((await facade.resume(invocation)).status, "completed");
+      assert.equal(writes, 1);
+      assert.ok(executionReport?.kind === "file");
+      const proof = JSON.parse(fs.readFileSync(executionReport.path, "utf8")) as {
+        readback: { checks: { path: string } };
+      };
+      fs.appendFileSync(proof.readback.checks.path, "{}\n");
+      assert.equal(
+        (await facade.resume(invocation)).status,
+        "blocked",
+        "changed readback evidence cannot retain completion",
+      );
+      assert.equal(writes, 1, "damaged evidence cannot reset mutation attempts");
+      if (childFailure) throw childFailure;
     }
   });
 }

@@ -29,8 +29,8 @@ checkPaths:
   - specs/import-profiles.json
   - tasks/**
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: db62b65202d3e40beb5e57d6dec990d6b584372d
-lastReviewedNote: "Reviewed for Foundry #118 current-row approval continuation: original-grant re-finalization, exact derived activation, equal-byte descendant proof, unchanged authority/expiry, and recovery after interrupted capture. Input/lineage lookup preserves ordered verified producers. Actual owner dispatch/readback and full release acceptance remain open."
+lastReviewedCommit: 3514bcacdec59cb6b4d760e7d96c8f790d910a6c
+lastReviewedNote: "Reviewed for Foundry #118 public owner execution: sealed request, CLI batch one-shot dispatch, durable consumed marker, independent root/owner/state/payload readback, producer-backed completion, and no replay on recovery. Full workflow, live RC and formal release acceptance remain open."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -138,7 +138,7 @@ An expected account may be selected after local preparation. The first selection
 
 Before a restricted child handoff, the runtime stores a content-addressed `execution-context.v1` under task evidence. A new process must reconstruct the context, qualification and identity, then recheck source ancestry, final bytes, current authorization/QA exceptions, owner CLI path and CommandSpec operation semantics. Only the verified spec is returned to the existing no-replay executor. The execution context never carries credentials and never clears or retries an attempt.
 
-The W05 facade now projects these records through the public result envelope. It automatically resumes only deterministic local cleanup. A nonempty attempt directory returns readback-only recovery; an unindexed copied completion report does not change task status. `completed` requires a current indexed completion report for the same task after source and artifact verification. Other stages remain explicit next actions until their owner evidence is registered; the facade never invents a child command or treats a directory name as task state.
+The public facade projects preparation, sealed approval, owner execution and independent readback through the result envelope. Before dispatch, the dedicated execution-consume operation registers an immutable `attempts/owner-v1/<scope>/consumed.json` output with producer evidence; other local operations cannot write task-control paths. Recognized consumed requests resume readback only, while unknown attempts remain blocked. Completion requires a current producer-backed completion report or verified current write scopes with no outstanding reference-only partition. Inspect revalidates completion, execution requests, consumed markers, observations and results against their exact producer plans, receipts and current bytes. A forged index entry borrowing another operation receipt cannot prove completion. No child command is inferred from a directory name.
 
 The request store revalidates every predecessor's retained job against its publication and indexed identity before admitting a new revision or returning a descendant for status/resume. A nonempty predecessor attempt directory blocks the descendant and directs recovery to the original owner; its declared success/unknown state never clears the guard. Missing or altered predecessor state is an audit condition, not permission to reconstruct an empty history. This facade guard does not by itself establish complete migration history, cross-request inheritance or restricted execution admission.
 
