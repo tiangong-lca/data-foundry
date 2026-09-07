@@ -407,7 +407,10 @@ export async function prepareFoundryRuntimeComponents(
         version: nativePackage.version,
         root,
         files,
-        licenses: [...nativePackage.license_files],
+        licenses:
+          id === "tidas" && native.licenseCoverage.tidas === "owner-inventory-verified"
+            ? ["share/licenses/tidas/LICENSE", "share/licenses/tidas/THIRD-PARTY-NOTICES.txt"]
+            : [...nativePackage.license_files],
         provenance: ["metadata/runtime-provenance.json"],
         protocols:
           id === "node"

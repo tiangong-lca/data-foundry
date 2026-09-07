@@ -119,6 +119,12 @@ test("TIDAS v2 retains its complete source-bound notice inventory", () => {
   });
   assert.equal(result.files.size, Object.keys(sample.entries).length);
   assert.equal(result.distribution.schema_version, "tidas.distribution-manifest.v2");
+  for (const [name, bytes] of Object.entries(sample.entries)) {
+    if (name.includes("/texts/")) {
+      assert.ok(result.noticeText.includes(bytes), `Full original notice retained: ${name}`);
+      assert.deepEqual(result.files.get(name), bytes);
+    }
+  }
   assert.throws(
     () =>
       selectFoundryTidasDistribution(bytes, {

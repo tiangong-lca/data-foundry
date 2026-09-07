@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 3db019d9a30d6b0458eb97da3d54ced7aa147be2
-lastReviewedNote: "Reviewed for Foundry #112 adoption of qualified public TIDAS0.3.0: full source-bound native notices and reviewed 0.2/0.3 runtime protocol admission. Source release helpers remain outside the public compiler closure; workspace/task/account authorization, no-replay and final F1 publication gates retain their existing owners."
+lastReviewedCommit: 67c16d5735cf909de474a0a69b555ffd4f1d539c
+lastReviewedNote: "Reviewed for Foundry #112 complete TIDAS0.3 notices: deterministic full-text aggregate entrypoint fits the published CLI64-entry bound while every original text, source record and SPDX reference remains retained. Runtime, authorization, compiler and final publication boundaries are unchanged."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -86,7 +86,7 @@ Minimum-host data is frozen in `specs/release/runtime-inputs.json`. [The pinned 
 
 The source-side qualifier receives the in-process prepared authority. It executes the actual packaged Node/Foundry/TIDAS combination with an empty tool PATH, no supplied credentials, an empty component cache seeded from the verified local archives, and then a warm cache with no manager downloads. It checks public init/doctor/task lifecycle, read selection/restoration and rejection of developer commands. Diagnostic timings and results live outside hashed component payloads. This proves native execution from the prepared archives; published URL download/copy-bootstrap and final four-platform publication remain distinct gates.
 
-The qualified TIDAS0.3.0 archive includes distribution manifest v2 and a complete executable/source-bound native notice inventory. Preparation verifies the nested manifest digest, every retained file and Cargo/native/Rust evidence before reporting `owner-inventory-verified`. The assembler still refuses published mode when this verified coverage is absent. All original notice texts and source evidence remain in the TIDAS component, and its SPDX license references include every retained notice text. Candidate component URLs are intended release locations and are not advertised as already downloadable. The source CI performs candidate assembly/qualification but does not publish its binaries.
+The qualified TIDAS0.3.0 archive includes distribution manifest v2 and a complete executable/source-bound native notice inventory. Preparation verifies the nested manifest digest, every retained file and Cargo/native/Rust evidence before reporting `owner-inventory-verified`. The assembler still refuses published mode when this verified coverage is absent. All original notice texts and source evidence remain in the TIDAS component, and its SPDX license references include every retained notice text. The component manifest uses the project LICENSE and a deterministic THIRD-PARTY-NOTICES.txt entrypoint containing every original text byte; this stays within the published CLI limit of64 license entrypoints while the complete per-file inventory and source manifest remain intact. Candidate component URLs are intended release locations and are not advertised as already downloadable. The source CI performs candidate assembly/qualification but does not publish its binaries.
 
 ## Build and staging roots
 

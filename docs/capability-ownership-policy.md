@@ -93,8 +93,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: a229230d120abdbad809bbbc52516537624c1ea0
-lastReviewedNote: "Reviewed for Foundry #112 adoption of qualified public TIDAS0.3.0: full source-bound native notices and reviewed 0.2/0.3 runtime protocol admission. Source release helpers remain outside the public compiler closure; workspace/task/account authorization, no-replay and final F1 publication gates retain their existing owners."
+lastReviewedCommit: 67c16d5735cf909de474a0a69b555ffd4f1d539c
+lastReviewedNote: "Reviewed for Foundry #112 complete TIDAS0.3 notices: deterministic full-text aggregate entrypoint fits the published CLI64-entry bound while every original text, source record and SPDX reference remains retained. Runtime, authorization, compiler and final publication boundaries are unchanged."
 ---
 
 # Capability Ownership Policy
