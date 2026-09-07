@@ -235,6 +235,8 @@ async function main(args: readonly string[]): Promise<void> {
     args[3],
     args.length === 5 ? "source-candidate" : "published-release",
   );
+  if (process.env.GITHUB_ACTIONS === "true" && process.env.GITHUB_OUTPUT)
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `manifest_sha256=${result.manifest_sha256}\n`);
   process.stdout.write(
     json({
       status: "verified",

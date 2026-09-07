@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 3d2bc40085df1fb178ad00683df1123470ce4b6a
-lastReviewedNote: "Reviewed for Foundry #112 native base CLI cache adoption and warm reuse: the qualifier executes the actual packaged Node/CLI pair and aggregation requires its13-call evidence. All changes remain source-only; public download/copied-script/final-manifest gates and task/account boundaries remain separate."
+lastReviewedCommit: 4b027afad988467255c941eb8cec23741fc9ccbe
+lastReviewedNote: "Reviewed for Foundry #112 copied C1 bootstrap and final manifest workflow: isolated cached/public modes, actual system tools, tamper refusal and strict four-platform public proof before immutable manifest publication. Source-only tooling preserves runtime/task/account boundaries; actual versioned publication remains required."
 ---
 
 # Test Layout
@@ -331,6 +331,8 @@ The Git command suite also qualifies filesystem case aliases while rejecting a d
 `unit/foundry-package-archive.test.mts` verifies cross-host gzip header normalization without changing payload/CRC bytes, and rejects optional/header-CRC formats. `unit/foundry-release-assets.test.mts` covers create-only drafts, exact asset reuse, lost-response readback, source/asset conflicts, bounded draft lookup and pagination. Publisher command tests reject local and caller-selected release inputs before network access. Aggregation tests also reject serialized receipts as release authority. These transport tests use explicit fakes and do not prove a public release.
 
 `unit/foundry-release-bootstrap.test.mts` checks complete deterministic checksum lists, portable names, the exact released C1 lock field set, trusted manifest/source URL binding and rejection of missing CLI or mismatched checksum data. Real native qualification also invokes the base CLI for receipt adoption and warm reuse; aggregation requires that result. Copied-script and public-download execution remain further required evidence.
+
+`unit/foundry-release-bootstrap-environment.test.mts` checks that copied scripts cannot inherit credentials, Node hooks, npm config, proxy credentials or PowerShell policy overrides. Public-qualification tests require all four matching cold-download reports and reject cached, incomplete, failed, stale or different-runtime evidence. Command tests reject missing independent digests and ordinary final-publication execution. Source CI separately exercises actual original scripts and system tar from real platform artifacts; release CI supplies the actual public cold-download proof.
 
 W06 package coverage has two layers. `unit/foundry-package-contract.test.mts` checks coherent repository/compiled/schema versions, valid-version tamper rejection, fixed package identity, exports, allowlist, no-lifecycle metadata and compiler settings; the facade schema suite compiles the package descriptor schema strictly. `scenarios/foundry-package-consumer.test.mts` rebuilds and packs twice byte-identically, compares the pnpm payload with the canonical gzip-header output, installs the canonical pack-driver tarball into an online then offline clean consumer, compiles a typed consumer, verifies exact C1, runs all six operations from a Unicode CWD against a read-only package, rejects internal commands and tests missing/changed/extra/linked/lifecycle-bearing/Intel-invalid closures. A fresh scenario-local Corepack cache and exact pnpm version preflight prevent repeated tool downloads when the synthetic HOME changes; later packs disable Corepack network/latest lookup. Cold tool bootstrap and the online consumer installation allow five minutes, while offline installation and local commands retain two-minute bounds. It uses only public synthetic inputs; the official OAuth installed-package case remains private W14 evidence.
 

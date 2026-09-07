@@ -86,6 +86,9 @@ async function main(args: readonly string[]): Promise<void> {
     public_download_qualification: "required",
   };
   writeFoundryComponentFile(output, "component-publication.json", json(report));
+  writeFoundryComponentFile(output, "runtime-manifest.json", bytes.manifestBytes);
+  writeFoundryComponentFile(output, "runtime-aggregate.json", bytes.reportBytes);
+  writeFoundryComponentFile(output, "bootstrap-lock.json", bytes.bootstrapLockBytes);
   if (process.env.GITHUB_OUTPUT)
     fs.appendFileSync(
       process.env.GITHUB_OUTPUT,

@@ -135,7 +135,9 @@
     "prepush:gate": "pnpm lint && pnpm test:toolchain && pnpm test && pnpm golden:diff && pnpm surface:audit && pnpm build && pnpm package:build && pnpm package:check && pnpm audit:high",
     "release:prepare-runtime": "node scripts/release-prepare-runtime.ts",
     "release:aggregate-runtime": "node scripts/release-aggregate-runtime.ts",
-    "release:publish-components": "node scripts/release-publish-components.ts"
+    "release:publish-components": "node scripts/release-publish-components.ts",
+    "release:qualify-bootstrap": "node scripts/release-qualify-bootstrap.ts",
+    "release:publish-runtime-manifest": "node scripts/release-publish-runtime-manifest.ts"
   },
   "engines": {
     "node": ">=24.19.0 <25",

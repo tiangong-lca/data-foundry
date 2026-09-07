@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 3d2bc40085df1fb178ad00683df1123470ce4b6a
-lastReviewedNote: "Reviewed for Foundry #112 native base CLI cache adoption and warm reuse: the qualifier executes the actual packaged Node/CLI pair and aggregation requires its13-call evidence. All changes remain source-only; public download/copied-script/final-manifest gates and task/account boundaries remain separate."
+lastReviewedCommit: 4b027afad988467255c941eb8cec23741fc9ccbe
+lastReviewedNote: "Reviewed for Foundry #112 copied C1 bootstrap and final manifest workflow: isolated cached/public modes, actual system tools, tamper refusal and strict four-platform public proof before immutable manifest publication. Source-only tooling preserves runtime/task/account boundaries; actual versioned publication remains required."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -160,7 +160,7 @@ An ordinary unchanged-version main push exits without a GitHub PR lookup. A rele
 
 `.github/workflows/publish-foundry.yml` connects that context gate to the existing four-native-host canonical gate through `workflow_call`. The reusable quality workflow checks out the admitted SHA, retains its ordinary PR/manual triggers, and does not persist checkout credentials. These source qualification jobs have read-only permissions.
 
-After every host passes, the separate `release-tag` job revalidates the event, clean source/main relationship, release-only diff and merged PR. `pnpm release:tag` accepts no source/tag arguments or serialized context and requires that exact job identity. This tag job receives contents-write permission only for its create-or-verify operation; it installs no project dependencies and does not persist checkout credentials. The later component publisher has separate contents-write permission gated on all published-input native jobs.
+After every host passes, the separate `release-tag` job revalidates the event, clean source/main relationship, release-only diff and merged PR. `pnpm release:tag` accepts no source/tag arguments or serialized context and requires that exact job identity. This tag job receives contents-write permission only for its create-or-verify operation; it installs no project dependencies and does not persist checkout credentials. The later component publisher has separate contents-write permission gated on all published-input native jobs; final-manifest publication has its own contents-write job after all public bootstrap checks.
 
 The tag helper derives `foundry-v<version>`, queries only the canonical repository and creates a missing tag reference at the exact qualified source commit. An existing tag must resolve to that same commit; an annotated tag is followed through at most four tag objects, with cycles and invalid object types rejected. There is no update, force or delete operation. If a create response is lost or fails, one readback may confirm the intended tag; an absent or different result stays failed without replaying the mutation. A fresh workflow rerun repeats source validation and the same create-or-verify policy.
 
@@ -204,11 +204,25 @@ After `npm_published=true`, four native `prepare-runtime` jobs run `release:prep
 
 The `publish-components` job downloads those four results from its own run attempt and verifies each archive attestation against the canonical workflow, exact source digest/ref and GitHub-hosted runner identity. `release:publish-components` accepts no arguments and requires that exact owning job. It revalidates the merged release-only source, existing package tag and actual public Foundry npm artifact, then performs fresh in-process four-platform aggregation and checks package digests again. Copied aggregate receipts cannot supply release bytes. Before upload it rechecks its source, manifest, report and every archived byte.
 
-Component assets use the existing `foundry-v<version>` tag. The publisher creates a draft, uploads only missing expected files, checks exact source and server-reported asset digests, then publishes the complete draft. An existing published release is accepted only with the complete identical asset set. Conflicting bytes, extra files, an incomplete published release or a different tag source fail; there is no asset replacement, deletion or tag movement. The tag library also supports a distinct `foundry-runtime-v<version>` namespace for the later final-manifest stage.
+Component assets use the existing `foundry-v<version>` tag. The publisher creates a draft, uploads only missing expected files, checks exact source and server-reported asset digests, then publishes the complete draft. An existing published release is accepted only with the complete identical asset set. Conflicting bytes, extra files, an incomplete published release or a different tag source fail; there is no asset replacement, deletion or tag movement. The final-manifest stage uses the distinct `foundry-runtime-v<version>` namespace after public bootstrap qualification.
 
 After a lost mutation response, one fresh read owns the result; the operation is not automatically repeated. Draft recovery uses a bounded complete release listing only when no published tag result is available, then retains the exact release ID for subsequent reads. Source identity is read from the actual peeled Git tag, never from the release's display-oriented target_commitish field. Ambiguous or incomplete draft discovery fails before another release is created.
 
 The published component release includes twelve archives, runtime-candidate.json, runtime-aggregate.json and bootstrap-lock.candidate.json. The candidate manifest is deliberately separate from the final compatibility publication: native public-download and copied-bootstrap checks must complete before the final immutable manifest is released and selected by Skills. The current component stage records that those further checks are required; component availability alone is not F1 completion. Separate release stages support GitHub's rule that immutable published releases cannot receive additional assets.
+
+## Copied bootstrap and final manifest qualification
+
+`release:qualify-bootstrap` requires an independently selected manifest SHA256, exact same-source aggregate input, a new absolute output and either qualified local archives or explicit public mode. The CLI refuses source-tree output. Public mode additionally requires the owning release job, published-package scope and exact merged release-only context. The tool cannot choose another package version or publish anything.
+
+The verifier downloads both original C1 source scripts through their pinned URLs and checks their full bytes and SHA256 before copying them unchanged beside freshly derived lock data. Its child environment contains isolated home/cache/config/temp paths and system tools; account credentials, session paths, Node hooks, npm configuration, proxy credentials and PowerShell execution-policy overrides are excluded. It invokes the installed PowerShell executable directly on Windows and the system POSIX shell elsewhere, without changing host execution policy.
+
+Cached qualification verifies and seeds the real archives, then re-extracts the base with the system tar after checking the exact regular-file entry list. It removes only the base receipt in that private test cache so the original script and CLI must adopt the verified tree. Public qualification starts with no cache or archive seeds and lets the original script download the actual released manifest/base and the manager download the remaining components. Both modes exercise initialization, warm doctor, developer-command rejection and rejection of altered script/checksum-index bytes; modified private test copies are restored and the final cache is rechecked.
+
+Source CI runs cached copied-script checks on all four hosts after complete aggregation. Release CI runs public checks after component publication. Their reports carry distinct modes and initial-cache evidence. Cached or single-platform success cannot authorize final publication.
+
+`release:publish-runtime-manifest` runs only in its owning job after all four public-bootstrap jobs succeed. It revalidates the exact source, the complete twelve-component/eight-launch manifest, all five checks per public report, original script digests and observed package/Node/TIDAS identities. It rereads the public candidate manifest and exact source tag before creating or verifying `foundry-runtime-v<version>`.
+
+The final release contains the identical qualified runtime-manifest.json, bootstrap-lock.json pointing to that final URL, both unchanged C1 scripts and a public qualification summary binding all four report hashes and the workflow run. It uses the existing create-only draft/asset/readback machinery. Every final public asset is downloaded and compared again before runtime_published=true is emitted. The first-package account handoff and actual versioned workflow execution remain required; implementation or transport fixtures alone do not establish F1 publication.
 
 ## Frozen production payload and metadata
 

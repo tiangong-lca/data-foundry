@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 3d2bc40085df1fb178ad00683df1123470ce4b6a
-lastReviewedNote: "Reviewed for Foundry #112 native base CLI cache adoption and warm reuse: the qualifier executes the actual packaged Node/CLI pair and aggregation requires its13-call evidence. All changes remain source-only; public download/copied-script/final-manifest gates and task/account boundaries remain separate."
+lastReviewedCommit: 4b027afad988467255c941eb8cec23741fc9ccbe
+lastReviewedNote: "Reviewed for Foundry #112 copied C1 bootstrap and final manifest workflow: isolated cached/public modes, actual system tools, tamper refusal and strict four-platform public proof before immutable manifest publication. Source-only tooling preserves runtime/task/account boundaries; actual versioned publication remains required."
 ---
 
 # Environment Surface Policy
