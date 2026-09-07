@@ -70,6 +70,8 @@ The TIDAS expectation admits only `linux-x64`, `linux-arm64`, `darwin-arm64` and
 
 ## Root ownership
 
+Public semantic input remains separate from frozen task source selection and runtime trust. The invocation checks task/actor/current-assessment/work-item bindings, captures explicit non-credential input files, and registers immutable snapshots. Existing indexed work provides the collector context; submitted files provide candidate data only. Repaired rows retain source ancestry, and the next assessment must match the newest row manifest. No semantic data or local apply result is authorization for a remote action.
+
 | Root | Meaning and authority |
 | --- | --- |
 | `runtimeRoot` | Immutable executing package. No user outputs or state may be written here. |

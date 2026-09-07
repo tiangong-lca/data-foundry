@@ -57,6 +57,8 @@ import {
 } from "./lib/foundry-runtime-selection.ts";
 import type { TrustedRuntimeManifest } from "@tiangong-lca/cli/runtime";
 import { datasetTypePlural } from "./lib/import-curation/internal/dataset-types.ts";
+import { currentWorkflowState } from "./lib/foundry-workflow-state.ts";
+import { selectFoundrySemanticInput } from "./lib/foundry-semantic-input.ts";
 
 export interface FoundryFacadeRuntimeSelection {
   readonly cliExpectation: unknown;
@@ -274,6 +276,7 @@ function failure(
     needsInputCodes.has(code) ||
     code.startsWith("argument_") ||
     code.startsWith("task_spec_") ||
+    code.startsWith("task_semantic_") ||
     code.startsWith("task_seed_");
   const blocked =
     !needsAuth &&
@@ -528,11 +531,8 @@ function taskProjection(
         permissions: noPermission(),
       });
   }
-  const assessment = inspected.artifacts.find(
-    (entry) =>
-      entry.command === "dataset-workflow-assessment" &&
-      path.basename(entry.path) === "foundry-assessment.json",
-  );
+  const workflow = currentWorkflowState(context, inspected.artifacts);
+  const assessment = workflow.assessment?.entry;
   if (assessment) {
     const report: unknown = JSON.parse(
       readCaptured(
@@ -636,8 +636,7 @@ function taskProjection(
           "Review the current prepared artifacts and continue the returned task workflow.",
         ),
       ]
-    : record.spec.preparation ||
-        !inspected.artifacts.some((entry) => entry.command === "dataset-workflow-assessment")
+    : record.spec.preparation || !workflow.assessment
       ? [resumeCommand(context, record)]
       : [
           human(
@@ -1141,7 +1140,11 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
         );
       }
     },
-    async resume(input: { taskId: string; actorId: string }): Promise<FoundryOperationResult> {
+    async resume(input: {
+      taskId: string;
+      actorId: string;
+      semanticInputFile?: string;
+    }): Promise<FoundryOperationResult> {
       let current: ReturnType<typeof createFoundryRuntimeContext> | null = null;
       try {
         assertNotInterrupted(options.signal);
@@ -1162,7 +1165,58 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
           runtimeIdentity(context, qualified),
         );
         if (existing.status === "completed" || existing.status === "blocked") return existing;
+        if (input.semanticInputFile) {
+          if (record.spec.preparation)
+            throw new FoundryContextError(
+              "task_semantic_input_invalid",
+              "Explicit cleanup tasks do not accept semantic submissions.",
+            );
+          const submission = selectFoundrySemanticInput(context, input.semanticInputFile);
+          const facts = before.artifacts.map((artifact) => ({
+            path: path.join(context.taskRoot!, artifact.path),
+            bytes: artifact.bytes,
+            sha256: artifact.sha256,
+          }));
+          const selected = taskContext(options, current, record, facts);
+          const result = await createFoundryRuntime(selected, qualified).applySemantic(
+            before.artifacts,
+            submission,
+          );
+          assertNotInterrupted(options.signal);
+          const after = await runtime.inspectTask();
+          if (result.status !== "completed")
+            return createFoundryOperationResult({
+              operation: "task.resume",
+              status: "needs_input",
+              taskId: record.task_id,
+              artifacts: taskArtifacts(context, after),
+              blockers: [
+                {
+                  code: "semantic_input_rejected",
+                  message:
+                    "Review the registered semantic result and correct the submitted patch; prior rows remain current.",
+                  scope: record.task_id,
+                },
+              ],
+              nextActions: [
+                human(
+                  "correct_semantic_input",
+                  "Use the semantic-result.json diagnostics and submit corrected input against the current assessment.",
+                ),
+              ],
+              runtimeIdentity: runtimeIdentity(context, qualified),
+              permissions: noPermission(),
+            });
+          return taskProjection(
+            "task.resume",
+            context,
+            record,
+            after,
+            runtimeIdentity(context, qualified),
+          );
+        }
         const preparation = record.spec.preparation;
+        const workflow = currentWorkflowState(context, before.artifacts);
         const imported = before.artifacts.some(
           (artifact) => artifact.command === "dataset-tidas-import",
         );
@@ -1177,9 +1231,7 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
               /^outputs\/import\/[^/]+\/tidas\/([^/]+)\//u.exec(artifact.path)?.[1] ?? "",
             ),
         );
-        const rowsPrepared = before.artifacts.some(
-          (artifact) => artifact.command === "dataset-workflow-rows",
-        );
+        const rowsPrepared = Boolean(workflow.rows);
         if (!preparation && record.spec.lane === "external-dataset-curated-import" && !imported) {
           if (record.inputs.length !== 1)
             throw new FoundryContextError(
@@ -1214,19 +1266,20 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
             facts.map((fact) => fact.path),
           );
           assertNotInterrupted(options.signal);
-        } else if (
-          !preparation &&
-          !before.artifacts.some((artifact) => artifact.command === "dataset-workflow-assessment")
-        ) {
+        } else if (!preparation && !workflow.assessment) {
           const selectedArtifacts = before.artifacts.filter((artifact) =>
-            ["dataset-workflow-rows", "dataset-context-pack"].includes(artifact.command),
+            ["dataset-workflow-rows", "dataset-context-pack", "dataset-semantic-apply"].includes(
+              artifact.command,
+            ),
           );
           const facts = selectedArtifacts.map((artifact) => ({
             path: path.join(context.taskRoot!, artifact.path),
             bytes: artifact.bytes,
             sha256: artifact.sha256,
           }));
-          const rows = facts.find((fact) => path.basename(fact.path) === "foundry-rows.json");
+          const rows = workflow.rows
+            ? facts.find((fact) => fact.path === workflow.rows!.file)
+            : undefined;
           if (!rows)
             throw new FoundryContextError(
               "workflow_rows_required",

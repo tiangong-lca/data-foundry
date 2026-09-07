@@ -1,0 +1,146 @@
+import fs from "node:fs";
+import path from "node:path";
+import { createHash } from "node:crypto";
+import {
+  FoundryContextError,
+  resolveFoundryOutput,
+  type FoundryRuntimeContext,
+} from "./foundry-runtime-context.ts";
+import type { ArtifactEntry } from "./foundry-task-types.ts";
+
+export interface WorkflowRowSet {
+  type: string;
+  file: string;
+  count: number;
+}
+export interface WorkflowArtifact<T> {
+  entry: ArtifactEntry;
+  file: string;
+  value: T;
+}
+export interface WorkflowRows {
+  schema: "tiangong-foundry.rows-stage.v1";
+  status: "completed";
+  sets: WorkflowRowSet[];
+}
+export interface WorkflowAssessment {
+  schema: "tiangong-foundry.assessment-stage.v1";
+  status: string;
+  owner_base: string;
+  rows_report?: string;
+  sets: Array<Record<string, unknown>>;
+}
+
+export function workflowObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new FoundryContextError(
+      "workflow_report_invalid",
+      "Workflow metadata must be an object.",
+    );
+  return value as Record<string, unknown>;
+}
+
+export function readWorkflowArtifact(
+  context: FoundryRuntimeContext,
+  entry: ArtifactEntry,
+): WorkflowArtifact<Record<string, unknown>> {
+  const file = resolveFoundryOutput(context, entry.path);
+  const fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+  try {
+    const stat = fs.fstatSync(fd);
+    if (!stat.isFile() || stat.size > 8 * 1024 * 1024 || stat.size !== entry.bytes)
+      throw new FoundryContextError(
+        "workflow_artifact_changed",
+        "Workflow artifact size or identity changed.",
+      );
+    const bytes = fs.readFileSync(fd);
+    if (
+      bytes.length !== entry.bytes ||
+      createHash("sha256").update(bytes).digest("hex") !== entry.sha256
+    )
+      throw new FoundryContextError(
+        "workflow_artifact_changed",
+        "Workflow artifact content changed.",
+      );
+    return { entry, file, value: workflowObject(JSON.parse(bytes.toString("utf8"))) };
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+export function currentWorkflowState(
+  context: FoundryRuntimeContext,
+  entries: readonly ArtifactEntry[],
+) {
+  const rowEntry = entries.findLast(
+    (entry) =>
+      ["dataset-workflow-rows", "dataset-semantic-apply"].includes(entry.command) &&
+      path.basename(entry.path) === "foundry-rows.json",
+  );
+  let rows: WorkflowArtifact<WorkflowRows> | null = null;
+  if (rowEntry) {
+    const found = readWorkflowArtifact(context, rowEntry);
+    if (
+      found.value.schema !== "tiangong-foundry.rows-stage.v1" ||
+      found.value.status !== "completed" ||
+      !Array.isArray(found.value.sets)
+    )
+      throw new FoundryContextError("workflow_rows_invalid", "Registered row metadata is invalid.");
+    const sets = found.value.sets.map((value) => {
+      const set = workflowObject(value);
+      if (
+        typeof set.type !== "string" ||
+        typeof set.file !== "string" ||
+        !Number.isSafeInteger(set.count) ||
+        Number(set.count) < 0
+      )
+        throw new FoundryContextError("workflow_rows_invalid", "A registered row set is invalid.");
+      return { type: set.type, file: set.file, count: Number(set.count) };
+    });
+    rows = {
+      ...found,
+      value: { schema: "tiangong-foundry.rows-stage.v1", status: "completed", sets },
+    };
+  }
+  let assessment: WorkflowArtifact<WorkflowAssessment> | null = null;
+  if (rows) {
+    for (const entry of [...entries].reverse()) {
+      if (
+        entry.command !== "dataset-workflow-assessment" ||
+        path.basename(entry.path) !== "foundry-assessment.json"
+      )
+        continue;
+      const found = readWorkflowArtifact(context, entry),
+        value = found.value;
+      if (
+        value.schema !== "tiangong-foundry.assessment-stage.v1" ||
+        typeof value.owner_base !== "string" ||
+        !Array.isArray(value.sets)
+      )
+        throw new FoundryContextError(
+          "workflow_assessment_invalid",
+          "Registered assessment metadata is invalid.",
+        );
+      const sets = value.sets.map(workflowObject);
+      const matchingRows =
+        sets.length === rows.value.sets.length &&
+        rows.value.sets.every((row) =>
+          sets.some((set) => set.type === row.type && set.rows === row.file),
+        );
+      if ((value.rows_report === undefined || value.rows_report === rows.file) && matchingRows) {
+        assessment = {
+          ...found,
+          value: {
+            schema: "tiangong-foundry.assessment-stage.v1",
+            status: String(value.status),
+            owner_base: value.owner_base,
+            rows_report: rows.file,
+            sets,
+          },
+        };
+        break;
+      }
+    }
+  }
+  return { rows, assessment };
+}

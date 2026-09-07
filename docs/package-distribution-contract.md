@@ -104,6 +104,8 @@ The public compiler closure includes the native-import and contract-context adap
 
 Indexed row preparation and local assessment include the existing curation and authoring library owners in that closure. `specs/prewrite-content-policy.json` is an explicit required asset; the packaged path must not fall back to an absent content policy. Native validation data issues remain available to curation. Public authoring output disables legacy source-runner commands while the developer producer retains its default command rendering.
 
+The package includes `foundry-semantic-input.schema.json` and exports its schema identifier and input types. Public semantic submission reuses the existing collector and exact CLI local patch owner. Selected bytes are captured without exposing a caller-selected runtime or an arbitrary executable, and only a successful local apply advances the indexed row version.
+
 The repository manifest retains developer scripts. `build-foundry-package.ts` projects a separate exact public manifest into `package-stage/` containing identity, repository links, public access intent, bin/exports/files, Node engine, license, one production dependency and runtime layout. It omits `scripts`, `devDependencies`, `packageManager`, lint configuration and `private`. There are no install/prepare lifecycle hooks; installation cannot initialize a workspace, install Git hooks, authenticate or download a component. Repository hook setup is the explicit `pnpm dev:hooks` command.
 
 ## File and descriptor integrity

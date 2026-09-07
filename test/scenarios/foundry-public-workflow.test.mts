@@ -9,7 +9,14 @@ import { createFoundryFacade } from "../../scripts/public-api.ts";
 import { FOUNDRY_TIDAS_EXPECTATION_SCHEMA } from "../../scripts/lib/foundry-runtime-qualification.ts";
 import { flowRow } from "../fixtures/row-builders.ts";
 
-function workflowFixture(t: TestContext, importFails = false, validationFails = false) {
+const digestFile = (file: string) =>
+  createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+
+function workflowFixture(
+  t: TestContext,
+  importFails = false,
+  validationFails: boolean | "missing-name" = false,
+) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-public-workflow-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const workspace = path.join(root, "项目 workspace");
@@ -55,7 +62,12 @@ function workflowFixture(t: TestContext, importFails = false, validationFails = 
     fs.writeFileSync(
       binary,
       before
-        .replace('process.env.FAKE_TIDAS_INVALID === "1"', "true")
+        .replace(
+          'process.env.FAKE_TIDAS_INVALID === "1"',
+          validationFails === "missing-name"
+            ? '!JSON.parse(fs.readFileSync(path.join(args[1], manifest[0].relative_path), "utf8")).flowDataSet?.flowInformation?.dataSetInformation?.name'
+            : "true",
+        )
         .replace('process.env.FAKE_TIDAS_BATCH_DATA_ISSUES === "1"', "true"),
     );
   }
@@ -165,6 +177,195 @@ test("qualified public import dispatches the native owner and retains indexed st
   const changed = await facade.resume({ taskId: started.task_id, actorId: "workflow-actor" });
   assert.equal(changed.status, "blocked");
   assert.deepEqual(fs.readFileSync(imported.path), before);
+});
+
+test("public semantic submission rejects stale evidence and re-assesses only successfully applied rows", async (t) => {
+  const { root, facade } = workflowFixture(t, false, "missing-name");
+  const id = "44444444-4444-4444-8444-444444444444";
+  const good = flowRow(id);
+  const bad = {
+    ...good,
+    flowDataSet: {
+      ...good.flowDataSet,
+      flowInformation: { dataSetInformation: { "common:UUID": id } },
+    },
+  };
+  const seed = path.join(root, "seed.json");
+  fs.writeFileSync(seed, JSON.stringify({ rows: [{ id, version: "00.00.001", flow: bad }] }));
+  const specFile = path.join(root, "request.json");
+  fs.writeFileSync(
+    specFile,
+    JSON.stringify({
+      schema: "tiangong-foundry.task-start.v1",
+      request_id: "semantic-cycle",
+      actor_id: "semantic-actor",
+      lane: "source-evidence-dataset-development",
+      profile_id: "generic",
+      target_entities: ["flow"],
+      sources: [{ path: seed }],
+      seed: { path: seed },
+      account_intent: null,
+      preparation: null,
+    }),
+  );
+  const started = await facade.start({ specFile });
+  assert.ok(started.task_id);
+  const invocation = { taskId: started.task_id, actorId: "semantic-actor" };
+  await facade.resume(invocation);
+  await facade.resume(invocation);
+  const assessed = await facade.resume(invocation);
+  assert.equal(assessed.status, "needs_input");
+  const assessmentFile = assessed.artifacts.find(
+    (artifact) => artifact.kind === "file" && artifact.role === "foundry-assessment.json",
+  );
+  assert.ok(assessmentFile?.kind === "file");
+  const assessment = JSON.parse(fs.readFileSync(assessmentFile.path, "utf8")) as {
+    owner_base: string;
+    sets: Array<{ rows: string; authoring_manifest: string }>;
+  };
+  const manifest = JSON.parse(fs.readFileSync(assessment.sets[0].authoring_manifest, "utf8")) as {
+    tasks: Array<{
+      entity: { entity_id: string; version: string };
+      files: { task_json: string; authoring_package: string };
+      action_items: Array<{ code: string; path: string | null }>;
+    }>;
+  };
+  const task = manifest.tasks[0];
+  const taskFile = path.resolve(assessment.owner_base, task.files.task_json);
+  const patchFile = path.join(root, "patch.json"),
+    submissionFile = path.join(root, "submission.json");
+  const operation = {
+    op: "add",
+    path: "/json/flowDataSet/flowInformation/dataSetInformation/name",
+    value: good.flowDataSet.flowInformation.dataSetInformation.name,
+    basis: "Controlled fixture restores the selected source name.",
+    evidence: {
+      source: seed,
+      field_path: "/flowDataSet/flowInformation/dataSetInformation/name",
+      quote_or_trace: "Natural gas",
+    },
+    resolution: {
+      mode: "evidence_backed_completion",
+      used_context_kinds: [
+        "schema",
+        "methodology_yaml",
+        "ruleset",
+        "classification_schema",
+        "location_schema",
+      ],
+    },
+    closes_action_items: task.action_items.map((item) => ({ code: item.code, path: item.path })),
+  };
+  const patch = {
+    schema_version: 1,
+    patch_status: "completed",
+    patch_sets: [
+      {
+        dataset_id: task.entity.entity_id,
+        version: task.entity.version,
+        authoring_package: path.basename(task.files.authoring_package),
+        operations: [operation],
+      },
+    ],
+  };
+  const writeSubmission = (actor = invocation.actorId) => {
+    fs.writeFileSync(
+      submissionFile,
+      JSON.stringify({
+        schema: "tiangong-foundry.semantic-input.v1",
+        task_id: invocation.taskId,
+        actor_id: actor,
+        assessment_sha256: assessmentFile.sha256,
+        submissions: [
+          {
+            kind: "patch",
+            authoring_task_sha256: digestFile(taskFile),
+            file: patchFile,
+            sha256: digestFile(patchFile),
+          },
+        ],
+      }),
+    );
+  };
+  fs.writeFileSync(patchFile, JSON.stringify(patch));
+  writeSubmission("wrong-actor");
+  const wrong = await facade.resume({ ...invocation, semanticInputFile: submissionFile });
+  assert.equal(wrong.status, "blocked");
+  assert.equal(wrong.blockers[0]?.code, "semantic_input_scope_mismatch");
+  const invalid = structuredClone(patch);
+  invalid.patch_sets[0].operations[0].evidence.quote_or_trace = "";
+  invalid.patch_sets[0].operations[0].evidence.field_path = "";
+  fs.writeFileSync(patchFile, JSON.stringify(invalid));
+  writeSubmission();
+  const refused = await facade.resume({ ...invocation, semanticInputFile: submissionFile });
+  assert.equal(refused.status, "needs_input");
+  assert.equal(refused.blockers[0]?.code, "semantic_input_rejected");
+  const oldRows = fs.readFileSync(assessment.sets[0].rows);
+  fs.writeFileSync(patchFile, JSON.stringify(patch));
+  writeSubmission();
+  const alternatePatch = structuredClone(patch);
+  alternatePatch.patch_sets[0].operations[0].basis =
+    "Concurrent equivalent repair with a distinct submission.";
+  const alternateFile = path.join(root, "alternate-patch.json"),
+    alternateSubmission = path.join(root, "alternate-submission.json");
+  fs.writeFileSync(alternateFile, JSON.stringify(alternatePatch));
+  const alternateDescriptor = JSON.parse(fs.readFileSync(submissionFile, "utf8")) as {
+    submissions: Array<{ file: string; sha256: string }>;
+  };
+  alternateDescriptor.submissions[0].file = alternateFile;
+  alternateDescriptor.submissions[0].sha256 = digestFile(alternateFile);
+  fs.writeFileSync(alternateSubmission, JSON.stringify(alternateDescriptor));
+  const raced = await Promise.all([
+    facade.resume({ ...invocation, semanticInputFile: submissionFile }),
+    facade.resume({ ...invocation, semanticInputFile: alternateSubmission }),
+  ]);
+  assert.equal(
+    raced.filter((result) => result.status === "ready").length,
+    1,
+    JSON.stringify(raced),
+  );
+  assert.equal(raced.filter((result) => result.status === "blocked").length, 1);
+  const winner = raced.findIndex((result) => result.status === "ready");
+  const acceptedSubmission = winner === 0 ? submissionFile : alternateSubmission;
+  const applied = raced[winner];
+  assert.equal(applied.status, "ready", JSON.stringify(applied));
+  assert.deepEqual(fs.readFileSync(assessment.sets[0].rows), oldRows, "old rows stay immutable");
+  const rowManifest = applied.artifacts.findLast(
+    (artifact) => artifact.kind === "file" && artifact.role === "foundry-rows.json",
+  );
+  assert.ok(rowManifest?.kind === "file");
+  const rows = JSON.parse(fs.readFileSync(rowManifest.path, "utf8")) as {
+    sets: Array<{ file: string }>;
+  };
+  assert.notEqual(rows.sets[0].file, assessment.sets[0].rows);
+  const repaired = JSON.parse(fs.readFileSync(rows.sets[0].file, "utf8").trim()) as {
+    json: typeof good;
+  };
+  assert.deepEqual(
+    repaired.json.flowDataSet.flowInformation.dataSetInformation.name,
+    operation.value,
+  );
+  const duplicate = await facade.resume({ ...invocation, semanticInputFile: acceptedSubmission });
+  assert.deepEqual(
+    duplicate.artifacts,
+    applied.artifacts,
+    "an accepted submission cannot apply twice",
+  );
+  const reviewed = await facade.resume(invocation);
+  assert.equal(reviewed.status, "ready", JSON.stringify(reviewed));
+  assert.notEqual(reviewed.status, "completed");
+  const latest = reviewed.artifacts.findLast(
+    (artifact) => artifact.kind === "file" && artifact.role === "foundry-assessment.json",
+  );
+  assert.ok(latest?.kind === "file");
+  assert.notEqual(latest.sha256, assessmentFile.sha256);
+  patch.patch_sets[0].operations[0].basis =
+    "A different submission must not use the old assessment.";
+  fs.writeFileSync(patchFile, JSON.stringify(patch));
+  writeSubmission();
+  const stale = await facade.resume({ ...invocation, semanticInputFile: submissionFile });
+  assert.equal(stale.status, "blocked");
+  assert.equal(stale.blockers[0]?.code, "semantic_assessment_mismatch");
 });
 
 test("a failed native conversion remains blocked without preparing later context", async (t) => {

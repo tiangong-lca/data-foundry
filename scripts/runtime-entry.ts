@@ -191,9 +191,11 @@ async function runPublicCommand(
           ]
         : parsed.operation === "task.start"
           ? ["spec"]
-          : parsed.operation === "task.status" || parsed.operation === "task.resume"
-            ? ["task", "actor"]
-            : []),
+          : parsed.operation === "task.resume"
+            ? ["task", "actor", "semanticInput"]
+            : parsed.operation === "task.status"
+              ? ["task", "actor"]
+              : []),
   ]);
   const unknownOption = Object.keys(parsed.args).find((key) => !allowed.has(key));
   if (unknownOption)
@@ -453,7 +455,11 @@ async function runPublicCommand(
     result =
       parsed.operation === "task.status"
         ? await facade.status({ taskId, actorId })
-        : await facade.resume({ taskId, actorId });
+        : await facade.resume({
+            taskId,
+            actorId,
+            semanticInputFile: option(parsed.args.semanticInput, "--semantic-input") ?? undefined,
+          });
   }
   return result;
 }

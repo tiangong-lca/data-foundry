@@ -49,6 +49,9 @@ import { importFoundryWorkflowPackage } from "./lib/foundry-workflow-import.ts";
 import { prepareFoundryWorkflowContext } from "./lib/foundry-workflow-context.ts";
 import { materializeFoundryWorkflowRows } from "./lib/foundry-workflow-rows.ts";
 import { assessFoundryWorkflowRows } from "./lib/foundry-workflow-assessment.ts";
+import { applyFoundrySemanticInput } from "./lib/foundry-workflow-semantic.ts";
+import type { SelectedSemanticInput } from "./lib/foundry-semantic-input.ts";
+import type { ArtifactEntry } from "./lib/foundry-task-types.ts";
 
 export interface FoundryCleanupRequest {
   input: string;
@@ -89,6 +92,8 @@ export function createFoundryRuntime(
       materializeFoundryWorkflowRows(context, sources),
     assessRows: (rows: string, contracts: readonly string[]) =>
       assessFoundryWorkflowRows(context, requireQualification(), rows, contracts),
+    applySemantic: (entries: readonly ArtifactEntry[], submission: SelectedSemanticInput) =>
+      applyFoundrySemanticInput(context, requireQualification(), entries, submission),
     initializeWorkspace: () => initializeFoundryWorkspace(context),
     startTask: (options: FoundryTaskOptions = {}) => {
       assertFoundryWorkspaceWrite(context);

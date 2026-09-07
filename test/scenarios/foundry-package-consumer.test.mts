@@ -370,6 +370,7 @@ test("packed Foundry installs twice and runs only the public facade from a read-
     "FOUNDRY_OPERATION_RESULT_SCHEMA",
     "FOUNDRY_PACKAGE_DESCRIPTOR_SCHEMA",
     "FOUNDRY_RUNTIME_SELECTION_SCHEMA",
+    "FOUNDRY_SEMANTIC_INPUT_SCHEMA",
     "FOUNDRY_TASK_START_SPEC_SCHEMA",
     "FOUNDRY_WORKSPACE_MIGRATION_PLAN_SCHEMA",
     "FoundryPackageError",

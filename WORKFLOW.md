@@ -281,8 +281,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: a470cf5dba43508170299b8cca09e5a755918143
-lastReviewedNote: "Reviewed for Foundry #118 indexed rows and local schema/QA/queue/curation/authoring assessment. Native data-issue reports and concrete support queue types retain owner evidence; public semantic work is needs_input, not write authority. Semantic intake and final publication remain required."
+lastReviewedCommit: 1ebc85d2cf103865bbbd8fc57614c6db45b6acf4
+lastReviewedNote: "Reviewed for Foundry #118 public semantic input: current task/actor/assessment/work-item bindings, immutable input snapshots, strict local collect/apply, concurrent-stale rejection and latest-row reassessment. Semantic input grants no remote permission; specialized decisions and final owner write/readback remain required."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

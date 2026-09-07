@@ -286,6 +286,8 @@ lastReviewedNote: "Reviewed for Foundry #112 copied C1 bootstrap and final manif
 
 # Test Layout
 
+Semantic-input tests cover strict schema/identity/file selection, wrong actor and stale assessment, evidence rejection, immutable old rows, duplicate acceptance, concurrent competing submissions and re-assessment of the successful row version. Actual installed-package verification also calls the public CLI `--semantic-input` path with the retained missing-name case and confirms that repeated submission does not apply twice. These local checks do not replace authorization, remote no-replay/readback or final F1 acceptance.
+
 The public-workflow regression now covers primary-tree selection without process-bundle double counting, typed API seed wrappers, schema data-issue reports, local QA/queue/curation, concrete semantic manifests, disabled developer commands and changed-assessment refusal. Queue tests verify concrete support-type matching without attaching a different dataset type. Real installed candidates are additionally checked with the valid ILCD fixture, retained valid Flow sample and a derived missing-name sample; only the latter requires semantic repair.
 
 `scenarios/foundry-public-workflow.test.mts` exercises native owner dispatch and indexed stage reports through the public factory, actor/input rejection, and real CLI-owned context packs for both lanes. Its fake native binary isolates dispatch and ledger behavior. Separate actual packed-package probes use verified TIDAS 0.3.0 with a valid four-document ILCD fixture and the retained real Flow source sample; these local-stage checks do not replace final semantic, write/readback or F1 publication acceptance.

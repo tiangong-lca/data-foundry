@@ -387,9 +387,11 @@ export async function runFoundryTaskOperation(
       | "dataset-tidas-import"
       | "dataset-context-pack"
       | "dataset-workflow-rows"
-      | "dataset-workflow-assessment";
+      | "dataset-workflow-assessment"
+      | "dataset-semantic-apply";
     options: JsonRecord;
     task?: FoundryTaskOptions;
+    validateCurrent?: (index: readonly ArtifactEntry[]) => void;
   },
   operation: (transaction: FoundryTaskOperation) => JsonRecord,
 ): Promise<JsonRecord> {
@@ -415,6 +417,13 @@ export async function runFoundryTaskOperation(
       const indexBefore = readTaskBytes(context, "artifact-index.jsonl", maxIndexBytes);
       const index = readIndex(context);
       verifyInputs(context, task, index);
+      input.validateCurrent?.(
+        Object.freeze(
+          index.map((entry) =>
+            Object.freeze({ ...entry, receipt: Object.freeze({ ...entry.receipt }) }),
+          ),
+        ),
+      );
       const inputScopeSha256 = sha256Json(context.inputs);
       const optionsSha256 = sha256Json(input.options);
       const operationId = sha256Json({

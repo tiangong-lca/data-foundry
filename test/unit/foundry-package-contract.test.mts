@@ -21,6 +21,7 @@ const packageFiles = [
   "specs/schemas/foundry-operation-result.schema.json",
   "specs/schemas/foundry-package-descriptor.schema.json",
   "specs/schemas/foundry-task-start.schema.json",
+  "specs/schemas/foundry-semantic-input.schema.json",
   "specs/schemas/foundry-workspace-migration-plan.schema.json",
   "specs/schemas/foundry-workspace-migration-transfer-plan.schema.json",
   "specs/schemas/foundry-migration-transfer-receipt.schema.json",

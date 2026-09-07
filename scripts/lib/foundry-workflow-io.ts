@@ -63,13 +63,29 @@ export function runWorkflowLocalCli(
   temporary: string,
   argv: readonly string[],
 ): Record<string, unknown> {
+  const result = runWorkflowLocalCliResult(context, qualified, temporary, argv);
+  if (![0, 2].includes(result.exit) || "error" in result.report)
+    throw new FoundryContextError(
+      "workflow_cli_failed",
+      "Local CLI returned an invalid stage report.",
+    );
+  return result.report;
+}
+
+export function runWorkflowLocalCliResult(
+  context: FoundryRuntimeContext,
+  qualified: QualifiedFoundryRuntime,
+  temporary: string,
+  argv: readonly string[],
+): { exit: number; report: Record<string, unknown> } {
   const local =
     (argv[0] === "qa" && ["flow", "process", "lifecyclemodel"].includes(argv[1])) ||
-    (argv[0] === "dataset" && argv[1] === "curation-queue" && argv[2] === "build");
+    (argv[0] === "dataset" && argv[1] === "curation-queue" && argv[2] === "build") ||
+    (argv[0] === "dataset" && argv[1] === "patch" && argv[2] === "apply");
   if (!local)
     throw new FoundryContextError(
       "workflow_command_invalid",
-      "This stage admits local QA and queue preparation only.",
+      "This stage admits local QA, queue preparation and patch application only.",
     );
   assertQualifiedFoundryRuntime(context, qualified);
   const cli = resolveInstalledTiangongLcaCliPackage();
@@ -81,17 +97,22 @@ export function runWorkflowLocalCli(
     timeout: 120_000,
     maxBuffer: 8 * 1024 * 1024,
   });
-  if (child.error || child.signal || ![0, 2].includes(child.status ?? -1) || !child.stdout.trim())
+  if (
+    child.error ||
+    child.signal ||
+    ![0, 1, 2].includes(child.status ?? -1) ||
+    !child.stdout.trim()
+  )
     throw new FoundryContextError(
       "workflow_cli_failed",
       `Local CLI ${argv.slice(0, 2).join(" ")} did not return a stage report.`,
     );
   const report: unknown = JSON.parse(child.stdout);
-  if (!report || typeof report !== "object" || Array.isArray(report) || "error" in report)
+  if (!report || typeof report !== "object" || Array.isArray(report))
     throw new FoundryContextError(
       "workflow_cli_failed",
       "Local CLI returned an invalid stage report.",
     );
   assertQualifiedFoundryRuntime(context, qualified);
-  return report as Record<string, unknown>;
+  return { exit: child.status!, report: report as Record<string, unknown> };
 }

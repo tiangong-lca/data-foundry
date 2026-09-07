@@ -215,6 +215,7 @@ export function assessFoundryWorkflowRows(
           schema: "tiangong-foundry.assessment-stage.v1",
           status: "completed",
           owner_base: context.assetRoot,
+          rows_report: rowsReport,
           sets: assessed,
         };
         operation.writeJson(path.join(output, "foundry-assessment.json"), report);

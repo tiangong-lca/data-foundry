@@ -53,7 +53,7 @@ This is the implemented v1 facade protocol for `@tiangong-lca/foundry` and its `
 | `tiangong-foundry doctor --workspace <path> [--expected-project-ref <ref> --expected-user-id <uuid> [--session-reference <path>]] --json` | Read-only runtime, asset, workspace and account-readiness diagnostics. It checks only bounded reference metadata, never session contents, repository maintenance, Git, login or download. |
 | `tiangong-foundry task start --workspace <path> --spec <file> --json` | Validate the strict `task-start.v1` spec and independently capture its selected sources/optional seed. A relative spec path resolves from the selected workspace root. Request ID, actor, lane, profile, account intent and preparation live in the reviewed spec. |
 | `tiangong-foundry task status --workspace <path> --task <id> --actor <id> --json` | Reconstruct the exact registered request revision and inspect its current task/index/attempt state. Actor intent is supplied independently on every call. |
-| `tiangong-foundry task resume --workspace <path> --task <id> --actor <id> --json` | Continue only the registered deterministic local preparation or return content-bound next actions. Consumed/ambiguous mutation state is readback-only and never replayed. |
+| `tiangong-foundry task resume --workspace <path> --task <id> --actor <id> [--semantic-input <file>] --json` | Continue registered local stages or accept a current work-item-bound semantic submission. Consumed/ambiguous mutation state is readback-only and never replayed. |
 | `tiangong-foundry workspace migrate --workspace <path> --dry-run --json` | Inventory old state and produce a content-bound migration plan. Applying that plan is a separately explicit operation defined by W10. |
 
 The CLI-owned `tiangong-lca runtime ensure/status` manages qualified components only; it does not initialize a Foundry job or grant data permissions. Skills invoke the Foundry facade and its next actions rather than rebuilding its task state machine.
@@ -85,6 +85,16 @@ Curation blockers or authoring tasks produce `needs_input` with references to th
 An executable next action contains Node/active source-or-emitted entry argv, `cwd=workspaceRoot` and purpose. Its verified binding digest covers every executable field; workspace, task and actor are explicit argv values, while task lookup revalidates the immutable revision fingerprint and current runtime/input facts before work. It has no `display` authority. A final restricted data CommandSpec still requires the W04 execution-context/identity/authorization gate; W05 does not dispatch it.
 
 ## Single-result envelope
+
+### Semantic input
+
+`--semantic-input` selects a `tiangong-foundry.semantic-input.v1` JSON descriptor. The descriptor binds the same task and actor, the current assessment artifact SHA-256, and a bounded `submissions` array. Each entry has `kind=patch`, the registered authoring task's SHA-256, a selected patch file and its SHA-256. File paths resolve from the explicit workspace. Duplicate work-item digests, unknown fields, credential paths and changed bytes are rejected. Each file is limited to 8 MiB and the complete selection to 64 MiB.
+
+The public runtime independently resolves work through the current task index; a caller cannot supply a replacement manifest or runtime trust anchor. It snapshots the descriptor and selected patch bytes into a new task-owned generation, then uses a projection of the trusted authoring manifest to collect only the selected tasks. Original work items are unchanged. Public acceptance requires structured evidence, basis and the available required context kinds even when the historical profile did not demand them.
+
+Only the exact CLI's local `dataset patch apply` runs here, with authoring-package and action-item closure checks. An output file alone is insufficient: only exit 0, `status=completed`, zero blockers and preserved row count can select repaired rows. Invalid proposals retain diagnostics and leave the current rows unchanged. A successful submission publishes a new indexed row manifest, preserves the predecessor, and makes a subsequent resume assess that new version. Identical accepted submissions are idempotent; different submissions against an old assessment are rejected. The current assessment is revalidated under the task lock before publication so concurrent submissions cannot overwrite each other.
+
+This patch input is local preparation. It does not grant write permission, clear attempts or replace specialized identity/classification/location decision protocols.
 
 `--json` emits exactly one JSON object on stdout, followed by a newline. Progress goes to stderr. The schema identifier is `tiangong-foundry.operation-result.v1`; required fields are:
 
