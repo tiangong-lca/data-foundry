@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 083925c1f714d1e459694afeb501c3d112fea311
-lastReviewedNote: "Reviewed for Foundry #112 canonical gzip consumer verification: online/offline clean consumers install the actual pack-driver archive, while raw pnpm payload comparison preserves content identity. Package, environment, runtime and permission boundaries remain unchanged."
+lastReviewedCommit: 9cd06710f8aea82b5ebf3ceff3adfa796d817ea2
+lastReviewedNote: "Reviewed for Foundry #112 C1-compatible Node/CLI bootstrap base and adjacent lock: frozen production bytes, both upstream sources, complete licenses/SPDX/checksum inventory and manager key reuse. Source-only preparation adds no task, account or publication authority; actual public/bootstrap qualification remains required."
 ---
 
 # Test Layout
@@ -329,6 +329,8 @@ The Git command suite also qualifies filesystem case aliases while rejecting a d
 `unit/foundry-release-aggregate.test.mts` checks complete deterministic four-platform assembly and rejects missing/duplicate platforms, mixed source or package facts, failed qualification, wrong package scope and divergent workspace/manifest data. `commands/foundry-release-aggregate.test.mts` checks the bounded maintainer entrypoint and absence of source/publication overrides. Wire fixtures do not prove native execution; CI separately verifies real per-host preparation and actual archive inventories before retaining the combined contract.
 
 `unit/foundry-package-archive.test.mts` verifies cross-host gzip header normalization without changing payload/CRC bytes, and rejects optional/header-CRC formats. `unit/foundry-release-assets.test.mts` covers create-only drafts, exact asset reuse, lost-response readback, source/asset conflicts, bounded draft lookup and pagination. Publisher command tests reject local and caller-selected release inputs before network access. Aggregation tests also reject serialized receipts as release authority. These transport tests use explicit fakes and do not prove a public release.
+
+`unit/foundry-release-bootstrap.test.mts` checks complete deterministic checksum lists, portable names, the exact released C1 lock field set, trusted manifest/source URL binding and rejection of missing CLI or mismatched checksum data. Real native base and copied-script execution remain required beyond these wire fixtures.
 
 W06 package coverage has two layers. `unit/foundry-package-contract.test.mts` checks coherent repository/compiled/schema versions, valid-version tamper rejection, fixed package identity, exports, allowlist, no-lifecycle metadata and compiler settings; the facade schema suite compiles the package descriptor schema strictly. `scenarios/foundry-package-consumer.test.mts` rebuilds and packs twice byte-identically, compares the pnpm payload with the canonical gzip-header output, installs the canonical pack-driver tarball into an online then offline clean consumer, compiles a typed consumer, verifies exact C1, runs all six operations from a Unicode CWD against a read-only package, rejects internal commands and tests missing/changed/extra/linked/lifecycle-bearing/Intel-invalid closures. A fresh scenario-local Corepack cache and exact pnpm version preflight prevent repeated tool downloads when the synthetic HOME changes; later packs disable Corepack network/latest lookup. Cold tool bootstrap and the online consumer installation allow five minutes, while offline installation and local commands retain two-minute bounds. It uses only public synthetic inputs; the official OAuth installed-package case remains private W14 evidence.
 

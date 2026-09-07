@@ -11,6 +11,7 @@ import { aggregateFoundryRuntimeManifests } from "./lib/foundry-release-aggregat
 import { readFoundryReleaseArtifact } from "./lib/foundry-release-prepared.ts";
 import { readFoundryReleaseGit as git } from "./lib/foundry-release-contract.ts";
 import { sameFoundryReleaseDirectory } from "./lib/foundry-release-root.ts";
+import { createFoundryBootstrapLock } from "./lib/foundry-release-bootstrap.ts";
 import {
   foundryComponentJson as json,
   foundryComponentHash as hash,
@@ -136,6 +137,13 @@ export async function prepareFoundryRuntimeAggregate(
     if (JSON.stringify(sourceState()) !== JSON.stringify(source))
       throw new Error("Aggregation source changed during verification.");
     writeFoundryComponentFile(output, "runtime-manifest.json", aggregate.bytes);
+    const bootstrapLock = json(
+      createFoundryBootstrapLock(
+        trusted,
+        `https://github.com/tiangong-lca/data-foundry/releases/download/foundry-v${version}/runtime-candidate.json`,
+      ),
+    );
+    const bootstrap = writeFoundryComponentFile(output, "bootstrap-lock.json", bootstrapLock);
     const report = {
       schema: "tiangong-foundry.runtime-aggregate.v1",
       status: "verified",
@@ -146,6 +154,7 @@ export async function prepareFoundryRuntimeAggregate(
       manifest_sha256: aggregate.sha256,
       platforms: aggregate.platforms,
       archives,
+      bootstrap,
     };
     writeFoundryComponentFile(output, "runtime-aggregate.json", json(report));
     const result = freezeFoundryReleaseValue({ output, ...report, manifest: aggregate.manifest });
@@ -189,13 +198,22 @@ export function readPreparedFoundryRuntimeAggregate(value: PreparedFoundryRuntim
     32 * 1024 * 1024,
   );
   if (!reportBytes.equals(json(report))) throw new Error("Aggregated report changed.");
+  const bootstrapLockBytes = readFoundryReleaseArtifact(
+    path.join(output, value.bootstrap.path),
+    32 * 1024 * 1024,
+  );
+  if (
+    bootstrapLockBytes.length !== value.bootstrap.bytes ||
+    hash(bootstrapLockBytes) !== value.bootstrap.sha256
+  )
+    throw new Error("Aggregated bootstrap lock changed.");
   const archives = value.archives.map((fact) => {
     const bytes = readFoundryReleaseArtifact(path.join(output, fact.path), 512 * 1024 * 1024);
     if (bytes.length !== fact.bytes || hash(bytes) !== fact.sha256)
       throw new Error("Aggregated release archive changed.");
     return { name: path.basename(fact.path), bytes };
   });
-  return { manifestBytes, reportBytes, archives };
+  return { manifestBytes, reportBytes, archives, bootstrapLockBytes };
 }
 
 async function main(args: readonly string[]): Promise<void> {

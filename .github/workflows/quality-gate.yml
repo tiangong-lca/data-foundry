@@ -122,5 +122,6 @@ jobs:
           path: |
             ${{ runner.temp }}/foundry-runtime-set/runtime-manifest.json
             ${{ runner.temp }}/foundry-runtime-set/runtime-aggregate.json
+            ${{ runner.temp }}/foundry-runtime-set/bootstrap-lock.json
           if-no-files-found: error
           retention-days: 7

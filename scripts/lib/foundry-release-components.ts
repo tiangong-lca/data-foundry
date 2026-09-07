@@ -40,6 +40,10 @@ import { readFoundryReleaseArtifact } from "./foundry-release-prepared.ts";
 import { npmReleasePolicy, verifyPublicNpmRelease } from "./foundry-release-provenance.ts";
 import { createFoundrySpdxDocument, type FoundrySbomPackage } from "./foundry-release-metadata.ts";
 import {
+  createFoundryBootstrapIntegrity,
+  FOUNDRY_BOOTSTRAP_CLI,
+} from "./foundry-release-bootstrap.ts";
+import {
   assertFoundryComponentFiles,
   copyFoundryComponentPayload,
   writeFoundryComponentFile,
@@ -370,38 +374,114 @@ export async function prepareFoundryRuntimeComponents(
           (id === "tidas" && file.path === "metadata/tidas-distribution.json"),
       );
       const root = path.join(stages, id);
-      copyFoundryComponentPayload(
-        native.payloadRoot,
-        native.files,
-        root,
-        platform,
-        selected.map((file) => file.path),
-      );
+      let files: ComponentFile[];
+      if (id === "node") {
+        const cliFiles = production.files.filter(
+          (file) =>
+            file.path.startsWith("node_modules/") ||
+            file.path.startsWith("metadata/licenses/") ||
+            [
+              "metadata/cli-registry.json",
+              "metadata/cli-attestations.json",
+              "metadata/licenses.json",
+            ].includes(file.path),
+        );
+        copyFoundryComponentPayload(
+          production.payloadRoot,
+          production.files,
+          root,
+          platform,
+          cliFiles.map((file) => file.path),
+        );
+        files = [...cliFiles];
+        assertFoundryComponentFiles(native.payloadRoot, native.files, platform);
+        for (const file of selected) {
+          const bytes = readFoundryReleaseArtifact(
+            path.join(native.payloadRoot, file.path),
+            512 * 1024 * 1024,
+            true,
+          );
+          if (bytes.length !== file.bytes || hash(bytes) !== file.sha256)
+            throw new Error("Bootstrap Node input changed before copying.");
+          files.push(writeFoundryComponentFile(root, file.path, bytes, file.mode));
+        }
+        assertFoundryComponentFiles(native.payloadRoot, native.files, platform);
+        if (!files.some((file) => file.path === FOUNDRY_BOOTSTRAP_CLI))
+          throw new Error("Bootstrap base lacks the public CLI entry.");
+      } else {
+        copyFoundryComponentPayload(
+          native.payloadRoot,
+          native.files,
+          root,
+          platform,
+          selected.map((file) => file.path),
+        );
+        files = [...selected];
+      }
       const nativePackage = native.software.find((pkg) => pkg.name === id)!;
-      const upstream = native.sources[id];
-      const files = [...selected];
+      const upstream =
+        id === "node"
+          ? {
+              repository: inputs.cli.repository,
+              commit: inputs.cli.source_commit,
+              date: inputs.cli.source_date,
+            }
+          : native.sources[id];
+      const bootstrapGraph = {
+        package_manager: production.lock.package_manager,
+        root_dependencies: production.lock.root_dependencies,
+        packages: production.lock.packages,
+      };
       add(root, files, "metadata/runtime-lock.json", {
         schema: "tiangong-foundry.runtime-component-lock.v1",
         component: id,
         package: nativePackage,
-        files: selected,
-        source: upstream,
+        files: [...files],
+        source: id === "node" ? { node: native.sources.node, cli: upstream } : upstream,
+        ...(id === "node"
+          ? { bootstrap_cli: production.cli, bootstrap_dependencies: bootstrapGraph }
+          : {}),
       });
       add(
         root,
         files,
         "metadata/runtime-sbom.spdx.json",
-        createFoundrySpdxDocument([nativePackage], [nativePackage.id], {
-          component: id,
-          version: nativePackage.version,
-          platform,
-          sourceCommit: upstream.commit,
-          sourceDate: upstream.date,
-          namespaceRepository: upstream.repository,
-          creator: "Tool: tiangong-foundry-component-v1",
-        }),
+        createFoundrySpdxDocument(
+          id === "node" ? [...production.software, nativePackage] : [nativePackage],
+          id === "node"
+            ? [nativePackage.id, ...Object.values(production.lock.root_dependencies)]
+            : [nativePackage.id],
+          {
+            component: id,
+            version: nativePackage.version,
+            platform,
+            sourceCommit: upstream.commit,
+            sourceDate: upstream.date,
+            namespaceRepository: upstream.repository,
+            creator:
+              id === "node"
+                ? "Tool: tiangong-foundry-node-cli-component-v1"
+                : "Tool: tiangong-foundry-component-v1",
+          },
+        ),
       );
-      add(root, files, "metadata/runtime-provenance.json", native.provenance[id]);
+      add(
+        root,
+        files,
+        "metadata/runtime-provenance.json",
+        id === "node"
+          ? {
+              schema: "tiangong-foundry.bootstrap-base-provenance.v1",
+              node: native.provenance.node,
+              cli: production.cli,
+              dependencies: bootstrapGraph,
+            }
+          : native.provenance[id],
+      );
+      if (id === "node") {
+        const integrity = createFoundryBootstrapIntegrity(files);
+        files.push(writeFoundryComponentFile(root, integrity.path, integrity.bytes));
+      }
       componentInputs.push({
         id,
         version: nativePackage.version,
@@ -414,15 +494,25 @@ export async function prepareFoundryRuntimeComponents(
                 "share/licenses/tidas/third-party-notices/README.txt",
                 "share/licenses/tidas/third-party-notices/notice-manifest.json",
               ]
-            : [...nativePackage.license_files],
-        provenance: ["metadata/runtime-provenance.json"],
+            : [
+                ...nativePackage.license_files,
+                ...(id === "node"
+                  ? production.licenses.flatMap((entry) => entry.files.map((file) => file.path))
+                  : []),
+              ]
+                .filter((file, index, values) => values.indexOf(file) === index)
+                .sort(),
+        provenance:
+          id === "node"
+            ? ["metadata/runtime-provenance.json", "metadata/cli-attestations.json"]
+            : ["metadata/runtime-provenance.json"],
         protocols:
           id === "node"
-            ? ["tiangong-foundry.node-runtime.v1"]
+            ? ["tiangong-foundry.node-runtime.v1", "tiangong-lca.runtime-bootstrap.v1"]
             : [...tidasExpectation.validation.protocols],
         fingerprints:
           id === "node"
-            ? { executable: nodeFact.sha256 }
+            ? { executable: nodeFact.sha256, cli: production.cliContentSha256 }
             : { validation: tidasExpectation.validation.asset_fingerprint },
       });
     }

@@ -65,6 +65,7 @@ async function main(args: readonly string[]): Promise<void> {
         ...bytes.archives,
         { name: "runtime-candidate.json", bytes: bytes.manifestBytes },
         { name: "runtime-aggregate.json", bytes: bytes.reportBytes },
+        { name: "bootstrap-lock.candidate.json", bytes: bytes.bootstrapLockBytes },
       ],
     },
     createGitHubFoundryAssetStore(token),

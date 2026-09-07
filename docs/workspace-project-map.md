@@ -89,8 +89,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 083925c1f714d1e459694afeb501c3d112fea311
-lastReviewedNote: "Reviewed for Foundry #112 canonical gzip consumer verification: online/offline clean consumers install the actual pack-driver archive, while raw pnpm payload comparison preserves content identity. Package, environment, runtime and permission boundaries remain unchanged."
+lastReviewedCommit: 9cd06710f8aea82b5ebf3ceff3adfa796d817ea2
+lastReviewedNote: "Reviewed for Foundry #112 C1-compatible Node/CLI bootstrap base and adjacent lock: frozen production bytes, both upstream sources, complete licenses/SPDX/checksum inventory and manager key reuse. Source-only preparation adds no task, account or publication authority; actual public/bootstrap qualification remains required."
 ---
 
 # Workspace Project Map
