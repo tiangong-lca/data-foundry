@@ -158,8 +158,8 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 24d1e9a9c85751a3e882aaa4889c53ef221e1494
-lastReviewedNote: "Reviewed for Foundry #112 four-platform aggregation: exact source/package/host contracts, actual archive verification through public CLI APIs and read-only CI artifact handoff. Candidate aggregation adds no publication, runtime task, credential or business authority."
+lastReviewedCommit: e0edc2f2b3b399ae0aae5f70aa2b22fab6744222
+lastReviewedNote: "Reviewed for Foundry #112 portable npm archives and create-only component publication: exact public package/source proof, native jobs and archive attestations, in-process aggregation, bounded draft recovery and immutable asset checks. Public-download/bootstrap/final-manifest qualification remains required; task/account/runtime authority is unchanged."
 ---
 
 # TianGong LCA Data Foundry

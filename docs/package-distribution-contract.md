@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-07
-lastReviewedCommit: 24d1e9a9c85751a3e882aaa4889c53ef221e1494
-lastReviewedNote: "Reviewed for Foundry #112 four-platform aggregation: exact source/package/host contracts, actual archive verification through public CLI APIs and read-only CI artifact handoff. Candidate aggregation adds no publication, runtime task, credential or business authority."
+lastReviewedCommit: e0edc2f2b3b399ae0aae5f70aa2b22fab6744222
+lastReviewedNote: "Reviewed for Foundry #112 portable npm archives and create-only component publication: exact public package/source proof, native jobs and archive attestations, in-process aggregation, bounded draft recovery and immutable asset checks. Public-download/bootstrap/final-manifest qualification remains required; task/account/runtime authority is unchanged."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -118,6 +118,10 @@ Verification uses regular-file, `O_NOFOLLOW`, fd size/inode/mtime and SHA checks
 
 Release tools compare native filesystem directory identity when binding the script root to Git's reported root. Different drive/path casing for the same directory is accepted; a parent, child or other directory is rejected. This applies to version preparation, exact Git inspection and workflow admission without weakening clean-tree or inherited-Git-environment guards.
 
+## Portable npm archive bytes
+
+The pinned pnpm packer emits identical package payloads but different gzip OS header bytes on Linux, Windows and macOS. The Foundry packer sets only that header byte to255 before returning, signing or uploading the archive. It preserves the compressed blocks, tar metadata, CRC and uncompressed size. [RFC1952](https://www.rfc-editor.org/info/rfc1952/) permits255 as the default OS value; headers with optional fields or a header CRC are rejected rather than modified. Published-package equality remains an exact byte comparison across platforms.
+
 ## Four-platform runtime aggregation
 
 `pnpm release:aggregate-runtime --input <absolute-platform-results> --output <new-absolute-directory>` consumes the four fixed platform directories from successful jobs at the executing clean source. The default requires `published-release` package inputs; explicit `--candidate` keeps source-only qualification separate. There is no source, version, platform, registry or publication override.
@@ -146,7 +150,7 @@ An ordinary unchanged-version main push exits without a GitHub PR lookup. A rele
 
 `.github/workflows/publish-foundry.yml` connects that context gate to the existing four-native-host canonical gate through `workflow_call`. The reusable quality workflow checks out the admitted SHA, retains its ordinary PR/manual triggers, and does not persist checkout credentials. These source qualification jobs have read-only permissions.
 
-After every host passes, the separate `release-tag` job revalidates the event, clean source/main relationship, release-only diff and merged PR. `pnpm release:tag` accepts no source/tag arguments or serialized context and requires that exact job identity. Only this job receives GitHub contents-write permission; it installs no project dependencies and does not persist checkout credentials.
+After every host passes, the separate `release-tag` job revalidates the event, clean source/main relationship, release-only diff and merged PR. `pnpm release:tag` accepts no source/tag arguments or serialized context and requires that exact job identity. This tag job receives contents-write permission only for its create-or-verify operation; it installs no project dependencies and does not persist checkout credentials. The later component publisher has separate contents-write permission gated on all published-input native jobs.
 
 The tag helper derives `foundry-v<version>`, queries only the canonical repository and creates a missing tag reference at the exact qualified source commit. An existing tag must resolve to that same commit; an annotated tag is followed through at most four tag objects, with cycles and invalid object types rejected. There is no update, force or delete operation. If a create response is lost or fails, one readback may confirm the intended tag; an absent or different result stays failed without replaying the mutation. A fresh workflow rerun repeats source validation and the same create-or-verify policy.
 
@@ -183,6 +187,18 @@ The pinned pnpm 11.24.0 executable uploads copied, rechecked tarball/signature b
 There is one publisher invocation. Regardless of its reported success or an uncertain/failed response, independent public readback owns the outcome. Up to three bounded readback attempts accommodate registry propagation; they never repeat publication. The public tarball's byte count and SHA-512 must match the prepared artifact, in addition to all signed-source/workflow checks. A different existing version payload, missing provenance or failed readback stops the release. Existing-version verification does not establish that the account has configured future Trusted Publisher permissions.
 
 `package-artifacts/npm-publication/` contains the publication result and readable report; a successful result also preserves public metadata, attestations and verification. The workflow exports this evidence even when publication fails. `npm_published=true` is emitted only after public verification succeeds; later component/manifest stages must require it. It proves package publication only, not complete F1 runtime qualification.
+
+## Runtime component publication
+
+After `npm_published=true`, four native `prepare-runtime` jobs run `release:prepare-runtime --published` at the same release source. They independently verify public npm inputs, build the three complete components and execute native qualification. The jobs attest their exact archives with pinned GitHub build provenance and retain run-attempt-specific artifacts; they have no GitHub contents-write permission.
+
+The `publish-components` job downloads those four results from its own run attempt and verifies each archive attestation against the canonical workflow, exact source digest/ref and GitHub-hosted runner identity. `release:publish-components` accepts no arguments and requires that exact owning job. It revalidates the merged release-only source, existing package tag and actual public Foundry npm artifact, then performs fresh in-process four-platform aggregation and checks package digests again. Copied aggregate receipts cannot supply release bytes. Before upload it rechecks its source, manifest, report and every archived byte.
+
+Component assets use the existing `foundry-v<version>` tag. The publisher creates a draft, uploads only missing expected files, checks exact source and server-reported asset digests, then publishes the complete draft. An existing published release is accepted only with the complete identical asset set. Conflicting bytes, extra files, an incomplete published release or a different tag source fail; there is no asset replacement, deletion or tag movement. The tag library also supports a distinct `foundry-runtime-v<version>` namespace for the later final-manifest stage.
+
+After a lost mutation response, one fresh read owns the result; the operation is not automatically repeated. Draft recovery uses a bounded complete release listing only when no published tag result is available, then retains the exact release ID for subsequent reads. Source identity is read from the actual peeled Git tag, never from the release's display-oriented target_commitish field. Ambiguous or incomplete draft discovery fails before another release is created.
+
+The published component release includes twelve archives, runtime-candidate.json and runtime-aggregate.json. The candidate manifest is deliberately separate from the final compatibility publication: native public-download and copied-bootstrap checks must complete before the final immutable manifest is released and selected by Skills. The current component stage records that those further checks are required; component availability alone is not F1 completion. Separate release stages support GitHub's rule that immutable published releases cannot receive additional assets.
 
 ## Frozen production payload and metadata
 

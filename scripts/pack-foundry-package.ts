@@ -14,6 +14,22 @@ import { resolvePackageManagerCommand } from "./lib/package-manager-command.ts";
 
 const maxArchiveBytes = 64 * 1024 * 1024;
 
+/** RFC1952 OS=255 removes pnpm's host marker without recompressing the payload. */
+export function canonicalizeFoundryPackageArchive(input: Uint8Array): Buffer {
+  if (
+    input.byteLength < 18 ||
+    input.byteLength > maxArchiveBytes ||
+    input[0] !== 0x1f ||
+    input[1] !== 0x8b ||
+    input[2] !== 8 ||
+    input[3] !== 0
+  )
+    throw new Error("Package gzip header differs from the qualified pnpm format.");
+  const bytes = Buffer.from(input);
+  bytes[9] = 255;
+  return bytes;
+}
+
 export interface PackedFoundryPackage {
   readonly path: string;
   readonly bytes: Buffer;
@@ -85,10 +101,12 @@ export function packFoundryPackage(
       path.basename(temporaryArchive) !== archiveName
     )
       throw new Error("Package archive command returned an unexpected output path.");
-    const generated = archiveBytes(temporaryArchive);
+    const generated = canonicalizeFoundryPackageArchive(archiveBytes(temporaryArchive));
+    const canonicalArchive = path.join(temporaryDirectory, "canonical-package.tgz");
+    fs.writeFileSync(canonicalArchive, generated, { flag: "wx", mode: 0o644 });
     const target = path.join(destination, archiveName);
     try {
-      fs.linkSync(temporaryArchive, target);
+      fs.linkSync(canonicalArchive, target);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
       if (!archiveBytes(target).equals(generated))

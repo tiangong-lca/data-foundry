@@ -158,3 +158,144 @@ jobs:
           path: package-artifacts/npm-publication/
           if-no-files-found: warn
           retention-days: 30
+
+  prepare-runtime:
+    name: Prepare published runtime (${{ matrix.platform }})
+    needs:
+      - release-context
+      - npm-package
+    if: needs.npm-package.outputs.npm_published == 'true'
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+          - os: ubuntu-24.04-arm
+            platform: linux-arm64
+          - os: macos-latest
+            platform: darwin-arm64
+          - os: windows-latest
+            platform: win32-x64
+    steps:
+      - name: Checkout the qualified release source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-context.outputs.release_head }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pnpm and Node.js
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        with:
+          runtime: node@24.19.0
+          install: false
+          cache: true
+
+      - name: Install frozen release dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Assemble and qualify actual public npm and native inputs
+        run: pnpm release:prepare-runtime --output "${{ runner.temp }}/foundry-published-runtime" --published
+
+      - name: Attest exact runtime component archives
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ runner.temp }}/foundry-published-runtime/components/*.tar.gz
+
+      - name: Preserve the qualified published-input platform
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: foundry-published-${{ github.run_attempt }}-${{ matrix.platform }}
+          path: ${{ runner.temp }}/foundry-published-runtime/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+  publish-components:
+    name: Publish immutable runtime components
+    needs:
+      - release-context
+      - prepare-runtime
+    runs-on: ubuntu-latest
+    outputs:
+      components_published: ${{ steps.publish.outputs.components_published }}
+      manifest_sha256: ${{ steps.publish.outputs.manifest_sha256 }}
+      candidate_url: ${{ steps.publish.outputs.candidate_url }}
+    permissions:
+      contents: write
+      pull-requests: read
+      attestations: read
+    steps:
+      - name: Checkout the qualified release source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-context.outputs.release_head }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Refresh main ancestry
+        run: git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
+
+      - name: Set up pnpm and Node.js
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        with:
+          runtime: node@24.19.0
+          install: false
+          cache: true
+
+      - name: Install frozen release dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Download qualified linux-x64 from this attempt
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: foundry-published-${{ github.run_attempt }}-linux-x64
+          path: ${{ runner.temp }}/foundry-published-platforms/linux-x64
+
+      - name: Download qualified linux-arm64 from this attempt
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: foundry-published-${{ github.run_attempt }}-linux-arm64
+          path: ${{ runner.temp }}/foundry-published-platforms/linux-arm64
+
+      - name: Download qualified darwin-arm64 from this attempt
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: foundry-published-${{ github.run_attempt }}-darwin-arm64
+          path: ${{ runner.temp }}/foundry-published-platforms/darwin-arm64
+
+      - name: Download qualified win32-x64 from this attempt
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: foundry-published-${{ github.run_attempt }}-win32-x64
+          path: ${{ runner.temp }}/foundry-published-platforms/win32-x64
+
+      - name: Verify archive source attestations before publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_HEAD: ${{ needs.release-context.outputs.release_head }}
+        run: |
+          for archive in "$RUNNER_TEMP"/foundry-published-platforms/*/components/*.tar.gz; do
+            gh attestation verify "$archive" --repo tiangong-lca/data-foundry --signer-workflow tiangong-lca/data-foundry/.github/workflows/publish-foundry.yml --source-digest "$RELEASE_HEAD" --source-ref "$GITHUB_REF" --deny-self-hosted-runners
+          done
+
+      - name: Aggregate and publish exact component assets
+        id: publish
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pnpm release:publish-components
+
+      - name: Preserve component publication evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: foundry-components-publication-${{ github.run_attempt }}
+          path: package-artifacts/runtime-publication/
+          if-no-files-found: warn
+          retention-days: 30

@@ -46,6 +46,27 @@ test("a different existing tag target can never be changed by the release helper
   assert.equal(writes, 0);
 });
 
+test("the runtime manifest gets a distinct exact-source tag without broadening arbitrary ref access", async () => {
+  const runtimeRef = "refs/tags/foundry-runtime-v0.1.1";
+  const result = await ensureFoundryReleaseTag(
+    { ...request, kind: "manifest" },
+    {
+      read: async (name) => {
+        assert.equal(name, runtimeRef);
+        return null;
+      },
+      create: async (name, sha) => ({ ref: name, head: sha }),
+    },
+  );
+  assert.equal(result.ref, runtimeRef);
+  const store = createGitHubFoundryTagStore("test-only-token", async (url) => {
+    assert.ok(url.endsWith("git/ref/tags/foundry-runtime-v0.1.1"));
+    return Response.json({ ref: runtimeRef, object: { type: "commit", sha: head } });
+  });
+  assert.deepEqual(await store.read(runtimeRef), { ref: runtimeRef, head });
+  await assert.rejects(store.read("refs/tags/other-v0.1.1"), /identity/u);
+});
+
 test("lost tag-creation responses reconcile by readback without a second mutation", async () => {
   let reads = 0,
     writes = 0;

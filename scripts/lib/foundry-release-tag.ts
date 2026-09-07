@@ -12,19 +12,25 @@ export interface FoundryReleaseTagStore {
 function sha(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f]{40}$/u.test(value) && value !== "0".repeat(40);
 }
-function releaseRef(version: string): string {
+export type FoundryReleaseKind = "components" | "manifest";
+export function foundryReleaseRef(
+  version: string,
+  kind: FoundryReleaseKind = "components",
+): string {
   if (
+    !["components", "manifest"].includes(kind) ||
     typeof version !== "string" ||
     version.length > 64 ||
     !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u.test(version) ||
     version.split(".").some((part) => BigInt(part) > BigInt(Number.MAX_SAFE_INTEGER))
   )
     throw new Error("Foundry tag requires a stable canonical version.");
-  return `refs/tags/foundry-v${version}`;
+  return `refs/tags/${kind === "manifest" ? "foundry-runtime" : "foundry"}-v${version}`;
 }
 function requireRef(ref: string): void {
-  const prefix = "refs/tags/foundry-v";
-  if (!ref.startsWith(prefix) || releaseRef(ref.slice(prefix.length)) !== ref)
+  const kind = ref.startsWith("refs/tags/foundry-runtime-v") ? "manifest" : "components";
+  const prefix = kind === "manifest" ? "refs/tags/foundry-runtime-v" : "refs/tags/foundry-v";
+  if (!ref.startsWith(prefix) || foundryReleaseRef(ref.slice(prefix.length), kind) !== ref)
     throw new Error("Foundry tag identity is invalid.");
 }
 function requireTarget(value: FoundryReleaseTagTarget, ref: string, head: string): void {
@@ -37,10 +43,10 @@ function requireTarget(value: FoundryReleaseTagTarget, ref: string, head: string
 }
 
 export async function ensureFoundryReleaseTag(
-  request: { readonly version: string; readonly head: string },
+  request: { readonly version: string; readonly head: string; readonly kind?: FoundryReleaseKind },
   store: FoundryReleaseTagStore,
 ): Promise<FoundryReleaseTagTarget & { readonly status: "created" | "existing" | "reconciled" }> {
-  const ref = releaseRef(request.version),
+  const ref = foundryReleaseRef(request.version, request.kind),
     head = request.head;
   if (!sha(head)) throw new Error("Foundry tag requires an exact source commit.");
   const existing = await store.read(ref);

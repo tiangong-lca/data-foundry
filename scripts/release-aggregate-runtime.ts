@@ -15,11 +15,13 @@ import {
   foundryComponentJson as json,
   foundryComponentHash as hash,
   writeFoundryComponentFile,
+  freezeFoundryReleaseValue,
 } from "./lib/foundry-release-component-io.ts";
 
 const usage =
   "Usage: release-aggregate-runtime --input <absolute-platform-results> --output <new-absolute-directory> [--candidate]";
 const root = path.resolve(import.meta.dirname, "..");
+const aggregates = new WeakSet<object>();
 function sourceState() {
   if (
     !sameFoundryReleaseDirectory(root, git(root, ["rev-parse", "--show-toplevel"]).trim()) ||
@@ -48,23 +50,14 @@ function parse(file: string): unknown {
   );
 }
 
-async function main(args: readonly string[]): Promise<void> {
-  if (args.length === 1 && args[0] === "--help") {
-    process.stdout.write(`${usage}\n`);
-    return;
-  }
-  if (
-    (args.length !== 4 && args.length !== 5) ||
-    args[0] !== "--input" ||
-    !args[1] ||
-    args[2] !== "--output" ||
-    !args[3] ||
-    (args.length === 5 && args[4] !== "--candidate")
-  )
-    throw new Error(usage);
-  const input = directory(args[1]);
-  if (!path.isAbsolute(args[3])) throw new Error("Aggregation output must be absolute.");
-  const output = path.join(directory(path.dirname(args[3])), path.basename(args[3]));
+export async function prepareFoundryRuntimeAggregate(
+  selectedInput: string,
+  selectedOutput: string,
+  scope: "source-candidate" | "published-release",
+) {
+  const input = directory(selectedInput);
+  if (!path.isAbsolute(selectedOutput)) throw new Error("Aggregation output must be absolute.");
+  const output = path.join(directory(path.dirname(selectedOutput)), path.basename(selectedOutput));
   if (fs.existsSync(output)) throw new Error("Aggregation will not replace an existing output.");
   const relative = path.relative(root, output);
   if (
@@ -76,7 +69,6 @@ async function main(args: readonly string[]): Promise<void> {
     throw new Error("Aggregation output must be outside source or under package-artifacts/.");
   const source = sourceState();
   const version = (parse(path.join(root, "package.json")) as { version: string }).version;
-  const scope = args.length === 5 ? "source-candidate" : "published-release";
   const platforms = Object.keys(inputs.minimum_hosts).sort();
   if (JSON.stringify(fs.readdirSync(input).sort()) !== JSON.stringify(platforms))
     throw new Error("Aggregation input must contain exactly four platform directories.");
@@ -156,17 +148,9 @@ async function main(args: readonly string[]): Promise<void> {
       archives,
     };
     writeFoundryComponentFile(output, "runtime-aggregate.json", json(report));
-    process.stdout.write(
-      json({
-        status: "verified",
-        scope,
-        source: source.commit,
-        output,
-        manifest_sha256: aggregate.sha256,
-        platforms,
-        components: archives.length,
-      }),
-    );
+    const result = freezeFoundryReleaseValue({ output, ...report, manifest: aggregate.manifest });
+    aggregates.add(result);
+    return result;
   } catch (error) {
     const current = fs.lstatSync(output, { bigint: true });
     if (
@@ -180,6 +164,70 @@ async function main(args: readonly string[]): Promise<void> {
   } finally {
     if (cache) fs.rmSync(cache, { recursive: true, force: true });
   }
+}
+
+export type PreparedFoundryRuntimeAggregate = Awaited<
+  ReturnType<typeof prepareFoundryRuntimeAggregate>
+>;
+/** Rechecks fresh process-local aggregation before exposing release bytes. */
+export function readPreparedFoundryRuntimeAggregate(value: PreparedFoundryRuntimeAggregate) {
+  if (!value || !aggregates.has(value))
+    throw new Error("Release requires fresh in-process runtime aggregation.");
+  if (JSON.stringify(sourceState()) !== JSON.stringify(value.source))
+    throw new Error("Aggregated release source changed.");
+  const output = directory(value.output);
+  directory(path.join(output, "components"));
+  const manifestBytes = readFoundryReleaseArtifact(
+    path.join(output, "runtime-manifest.json"),
+    32 * 1024 * 1024,
+  );
+  if (hash(manifestBytes) !== value.manifest_sha256)
+    throw new Error("Aggregated manifest changed.");
+  const { output: _output, manifest: _manifest, ...report } = value;
+  const reportBytes = readFoundryReleaseArtifact(
+    path.join(output, "runtime-aggregate.json"),
+    32 * 1024 * 1024,
+  );
+  if (!reportBytes.equals(json(report))) throw new Error("Aggregated report changed.");
+  const archives = value.archives.map((fact) => {
+    const bytes = readFoundryReleaseArtifact(path.join(output, fact.path), 512 * 1024 * 1024);
+    if (bytes.length !== fact.bytes || hash(bytes) !== fact.sha256)
+      throw new Error("Aggregated release archive changed.");
+    return { name: path.basename(fact.path), bytes };
+  });
+  return { manifestBytes, reportBytes, archives };
+}
+
+async function main(args: readonly string[]): Promise<void> {
+  if (args.length === 1 && args[0] === "--help") {
+    process.stdout.write(`${usage}\n`);
+    return;
+  }
+  if (
+    (args.length !== 4 && args.length !== 5) ||
+    args[0] !== "--input" ||
+    !args[1] ||
+    args[2] !== "--output" ||
+    !args[3] ||
+    (args.length === 5 && args[4] !== "--candidate")
+  )
+    throw new Error(usage);
+  const result = await prepareFoundryRuntimeAggregate(
+    args[1],
+    args[3],
+    args.length === 5 ? "source-candidate" : "published-release",
+  );
+  process.stdout.write(
+    json({
+      status: "verified",
+      scope: result.scope,
+      source: result.source.commit,
+      output: result.output,
+      manifest_sha256: result.manifest_sha256,
+      platforms: result.platforms.map((item) => item.platform),
+      components: result.archives.length,
+    }),
+  );
 }
 
 if (import.meta.main)

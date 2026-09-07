@@ -4,6 +4,10 @@ import { createHash } from "node:crypto";
 import type { RuntimeManifest } from "@tiangong-lca/cli/runtime";
 import inputs from "../../specs/release/runtime-inputs.json" with { type: "json" };
 import { aggregateFoundryRuntimeManifests } from "../../scripts/lib/foundry-release-aggregate.ts";
+import {
+  readPreparedFoundryRuntimeAggregate,
+  type PreparedFoundryRuntimeAggregate,
+} from "../../scripts/release-aggregate-runtime.ts";
 
 const sha = (value: Uint8Array | string) => createHash("sha256").update(value).digest("hex");
 const encode = (value: unknown) => Buffer.from(JSON.stringify(value));
@@ -14,6 +18,17 @@ const source = {
   date: "2026-09-07T00:00:00.000Z",
 };
 const expectation = { source, version: "0.1.0", scope: "published-release" as const };
+
+test("a serialized aggregate cannot supply publication bytes", () => {
+  assert.throws(
+    () =>
+      readPreparedFoundryRuntimeAggregate({
+        source,
+        scope: "published-release",
+      } as unknown as PreparedFoundryRuntimeAggregate),
+    /in-process/u,
+  );
+});
 
 // Small explicit wire fixtures exercise aggregation, never native/public qualification.
 function samples() {
