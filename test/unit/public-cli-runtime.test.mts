@@ -19,7 +19,7 @@ import {
 test("Foundry consumes the exact published CLI C1 runtime boundary", async () => {
   const descriptor = describeCliRuntime();
   assert.equal(descriptor.package.name, "@tiangong-lca/cli");
-  assert.equal(descriptor.package.version, "0.1.11");
+  assert.equal(descriptor.package.version, "0.1.12");
   assert.equal(RUNTIME_HOST_CONTEXT_PROTOCOL, "tiangong-lca.runtime-host.v1");
   await assert.rejects(receiveRuntimeHostContext(), /inherited manager IPC channel/u);
   assert.deepEqual(
