@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import {
   FoundryContextError,
+  assertFoundryWorkspaceWrite,
   resolveFoundryOutput,
   type FoundryRuntimeContext,
 } from "./foundry-runtime-context.ts";
@@ -14,15 +16,22 @@ import { resolveInstalledTiangongLcaCliPackage } from "./foundry-runtime-utils.t
 import { createFoundryIsolatedChildEnvironment } from "./foundry-runtime-environment.ts";
 import type { FoundryTaskOperation } from "./foundry-task-types.ts";
 
+export function createWorkflowDirectory(context: FoundryRuntimeContext, prefix: string): string {
+  assertFoundryWorkspaceWrite(context);
+  const directory = resolveFoundryOutput(context, `${prefix}${randomUUID()}`);
+  fs.mkdirSync(path.dirname(directory), { recursive: true, mode: 0o700 });
+  resolveFoundryOutput(context, directory);
+  // mkdir is exclusive and supports long Windows paths where mkdtemp fails.
+  fs.mkdirSync(directory, { mode: 0o700 });
+  return resolveFoundryOutput(context, directory);
+}
+
 export function createWorkflowStageDirectory(
   context: FoundryRuntimeContext,
   operation: FoundryTaskOperation,
   stage: string,
 ): string {
-  const parent = resolveFoundryOutput(context, `outputs/${stage}/${operation.operationId}`);
-  fs.mkdirSync(parent, { recursive: true, mode: 0o700 });
-  resolveFoundryOutput(context, parent);
-  return fs.mkdtempSync(path.join(parent, "run-"));
+  return createWorkflowDirectory(context, `outputs/${stage}/${operation.operationId}/run-`);
 }
 
 export function registerWorkflowStageFiles(

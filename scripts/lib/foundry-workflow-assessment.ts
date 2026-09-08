@@ -22,6 +22,7 @@ import { routeFoundryDecisionAction } from "./foundry-decision-routing.ts";
 import { prepareFoundryDecisionWork } from "./foundry-workflow-decisions.ts";
 import {
   createWorkflowStageDirectory,
+  createWorkflowDirectory,
   registerWorkflowStageFiles,
   runWorkflowLocalCli,
 } from "./foundry-workflow-io.ts";
@@ -101,7 +102,10 @@ export function assessFoundryWorkflowRows(
       }
       const output = createWorkflowStageDirectory(context, operation, "assessment");
       fs.mkdirSync(resolveFoundryOutput(context, "tmp"), { recursive: true, mode: 0o700 });
-      const temporary = fs.mkdtempSync(path.join(context.tempRoot, "assessment-"));
+      const temporary = createWorkflowDirectory(
+        context,
+        path.join(context.tempRoot, "assessment-"),
+      );
       try {
         const executable = path.join(temporary, path.basename(qualified.tidas.executable_path));
         copyFoundryIsolatedExecutable(qualified.tidas.executable_path, executable);

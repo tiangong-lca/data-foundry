@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: d047a3b059b750f0f7fac6caaa262276c6c5fd86
-lastReviewedNote: "Reviewed for PR120 CI: explicit fresh timestamps for synchronous identity fixtures preserve the unchanged stale guard; safe system-code diagnostics and an early Windows direct-context test expose host failures without raw error data. Required canonical/native/public gates remain intact."
+lastReviewedCommit: 3b031db1f5b6fb1ddceec9c3bde3c23df367d716
+lastReviewedNote: "Reviewed for PR120 Windows context RED: task-confined cryptographic directory names with exclusive mkdir replace deep-path mkdtemp for context, assessment and semantic generations. Prior artifacts, write guards and confinement remain intact; actual Windows CI verification is still required."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -214,3 +214,5 @@ A managed launch policy can supply a target manifest as a file already bound by 
 `createFoundryWorkspaceAccess({ manifestBytes, expectedSha256, access })` is the public host bridge when bootstrap and Foundry load separate CLI SDK instances. It verifies the independently selected digest again with Foundry's own CLI instance. The host must obtain that expected digest from its trusted release/skill configuration; it must not derive it from workspace data or the bytes being checked. The bridge is not exposed through ordinary argv or task specifications.
 
 Unexpected runtime failures retain the generic failure code and safe message; recognized filesystem/Node error codes may be included without raw exception text, paths or user data. This helps identify host failures while preserving the non-leaking error envelope.
+
+Context, assessment and semantic stages allocate new task-contained directories with exclusive creation, including long Windows task paths. A prior generation is retained rather than reused after interruption.

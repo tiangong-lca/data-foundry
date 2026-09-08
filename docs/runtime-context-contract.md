@@ -41,8 +41,8 @@ checkPaths:
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: d047a3b059b750f0f7fac6caaa262276c6c5fd86
-lastReviewedNote: "Reviewed for PR120 CI: explicit fresh timestamps for synchronous identity fixtures preserve the unchanged stale guard; safe system-code diagnostics and an early Windows direct-context test expose host failures without raw error data. Required canonical/native/public gates remain intact."
+lastReviewedCommit: 3b031db1f5b6fb1ddceec9c3bde3c23df367d716
+lastReviewedNote: "Reviewed for PR120 Windows context RED: task-confined cryptographic directory names with exclusive mkdir replace deep-path mkdtemp for context, assessment and semantic generations. Prior artifacts, write guards and confinement remain intact; actual Windows CI verification is still required."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
@@ -132,3 +132,5 @@ Managed facade construction passes the independently selected component-cache ro
 The package-owned managed initializer receives the public CLI IPC context before public operations, verifies the installed entry and component metadata, and supplies the existing CLI/TIDAS qualification, workspace-access and runtime-target interfaces. It reads no `.env` or task-selected trust anchor. The metadata schema and exact admission sequence are defined by `package-distribution-contract.md`; native qualification and task/identity authorization retain their existing owners.
 
 Prepared-support finalization explicitly selects the approved input file for its dataset type. Other completed scope artifacts are retained through the existing verified-progress map; the original row manifest and approval origin remain lineage anchors. `approval_authorization_sha256` distinguishes a new derived-input finalization from an unchanged blocked result.
+
+Workflow generation and scratch directories use task-confined cryptographic names with exclusive `mkdir`, rather than `mkdtemp` under deep task paths. This preserves distinct immutable generations on Windows when a registered task plus operation digest exceeds the Windows `mkdtemp` path limit. Workspace write access and path confinement are checked before creation; existing directories are never adopted.

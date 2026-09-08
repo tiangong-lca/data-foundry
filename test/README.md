@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: d047a3b059b750f0f7fac6caaa262276c6c5fd86
-lastReviewedNote: "Reviewed for PR120 CI: explicit fresh timestamps for synchronous identity fixtures preserve the unchanged stale guard; safe system-code diagnostics and an early Windows direct-context test expose host failures without raw error data. Required canonical/native/public gates remain intact."
+lastReviewedCommit: 3b031db1f5b6fb1ddceec9c3bde3c23df367d716
+lastReviewedNote: "Reviewed for PR120 Windows context RED: task-confined cryptographic directory names with exclusive mkdir replace deep-path mkdtemp for context, assessment and semantic generations. Prior artifacts, write guards and confinement remain intact; actual Windows CI verification is still required."
 ---
 
 # Test Layout
@@ -517,3 +517,5 @@ Support workflow coverage uses explicit Unit Group/Flow Property payload builder
 The real installed-owner case exposed the published CLI remote-verification data exit of 1. Public remote-response fixtures now match that exit, and an ordinary traceHash case first reproduces the missed acceptance callback before the adapter correction. The live case uses one predeclared new contact, exits the client after the actual insert but before delivery to Foundry, then independently verifies recovery and zero mutation requests on repeated resume. All credentials and private case artifacts remain outside tracked/public data.
 
 The synchronous public identity fixture sets an explicit fresh report timestamp so host filesystem clock rounding cannot make a newly written report appear stale. The runtime stale-report guard and explicit stale negative tests remain unchanged. A direct qualified context-owner test exercises the same registered Unicode task path without the facade error projection; Windows CI runs it before the full canonical gate to expose filesystem failures early.
+
+The Windows direct-context RED identified `ENOENT` from `mkdtemp` at a path containing the immutable task and operation digests. Workflow directory tests cover a prefix longer than260 characters while the legacy allocator is unavailable, independent empty generations, preserved prior evidence and rejected task-root escape. Actual Windows CI must confirm the qualified context path and all downstream stages.

@@ -25,6 +25,7 @@ import { runFoundryTaskOperation } from "./foundry-task-store.ts";
 import type { ArtifactEntry } from "./foundry-task-types.ts";
 import {
   createWorkflowStageDirectory,
+  createWorkflowDirectory,
   registerWorkflowStageFiles,
   runWorkflowLocalCliResult,
 } from "./foundry-workflow-io.ts";
@@ -228,7 +229,7 @@ export async function applyFoundrySemanticInput(
       for (const input of context.inputs) readFoundryInput(context, input.path);
       const output = createWorkflowStageDirectory(context, operation, "semantic");
       fs.mkdirSync(resolveFoundryOutput(context, "tmp"), { recursive: true, mode: 0o700 });
-      const temporary = fs.mkdtempSync(path.join(context.tempRoot, "semantic-"));
+      const temporary = createWorkflowDirectory(context, path.join(context.tempRoot, "semantic-"));
       const updated = new Map<string, WorkflowRowSet>();
       const identityReports = [...rows.value.identity_reports],
         rewriteReports = [...rows.value.identity_rewrite_reports];

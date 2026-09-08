@@ -15,6 +15,7 @@ import { createFoundryIsolatedChildEnvironment } from "./foundry-runtime-environ
 import { resolveInstalledTiangongLcaCliPackage } from "./foundry-runtime-utils.ts";
 import { runFoundryTaskOperation } from "./foundry-task-store.ts";
 import { supportedDatasetTypes } from "./import-curation/internal/dataset-types.ts";
+import { createWorkflowDirectory } from "./foundry-workflow-io.ts";
 
 export async function prepareFoundryWorkflowContext(
   context: FoundryRuntimeContext,
@@ -45,9 +46,9 @@ export async function prepareFoundryWorkflowContext(
       resolveFoundryOutput(context, parent);
       // The owner writes to a new task-contained generation. Only this invocation's
       // inspected outputs enter the transaction; an interrupted generation is never adopted.
-      const output = fs.mkdtempSync(path.join(parent, "run-"));
+      const output = createWorkflowDirectory(context, path.join(parent, "run-"));
       fs.mkdirSync(resolveFoundryOutput(context, "tmp"), { recursive: true, mode: 0o700 });
-      const temporary = fs.mkdtempSync(path.join(context.tempRoot, "context-"));
+      const temporary = createWorkflowDirectory(context, path.join(context.tempRoot, "context-"));
       try {
         const cli = resolveInstalledTiangongLcaCliPackage();
         const environment = createFoundryIsolatedChildEnvironment({ tempRoot: temporary });

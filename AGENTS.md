@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: d047a3b059b750f0f7fac6caaa262276c6c5fd86
-lastReviewedNote: "Reviewed for PR120 CI: explicit fresh timestamps for synchronous identity fixtures preserve the unchanged stale guard; safe system-code diagnostics and an early Windows direct-context test expose host failures without raw error data. Required canonical/native/public gates remain intact."
+lastReviewedCommit: 3b031db1f5b6fb1ddceec9c3bde3c23df367d716
+lastReviewedNote: "Reviewed for PR120 Windows context RED: task-confined cryptographic directory names with exclusive mkdir replace deep-path mkdtemp for context, assessment and semantic generations. Prior artifacts, write guards and confinement remain intact; actual Windows CI verification is still required."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

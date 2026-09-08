@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: d047a3b059b750f0f7fac6caaa262276c6c5fd86
-lastReviewedNote: "Reviewed for Foundry #118 explicit ordinary/production-test intent through fingerprints, immutable account records, migration templates and sealed execution; qualified traceHash-only acceptance binds original/fresh raw hashes and preserves all verification evidence. Production-test rejects differences. Full release/live acceptance remains open."
+lastReviewedCommit: 3b031db1f5b6fb1ddceec9c3bde3c23df367d716
+lastReviewedNote: "Reviewed for PR120 Windows context RED: task-confined cryptographic directory names with exclusive mkdir replace deep-path mkdtemp for context, assessment and semantic generations. Prior artifacts, write guards and confinement remain intact; actual Windows CI verification is still required."
 ---
 
 # Environment Surface Policy
