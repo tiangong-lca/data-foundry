@@ -161,6 +161,16 @@ test("package descriptor rejects platform, path, order and digest drift", () => 
       "package-dist/scripts/public-api.d.ts",
     ].map((selectedPath) => ({ path: selectedPath, bytes: 1, sha256 })),
   );
+  for (const name of ["task-start", "semantic-input", "authorization-input"]) {
+    const schema = readJson(`specs/schemas/foundry-${name}.schema.json`);
+    const properties = schema.properties as Record<string, { const?: unknown }>;
+    const protocol = properties.schema.const;
+    assert.equal(typeof protocol, "string");
+    assert.ok(
+      (descriptor.runtime.protocol_schemas as readonly string[]).includes(String(protocol)),
+      `The descriptor must advertise the shipped public ${name} input protocol`,
+    );
+  }
   assert.deepEqual(
     assertFoundryPackageDescriptor(JSON.parse(JSON.stringify(descriptor))),
     descriptor,

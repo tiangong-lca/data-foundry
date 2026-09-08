@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 475142490df97a575b2d109c68a2f5ddcb94e1f8
-lastReviewedNote: "Reviewed for PR120: native validation allocates exclusive random staging beside the output to support deep Windows paths while preserving atomic replacement and prior output on cancellation. The direct qualified context regression now exercises materialization and assessment with indexed input facts. Native engine ownership, public protocol and authorization remain unchanged."
+lastReviewedCommit: 06154e4b50eae91873fa040fc71b4801ea3e6e2d
+lastReviewedNote: "Reviewed for PR120 package review: the descriptor and its structural schema now advertise the already implemented and shipped authorization-input v1 alongside task-start and semantic-input. A cross-contract regression compares all three shipped input schemas with the generated declaration. Runtime authorization, package ownership, environment and execution semantics are unchanged."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

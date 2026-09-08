@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: d047a3b059b750f0f7fac6caaa262276c6c5fd86
-lastReviewedNote: "Reviewed for PR120 CI: explicit fresh timestamps for synchronous identity fixtures preserve the unchanged stale guard; safe system-code diagnostics and an early Windows direct-context test expose host failures without raw error data. Required canonical/native/public gates remain intact."
+lastReviewedCommit: 06154e4b50eae91873fa040fc71b4801ea3e6e2d
+lastReviewedNote: "Reviewed for PR120 package review: the descriptor and its structural schema now advertise the already implemented and shipped authorization-input v1 alongside task-start and semantic-input. A cross-contract regression compares all three shipped input schemas with the generated declaration. Runtime authorization, package ownership, environment and execution semantics are unchanged."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -117,6 +117,8 @@ The repository manifest retains developer scripts. `build-foundry-package.ts` pr
 `package.json.files` is an explicit allowlist for the compiled closure, public schemas/profile documents and reviewed contracts. Profile documentation referenced by `specs/import-profiles.json` is included so a distributed profile has no dangling governed document. README and LICENSE are included. Private live evidence, `.env*`, session data, tasks, inputs, outputs, reports and `.foundry` are excluded.
 
 `package-dist/assets/foundry-package-descriptor.json` uses `tiangong-foundry.package-descriptor.v1`. It binds package/bin/API identity, exact CLI dependency, runtime layout v2, the four supported tuples, workspace read/write schema and public protocol set. Its sorted file inventory binds every other shipped payload by portable path, bytes and SHA-256. The descriptor excludes itself. `package.json` is also excluded from the byte inventory because package managers normalize its property order; the installed verifier instead compares its complete semantic object to the exact sanitized public shape and rejects every extra field, including lifecycle scripts.
+
+The public protocol set advertises each shipped external task input: task-start, semantic-input and authorization-input v1. The descriptor and its structural schema agree; including an input schema file in the archive alone does not declare support for that public protocol.
 
 Verification uses regular-file, `O_NOFOLLOW`, fd size/inode/mtime and SHA checks. Missing, extra, linked, renamed, traversing, oversized or changed payloads fail before a package-backed facade context is created. Every package-entry resolution performs this check even if an extra source-like file appears; such a file is itself an unexpected payload and cannot switch the resolver into developer mode. A nested `node_modules` may be dependency storage only when it is a real directory, never a symlink. Source and ordinary developer-emitted layouts remain readable as legacy layout v1 or repository layout v2 without treating a copied name-only manifest as a package.
 
