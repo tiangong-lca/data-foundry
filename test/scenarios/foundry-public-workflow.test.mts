@@ -807,7 +807,7 @@ for (const [identityDecision, approvalKind, trace, mixed, explicitMode, remoteDi
                 };
                 fs.writeFileSync(file, JSON.stringify(report));
                 return {
-                  status: blockers.length ? 2 : 0,
+                  status: blockers.length ? 1 : 0,
                   signal: null,
                   stdout: JSON.stringify(report),
                   stderr: "",
@@ -940,7 +940,7 @@ for (const [identityDecision, approvalKind, trace, mixed, explicitMode, remoteDi
             }
             fs.writeFileSync(file, JSON.stringify(report));
             return {
-              status: report.status === "blocked_remote_verification" ? 2 : 0,
+              status: report.status === "blocked_remote_verification" ? 1 : 0,
               signal: null,
               stdout: JSON.stringify(report),
               stderr: "",
@@ -1829,7 +1829,7 @@ async function verifyDependentScopes(t: TestContext, support: boolean) {
       }
       fs.writeFileSync(reportFile, JSON.stringify(report));
       return {
-        status: report.status === "blocked_remote_verification" ? 2 : 0,
+        status: report.status === "blocked_remote_verification" ? 1 : 0,
         signal: null,
         stdout: JSON.stringify(report),
         stderr: "",

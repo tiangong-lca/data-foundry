@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: c2913334130a666e9fbe3c18db286d24df355c1b
-lastReviewedNote: "Reviewed for Foundry #118 prepared support authorization: exact lineage-based grant derivation after cleanup, permission-only eligibility, bound-input finalization, preserved completed scope generations and structured sealing continuation. Missing actions and unrelated blockers remain blocked; live/F1 acceptance remains open."
+lastReviewedCommit: 86861430ea86cfd4f1fcae5056eac36709269962
+lastReviewedNote: "Reviewed for Foundry #118 live installed qualification: remote verification uses CLI data-block exit1, with regression RED/GREEN for ordinary trace acceptance. Real scoped contact insertion, client interruption, independent strict readback and no replay are recorded privately; final F1/CI/integration remain open."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -191,7 +191,7 @@ Finalization records which authorization hash it used; a still-blocked result un
 
 The optional `account_intent.account_mode` task field selects `ordinary` or `production-test`; omission retains the existing ordinary behavior and serialized shape. An explicit mode participates in the request fingerprint. Its workspace/task account registration is immutable, so resuming the same task with a different effective mode is rejected. Migration task templates preserve the explicit mode while omitting session references. An explicitly selected host mode for the same account must agree with the task mode. Ambient `FOUNDRY_ACCOUNT_MODE` cannot set or change public task intent.
 
-Finalization and sealed handoffs receive that registered mode explicitly, and stored execution requests recheck it. In ordinary mode, a failed root payload comparison may use the existing traceHash acceptance owner. It obtains a fresh payload through qualified CLI `flow get` or `process get` with explicit authentication, executable/argv and retained command/log artifacts. The fresh payload and selected local domain payload must match the original check's raw hashes; only then may equal payloads after removing `tiangongfoundry:importTraceSummary.traceHash` be accepted. Canonical `json` row envelopes are unwrapped without changing input files. Original failed verification files, fresh reads and separate acceptance evidence remain indexed.
+Finalization and sealed handoffs receive that registered mode explicitly, and stored execution requests recheck it. In ordinary mode, a failed root payload comparison may use the existing traceHash acceptance owner. The pinned public CLI reports completed remote-verification blockers with exit 1; the adapter distinguishes that data result from usage/native-tool exits before considering acceptance. It obtains a fresh payload through qualified CLI `flow get` or `process get` with explicit authentication, executable/argv and retained command/log artifacts. The fresh payload and selected local domain payload must match the original check's raw hashes; only then may equal payloads after removing `tiangongfoundry:importTraceSummary.traceHash` be accepted. Canonical `json` row envelopes are unwrapped without changing input files. Original failed verification files, fresh reads and separate acceptance evidence remain indexed.
 
 Production-test mode never invokes traceHash acceptance: owner/state/identity/version and complete payload must match exactly. Other payload changes, mismatched fresh-read hashes, missing or hidden references, and unresolved checks remain blocking in every mode. Recovery stays read-only and cannot replay the consumed mutation.
 

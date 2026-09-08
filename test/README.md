@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: c2913334130a666e9fbe3c18db286d24df355c1b
-lastReviewedNote: "Reviewed for Foundry #118 prepared support authorization: exact lineage-based grant derivation after cleanup, permission-only eligibility, bound-input finalization, preserved completed scope generations and structured sealing continuation. Missing actions and unrelated blockers remain blocked; live/F1 acceptance remains open."
+lastReviewedCommit: 86861430ea86cfd4f1fcae5056eac36709269962
+lastReviewedNote: "Reviewed for Foundry #118 live installed qualification: remote verification uses CLI data-block exit1, with regression RED/GREEN for ordinary trace acceptance. Real scoped contact insertion, client interruption, independent strict readback and no replay are recorded privately; final F1/CI/integration remain open."
 ---
 
 # Test Layout
@@ -513,3 +513,5 @@ W10 planning tests live in `unit/foundry-migration-plan.test.mts` (independent r
 `unit/foundry-migration-transfer.test.mts` covers checkpoint interruption/resume, source/destination drift, missing/corrupt completed archives, foreign state, cancellation, concurrent staging and private queue files. `scenarios/workspace-migration-transfer.test.mts` drives CLI v2 planning/staging/audit with root queues/external files and verifies the pending target cannot initialize. `scenarios/workspace-migration-adoption.test.mts`, `workspace-read-write-compatibility.test.mts` and `workspace-runtime-selection.test.mts` cover current-owner regeneration, public apply/audit, preserved origin and no-replay scope, escaped/interrupted adoption, future fields and CLI-managed rollback leases. Component fixtures are synthetic; private source/installed frozen-case qualification is separate.
 
 Support workflow coverage uses explicit Unit Group/Flow Property payload builders with reference-unit scale one and published category/schema fields. Their unwrapped initial payloads were independently checked with actual TIDAS 0.3.0 schema and eILCD projection validation. The public transport remains controlled: missing mint permission preserves a blocked result without reads/derivation/writes; full current-row approval proceeds through registered derivation, preserves the completed UG generation, and permits the dependent FP only after UG readback. This is not live owner-write evidence.
+
+The real installed-owner case exposed the published CLI remote-verification data exit of 1. Public remote-response fixtures now match that exit, and an ordinary traceHash case first reproduces the missed acceptance callback before the adapter correction. The live case uses one predeclared new contact, exits the client after the actual insert but before delivery to Foundry, then independently verifies recovery and zero mutation requests on repeated resume. All credentials and private case artifacts remain outside tracked/public data.

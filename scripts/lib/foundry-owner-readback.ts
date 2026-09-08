@@ -144,7 +144,8 @@ export async function readbackFoundryOwner(
       reportFile &&
       !result.error &&
       !result.signal &&
-      result.status === 2 &&
+      // The published CLI uses exit 1 for a completed, blocked remote report.
+      result.status === 1 &&
       request.policy.account_mode === "ordinary"
     ) {
       const accepted = acceptFoundryOwnerTraceDifference(
