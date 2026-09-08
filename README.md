@@ -158,8 +158,8 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 2c1a449c0af751067d5c05363128353e288b1126
-lastReviewedNote: "Reviewed for Foundry #123: adopt independently verified CLI0.1.12 at immutable6df087b, including the corrected original Windows HTTP bootstrap. Exact package/runtime expectations, release input/source/script hashes and current examples advance together; Node/TIDAS pins, profile semantics, authorization and retained private-case evidence are unchanged. Final F1 publication remains separate."
+lastReviewedCommit: 279fd69321efd22fdfcd8e424586ce5d59481309
+lastReviewedNote: "Reviewed for Foundry #125: explicit cancellation/result guards prevent skipped-lane propagation from suppressing required aggregate/bootstrap jobs. A terminal CI gate rejects any missing selected stage, and publication continuations require successful prerequisites without overriding cancellation. Tests/runtime/authorization scopes are unchanged."
 ---
 
 # TianGong LCA Data Foundry
@@ -322,6 +322,8 @@ The Golden gate checks normalized command artifacts against a non-`HEAD` merge-b
 Artifact paths recorded by fixtures must accept both platform separators. Durable JSON writers fsync the same writable descriptor they opened; POSIX permission-bit assertions apply only where the operating system implements those bits.
 
 Remote handoff commands are machine contracts, not shell snippets. `dataset-commit-handoff-plan` emits `tiangong-foundry.command-spec.v1` objects whose `executable` and `argv` are authoritative. `display` is derived for readers and is excluded from the command hash. Both commit and post-write verify specs bind the exact final rows path, bytes, and SHA-256; batch runners verify the binding immediately before `shell=false` execution.
+
+CI runs the full test inventory in isolated groups on all four supported platforms and verifies complete execution evidence before native qualification. Strict version-only PRs use bounded version/package checks; final releases always run the complete four-platform gate. A source-bound, digest-verified package artifact is reused for native assembly and signing, while fresh-install and cold-bootstrap tests remain. The local `pnpm prepush:gate` stays complete. Details are in `docs/package-distribution-contract.md`.
 
 ## Production Case TDD
 

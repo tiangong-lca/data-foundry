@@ -152,8 +152,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 2c1a449c0af751067d5c05363128353e288b1126
-lastReviewedNote: "Reviewed for Foundry #123: adopt independently verified CLI0.1.12 at immutable6df087b, including the corrected original Windows HTTP bootstrap. Exact package/runtime expectations, release input/source/script hashes and current examples advance together; Node/TIDAS pins, profile semantics, authorization and retained private-case evidence are unchanged. Final F1 publication remains separate."
+lastReviewedCommit: 279fd69321efd22fdfcd8e424586ce5d59481309
+lastReviewedNote: "Reviewed for Foundry #125: explicit cancellation/result guards prevent skipped-lane propagation from suppressing required aggregate/bootstrap jobs. A terminal CI gate rejects any missing selected stage, and publication continuations require successful prerequisites without overriding cancellation. Tests/runtime/authorization scopes are unchanged."
 ---
 
 # Architecture
@@ -446,3 +446,5 @@ See `docs/workspace-project-map.md` and `specs/workspace-capability-adapters.md`
 The public traceHash adapter delegates normalization to `remote-verification-accepted-diff.ts`. It supplies qualified CLI reads, retains original/accepted reports, and binds the fresh domain payload to the original remote hash. Canonical row envelopes are unwrapped only for comparison. Explicit account verification mode survives task registration and migration templates; production-test mode cannot enter the accepted-difference path.
 
 The prepared-approval adapter can bridge cleanup byte changes for an otherwise valid support scope by using the existing registered grant derivation, then re-running the finalize owner on the bound descendant. Eligibility is limited to the support-permission blocker with complete scoped write/mint actions. It preserves completed dependency generations and stops on unchanged blocked authorization state. No profile hash check or write admission guard is relaxed.
+
+Source CI execution is separate from the consumer runtime: complete isolated test partitions and exact version-only PR classification are owned by CI tooling. One verified package snapshot may be reused across native qualification and signing through independently supplied artifact digests and exact source/toolchain/run binding. Downloaded manifests and serialized receipts cannot issue snapshot authority. The final release always performs full four-platform qualification; consumer credentials, task state, authorization and no-replay behavior are unchanged.

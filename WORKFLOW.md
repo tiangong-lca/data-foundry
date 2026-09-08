@@ -281,8 +281,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 2c1a449c0af751067d5c05363128353e288b1126
-lastReviewedNote: "Reviewed for Foundry #123: adopt independently verified CLI0.1.12 at immutable6df087b, including the corrected original Windows HTTP bootstrap. Exact package/runtime expectations, release input/source/script hashes and current examples advance together; Node/TIDAS pins, profile semantics, authorization and retained private-case evidence are unchanged. Final F1 publication remains separate."
+lastReviewedCommit: 279fd69321efd22fdfcd8e424586ce5d59481309
+lastReviewedNote: "Reviewed for Foundry #125: explicit cancellation/result guards prevent skipped-lane propagation from suppressing required aggregate/bootstrap jobs. A terminal CI gate rejects any missing selected stage, and publication continuations require successful prerequisites without overriding cancellation. Tests/runtime/authorization scopes are unchanged."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

@@ -361,7 +361,10 @@ test("four-platform CI installs only from the frozen pnpm contract", () => {
     `runtime: node@${nodeVersion}`,
     "fetch-depth: 0",
     "pnpm install --frozen-lockfile",
-    "pnpm prepush:gate",
+    "pnpm ci:platform-checks",
+    "node scripts/ci-test-shard.ts",
+    "node scripts/ci-verify-tests.ts",
+    "node scripts/ci-build-package.ts",
   ]) {
     assert.match(workflow, new RegExp(escapeRegExp(expected), "u"));
   }

@@ -2,6 +2,10 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { packFoundryPackage } from "./pack-foundry-package.ts";
+import {
+  selectedFoundryCiPackage,
+  materializeVerifiedFoundryCiPackage,
+} from "./lib/foundry-ci-package.ts";
 import { loadFoundryReleaseWorkflowContext } from "./lib/foundry-release-workflow.ts";
 import { createGitHubFoundryTagStore } from "./lib/foundry-release-tag.ts";
 import { signFoundryNpmArtifact } from "./lib/foundry-release-signing.ts";
@@ -28,7 +32,10 @@ async function main(args: readonly string[]): Promise<void> {
     throw new Error("Package artifacts require a real owned directory.");
   const output = path.join(artifactRoot, "npm-release");
   fs.mkdirSync(output, { mode: 0o700 });
-  const packed = packFoundryPackage(output);
+  const reusedPackage = selectedFoundryCiPackage();
+  const packed = reusedPackage
+    ? materializeVerifiedFoundryCiPackage(reusedPackage, output)
+    : packFoundryPackage(output);
   if (
     packed.descriptor.package.name !== "@tiangong-lca/foundry" ||
     packed.descriptor.package.version !== context.version

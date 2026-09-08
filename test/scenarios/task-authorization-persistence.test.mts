@@ -234,3 +234,52 @@ test("headless identity uses only the existing process token mode and never seri
     hasCode("identity_receipt_invalid"),
   );
 });
+
+test("verified runtime identity expires after sixty seconds and requires a fresh owner receipt", async (t) => {
+  const now = Date.now();
+  t.mock.timers.enable({ apis: ["Date"], now });
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-identity-expiry-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const input = path.join(root, "rows.jsonl");
+  fs.writeFileSync(input, '{"flowDataSet":{}}\n');
+  const options = {
+    moduleUrl,
+    workspace: path.join(root, "workspace"),
+    cacheBase: path.join(root, "cache"),
+  };
+  initializeFoundryWorkspace(createFoundryRuntimeContext(options));
+  const context = createFoundryRuntimeContext({
+    ...options,
+    accountIntent,
+    taskId: "expiry",
+    actorId: "agent",
+    inputs: [captureFoundryInput(input)],
+  });
+  await createFoundryRuntime(context).cleanup({ input, type: "flow" });
+  let calls = 0;
+  t.mock.method(childProcess, "spawnSync", (_executable: unknown, argv: unknown) => {
+    assert.ok(Array.isArray(argv) && argv.includes("identity-receipt"));
+    calls++;
+    return {
+      status: 0,
+      signal: null,
+      stdout: JSON.stringify(
+        testAuthIdentityReceipt({
+          projectRef: accountIntent.projectRef,
+          userId: accountIntent.userId,
+        }),
+      ),
+      stderr: "",
+    };
+  });
+  const identity = verifyFoundryRuntimeIdentity(context, { mode: "oauth" }, {});
+  assertVerifiedFoundryIdentity(context, identity);
+  t.mock.timers.setTime(now + 60_001);
+  assert.throws(
+    () => assertVerifiedFoundryIdentity(context, identity),
+    hasCode("identity_receipt_stale"),
+  );
+  const fresh = verifyFoundryRuntimeIdentity(context, { mode: "oauth" }, {});
+  assertVerifiedFoundryIdentity(context, fresh);
+  assert.equal(calls, 2);
+});

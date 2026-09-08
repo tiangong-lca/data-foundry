@@ -1,0 +1,19 @@
+{
+  "schema": "tiangong-foundry.ci-test-durations.v1",
+  "baseline_run": 34213572802,
+  "baseline_platform": "win32-x64",
+  "weights_seconds": {
+    "test/scenarios/foundry-public-identity-final-rows.test.mts": 264.831,
+    "test/scenarios/foundry-public-identity-reference-reuse.test.mts": 125.752,
+    "test/scenarios/foundry-public-approval-current-rows.test.mts": 286.395,
+    "test/scenarios/foundry-public-approval-current-trace.test.mts": 268.169,
+    "test/scenarios/foundry-public-identity-mixed-reuse.test.mts": 206.447,
+    "test/scenarios/foundry-public-trace-acceptance.test.mts": 181.682,
+    "test/scenarios/foundry-public-trace-strict-owner.test.mts": 200.324,
+    "test/scenarios/foundry-public-trace-unrelated-change.test.mts": 206.516,
+    "test/scenarios/foundry-public-dependent-source.test.mts": 124.441,
+    "test/scenarios/foundry-public-dependent-flowproperty.test.mts": 510.735,
+    "test/scenarios/foundry-public-workflow.test.mts": 248.961,
+    "test/scenarios/foundry-package-consumer.test.mts": 853.824
+  }
+}

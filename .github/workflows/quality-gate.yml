@@ -9,14 +9,184 @@ on:
         description: Exact commit already admitted by the owning release workflow.
         required: true
         type: string
+    outputs:
+      package_sha256:
+        value: ${{ jobs.build-package.outputs.package_sha256 }}
+      package_manifest_sha256:
+        value: ${{ jobs.build-package.outputs.package_manifest_sha256 }}
 
 permissions:
   contents: read
 
 jobs:
+  plan:
+    name: Select exact CI qualification
+    runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.plan.outputs.mode }}
+      source_sha: ${{ steps.plan.outputs.source_sha }}
+      test_plan_sha256: ${{ steps.plan.outputs.test_plan_sha256 }}
+      shards: ${{ steps.plan.outputs.shards }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.source_sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        with:
+          runtime: node@24.19.0
+          install: false
+          cache: false
+      - id: plan
+        env:
+          FOUNDRY_CI_SOURCE_SHA: ${{ inputs.source_sha }}
+          FOUNDRY_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/ci-plan.ts --github-output
+
+  build-package:
+    name: Build the source-bound package once
+    needs: plan
+    runs-on: ubuntu-latest
+    outputs:
+      package_sha256: ${{ steps.build.outputs.package_sha256 }}
+      package_manifest_sha256: ${{ steps.build.outputs.package_manifest_sha256 }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.plan.outputs.source_sha }}
+          persist-credentials: false
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        with:
+          runtime: node@24.19.0
+          install: false
+          cache: true
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - id: build
+        run: node scripts/ci-build-package.ts --output "${{ runner.temp }}/foundry-ci-package" --github-output
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: foundry-ci-package-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/foundry-ci-package/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  test-shards:
+    name: Tests (${{ matrix.platform }} / ${{ matrix.shard }})
+    needs: plan
+    if: needs.plan.outputs.mode == 'full'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+        shard: ${{ fromJSON(needs.plan.outputs.shards || '[1,2,3,4]') }}
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+          - os: ubuntu-24.04-arm
+            platform: linux-arm64
+          - os: macos-latest
+            platform: darwin-arm64
+          - os: windows-latest
+            platform: win32-x64
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.plan.outputs.source_sha }}
+          persist-credentials: false
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        with:
+          runtime: node@24.19.0
+          install: false
+          cache: true
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Run the complete selected test partition
+        shell: bash
+        env:
+          CI_TEST_INDEX: ${{ matrix.shard }}
+          CI_TEST_PLAN: ${{ needs.plan.outputs.test_plan_sha256 }}
+          CI_TEST_SOURCE: ${{ needs.plan.outputs.source_sha }}
+        run: node scripts/ci-test-shard.ts --index "$CI_TEST_INDEX" --plan-sha256 "$CI_TEST_PLAN" --source-sha "$CI_TEST_SOURCE" --output "$RUNNER_TEMP/foundry-ci-tests"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: foundry-tests-${{ github.run_attempt }}-${{ matrix.platform }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/foundry-ci-tests/
+          if-no-files-found: warn
+          retention-days: 7
+
+  verify-tests:
+    name: Verify every test shard on every platform
+    needs: [plan, test-shards]
+    if: always() && needs.plan.outputs.mode == 'full'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every test job to succeed
+        env:
+          TEST_RESULT: ${{ needs.test-shards.result }}
+        run: test "$TEST_RESULT" = success
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.plan.outputs.source_sha }}
+          persist-credentials: false
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        with:
+          runtime: node@24.19.0
+          install: false
+          cache: true
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: foundry-tests-${{ github.run_attempt }}-*
+          path: ${{ runner.temp }}/foundry-test-shards
+      - name: Verify source, inventory, counters and event digests
+        env:
+          CI_TEST_PLAN: ${{ needs.plan.outputs.test_plan_sha256 }}
+          CI_TEST_SOURCE: ${{ needs.plan.outputs.source_sha }}
+        run: node scripts/ci-verify-tests.ts --input "$RUNNER_TEMP/foundry-test-shards" --plan-sha256 "$CI_TEST_PLAN" --source-sha "$CI_TEST_SOURCE" --output "$RUNNER_TEMP/foundry-tests.json"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: foundry-tests-complete-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/foundry-tests.json
+          if-no-files-found: error
+          retention-days: 7
+
+  version-pr:
+    name: Verify the bounded version-only PR
+    needs: [plan, build-package]
+    if: needs.plan.outputs.mode == 'version-only'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.plan.outputs.source_sha }}
+          persist-credentials: false
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        with:
+          runtime: node@24.19.0
+          install: false
+          cache: true
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Revalidate exact version projection and contracts
+        env:
+          FOUNDRY_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/ci-version-gate.ts
+
   quality-gate:
     name: quality-gate (${{ matrix.os }} / ${{ matrix.arch }})
+    needs: [plan, build-package, verify-tests, version-pr]
+    if: always()
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -34,35 +204,54 @@ jobs:
             arch: arm64
             platform: linux-arm64
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - name: Require the selected complete qualification lane
+        shell: bash
+        env:
+          PLAN_RESULT: ${{ needs.plan.result }}
+          BUILD_RESULT: ${{ needs.build-package.result }}
+          MODE: ${{ needs.plan.outputs.mode }}
+          TEST_RESULT: ${{ needs.verify-tests.result }}
+          VERSION_RESULT: ${{ needs.version-pr.result }}
+        run: |
+          set -euo pipefail
+          test "$PLAN_RESULT" = success
+          test "$BUILD_RESULT" = success
+          case "$MODE" in
+            full) test "$TEST_RESULT" = success ;;
+            version-only) test "$VERSION_RESULT" = success ;;
+            *) exit 1 ;;
+          esac
+      - uses: actions/checkout@v7
+        if: needs.plan.outputs.mode == 'full'
         with:
           fetch-depth: 0
-          ref: ${{ inputs.source_sha || github.sha }}
+          ref: ${{ needs.plan.outputs.source_sha }}
           persist-credentials: false
-
-      - name: Set up pnpm and Node.js
-        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        if: needs.plan.outputs.mode == 'full'
         with:
           runtime: node@24.19.0
           install: false
           cache: true
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Verify Windows task context paths
-        if: runner.os == 'Windows'
-        run: node --test --test-name-pattern="qualified context owner accepts" test/scenarios/foundry-public-workflow.test.mts
-
-      - name: Run canonical gate
-        run: pnpm prepush:gate
-
-      - name: Qualify assembled native runtime candidate
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+        if: needs.plan.outputs.mode == 'full'
+      - name: Run remaining canonical platform checks
+        if: needs.plan.outputs.mode == 'full'
+        run: pnpm ci:platform-checks
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        if: needs.plan.outputs.mode == 'full'
+        with:
+          name: foundry-ci-package-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/foundry-ci-package
+      - name: Qualify native runtime with the same verified package
+        if: needs.plan.outputs.mode == 'full'
+        env:
+          FOUNDRY_CI_PACKAGE_DIR: ${{ runner.temp }}/foundry-ci-package
+          FOUNDRY_CI_PACKAGE_MANIFEST_SHA256: ${{ needs.build-package.outputs.package_manifest_sha256 }}
+          FOUNDRY_CI_PACKAGE_SHA256: ${{ needs.build-package.outputs.package_sha256 }}
         run: pnpm release:prepare-runtime --output "${{ runner.temp }}/foundry-runtime-candidate"
-
-      - name: Preserve qualified platform artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: needs.plan.outputs.mode == 'full'
         with:
           name: foundry-runtime-${{ github.run_attempt }}-${{ matrix.platform }}
           path: ${{ runner.temp }}/foundry-runtime-candidate/
@@ -74,7 +263,8 @@ jobs:
     name: Verify the complete four-platform runtime set
     outputs:
       manifest_sha256: ${{ steps.aggregate.outputs.manifest_sha256 }}
-    needs: quality-gate
+    needs: [plan, quality-gate]
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.quality-gate.result == 'success' && needs.plan.outputs.mode == 'full' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the same qualified source
@@ -135,7 +325,8 @@ jobs:
 
   qualify-bootstrap-cached:
     name: Verify copied bootstrap (${{ matrix.platform }})
-    needs: aggregate-runtime
+    needs: [plan, aggregate-runtime]
+    if: ${{ !cancelled() && needs.plan.outputs.mode == 'full' && needs.aggregate-runtime.result == 'success' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -189,3 +380,45 @@ jobs:
           path: ${{ runner.temp }}/foundry-bootstrap-qualification/bootstrap-qualification.json
           if-no-files-found: error
           retention-days: 7
+
+  complete-qualification:
+    name: Require every selected qualification stage
+    needs:
+      [
+        plan,
+        build-package,
+        verify-tests,
+        version-pr,
+        quality-gate,
+        aggregate-runtime,
+        qualify-bootstrap-cached,
+      ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject incomplete or skipped required stages
+        env:
+          MODE: ${{ needs.plan.outputs.mode }}
+          PLAN_RESULT: ${{ needs.plan.result }}
+          BUILD_RESULT: ${{ needs.build-package.result }}
+          TEST_RESULT: ${{ needs.verify-tests.result }}
+          VERSION_RESULT: ${{ needs.version-pr.result }}
+          NATIVE_RESULT: ${{ needs.quality-gate.result }}
+          AGGREGATE_RESULT: ${{ needs.aggregate-runtime.result }}
+          BOOTSTRAP_RESULT: ${{ needs.qualify-bootstrap-cached.result }}
+        run: |
+          set -euo pipefail
+          test "$PLAN_RESULT" = success
+          test "$BUILD_RESULT" = success
+          test "$NATIVE_RESULT" = success
+          case "$MODE" in
+            full)
+              test "$TEST_RESULT" = success
+              test "$AGGREGATE_RESULT" = success
+              test "$BOOTSTRAP_RESULT" = success
+              ;;
+            version-only)
+              test "$VERSION_RESULT" = success
+              ;;
+            *) exit 1 ;;
+          esac

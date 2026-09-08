@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 2c1a449c0af751067d5c05363128353e288b1126
-lastReviewedNote: "Reviewed for Foundry #123: adopt independently verified CLI0.1.12 at immutable6df087b, including the corrected original Windows HTTP bootstrap. Exact package/runtime expectations, release input/source/script hashes and current examples advance together; Node/TIDAS pins, profile semantics, authorization and retained private-case evidence are unchanged. Final F1 publication remains separate."
+lastReviewedCommit: 279fd69321efd22fdfcd8e424586ce5d59481309
+lastReviewedNote: "Reviewed for Foundry #125: explicit cancellation/result guards prevent skipped-lane propagation from suppressing required aggregate/bootstrap jobs. A terminal CI gate rejects any missing selected stage, and publication continuations require successful prerequisites without overriding cancellation. Tests/runtime/authorization scopes are unchanged."
 ---
 
 # Environment Surface Policy
@@ -66,6 +66,8 @@ Frozen production materialization and metadata collection are source release ope
 The `release:prepare-production` command binds its own clean physical Git root and the source Node/pnpm declarations. Its only input is a fresh explicit output directory. Public C1 provenance comes from the reviewed runtime input file; package/registry/source expectations cannot be supplied through environment or command options. Its independent C1 inspection child receives platform process settings only, never source account credentials or Node options. Failed assembly removes only the newly owned output.
 
 `release:prepare-native` similarly takes only a fresh output and the current supported tuple. Its URLs/digests come from reviewed source data. Redirects remain on the fixed official HTTPS artifact hosts and carry no account authorization. Native inspection uses only platform settings and a fresh private child home, without inherited Node options, TIDAS overrides or user sessions. The downloaded Node/TIDAS artifacts and upstream license texts are inputs, not sources of runtime authority or business permissions.
+
+CI tooling additionally uses `FOUNDRY_CI_BASE_SHA` and `FOUNDRY_CI_SOURCE_SHA` for exact PR/caller-source selection. `FOUNDRY_CI_PACKAGE_DIR`, `FOUNDRY_CI_PACKAGE_MANIFEST_SHA256` and `FOUNDRY_CI_PACKAGE_SHA256` are a complete source-job-only artifact selection supplied from independent producing-job outputs. Partial or invalid selection fails; it never silently rebuilds or reads an operator credential. The package context includes only non-secret Git/toolchain/run facts. These variables are excluded from `.env.example`, ordinary task inputs and installed runtime configuration.
 
 ## Allowed Variables
 
