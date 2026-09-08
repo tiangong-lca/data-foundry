@@ -29,7 +29,7 @@
           "const": "tiangong-lca.cli-runtime-expectation.v1"
         },
         "package_version": {
-          "const": "0.1.11"
+          "const": "0.1.12"
         },
         "platform": {
           "$ref": "#/$defs/platform"
