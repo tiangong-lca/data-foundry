@@ -33,6 +33,7 @@ import { readRows } from "./import-curation/internal/runtime-io.ts";
 import { bundleRowTypes, type BundleRowType } from "./bundle-row-types.ts";
 import { workflowObject } from "./foundry-workflow-state.ts";
 import type { OwnerExecutionRequest } from "./foundry-owner-execution-store.ts";
+import { acceptFoundryOwnerTraceDifference } from "./foundry-owner-trace-acceptance.ts";
 
 export async function readbackFoundryOwner(
   context: FoundryRuntimeContext,
@@ -133,7 +134,37 @@ export async function readbackFoundryOwner(
         message: "Readback needs matching fresh stdout, report and check artifacts.",
       });
     }
-    if (result.error || result.signal || result.status !== 0)
+    const original = {
+      report: reportFile ? captureFoundryInput(reportFile) : null,
+      checks: checksFile ? captureFoundryInput(checksFile) : null,
+    };
+    let acceptance: ReturnType<typeof captureFoundryInput> | null = null;
+    if (
+      !blockers.length &&
+      reportFile &&
+      !result.error &&
+      !result.signal &&
+      result.status === 2 &&
+      request.policy.account_mode === "ordinary"
+    ) {
+      const accepted = acceptFoundryOwnerTraceDifference(
+        context,
+        qualified,
+        request,
+        reportFile,
+        output,
+        environment,
+      );
+      if (accepted.accepted) {
+        reportFile = resolveFoundryOutput(context, accepted.verifyReportPath);
+        report = workflowObject(JSON.parse(fs.readFileSync(reportFile, "utf8")));
+        checksFile = resolveFoundryOutput(context, String(workflowObject(report.files).checks));
+        acceptance = captureFoundryInput(
+          resolveFoundryOutput(context, accepted.acceptanceReportPath),
+        );
+      }
+    }
+    if (result.error || result.signal || (result.status !== 0 && !acceptance))
       blockers.push({ code: "readback_cli_failed", exit_code: result.status });
     if (!blockers.length && reportFile) {
       const rows = readRows(request.content.input.path).map((row) =>
@@ -211,6 +242,8 @@ export async function readbackFoundryOwner(
       command: spec,
       report: reportFile ? captureFoundryInput(reportFile) : null,
       checks: checksFile ? captureFoundryInput(checksFile) : null,
+      original_verification: original,
+      acceptance,
       blockers,
     };
     fs.writeFileSync(

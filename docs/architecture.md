@@ -152,8 +152,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: d96327ef43af418df731bf4e12387050339d7bb3
-lastReviewedNote: "Reviewed for Foundry #118 canonical reference verification: current identity partition/rewrite scope, qualified CLI visibility and exact-version checks, immutable producer-backed proof, read-only retry/reuse, and completion alongside verified write scopes. Full release/live acceptance remains open."
+lastReviewedCommit: 3da2201c023a02053fd7325422b5e53fe9c84826
+lastReviewedNote: "Reviewed for Foundry #118 explicit ordinary/production-test intent through fingerprints, immutable account records, migration templates and sealed execution; qualified traceHash-only acceptance binds original/fresh raw hashes and preserves all verification evidence. Production-test rejects differences. Full release/live acceptance remains open."
 ---
 
 # Architecture
@@ -442,3 +442,5 @@ The foundry should call the owning workspace surface instead of absorbing implem
 - `tidas-sdk`: compatibility SDK and context APIs
 
 See `docs/workspace-project-map.md` and `specs/workspace-capability-adapters.md` for the routing contract.
+
+The public traceHash adapter delegates normalization to `remote-verification-accepted-diff.ts`. It supplies qualified CLI reads, retains original/accepted reports, and binds the fresh domain payload to the original remote hash. Canonical row envelopes are unwrapped only for comparison. Explicit account verification mode survives task registration and migration templates; production-test mode cannot enter the accepted-difference path.

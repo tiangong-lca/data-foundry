@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: d96327ef43af418df731bf4e12387050339d7bb3
-lastReviewedNote: "Reviewed for Foundry #118 canonical reference verification: current identity partition/rewrite scope, qualified CLI visibility and exact-version checks, immutable producer-backed proof, read-only retry/reuse, and completion alongside verified write scopes. Full release/live acceptance remains open."
+lastReviewedCommit: 3da2201c023a02053fd7325422b5e53fe9c84826
+lastReviewedNote: "Reviewed for Foundry #118 explicit ordinary/production-test intent through fingerprints, immutable account records, migration templates and sealed execution; qualified traceHash-only acceptance binds original/fresh raw hashes and preserves all verification evidence. Production-test rejects differences. Full release/live acceptance remains open."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -180,6 +180,14 @@ Every facade revision also rechecks all retained predecessors in its request cha
 The public facade accepts CLI/TIDAS expectations only through its process-local host interface. Ordinary argv, task specs, `.env` and ambient `TIDAS_BIN`/expectation variables cannot select trust anchors. Without a host selection, doctor, start, status and local resume work and report `qualification.required`; child-required work must return the runtime qualification action. The managed bin now obtains this selection from the CLI IPC context and its verified component metadata. The final immutable production product manifest remains a W08 deliverable. The current exact CLI 0.1.11 constraint remains explicit rather than silently accepting a future version.
 
 `workspace migrate --dry-run` recursively inventories only regular files/directories, rejects links and returns `tiangong-foundry.workspace-migration-plan.v1` as an inline content-bound artifact. It classifies control, local-preparation, terminal-success, attempted/unknown, authorization/account and unclassified paths. The public envelope is bounded to 10,000 entries and 64 directory levels. The total hashed inventory is bounded to 256 MiB. Files larger than 64 MiB and recognized credential/session files retain path/size/classification facts with `sha256=null`; their contents are not read by this inventory. The tree digest binds this observational inventory, not an atomic filesystem snapshot, so W10 must re-read and verify every selected source immediately before apply. It writes nothing. W10 owns application, rollback and detailed old-schema mapping.
+
+## Account verification mode
+
+The optional `account_intent.account_mode` task field selects `ordinary` or `production-test`; omission retains the existing ordinary behavior and serialized shape. An explicit mode participates in the request fingerprint. Its workspace/task account registration is immutable, so resuming the same task with a different effective mode is rejected. Migration task templates preserve the explicit mode while omitting session references. An explicitly selected host mode for the same account must agree with the task mode. Ambient `FOUNDRY_ACCOUNT_MODE` cannot set or change public task intent.
+
+Finalization and sealed handoffs receive that registered mode explicitly, and stored execution requests recheck it. In ordinary mode, a failed root payload comparison may use the existing traceHash acceptance owner. It obtains a fresh payload through qualified CLI `flow get` or `process get` with explicit authentication, executable/argv and retained command/log artifacts. The fresh payload and selected local domain payload must match the original check's raw hashes; only then may equal payloads after removing `tiangongfoundry:importTraceSummary.traceHash` be accepted. Canonical `json` row envelopes are unwrapped without changing input files. Original failed verification files, fresh reads and separate acceptance evidence remain indexed.
+
+Production-test mode never invokes traceHash acceptance: owner/state/identity/version and complete payload must match exactly. Other payload changes, mismatched fresh-read hashes, missing or hidden references, and unresolved checks remain blocking in every mode. Recovery stays read-only and cannot replay the consumed mutation.
 
 ## Authentication and permissions
 

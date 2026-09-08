@@ -29,8 +29,8 @@ checkPaths:
   - specs/import-profiles.json
   - tasks/**
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: d96327ef43af418df731bf4e12387050339d7bb3
-lastReviewedNote: "Reviewed for Foundry #118 canonical reference verification: current identity partition/rewrite scope, qualified CLI visibility and exact-version checks, immutable producer-backed proof, read-only retry/reuse, and completion alongside verified write scopes. Full release/live acceptance remains open."
+lastReviewedCommit: 3da2201c023a02053fd7325422b5e53fe9c84826
+lastReviewedNote: "Reviewed for Foundry #118 explicit ordinary/production-test intent through fingerprints, immutable account records, migration templates and sealed execution; qualified traceHash-only acceptance binds original/fresh raw hashes and preserves all verification evidence. Production-test rejects differences. Full release/live acceptance remains open."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -127,6 +127,8 @@ The v2 JSONL index records sequence, previous record digest, operation/command/i
 A derived input must match an indexed output. Its completed producer receipt and plan must match the same job and content digests; every ancestor must lead through earlier index entries to frozen original source. The lineage walk verifies every receipt and plan again and explores every matching earlier producer, so reproducing identical output bytes cannot hide another valid ancestry path. Arbitrary files placed under `outputs/` do not become trusted inputs. Changing a parent receipt or plan invalidates continuation. Current selected input bytes are checked again, including before a local operation receipt is finalized.
 
 ## Account and authorization
+
+Account registration optionally stores `account_mode` from explicit task/host intent. Omitted legacy records retain their bytes and mean ordinary; production-test records cannot be downgraded on the same task. Request fingerprints and migration task templates retain an explicit mode. This verification policy grants no additional write action.
 
 An expected account may be selected after local preparation. The first selection is registered as project/user intent; subsequent disagreement is rejected. A missing task-local account file may only be restored from its existing workspace registration. This is intent, not proof of authentication.
 

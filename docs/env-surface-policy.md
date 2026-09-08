@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: d96327ef43af418df731bf4e12387050339d7bb3
-lastReviewedNote: "Reviewed for Foundry #118 canonical reference verification: current identity partition/rewrite scope, qualified CLI visibility and exact-version checks, immutable producer-backed proof, read-only retry/reuse, and completion alongside verified write scopes. Full release/live acceptance remains open."
+lastReviewedCommit: 3da2201c023a02053fd7325422b5e53fe9c84826
+lastReviewedNote: "Reviewed for Foundry #118 explicit ordinary/production-test intent through fingerprints, immutable account records, migration templates and sealed execution; qualified traceHash-only acceptance binds original/fresh raw hashes and preserves all verification evidence. Production-test rejects differences. Full release/live acceptance remains open."
 ---
 
 # Environment Surface Policy
@@ -144,3 +144,5 @@ Migration inventory never opens recognized `.env`, OAuth/session, token/cookie o
 Transfer staging uses the public CLI batch lock in a destination-keyed cache domain outside the source. It creates no auth session or business process. Root task queues receive the same private-file projection as `.foundry`, and explicit external inputs cannot be the selected session reference or recognized private storage.
 
 The host can select an independently trusted workspace read/write manifest and explicit runtime-manager options. These never come from `.env`, task specifications or ordinary argv. Registered `state/task-accounts/<id>.json` is identity intent, not OAuth storage. The explicitly selected session path is checked before marker and protected migration reads, including aliases. Source specifications and raw migration evidence do not carry session contents into current task state.
+
+Public finalization, handoff and readback set `FOUNDRY_ACCOUNT_MODE` only from the registered task intent. Public traceHash acceptance supplies an explicit qualified CLI get adapter and never calls the legacy default adapter that inherits `process.env`. Tokens remain in the existing process-only child environment; mode, CommandSpec and payload-read evidence contain no credential authority.

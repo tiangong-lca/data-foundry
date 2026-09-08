@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { resolveTiangongLcaCliRuntimeCommand } from "./foundry-runtime-utils.ts";
+import { unwrapDatasetPayload } from "./import-curation/internal/dataset-payload.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -377,7 +378,10 @@ export function acceptTraceHashOnlyRemoteVerificationMismatch({
     if (!Number.isInteger(rowIndex) || rowIndex < 0 || rowIndex >= rows.length) {
       return { accepted: false, reason: "payload_mismatch_row_index_missing", blocker };
     }
-    const localPayload = rows[rowIndex];
+    const localPayload = unwrapDatasetPayload(
+      rows[rowIndex],
+      blocker.table === "flows" ? "flow" : "process",
+    );
     const localIdentity = datasetIdentity(localPayload, blocker.table);
     const blockerVersion = String(blocker.version || "00.00.001");
     if (
@@ -430,6 +434,11 @@ export function acceptTraceHashOnlyRemoteVerificationMismatch({
     if (!check || check.status !== "payload_mismatch") {
       return { accepted: false, reason: "payload_mismatch_check_missing", blocker };
     }
+    if (
+      check.local_payload_sha256 !== sha256StableJson(localPayload) ||
+      check.remote_payload_sha256 !== sha256StableJson(remote.payload)
+    )
+      return { accepted: false, reason: "payload_mismatch_readback_hash_drift", blocker };
 
     const accepted = {
       table: blocker.table,

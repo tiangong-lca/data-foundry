@@ -57,6 +57,11 @@ function buildRequest(
       "The sealed capsule changed before request preparation.",
     );
   const scopeId = sha256Json({ task: context.taskId, type: value.dataset_type });
+  if ((handoff.account_mode ?? "ordinary") !== (context.accountIntent.accountMode ?? "ordinary"))
+    throw new FoundryContextError(
+      "execution_account_mode_mismatch",
+      "Sealed handoff must preserve the registered account verification mode.",
+    );
   const content = {
     authorization: authorization.entry.sha256,
     input: captureFoundryInput(input.path),
@@ -161,6 +166,7 @@ export function readOwnerExecutionRequests(
           sha256Json({ task: context.taskId, type: request.policy.dataset_type }) ||
         request.policy.project_ref !== context.accountIntent?.projectRef ||
         request.policy.user_id !== context.accountIntent?.userId ||
+        request.policy.account_mode !== (context.accountIntent?.accountMode ?? "ordinary") ||
         request.policy.state_code !== 0 ||
         sha256Json(request.contract) !==
           sha256Json(

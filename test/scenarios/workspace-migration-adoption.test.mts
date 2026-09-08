@@ -45,7 +45,7 @@ async function fixture(
   t: TestContext,
   laterHistory = false,
   nativeId?: string,
-  withAccount = false,
+  withAccount: boolean | "production-test" = false,
 ) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-adoption-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -87,7 +87,11 @@ async function fixture(
     json(path.join(task, "attempts/later.json"), { state: "UNKNOWN_DO_NOT_REPLAY" });
   const spec = path.join(root, "task.json");
   const accountIntent = withAccount
-    ? { projectRef: "a".repeat(20), userId: "00000000-0000-4000-8000-000000000001" }
+    ? {
+        projectRef: "a".repeat(20),
+        userId: "00000000-0000-4000-8000-000000000001",
+        ...(withAccount === "production-test" ? { accountMode: withAccount } : {}),
+      }
     : undefined;
   json(spec, {
     schema: "tiangong-foundry.task-start.v1",
@@ -103,6 +107,7 @@ async function fixture(
           project_ref: accountIntent.projectRef,
           user_id: accountIntent.userId,
           session_reference: null,
+          ...(accountIntent.accountMode ? { account_mode: accountIntent.accountMode } : {}),
         }
       : null,
     preparation: {
@@ -259,7 +264,7 @@ test("a selected current spec cannot change the retained source scope or actor",
 });
 
 test("application rebuilds through current task owners before activating an audited workspace", async (t) => {
-  const f = await fixture(t);
+  const f = await fixture(t, false, undefined, "production-test");
   const original = fs.readFileSync(path.join(f.task, "foundry-job.json"));
   const adoption = await planFoundryMigrationAdoption(
     f.context,
@@ -302,6 +307,16 @@ test("application rebuilds through current task owners before activating an audi
     assert.equal(validate({ ...value, unexpected: true }), false);
   }
   const taskId = String(applied.activation.tasks[0].task_id);
+  assert.equal(adoption.tasks[0].target_spec?.account_intent?.account_mode, "production-test");
+  assert.equal(
+    JSON.parse(
+      fs.readFileSync(
+        path.join(current.controlRoot, "workspaces", taskId, "account-intent.json"),
+        "utf8",
+      ),
+    ).account_mode,
+    "production-test",
+  );
   const facade = createFoundryFacade(f.options);
   const status = await facade.status({ taskId, actorId: "actor" });
   assert.equal(status.status, "ready", JSON.stringify(status.blockers));

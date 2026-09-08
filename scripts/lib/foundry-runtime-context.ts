@@ -376,6 +376,9 @@ export function createFoundryRuntimeContext(
       !/^[a-z0-9]{20}$/u.test(requestedAccount.projectRef) ||
       typeof requestedAccount.userId !== "string" ||
       !uuidPattern.test(requestedAccount.userId) ||
+      (requestedAccount.accountMode !== undefined &&
+        requestedAccount.accountMode !== "ordinary" &&
+        requestedAccount.accountMode !== "production-test") ||
       (requestedAccount.sessionReference !== undefined &&
         (typeof requestedAccount.sessionReference !== "string" ||
           !path.isAbsolute(requestedAccount.sessionReference))))

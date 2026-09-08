@@ -11,6 +11,7 @@ export interface FoundryAccountIntent {
   readonly projectRef: string;
   readonly userId: string;
   readonly sessionReference?: string;
+  readonly accountMode?: "ordinary" | "production-test";
 }
 
 export interface FoundryWorkspaceAccess {

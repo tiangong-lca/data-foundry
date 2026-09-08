@@ -280,7 +280,7 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: db62b65202d3e40beb5e57d6dec990d6b584372d
+lastReviewedCommit: 3da2201c023a02053fd7325422b5e53fe9c84826
 lastReviewedNote: "Reviewed for Foundry #118 current-row approval continuation: original-grant re-finalization, exact derived activation, equal-byte descendant proof, unchanged authority/expiry, and recovery after interrupted capture. Input/lineage lookup preserves ordered verified producers. Actual owner dispatch/readback and full release acceptance remain open."
 ---
 
@@ -296,9 +296,9 @@ The public identity regression uses the real installed request/context/curation 
 
 Public identity submission covers `create_new` and `reuse_existing_reference`, wrong snapshot/context refusal, unresolved diagnostics with unchanged rows, duplicate reuse and preserved report lineage. A reference-rewrite case verifies flow partition cardinality and dependent process IDs while retaining canonical row metadata. Source/receipt/lineage tamper checks remain required after producer lookup is indexed; no timing threshold substitutes for correctness checks.
 
-Public finalization tests continue the create-new case through original owner dry-run/reference-report formats to `permissions.required`, and retain an explicit verification blocker for reference-only scope. Remote responses are intercepted; commit flags are forbidden in the test transport. Repeated pending resume must return the same artifacts without more reads. Legacy finalize ready/blocked/order tests continue through thin command adapters. A separate actual TIDAS 0.3.0/CLI 0.1.11 local probe checks report generation and precise missing identity/reference/owner blockers on the frozen reference sample; it performs no real account query or write and is not final live acceptance.
+Public finalization tests continue the create-new case through original owner dry-run/reference-report formats to `permissions.required`, and retain an explicit verification blocker for reference-only scope. Remote responses are intercepted; the finalization stage permits only dry-run and read-only verification commands, while separately sealed owner execution has an explicit one-shot commit fixture. Repeated pending resume must return the same artifacts without more reads. Legacy finalize ready/blocked/order tests continue through thin command adapters. A separate actual TIDAS 0.3.0/CLI 0.1.11 local probe checks report generation and precise missing identity/reference/owner blockers on the frozen reference sample; it performs no real account query or write and is not final live acceptance.
 
-Authorization input tests cover strict file/scope schema, frozen selection, required user evidence, duplicate evidence IDs and unknown selectors. The public flow rejects stale finalization and incorrect binding, permits only one winner for competing initial grants, produces the existing sealed capsule and reuses identical approval. The CLI `--authorization-input` route emits one envelope. These tests intercept account/remote responses, never dispatch the sealed commit, and do not establish live write/readback or F1 acceptance.
+Authorization input tests cover strict file/scope schema, frozen selection, required user evidence, duplicate evidence IDs and unknown selectors. The public flow rejects stale finalization and incorrect binding, permits only one winner for competing initial grants, produces the existing sealed capsule and reuses identical approval. The CLI `--authorization-input` route emits one envelope. Approval submission itself does not dispatch. Subsequent public resume tests invoke the sealed commit through a controlled transport, preserve attempts before dispatch and verify readback recovery without replay. They do not establish live write/readback or F1 acceptance.
 
 Prepared-row cases continue the same approval through re-finalization and sealing with unchanged expiry. One case uses actual cleanup of an import trace to change the final payload digest; another proves same-content path reuse. A controlled capture interruption after derived activation must recover without another approval or dispatch. The persistence regression rejects an independent equal-byte source copy and accepts only an indexed descendant under the existing grant.
 
@@ -359,6 +359,10 @@ W06 package coverage has two layers. `unit/foundry-package-contract.test.mts` ch
 `unit/package-manager-command.test.mts` covers Windows native pnpm selection, complete npm/Node installation pairing, literal Unicode/space/metacharacter argv, missing-tool rejection, POSIX lookup and the actual package-verifier dry-run call. The consumer scenario also executes the repository verifier and pack driver, including reuse of an identical archive, on every supported CI platform. Package tools share the repository-only resolver and always spawn without a shell.
 
 Foundry tests are organized by responsibility, not by the date a regression was added.
+
+Public execution now covers mixed canonical reuse/write completion, contact-to-source dependency order, retention of completed final-row generations and recovery after unchanged grants expire. Reference checks reject missing, duplicate, substituted and outdated targets. Mutating recorded readback evidence invalidates completed status.
+
+Verification-mode tests preserve legacy omitted-mode shapes, reject implicit account-mode changes and host/task disagreement, and carry production-test mode through actual migration activation and schema validation. The public trace cases accept only an ordinary traceHash-only difference, reject it in production-test, and reject other content changes in ordinary mode. The shared acceptance tests cover canonical row envelopes and reject a fresh payload whose raw hash differs from the original verification observation. Original failed verification and separate acceptance/get evidence remain available.
 
 ## Directories
 

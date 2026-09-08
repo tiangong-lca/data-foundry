@@ -164,6 +164,7 @@ export async function recordFoundryWorkflowAuthorization(
     context.accountIntent?.sessionReference,
     process.env,
   );
+  environment.FOUNDRY_ACCOUNT_MODE = context.accountIntent?.accountMode ?? "ordinary";
   try {
     if (request.inputKind === "final_rows") {
       environment.FOUNDRY_VERIFIED_PROJECT_REF = context.accountIntent!.projectRef;
@@ -179,6 +180,7 @@ export async function recordFoundryWorkflowAuthorization(
           mutationManifest: scope.mutation_manifest,
           outDir: path.join(output, "handoff"),
           targetUserId: context.accountIntent!.userId,
+          accountMode: context.accountIntent?.accountMode ?? "ordinary",
           taskAuthorization: authorization,
           taskAuthorizationBinding: authorization.binding,
           profile: authorization.binding.profile_id,

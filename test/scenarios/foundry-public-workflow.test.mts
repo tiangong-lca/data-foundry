@@ -582,14 +582,18 @@ test("public decisions bind their owner and context, preserve rows on refusal, a
   }
 });
 
-for (const [identityDecision, approvalKind, trace, mixed] of [
+for (const [identityDecision, approvalKind, trace, mixed, explicitMode, remoteDifference] of [
   ["create_new", "final_rows", false, false],
   ["reuse_existing_reference", "final_rows", false, false],
   ["create_new", "current_rows", false, false],
   ["create_new", "current_rows", true, false],
   ["create_new", "final_rows", false, true],
+  ["create_new", "final_rows", true, false, "ordinary", "trace_hash"],
+  ["create_new", "final_rows", true, false, "production-test", "trace_hash"],
+  ["create_new", "final_rows", true, false, "ordinary", "other_field"],
 ] as const) {
-  test(`public identity preflight and ${identityDecision} ${approvalKind}${trace ? " with_trace" : ""}${mixed ? " mixed_reuse" : ""} submission preserve current scope and evidence`, async (t) => {
+  test(`public identity preflight and ${identityDecision} ${approvalKind}${trace ? " with_trace" : ""}${mixed ? " mixed_reuse" : ""}${remoteDifference ? ` ${explicitMode} ${remoteDifference}` : ""} submission preserve current scope and evidence`, async (t) => {
+    const accountMode = explicitMode ?? "ordinary";
     const { root, workspace, facade, runtimeSelection } = workflowFixture(t);
     const id = "77777777-7777-4777-8777-777777777777";
     const basic = flowRow(id);
@@ -648,6 +652,7 @@ for (const [identityDecision, approvalKind, trace, mixed] of [
       project_ref: "qgzvkongdjqiiamzbbts",
       user_id: "c536ee37-64ab-427b-b7e3-4e2bb4fdffb7",
       session_reference: null,
+      ...(explicitMode ? { account_mode: explicitMode } : {}),
     };
     const reusedId = "88888888-8888-4888-8888-888888888888";
     const reusedPayload = structuredClone(payload);
@@ -707,6 +712,9 @@ for (const [identityDecision, approvalKind, trace, mixed] of [
     let writes = 0,
       exactReadback = approvalKind !== "current_rows";
     let childFailure: unknown;
+    let getCalls = 0,
+      restoreExactPayload = false;
+    const remotePayloads = new Map<string, typeof payload>();
     t.mock.method(
       childProcess,
       "spawnSync",
@@ -714,6 +722,24 @@ for (const [identityDecision, approvalKind, trace, mixed] of [
         try {
           const argv = args[1],
             options = args[2];
+          if (Array.isArray(argv) && argv[1] === "flow" && argv[2] === "get") {
+            getCalls++;
+            assert.equal(args[0], process.execPath);
+            assert.equal(argv[0], resolveInstalledTiangongLcaCliPackage().binPath);
+            assert.equal(options?.shell, false);
+            assert.equal(options?.env?.FOUNDRY_ACCOUNT_MODE, "ordinary");
+            assert.equal(options?.env?.TIANGONG_LCA_ACCESS_TOKEN, undefined);
+            const selected = remotePayloads.get(argv[argv.indexOf("--id") + 1]);
+            assert.ok(selected, "normalization requires a fresh read of the observed root");
+            return {
+              status: 0,
+              signal: null,
+              stdout: JSON.stringify({ flow: selected }),
+              stderr: "",
+              pid: 1,
+              output: [],
+            };
+          }
           if (
             Array.isArray(argv) &&
             ["publish-version", "save-draft", "verify-remote"].some((name) => argv.includes(name))
@@ -804,33 +830,65 @@ for (const [identityDecision, approvalKind, trace, mixed] of [
                 const rows = readRows(input);
                 const checks = [
                   ...(report.checks as Array<Record<string, unknown>>),
-                  ...rows.map((row, row_index) => ({
-                    role: "root",
-                    path: `${input}#readback`,
-                    table: "flows",
-                    id,
-                    version: "00.00.001",
-                    row_index,
-                    status: "ok",
-                    local_payload_sha256: canonicalPayloadSha256(unwrapDatasetPayload(row, "flow")),
-                    remote_payload_sha256: canonicalPayloadSha256(
-                      unwrapDatasetPayload(row, "flow"),
-                    ),
-                    remote_user_id: exactReadback || trace ? account.user_id : "another-owner",
-                    remote_state_code: !exactReadback && trace ? 20 : 0,
-                  })),
+                  ...rows.map((row, row_index) => {
+                    const local = unwrapDatasetPayload(row, "flow"),
+                      remote = structuredClone(local) as typeof payload;
+                    if (remoteDifference && !restoreExactPayload) {
+                      let changed = 0;
+                      const changeTrace = (value: unknown, inSummary = false) => {
+                        if (!value || typeof value !== "object") return;
+                        for (const [key, child] of Object.entries(value)) {
+                          if (inSummary && key === "traceHash") {
+                            (value as Record<string, unknown>)[key] = "controlled-remote-hash";
+                            changed++;
+                          } else
+                            changeTrace(
+                              child,
+                              inSummary || key === "tiangongfoundry:importTraceSummary",
+                            );
+                        }
+                      };
+                      changeTrace(remote);
+                      assert.ok(changed > 0, "real finalize must produce a trace summary");
+                      if (remoteDifference === "other_field")
+                        remote.flowDataSet.flowInformation.dataSetInformation.name.baseName[
+                          "#text"
+                        ] = "Different fixture content";
+                    }
+                    remotePayloads.set(id, remote);
+                    return {
+                      role: "root",
+                      path: `${input}#readback`,
+                      table: "flows",
+                      id,
+                      version: "00.00.001",
+                      row_index,
+                      status: remoteDifference && !restoreExactPayload ? "payload_mismatch" : "ok",
+                      local_payload_sha256: canonicalPayloadSha256(local),
+                      remote_payload_sha256: canonicalPayloadSha256(remote),
+                      remote_user_id: exactReadback || trace ? account.user_id : "another-owner",
+                      remote_state_code: !exactReadback && trace ? 20 : 0,
+                    };
+                  }),
                 ];
                 const checksFile = path.join(outDir, "checks.jsonl");
                 fs.writeFileSync(
                   checksFile,
                   checks.map((check) => JSON.stringify(check)).join("\n") + "\n",
                 );
+                const payloadBlockers = checks
+                  .filter((check) => check.status === "payload_mismatch")
+                  .map((check) => ({ ...check, code: "payload_mismatch" }));
                 Object.assign(report, {
+                  status: payloadBlockers.length
+                    ? "blocked_remote_verification"
+                    : "passed_remote_verification",
+                  blockers: payloadBlockers,
                   checks,
                   counts: {
-                    blockers: 0,
+                    blockers: payloadBlockers.length,
                     root_readback_checks: rows.length,
-                    root_payload_mismatches: 0,
+                    root_payload_mismatches: payloadBlockers.length,
                   },
                   files: { report: file, checks: checksFile },
                 });
@@ -877,7 +935,7 @@ for (const [identityDecision, approvalKind, trace, mixed] of [
             }
             fs.writeFileSync(file, JSON.stringify(report));
             return {
-              status: 0,
+              status: report.status === "blocked_remote_verification" ? 2 : 0,
               signal: null,
               stdout: JSON.stringify(report),
               stderr: "",
@@ -1385,16 +1443,17 @@ for (const [identityDecision, approvalKind, trace, mixed] of [
           capsule_file: string;
           capsule: { approved_input: { sha256: string }; final_rows: { sha256: string } };
         };
-        handoff: { commands: { commit: { argv: string[] } } };
+        handoff: { account_mode: string; commands: { commit: { argv: string[] } } };
       };
       assert.equal(authorization.status, "sealed");
+      assert.equal(authorization.handoff.account_mode, accountMode);
       assert.equal(
         authorization.expires_at_utc,
         grant.expires_at_utc,
         "continuation does not extend the approved lifetime",
       );
       assert.equal(authorization.capsule.capsule.approved_input.sha256, input.sha256);
-      if (trace)
+      if (trace && approvalKind === "current_rows")
         assert.notEqual(
           authorization.capsule.capsule.final_rows.sha256,
           input.sha256,
@@ -1473,6 +1532,17 @@ for (const [identityDecision, approvalKind, trace, mixed] of [
       }
       let executed = await facade.resume(invocation);
       assert.equal(writes, 1, JSON.stringify(executed.blockers));
+      if (
+        remoteDifference &&
+        (accountMode === "production-test" || remoteDifference === "other_field")
+      ) {
+        assert.equal(executed.status, "needs_input", JSON.stringify(executed.blockers));
+        assert.equal(executed.blockers[0]?.code, "mutation_readback_required");
+        assert.equal(getCalls, accountMode === "production-test" ? 0 : 1);
+        restoreExactPayload = true;
+        executed = await facade.resume(invocation);
+        assert.equal(writes, 1, "strict mismatch recovery cannot replay mutation");
+      } else if (remoteDifference === "trace_hash") assert.equal(getCalls, 1);
       if (approvalKind === "current_rows") {
         assert.equal(executed.status, "needs_input", JSON.stringify(executed));
         assert.equal(executed.blockers[0]?.code, "mutation_readback_required");
@@ -1511,6 +1581,21 @@ for (const [identityDecision, approvalKind, trace, mixed] of [
       assert.equal((await facade.resume(invocation)).status, "completed");
       assert.equal(writes, 1);
       assert.ok(executionReport?.kind === "file");
+      if (remoteDifference === "trace_hash" && accountMode === "ordinary") {
+        const result = JSON.parse(fs.readFileSync(executionReport.path, "utf8")) as {
+          readback: {
+            acceptance: { path: string };
+            original_verification: { report: { path: string } };
+          };
+        };
+        assert.ok(fs.existsSync(result.readback.acceptance.path));
+        assert.equal(
+          JSON.parse(fs.readFileSync(result.readback.original_verification.report.path, "utf8"))
+            .status,
+          "blocked_remote_verification",
+          "original failure evidence is retained beside the accepted proof",
+        );
+      }
       const proof = JSON.parse(fs.readFileSync(executionReport.path, "utf8")) as {
         readback: { checks: { path: string } };
       };

@@ -74,6 +74,7 @@ export async function finalizeFoundryWorkflow(
   fs.mkdirSync(output, { recursive: true, mode: 0o700 });
   fs.mkdirSync(temporary, { recursive: true, mode: 0o700 });
   const environment = createFoundryIsolatedChildEnvironment({ tempRoot: temporary });
+  environment.FOUNDRY_ACCOUNT_MODE = context.accountIntent?.accountMode ?? "ordinary";
   const sets: Array<Record<string, unknown>> = [],
     blockers: Array<Record<string, unknown>> = [];
   let receiptFile: string | undefined;

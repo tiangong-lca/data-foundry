@@ -349,6 +349,16 @@ function selectedInputs(
 }
 
 function accountIntent(spec: FoundryTaskStartSpec, host?: FoundryAccountIntent) {
+  if (
+    host?.accountMode &&
+    host.projectRef === spec.account_intent?.project_ref &&
+    host.userId === spec.account_intent?.user_id &&
+    host.accountMode !== (spec.account_intent.account_mode ?? "ordinary")
+  )
+    throw new FoundryContextError(
+      "task_account_mismatch",
+      "Explicit host and task verification modes must agree.",
+    );
   const inheritedReference =
     host &&
     host.projectRef === spec.account_intent?.project_ref &&
@@ -359,6 +369,9 @@ function accountIntent(spec: FoundryTaskStartSpec, host?: FoundryAccountIntent) 
     ? {
         projectRef: spec.account_intent.project_ref,
         userId: spec.account_intent.user_id,
+        ...(spec.account_intent.account_mode
+          ? { accountMode: spec.account_intent.account_mode }
+          : {}),
         ...((spec.account_intent.session_reference ?? inheritedReference)
           ? { sessionReference: spec.account_intent.session_reference ?? inheritedReference }
           : {}),

@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  migrationTaskTemplate,
+  materializeMigrationTaskSpec,
+} from "../../scripts/lib/foundry-migration-adoption-plan.ts";
+import {
   FOUNDRY_TASK_START_SPEC_SCHEMA,
   parseFoundryTaskStartSpec,
   taskStartSpecFingerprint,
@@ -75,6 +79,36 @@ test("task-start spec rejects duplicates, credentials, unknown fields and malfor
     parseFoundryTaskStartSpec({
       ...base,
       account_intent: { project_ref: "short", user_id: "not-a-uuid", session_reference: null },
+    }),
+  );
+});
+
+test("explicit account verification mode binds task identity and survives migration templates", () => {
+  const account = {
+    project_ref: "aaaaaaaaaaaaaaaaaaaa",
+    user_id: "11111111-1111-4111-8111-111111111111",
+    session_reference: null,
+  };
+  const legacy = parseFoundryTaskStartSpec({ ...base, account_intent: account });
+  assert.deepEqual(
+    legacy.account_intent,
+    account,
+    "legacy bytes and fingerprints retain their existing shape",
+  );
+  const production = parseFoundryTaskStartSpec({
+    ...base,
+    account_intent: { ...account, account_mode: "production-test" },
+  });
+  const facts = [{ path: "/project/inputs/flow.json", bytes: 42, sha256: "1".repeat(64) }];
+  assert.notEqual(
+    taskStartSpecFingerprint(legacy, facts),
+    taskStartSpecFingerprint(production, facts),
+  );
+  assert.deepEqual(materializeMigrationTaskSpec(migrationTaskTemplate(production)), production);
+  assert.throws(() =>
+    parseFoundryTaskStartSpec({
+      ...base,
+      account_intent: { ...account, account_mode: "unrestricted" },
     }),
   );
 });

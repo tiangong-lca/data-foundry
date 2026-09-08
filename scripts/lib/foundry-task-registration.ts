@@ -443,7 +443,14 @@ export function bindAccountIntent(context: FoundryRuntimeContext): void {
     } catch {
       fail("task_account_invalid", "Task account registration is malformed.");
     }
-    exact(stored, ["schema", "workspace_id", "task_id", "project_ref", "user_id"]);
+    exact(stored, [
+      "schema",
+      "workspace_id",
+      "task_id",
+      "project_ref",
+      "user_id",
+      ...(Object.hasOwn(stored, "account_mode") ? ["account_mode"] : []),
+    ]);
     if (
       stored.schema !== "tiangong-foundry.account-intent.v1" ||
       stored.workspace_id !== context.workspaceId ||
@@ -451,10 +458,18 @@ export function bindAccountIntent(context: FoundryRuntimeContext): void {
       typeof stored.project_ref !== "string" ||
       !/^[a-z0-9]{20}$/u.test(stored.project_ref) ||
       typeof stored.user_id !== "string" ||
+      (Object.hasOwn(stored, "account_mode") &&
+        stored.account_mode !== "ordinary" &&
+        stored.account_mode !== "production-test") ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u.test(stored.user_id)
     )
       fail("task_account_invalid", "Task account registration does not match this task.");
-    if (intent && (stored.project_ref !== intent.projectRef || stored.user_id !== intent.userId))
+    if (
+      intent &&
+      (stored.project_ref !== intent.projectRef ||
+        stored.user_id !== intent.userId ||
+        (stored.account_mode ?? "ordinary") !== (intent.accountMode ?? "ordinary"))
+    )
       fail("task_account_mismatch", "Task account intent cannot change implicitly.");
   } else if (intent) {
     registered = bytes({
@@ -463,6 +478,7 @@ export function bindAccountIntent(context: FoundryRuntimeContext): void {
       task_id: context.taskId,
       project_ref: intent.projectRef,
       user_id: intent.userId,
+      ...(intent.accountMode ? { account_mode: intent.accountMode } : {}),
     });
     writeStateOnce(context, `task-accounts/${context.taskId}.json`, registered);
   }
