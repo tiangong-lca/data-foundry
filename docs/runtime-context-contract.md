@@ -41,8 +41,8 @@ checkPaths:
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 2c1a449c0af751067d5c05363128353e288b1126
-lastReviewedNote: "Reviewed for Foundry #123: adopt independently verified CLI0.1.12 at immutable6df087b, including the corrected original Windows HTTP bootstrap. Exact package/runtime expectations, release input/source/script hashes and current examples advance together; Node/TIDAS pins, profile semantics, authorization and retained private-case evidence are unchanged. Final F1 publication remains separate."
+lastReviewedCommit: 8e424164458860f0c672e07ec026cadc1282c277
+lastReviewedNote: "Reviewed for Foundry #125: isolate all existing scenarios into complete duration-balanced CI partitions, admit only the strict version-only PR projection, and reuse one independently digest/source/toolchain/run-bound package snapshot. Full final four-platform/native/bootstrap qualification, local hooks, fresh consumer cases and all runtime/authorization/no-replay boundaries remain required."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md

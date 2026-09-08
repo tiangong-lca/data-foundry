@@ -141,7 +141,13 @@
     "release:aggregate-runtime": "node scripts/release-aggregate-runtime.ts",
     "release:publish-components": "node scripts/release-publish-components.ts",
     "release:qualify-bootstrap": "node scripts/release-qualify-bootstrap.ts",
-    "release:publish-runtime-manifest": "node scripts/release-publish-runtime-manifest.ts"
+    "release:publish-runtime-manifest": "node scripts/release-publish-runtime-manifest.ts",
+    "ci:platform-checks": "pnpm lint && pnpm golden:diff && pnpm surface:audit && pnpm build && pnpm audit:high",
+    "ci:plan": "node scripts/ci-plan.ts",
+    "ci:build-package": "node scripts/ci-build-package.ts",
+    "ci:test": "node scripts/ci-test-shard.ts",
+    "ci:verify-tests": "node scripts/ci-verify-tests.ts",
+    "ci:version-gate": "node scripts/ci-version-gate.ts"
   },
   "engines": {
     "node": ">=24.19.0 <25",

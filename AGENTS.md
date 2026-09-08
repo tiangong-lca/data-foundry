@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 2c1a449c0af751067d5c05363128353e288b1126
-lastReviewedNote: "Reviewed for Foundry #123: adopt independently verified CLI0.1.12 at immutable6df087b, including the corrected original Windows HTTP bootstrap. Exact package/runtime expectations, release input/source/script hashes and current examples advance together; Node/TIDAS pins, profile semantics, authorization and retained private-case evidence are unchanged. Final F1 publication remains separate."
+lastReviewedCommit: 8e424164458860f0c672e07ec026cadc1282c277
+lastReviewedNote: "Reviewed for Foundry #125: isolate all existing scenarios into complete duration-balanced CI partitions, admit only the strict version-only PR projection, and reuse one independently digest/source/toolchain/run-bound package snapshot. Full final four-platform/native/bootstrap qualification, local hooks, fresh consumer cases and all runtime/authorization/no-replay boundaries remain required."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -361,6 +361,8 @@ Receive external LCA packages or source documents, choose the correct import lan
 - The Golden gate must compare against a non-`HEAD` merge-base with full Git history and a Node-native comparator. Cross-platform TypeScript fixtures use executable-plus-argv dispatch through `process.execPath`, not OS executable-bit behavior. `.gitattributes` keeps repository text at LF on every runner; only Windows launcher files may opt into CRLF.
 - Foundry artifact-to-scope matching and transitional command parsers must accept both path separators. Durable JSON/JSONL writers flush the writable descriptor they opened; POSIX permission-bit assertions are not imposed on Windows filesystems.
 - Executable handoffs use `tiangong-foundry.command-spec.v1`: `executable` plus `argv` are authoritative, `display` is derived and never executed, and `sha256` binds the authoritative fields plus exact input artifact facts. Commit and post-write verify specs must both bind the handoff `final_rows_artifact` path, byte count, and SHA-256; runners recheck those bytes before every spawn and always use `shell=false`.
+
+Full CI may execute the complete test inventory in isolated duration-balanced shards while retaining every supported platform and native/public-bootstrap qualification. Only the exact inspected version projection may use the bounded PR lane; final release calls always run full qualification. CI package reuse requires independent producing-job digests, exact source/toolchain/run binding and an in-memory verified snapshot. It cannot rely on an unsigned cache receipt alone, change ordinary runtime authority or replace dedicated cold-start tests. See `docs/package-distribution-contract.md`.
 
 ## Default Operating Order
 

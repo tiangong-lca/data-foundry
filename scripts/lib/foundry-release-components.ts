@@ -17,6 +17,10 @@ import inputs from "../../specs/release/runtime-inputs.json" with { type: "json"
 import { foundryPackageRepoRoot } from "../build-foundry-package.ts";
 import { packFoundryPackage } from "../pack-foundry-package.ts";
 import {
+  selectedFoundryCiPackage,
+  materializeVerifiedFoundryCiPackage,
+} from "./foundry-ci-package.ts";
+import {
   prepareFoundryProductionInput,
   assertPreparedFoundryProductionInput,
 } from "../release-prepare-production.ts";
@@ -170,7 +174,10 @@ export async function prepareFoundryRuntimeComponents(
       throw new Error(
         "Published runtime assembly requires owner-qualified TIDAS third-party license evidence.",
       );
-    const packed = packFoundryPackage(path.join(work, "package"));
+    const reusedPackage = selectedFoundryCiPackage();
+    const packed = reusedPackage
+      ? materializeVerifiedFoundryCiPackage(reusedPackage, path.join(work, "package"))
+      : packFoundryPackage(path.join(work, "package"));
     const publication =
       scope === "published-release"
         ? await verifyPublicNpmRelease({ package: "foundry", version, gitHead: source.commit })

@@ -130,9 +130,18 @@ jobs:
       - name: Install frozen build and signature dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Build and sign the exact release package
+      - name: Download the package verified by source qualification
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: foundry-ci-package-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/foundry-ci-package
+
+      - name: Sign the exact package verified by source qualification
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          FOUNDRY_CI_PACKAGE_DIR: ${{ runner.temp }}/foundry-ci-package
+          FOUNDRY_CI_PACKAGE_MANIFEST_SHA256: ${{ needs.release-qualification.outputs.package_manifest_sha256 }}
+          FOUNDRY_CI_PACKAGE_SHA256: ${{ needs.release-qualification.outputs.package_sha256 }}
         run: pnpm release:prepare-package
 
       - name: Preserve the signed package and first-publication handoff
@@ -163,6 +172,7 @@ jobs:
     name: Prepare published runtime (${{ matrix.platform }})
     needs:
       - release-context
+      - release-qualification
       - npm-package
     if: needs.npm-package.outputs.npm_published == 'true'
     runs-on: ${{ matrix.os }}
@@ -200,7 +210,17 @@ jobs:
       - name: Install frozen release dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
+      - name: Download the package verified by source qualification
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: foundry-ci-package-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/foundry-ci-package
+
       - name: Assemble and qualify actual public npm and native inputs
+        env:
+          FOUNDRY_CI_PACKAGE_DIR: ${{ runner.temp }}/foundry-ci-package
+          FOUNDRY_CI_PACKAGE_MANIFEST_SHA256: ${{ needs.release-qualification.outputs.package_manifest_sha256 }}
+          FOUNDRY_CI_PACKAGE_SHA256: ${{ needs.release-qualification.outputs.package_sha256 }}
         run: pnpm release:prepare-runtime --output "${{ runner.temp }}/foundry-published-runtime" --published
 
       - name: Attest exact runtime component archives
