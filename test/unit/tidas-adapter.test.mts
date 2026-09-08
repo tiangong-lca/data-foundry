@@ -314,7 +314,8 @@ test("deep validation output preserves atomic replacement without Windows mkdtem
   const { root, bin } = isolatedFixture();
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const rowsFile = path.join(root, "processes.jsonl");
-  const parent = path.join(root, "workspace", "a".repeat(70), "b".repeat(70), "c".repeat(70));
+  // The suffix alone exceeds 260 characters, even when the host temp root is only /tmp.
+  const parent = path.join(root, "workspace", "a".repeat(90), "b".repeat(90), "c".repeat(90));
   const outDir = path.join(parent, "validation");
   assert.ok(parent.length > 260);
   fs.writeFileSync(rowsFile, `${JSON.stringify(processRow())}\n`);
