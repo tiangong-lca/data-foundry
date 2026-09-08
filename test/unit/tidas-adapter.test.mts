@@ -310,6 +310,36 @@ test("row validation maps official batch evidence into Foundry compatibility rep
   }
 });
 
+test("deep validation output preserves atomic replacement without Windows mkdtemp", (t) => {
+  const { root, bin } = isolatedFixture();
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const rowsFile = path.join(root, "processes.jsonl");
+  const parent = path.join(root, "workspace", "a".repeat(70), "b".repeat(70), "c".repeat(70));
+  const outDir = path.join(parent, "validation");
+  assert.ok(parent.length > 260);
+  fs.writeFileSync(rowsFile, `${JSON.stringify(processRow())}\n`);
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.writeFileSync(path.join(outDir, "sentinel"), "keep");
+  t.mock.method(fs, "mkdtempSync", () => {
+    throw Object.assign(new Error("Windows long-prefix mkdtemp"), { code: "ENOENT" });
+  });
+  const invoke = (exitClass?: string) =>
+    withEnvironment(
+      { TIDAS_BIN: bin, FAKE_TIDAS_EXIT_CLASS: exitClass, FAKE_TIDAS_INVALID: undefined },
+      () =>
+        runTidasRowsValidation({ repoRoot: root, options: { rowsFile, type: "process", outDir } }),
+    );
+  assert.equal(invoke("cancelled").exit_code, 130);
+  assert.equal(fs.readFileSync(path.join(outDir, "sentinel"), "utf8"), "keep");
+  assert.deepEqual(fs.readdirSync(parent), ["validation"]);
+  const completed = invoke();
+  assert.equal(completed.exit_code, 0);
+  assert.equal(completed.report.status, "completed");
+  assert.ok(typeof completed.report_file === "string" && fs.existsSync(completed.report_file));
+  assert.equal(fs.existsSync(path.join(outDir, "sentinel")), false);
+  assert.deepEqual(fs.readdirSync(parent), ["validation"]);
+});
+
 test("cancelled row validation cleans staging and preserves the previous output", () => {
   const { root, bin } = isolatedFixture();
   const rowsFile = path.join(root, "processes.jsonl");

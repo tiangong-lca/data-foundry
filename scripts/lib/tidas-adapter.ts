@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import type { SpawnSyncReturns } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { BinaryLike } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -549,7 +549,9 @@ export function runTidasRowsValidation({
   if (!options.outDir) throw new Error("--out-dir is required.");
   const rows = readRows(rowsFile);
   fs.mkdirSync(path.dirname(outDir), { recursive: true });
-  const staging = fs.mkdtempSync(path.join(path.dirname(outDir), ".tidas-validate-stage-"));
+  const staging = path.join(path.dirname(outDir), `.tidas-validate-stage-${randomUUID()}`);
+  // Keep staging beside the output for atomic rename; Windows mkdtemp rejects deep prefixes.
+  fs.mkdirSync(staging, { mode: 0o700 });
   try {
     const inputRoot = path.join(staging, "input");
     const manifest: Array<{

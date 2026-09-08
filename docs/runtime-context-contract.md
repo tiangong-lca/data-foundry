@@ -41,8 +41,8 @@ checkPaths:
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 3b031db1f5b6fb1ddceec9c3bde3c23df367d716
-lastReviewedNote: "Reviewed for PR120 Windows context RED: task-confined cryptographic directory names with exclusive mkdir replace deep-path mkdtemp for context, assessment and semantic generations. Prior artifacts, write guards and confinement remain intact; actual Windows CI verification is still required."
+lastReviewedCommit: 475142490df97a575b2d109c68a2f5ddcb94e1f8
+lastReviewedNote: "Reviewed for PR120: native validation allocates exclusive random staging beside the output to support deep Windows paths while preserving atomic replacement and prior output on cancellation. The direct qualified context regression now exercises materialization and assessment with indexed input facts. Native engine ownership, public protocol and authorization remain unchanged."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
@@ -134,3 +134,5 @@ The package-owned managed initializer receives the public CLI IPC context before
 Prepared-support finalization explicitly selects the approved input file for its dataset type. Other completed scope artifacts are retained through the existing verified-progress map; the original row manifest and approval origin remain lineage anchors. `approval_authorization_sha256` distinguishes a new derived-input finalization from an unchanged blocked result.
 
 Workflow generation and scratch directories use task-confined cryptographic names with exclusive `mkdir`, rather than `mkdtemp` under deep task paths. This preserves distinct immutable generations on Windows when a registered task plus operation digest exceeds the Windows `mkdtemp` path limit. Workspace write access and path confinement are checked before creation; existing directories are never adopted.
+
+The native validation adapter also allocates a cryptographically named exclusive staging directory beside its selected output. This keeps atomic same-filesystem replacement and cancellation cleanup available at deep Windows task paths. Failed or cancelled validation preserves the previous output; successful validation publishes the complete new report set.

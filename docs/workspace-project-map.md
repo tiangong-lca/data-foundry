@@ -89,8 +89,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 3b031db1f5b6fb1ddceec9c3bde3c23df367d716
-lastReviewedNote: "Reviewed for PR120 Windows context RED: task-confined cryptographic directory names with exclusive mkdir replace deep-path mkdtemp for context, assessment and semantic generations. Prior artifacts, write guards and confinement remain intact; actual Windows CI verification is still required."
+lastReviewedCommit: 475142490df97a575b2d109c68a2f5ddcb94e1f8
+lastReviewedNote: "Reviewed for PR120: native validation allocates exclusive random staging beside the output to support deep Windows paths while preserving atomic replacement and prior output on cancellation. The direct qualified context regression now exercises materialization and assessment with indexed input facts. Native engine ownership, public protocol and authorization remain unchanged."
 ---
 
 # Workspace Project Map

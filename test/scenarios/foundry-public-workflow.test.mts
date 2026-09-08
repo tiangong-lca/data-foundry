@@ -198,10 +198,44 @@ test("qualified context owner accepts the registered Unicode task path directly"
     inputs: [captureFoundryInput(seed)],
   });
   const qualified = qualifyFoundryRuntime(context, runtimeSelection);
-  const result = await createFoundryRuntime(context, qualified).prepareContext(["flow"]);
+  const runtime = createFoundryRuntime(context, qualified);
+  const result = await runtime.prepareContext(["flow"]);
   assert.equal(result.status, "completed");
-  const inspected = await createFoundryRuntime(context, qualified).inspectTask();
-  assert.ok(inspected.artifacts.some((item) => item.path.endsWith("/contract-report.json")));
+  await runtime.materializeRows([seed]);
+  const inspected = await runtime.inspectTask();
+  const contract = inspected.artifacts.find((item) => item.path.endsWith("/contract-report.json"));
+  const rows = inspected.artifacts.find((item) => item.path.endsWith("/foundry-rows.json"));
+  assert.ok(contract);
+  assert.ok(rows);
+  const assessmentContext = createFoundryRuntimeContext({
+    moduleUrl: new URL("../../scripts/runtime-entry.ts", import.meta.url).href,
+    workspace,
+    cacheBase: path.join(root, "cache"),
+    taskId: started.task_id,
+    actorId: "context-actor",
+    inputs: [
+      captureFoundryInput(seed),
+      ...inspected.artifacts.map((artifact) => {
+        const fact = captureFoundryInput(path.resolve(context.taskRoot!, artifact.path));
+        assert.equal(fact.sha256, artifact.sha256);
+        assert.equal(fact.bytes, artifact.bytes);
+        return fact;
+      }),
+    ],
+  });
+  const assessmentRuntime = createFoundryRuntime(
+    assessmentContext,
+    qualifyFoundryRuntime(assessmentContext, runtimeSelection),
+  );
+  const assessed = await assessmentRuntime.assessRows(path.resolve(context.taskRoot!, rows.path), [
+    path.resolve(context.taskRoot!, contract.path),
+  ]);
+  assert.equal(assessed.status, "completed");
+  assert.ok(
+    (await runtime.inspectTask()).artifacts.some((item) =>
+      item.path.endsWith("/foundry-assessment.json"),
+    ),
+  );
 });
 
 test("qualified public import dispatches the native owner and retains indexed stage evidence", async (t) => {
