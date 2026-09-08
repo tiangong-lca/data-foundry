@@ -1,6 +1,4 @@
-import { fileURLToPath } from "node:url";
-
-export const foundryCiReporterPath = fileURLToPath(import.meta.url);
+export const foundryCiReporterUrl = import.meta.url;
 
 function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))

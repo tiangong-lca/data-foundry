@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 8e424164458860f0c672e07ec026cadc1282c277
-lastReviewedNote: "Reviewed for Foundry #125: isolate all existing scenarios into complete duration-balanced CI partitions, admit only the strict version-only PR projection, and reuse one independently digest/source/toolchain/run-bound package snapshot. Full final four-platform/native/bootstrap qualification, local hooks, fresh consumer cases and all runtime/authorization/no-replay boundaries remain required."
+lastReviewedCommit: a7f78b5818a86b055005c90f54c2b385ad708fd1
+lastReviewedNote: "Reviewed for Foundry #125: use a file URL for the native CI reporter so Windows ESM loading remains portable. This source-only correction preserves all test partitions, trusted build reuse and final full release qualification."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

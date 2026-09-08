@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-import report from "../../scripts/ci-test-reporter.ts";
+import report, { foundryCiReporterUrl } from "../../scripts/ci-test-reporter.ts";
 
 async function collect(items: unknown[]): Promise<unknown[]> {
   async function* events() {
@@ -70,12 +70,15 @@ test("actual Node reporter integration preserves passed and platform-skipped cas
   const environment = { ...process.env };
   delete environment.NODE_TEST_CONTEXT;
   delete environment.NODE_OPTIONS;
-  const reporter = path.resolve(import.meta.dirname, "../../scripts/ci-test-reporter.ts");
-  const result = spawnSync(process.execPath, ["--test", `--test-reporter=${reporter}`, fixture], {
-    env: environment,
-    encoding: "utf8",
-    timeout: 30000,
-  });
+  const result = spawnSync(
+    process.execPath,
+    ["--test", `--test-reporter=${foundryCiReporterUrl}`, fixture],
+    {
+      env: environment,
+      encoding: "utf8",
+      timeout: 30000,
+    },
+  );
   assert.equal(result.status, 0, result.stderr);
   const records = result.stdout
     .trim()

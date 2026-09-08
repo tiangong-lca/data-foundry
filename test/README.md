@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 8e424164458860f0c672e07ec026cadc1282c277
-lastReviewedNote: "Reviewed for Foundry #125: isolate all existing scenarios into complete duration-balanced CI partitions, admit only the strict version-only PR projection, and reuse one independently digest/source/toolchain/run-bound package snapshot. Full final four-platform/native/bootstrap qualification, local hooks, fresh consumer cases and all runtime/authorization/no-replay boundaries remain required."
+lastReviewedCommit: a7f78b5818a86b055005c90f54c2b385ad708fd1
+lastReviewedNote: "Reviewed for Foundry #125: load the CI custom reporter through its source file URL so Windows drive letters are not treated as ESM protocols. Actual Node reporter integration passes; source/plan/test coverage/build-reuse and final publication safeguards are unchanged."
 ---
 
 # Test Layout
@@ -525,3 +525,5 @@ The Windows direct-context RED identified `ENOENT` from `mkdtemp` at a path cont
 The sixteen public workflow scenarios retain their assertions and names. Heavy identity/approval and dependent-scope cases have separate scenario entry files over `fixtures/foundry-public-workflow.ts`, so process-global mocks and environment remain isolated. The CI planner includes every test file exactly once in each platform partition and balances known slow files with measured durations; estimates never replace execution evidence. The runner and collector reject missing/duplicate files, wrong source/plan/platform, failed execution and changed event bytes.
 
 Full CI retains all supported platforms, canonical platform checks, native assembly and copied bootstrap. Version-only PRs use the existing strict projection proof plus release/package/real-consumer checks; the final release workflow always selects full qualification. Workflow regression checks preserve the platform set, dependency guards and independent artifact-output bindings. Build-reuse tests reject changed bytes, self-authored digests, wrong source/toolchain/run, invalid paths, partial selection and serialized snapshots. Dedicated real builds, fresh installs and public-download qualification remain separate evidence.
+
+The custom CI reporter is selected by its `file:` URL rather than a native absolute path; Node ESM must not interpret a Windows drive letter as a URL scheme. The actual reporter integration exercises the same exported URL used by the shard runner.

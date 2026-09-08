@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { loadFoundryTestPlan } from "./lib/foundry-ci-plan.ts";
-import { foundryCiReporterPath } from "./ci-test-reporter.ts";
+import { foundryCiReporterUrl } from "./ci-test-reporter.ts";
 import { readFoundryReleaseGit as git } from "./lib/foundry-release-contract.ts";
 import { readFoundryReleaseArtifact } from "./lib/foundry-release-prepared.ts";
 
@@ -68,7 +68,7 @@ async function main(args: readonly string[]): Promise<void> {
         "--test-concurrency=2",
         "--test-reporter=spec",
         "--test-reporter-destination=stdout",
-        `--test-reporter=${foundryCiReporterPath}`,
+        `--test-reporter=${foundryCiReporterUrl}`,
         `--test-reporter-destination=${eventsFile}`,
         ...shard.files.map((file) => path.join(root, file)),
       ],

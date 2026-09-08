@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 8e424164458860f0c672e07ec026cadc1282c277
-lastReviewedNote: "Reviewed for Foundry #125: isolate all existing scenarios into complete duration-balanced CI partitions, admit only the strict version-only PR projection, and reuse one independently digest/source/toolchain/run-bound package snapshot. Full final four-platform/native/bootstrap qualification, local hooks, fresh consumer cases and all runtime/authorization/no-replay boundaries remain required."
+lastReviewedCommit: a7f78b5818a86b055005c90f54c2b385ad708fd1
+lastReviewedNote: "Reviewed for Foundry #125: load the CI custom reporter through its source file URL so Windows drive letters are not treated as ESM protocols. Actual Node reporter integration passes; source/plan/test coverage/build-reuse and final publication safeguards are unchanged."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
