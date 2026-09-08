@@ -7,6 +7,12 @@ import test, { type TestContext } from "node:test";
 import { CLI_RUNTIME_EXPECTATION_SCHEMA, describeCliRuntime } from "@tiangong-lca/cli/runtime";
 import { createFoundryFacade, runFoundryPublicCommand } from "../../scripts/public-api.ts";
 import { FOUNDRY_TIDAS_EXPECTATION_SCHEMA } from "../../scripts/lib/foundry-runtime-qualification.ts";
+import { qualifyFoundryRuntime } from "../../scripts/lib/foundry-runtime-qualification.ts";
+import { createFoundryRuntime } from "../../scripts/foundry-runtime.ts";
+import {
+  createFoundryRuntimeContext,
+  captureFoundryInput,
+} from "../../scripts/lib/foundry-runtime-context.ts";
 import { flowRow, sourceRow, processRowWithInvalidLocation } from "../fixtures/row-builders.ts";
 import { datasetIdentity } from "../../scripts/lib/import-curation/internal/dataset-payload.ts";
 import { bundleRowTypes, type BundleRowType } from "../../scripts/lib/bundle-row-types.ts";
@@ -158,6 +164,46 @@ ${marker}`,
   return { root, workspace, facade, runtimeSelection: facadeOptions.runtimeSelection };
 }
 
+test("qualified context owner accepts the registered Unicode task path directly", async (t) => {
+  const { root, workspace, facade, runtimeSelection } = workflowFixture(t);
+  const seed = path.join(root, "context-seed.json"),
+    specFile = path.join(root, "context-request.json");
+  fs.writeFileSync(
+    seed,
+    JSON.stringify({ rows: [flowRow("77777777-7777-4777-8777-777777777777")] }),
+  );
+  fs.writeFileSync(
+    specFile,
+    JSON.stringify({
+      schema: "tiangong-foundry.task-start.v1",
+      request_id: "direct-context-owner",
+      actor_id: "context-actor",
+      lane: "source-evidence-dataset-development",
+      profile_id: "generic",
+      target_entities: ["flow"],
+      sources: [{ path: seed }],
+      seed: { path: seed },
+      account_intent: null,
+      preparation: null,
+    }),
+  );
+  const started = await facade.start({ specFile });
+  assert.ok(started.task_id);
+  const context = createFoundryRuntimeContext({
+    moduleUrl: new URL("../../scripts/runtime-entry.ts", import.meta.url).href,
+    workspace,
+    cacheBase: path.join(root, "cache"),
+    taskId: started.task_id,
+    actorId: "context-actor",
+    inputs: [captureFoundryInput(seed)],
+  });
+  const qualified = qualifyFoundryRuntime(context, runtimeSelection);
+  const result = await createFoundryRuntime(context, qualified).prepareContext(["flow"]);
+  assert.equal(result.status, "completed");
+  const inspected = await createFoundryRuntime(context, qualified).inspectTask();
+  assert.ok(inspected.artifacts.some((item) => item.path.endsWith("/contract-report.json")));
+});
+
 test("qualified public import dispatches the native owner and retains indexed stage evidence", async (t) => {
   const { root, facade } = workflowFixture(t);
   const source = path.join(root, "selected-package.zip");
@@ -199,7 +245,7 @@ test("qualified public import dispatches the native owner and retains indexed st
     context.artifacts.some(
       (artifact) => artifact.kind === "file" && path.basename(artifact.path) === "schema.json",
     ),
-    "the next resume must prepare real CLI-owned contract context",
+    `the next resume must prepare real CLI-owned contract context: ${JSON.stringify(context.blockers)}`,
   );
   const materialized = await facade.resume({ taskId: started.task_id, actorId: "workflow-actor" });
   const processRows = materialized.artifacts.find(
@@ -996,6 +1042,14 @@ for (const [identityDecision, approvalKind, trace, mixed, explicitMode, remoteDi
             fs.writeFileSync(
               path.join(outDir, "outputs", "identity-decision.json"),
               JSON.stringify(report) + "\n",
+            );
+            // This synchronous transport fixture has no real process/network delay.
+            // Give its new report an explicit fresh tick despite filesystem rounding.
+            const reportTime = new Date(Date.now() + 1);
+            fs.utimesSync(
+              path.join(outDir, "outputs", "identity-decision.json"),
+              reportTime,
+              reportTime,
             );
             if (failRead)
               return {

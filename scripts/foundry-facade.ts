@@ -265,10 +265,39 @@ function failure(
   identity: unknown = null,
 ): FoundryOperationResult {
   const code = error instanceof FoundryContextError ? error.code : "runtime_operation_failed";
+  const systemCode =
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    [
+      "ENOENT",
+      "EACCES",
+      "EPERM",
+      "EINVAL",
+      "ENAMETOOLONG",
+      "EIO",
+      "ENOSPC",
+      "EBADF",
+      "EEXIST",
+      "ENOTDIR",
+      "EMFILE",
+      "ENFILE",
+      "EBUSY",
+      "UNKNOWN",
+      "ERR_INVALID_ARG_TYPE",
+      "ERR_INVALID_ARG_VALUE",
+      "ERR_OUT_OF_RANGE",
+    ].includes(String(error.code))
+      ? String(error.code)
+      : error instanceof SyntaxError
+        ? "SyntaxError"
+        : error instanceof TypeError
+          ? "TypeError"
+          : null;
   const message =
     error instanceof FoundryContextError
       ? error.message
-      : "Foundry could not complete this operation; selected state was preserved.";
+      : `Foundry could not complete this operation${systemCode ? ` (${systemCode})` : ""}; selected state was preserved.`;
   const needsAuth = code === "needs_auth" || code.startsWith("identity_");
   const needsInputCodes = new Set([
     "task_not_found",

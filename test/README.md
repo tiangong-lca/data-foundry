@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 86861430ea86cfd4f1fcae5056eac36709269962
-lastReviewedNote: "Reviewed for Foundry #118 live installed qualification: remote verification uses CLI data-block exit1, with regression RED/GREEN for ordinary trace acceptance. Real scoped contact insertion, client interruption, independent strict readback and no replay are recorded privately; final F1/CI/integration remain open."
+lastReviewedCommit: d047a3b059b750f0f7fac6caaa262276c6c5fd86
+lastReviewedNote: "Reviewed for PR120 CI: explicit fresh timestamps for synchronous identity fixtures preserve the unchanged stale guard; safe system-code diagnostics and an early Windows direct-context test expose host failures without raw error data. Required canonical/native/public gates remain intact."
 ---
 
 # Test Layout
@@ -515,3 +515,5 @@ W10 planning tests live in `unit/foundry-migration-plan.test.mts` (independent r
 Support workflow coverage uses explicit Unit Group/Flow Property payload builders with reference-unit scale one and published category/schema fields. Their unwrapped initial payloads were independently checked with actual TIDAS 0.3.0 schema and eILCD projection validation. The public transport remains controlled: missing mint permission preserves a blocked result without reads/derivation/writes; full current-row approval proceeds through registered derivation, preserves the completed UG generation, and permits the dependent FP only after UG readback. This is not live owner-write evidence.
 
 The real installed-owner case exposed the published CLI remote-verification data exit of 1. Public remote-response fixtures now match that exit, and an ordinary traceHash case first reproduces the missed acceptance callback before the adapter correction. The live case uses one predeclared new contact, exits the client after the actual insert but before delivery to Foundry, then independently verifies recovery and zero mutation requests on repeated resume. All credentials and private case artifacts remain outside tracked/public data.
+
+The synchronous public identity fixture sets an explicit fresh report timestamp so host filesystem clock rounding cannot make a newly written report appear stale. The runtime stale-report guard and explicit stale negative tests remain unchanged. A direct qualified context-owner test exercises the same registered Unicode task path without the facade error projection; Windows CI runs it before the full canonical gate to expose filesystem failures early.

@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 86861430ea86cfd4f1fcae5056eac36709269962
-lastReviewedNote: "Reviewed for Foundry #118 live installed qualification: remote verification uses CLI data-block exit1, with regression RED/GREEN for ordinary trace acceptance. Real scoped contact insertion, client interruption, independent strict readback and no replay are recorded privately; final F1/CI/integration remain open."
+lastReviewedCommit: d047a3b059b750f0f7fac6caaa262276c6c5fd86
+lastReviewedNote: "Reviewed for PR120 CI: explicit fresh timestamps for synchronous identity fixtures preserve the unchanged stale guard; safe system-code diagnostics and an early Windows direct-context test expose host failures without raw error data. Required canonical/native/public gates remain intact."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -212,3 +212,5 @@ Runtime selection from a managed installed package revalidates ownership of its 
 A managed launch policy can supply a target manifest as a file already bound by the current trusted component inventory. `null` selects the current manifest. This supplies the existing `runtimeTarget` host seam without a manifest-path or digest option in ordinary argv. The same host also supplies its component-cache root, which is excluded from workspace operations before marker reads or writes.
 
 `createFoundryWorkspaceAccess({ manifestBytes, expectedSha256, access })` is the public host bridge when bootstrap and Foundry load separate CLI SDK instances. It verifies the independently selected digest again with Foundry's own CLI instance. The host must obtain that expected digest from its trusted release/skill configuration; it must not derive it from workspace data or the bytes being checked. The bridge is not exposed through ordinary argv or task specifications.
+
+Unexpected runtime failures retain the generic failure code and safe message; recognized filesystem/Node error codes may be included without raw exception text, paths or user data. This helps identify host failures while preserving the non-leaking error envelope.

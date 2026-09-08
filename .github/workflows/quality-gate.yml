@@ -51,6 +51,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify Windows task context paths
+        if: runner.os == 'Windows'
+        run: node --test --test-name-pattern="qualified context owner accepts" test/scenarios/foundry-public-workflow.test.mts
+
       - name: Run canonical gate
         run: pnpm prepush:gate
 

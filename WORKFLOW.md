@@ -281,8 +281,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 86861430ea86cfd4f1fcae5056eac36709269962
-lastReviewedNote: "Reviewed for Foundry #118 live installed qualification: remote verification uses CLI data-block exit1, with regression RED/GREEN for ordinary trace acceptance. Real scoped contact insertion, client interruption, independent strict readback and no replay are recorded privately; final F1/CI/integration remain open."
+lastReviewedCommit: d047a3b059b750f0f7fac6caaa262276c6c5fd86
+lastReviewedNote: "Reviewed for PR120 CI: explicit fresh timestamps for synchronous identity fixtures preserve the unchanged stale guard; safe system-code diagnostics and an early Windows direct-context test expose host failures without raw error data. Required canonical/native/public gates remain intact."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
