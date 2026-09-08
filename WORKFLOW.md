@@ -281,8 +281,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: a7f78b5818a86b055005c90f54c2b385ad708fd1
-lastReviewedNote: "Reviewed for Foundry #125: load the CI custom reporter through its source file URL so Windows drive letters are not treated as ESM protocols. Actual Node reporter integration passes; source/plan/test coverage/build-reuse and final publication safeguards are unchanged."
+lastReviewedCommit: 73b74f070dcfa3864474c4061c7cebb6020e43f0
+lastReviewedNote: "Reviewed for Foundry #125: separate positive workflow timing from the dedicated60second identity-expiry regression. Production authority and data paths are unchanged; CI retains every original scenario and rejects expired identity until freshly reverified."
 tracker:
   kind: filesystem
   inbox: tasks/inbox

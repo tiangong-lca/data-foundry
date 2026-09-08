@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: a7f78b5818a86b055005c90f54c2b385ad708fd1
-lastReviewedNote: "Reviewed for Foundry #125: use a file URL for the native CI reporter so Windows ESM loading remains portable. This source-only correction preserves all test partitions, trusted build reuse and final full release qualification."
+lastReviewedCommit: 73b74f070dcfa3864474c4061c7cebb6020e43f0
+lastReviewedNote: "Reviewed for Foundry #125: separate positive workflow timing from the dedicated60second identity-expiry regression. Production authority and data paths are unchanged; CI retains every original scenario and rejects expired identity until freshly reverified."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

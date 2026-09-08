@@ -1182,6 +1182,8 @@ export async function verifyPublicIdentityWorkflow(t: TestContext, scenario: Pub
 }
 
 export async function verifyDependentScopes(t: TestContext, support: boolean) {
+  // This scenario checks authorization lineage, not elapsed wall-clock time.
+  t.mock.timers.enable({ apis: ["Date"], now: Date.now() });
   const firstType = support ? "unitgroup" : "contact",
     secondType = support ? "flowproperty" : "source";
   const { root, workspace, facade } = workflowFixture(t);

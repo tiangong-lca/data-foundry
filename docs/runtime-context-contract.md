@@ -41,8 +41,8 @@ checkPaths:
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: a7f78b5818a86b055005c90f54c2b385ad708fd1
-lastReviewedNote: "Reviewed for Foundry #125: load the CI custom reporter through its source file URL so Windows drive letters are not treated as ESM protocols. Actual Node reporter integration passes; source/plan/test coverage/build-reuse and final publication safeguards are unchanged."
+lastReviewedCommit: 73b74f070dcfa3864474c4061c7cebb6020e43f0
+lastReviewedNote: "Reviewed for Foundry #125: positive dependent-scope fixtures use a logical Date clock to avoid hardware-time expiry. A separate runtime identity regression advances beyond60seconds and requires a new owner receipt. Production freshness, task binding, authorization, execution and no-replay behavior are unchanged."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
