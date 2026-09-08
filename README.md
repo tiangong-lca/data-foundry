@@ -158,8 +158,8 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 73b74f070dcfa3864474c4061c7cebb6020e43f0
-lastReviewedNote: "Reviewed for Foundry #125: load the CI custom reporter through its source file URL so Windows drive letters are not treated as ESM protocols. Actual Node reporter integration passes; source/plan/test coverage/build-reuse and final publication safeguards are unchanged."
+lastReviewedCommit: 279fd69321efd22fdfcd8e424586ce5d59481309
+lastReviewedNote: "Reviewed for Foundry #125: explicit cancellation/result guards prevent skipped-lane propagation from suppressing required aggregate/bootstrap jobs. A terminal CI gate rejects any missing selected stage, and publication continuations require successful prerequisites without overriding cancellation. Tests/runtime/authorization scopes are unchanged."
 ---
 
 # TianGong LCA Data Foundry

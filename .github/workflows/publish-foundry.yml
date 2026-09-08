@@ -55,7 +55,7 @@ jobs:
   release-qualification:
     name: Qualify the exact source on all supported hosts
     needs: release-context
-    if: needs.release-context.outputs.should_release == 'true'
+    if: ${{ !cancelled() && needs.release-context.result == 'success' && needs.release-context.outputs.should_release == 'true' }}
     uses: ./.github/workflows/quality-gate.yml
     with:
       source_sha: ${{ needs.release-context.outputs.release_head }}
@@ -65,7 +65,7 @@ jobs:
     needs:
       - release-context
       - release-qualification
-    if: needs.release-context.outputs.should_release == 'true'
+    if: ${{ !cancelled() && needs.release-context.result == 'success' && needs.release-qualification.result == 'success' && needs.release-context.outputs.should_release == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -100,7 +100,7 @@ jobs:
       - release-context
       - release-qualification
       - release-tag
-    if: needs.release-context.outputs.should_release == 'true'
+    if: ${{ !cancelled() && needs.release-context.result == 'success' && needs.release-qualification.result == 'success' && needs.release-tag.result == 'success' && needs.release-context.outputs.should_release == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
@@ -174,7 +174,7 @@ jobs:
       - release-context
       - release-qualification
       - npm-package
-    if: needs.npm-package.outputs.npm_published == 'true'
+    if: ${{ !cancelled() && needs.release-context.result == 'success' && needs.release-qualification.result == 'success' && needs.npm-package.result == 'success' && needs.npm-package.outputs.npm_published == 'true' }}
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -242,6 +242,7 @@ jobs:
     needs:
       - release-context
       - prepare-runtime
+    if: ${{ !cancelled() && needs.release-context.result == 'success' && needs.prepare-runtime.result == 'success' }}
     runs-on: ubuntu-latest
     outputs:
       components_published: ${{ steps.publish.outputs.components_published }}
@@ -325,7 +326,7 @@ jobs:
     needs:
       - release-context
       - publish-components
-    if: needs.publish-components.outputs.components_published == 'true'
+    if: ${{ !cancelled() && needs.release-context.result == 'success' && needs.publish-components.result == 'success' && needs.publish-components.outputs.components_published == 'true' }}
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -386,6 +387,7 @@ jobs:
       - release-context
       - publish-components
       - qualify-bootstrap-public
+    if: ${{ !cancelled() && needs.release-context.result == 'success' && needs.publish-components.result == 'success' && needs.qualify-bootstrap-public.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

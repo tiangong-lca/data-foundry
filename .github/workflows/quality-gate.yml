@@ -264,7 +264,7 @@ jobs:
     outputs:
       manifest_sha256: ${{ steps.aggregate.outputs.manifest_sha256 }}
     needs: [plan, quality-gate]
-    if: needs.plan.outputs.mode == 'full'
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.quality-gate.result == 'success' && needs.plan.outputs.mode == 'full' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the same qualified source
@@ -325,7 +325,8 @@ jobs:
 
   qualify-bootstrap-cached:
     name: Verify copied bootstrap (${{ matrix.platform }})
-    needs: aggregate-runtime
+    needs: [plan, aggregate-runtime]
+    if: ${{ !cancelled() && needs.plan.outputs.mode == 'full' && needs.aggregate-runtime.result == 'success' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -379,3 +380,45 @@ jobs:
           path: ${{ runner.temp }}/foundry-bootstrap-qualification/bootstrap-qualification.json
           if-no-files-found: error
           retention-days: 7
+
+  complete-qualification:
+    name: Require every selected qualification stage
+    needs:
+      [
+        plan,
+        build-package,
+        verify-tests,
+        version-pr,
+        quality-gate,
+        aggregate-runtime,
+        qualify-bootstrap-cached,
+      ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject incomplete or skipped required stages
+        env:
+          MODE: ${{ needs.plan.outputs.mode }}
+          PLAN_RESULT: ${{ needs.plan.result }}
+          BUILD_RESULT: ${{ needs.build-package.result }}
+          TEST_RESULT: ${{ needs.verify-tests.result }}
+          VERSION_RESULT: ${{ needs.version-pr.result }}
+          NATIVE_RESULT: ${{ needs.quality-gate.result }}
+          AGGREGATE_RESULT: ${{ needs.aggregate-runtime.result }}
+          BOOTSTRAP_RESULT: ${{ needs.qualify-bootstrap-cached.result }}
+        run: |
+          set -euo pipefail
+          test "$PLAN_RESULT" = success
+          test "$BUILD_RESULT" = success
+          test "$NATIVE_RESULT" = success
+          case "$MODE" in
+            full)
+              test "$TEST_RESULT" = success
+              test "$AGGREGATE_RESULT" = success
+              test "$BOOTSTRAP_RESULT" = success
+              ;;
+            version-only)
+              test "$VERSION_RESULT" = success
+              ;;
+            *) exit 1 ;;
+          esac

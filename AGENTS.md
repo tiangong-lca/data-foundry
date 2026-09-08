@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 73b74f070dcfa3864474c4061c7cebb6020e43f0
-lastReviewedNote: "Reviewed for Foundry #125: separate positive workflow timing from the dedicated60second identity-expiry regression. Production authority and data paths are unchanged; CI retains every original scenario and rejects expired identity until freshly reverified."
+lastReviewedCommit: 279fd69321efd22fdfcd8e424586ce5d59481309
+lastReviewedNote: "Reviewed for Foundry #125: explicit cancellation/result guards prevent skipped-lane propagation from suppressing required aggregate/bootstrap jobs. A terminal CI gate rejects any missing selected stage, and publication continuations require successful prerequisites without overriding cancellation. Tests/runtime/authorization scopes are unchanged."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

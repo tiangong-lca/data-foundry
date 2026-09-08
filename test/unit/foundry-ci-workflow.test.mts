@@ -90,3 +90,37 @@ test("publication always calls full source qualification and reuses only its ind
     );
   }
 });
+
+test("full qualification cannot succeed when aggregation or copied bootstrap was skipped", () => {
+  const jobs = object(workflow("quality-gate.yml").jobs);
+  for (const id of ["aggregate-runtime", "qualify-bootstrap-cached"]) {
+    const job = object(jobs[id]);
+    assert.match(String(job.if), /!cancelled\(\)/u);
+    assert.match(String(job.if), /result == 'success'/u);
+    assert.match(String(job.if), /mode == 'full'/u);
+  }
+  const complete = object(jobs["complete-qualification"]);
+  assert.equal(complete.if, "always()");
+  assert.ok(Array.isArray(complete.needs));
+  for (const id of [
+    "plan",
+    "build-package",
+    "verify-tests",
+    "version-pr",
+    "quality-gate",
+    "aggregate-runtime",
+    "qualify-bootstrap-cached",
+  ])
+    assert.ok(complete.needs.includes(id));
+  const guard = String(steps(complete)[0].run);
+  for (const key of [
+    "PLAN_RESULT",
+    "BUILD_RESULT",
+    "TEST_RESULT",
+    "NATIVE_RESULT",
+    "AGGREGATE_RESULT",
+    "BOOTSTRAP_RESULT",
+    "VERSION_RESULT",
+  ])
+    assert.ok(guard.includes(`test "$${key}" = success`));
+});

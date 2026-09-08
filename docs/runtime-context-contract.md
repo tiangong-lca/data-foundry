@@ -41,8 +41,8 @@ checkPaths:
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 73b74f070dcfa3864474c4061c7cebb6020e43f0
-lastReviewedNote: "Reviewed for Foundry #125: positive dependent-scope fixtures use a logical Date clock to avoid hardware-time expiry. A separate runtime identity regression advances beyond60seconds and requires a new owner receipt. Production freshness, task binding, authorization, execution and no-replay behavior are unchanged."
+lastReviewedCommit: 279fd69321efd22fdfcd8e424586ce5d59481309
+lastReviewedNote: "Reviewed for Foundry #125: explicit cancellation/result guards prevent skipped-lane propagation from suppressing required aggregate/bootstrap jobs. A terminal CI gate rejects any missing selected stage, and publication continuations require successful prerequisites without overriding cancellation. Tests/runtime/authorization scopes are unchanged."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
