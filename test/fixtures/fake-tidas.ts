@@ -226,10 +226,17 @@ function main(): number {
     events.push(final);
     fs.mkdirSync(path.dirname(eventsPath), { recursive: true });
     fs.writeFileSync(eventsPath, `${events.map((event) => JSON.stringify(event)).join("\n")}\n`);
-    const report = baseReport("validate");
+    const dataIssues =
+      process.env.FAKE_TIDAS_BATCH_DATA_ISSUES === "1" &&
+      events.some((event) => event.type === "issue");
+    const report = baseReport(
+      "validate",
+      dataIssues ? "completed-with-issues" : "succeeded",
+      dataIssues ? "data-issues" : "success",
+    );
     report.summary.validation_batch_final = final;
     process.stdout.write(`${JSON.stringify(report)}\n`);
-    return 0;
+    return dataIssues ? 2 : 0;
   }
 
   if (command === "validate") {

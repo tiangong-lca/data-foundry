@@ -280,9 +280,9 @@ checkPaths:
   - test/unit/foundry-runtime-environment.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: d2ec3d1b1f749a00266e0809870e821af0d8ca3f
-lastReviewedNote: "Reviewed for Foundry #116: executable zero-JavaScript ratchet remains required and tested; Docpact records document reviews without forcing test-comment edits into version-only releases. Runtime and release isolation are unchanged."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: 06154e4b50eae91873fa040fc71b4801ea3e6e2d
+lastReviewedNote: "Reviewed for PR120 package review: the descriptor and its structural schema now advertise the already implemented and shipped authorization-input v1 alongside task-start and semantic-input. A cross-contract regression compares all three shipped input schemas with the generated declaration. Runtime authorization, package ownership, environment and execution semantics are unchanged."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -569,6 +569,8 @@ Use this lane when the candidate release merges, splits, adds, or retires flow i
 The complete contract is `docs/topology-convergence-contract.md`.
 
 ## Maintainer Validation
+
+Golden comparisons retain isolated source snapshots and frozen dependency installs. Matching package-manager pins may reuse only the verified pnpm content store and Corepack tool cache, with installation scripts disabled and store integrity checks enabled. This avoids repeated dependency downloads without inheriting operator configuration, credentials or `node_modules`; the compared commands still receive identical isolated environments.
 
 Docpact requires `test/unit/zero-javascript-ratchet.test.mts` to exist; the normal test gate verifies its executable assertions. Review the TypeScript boundary in the governed documents and record their review metadata. Do not add review-only comments to executable tests for a version bump. Release-only PRs retain the exact version projections and permitted document review metadata; governance rule changes land in a separate source PR first.
 

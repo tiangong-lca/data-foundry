@@ -45,6 +45,13 @@ import { foundryPublicOperations } from "./lib/foundry-operation-result.ts";
 import { listImportProfiles } from "./lib/import-curation/profiles.ts";
 import { runDatasetCurationCleanup } from "./lib/import-curation/curation-cleanup.ts";
 import { readRows } from "./lib/import-curation/internal/runtime-io.ts";
+import { importFoundryWorkflowPackage } from "./lib/foundry-workflow-import.ts";
+import { prepareFoundryWorkflowContext } from "./lib/foundry-workflow-context.ts";
+import { materializeFoundryWorkflowRows } from "./lib/foundry-workflow-rows.ts";
+import { assessFoundryWorkflowRows } from "./lib/foundry-workflow-assessment.ts";
+import { applyFoundrySemanticInput } from "./lib/foundry-workflow-semantic.ts";
+import type { SelectedSemanticInput } from "./lib/foundry-semantic-input.ts";
+import type { ArtifactEntry } from "./lib/foundry-task-types.ts";
 
 export interface FoundryCleanupRequest {
   input: string;
@@ -73,6 +80,20 @@ export function createFoundryRuntime(
   return Object.freeze({
     context,
     qualification: qualification ?? null,
+    importPackage: (input: string) =>
+      importFoundryWorkflowPackage(
+        context,
+        requireQualification(),
+        resolveFoundryInputPath(context, input),
+      ),
+    prepareContext: (types: readonly string[]) =>
+      prepareFoundryWorkflowContext(context, requireQualification(), types),
+    materializeRows: (sources: readonly string[]) =>
+      materializeFoundryWorkflowRows(context, sources),
+    assessRows: (rows: string, contracts: readonly string[], identityReport?: string) =>
+      assessFoundryWorkflowRows(context, requireQualification(), rows, contracts, identityReport),
+    applySemantic: (entries: readonly ArtifactEntry[], submission: SelectedSemanticInput) =>
+      applyFoundrySemanticInput(context, requireQualification(), entries, submission),
     initializeWorkspace: () => initializeFoundryWorkspace(context),
     startTask: (options: FoundryTaskOptions = {}) => {
       assertFoundryWorkspaceWrite(context);
@@ -84,38 +105,51 @@ export function createFoundryRuntime(
       return task;
     },
     inspectTask: () =>
-      withFoundryTaskMetadata(context, (task, index) => {
-        const attempts = path.join(context.taskRoot!, "attempts");
-        let attemptsPresent = false;
-        if (fs.existsSync(attempts)) {
-          const stat = fs.lstatSync(attempts);
-          if (!stat.isDirectory() || stat.isSymbolicLink())
-            throw new FoundryContextError(
-              "task_attempt_state_invalid",
-              "Task attempt state must remain a contained directory.",
-            );
-          attemptsPresent = fs.readdirSync(attempts).length > 0;
-        }
-        const authorization = path.join(context.taskRoot!, "authorization.json");
-        let authorizationPresent = false;
-        if (fs.existsSync(authorization)) {
-          const stat = fs.lstatSync(authorization);
-          if (!stat.isFile() || stat.isSymbolicLink())
-            throw new FoundryContextError(
-              "task_authorization_state_invalid",
-              "Task authorization state must remain a contained regular file.",
-            );
-          authorizationPresent = true;
-        }
-        return Object.freeze({
-          job: Object.freeze({ ...task.job }),
-          job_sha256: task.jobSha256,
-          sources: Object.freeze(task.sources.map((source) => Object.freeze({ ...source }))),
-          artifacts: Object.freeze(index.map((entry) => Object.freeze({ ...entry }))),
-          authorization_present: authorizationPresent,
-          attempts_present: attemptsPresent,
-        });
-      }),
+      withFoundryTaskMetadata(
+        context,
+        (task, index) => {
+          const attempts = path.join(context.taskRoot!, "attempts");
+          let attemptsPresent = false;
+          if (fs.existsSync(attempts)) {
+            const stat = fs.lstatSync(attempts);
+            if (!stat.isDirectory() || stat.isSymbolicLink())
+              throw new FoundryContextError(
+                "task_attempt_state_invalid",
+                "Task attempt state must remain a contained directory.",
+              );
+            attemptsPresent = fs.readdirSync(attempts).length > 0;
+          }
+          const authorization = path.join(context.taskRoot!, "authorization.json");
+          let authorizationPresent = false;
+          if (fs.existsSync(authorization)) {
+            const stat = fs.lstatSync(authorization);
+            if (!stat.isFile() || stat.isSymbolicLink())
+              throw new FoundryContextError(
+                "task_authorization_state_invalid",
+                "Task authorization state must remain a contained regular file.",
+              );
+            authorizationPresent = true;
+          }
+          return Object.freeze({
+            job: Object.freeze({ ...task.job }),
+            job_sha256: task.jobSha256,
+            sources: Object.freeze(task.sources.map((source) => Object.freeze({ ...source }))),
+            artifacts: Object.freeze(index.map((entry) => Object.freeze({ ...entry }))),
+            authorization_present: authorizationPresent,
+            attempts_present: attemptsPresent,
+          });
+        },
+        {
+          verifyCommands: [
+            "dataset-import-completion-report",
+            "dataset-workflow-execution-prepare",
+            "dataset-workflow-execution-consume",
+            "dataset-workflow-execution-result",
+            "dataset-workflow-execution-observation",
+            "dataset-workflow-reference-verify",
+          ],
+        },
+      ),
     verifyIdentity: (authentication?: FoundryAuthentication) =>
       verifyFoundryRuntimeIdentity(context, authentication, process.env, qualification),
     registerAuthorization: (

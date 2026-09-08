@@ -34,9 +34,9 @@ checkPaths:
   - scripts/public-api.ts
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: 4b027afad988467255c941eb8cec23741fc9ccbe
-lastReviewedNote: "Reviewed for Foundry #112 copied C1 bootstrap and final manifest workflow: isolated cached/public modes, actual system tools, tamper refusal and strict four-platform public proof before immutable manifest publication. Source-only tooling preserves runtime/task/account boundaries; actual versioned publication remains required."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: 06154e4b50eae91873fa040fc71b4801ea3e6e2d
+lastReviewedNote: "Reviewed for PR120 package review: the descriptor and its structural schema now advertise the already implemented and shipped authorization-input v1 alongside task-start and semantic-input. A cross-contract regression compares all three shipped input schemas with the generated declaration. Runtime authorization, package ownership, environment and execution semantics are unchanged."
 ---
 
 # Environment Surface Policy
@@ -113,11 +113,17 @@ The account wrapper reads only public OAuth configuration, an absolute private C
 
 `FOUNDRY_RUNTIME_ENV_FILE_POLICY=disabled` is an internal child-process binding, not a user-configurable `.env.example` variable. The Golden harness sets it only inside an explicit allowlisted environment shared byte-for-byte by baseline and current commands. Both sides run in isolated source snapshots: candidate files come only from Git-visible tracked/untracked source, excluding ignored operator inputs, credentials, task state and prior reports. That environment replaces HOME, temp, XDG, npm, git and Corepack state with task-local directories, preserves only required platform launcher keys, accepts only `TIANGONG_LCA_CLI_BIN` and `TIDAS_BIN` as caller overrides, and drops ambient `NODE_OPTIONS`, tokens, keys, passwords, sessions, credential URLs and other configuration injection. The legacy developer entry keeps explicit CLI startup behavior for repository maintenance. The explicit workspace runtime never loads `.env`, and user-workspace commands do not fall back to the developer path. Tests seed only temporary environment files and intercept operator-state access before it can occur.
 
+Golden dependency installation has a separate cache-only exception when the snapshot and current package-manager pins match: it discovers the active pnpm content store and reuses Corepack's tool cache. Frozen installs keep scripts disabled and explicitly enable store integrity verification; they do not copy or link the current `node_modules`, disable supply-chain policy checks, or use offline staleness overrides. Snapshot HOME/config remain isolated. Baseline/current Foundry commands still receive the original identical isolated environment, without these installer-only cache locations. Windows installation uses the existing native package-manager resolver and argv dispatch.
+
 Runtime qualification passes the same explicit isolated environment into both TIDAS handshake invocations. It copies the independently hashed TIDAS executable into a private temporary directory, rehashes the copy and invokes only that copy; ambient `TIDAS_*` settings cannot alter executable selection or resource budgets. The execution-context document stores runtime, authorization, input and CommandSpec digests only. It contains no environment map, OAuth material, session reference or credential path.
 
 The W05 facade receives runtime expectations and the selected TIDAS executable only through an explicit process-local host argument. `FOUNDRY_CLI_EXPECTATION`, ambient `TIDAS_BIN`, task spec fields, ordinary argv and `.env` are not trust sources; unsupported public options are rejected before workspace mutation. The final CLI manager/manifest binding is W06/W08 work.
 
 Consumer doctor may receive expected project/user and an absolute private session reference. It verifies only that the reference is a bounded regular non-link file and reports `configured_unverified`; it never opens the file or claims server authentication. Missing reference metadata returns `needs_auth` with a human OAuth action. Task start does not authenticate or cache an identity. Restricted resume continues to require a fresh CLI-owned identity at the W04 boundary.
+
+Public read-only identity preflight shares `foundry-authentication-environment.ts` with fresh account verification. It takes explicit host OAuth/headless configuration, preserves required system launcher/session discovery keys, and omits ambient credentials, executable overrides, Node options and result-cache settings. Its expected project/user bindings come from the verified current task account. The receipt passed to the runner is temporary non-secret proof; headless tokens remain only in the child environment and are not registered as artifacts.
+
+The public finalize composition injects explicit environments into queue, handoff and preflight helpers. Local checks remain credential-free; remote read/dry-run stages use current task account configuration. Ambient preflight concurrency/reuse-map settings and source-runner shard dispatch do not enter this path. Native validation runs the copied, rehashed qualified executable. Finalize rejects mutation flags and cannot dispatch a commit.
 
 ## Automatic Check
 
@@ -138,3 +144,5 @@ Migration inventory never opens recognized `.env`, OAuth/session, token/cookie o
 Transfer staging uses the public CLI batch lock in a destination-keyed cache domain outside the source. It creates no auth session or business process. Root task queues receive the same private-file projection as `.foundry`, and explicit external inputs cannot be the selected session reference or recognized private storage.
 
 The host can select an independently trusted workspace read/write manifest and explicit runtime-manager options. These never come from `.env`, task specifications or ordinary argv. Registered `state/task-accounts/<id>.json` is identity intent, not OAuth storage. The explicitly selected session path is checked before marker and protected migration reads, including aliases. Source specifications and raw migration evidence do not carry session contents into current task state.
+
+Public finalization, handoff and readback set `FOUNDRY_ACCOUNT_MODE` only from the registered task intent. Public traceHash acceptance supplies an explicit qualified CLI get adapter and never calls the legacy default adapter that inherits `process.env`. Tokens remain in the existing process-only child environment; mode, CommandSpec and payload-read evidence contain no credential authority.

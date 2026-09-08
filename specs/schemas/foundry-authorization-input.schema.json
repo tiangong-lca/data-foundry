@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Foundry Authorization Input v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "task_id",
+    "actor_id",
+    "finalization_sha256",
+    "dataset_type",
+    "input_kind",
+    "input_sha256",
+    "expected_previous_sha256",
+    "grant",
+    "evidence"
+  ],
+  "properties": {
+    "schema": {
+      "const": "tiangong-foundry.authorization-input.v1"
+    },
+    "task_id": {
+      "type": "string",
+      "pattern": "^task-[0-9a-f]{64}-r[0-9]{4}$"
+    },
+    "actor_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,255}$"
+    },
+    "finalization_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "dataset_type": {
+      "enum": [
+        "flow",
+        "process",
+        "contact",
+        "source",
+        "unitgroup",
+        "flowproperty",
+        "lifecyclemodel"
+      ]
+    },
+    "input_kind": {
+      "enum": ["current_rows", "final_rows"]
+    },
+    "input_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "expected_previous_sha256": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "grant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256"],
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "pattern": "^[^\\u0000\\r\\n]+$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "file", "sha256"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,255}$"
+          },
+          "kind": {
+            "enum": ["user-decision", "source-model"]
+          },
+          "file": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "pattern": "^[^\\u0000\\r\\n]+$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      },
+      "contains": {
+        "type": "object",
+        "required": ["kind"],
+        "properties": {
+          "kind": {
+            "const": "user-decision"
+          }
+        }
+      },
+      "minContains": 1
+    }
+  }
+}

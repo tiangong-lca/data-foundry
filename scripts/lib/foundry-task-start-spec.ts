@@ -14,6 +14,7 @@ interface AccountIntentSelection {
   readonly project_ref: string;
   readonly user_id: string;
   readonly session_reference: string | null;
+  readonly account_mode?: "ordinary" | "production-test";
 }
 
 interface CleanupPreparation {
@@ -86,7 +87,25 @@ function selection(value: unknown, label: string): Readonly<SourceSelection> {
 function account(value: unknown): Readonly<AccountIntentSelection> | null {
   if (value === null) return null;
   const item = record(value, "Account intent");
-  exact(item, ["project_ref", "user_id", "session_reference"], "Account intent");
+  exact(
+    item,
+    [
+      "project_ref",
+      "user_id",
+      "session_reference",
+      ...(Object.hasOwn(item, "account_mode") ? ["account_mode"] : []),
+    ],
+    "Account intent",
+  );
+  if (
+    Object.hasOwn(item, "account_mode") &&
+    item.account_mode !== "ordinary" &&
+    item.account_mode !== "production-test"
+  )
+    fail(
+      "task_spec_account_invalid",
+      "Account verification mode must be ordinary or production-test.",
+    );
   if (
     typeof item.project_ref !== "string" ||
     !/^[a-z0-9]{20}$/u.test(item.project_ref) ||
@@ -100,6 +119,9 @@ function account(value: unknown): Readonly<AccountIntentSelection> | null {
     project_ref: item.project_ref,
     user_id: item.user_id,
     session_reference: item.session_reference,
+    ...(item.account_mode
+      ? { account_mode: item.account_mode as "ordinary" | "production-test" }
+      : {}),
   });
 }
 

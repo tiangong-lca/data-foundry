@@ -49,7 +49,12 @@ test("both decision factories retain their exact zero-escape export identity", (
     "location-decisions": "createLocationDecisionCommands",
   } as const;
   for (const [stem, exportName] of Object.entries(expected)) {
-    const source = readRepoFile(`scripts/commands/${stem}.ts`);
+    const owner = stem.replace(/-decisions$/u, "");
+    assert.equal(
+      readRepoFile(`scripts/commands/${stem}.ts`).trim(),
+      `export { ${exportName} } from "../lib/decision-owners/${owner}.ts";`,
+    );
+    const source = readRepoFile(`scripts/lib/decision-owners/${owner}.ts`);
     assert.doesNotMatch(source, /\bany\b/u, stem);
     assert.doesNotMatch(source, /@ts-(?:ignore|nocheck|expect-error)/u, stem);
     assert.deepEqual(

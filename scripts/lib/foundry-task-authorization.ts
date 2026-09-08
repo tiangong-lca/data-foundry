@@ -30,11 +30,12 @@ import {
 import {
   validateTaskAuthorization,
   deriveTaskAuthorizationGrant,
+  taskAuthorizationMatches,
   type TaskAuthorizationBinding,
   type ValidatedTaskAuthorization,
 } from "./task-authorization.ts";
 import { sha256Json } from "./identity-preflight-proof.ts";
-import type { LoadedTask } from "./foundry-task-types.ts";
+import type { LoadedTask, ArtifactEntry } from "./foundry-task-types.ts";
 
 export interface TaskApprovalEvidence {
   id: string;
@@ -203,13 +204,15 @@ export async function registerFoundryTaskAuthorization(
     grant: unknown;
     evidence: readonly TaskApprovalEvidence[];
     expectedPreviousSha256?: string | null;
+    validateCurrent?: (task: LoadedTask, index: readonly ArtifactEntry[]) => void;
   },
   qualification?: QualifiedFoundryRuntime,
 ): Promise<{ authorization_sha256: string; pointer_sha256: string }> {
   assertFoundryWorkspaceActive(context);
   assertVerifiedFoundryIdentity(context, identity, qualification);
-  return withFoundryTaskMetadata(context, (task) => {
+  return withFoundryTaskMetadata(context, (task, index) => {
     assertVerifiedFoundryIdentity(context, identity, qualification);
+    options.validateCurrent?.(task, index);
     const input = inputFact(context, options.inputFile);
     const result = validateTaskAuthorization(options.grant, binding(context, task, input));
     if (result.status !== "authorized")
@@ -279,6 +282,7 @@ export async function registerFoundryTaskAuthorization(
         "Authorization expired or changed before it could be activated.",
       );
     const registrationBytes = writeRegistration(context, registration);
+    options.validateCurrent?.(task, index);
     const pointer = bytes({
       schema: "tiangong-foundry.authorization-pointer.v1",
       authorization_sha256: authorization.authorization_sha256,
@@ -299,7 +303,7 @@ export async function loadFoundryTaskAuthorization(
   qualification?: QualifiedFoundryRuntime,
 ): Promise<ValidatedTaskAuthorization> {
   assertVerifiedFoundryIdentity(context, identity, qualification);
-  return withFoundryTaskMetadata(context, (task) => {
+  const loaded = await withFoundryTaskMetadata(context, (task) => {
     assertVerifiedFoundryIdentity(context, identity, qualification);
     const input = inputFact(context, inputFile);
     if (!fs.existsSync(taskPath(context, "authorization.json")))
@@ -336,11 +340,15 @@ export async function loadFoundryTaskAuthorization(
       "evidence",
       "identity",
     ]);
+    const registeredInput = object(registration.input);
+    exact(registeredInput, ["path", "bytes", "sha256"]);
     if (
       registration.schema !== "tiangong-foundry.authorization-registration.v1" ||
       registration.job_sha256 !== task.jobSha256 ||
       registration.authorization_sha256 !== pointer.authorization_sha256 ||
-      sha256Json(registration.input) !== sha256Json(input) ||
+      typeof registeredInput.path !== "string" ||
+      registeredInput.bytes !== input.bytes ||
+      registeredInput.sha256 !== input.sha256 ||
       sha256Json(registration.identity) !==
         sha256Json({
           project_ref: identity.receipt.project.project_ref,
@@ -425,8 +433,36 @@ export async function loadFoundryTaskAuthorization(
         "task_authorization_invalid",
         "Task authorization expired during evidence verification.",
       );
-    return refreshed.authorization;
+    return {
+      authorization: refreshed.authorization,
+      registeredInput: registeredInput.path,
+      pointerSha256: digest(readTaskBytes(context, "authorization.json")),
+      inputPath: input.path,
+    };
   });
+  if (loaded.registeredInput !== loaded.inputPath) {
+    await assertFoundryTaskInputLineage(context, loaded.registeredInput, loaded.inputPath);
+    return withFoundryTaskMetadata(context, (task) => {
+      assertVerifiedFoundryIdentity(context, identity, qualification);
+      if (digest(readTaskBytes(context, "authorization.json")) !== loaded.pointerSha256)
+        fail(
+          "authorization_update_conflict",
+          "Approval changed during equivalent-content lineage verification.",
+        );
+      if (
+        !taskAuthorizationMatches(
+          loaded.authorization,
+          binding(context, task, inputFact(context, inputFile)),
+        )
+      )
+        fail(
+          "task_authorization_invalid",
+          "Approval expired during equivalent-content lineage verification.",
+        );
+      return loaded.authorization;
+    });
+  }
+  return loaded.authorization;
 }
 
 /** Prepare, but do not activate, an exact successor grant for a verified derived task artifact. */

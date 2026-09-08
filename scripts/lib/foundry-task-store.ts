@@ -55,13 +55,21 @@ export type {
 export async function withFoundryTaskMetadata<T>(
   context: FoundryRuntimeContext,
   inspect: (task: LoadedTask, index: readonly ArtifactEntry[]) => T,
+  options: { verifyCommands?: readonly string[] } = {},
 ): Promise<T> {
   requiredTask(context);
   const inspectCurrent = () => {
     const task = loadTask(context, {});
     bindAccountIntent(context);
     const index = readIndex(context);
-    verifyInputs(context, task, index);
+    const extra = index
+      .filter((entry) => options.verifyCommands?.includes(entry.command))
+      .map((entry) => ({
+        path: taskPath(context, entry.path),
+        bytes: entry.bytes,
+        sha256: entry.sha256,
+      }));
+    verifyInputs(context, task, index, [...context.inputs, ...extra]);
     return inspect(task, index);
   };
   if (context.workspaceAccess === "read") return inspectCurrent();
@@ -85,6 +93,23 @@ function selectedInput(context: FoundryRuntimeContext, file: string): FoundryInp
   return context.inputs.find((fact) => fact.path === resolved)!;
 }
 
+function producerLookup(context: FoundryRuntimeContext, index: readonly ArtifactEntry[]) {
+  const key = (fact: FoundryInputFact) => JSON.stringify([fact.path, fact.sha256, fact.bytes]);
+  const byFact = new Map<string, ArtifactEntry[]>();
+  for (const entry of index) {
+    const id = key({
+      path: taskPath(context, entry.path),
+      sha256: entry.sha256,
+      bytes: entry.bytes,
+    });
+    const candidates = byFact.get(id) ?? [];
+    candidates.push(entry);
+    byFact.set(id, candidates);
+  }
+  return (fact: FoundryInputFact, before = Number.POSITIVE_INFINITY) =>
+    (byFact.get(key(fact)) ?? []).filter((entry) => entry.sequence < before);
+}
+
 /** Prove a selected derived input descends from a selected approved input in the same verified index. */
 export async function assertFoundryTaskInputLineage(
   context: FoundryRuntimeContext,
@@ -96,14 +121,7 @@ export async function assertFoundryTaskInputLineage(
   if (sameFact(ancestor, derived))
     fail("task_lineage_not_derived", "A derived authorization requires a distinct indexed output.");
   return withFoundryTaskMetadata(context, (task, index) => {
-    const findProducers = (fact: FoundryInputFact, before = Number.POSITIVE_INFINITY) =>
-      index.filter(
-        (entry) =>
-          entry.sequence < before &&
-          taskPath(context, entry.path) === fact.path &&
-          entry.sha256 === fact.sha256 &&
-          entry.bytes === fact.bytes,
-      );
+    const findProducers = producerLookup(context, index);
     const first = findProducers(derived);
     if (!first.length) fail("task_lineage_invalid", "Derived input has no indexed producer.");
     const pending = [...first];
@@ -247,6 +265,7 @@ function verifyInputs(
   context: FoundryRuntimeContext,
   task: LoadedTask,
   index: ArtifactEntry[],
+  inputs: readonly FoundryInputFact[] = context.inputs,
 ): void {
   for (const source of task.sources) {
     try {
@@ -260,15 +279,10 @@ function verifyInputs(
     );
   }
   const verified = new Set<string>();
+  const producers = producerLookup(context, index);
   const findProducer = (fact: FoundryInputFact, before = Number.POSITIVE_INFINITY) =>
-    index.find(
-      (entry) =>
-        entry.sequence < before &&
-        taskPath(context, entry.path) === fact.path &&
-        entry.sha256 === fact.sha256 &&
-        entry.bytes === fact.bytes,
-    );
-  for (const fact of context.inputs) {
+    producers(fact, before)[0];
+  for (const fact of inputs) {
     if (!task.sources.some((source) => sameFact(source, fact))) {
       const first = findProducer(fact);
       if (!first)
@@ -381,7 +395,26 @@ function replaceIndex(
 /** Short local preparation transaction. Remote mutation/batch execution must not use this replay path. */
 export async function runFoundryTaskOperation(
   context: FoundryRuntimeContext,
-  input: { command: "dataset-curation-cleanup"; options: JsonRecord; task?: FoundryTaskOptions },
+  input: {
+    command:
+      | "dataset-curation-cleanup"
+      | "dataset-tidas-import"
+      | "dataset-context-pack"
+      | "dataset-workflow-rows"
+      | "dataset-workflow-assessment"
+      | "dataset-workflow-identity"
+      | "dataset-workflow-finalize"
+      | "dataset-workflow-authorization"
+      | "dataset-workflow-execution-prepare"
+      | "dataset-workflow-execution-result"
+      | "dataset-workflow-execution-consume"
+      | "dataset-workflow-execution-observation"
+      | "dataset-workflow-reference-verify"
+      | "dataset-semantic-apply";
+    options: JsonRecord;
+    task?: FoundryTaskOptions;
+    validateCurrent?: (index: readonly ArtifactEntry[]) => void;
+  },
   operation: (transaction: FoundryTaskOperation) => JsonRecord,
 ): Promise<JsonRecord> {
   assertFoundryWorkspaceWrite(context);
@@ -406,6 +439,13 @@ export async function runFoundryTaskOperation(
       const indexBefore = readTaskBytes(context, "artifact-index.jsonl", maxIndexBytes);
       const index = readIndex(context);
       verifyInputs(context, task, index);
+      input.validateCurrent?.(
+        Object.freeze(
+          index.map((entry) =>
+            Object.freeze({ ...entry, receipt: Object.freeze({ ...entry.receipt }) }),
+          ),
+        ),
+      );
       const inputScopeSha256 = sha256Json(context.inputs);
       const optionsSha256 = sha256Json(input.options);
       const operationId = sha256Json({
@@ -488,7 +528,10 @@ export async function runFoundryTaskOperation(
             fail("task_operation_closed", "Operation writers cannot escape the task transaction.");
           loadTask(context, input.task ?? {});
           const relativePath = relative(context, file);
-          if (!/^(?:outputs|evidence)\//u.test(relativePath))
+          const consumedMarker =
+            input.command === "dataset-workflow-execution-consume" &&
+            /^attempts\/owner-v1\/[0-9a-f]{64}\/consumed\.json$/u.test(relativePath);
+          if (!/^(?:outputs|evidence)\//u.test(relativePath) && !consumedMarker)
             fail(
               "task_output_role_invalid",
               "Command output cannot overwrite task control records.",

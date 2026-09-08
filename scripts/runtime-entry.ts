@@ -2,6 +2,7 @@
 import path from "node:path";
 import type { TrustedRuntimeManifest } from "@tiangong-lca/cli/runtime";
 import type { FoundryRuntimeManagerOptions } from "./lib/foundry-runtime-selection.ts";
+import type { FoundryAuthentication } from "./lib/foundry-runtime-identity.ts";
 import { transferRead } from "./lib/foundry-migration-transfer-io.ts";
 import { migrationCredentialPath } from "./lib/foundry-migration-inventory.ts";
 import { createFoundryFacade, type FoundryFacadeRuntimeSelection } from "./foundry-facade.ts";
@@ -28,6 +29,7 @@ export interface FoundryRuntimeCommandHost {
   readonly workspaceAccess?: FoundryWorkspaceAccess;
   readonly cacheBase?: string;
   readonly accountIntent?: FoundryAccountIntent;
+  readonly authentication?: FoundryAuthentication;
   readonly runtimeTarget?: TrustedRuntimeManifest;
   readonly runtimeManager?: FoundryRuntimeManagerOptions;
   readonly signal?: AbortSignal;
@@ -191,9 +193,11 @@ async function runPublicCommand(
           ]
         : parsed.operation === "task.start"
           ? ["spec"]
-          : parsed.operation === "task.status" || parsed.operation === "task.resume"
-            ? ["task", "actor"]
-            : []),
+          : parsed.operation === "task.resume"
+            ? ["task", "actor", "semanticInput", "authorizationInput"]
+            : parsed.operation === "task.status"
+              ? ["task", "actor"]
+              : []),
   ]);
   const unknownOption = Object.keys(parsed.args).find((key) => !allowed.has(key));
   if (unknownOption)
@@ -218,6 +222,7 @@ async function runPublicCommand(
     workspace,
     cacheBase: host.cacheBase,
     runtimeSelection: host.runtimeSelection,
+    authentication: host.authentication,
     workspaceAccess: host.workspaceAccess,
     runtimeManager: host.runtimeManager,
     accountIntent:
@@ -453,7 +458,13 @@ async function runPublicCommand(
     result =
       parsed.operation === "task.status"
         ? await facade.status({ taskId, actorId })
-        : await facade.resume({ taskId, actorId });
+        : await facade.resume({
+            taskId,
+            actorId,
+            semanticInputFile: option(parsed.args.semanticInput, "--semantic-input") ?? undefined,
+            authorizationInputFile:
+              option(parsed.args.authorizationInput, "--authorization-input") ?? undefined,
+          });
   }
   return result;
 }

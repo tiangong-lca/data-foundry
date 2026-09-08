@@ -1,7 +1,7 @@
 {
   "$schema": "../specs/schemas/file-location-registry.schema.json",
   "schema_version": 1,
-  "updated_at_utc": "2026-09-07T05:28:55Z",
+  "updated_at_utc": "2026-09-08T00:14:52Z",
   "policy_doc": "docs/file-organization.md",
   "entries": [
     {
@@ -198,11 +198,28 @@
         "docs/skill-orchestration/source-evidence-top-level-skill-design.md",
         "scripts/lib/foundry-task-registration.ts",
         "scripts/lib/foundry-task-store.ts",
-        "scripts/lib/foundry-task-authorization.ts"
+        "scripts/lib/foundry-task-authorization.ts",
+        "scripts/lib/foundry-workflow-import.ts",
+        "scripts/lib/foundry-workflow-context.ts",
+        "scripts/lib/foundry-workflow-rows.ts",
+        "scripts/lib/foundry-workflow-assessment.ts",
+        "scripts/lib/foundry-semantic-input.ts",
+        "scripts/lib/foundry-workflow-semantic.ts",
+        "scripts/lib/foundry-workflow-state.ts",
+        "scripts/lib/foundry-workflow-identity.ts",
+        "scripts/lib/foundry-workflow-identity-apply.ts",
+        "scripts/lib/foundry-workflow-finalize.ts",
+        "scripts/lib/foundry-authorization-input.ts",
+        "scripts/lib/foundry-workflow-authorization.ts",
+        "scripts/lib/foundry-workflow-approval-continuation.ts",
+        "docs/public-runtime-contract.md",
+        "scripts/lib/foundry-owner-execution-store.ts",
+        "scripts/lib/foundry-workflow-reference-verify.ts",
+        "scripts/lib/foundry-owner-trace-acceptance.ts"
       ],
       "sensitivity": "non-sensitive task ledger schema examples; contains no credentials and no private payloads",
       "tracked": true,
-      "notes": "Owns implemented v2 registered jobs/source/profile snapshots, account intent, operation receipts and artifact-index lineage. Workspace state anchors task identity; authorization registers independent evidence. Legacy v1 files and consumed attempts require explicit migration/recovery."
+      "notes": "Defines immutable source/input lineage, producer-backed operation receipts, current approval, and owner attempt/readback evidence. The dedicated consume operation owns attempts/owner-v1/<scope>/consumed.json; execution requests, observations and results remain registered under task outputs. Canonical reference query/check/result artifacts bind current identity decisions and are verified before reference-only completion. Explicit ordinary/production-test intent is retained in account registration and migration templates; public traceHash acceptance retains original/fresh-read/accepted evidence under owner-readback outputs."
     },
     {
       "id": "foundry-safety-policy",

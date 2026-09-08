@@ -151,9 +151,9 @@ checkPaths:
   - test/unit/foundry-runtime-environment.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: d2ec3d1b1f749a00266e0809870e821af0d8ca3f
-lastReviewedNote: "Reviewed for Foundry #116: executable zero-JavaScript ratchet remains required and tested; Docpact records document reviews without forcing test-comment edits into version-only releases. Runtime and release isolation are unchanged."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: 06154e4b50eae91873fa040fc71b4801ea3e6e2d
+lastReviewedNote: "Reviewed for PR120 package review: the descriptor and its structural schema now advertise the already implemented and shipped authorization-input v1 alongside task-start and semantic-input. A cross-contract regression compares all three shipped input schemas with the generated declaration. Runtime authorization, package ownership, environment and execution semantics are unchanged."
 ---
 
 # Architecture
@@ -170,6 +170,8 @@ The explicit workspace runtime is defined by `docs/runtime-context-contract.md`:
 
 Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel account overrides, QA waivers and the Worldsteel full-context relaxation grant no permission to a new task. `docs/task-authorization-contract.md` owns the separate workspace/task/actor/account/profile/input binding and exact action evidence. Local candidate preparation and checked public-reference proofs remain available; current final-row hashes, task permissions and all content/closure/no-replay gates are required before a restricted write handoff.
 
+The public task facade delegates sealed owner execution to `foundry-workflow-execution.ts`, request/attempt state to `foundry-owner-execution-store.ts`, and independent owner verification to `foundry-owner-readback.ts`. The existing closeout factory lives under `lib/finalize-owners` with its developer-command re-export preserved. Local operation receipts capture evidence only; the CLI batch boundary owns one-shot mutation and readback recovery. `foundry-workflow-reference-verify.ts` selects canonical targets from identity rewrite evidence and verifies them through the published CLI; it never turns retained original reference rows into mutation or payload-equality requirements. See [public execution and recovery](public-runtime-contract.md#owner-execution-and-recovery).
+
 ## OAuth identity boundary
 
 Foundry selects a private session reference and exact project/user intent, then calls the published CLI for a fresh server-verified identity receipt. It validates TTL, canonical hash, expected identity and current OAuth session metadata without owning login, password decoding, token exchange or refresh. Candidate Golden execution uses an isolated Git-visible source snapshot so ignored operator state cannot change qualification. Support-cache transport is owned by the public CLI export. Foundry validates the fresh identity, project, public-state scope, completion marker, artifact paths and hashes, then summarizes rows and atomically replaces only the requested local cache. The CLI runs in a private temporary cwd with an allowlisted OAuth environment; the operator checkout .env and unrelated secrets cannot enter that child. Exact public CLI 0.1.11 and reviewed TIDAS 0.2.x/0.3.x expectations are independently selected and re-observed through the W04 qualification boundary. F1 component provenance and package qualification remain W06/W08 gates.
@@ -182,11 +184,21 @@ Foundry selects a private session reference and exact project/user intent, then 
 
 ## Public facade composition
 
-`foundry-facade.ts` is the public orchestration boundary. `foundry-operation-result.ts` owns the strict single-result envelope and exits; `foundry-task-start-spec.ts` owns bounded user intent; `foundry-facade-store.ts` owns deterministic request/revision indexes and task pointers; `foundry-migration-inventory.ts` owns the read-only W10 input plan. The facade calls `createFoundryRuntime` for task creation, inspection and deterministic cleanup. It does not instantiate the legacy command graph for public requests.
+`foundry-facade.ts` is the public orchestration boundary. `foundry-operation-result.ts` owns the strict single-result envelope and exits; `foundry-task-start-spec.ts` owns bounded user intent; `foundry-facade-store.ts` owns deterministic request/revision indexes and task pointers; `foundry-migration-inventory.ts` owns the read-only W10 input plan. The facade calls `createFoundryRuntime` for task creation, inspection, deterministic cleanup, qualified native conversion and CLI contract-context preparation. Each local stage uses the existing task transaction. It does not instantiate the legacy command graph for public requests.
+
+`foundry-workflow-decisions.ts` prepares classification/location work through the reusable factories in `lib/decision-owners/`; the original flat command modules remain thin adapters. `foundry-decision-owners.ts` composes these factories with installed CLI schemas, canonical row helpers and isolated local CLI execution. Semantic submission dispatches the selected owner against its exact current task context, publishes successful rows and requires reassessment before another owner consumes them.
+
+`foundry-workflow-identity.ts` performs fresh account verification and read-only CLI preflight before locally registering captured evidence. `foundry-identity-owners.ts` composes the existing query/request/runner owners with explicit executable/environment facts; `bundle-source-context.ts` shares unchanged source-trace and name extraction. `foundry-authentication-environment.ts` supplies the narrow authentication environment used by verification and preflight. A current preflight report invalidates the earlier assessment so manual-review findings become identity tasks.
+
+`foundry-workflow-identity-apply.ts` admits exact task/snapshot/context-bound decisions, delegates identity partitioning and dependent process-reference rewrites to existing owners, and verifies that partition contents preserve current scope. The semantic transaction activates only successful resolved output, retaining identity/rewrite report lineage. Unresolved partitions remain diagnostic with unchanged current rows.
+
+`foundry-finalize-owners.ts` composes the existing finalize, handoff and queue factories under `lib/finalize-owners/` with explicit environments and the qualified installed CLI. Original command modules remain thin compatible adapters. `foundry-workflow-finalize.ts` follows current row-manifest ancestry, supplies current evidence and per-type contract context, isolates fresh preflight outputs, and captures owner reports after read-only work. It never dispatches a mutation. Current finalization is bound to both rows and assessment; success requests task authorization, while blockers retain concrete diagnostic reports. Owner write and readback integration remain pending.
 
 Request and task records form a two-level index: one request retains monotonic revisions, while each revision points to one immutable v2 task. The latest identical fingerprint is reused; a changed canonical path or byte hash produces a new task with a predecessor. This preserves old attempts and avoids using user-visible filenames or current directories as identity. Status resolves through the task pointer and requires actor intent before loading task content.
 
 Runtime selection is an injected host capability. Direct/unqualified use can initialize, diagnose, create, inspect and locally prepare tasks; child-required stages need a CLI-manager selection that W06/W08 will derive from an immutable product manifest. No environment variable or task document can choose the CLI/TIDAS trust anchor.
+
+`foundry-authorization-input.ts` captures explicit grant/evidence selections. `foundry-workflow-authorization.ts` binds them to a current finalization scope, calls the existing fresh-identity registration/loader, rebuilds the owner handoff and seals exact final-row intent through the existing execution-admission API. It records approval metadata without executing the command. `foundry-workflow-approval-continuation.ts` re-finalizes prepared-row approval, activates the original owner’s exact derived grant or reuses a proven equal-byte descendant, and recovers interrupted sealing against the active pointer. Mutation/readback dispatch remains separate work.
 
 ## Package boundary
 
@@ -430,3 +442,7 @@ The foundry should call the owning workspace surface instead of absorbing implem
 - `tidas-sdk`: compatibility SDK and context APIs
 
 See `docs/workspace-project-map.md` and `specs/workspace-capability-adapters.md` for the routing contract.
+
+The public traceHash adapter delegates normalization to `remote-verification-accepted-diff.ts`. It supplies qualified CLI reads, retains original/accepted reports, and binds the fresh domain payload to the original remote hash. Canonical row envelopes are unwrapped only for comparison. Explicit account verification mode survives task registration and migration templates; production-test mode cannot enter the accepted-difference path.
+
+The prepared-approval adapter can bridge cleanup byte changes for an otherwise valid support scope by using the existing registered grant derivation, then re-running the finalize owner on the bound descendant. Eligibility is limited to the support-permission blocker with complete scoped write/mint actions. It preserves completed dependency generations and stops on unchanged blocked authorization state. No profile hash check or write admission guard is relaxed.

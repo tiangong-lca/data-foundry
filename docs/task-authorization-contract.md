@@ -29,9 +29,9 @@ checkPaths:
   - test/unit/task-authorization.test.mts
   - test/unit/task-profile-authority.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: 3db019d9a30d6b0458eb97da3d54ced7aa147be2
-lastReviewedNote: "Reviewed for Foundry #112 adoption of qualified public TIDAS0.3.0: full source-bound native notices and reviewed 0.2/0.3 runtime protocol admission. Source release helpers remain outside the public compiler closure; workspace/task/account authorization, no-replay and final F1 publication gates retain their existing owners."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: c2913334130a666e9fbe3c18db286d24df355c1b
+lastReviewedNote: "Reviewed for Foundry #118 prepared support authorization: exact lineage-based grant derivation after cleanup, permission-only eligibility, bound-input finalization, preserved completed scope generations and structured sealing continuation. Missing actions and unrelated blockers remain blocked; live/F1 acceptance remains open."
 related:
   - docs/architecture.md
   - docs/safety-policy.md
@@ -48,9 +48,15 @@ The task host owns the current workspace/task/actor intent, frozen inputs and fr
 
 The runtime host revalidates persisted authorization through its explicit loader; every new process must obtain current identity and the same stored task/input binding. When qualification is present, registration and loading require an identity bound to that exact qualification. The profile API itself has no ambient file search or environment flag granting permission. Native validation and other public preparation remain available without a restricted action grant; only commands that select or hand off restricted scopes declare the authorization boundary.
 
-The public facade does not authenticate during workspace initialization or task start. A request revision may retain non-secret account intent, but login/session readiness and task permission remain separate. W05 automatically resumes only deterministic local cleanup and reports `permissions.not_required`. Any future restricted action must first register its requested actions and approval reference, then rehydrate current qualification, identity and this authorization before exposing a child CommandSpec.
+The public facade does not authenticate during workspace initialization or task start. A request revision may retain non-secret account intent, but login/session readiness and task permission remain separate. Local preparation and read-only identity preflight report `permissions.not_required`. Any restricted action must first register its requested actions and approval reference, then rehydrate current qualification, identity and this authorization before exposing a child CommandSpec.
+
+The extended public workflow may authenticate for read-only identity preflight after local semantic preparation. Its task account intent and fresh CLI receipt select the read scope. Host authentication is explicit; OAuth configuration is public and headless tokens stay process-only. Query receipts and current-row identity reports are evidence, never an action grant. Preflight does not consume, reset or dispatch a mutation attempt; subsequent permission admission still requires its own current identity and approval checks.
 
 ## Required binding and evidence
+
+The public facade accepts explicit approval selection through `--authorization-input`, whose descriptor/schema is owned by `public-runtime-contract.md`. Finalization supplies reviewable bindings and current input digests, never an issued grant. Registration uses an internal current-state check under its metadata lock before activation, so an approval for an older finalization cannot replace current state. The existing expected-previous-pointer compare-and-swap remains mandatory.
+
+Ready final-row approval rebuilds the existing commit handoff and seals a capsule without dispatching it. Host evidence selections remain independent of grant text, and evidence paths are canonical. Prepared-row approval is continued through current-grant re-finalization and the existing derived-grant helper. Activation uses its returned pointer guard; sealing retains the original approved ancestor. Interrupted post-activation capture verifies the active grant against that original approval before recovering. A registered or sealed report does not relax fresh identity/admission checks or clear consumed attempts.
 
 The exact v1 binding contains `workspace_id`, `task_id`, `actor_id`, `project_ref`, `user_id`, `profile_id`, `profile_sha256`, and `input_scope_sha256`. The profile digest is the stable, key-sorted JSON digest of the selected raw rule profile. Input scope is independently frozen by the task host; it must prove current source bytes and downstream lineage, rather than copying the digest from the grant. At a row-consuming permission boundary it is the SHA-256 of that exact input file; commit handoff checks the final-row artifact bytes again. A transformed row file needs a newly bound grant supported by the retained task approval and verified lineage, never silent reuse of the old digest. A binding mismatch invalidates every exception in that grant.
 
@@ -73,6 +79,8 @@ Grant issue/expiry timestamps use exact millisecond UTC format. A grant must be 
 A single action never enables another. A mixed support handoff checks the actual final rows, not just the report's declared `support` type. A ready legacy finalize/mutation report cannot bypass this check. Non-generic handoffs require the mutation manifest to record the current `profile_rules_sha256`; used QA exceptions carry `required_qa_waiver_codes` and must still be authorized at handoff. No action grants publication, deletion, foreign-row visibility, review completion, full-context relaxation or replay.
 
 ## Derived input and execution admission
+
+When a selected derived artifact has identical bytes to the registered input, the loader may reuse that same content-bound grant after proving the registered input's producer lineage to the selected path. It rechecks the active pointer, current identity, binding and expiry after the lineage check. An independent equal-byte copy without an indexed derivation is rejected; grant/registration bytes are not rewritten merely to accommodate a new path.
 
 `prepareDerivedFoundryTaskAuthorization` may reuse a current approval only after the indexed receipt/plan graph proves that the selected final rows descend from the approved input. It requires the exact qualified runtime and identity. The successor changes only `input_scope_sha256`; task/account/profile binding, issue and expiry times, actions, QA waivers and evidence remain byte-equivalent in authority. The active pointer must still name the parent before and after preparation, and later activation uses its captured digest as the compare-and-swap base. `authorization-derivation.schema.json` records both content facts and parent/successor digests. It does not activate the successor.
 
@@ -119,3 +127,5 @@ The evidence source is `specs/import-profiles.json` at `1374961f11d46546acc46398
 This contract does not edit old locks, task inputs, checkpoints, sealed attempts or already verified records. Migration must produce a separate reviewed mapping, not relabel historical evidence as new authorization. A fresh grant never resets a consumed attempt or permits a second mutation. Existing no-replay/readback recovery remains authoritative. Real task #95 and its records are outside this refactor's migration scope.
 
 Read-only or pending workspace contexts cannot register/derive authorization or admit a business command. After activation, preserved migration scope is checked at execution-capsule creation and before/after admission revalidation. A fresh grant does not reset retained attempt authority. Original profile/account/approval files remain archived evidence, while new permission still needs the independently selected current identity, exact input lineage and reviewed scope.
+
+For public prepared FP/UG input, a captured finalization blocked solely by the support permission gate may derive the existing complete support approval through registered input lineage, then rerun local finalization on those exact approved bytes. Missing write/mint actions and unrelated blockers remain pending. This adds no permission, extends no expiry and cannot replay a consumed scope.

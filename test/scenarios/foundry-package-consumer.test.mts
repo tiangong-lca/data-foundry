@@ -332,6 +332,14 @@ test("packed Foundry installs twice and runs only the public facade from a read-
   };
   assert.equal(api.assertFoundryPackage(firstPackage).package.name, "@tiangong-lca/foundry");
   assert.equal(api.assertFoundryPackage(secondPackage).package.version, sourcePackageVersion);
+  const installedResolver = (await import(
+    pathToFileURL(path.join(firstPackage, "package-dist/scripts/lib/foundry-runtime-utils.js")).href
+  )) as {
+    resolveInstalledTiangongLcaCliPackage: () => { packageVersion: string; binPath: string };
+  };
+  const installedCli = installedResolver.resolveInstalledTiangongLcaCliPackage();
+  assert.equal(installedCli.packageVersion, "0.1.11");
+  assert.ok(fs.statSync(installedCli.binPath).isFile());
   await verifyManagedPackageCache(firstPackage, root);
   await verifyManagedPackageHost(firstPackage, root);
   const consumerModule = path.join(firstProject, "consumer.mjs");
@@ -353,6 +361,7 @@ test("packed Foundry installs twice and runs only the public facade from a read-
     doctor: string;
   };
   assert.deepEqual(importedResult.exports, [
+    "FOUNDRY_AUTHORIZATION_INPUT_SCHEMA",
     "FOUNDRY_COMMAND_NEXT_ACTION_BINDING_SCHEMA",
     "FOUNDRY_MIGRATED_WORKSPACE_SCHEMA",
     "FOUNDRY_MIGRATION_ACTIVATION_SCHEMA",
@@ -362,6 +371,7 @@ test("packed Foundry installs twice and runs only the public facade from a read-
     "FOUNDRY_OPERATION_RESULT_SCHEMA",
     "FOUNDRY_PACKAGE_DESCRIPTOR_SCHEMA",
     "FOUNDRY_RUNTIME_SELECTION_SCHEMA",
+    "FOUNDRY_SEMANTIC_INPUT_SCHEMA",
     "FOUNDRY_TASK_START_SPEC_SCHEMA",
     "FOUNDRY_WORKSPACE_MIGRATION_PLAN_SCHEMA",
     "FoundryPackageError",

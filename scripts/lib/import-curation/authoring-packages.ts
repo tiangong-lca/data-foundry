@@ -22,6 +22,7 @@ interface JsonRecord {
 }
 
 interface AuthoringTaskBuildOptions extends JsonRecord {
+  includeExecutionCommands?: boolean;
   help?: unknown;
   curationGateReport?: string | null;
   gateReport?: string | null;
@@ -139,7 +140,7 @@ export function runDatasetAuthoringTaskBuild({
         repoRoot: repoRoot!,
         packagePath: entry.package_path,
         outDir: path.join(outDir!, entry.task_dir_name),
-        options: {},
+        options: { includeExecutionCommands: options.includeExecutionCommands },
       }),
     );
     return writeAuthoringTaskBatchManifest(
@@ -152,6 +153,7 @@ export function runDatasetAuthoringTaskBuild({
       },
       {
         sharedContextCacheDir,
+        includeExecutionCommands: options.includeExecutionCommands,
       },
     );
   }

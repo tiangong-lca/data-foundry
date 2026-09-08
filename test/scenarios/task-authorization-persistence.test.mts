@@ -17,6 +17,7 @@ import {
 import { taskAuthorizationAllows } from "../../scripts/lib/task-authorization.ts";
 import { sha256Json } from "../../scripts/lib/identity-preflight-proof.ts";
 import { testAuthIdentityReceipt } from "../fixtures/auth-identity-receipt.ts";
+import { runFoundryTaskOperation } from "../../scripts/lib/foundry-task-store.ts";
 
 const moduleUrl = new URL("../../scripts/runtime-entry.ts", import.meta.url).href;
 const accountIntent = {
@@ -31,6 +32,8 @@ test("persisted authorization requires fresh identity and independently bound ev
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const input = path.join(root, "input.jsonl");
   fs.writeFileSync(input, '{"flowDataSet":{}}\n');
+  const independentCopy = path.join(root, "independent-copy.jsonl");
+  fs.copyFileSync(input, independentCopy);
   const options = {
     moduleUrl,
     workspace: path.join(root, "project"),
@@ -42,7 +45,7 @@ test("persisted authorization requires fresh identity and independently bound ev
     accountIntent,
     taskId: "task",
     actorId: "agent",
-    inputs: [captureFoundryInput(input)],
+    inputs: [captureFoundryInput(input), captureFoundryInput(independentCopy)],
   });
   const runtime = createFoundryRuntime(context);
   await runtime.cleanup({ input, type: "flow" });
@@ -129,6 +132,37 @@ test("persisted authorization requires fresh identity and independently bound ev
   const loaded = await runtime.loadAuthorization(identity, input);
   assert.equal(taskAuthorizationAllows(loaded, "unitgroup_write"), true);
   assert.equal(taskAuthorizationAllows(loaded, "flowproperty_write"), false);
+  await assert.rejects(
+    () => runtime.loadAuthorization(identity, independentCopy),
+    hasCode("task_lineage_invalid"),
+  );
+  const derivedFile = path.join(context.taskRoot!, "outputs", "equivalent.jsonl");
+  await runFoundryTaskOperation(
+    context,
+    { command: "dataset-curation-cleanup", options: { fixture: "equivalent-output" } },
+    (operation) => {
+      operation.writeText(derivedFile, fs.readFileSync(input));
+      const result = { output: derivedFile };
+      operation.writeJson(
+        path.join(context.taskRoot!, "outputs", "equivalent-result.json"),
+        result,
+      );
+      return result;
+    },
+  );
+  const withDerived = createFoundryRuntime(
+    createFoundryRuntimeContext({
+      ...options,
+      accountIntent,
+      taskId: "task",
+      actorId: "agent",
+      inputs: [input, independentCopy, derivedFile].map(captureFoundryInput),
+    }),
+  );
+  assert.equal(
+    (await withDerived.loadAuthorization(identity, derivedFile)).authorization_sha256,
+    approved.authorization_sha256,
+  );
   assert.deepEqual(
     await runtime.registerAuthorization(identity, { inputFile: input, grant, evidence: selected }),
     approved,

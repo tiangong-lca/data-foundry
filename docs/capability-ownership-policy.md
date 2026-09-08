@@ -92,9 +92,9 @@ checkPaths:
   - scripts/lib/import-curation/internal/mutation-manifest-workflow.ts
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: 4b027afad988467255c941eb8cec23741fc9ccbe
-lastReviewedNote: "Reviewed for Foundry #112 copied C1 bootstrap and final manifest workflow: isolated cached/public modes, actual system tools, tamper refusal and strict four-platform public proof before immutable manifest publication. Source-only tooling preserves runtime/task/account boundaries; actual versioned publication remains required."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: 06154e4b50eae91873fa040fc71b4801ea3e6e2d
+lastReviewedNote: "Reviewed for PR120 package review: the descriptor and its structural schema now advertise the already implemented and shipped authorization-input v1 alongside task-start and semantic-input. A cross-contract regression compares all three shipped input schemas with the generated declaration. Runtime authorization, package ownership, environment and execution semantics are unchanged."
 ---
 
 # Capability Ownership Policy

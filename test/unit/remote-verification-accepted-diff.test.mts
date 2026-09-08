@@ -6,6 +6,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import * as acceptedDiffModule from "../../scripts/lib/remote-verification-accepted-diff.ts";
+import { canonicalPayloadSha256 } from "../../scripts/lib/post-write-root-proof.ts";
 
 const { acceptTraceHashOnlyRemoteVerificationMismatch } = acceptedDiffModule;
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -44,55 +45,38 @@ function flowPayload(traceHash: string) {
   };
 }
 
-test("accepts only importTraceSummary traceHash root payload mismatches", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-accepted-diff-"));
-  const inputPath = path.join(root, "flows.cleaned.jsonl");
-  const verifyOut = path.join(root, "post-write-verify", "outputs");
-  const reportPath = path.join(verifyOut, "remote-verification-report.json");
-  const checksPath = path.join(verifyOut, "remote-verification.jsonl");
-  const blockersPath = path.join(verifyOut, "blockers.jsonl");
-  const local = flowPayload("local-hash");
-  const remote = flowPayload("remote-hash");
+for (const wrapped of [false, true])
+  test(`accepts only importTraceSummary traceHash root payload mismatches${wrapped ? " in canonical row wrappers" : ""}`, () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-accepted-diff-"));
+    const inputPath = path.join(root, "flows.cleaned.jsonl");
+    const verifyOut = path.join(root, "post-write-verify", "outputs");
+    const reportPath = path.join(verifyOut, "remote-verification-report.json");
+    const checksPath = path.join(verifyOut, "remote-verification.jsonl");
+    const blockersPath = path.join(verifyOut, "blockers.jsonl");
+    const local = flowPayload("local-hash");
+    const remote = flowPayload("remote-hash");
 
-  writeJsonLines(inputPath, [local]);
-  writeJsonLines(checksPath, [
-    {
-      role: "root",
-      table: "flows",
-      id: "8be4cf81-079c-5a30-a353-fdc219cce43b",
-      version: "00.00.001",
-      row_index: 0,
-      status: "payload_mismatch",
-      path: "/flowDataSet#readback",
-      local_payload_sha256: "local-original",
-      remote_payload_sha256: "remote-original",
-      remote_user_id: "user-1",
-      remote_state_code: 0,
-    },
-  ]);
-  writeJsonLines(blockersPath, [
-    {
-      code: "payload_mismatch",
-      role: "root",
-      table: "flows",
-      id: "8be4cf81-079c-5a30-a353-fdc219cce43b",
-      version: "00.00.001",
-      row_index: 0,
-      path: "/flowDataSet#readback",
-    },
-  ]);
-  writeJson(reportPath, {
-    status: "blocked_remote_verification",
-    input_path: inputPath,
-    counts: {
-      rows: 1,
-      checked: 1,
-      blockers: 1,
-      root_readback_checks: 1,
-      root_payload_mismatches: 1,
-      by_status: { ok: 0, payload_mismatch: 1 },
-    },
-    blockers: [
+    writeJsonLines(inputPath, [
+      wrapped
+        ? { id: "8be4cf81-079c-5a30-a353-fdc219cce43b", version: "00.00.001", json: local }
+        : local,
+    ]);
+    writeJsonLines(checksPath, [
+      {
+        role: "root",
+        table: "flows",
+        id: "8be4cf81-079c-5a30-a353-fdc219cce43b",
+        version: "00.00.001",
+        row_index: 0,
+        status: "payload_mismatch",
+        path: "/flowDataSet#readback",
+        local_payload_sha256: canonicalPayloadSha256(local),
+        remote_payload_sha256: canonicalPayloadSha256(remote),
+        remote_user_id: "user-1",
+        remote_state_code: 0,
+      },
+    ]);
+    writeJsonLines(blockersPath, [
       {
         code: "payload_mismatch",
         role: "root",
@@ -102,32 +86,74 @@ test("accepts only importTraceSummary traceHash root payload mismatches", () => 
         row_index: 0,
         path: "/flowDataSet#readback",
       },
-    ],
-    files: { report: reportPath, checks: checksPath, blockers: blockersPath },
-  });
+    ]);
+    writeJson(reportPath, {
+      status: "blocked_remote_verification",
+      input_path: inputPath,
+      counts: {
+        rows: 1,
+        checked: 1,
+        blockers: 1,
+        root_readback_checks: 1,
+        root_payload_mismatches: 1,
+        by_status: { ok: 0, payload_mismatch: 1 },
+      },
+      blockers: [
+        {
+          code: "payload_mismatch",
+          role: "root",
+          table: "flows",
+          id: "8be4cf81-079c-5a30-a353-fdc219cce43b",
+          version: "00.00.001",
+          row_index: 0,
+          path: "/flowDataSet#readback",
+        },
+      ],
+      files: { report: reportPath, checks: checksPath, blockers: blockersPath },
+    });
 
-  const result = acceptTraceHashOnlyRemoteVerificationMismatch({
-    verifyReportPath: reportPath,
-    outDir: root,
-    repoRoot: root,
-    runCliGet: () => ({ ok: true, payload: remote, command: "fake flow get" }),
-  });
+    const result = acceptTraceHashOnlyRemoteVerificationMismatch({
+      verifyReportPath: reportPath,
+      outDir: root,
+      repoRoot: root,
+      runCliGet: () => ({ ok: true, payload: remote, command: "fake flow get" }),
+    });
 
-  assert.equal(result.accepted, true);
-  const acceptedReport = JSON.parse(fs.readFileSync(result.verifyReportPath, "utf8"));
-  assert.equal(acceptedReport.status, "passed_remote_verification");
-  assert.equal(acceptedReport.counts.root_payload_mismatches, 0);
-  assert.equal(acceptedReport.blockers.length, 0);
-  assert.equal(acceptedReport.foundry_accepted_remote_verification.accepted_differences.length, 1);
-  const acceptedChecks = fs
-    .readFileSync(acceptedReport.files.checks, "utf8")
-    .trim()
-    .split(/\r?\n/u)
-    .map((line) => JSON.parse(line));
-  assert.equal(acceptedChecks[0].status, "ok");
-  assert.equal(acceptedChecks[0].local_payload_sha256, acceptedChecks[0].remote_payload_sha256);
-  assert.equal(acceptedChecks[0].foundry_verification_mode, "accepted_normalized_payload");
-});
+    assert.equal(result.accepted, true);
+    const acceptedReport = JSON.parse(fs.readFileSync(result.verifyReportPath, "utf8"));
+    assert.equal(acceptedReport.status, "passed_remote_verification");
+    assert.equal(acceptedReport.counts.root_payload_mismatches, 0);
+    assert.equal(acceptedReport.blockers.length, 0);
+    assert.equal(
+      acceptedReport.foundry_accepted_remote_verification.accepted_differences.length,
+      1,
+    );
+    const acceptedChecks = fs
+      .readFileSync(acceptedReport.files.checks, "utf8")
+      .trim()
+      .split(/\r?\n/u)
+      .map((line) => JSON.parse(line));
+    assert.equal(acceptedChecks[0].status, "ok");
+    assert.equal(acceptedChecks[0].local_payload_sha256, acceptedChecks[0].remote_payload_sha256);
+    assert.equal(acceptedChecks[0].foundry_verification_mode, "accepted_normalized_payload");
+    const originalChecks = fs.readFileSync(checksPath, "utf8");
+    fs.writeFileSync(
+      checksPath,
+      originalChecks.replace(canonicalPayloadSha256(remote), "0".repeat(64)),
+    );
+    const changedRead = acceptTraceHashOnlyRemoteVerificationMismatch({
+      verifyReportPath: reportPath,
+      outDir: path.join(root, "changed-read"),
+      repoRoot: root,
+      runCliGet: () => ({ ok: true, payload: remote, command: "fake flow get" }),
+    });
+    assert.equal(
+      changedRead.accepted,
+      false,
+      "a different fresh payload cannot inherit the original owner/state observation",
+    );
+    assert.equal(changedRead.reason, "payload_mismatch_readback_hash_drift");
+  });
 
 test("rejects payload mismatches that still differ after traceHash normalization", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-accepted-diff-reject-"));

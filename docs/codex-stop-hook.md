@@ -18,9 +18,9 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - package.json
   - scripts/commands/core.ts
-lastReviewedAt: 2026-09-04
-lastReviewedCommit: 46e359bc3d5d4055db034e7ec04e7989d8eb3680
-lastReviewedNote: "Reviewed for #97: fresh OAuth identity, private session references and credential-free candidate Golden snapshots; transport ownership and no-replay gates remain unchanged. Support-cache CLI extraction is a tracked prerequisite in tiangong-cli #270."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: 81450527dd1f0b0439ed1f385fb494f9c045eb93
+lastReviewedNote: "Reviewed for Foundry #118 public classification/location tasks and bound semantic submission. Existing domain owners, task lineage, package-only composition, credential boundaries and acceptance hooks remain enforced; identity/publication work remains open."
 ---
 
 # Codex Stop Hook

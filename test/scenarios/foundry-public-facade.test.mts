@@ -58,6 +58,28 @@ function writeSpec(file: string, input: string) {
   );
 }
 
+test("facade reports recognized system error codes without raw paths or error text", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-safe-system-error-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const facade = createFoundryFacade({
+    moduleUrl: new URL("../../scripts/runtime-entry.ts", import.meta.url).href,
+    workspace: path.join(root, "workspace"),
+    cacheBase: path.join(root, "cache"),
+  });
+  const mkdir = fs.mkdirSync;
+  t.mock.method(fs, "mkdirSync", (...args: Parameters<typeof fs.mkdirSync>) => {
+    if (String(args[0]).includes("workspace"))
+      throw Object.assign(new Error("private-path-and-secret-must-not-be-emitted"), {
+        code: "ENAMETOOLONG",
+      });
+    return Reflect.apply(mkdir, fs, args);
+  });
+  const result = facade.initialize();
+  assert.equal(result.blockers[0]?.code, "runtime_operation_failed");
+  assert.match(result.blockers[0]?.message ?? "", /ENAMETOOLONG/u);
+  assert.doesNotMatch(JSON.stringify(result), /private-path-and-secret-must-not-be-emitted/u);
+});
+
 test("hierarchical facade emits one JSON envelope and resumes only registered local work", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-public-facade-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

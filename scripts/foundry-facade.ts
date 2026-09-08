@@ -56,6 +56,24 @@ import {
   type FoundryRuntimeManagerOptions,
 } from "./lib/foundry-runtime-selection.ts";
 import type { TrustedRuntimeManifest } from "@tiangong-lca/cli/runtime";
+import { datasetTypePlural } from "./lib/import-curation/internal/dataset-types.ts";
+import { currentWorkflowState, workflowObject } from "./lib/foundry-workflow-state.ts";
+import {
+  completedOwnerScopes,
+  prepareFoundryOwnerExecution,
+} from "./lib/foundry-owner-execution-store.ts";
+import { executeFoundryOwnerScope } from "./lib/foundry-workflow-execution.ts";
+import {
+  inspectFoundryReferences,
+  verifyFoundryReferences,
+} from "./lib/foundry-workflow-reference-verify.ts";
+import { selectFoundrySemanticInput } from "./lib/foundry-semantic-input.ts";
+import { runFoundryWorkflowIdentity } from "./lib/foundry-workflow-identity.ts";
+import { finalizeFoundryWorkflow } from "./lib/foundry-workflow-finalize.ts";
+import { selectFoundryAuthorizationInput } from "./lib/foundry-authorization-input.ts";
+import { authorizeFoundryWorkflow } from "./lib/foundry-workflow-authorization.ts";
+import { continueFoundryPreparedApproval } from "./lib/foundry-workflow-approval-continuation.ts";
+import type { FoundryAuthentication } from "./lib/foundry-runtime-identity.ts";
 
 export interface FoundryFacadeRuntimeSelection {
   readonly cliExpectation: unknown;
@@ -71,6 +89,7 @@ export interface FoundryFacadeOptions {
   readonly environment?: NodeJS.ProcessEnv;
   readonly runtimeSelection?: FoundryFacadeRuntimeSelection;
   readonly accountIntent?: FoundryAccountIntent;
+  readonly authentication?: FoundryAuthentication;
   readonly signal?: AbortSignal;
   readonly workspaceAccess?: FoundryWorkspaceAccess;
   readonly runtimeManager?: FoundryRuntimeManagerOptions;
@@ -122,10 +141,11 @@ function human(code: string, instructions: string): FoundryOperationNextAction {
 function resumeCommand(
   context: ReturnType<typeof createFoundryRuntimeContext>,
   record: FoundryFacadeTaskRecord,
+  ownerStage?: "execution" | "readback" | "reference_verification" | "approval_continuation",
 ): FoundryOperationNextAction {
   const action = {
     kind: "command",
-    code: "resume_local_preparation",
+    code: ownerStage ? `resume_owner_${ownerStage}` : "resume_local_preparation",
     executable: process.execPath,
     argv: [
       context.runtime.entryPath,
@@ -140,7 +160,16 @@ function resumeCommand(
       "--json",
     ],
     cwd: context.workspaceRoot,
-    purpose: "Resume the content-bound deterministic local preparation for this task revision.",
+    purpose:
+      ownerStage === "execution"
+        ? "Continue the approved owner scope using its exact sealed execution request."
+        : ownerStage === "readback"
+          ? "Read back the consumed owner scope using its retained request."
+          : ownerStage === "reference_verification"
+            ? "Verify the canonical references selected by the current semantic decisions."
+            : ownerStage === "approval_continuation"
+              ? "Continue sealing the current scope under its existing registered approval."
+              : "Resume the content-bound deterministic local preparation for this task revision.",
   } as const;
   return Object.freeze({
     ...action,
@@ -236,10 +265,39 @@ function failure(
   identity: unknown = null,
 ): FoundryOperationResult {
   const code = error instanceof FoundryContextError ? error.code : "runtime_operation_failed";
+  const systemCode =
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    [
+      "ENOENT",
+      "EACCES",
+      "EPERM",
+      "EINVAL",
+      "ENAMETOOLONG",
+      "EIO",
+      "ENOSPC",
+      "EBADF",
+      "EEXIST",
+      "ENOTDIR",
+      "EMFILE",
+      "ENFILE",
+      "EBUSY",
+      "UNKNOWN",
+      "ERR_INVALID_ARG_TYPE",
+      "ERR_INVALID_ARG_VALUE",
+      "ERR_OUT_OF_RANGE",
+    ].includes(String(error.code))
+      ? String(error.code)
+      : error instanceof SyntaxError
+        ? "SyntaxError"
+        : error instanceof TypeError
+          ? "TypeError"
+          : null;
   const message =
     error instanceof FoundryContextError
       ? error.message
-      : "Foundry could not complete this operation; selected state was preserved.";
+      : `Foundry could not complete this operation${systemCode ? ` (${systemCode})` : ""}; selected state was preserved.`;
   const needsAuth = code === "needs_auth" || code.startsWith("identity_");
   const needsInputCodes = new Set([
     "task_not_found",
@@ -273,6 +331,8 @@ function failure(
     needsInputCodes.has(code) ||
     code.startsWith("argument_") ||
     code.startsWith("task_spec_") ||
+    code.startsWith("task_semantic_") ||
+    code.startsWith("task_authorization_input_") ||
     code.startsWith("task_seed_");
   const blocked =
     !needsAuth &&
@@ -320,6 +380,16 @@ function selectedInputs(
 }
 
 function accountIntent(spec: FoundryTaskStartSpec, host?: FoundryAccountIntent) {
+  if (
+    host?.accountMode &&
+    host.projectRef === spec.account_intent?.project_ref &&
+    host.userId === spec.account_intent?.user_id &&
+    host.accountMode !== (spec.account_intent.account_mode ?? "ordinary")
+  )
+    throw new FoundryContextError(
+      "task_account_mismatch",
+      "Explicit host and task verification modes must agree.",
+    );
   const inheritedReference =
     host &&
     host.projectRef === spec.account_intent?.project_ref &&
@@ -330,6 +400,9 @@ function accountIntent(spec: FoundryTaskStartSpec, host?: FoundryAccountIntent) 
     ? {
         projectRef: spec.account_intent.project_ref,
         userId: spec.account_intent.user_id,
+        ...(spec.account_intent.account_mode
+          ? { accountMode: spec.account_intent.account_mode }
+          : {}),
         ...((spec.account_intent.session_reference ?? inheritedReference)
           ? { sessionReference: spec.account_intent.session_reference ?? inheritedReference }
           : {}),
@@ -359,6 +432,7 @@ function taskContext(
   options: FoundryFacadeOptions,
   base: ReturnType<typeof createFoundryRuntimeContext>,
   record: FoundryFacadeTaskRecord,
+  derived: readonly FoundryInputFact[] = [],
 ) {
   return createFoundryRuntimeContext({
     ...contextOptions(options),
@@ -366,7 +440,10 @@ function taskContext(
     taskId: record.task_id,
     actorId: record.spec.actor_id,
     accountIntent: accountIntent(record.spec, options.accountIntent),
-    inputs: record.inputs,
+    inputs: [
+      ...record.inputs,
+      ...derived.filter((fact) => !record.inputs.some((source) => source.path === fact.path)),
+    ],
   });
 }
 
@@ -448,10 +525,17 @@ function taskProjection(
       runtimeIdentity: identity,
       permissions: noPermission(),
     });
-  if (inspected.attempts_present)
+  let execution: ReturnType<typeof completedOwnerScopes> | null = null;
+  try {
+    execution = completedOwnerScopes(context, inspected.artifacts);
+  } catch (error) {
+    if (!(error instanceof FoundryContextError) || error.code !== "execution_legacy_attempts")
+      throw error;
+  }
+  if (!execution || execution.pending.length)
     return createFoundryOperationResult({
       operation,
-      status: "blocked",
+      status: execution ? "needs_input" : "blocked",
       taskId: record.task_id,
       artifacts,
       blockers: [
@@ -462,18 +546,343 @@ function taskProjection(
           scope: record.task_id,
         },
       ],
-      nextActions: [
-        human(
-          "resume_owner_readback",
-          "Use the retained owner attempt and readback evidence; do not dispatch another mutation.",
-        ),
-      ],
+      nextActions: execution
+        ? [resumeCommand(context, record, "readback")]
+        : [
+            human(
+              "resume_owner_readback",
+              "Use the retained owner attempt and readback evidence; do not dispatch another mutation.",
+            ),
+          ],
       runtimeIdentity: identity,
       permissions: noPermission(),
     });
   const prepared = inspected.artifacts.some(
     (entry) => entry.command === "dataset-curation-cleanup",
   );
+  const nativeReport = artifacts.find(
+    (artifact) =>
+      artifact.kind === "file" &&
+      path.basename(artifact.path) === "foundry-native-import.json" &&
+      inspected.artifacts.some(
+        (entry) =>
+          entry.command === "dataset-tidas-import" &&
+          path.join(context.taskRoot!, entry.path) === artifact.path,
+      ),
+  );
+  if (nativeReport?.kind === "file") {
+    const result: unknown = JSON.parse(
+      readCaptured(nativeReport, maxSeedBytes, "native_import_report_invalid").toString("utf8"),
+    );
+    if (
+      !result ||
+      typeof result !== "object" ||
+      !("schema" in result) ||
+      result.schema !== "tiangong-foundry.native-import-stage.v1" ||
+      !("status" in result)
+    )
+      throw new FoundryContextError(
+        "native_import_report_invalid",
+        "The registered native stage report is invalid.",
+      );
+    if (result.status !== "completed")
+      return createFoundryOperationResult({
+        operation,
+        status: "blocked",
+        taskId: record.task_id,
+        artifacts,
+        blockers: [
+          {
+            code: "native_import_blocked",
+            message:
+              "Inspect the registered conversion report before continuing this source package.",
+            scope: record.task_id,
+          },
+        ],
+        nextActions: [
+          human(
+            "review_conversion_report",
+            "Resolve the conversion findings for the selected source before continuing.",
+          ),
+        ],
+        runtimeIdentity: identity,
+        permissions: noPermission(),
+      });
+  }
+  const workflow = currentWorkflowState(context, inspected.artifacts);
+  const references = inspectFoundryReferences(context, inspected.artifacts);
+  const scopeComplete =
+    workflow.rows &&
+    (workflow.rows.value.sets.length > 0 || references.scope) &&
+    workflow.rows.value.sets.every((set) => execution.completed.has(set.type));
+  if (scopeComplete && (!references.scope || references.verified) && workflow.finalization)
+    return createFoundryOperationResult({
+      operation,
+      status: "completed",
+      taskId: record.task_id,
+      artifacts,
+      blockers: [],
+      nextActions: [],
+      runtimeIdentity: identity,
+      permissions: noPermission(),
+    });
+  if (workflow.finalization && references.scope && !references.verified)
+    return createFoundryOperationResult({
+      operation,
+      status: "needs_input",
+      taskId: record.task_id,
+      artifacts,
+      blockers: [
+        {
+          code: "reference_verification_required",
+          message: "Current canonical reference decisions require independent remote verification.",
+          scope: record.task_id,
+        },
+      ],
+      nextActions: [resumeCommand(context, record, "reference_verification")],
+      runtimeIdentity: identity,
+      permissions: noPermission(),
+    });
+  if (
+    workflow.authorization &&
+    !execution.completed.has(String(workflow.authorization.value.dataset_type))
+  ) {
+    const report = workflow.authorization.value;
+    const code =
+      report.status === "sealed"
+        ? "authorized_execution_pending"
+        : report.status === "authorized_current_rows"
+          ? "authorized_refinalization_pending"
+          : "authorized_handoff_requires_input";
+    return createFoundryOperationResult({
+      operation,
+      status: "needs_input",
+      taskId: record.task_id,
+      artifacts,
+      blockers: [
+        {
+          code,
+          message:
+            report.status === "sealed"
+              ? "Current approval and execution capsule are recorded; owner execution remains pending."
+              : "Current approval is registered; resolve the remaining preparation or handoff work.",
+          scope: record.task_id,
+        },
+      ],
+      nextActions:
+        report.status === "sealed"
+          ? [resumeCommand(context, record, "execution")]
+          : [
+              human(
+                code,
+                `Read the registered approval result ${workflow.authorization.file}. Existing approval does not permit replay of any consumed attempt.`,
+              ),
+            ],
+      runtimeIdentity: identity,
+      permissions: {
+        state: "granted",
+        requested_actions: Array.isArray(report.allowed_actions)
+          ? report.allowed_actions.filter((item): item is string => typeof item === "string")
+          : [],
+        approval_reference: String(report.authorization_sha256),
+      },
+    });
+  }
+  if (workflow.preparedApproval) {
+    const canContinue =
+      Array.isArray(workflow.finalization?.value.sets) &&
+      workflow.finalization.value.sets
+        .map(workflowObject)
+        .some(
+          (scope) =>
+            scope.type === workflow.preparedApproval!.value.dataset_type &&
+            scope.status === "ready_for_remote_write",
+        );
+    return createFoundryOperationResult({
+      operation,
+      status: "needs_input",
+      taskId: record.task_id,
+      artifacts,
+      blockers: [
+        {
+          code: "authorization_continuation_pending",
+          message:
+            "Resume to verify the retained preparation approval and complete its current final-row derivation.",
+          scope: record.task_id,
+        },
+      ],
+      nextActions: canContinue
+        ? [resumeCommand(context, record, "approval_continuation")]
+        : [
+            human(
+              "resume_approval_continuation",
+              `Retained preparation approval: ${workflow.preparedApproval.file}.`,
+            ),
+          ],
+      runtimeIdentity: identity,
+      permissions: noPermission(),
+    });
+  }
+  if (workflow.finalization) {
+    const ready = workflow.finalization.value.status === "ready_for_authorization";
+    const found = workflow.finalization;
+    return createFoundryOperationResult({
+      operation,
+      status: "needs_input",
+      taskId: record.task_id,
+      artifacts,
+      blockers: [
+        {
+          code: ready ? "task_authorization_required" : "finalization_requires_input",
+          message: ready
+            ? "Final rows are prepared. Register current task approval before owner draft execution."
+            : "Resolve the registered finalization blockers before owner draft execution.",
+          scope: record.task_id,
+        },
+      ],
+      nextActions: [
+        human(
+          ready ? "authorize_final_rows" : "review_finalization",
+          `Read the current finalization report ${found.file} and its per-scope owner reports.`,
+        ),
+      ],
+      runtimeIdentity: identity,
+      permissions: ready
+        ? { state: "required", requested_actions: [], approval_reference: null }
+        : noPermission(),
+    });
+  }
+  if (workflow.identity?.value.status === "blocked")
+    return createFoundryOperationResult({
+      operation,
+      status: "needs_input",
+      taskId: record.task_id,
+      artifacts,
+      blockers: [
+        {
+          code: "identity_preflight_requires_input",
+          message:
+            "Review the identity preflight diagnostics. A subsequent resume retries this read-only stage against the same current rows.",
+          scope: record.task_id,
+        },
+      ],
+      nextActions: [
+        human(
+          "review_identity_preflight",
+          `Read ${workflow.identity.file} and resolve the reported query or execution failure before retrying.`,
+        ),
+      ],
+      runtimeIdentity: identity,
+      permissions: noPermission(),
+    });
+  const assessment = workflow.assessment?.entry;
+  if (assessment) {
+    const report: unknown = JSON.parse(
+      readCaptured(
+        { ...assessment, path: path.join(context.taskRoot!, assessment.path) },
+        maxSeedBytes,
+        "workflow_assessment_invalid",
+      ).toString("utf8"),
+    );
+    if (
+      !report ||
+      typeof report !== "object" ||
+      !("schema" in report) ||
+      report.schema !== "tiangong-foundry.assessment-stage.v1" ||
+      !("sets" in report) ||
+      !Array.isArray(report.sets)
+    )
+      throw new FoundryContextError(
+        "workflow_assessment_invalid",
+        "Registered assessment metadata is invalid.",
+      );
+    const pending = report.sets.filter((value: unknown) => {
+      if (
+        !value ||
+        typeof value !== "object" ||
+        !("curation_counts" in value) ||
+        !("authoring_counts" in value) ||
+        !("type" in value) ||
+        typeof value.type !== "string"
+      )
+        throw new FoundryContextError(
+          "workflow_assessment_invalid",
+          "Assessment counts are missing.",
+        );
+      const curation = value.curation_counts as Record<string, unknown>;
+      const authoring = value.authoring_counts as Record<string, unknown>;
+      if (
+        !curation ||
+        !authoring ||
+        !Number.isSafeInteger(curation.blocking_items) ||
+        !Number.isSafeInteger(authoring.tasks)
+      )
+        throw new FoundryContextError(
+          "workflow_assessment_invalid",
+          "Assessment counts are invalid.",
+        );
+      for (const key of [
+        "rows",
+        "schema_report",
+        "qa_report",
+        "curation_report",
+        "authoring_manifest",
+      ]) {
+        const file = (value as Record<string, unknown>)[key];
+        if (typeof file !== "string")
+          throw new FoundryContextError(
+            "workflow_assessment_invalid",
+            "Assessment file reference is missing.",
+          );
+        const expected = inspected.artifacts.find(
+          (entry) => path.join(context.taskRoot!, entry.path) === file,
+        );
+        if (!expected)
+          throw new FoundryContextError(
+            "workflow_assessment_invalid",
+            "Assessment references an unregistered artifact.",
+          );
+        const observed = captureFoundryInput(file);
+        if (observed.bytes !== expected.bytes || observed.sha256 !== expected.sha256)
+          throw new FoundryContextError(
+            "workflow_assessment_changed",
+            "An assessed input or report changed; retain its original evidence before continuing.",
+          );
+      }
+      return Number(curation.blocking_items ?? 0) > 0 || Number(authoring.tasks ?? 0) > 0;
+    }) as Array<{
+      type: string;
+      curation_report: string;
+      authoring_manifest: string;
+      decisions?: Array<{ kind: string; task: string; status: string }>;
+    }>;
+    if (pending.length)
+      return createFoundryOperationResult({
+        operation,
+        status: "needs_input",
+        taskId: record.task_id,
+        artifacts,
+        blockers: pending.map((set) => ({
+          code: "curation_requires_input",
+          message: `Resolve the current ${set.type} curation and authoring work before a write handoff.`,
+          scope: record.task_id,
+        })),
+        nextActions: pending.flatMap((set) => [
+          human(
+            "review_semantic_work",
+            `Read the registered curation report ${set.curation_report} and authoring manifest ${set.authoring_manifest}. Use their bound source/context evidence; no write permission is implied.`,
+          ),
+          ...(set.decisions ?? []).map((work) =>
+            human(
+              `review_${work.kind}_decisions`,
+              `Read registered ${work.kind} task ${work.task} (${work.status}). Complete its bound decision template and submit it with semantic-input kind=${work.kind}.`,
+            ),
+          ),
+        ]),
+        runtimeIdentity: identity,
+        permissions: noPermission(),
+      });
+  }
   const nextActions = prepared
     ? [
         human(
@@ -481,12 +890,12 @@ function taskProjection(
           "Review the current prepared artifacts and continue the returned task workflow.",
         ),
       ]
-    : record.spec.preparation
+    : record.spec.preparation || !workflow.assessment
       ? [resumeCommand(context, record)]
       : [
           human(
-            "continue_task_authoring",
-            "Continue authoring from the frozen task sources and seed evidence.",
+            "review_assessment",
+            "Review the registered curation reports and authoring-task manifests. Resolve their current semantic work before requesting a write handoff; assessment does not grant permission.",
           ),
         ];
   return createFoundryOperationResult({
@@ -985,7 +1394,12 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
         );
       }
     },
-    async resume(input: { taskId: string; actorId: string }): Promise<FoundryOperationResult> {
+    async resume(input: {
+      taskId: string;
+      actorId: string;
+      semanticInputFile?: string;
+      authorizationInputFile?: string;
+    }): Promise<FoundryOperationResult> {
       let current: ReturnType<typeof createFoundryRuntimeContext> | null = null;
       try {
         assertNotInterrupted(options.signal);
@@ -998,15 +1412,436 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
         const before = await runtime.inspectTask();
         assertNotInterrupted(options.signal);
         loadFoundryFacadeTaskRecord(current, record.task_id, record.spec.actor_id);
-        if (before.attempts_present)
+        const existing = taskProjection(
+          "task.resume",
+          context,
+          record,
+          before,
+          runtimeIdentity(context, qualified),
+        );
+        if (existing.status === "completed" || existing.status === "blocked") return existing;
+        const execution = completedOwnerScopes(context, before.artifacts);
+        if (execution.pending.length) {
+          if (input.authorizationInputFile || input.semanticInputFile)
+            throw new FoundryContextError(
+              "execution_recovery_required",
+              "Recover the consumed request before submitting changes.",
+            );
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Owner readback requires qualified runtime owners.",
+            );
+          const selected = taskContext(
+            options,
+            current,
+            record,
+            before.artifacts.map((entry) => ({
+              path: path.join(context.taskRoot!, entry.path),
+              bytes: entry.bytes,
+              sha256: entry.sha256,
+            })),
+          );
+          await executeFoundryOwnerScope(
+            selected,
+            qualified,
+            before.artifacts,
+            execution.pending[0],
+            options.authentication,
+          );
           return taskProjection(
             "task.resume",
             context,
             record,
-            before,
+            await runtime.inspectTask(),
             runtimeIdentity(context, qualified),
           );
+        }
+        if (input.authorizationInputFile) {
+          if (input.semanticInputFile || record.spec.preparation)
+            throw new FoundryContextError(
+              "task_authorization_input_invalid",
+              "Submit approval separately from semantic input or explicit cleanup.",
+            );
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Approval admission requires qualified runtime owners.",
+            );
+          const submission = selectFoundryAuthorizationInput(context, input.authorizationInputFile);
+          if (execution.completed.has(submission.spec.dataset_type))
+            throw new FoundryContextError(
+              "execution_scope_completed",
+              "A verified scope cannot receive new write approval.",
+            );
+          const facts = before.artifacts.map((artifact) => ({
+            path: path.join(context.taskRoot!, artifact.path),
+            bytes: artifact.bytes,
+            sha256: artifact.sha256,
+          }));
+          const selected = taskContext(options, current, record, facts);
+          await authorizeFoundryWorkflow(
+            selected,
+            qualified,
+            before.artifacts,
+            submission,
+            options.authentication,
+          );
+          return taskProjection(
+            "task.resume",
+            context,
+            record,
+            await runtime.inspectTask(),
+            runtimeIdentity(context, qualified),
+          );
+        }
+        if (input.semanticInputFile) {
+          if (execution.consumed.size)
+            throw new FoundryContextError(
+              "execution_scope_consumed",
+              "Retain consumed scope rows and their execution evidence.",
+            );
+          if (record.spec.preparation)
+            throw new FoundryContextError(
+              "task_semantic_input_invalid",
+              "Explicit cleanup tasks do not accept semantic submissions.",
+            );
+          const submission = selectFoundrySemanticInput(context, input.semanticInputFile);
+          const facts = before.artifacts.map((artifact) => ({
+            path: path.join(context.taskRoot!, artifact.path),
+            bytes: artifact.bytes,
+            sha256: artifact.sha256,
+          }));
+          const selected = taskContext(options, current, record, facts);
+          const result = await createFoundryRuntime(selected, qualified).applySemantic(
+            before.artifacts,
+            submission,
+          );
+          assertNotInterrupted(options.signal);
+          const after = await runtime.inspectTask();
+          if (result.status !== "completed")
+            return createFoundryOperationResult({
+              operation: "task.resume",
+              status: "needs_input",
+              taskId: record.task_id,
+              artifacts: taskArtifacts(context, after),
+              blockers: [
+                {
+                  code: "semantic_input_rejected",
+                  message:
+                    "Review the registered semantic result and correct the submitted input; prior rows remain current.",
+                  scope: record.task_id,
+                },
+              ],
+              nextActions: [
+                human(
+                  "correct_semantic_input",
+                  "Use the semantic-result.json diagnostics and submit corrected input against the current assessment.",
+                ),
+              ],
+              runtimeIdentity: runtimeIdentity(context, qualified),
+              permissions: noPermission(),
+            });
+          return taskProjection(
+            "task.resume",
+            context,
+            record,
+            after,
+            runtimeIdentity(context, qualified),
+          );
+        }
         const preparation = record.spec.preparation;
+        const workflow = currentWorkflowState(context, before.artifacts);
+        const references = inspectFoundryReferences(context, before.artifacts);
+        if (!preparation && workflow.finalization && references.scope && !references.verified) {
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Reference verification requires qualified runtime owners.",
+            );
+          const selected = taskContext(
+            options,
+            current,
+            record,
+            before.artifacts.map((entry) => ({
+              path: path.join(context.taskRoot!, entry.path),
+              bytes: entry.bytes,
+              sha256: entry.sha256,
+            })),
+          );
+          await verifyFoundryReferences(
+            selected,
+            qualified,
+            before.artifacts,
+            options.authentication,
+          );
+          return taskProjection(
+            "task.resume",
+            context,
+            record,
+            await runtime.inspectTask(),
+            runtimeIdentity(context, qualified),
+          );
+        }
+        if (
+          !preparation &&
+          workflow.authorization?.value.status === "sealed" &&
+          !execution.completed.has(String(workflow.authorization.value.dataset_type))
+        ) {
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Owner execution requires qualified runtime owners.",
+            );
+          const selected = taskContext(
+            options,
+            current,
+            record,
+            before.artifacts.map((entry) => ({
+              path: path.join(context.taskRoot!, entry.path),
+              bytes: entry.bytes,
+              sha256: entry.sha256,
+            })),
+          );
+          const request = execution.requests.find(
+            (item) => item.request.content.authorization === workflow.authorization!.entry.sha256,
+          );
+          if (request)
+            await executeFoundryOwnerScope(
+              selected,
+              qualified,
+              before.artifacts,
+              request,
+              options.authentication,
+            );
+          else await prepareFoundryOwnerExecution(selected, before.artifacts);
+          return taskProjection(
+            "task.resume",
+            context,
+            record,
+            await runtime.inspectTask(),
+            runtimeIdentity(context, qualified),
+          );
+        }
+        if (
+          !preparation &&
+          execution.completed.size &&
+          workflow.finalization?.value.execution_progress_sha256 !== execution.progressSha256
+        ) {
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Dependency finalization requires qualified runtime owners.",
+            );
+          const selected = taskContext(
+            options,
+            current,
+            record,
+            before.artifacts.map((entry) => ({
+              path: path.join(context.taskRoot!, entry.path),
+              bytes: entry.bytes,
+              sha256: entry.sha256,
+            })),
+          );
+          await finalizeFoundryWorkflow(
+            selected,
+            qualified,
+            before.artifacts,
+            options.authentication,
+            undefined,
+            { sha256: execution.progressSha256, scopes: execution.completed },
+          );
+          return taskProjection(
+            "task.resume",
+            context,
+            record,
+            await runtime.inspectTask(),
+            runtimeIdentity(context, qualified),
+          );
+        }
+        const preparedApproval =
+          workflow.authorization?.value.status === "authorized_current_rows"
+            ? workflow.authorization
+            : workflow.preparedApproval;
+        if (!preparation && preparedApproval && workflow.authorization?.value.status !== "sealed") {
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Approval continuation requires qualified runtime owners.",
+            );
+          const facts = before.artifacts.map((artifact) => ({
+            path: path.join(context.taskRoot!, artifact.path),
+            bytes: artifact.bytes,
+            sha256: artifact.sha256,
+          }));
+          const selected = taskContext(options, current, record, facts);
+          await continueFoundryPreparedApproval(
+            selected,
+            qualified,
+            before.artifacts,
+            preparedApproval,
+            options.authentication,
+          );
+          return taskProjection(
+            "task.resume",
+            context,
+            record,
+            await runtime.inspectTask(),
+            runtimeIdentity(context, qualified),
+          );
+        }
+        const imported = before.artifacts.some(
+          (artifact) => artifact.command === "dataset-tidas-import",
+        );
+        const contextPrepared = before.artifacts.some(
+          (artifact) => artifact.command === "dataset-context-pack",
+        );
+        const nativeRows = before.artifacts.filter(
+          (artifact) =>
+            artifact.command === "dataset-tidas-import" &&
+            artifact.path.endsWith(".json") &&
+            Object.values(datasetTypePlural).includes(
+              /^outputs\/import\/[^/]+\/tidas\/([^/]+)\//u.exec(artifact.path)?.[1] ?? "",
+            ),
+        );
+        const rowsPrepared = Boolean(workflow.rows);
+        if (!preparation && record.spec.lane === "external-dataset-curated-import" && !imported) {
+          if (record.inputs.length !== 1)
+            throw new FoundryContextError(
+              "task_import_source_required",
+              "Select one complete packaged input for native conversion.",
+            );
+          await runtime.importPackage(record.inputs[0].path);
+          assertNotInterrupted(options.signal);
+        } else if (!preparation && !contextPrepared) {
+          const closureTypes = Object.entries(datasetTypePlural)
+            .filter(([, plural]) =>
+              nativeRows.some((artifact) => artifact.path.includes(`/tidas/${plural}/`)),
+            )
+            .map(([type]) => type);
+          await runtime.prepareContext([
+            ...new Set([...record.spec.target_entities, ...closureTypes]),
+          ]);
+          assertNotInterrupted(options.signal);
+        } else if (!preparation && !rowsPrepared) {
+          const facts =
+            record.spec.lane === "external-dataset-curated-import"
+              ? nativeRows.map((artifact) => ({
+                  path: path.join(context.taskRoot!, artifact.path),
+                  bytes: artifact.bytes,
+                  sha256: artifact.sha256,
+                }))
+              : record.inputs.filter(
+                  (fact) => fact.path === sourcePath(record, record.spec.seed!.path),
+                );
+          const selected = taskContext(options, current, record, facts);
+          await createFoundryRuntime(selected, qualified).materializeRows(
+            facts.map((fact) => fact.path),
+          );
+          assertNotInterrupted(options.signal);
+        } else if (!preparation && !workflow.assessment) {
+          const selectedArtifacts = before.artifacts.filter((artifact) =>
+            [
+              "dataset-workflow-rows",
+              "dataset-context-pack",
+              "dataset-semantic-apply",
+              "dataset-workflow-identity",
+            ].includes(artifact.command),
+          );
+          const facts = selectedArtifacts.map((artifact) => ({
+            path: path.join(context.taskRoot!, artifact.path),
+            bytes: artifact.bytes,
+            sha256: artifact.sha256,
+          }));
+          const rows = workflow.rows
+            ? facts.find((fact) => fact.path === workflow.rows!.file)
+            : undefined;
+          if (!rows)
+            throw new FoundryContextError(
+              "workflow_rows_required",
+              "Registered row preparation is required.",
+            );
+          const contracts = facts
+            .filter((fact) => path.basename(fact.path) === "contract-report.json")
+            .map((fact) => fact.path);
+          const selected = taskContext(options, current, record, facts);
+          await createFoundryRuntime(selected, qualified).assessRows(
+            rows.path,
+            contracts,
+            workflow.identity?.value.status === "completed" ? workflow.identity.file : undefined,
+          );
+          assertNotInterrupted(options.signal);
+        } else if (
+          !preparation &&
+          (existing.status === "ready" || workflow.identity?.value.status === "blocked") &&
+          (!workflow.identity || workflow.identity.value.status === "blocked") &&
+          workflow.rows?.value.sets.some((set) => ["flow", "process"].includes(set.type))
+        ) {
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Identity preflight requires qualified runtime owners.",
+            );
+          const facts = before.artifacts.map((artifact) => ({
+            path: path.join(context.taskRoot!, artifact.path),
+            bytes: artifact.bytes,
+            sha256: artifact.sha256,
+          }));
+          const selected = taskContext(options, current, record, facts);
+          const result = await runFoundryWorkflowIdentity(
+            selected,
+            qualified,
+            before.artifacts,
+            options.authentication,
+          );
+          if (result.status !== "completed") {
+            const after = await runtime.inspectTask();
+            return createFoundryOperationResult({
+              operation: "task.resume",
+              status: "needs_input",
+              taskId: record.task_id,
+              artifacts: taskArtifacts(context, after),
+              blockers: [
+                {
+                  code: "identity_preflight_requires_input",
+                  message:
+                    "Review the registered identity preflight diagnostics before continuing.",
+                  scope: record.task_id,
+                },
+              ],
+              nextActions: [],
+              runtimeIdentity: runtimeIdentity(context, qualified),
+              permissions: noPermission(),
+            });
+          }
+        }
+        if (
+          !preparation &&
+          existing.status === "ready" &&
+          workflow.assessment &&
+          !workflow.finalization &&
+          (workflow.identity?.value.status === "completed" ||
+            !workflow.rows?.value.sets.some((set) => ["flow", "process"].includes(set.type)))
+        ) {
+          if (!qualified)
+            throw new FoundryContextError(
+              "runtime_unqualified",
+              "Finalization requires qualified runtime owners.",
+            );
+          const facts = before.artifacts.map((artifact) => ({
+            path: path.join(context.taskRoot!, artifact.path),
+            bytes: artifact.bytes,
+            sha256: artifact.sha256,
+          }));
+          const selected = taskContext(options, current, record, facts);
+          await finalizeFoundryWorkflow(
+            selected,
+            qualified,
+            before.artifacts,
+            options.authentication,
+          );
+          assertNotInterrupted(options.signal);
+        }
         if (preparation) {
           assertNotInterrupted(options.signal);
           await runtime.cleanup({

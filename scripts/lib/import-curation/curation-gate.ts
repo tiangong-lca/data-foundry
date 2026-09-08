@@ -66,6 +66,7 @@ interface JsonRecord {
 }
 
 interface CurationGateOptions extends JsonRecord {
+  includeExecutionCommands?: boolean;
   help?: unknown;
   type?: unknown;
   datasetType?: unknown;
@@ -104,6 +105,8 @@ interface CurationGateOptions extends JsonRecord {
 interface CurationGateArgs {
   repoRoot?: string;
   options?: CurationGateOptions;
+  routeAction?: (action: JsonRecord, datasetType: string, payload: unknown) => JsonRecord;
+  requireIdentityPreflight?: boolean;
 }
 
 function asJsonRecord(value: unknown): JsonRecord {
@@ -117,6 +120,8 @@ type SemanticActionOptions = Parameters<typeof collectProfileSemanticActionItems
 export function runDatasetCurationGate({
   repoRoot,
   options = {},
+  routeAction,
+  requireIdentityPreflight = false,
 }: CurationGateArgs = {}): JsonRecord {
   const datasetType = datasetTypeFromOptions(options);
   if (options.help) {
@@ -310,7 +315,9 @@ export function runDatasetCurationGate({
       version: identity.version,
     });
     const identityPreflightGateItemsForEntity = identityPreflightGateItems({
-      required: Boolean(fullContextRequirement) && ["flow", "process"].includes(datasetType),
+      required:
+        (Boolean(fullContextRequirement) || requireIdentityPreflight) &&
+        ["flow", "process"].includes(datasetType),
       context: identityPreflightContext,
       authoringContext: identityPreflightAuthoringContext,
       datasetType,
@@ -319,7 +326,9 @@ export function runDatasetCurationGate({
       profile: profile as unknown as IdentityPreflightGateOptions["profile"],
     });
     const identityPreflightActionItems = identityPreflightAuthoringActionItems({
-      required: Boolean(fullContextRequirement) && ["flow", "process"].includes(datasetType),
+      required:
+        (Boolean(fullContextRequirement) || requireIdentityPreflight) &&
+        ["flow", "process"].includes(datasetType),
       authoringContext: identityPreflightAuthoringContext,
       datasetType,
       identity,
@@ -375,7 +384,9 @@ export function runDatasetCurationGate({
       ...classificationQueueActionItems,
       ...locationQueueActionItems,
       ...semanticActionItems,
-    ];
+    ].map((item) =>
+      routeAction ? routeAction(asJsonRecord(item), datasetType, identity.payload) : item,
+    );
     const queueGateItems = [];
     if (requireQueueContext && !queueContext) {
       queueGateItems.push({
@@ -554,7 +565,9 @@ export function runDatasetCurationGate({
         patch_contract:
           "Structured patch sets must include authoring_package, row_index or dataset_id/version, operation evidence or basis, and closes_action_items for the package action_items they resolve.",
         recommended_apply:
-          "node scripts/foundry.ts dataset-patch-apply --input <rows.jsonl> --patch <ai-patches.json> --out <patched.jsonl> --out-dir <apply-dir> --authoring-package-dir <ai-authoring-packages-dir> --require-authoring-package --require-action-item-closure",
+          options.includeExecutionCommands === false
+            ? null
+            : "node scripts/foundry.ts dataset-patch-apply --input <rows.jsonl> --patch <ai-patches.json> --out <patched.jsonl> --out-dir <apply-dir> --authoring-package-dir <ai-authoring-packages-dir> --require-authoring-package --require-action-item-closure",
         cleanup_owner:
           "Foundry removes or externalizes import-only trace metadata before remote write",
         final_gate_owner: "Foundry profile-aware curation gate",

@@ -143,9 +143,9 @@ checkPaths:
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: 6a0042fd3e368bf191bc32ab402aa6950be61e1b
-lastReviewedNote: "Reviewed for Foundry #112 Windows qualification: the TIDAS fixture now drains queued work and exits naturally with the exact protocol code. Production adapter exit checks, runtime authority, public command scope and permission boundaries remain unchanged; native crash statuses are not accepted as cancellation."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: b8f2873d0def1bbf446bf214e3b773c91bca460e
+lastReviewedNote: "Reviewed for Foundry #118 public finalization through existing owners: explicit CLI/native environments, fresh per-type preflight outputs, preserved indexed evidence, current rows/assessment capture and authorization-pending results. Canonical catalog is a bound reference asset; write authorization/execution/readback and full release acceptance remain open."
 ---
 
 # Foundry AI Navigation

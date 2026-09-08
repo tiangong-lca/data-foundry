@@ -279,7 +279,7 @@ test("missing or changed predecessor publication cannot reset a descendant's his
   }
 });
 
-test("resume preserves an indexed completed projection", async (t) => {
+test("status and resume reject a completion index entry borrowed from another producer", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-facade-completed-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const workspace = path.join(root, "project");
@@ -324,8 +324,13 @@ test("resume preserves an indexed completed projection", async (t) => {
     `${JSON.stringify({ ...unsigned, record_sha256: sha256Json(unsigned) })}\n`,
   );
 
-  assert.equal((await facade.status({ taskId, actorId: "agent/session-001" })).status, "completed");
-  assert.equal((await facade.resume({ taskId, actorId: "agent/session-001" })).status, "completed");
+  for (const result of [
+    await facade.status({ taskId, actorId: "agent/session-001" }),
+    await facade.resume({ taskId, actorId: "agent/session-001" }),
+  ]) {
+    assert.equal(result.status, "blocked");
+    assert.equal(result.blockers[0]?.code, "task_lineage_invalid");
+  }
 });
 
 test("an interrupted unindexed revision reports an actionable recovery conflict", async (t) => {

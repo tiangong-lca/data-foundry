@@ -24,6 +24,7 @@ type IdentityPreflightCommands = {
 };
 
 type FinalizeFactoryDependencies = {
+  executionEnvironment?: NodeJS.ProcessEnv;
   asText: (value: unknown) => string;
   booleanOption: (value: unknown) => boolean;
   cliWrapperCommands: {
@@ -57,6 +58,7 @@ function record(value: unknown): JsonRecord | null {
 }
 
 export function createPostAuthoringFinalizeUtils({
+  executionEnvironment = process.env,
   asText,
   booleanOption,
   cliWrapperCommands,
@@ -478,7 +480,7 @@ export function createPostAuthoringFinalizeUtils({
     const concurrency = Math.max(
       1,
       Number.parseInt(
-        process.env.IDENTITY_PREFLIGHT_CONCURRENCY ??
+        executionEnvironment.IDENTITY_PREFLIGHT_CONCURRENCY ??
           String(options.identityPreflightConcurrency ?? "1"),
         10,
       ) || 1,
@@ -533,7 +535,7 @@ export function createPostAuthoringFinalizeUtils({
       "}))).then(()=>process.exit(fail));";
     const result = spawnSync(process.execPath, ["-e", worker, listFile], {
       cwd: repoRoot,
-      env: process.env,
+      env: executionEnvironment,
       encoding: "utf8",
     });
     return {
@@ -547,7 +549,7 @@ export function createPostAuthoringFinalizeUtils({
   }
 
   function preseedResolutionReuseDecisions({ index }: { index: string | null }): JsonRecord {
-    const mapFile = resolveRepoPath(process.env.IDENTITY_PREFLIGHT_REUSE_MAP);
+    const mapFile = resolveRepoPath(executionEnvironment.IDENTITY_PREFLIGHT_REUSE_MAP);
     if (!mapFile || !fileExists(mapFile) || !index || !fileExists(index)) {
       return { enabled: false, seeded: 0 };
     }

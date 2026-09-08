@@ -35,9 +35,9 @@ checkPaths:
   - test/scenarios/workspace-migration-planning.test.mts
   - test/unit/foundry-migration-transfer.test.mts
   - test/scenarios/workspace-migration-transfer.test.mts
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: 846cc25ada0f6bea300e37397a7e6e18e0629ec3
-lastReviewedNote: "Reviewed for Foundry #112 managed process admission: inherited public CLI IPC and inventory-bound package/CLI/TIDAS/launch/target metadata now precede workspace operations. Read/write, cancellation, cache/migration and no-replay boundaries remain enforced. Real installed-process regressions use explicit native/release fixtures; complete production F1 assembly and publication remain pending."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: 3da2201c023a02053fd7325422b5e53fe9c84826
+lastReviewedNote: "Reviewed for Foundry #118 explicit ordinary/production-test intent through fingerprints, immutable account records, migration templates and sealed execution; qualified traceHash-only acceptance binds original/fresh raw hashes and preserves all verification evidence. Production-test rejects differences. Full release/live acceptance remains open."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -90,7 +90,7 @@ A pre-dispatch stage may still declare `UNATTEMPTED` after a later dispatch. Sel
 
 The adoption plan records immutable origin identity, exact task/spec/source mapping, scope evidence and the intended runtime manifest. Source specifications and generated current specifications are preserved separately. Original strings are never rewritten in place.
 
-`target_spec` is a credential-free task template, not an executable task specification. Its account intent contains project/user only. Materialization adds the current task schema and a null session-reference slot; the matching host may supply its CLI-owned reference only in the process context. The original selected specification remains an immutable file snapshot. Session contents are never copied, and inline operation results retain their credential-field rejection.
+`target_spec` is a credential-free task template, not an executable task specification. Its account intent contains project/user and any explicitly selected ordinary/production-test verification mode. The mode survives template materialization and is registered on the adopted task; session references remain process-local. Materialization adds the current task schema and a null session-reference slot; the matching host may supply its CLI-owned reference only in the process context. The original selected specification remains an immutable file snapshot. Session contents are never copied, and inline operation results retain their credential-field rejection.
 
 An internal asynchronous adoption scope supplies the future workspace id only while current owners register and prepare the selected tasks. The physical marker stays pending. The scope admits only the bound local task identities and expires when its callback finishes, including for escaped asynchronous work. Pending state cannot create business authorization or execution admission.
 

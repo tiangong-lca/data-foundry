@@ -262,9 +262,9 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: d2ec3d1b1f749a00266e0809870e821af0d8ca3f
-lastReviewedNote: "Reviewed for Foundry #116: executable zero-JavaScript ratchet remains required and tested; Docpact records document reviews without forcing test-comment edits into version-only releases. Runtime and release isolation are unchanged."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: 06154e4b50eae91873fa040fc71b4801ea3e6e2d
+lastReviewedNote: "Reviewed for PR120 package review: the descriptor and its structural schema now advertise the already implemented and shipped authorization-input v1 alongside task-start and semantic-input. A cross-contract regression compares all three shipped input schemas with the generated declaration. Runtime authorization, package ownership, environment and execution semantics are unchanged."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

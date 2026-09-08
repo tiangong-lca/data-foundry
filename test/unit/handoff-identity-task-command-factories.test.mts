@@ -723,7 +723,11 @@ test("handoff and identity task factories exist only as zero-escape native TypeS
     const typedPath = path.join(repoRoot, `scripts/commands/${moduleName}.ts`);
     assert.equal(fs.existsSync(typedPath), true);
     assert.equal(fs.existsSync(typedPath.replace(/\.ts$/u, ".mjs")), false);
-    const source = fs.readFileSync(typedPath, "utf8");
+    const ownerPath =
+      moduleName === "commit-handoff"
+        ? path.join(repoRoot, "scripts/lib/finalize-owners/commit-handoff.ts")
+        : path.join(repoRoot, "scripts/lib/decision-owners/identity-task.ts");
+    const source = fs.readFileSync(ownerPath, "utf8");
     assert.doesNotMatch(source, /\bas\s+any\b|:\s*any\b|\bany\s*\[\]|<\s*any\b|,\s*any\s*>/u);
     assert.doesNotMatch(source, /@ts-(?:no)?check|@ts-ignore/u);
   }

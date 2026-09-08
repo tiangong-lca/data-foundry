@@ -245,7 +245,56 @@ test("row validation maps official batch evidence into Foundry compatibility rep
       blockers: 1,
     });
     const invalidReport = invalid.report as Record<string, Record<string, unknown>>;
+    const invalidIssues = (
+      invalid.report.rows as Array<{
+        issues: Array<{ code: string; path: string; issue_code: string }>;
+      }>
+    )[0].issues;
+    assert.equal(invalidIssues[0].code, "fixture_invalid");
+    assert.equal(invalidIssues[0].issue_code, "fixture_invalid");
+    assert.equal(invalidIssues[0].path, "/");
+    const wrappedRows = path.join(root, "wrapped-processes.json");
+    fs.writeFileSync(
+      wrappedRows,
+      JSON.stringify([{ id: "11111111-1111-4111-8111-111111111111", json: processRow() }]),
+    );
+    const wrapped = withEnvironment(
+      { TIDAS_BIN: bin, FAKE_TIDAS_INVALID: "1", FAKE_TIDAS_EXIT_CLASS: undefined },
+      () =>
+        runTidasRowsValidation({
+          repoRoot: root,
+          options: {
+            rowsFile: wrappedRows,
+            type: "process",
+            outDir: path.join(root, "wrapped-validation"),
+          },
+        }),
+    );
+    const wrappedIssues = (
+      wrapped.report.rows as Array<{ issues: Array<{ path: string; location: string }> }>
+    )[0].issues;
+    assert.equal(wrappedIssues[0].path, "/json/");
+    assert.equal(wrappedIssues[0].location, "/", "retain the original native location separately");
     assert.equal(invalidReport.rust_contract.batch_final_schema, "tidas.validation-final-event.v1");
+    const nativeIssues = withEnvironment(
+      {
+        TIDAS_BIN: bin,
+        FAKE_TIDAS_INVALID: "1",
+        FAKE_TIDAS_BATCH_DATA_ISSUES: "1",
+        FAKE_TIDAS_EXIT_CLASS: undefined,
+      },
+      () =>
+        runTidasRowsValidation({
+          repoRoot: root,
+          options: { rowsFile, type: "process", outDir: path.join(root, "native-data-issues") },
+        }),
+    );
+    assert.equal(nativeIssues.rust_exit_code, 2);
+    assert.equal(nativeIssues.exit_code, 2);
+    assert.deepEqual(nativeIssues.report.counts, invalid.report.counts);
+    assert.ok(
+      typeof nativeIssues.report_file === "string" && fs.existsSync(nativeIssues.report_file),
+    );
     const valid = withEnvironment({ TIDAS_BIN: bin, FAKE_TIDAS_INVALID: undefined }, () =>
       runTidasRowsValidation({
         repoRoot: root,
@@ -259,6 +308,37 @@ test("row validation maps official batch evidence into Foundry compatibility rep
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("deep validation output preserves atomic replacement without Windows mkdtemp", (t) => {
+  const { root, bin } = isolatedFixture();
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const rowsFile = path.join(root, "processes.jsonl");
+  // The suffix alone exceeds 260 characters, even when the host temp root is only /tmp.
+  const parent = path.join(root, "workspace", "a".repeat(90), "b".repeat(90), "c".repeat(90));
+  const outDir = path.join(parent, "validation");
+  assert.ok(parent.length > 260);
+  fs.writeFileSync(rowsFile, `${JSON.stringify(processRow())}\n`);
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.writeFileSync(path.join(outDir, "sentinel"), "keep");
+  t.mock.method(fs, "mkdtempSync", () => {
+    throw Object.assign(new Error("Windows long-prefix mkdtemp"), { code: "ENOENT" });
+  });
+  const invoke = (exitClass?: string) =>
+    withEnvironment(
+      { TIDAS_BIN: bin, FAKE_TIDAS_EXIT_CLASS: exitClass, FAKE_TIDAS_INVALID: undefined },
+      () =>
+        runTidasRowsValidation({ repoRoot: root, options: { rowsFile, type: "process", outDir } }),
+    );
+  assert.equal(invoke("cancelled").exit_code, 130);
+  assert.equal(fs.readFileSync(path.join(outDir, "sentinel"), "utf8"), "keep");
+  assert.deepEqual(fs.readdirSync(parent), ["validation"]);
+  const completed = invoke();
+  assert.equal(completed.exit_code, 0);
+  assert.equal(completed.report.status, "completed");
+  assert.ok(typeof completed.report_file === "string" && fs.existsSync(completed.report_file));
+  assert.equal(fs.existsSync(path.join(outDir, "sentinel")), false);
+  assert.deepEqual(fs.readdirSync(parent), ["validation"]);
 });
 
 test("cancelled row validation cleans staging and preserves the previous output", () => {

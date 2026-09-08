@@ -34,9 +34,9 @@ checkPaths:
   - test/commands/foundry-release-*.test.mts
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: 4b027afad988467255c941eb8cec23741fc9ccbe
-lastReviewedNote: "Reviewed for Foundry #112 copied C1 bootstrap and final manifest workflow: isolated cached/public modes, actual system tools, tamper refusal and strict four-platform public proof before immutable manifest publication. Source-only tooling preserves runtime/task/account boundaries; actual versioned publication remains required."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: 06154e4b50eae91873fa040fc71b4801ea3e6e2d
+lastReviewedNote: "Reviewed for PR120 package review: the descriptor and its structural schema now advertise the already implemented and shipped authorization-input v1 alongside task-start and semantic-input. A cross-contract regression compares all three shipped input schemas with the generated declaration. Runtime authorization, package ownership, environment and execution semantics are unchanged."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -100,6 +100,16 @@ Three roots have distinct ownership:
 
 The package compiler sets LF output and disables source maps, declaration maps and inline sources. The admitted closure contains no `scripts/commands/**`, `scripts/cases/**`, source `.ts`, tests, CI/agent/Git state or developer tools. Generated `.d.ts` declarations are public types, not source implementation.
 
+The public compiler closure includes the native-import and contract-context adapters reached through the facade. They reuse qualified TIDAS and the exact CLI, persist only user-workspace stage artifacts, and add no public flat command or source-checkout requirement. Package installation and these local stages do not establish complete task or release acceptance.
+
+Indexed row preparation and local assessment include the existing curation and authoring library owners in that closure. `specs/prewrite-content-policy.json` is an explicit required asset; the packaged path must not fall back to an absent content policy. Native validation data issues remain available to curation. Public authoring output disables legacy source-runner commands while the developer producer retains its default command rendering.
+
+Finalization includes the reused library owner closure and the existing public canonical support reference catalog at `specs/canonical-support/flow-properties-unit-groups.json`. The catalog is an explicit allowlisted, descriptor-bound asset; it supplies reference choices and does not grant write permission or replace current remote verification. Queue, dry-run and verification calls use the qualified CLI with explicit environments. Developer command modules remain outside the compiled package.
+
+The package includes `foundry-semantic-input.schema.json` and exports its schema identifier and input types. Public semantic submission reuses the existing collector and exact CLI local patch owner. Selected bytes are captured without exposing a caller-selected runtime or an arbitrary executable, and only a successful local apply advances the indexed row version.
+
+`foundry-authorization-input.schema.json` and its public identifier/types describe explicit approval selection. The compiled closure reuses current identity, authorization registration and execution-capsule owners. No approval content, credentials or task artifacts enter the distributed package. Public command hosts may provide the same process-only authentication configuration as SDK hosts; it is not an ordinary CLI/task-file option.
+
 The repository manifest retains developer scripts. `build-foundry-package.ts` projects a separate exact public manifest into `package-stage/` containing identity, repository links, public access intent, bin/exports/files, Node engine, license, one production dependency and runtime layout. It omits `scripts`, `devDependencies`, `packageManager`, lint configuration and `private`. There are no install/prepare lifecycle hooks; installation cannot initialize a workspace, install Git hooks, authenticate or download a component. Repository hook setup is the explicit `pnpm dev:hooks` command.
 
 ## File and descriptor integrity
@@ -107,6 +117,8 @@ The repository manifest retains developer scripts. `build-foundry-package.ts` pr
 `package.json.files` is an explicit allowlist for the compiled closure, public schemas/profile documents and reviewed contracts. Profile documentation referenced by `specs/import-profiles.json` is included so a distributed profile has no dangling governed document. README and LICENSE are included. Private live evidence, `.env*`, session data, tasks, inputs, outputs, reports and `.foundry` are excluded.
 
 `package-dist/assets/foundry-package-descriptor.json` uses `tiangong-foundry.package-descriptor.v1`. It binds package/bin/API identity, exact CLI dependency, runtime layout v2, the four supported tuples, workspace read/write schema and public protocol set. Its sorted file inventory binds every other shipped payload by portable path, bytes and SHA-256. The descriptor excludes itself. `package.json` is also excluded from the byte inventory because package managers normalize its property order; the installed verifier instead compares its complete semantic object to the exact sanitized public shape and rejects every extra field, including lifecycle scripts.
+
+The public protocol set advertises each shipped external task input: task-start, semantic-input and authorization-input v1. The descriptor and its structural schema agree; including an input schema file in the archive alone does not declare support for that public protocol.
 
 Verification uses regular-file, `O_NOFOLLOW`, fd size/inode/mtime and SHA checks. Missing, extra, linked, renamed, traversing, oversized or changed payloads fail before a package-backed facade context is created. Every package-entry resolution performs this check even if an extra source-like file appears; such a file is itself an unexpected payload and cannot switch the resolver into developer mode. A nested `node_modules` may be dependency storage only when it is a real directory, never a symlink. Source and ordinary developer-emitted layouts remain readable as legacy layout v1 or repository layout v2 without treating a copied name-only manifest as a package.
 

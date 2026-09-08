@@ -48,7 +48,10 @@ export interface MigrationAdoptionSelection {
   readonly specFile: string;
 }
 export type MigrationTaskTemplate = Omit<FoundryTaskStartSpec, "schema" | "account_intent"> & {
-  readonly account_intent: { readonly project_ref: string; readonly user_id: string } | null;
+  readonly account_intent: Omit<
+    NonNullable<FoundryTaskStartSpec["account_intent"]>,
+    "session_reference"
+  > | null;
 };
 export function materializeMigrationTaskSpec(
   template: MigrationTaskTemplate,
@@ -65,7 +68,13 @@ export function migrationTaskTemplate(spec: FoundryTaskStartSpec): MigrationTask
   const { schema: _schema, account_intent: account, ...fields } = spec;
   return {
     ...fields,
-    account_intent: account ? { project_ref: account.project_ref, user_id: account.user_id } : null,
+    account_intent: account
+      ? {
+          project_ref: account.project_ref,
+          user_id: account.user_id,
+          ...(account.account_mode ? { account_mode: account.account_mode } : {}),
+        }
+      : null,
   };
 }
 export interface MigrationAdoptionRow {
@@ -576,6 +585,9 @@ export async function planFoundryMigrationAdoption(
             ? {
                 project_ref: spec.account_intent.project_ref,
                 user_id: spec.account_intent.user_id,
+                ...(spec.account_intent.account_mode
+                  ? { account_mode: spec.account_intent.account_mode }
+                  : {}),
                 session_reference: null,
               }
             : null,

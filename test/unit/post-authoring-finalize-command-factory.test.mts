@@ -10,10 +10,11 @@ import { fileURLToPath } from "node:url";
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
 const typedPath = path.join(repoRoot, "scripts/commands/post-authoring-finalize.ts");
+const ownerPath = path.join(repoRoot, "scripts/lib/finalize-owners/post-authoring.ts");
 const legacyPath = path.join(repoRoot, "scripts/commands/post-authoring-finalize.mjs");
 
 function implementationSource(): string {
-  return fs.readFileSync(fs.existsSync(typedPath) ? typedPath : legacyPath, "utf8");
+  return fs.readFileSync(ownerPath, "utf8");
 }
 
 function readRepoFile(relativePath: string): string {
@@ -110,7 +111,11 @@ test("source/contact support finalize waits for parent cleanup and owns its outp
 test("post-authoring finalize owner exists only as zero-escape native TypeScript", () => {
   assert.equal(fs.existsSync(typedPath), true);
   assert.equal(fs.existsSync(legacyPath), false);
-  const source = fs.readFileSync(typedPath, "utf8");
+  assert.equal(
+    fs.readFileSync(typedPath, "utf8").trim(),
+    'export { createPostAuthoringFinalizeCommands } from "../lib/finalize-owners/post-authoring.ts";',
+  );
+  const source = fs.readFileSync(ownerPath, "utf8");
   assert.doesNotMatch(source, /\bas\s+any\b|:\s*any\b|\bany\s*\[\]|<\s*any\b|,\s*any\s*>/u);
   assert.doesNotMatch(source, /@ts-(?:no)?check|@ts-ignore/u);
   assert.deepEqual(

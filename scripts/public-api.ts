@@ -24,6 +24,21 @@ export function createFoundryWorkspaceAccess(input: {
 
 export type FoundryPackageFacadeOptions = Omit<FoundryFacadeOptions, "moduleUrl">;
 export type { FoundryFacadeRuntimeSelection } from "./foundry-facade.ts";
+export {
+  FOUNDRY_AUTHORIZATION_INPUT_SCHEMA,
+  type FoundryAuthorizationInput,
+} from "./lib/foundry-authorization-input.ts";
+export type {
+  FoundryAuthentication,
+  FoundryPublicOAuthConfiguration,
+} from "./lib/foundry-runtime-identity.ts";
+export {
+  FOUNDRY_SEMANTIC_INPUT_SCHEMA,
+  type FoundrySemanticInput,
+  type SemanticPatchInput,
+  type SemanticDecisionInput,
+  type SemanticSubmission,
+} from "./lib/foundry-semantic-input.ts";
 export type { FoundryWorkspaceAccess } from "./lib/foundry-runtime-context.ts";
 export {
   FOUNDRY_RUNTIME_SELECTION_SCHEMA,

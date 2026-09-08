@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, "..", "..");
 const typedPath = path.join(repoRoot, "scripts/commands/identity-preflight-run.ts");
+const ownerPath = path.join(repoRoot, "scripts/lib/decision-owners/identity-preflight.ts");
 const legacyPath = path.join(repoRoot, "scripts/commands/identity-preflight-run.mjs");
 
 function readRepoFile(relativePath: string): string {
@@ -56,7 +57,7 @@ test("identity-preflight command help bytes remain exact for all four exports", 
 });
 
 test("identity-preflight runner retains receipt, binding, cache, disk, and fail-closed codes", () => {
-  const source = fs.readFileSync(fs.existsSync(typedPath) ? typedPath : legacyPath, "utf8");
+  const source = fs.readFileSync(ownerPath, "utf8");
   for (const contract of [
     "parseFreshIntentBoundAuthReceipt",
     "validateBoundExecutionManifest",
@@ -84,7 +85,11 @@ test("identity-preflight runner retains receipt, binding, cache, disk, and fail-
 test("identity-preflight command owner exists only as zero-escape native TypeScript", () => {
   assert.equal(fs.existsSync(typedPath), true);
   assert.equal(fs.existsSync(legacyPath), false);
-  const source = fs.readFileSync(typedPath, "utf8");
+  assert.equal(
+    fs.readFileSync(typedPath, "utf8").trim(),
+    'export { createIdentityPreflightRunCommands } from "../lib/decision-owners/identity-preflight.ts";',
+  );
+  const source = fs.readFileSync(ownerPath, "utf8");
   assert.doesNotMatch(source, /\bas\s+any\b|:\s*any\b|\bany\s*\[\]|<\s*any\b|,\s*any\s*>/u);
   assert.doesNotMatch(source, /@ts-(?:no)?check|@ts-ignore/u);
   assert.deepEqual(

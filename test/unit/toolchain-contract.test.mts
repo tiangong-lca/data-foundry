@@ -371,9 +371,13 @@ test("golden comparison is portable and cannot collapse into HEAD self-compariso
   const source = readText("scripts/foundry-golden-diff.ts");
   assert.match(source, /merge-base/u);
   assert.match(source, /FOUNDRY_GOLDEN_BASE/u);
-  assert.match(source, /const args = \["install", "--frozen-lockfile", "--ignore-scripts"\]/u);
-  assert.match(source, /run\("pnpm", args/u);
-  assert.match(source, /commandProcessor, \["\/d", "\/s", "\/c"/u);
+  assert.match(
+    source,
+    /const args = \["install", "--frozen-lockfile", "--ignore-scripts", "--verify-store-integrity"\]/u,
+  );
+  assert.match(source, /resolvePackageManagerCommand\("pnpm", args\)/u);
+  assert.match(source, /run\(invocation\.executable, invocation\.argv/u);
+  assert.match(source, /env: environment/u);
   assert.doesNotMatch(source, /function linkInstalledDependencies/u);
   assert.doesNotMatch(
     source,

@@ -157,9 +157,9 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/unit/zero-javascript-ratchet.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: d2ec3d1b1f749a00266e0809870e821af0d8ca3f
-lastReviewedNote: "Reviewed for Foundry #116: executable zero-JavaScript ratchet remains required and tested; Docpact records document reviews without forcing test-comment edits into version-only releases. Runtime and release isolation are unchanged."
+lastReviewedAt: 2026-09-08
+lastReviewedCommit: 06154e4b50eae91873fa040fc71b4801ea3e6e2d
+lastReviewedNote: "Reviewed for PR120 package review: the descriptor and its structural schema now advertise the already implemented and shipped authorization-input v1 alongside task-start and semantic-input. A cross-contract regression compares all three shipped input schemas with the generated declaration. Runtime authorization, package ownership, environment and execution semantics are unchanged."
 ---
 
 # TianGong LCA Data Foundry
@@ -194,6 +194,8 @@ Foundry is intentionally thin. It owns task routing, local workspaces, import pr
 Identity-preflight candidate requests use the current Hybrid Search contract: one `lexical_weight` for the database `extracted_md` branch and one `semantic_weight` for `embedding_ft`.
 
 Remote verification is visibility-bound. A `missing_dataset` reference that is foreign or hidden by RLS remains a blocker and cannot be converted to passed from a trusted-key list or another account's observation. The only retained accepted-difference mechanism is exact root readback whose sole normalized difference is `tiangongfoundry:importTraceSummary.traceHash`; production-test account cases accept no difference at all.
+
+The packaged task facade now continues sealed approvals through registered owner execution and independent readback. It uses the published CLI batch engine, persists a consumed marker before dispatch, and resumes uncertain attempts only through the original readback request. Indexed execution evidence is verified against producer receipts and current file hashes. Reference-only tasks independently verify the semantic decisions’ canonical targets before completion, with zero writes. See [public execution and recovery](docs/public-runtime-contract.md#owner-execution-and-recovery).
 
 ## OAuth account execution
 
@@ -524,3 +526,5 @@ Installed shared runtime skills such as `.agents/skills/tiangong-kb-sci-search/`
 - `.foundry/`: ignored runtime state and generated workspaces.
 
 Remote writes are never ungated. A task must pass schema, QA, curation, cleanup, dry-run, mutation-manifest/reference-closure, commit handoff, and post-write verification gates before any database mutation. When deterministic source/contact rewrites create a writable shared contact or source dependency, Foundry may prepare a separate support finalize/handoff artifact, but dependent process/flow/lifecyclemodel scopes remain blocked until that support row is committed through the published CLI and verified. When the task write policy permits automated batch commit, ready scopes may commit without per-row human approval; human input is reserved for policy changes, exceptional waivers, and support gaps not already covered by a frozen profile's explicit account-local policy.
+
+Tasks may set `account_intent.account_mode` to `production-test` for strict payload verification. Ordinary tasks retain the narrowly proven import-trace `traceHash` normalization path. See [public verification policy](docs/public-runtime-contract.md#account-verification-mode).

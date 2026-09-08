@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import type { SpawnSyncReturns } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { BinaryLike } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -452,6 +452,9 @@ function payloadForRow(row: JsonRecord): JsonRecord {
     "process",
     "source",
     "unitgroup",
+    "json_ordered",
+    "jsonOrdered",
+    "json",
   ]) {
     const payload = record(row[key]);
     if (payload) return payload;
@@ -546,7 +549,9 @@ export function runTidasRowsValidation({
   if (!options.outDir) throw new Error("--out-dir is required.");
   const rows = readRows(rowsFile);
   fs.mkdirSync(path.dirname(outDir), { recursive: true });
-  const staging = fs.mkdtempSync(path.join(path.dirname(outDir), ".tidas-validate-stage-"));
+  const staging = path.join(path.dirname(outDir), `.tidas-validate-stage-${randomUUID()}`);
+  // Keep staging beside the output for atomic rename; Windows mkdtemp rejects deep prefixes.
+  fs.mkdirSync(staging, { mode: 0o700 });
   try {
     const inputRoot = path.join(staging, "input");
     const manifest: Array<{
@@ -600,7 +605,7 @@ export function runTidasRowsValidation({
       options,
       environment,
     });
-    if (operation.exit_code !== 0) return operation;
+    if (operation.exit_code !== 0 && operation.exit_code !== 2) return operation;
     const finalEvent = record(operation.report?.summary?.validation_batch_final);
     if (
       !finalEvent ||
@@ -622,8 +627,30 @@ export function runTidasRowsValidation({
     for (const event of events) {
       if (event.type !== "issue") continue;
       const ordinal = Number(event.document_ordinal);
+      if (!Number.isSafeInteger(ordinal) || ordinal < 0 || ordinal >= rows.length)
+        throw new Error("tidas_validation_issue_ordinal_invalid");
       if (!issuesByOrdinal.has(ordinal)) issuesByOrdinal.set(ordinal, []);
-      issuesByOrdinal.get(ordinal)!.push(event.issue);
+      const nativeIssue = record(event.issue);
+      if (!nativeIssue) throw new Error("tidas_validation_issue_invalid");
+      const location = typeof nativeIssue.location === "string" ? nativeIssue.location : null;
+      const payload = payloadForRow(rows[ordinal]);
+      const wrapper =
+        payload === rows[ordinal]
+          ? null
+          : Object.entries(rows[ordinal]).find(([, value]) => value === payload)?.[0];
+      const pointer =
+        location === null
+          ? null
+          : location === "" || location.startsWith("/")
+            ? location
+            : `/${location}`;
+      issuesByOrdinal.get(ordinal)!.push({
+        ...nativeIssue,
+        code: nativeIssue.code ?? nativeIssue.issue_code,
+        path:
+          nativeIssue.path ??
+          (pointer === null ? null : `${wrapper ? `/${wrapper}` : ""}${pointer}`),
+      });
     }
     const invalidOrdinals = new Set(
       events

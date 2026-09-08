@@ -39,6 +39,21 @@ test("facade task, result, request and migration schemas compile and reject unsa
   const validateTask = ajv.compile(taskSchema);
   assert.equal(validateTask(task), true, JSON.stringify(validateTask.errors));
   assert.equal(validateTask({ ...task, unexpected: true }), false);
+  const account = {
+    project_ref: "aaaaaaaaaaaaaaaaaaaa",
+    user_id: "11111111-1111-4111-8111-111111111111",
+    session_reference: null,
+    account_mode: "production-test",
+  };
+  assert.equal(
+    validateTask({ ...task, account_intent: account }),
+    true,
+    JSON.stringify(validateTask.errors),
+  );
+  assert.equal(
+    validateTask({ ...task, account_intent: { ...account, account_mode: "unrestricted" } }),
+    false,
+  );
 
   const validateResult = ajv.compile(read("foundry-operation-result.schema.json"));
   const result = createFoundryOperationResult({
