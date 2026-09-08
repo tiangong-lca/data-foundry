@@ -151,9 +151,9 @@ checkPaths:
   - test/unit/foundry-runtime-environment.test.mts
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
-lastReviewedAt: 2026-09-08
-lastReviewedCommit: 279fd69321efd22fdfcd8e424586ce5d59481309
-lastReviewedNote: "Reviewed for Foundry #125: explicit cancellation/result guards prevent skipped-lane propagation from suppressing required aggregate/bootstrap jobs. A terminal CI gate rejects any missing selected stage, and publication continuations require successful prerequisites without overriding cancellation. Tests/runtime/authorization scopes are unchanged."
+lastReviewedAt: 2026-09-09
+lastReviewedCommit: 5ece0abb2da26c958bd02a7e88487fe579cda877
+lastReviewedNote: "Reviewed for Foundry #114: prepare the exact0.1.1 three-field version projection over fully qualified optimized source125/main5ece0abb. Only permitted version/review metadata changes; complete final release qualification and public artifact/consumer/RC/integration requirements remain mandatory."
 ---
 
 # Architecture
