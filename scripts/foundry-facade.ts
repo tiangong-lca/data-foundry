@@ -57,7 +57,7 @@ import {
 } from "./lib/foundry-runtime-selection.ts";
 import type { TrustedRuntimeManifest } from "@tiangong-lca/cli/runtime";
 import { datasetTypePlural } from "./lib/import-curation/internal/dataset-types.ts";
-import { currentWorkflowState } from "./lib/foundry-workflow-state.ts";
+import { currentWorkflowState, workflowObject } from "./lib/foundry-workflow-state.ts";
 import {
   completedOwnerScopes,
   prepareFoundryOwnerExecution,
@@ -141,7 +141,7 @@ function human(code: string, instructions: string): FoundryOperationNextAction {
 function resumeCommand(
   context: ReturnType<typeof createFoundryRuntimeContext>,
   record: FoundryFacadeTaskRecord,
-  ownerStage?: "execution" | "readback" | "reference_verification",
+  ownerStage?: "execution" | "readback" | "reference_verification" | "approval_continuation",
 ): FoundryOperationNextAction {
   const action = {
     kind: "command",
@@ -167,7 +167,9 @@ function resumeCommand(
           ? "Read back the consumed owner scope using its retained request."
           : ownerStage === "reference_verification"
             ? "Verify the canonical references selected by the current semantic decisions."
-            : "Resume the content-bound deterministic local preparation for this task revision.",
+            : ownerStage === "approval_continuation"
+              ? "Continue sealing the current scope under its existing registered approval."
+              : "Resume the content-bound deterministic local preparation for this task revision.",
   } as const;
   return Object.freeze({
     ...action,
@@ -658,6 +660,15 @@ function taskProjection(
     });
   }
   if (workflow.preparedApproval) {
+    const canContinue =
+      Array.isArray(workflow.finalization?.value.sets) &&
+      workflow.finalization.value.sets
+        .map(workflowObject)
+        .some(
+          (scope) =>
+            scope.type === workflow.preparedApproval!.value.dataset_type &&
+            scope.status === "ready_for_remote_write",
+        );
     return createFoundryOperationResult({
       operation,
       status: "needs_input",
@@ -671,12 +682,14 @@ function taskProjection(
           scope: record.task_id,
         },
       ],
-      nextActions: [
-        human(
-          "resume_approval_continuation",
-          `Retained preparation approval: ${workflow.preparedApproval.file}.`,
-        ),
-      ],
+      nextActions: canContinue
+        ? [resumeCommand(context, record, "approval_continuation")]
+        : [
+            human(
+              "resume_approval_continuation",
+              `Retained preparation approval: ${workflow.preparedApproval.file}.`,
+            ),
+          ],
       runtimeIdentity: identity,
       permissions: noPermission(),
     });

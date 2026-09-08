@@ -93,8 +93,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 3da2201c023a02053fd7325422b5e53fe9c84826
-lastReviewedNote: "Reviewed for Foundry #118 explicit ordinary/production-test intent through fingerprints, immutable account records, migration templates and sealed execution; qualified traceHash-only acceptance binds original/fresh raw hashes and preserves all verification evidence. Production-test rejects differences. Full release/live acceptance remains open."
+lastReviewedCommit: c2913334130a666e9fbe3c18db286d24df355c1b
+lastReviewedNote: "Reviewed for Foundry #118 prepared support authorization: exact lineage-based grant derivation after cleanup, permission-only eligibility, bound-input finalization, preserved completed scope generations and structured sealing continuation. Missing actions and unrelated blockers remain blocked; live/F1 acceptance remains open."
 ---
 
 # Capability Ownership Policy

@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 3da2201c023a02053fd7325422b5e53fe9c84826
-lastReviewedNote: "Reviewed for Foundry #118 explicit ordinary/production-test intent through fingerprints, immutable account records, migration templates and sealed execution; qualified traceHash-only acceptance binds original/fresh raw hashes and preserves all verification evidence. Production-test rejects differences. Full release/live acceptance remains open."
+lastReviewedCommit: c2913334130a666e9fbe3c18db286d24df355c1b
+lastReviewedNote: "Reviewed for Foundry #118 prepared support authorization: exact lineage-based grant derivation after cleanup, permission-only eligibility, bound-input finalization, preserved completed scope generations and structured sealing continuation. Missing actions and unrelated blockers remain blocked; live/F1 acceptance remains open."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -180,6 +180,12 @@ Every facade revision also rechecks all retained predecessors in its request cha
 The public facade accepts CLI/TIDAS expectations only through its process-local host interface. Ordinary argv, task specs, `.env` and ambient `TIDAS_BIN`/expectation variables cannot select trust anchors. Without a host selection, doctor, start, status and local resume work and report `qualification.required`; child-required work must return the runtime qualification action. The managed bin now obtains this selection from the CLI IPC context and its verified component metadata. The final immutable production product manifest remains a W08 deliverable. The current exact CLI 0.1.11 constraint remains explicit rather than silently accepting a future version.
 
 `workspace migrate --dry-run` recursively inventories only regular files/directories, rejects links and returns `tiangong-foundry.workspace-migration-plan.v1` as an inline content-bound artifact. It classifies control, local-preparation, terminal-success, attempted/unknown, authorization/account and unclassified paths. The public envelope is bounded to 10,000 entries and 64 directory levels. The total hashed inventory is bounded to 256 MiB. Files larger than 64 MiB and recognized credential/session files retain path/size/classification facts with `sha256=null`; their contents are not read by this inventory. The tree digest binds this observational inventory, not an atomic filesystem snapshot, so W10 must re-read and verify every selected source immediately before apply. It writes nothing. W10 owns application, rollback and detailed old-schema mapping.
+
+## Prepared support authorization
+
+Cleanup may change the byte representation of a Unit Group or Flow Property before its input-bound permission is reapplied. When the selected scope is blocked only by `reference_only_support_type_write_blocked` and the retained approval includes both its exact write action and `canonical_support_local_mint`, resume may derive the grant against the already indexed final-row lineage. It then re-finalizes that scope using the newly bound input and original approval origin. Actions, evidence, account/profile and expiry remain unchanged. Schema, content, reference and other blockers cannot enter this path.
+
+Finalization records which authorization hash it used; a still-blocked result under that same grant is retained instead of repeatedly running the stage. Completed scopes preserve their original reports and final-row generations during both ordinary dependency finalization and later prepared-approval continuation. A ready scope with an already activated derived grant returns a bound continuation command to finish sealing, without requesting another approval.
 
 ## Account verification mode
 

@@ -179,7 +179,11 @@ export async function finalizeFoundryWorkflow(
     const scope = [...rows.value.sets].sort(
       (a, b) => order.indexOf(a.type) - order.indexOf(b.type),
     );
-    for (const set of scope) {
+    for (const originalSet of scope) {
+      const set =
+        approval?.datasetType === originalSet.type
+          ? { ...originalSet, file: approval.inputFile }
+          : originalSet;
       const completed = executionProgress?.scopes.get(set.type);
       if (completed) {
         sets.push(completed);
@@ -369,6 +373,7 @@ export async function finalizeFoundryWorkflow(
           assessment_report: state.assessment!.file,
           owner_base: context.assetRoot,
           approval_source_sha256: approval?.sourceSha256 ?? null,
+          approval_authorization_sha256: approval?.authorizationSha256 ?? null,
           execution_progress_sha256: executionProgress?.sha256 ?? null,
           sets,
           blockers,

@@ -41,8 +41,8 @@ checkPaths:
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 3da2201c023a02053fd7325422b5e53fe9c84826
-lastReviewedNote: "Reviewed for Foundry #118 explicit ordinary/production-test intent through fingerprints, immutable account records, migration templates and sealed execution; qualified traceHash-only acceptance binds original/fresh raw hashes and preserves all verification evidence. Production-test rejects differences. Full release/live acceptance remains open."
+lastReviewedCommit: c2913334130a666e9fbe3c18db286d24df355c1b
+lastReviewedNote: "Reviewed for Foundry #118 prepared support authorization: exact lineage-based grant derivation after cleanup, permission-only eligibility, bound-input finalization, preserved completed scope generations and structured sealing continuation. Missing actions and unrelated blockers remain blocked; live/F1 acceptance remains open."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
@@ -130,3 +130,5 @@ An installed package may retain the component cache that contains it only when i
 Managed facade construction passes the independently selected component-cache root through the internal context options. The context rejects workspace overlap before reading its marker and privately retains that root for subsequent assertions. Overridden migration destinations inherit the same exclusion. `foundry-runtime-cache.ts` owns this shared canonical-path boundary; it does not create a cache or grant installed-package ownership.
 
 The package-owned managed initializer receives the public CLI IPC context before public operations, verifies the installed entry and component metadata, and supplies the existing CLI/TIDAS qualification, workspace-access and runtime-target interfaces. It reads no `.env` or task-selected trust anchor. The metadata schema and exact admission sequence are defined by `package-distribution-contract.md`; native qualification and task/identity authorization retain their existing owners.
+
+Prepared-support finalization explicitly selects the approved input file for its dataset type. Other completed scope artifacts are retained through the existing verified-progress map; the original row manifest and approval origin remain lineage anchors. `approval_authorization_sha256` distinguishes a new derived-input finalization from an unchanged blocked result.

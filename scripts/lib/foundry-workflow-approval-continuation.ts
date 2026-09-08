@@ -27,6 +27,7 @@ import { readTaskBytes } from "./foundry-task-io.ts";
 import { deriveTaskAuthorizationGrant, validateTaskAuthorization } from "./task-authorization.ts";
 import { sha256Json } from "./identity-preflight-proof.ts";
 import type { ArtifactEntry } from "./foundry-task-types.ts";
+import { completedOwnerScopes } from "./foundry-owner-execution-store.ts";
 
 const digest = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
 function invalid(message: string): never {
@@ -53,22 +54,61 @@ export async function continueFoundryPreparedApproval(
     invalid("Prepared approval input is invalid.");
   const inputFile = original.path,
     datasetType = approval.value.dataset_type;
+  const progress = completedOwnerScopes(context, entries);
+  const executionProgress = { sha256: progress.progressSha256, scopes: progress.completed };
   readFoundryInput(context, inputFile);
   if (finalization.value.approval_source_sha256 !== approval.entry.sha256) {
     if (state.authorization?.entry.sha256 !== approval.entry.sha256)
       invalid("Preparation approval is no longer active.");
-    return finalizeFoundryWorkflow(context, qualified, entries, authentication, {
-      sourceSha256: approval.entry.sha256,
-      authorizationSha256: String(approval.value.authorization_sha256),
-      datasetType,
-      inputFile,
-    });
+    return finalizeFoundryWorkflow(
+      context,
+      qualified,
+      entries,
+      authentication,
+      {
+        sourceSha256: approval.entry.sha256,
+        authorizationSha256: String(approval.value.authorization_sha256),
+        datasetType,
+        inputFile,
+      },
+      executionProgress,
+    );
   }
   const scope = (finalization.value.sets as unknown[])
     .map(workflowObject)
     .find((item) => item.type === datasetType);
-  if (!scope || scope.status !== "ready_for_remote_write" || typeof scope.final_rows !== "string")
-    return finalization.value;
+  if (!scope || typeof scope.final_rows !== "string") return finalization.value;
+  const ready = scope.status === "ready_for_remote_write";
+  if (!ready) {
+    // Cleanup may change input bytes before support policy is reapplied. Only
+    // this permission blocker may advance; content and reference blockers stay pending.
+    const action =
+      datasetType === "unitgroup"
+        ? "unitgroup_write"
+        : datasetType === "flowproperty"
+          ? "flowproperty_write"
+          : null;
+    const actions = approval.value.allowed_actions;
+    if (
+      !action ||
+      !Array.isArray(actions) ||
+      !actions.includes(action) ||
+      !actions.includes("canonical_support_local_mint") ||
+      typeof scope.report !== "string"
+    )
+      return finalization.value;
+    const report = workflowObject(
+      JSON.parse(readFoundryInput(context, scope.report).toString("utf8")),
+    );
+    if (
+      !Array.isArray(report.blockers) ||
+      !report.blockers.length ||
+      report.blockers.some(
+        (raw) => workflowObject(raw).code !== "reference_only_support_type_write_blocked",
+      )
+    )
+      return finalization.value;
+  }
   const finalRows = scope.final_rows;
   readFoundryInput(context, finalRows);
   const identity = verifyFoundryRuntimeIdentity(context, authentication, process.env, qualified);
@@ -122,6 +162,24 @@ export async function continueFoundryPreparedApproval(
   if (expectedSha !== authorization.authorization_sha256)
     invalid("Active grant is not the approved scope's exact derivation.");
   await assertFoundryTaskInputLineage(context, inputFile, finalRows);
+  if (!ready) {
+    // An unchanged bound input cannot make progress by repeating finalization.
+    if (finalization.value.approval_authorization_sha256 === authorization.authorization_sha256)
+      return finalization.value;
+    return finalizeFoundryWorkflow(
+      context,
+      qualified,
+      entries,
+      authentication,
+      {
+        sourceSha256: approval.entry.sha256,
+        authorizationSha256: authorization.authorization_sha256,
+        datasetType,
+        inputFile: finalRows,
+      },
+      executionProgress,
+    );
+  }
   const registration = {
     authorization_sha256: authorization.authorization_sha256,
     pointer_sha256: digest(readTaskBytes(context, "authorization.json")),

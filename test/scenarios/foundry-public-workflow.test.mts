@@ -17,6 +17,11 @@ import { testAuthIdentityReceipt } from "../fixtures/auth-identity-receipt.ts";
 import { canonicalPayloadSha256 } from "../../scripts/lib/post-write-root-proof.ts";
 import { readRows } from "../../scripts/lib/import-curation/internal/runtime-io.ts";
 import { unwrapDatasetPayload } from "../../scripts/lib/import-curation/internal/dataset-payload.ts";
+import {
+  supportUnitGroupRow,
+  supportFlowPropertyRow,
+  supportFixtureReferences,
+} from "../fixtures/support-row-builders.ts";
 
 const digestFile = (file: string) =>
   createHash("sha256").update(fs.readFileSync(file)).digest("hex");
@@ -1611,7 +1616,9 @@ for (const [identityDecision, approvalKind, trace, mixed, explicitMode, remoteDi
   });
 }
 
-test("public dependent source scope continues after contact write and readback", async (t) => {
+async function verifyDependentScopes(t: TestContext, support: boolean) {
+  const firstType = support ? "unitgroup" : "contact",
+    secondType = support ? "flowproperty" : "source";
   const { root, workspace, facade } = workflowFixture(t);
   const contactId = "66666666-6666-4666-8666-666666666666",
     sourceId = "55555555-5555-4555-8555-555555555555";
@@ -1646,7 +1653,14 @@ test("public dependent source scope continues after contact write and readback",
   });
   const input = path.join(root, "dependent-seed.json"),
     specFile = path.join(root, "dependent-request.json");
-  fs.writeFileSync(input, JSON.stringify({ rows: [contact, source] }));
+  fs.writeFileSync(
+    input,
+    JSON.stringify({
+      rows: support
+        ? [supportUnitGroupRow(contactId), supportFlowPropertyRow(sourceId, contactId)]
+        : [contact, source],
+    }),
+  );
   fs.writeFileSync(
     specFile,
     JSON.stringify({
@@ -1655,16 +1669,16 @@ test("public dependent source scope continues after contact write and readback",
       actor_id: "scope-actor",
       lane: "source-evidence-dataset-development",
       profile_id: "generic",
-      target_entities: ["contact", "source"],
+      target_entities: [firstType, secondType],
       sources: [{ path: input }],
       seed: { path: input },
-      account_intent: account,
+      account_intent: { ...account, ...(support ? { account_mode: "production-test" } : {}) },
       preparation: null,
     }),
   );
   const writes: string[] = [],
     readbacks: string[] = [],
-    remote = new Set<string>();
+    remote = new Set<string>(support ? supportFixtureReferences.map((item) => item.id) : []);
   const originalSpawn = childProcess.spawnSync;
   let childFailure: unknown;
   t.mock.method(childProcess, "spawnSync", (...args: Parameters<typeof childProcess.spawnSync>) => {
@@ -1676,7 +1690,10 @@ test("public dependent source scope continues after contact write and readback",
           status: 0,
           signal: null,
           stdout: JSON.stringify(
-            testAuthIdentityReceipt({ projectRef: account.project_ref, userId: account.user_id }),
+            testAuthIdentityReceipt({
+              projectRef: account.project_ref,
+              userId: account.user_id,
+            }),
           ),
           stderr: "",
           pid: 1,
@@ -1709,9 +1726,14 @@ test("public dependent source scope continues after contact write and readback",
         const commit = argv.includes("--commit");
         assert.ok(commit || argv.includes("--dry-run"));
         if (commit) {
-          if (type === "source")
+          if (support)
             assert.ok(
-              remote.has(contactId) && readbacks.includes("contact"),
+              argv.includes("--allow-account-local-support"),
+              "support dispatch retains its explicit owner flag",
+            );
+          if (type === secondType)
+            assert.ok(
+              remote.has(contactId) && readbacks.includes(firstType),
               "contact must be independently read back before dependent source dispatch",
             );
           writes.push(type);
@@ -1740,16 +1762,29 @@ test("public dependent source scope continues after contact write and readback",
           commit,
           input_path: file,
           counts: { selected: rows.length, executed: commit ? rows.length : 0, failed: 0 },
-          files: { summary_json: reportFile, progress_jsonl: progress, failures_jsonl: failures },
+          files: {
+            summary_json: reportFile,
+            progress_jsonl: progress,
+            failures_jsonl: failures,
+          },
         };
       } else {
         const compare = argv.includes("--compare-root-payload");
         if (compare) readbacks.push(type);
         const checks: Array<Record<string, unknown>> = [];
-        if (type === "source")
+        if (support)
+          checks.push(
+            ...supportFixtureReferences.map((ref) => ({
+              ...ref,
+              role: "reference",
+              status: "ok",
+              remote_state_code: 100,
+            })),
+          );
+        if (type === secondType)
           checks.push({
             role: "reference",
-            table: "contacts",
+            table: bundleRowTypes[firstType].plural,
             id: contactId,
             version: "00.00.001",
             status: remote.has(contactId) ? "ok" : "missing_dataset",
@@ -1834,19 +1869,28 @@ test("public dependent source scope continues after contact write and readback",
     return { artifact, report };
   };
   let finalized = loadFinalize(current);
-  assert.equal(
-    finalized.report.sets.find((item) => item.type === "contact")?.status,
-    "ready_for_remote_write",
-    JSON.stringify(finalized.report),
-  );
+  if (!support)
+    assert.equal(
+      finalized.report.sets.find((item) => item.type === firstType)?.status,
+      "ready_for_remote_write",
+      JSON.stringify(finalized.report),
+    );
+  else {
+    assert.notEqual(
+      finalized.report.sets.find((item) => item.type === firstType)?.status,
+      "ready_for_remote_write",
+    );
+    assert.deepEqual(writes, []);
+  }
   assert.notEqual(
-    finalized.report.sets.find((item) => item.type === "source")?.status,
+    finalized.report.sets.find((item) => item.type === secondType)?.status,
     "ready_for_remote_write",
   );
-  const contactRows = finalized.report.sets.find((item) => item.type === "contact")!.final_rows;
-  const approve = async (type: "contact" | "source") => {
+  let contactRows = finalized.report.sets.find((item) => item.type === firstType)!.final_rows;
+  const approve = async (type: typeof firstType | typeof secondType) => {
     const scope = finalized.report.sets.find((item) => item.type === type)!;
-    const selected = scope.authorization_inputs.find((item) => item.input_kind === "final_rows")!;
+    const inputKind = support ? "current_rows" : "final_rows";
+    const selected = scope.authorization_inputs.find((item) => item.input_kind === inputKind)!;
     const evidenceFile = path.join(root, `${type}-evidence.txt`),
       grantFile = path.join(root, `${type}-grant.json`),
       descriptor = path.join(root, `${type}-approval.json`);
@@ -1862,7 +1906,7 @@ test("public dependent source scope continues after contact write and readback",
         issued_at_utc: new Date(Date.now() - 1000).toISOString(),
         expires_at_utc: new Date(Date.now() + 3600000).toISOString(),
         remote_state_code: 0,
-        allowed_actions: [],
+        allowed_actions: support ? ["canonical_support_local_mint", `${type}_write`].sort() : [],
         qa_waivers: [],
         evidence: [
           {
@@ -1889,7 +1933,7 @@ test("public dependent source scope continues after contact write and readback",
         actor_id: invocation.actorId,
         finalization_sha256: finalized.artifact.sha256,
         dataset_type: type,
-        input_kind: "final_rows",
+        input_kind: inputKind,
         input_sha256: selected.sha256,
         expected_previous_sha256: fs.existsSync(pointer) ? digestFile(pointer) : null,
         grant: { file: grantFile, sha256: digestFile(grantFile) },
@@ -1903,34 +1947,125 @@ test("public dependent source scope continues after contact write and readback",
         ],
       }),
     );
+    if (support && type === firstType) {
+      const originalGrant = JSON.parse(fs.readFileSync(grantFile, "utf8")) as Record<
+        string,
+        unknown
+      >;
+      const originalDescriptor = JSON.parse(fs.readFileSync(descriptor, "utf8")) as Record<
+        string,
+        unknown
+      >;
+      const missingGrant = path.join(root, "missing-mint-grant.json"),
+        missingDescriptor = path.join(root, "missing-mint-approval.json");
+      fs.writeFileSync(
+        missingGrant,
+        JSON.stringify({ ...originalGrant, allowed_actions: [`${type}_write`] }),
+      );
+      fs.writeFileSync(
+        missingDescriptor,
+        JSON.stringify({
+          ...originalDescriptor,
+          grant: { file: missingGrant, sha256: digestFile(missingGrant) },
+        }),
+      );
+      await facade.resume({ ...invocation, authorizationInputFile: missingDescriptor });
+      const blocked = await facade.resume(invocation);
+      const repeated = await facade.resume(invocation);
+      assert.deepEqual(
+        repeated.artifacts,
+        blocked.artifacts,
+        "incomplete support permission cannot trigger derived approval or repeated reads",
+      );
+      assert.deepEqual(writes, []);
+      assert.ok(!repeated.artifacts.some((item) => item.role === "owner-execution-request.json"));
+      finalized = loadFinalize(blocked);
+      fs.writeFileSync(
+        descriptor,
+        JSON.stringify({
+          ...originalDescriptor,
+          finalization_sha256: finalized.artifact.sha256,
+          expected_previous_sha256: digestFile(pointer),
+        }),
+      );
+    }
     const result = await facade.resume({ ...invocation, authorizationInputFile: descriptor });
     assert.equal(result.permissions.state, "granted", JSON.stringify(result));
+    if (support) {
+      await facade.resume(invocation);
+      const rebound = await facade.resume(invocation);
+      assert.equal(
+        loadFinalize(rebound).report.sets.find((item) => item.type === type)?.status,
+        "ready_for_remote_write",
+        JSON.stringify(loadFinalize(rebound).report),
+      );
+      assert.equal(
+        rebound.next_actions[0]?.kind,
+        "command",
+        "the retained derived approval needs continuation, not another user approval",
+      );
+      const sealed = await facade.resume(invocation);
+      assert.equal(
+        sealed.blockers[0]?.code,
+        "authorized_execution_pending",
+        JSON.stringify(loadFinalize(sealed).report),
+      );
+      const scopeRows = loadFinalize(sealed).report.sets.find(
+        (item) => item.type === firstType,
+      )!.final_rows;
+      if (type === firstType) contactRows = scopeRows;
+      else
+        assert.equal(
+          scopeRows,
+          contactRows,
+          "new scope approval preserves an already completed scope generation",
+        );
+    }
     await facade.resume(invocation);
     return facade.resume(invocation);
   };
-  current = await approve("contact");
-  assert.deepEqual(writes, ["contact"], JSON.stringify(current));
+  current = await approve(firstType);
+  assert.deepEqual(writes, [firstType], JSON.stringify(current));
   assert.notEqual(current.status, "completed");
   current = await facade.resume(invocation);
   finalized = loadFinalize(current);
   assert.equal(
-    finalized.report.sets.find((item) => item.type === "contact")?.final_rows,
+    finalized.report.sets.find((item) => item.type === firstType)?.final_rows,
     contactRows,
     "completed scope retains its exact generation",
   );
-  assert.equal(
-    finalized.report.sets.find((item) => item.type === "source")?.status,
-    "ready_for_remote_write",
-    JSON.stringify(finalized.report),
-  );
-  current = await approve("source");
+  if (!support)
+    assert.equal(
+      finalized.report.sets.find((item) => item.type === secondType)?.status,
+      "ready_for_remote_write",
+      JSON.stringify(finalized.report),
+    );
+  current = await approve(secondType);
   if (childFailure) throw childFailure;
-  assert.deepEqual(writes, ["contact", "source"], JSON.stringify(current));
-  assert.deepEqual(readbacks, ["contact", "source"]);
+  assert.deepEqual(writes, [firstType, secondType], JSON.stringify(current));
+  assert.deepEqual(readbacks, [firstType, secondType]);
+  if (support) {
+    const finalScopes = loadFinalize(current).report.sets;
+    for (const [type, expected] of [
+      [firstType, supportUnitGroupRow(contactId)],
+      [secondType, supportFlowPropertyRow(sourceId, contactId)],
+    ] as const) {
+      const file = finalScopes.find((item) => item.type === type)!.final_rows;
+      assert.deepEqual(
+        readRows(file).map((row) => unwrapDatasetPayload(row, type)),
+        [expected],
+        "finalization preserves the native-qualified support payload and unit scale",
+      );
+    }
+  }
   assert.equal(current.status, "completed", JSON.stringify(current));
   assert.equal((await facade.resume(invocation)).status, "completed");
-  assert.deepEqual(writes, ["contact", "source"]);
-});
+  assert.deepEqual(writes, [firstType, secondType]);
+}
+
+for (const support of [false, true])
+  test(`public dependent ${support ? "flowproperty" : "source"} scope continues after ${support ? "unitgroup" : "contact"} write and readback`, (t) =>
+    verifyDependentScopes(t, support));
 
 test("a failed native conversion remains blocked without preparing later context", async (t) => {
   const { root, facade } = workflowFixture(t, true);

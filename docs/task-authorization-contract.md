@@ -30,8 +30,8 @@ checkPaths:
   - test/unit/task-profile-authority.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
 lastReviewedAt: 2026-09-08
-lastReviewedCommit: 3da2201c023a02053fd7325422b5e53fe9c84826
-lastReviewedNote: "Reviewed for Foundry #118 explicit ordinary/production-test intent through fingerprints, immutable account records, migration templates and sealed execution; qualified traceHash-only acceptance binds original/fresh raw hashes and preserves all verification evidence. Production-test rejects differences. Full release/live acceptance remains open."
+lastReviewedCommit: c2913334130a666e9fbe3c18db286d24df355c1b
+lastReviewedNote: "Reviewed for Foundry #118 prepared support authorization: exact lineage-based grant derivation after cleanup, permission-only eligibility, bound-input finalization, preserved completed scope generations and structured sealing continuation. Missing actions and unrelated blockers remain blocked; live/F1 acceptance remains open."
 related:
   - docs/architecture.md
   - docs/safety-policy.md
@@ -127,3 +127,5 @@ The evidence source is `specs/import-profiles.json` at `1374961f11d46546acc46398
 This contract does not edit old locks, task inputs, checkpoints, sealed attempts or already verified records. Migration must produce a separate reviewed mapping, not relabel historical evidence as new authorization. A fresh grant never resets a consumed attempt or permits a second mutation. Existing no-replay/readback recovery remains authoritative. Real task #95 and its records are outside this refactor's migration scope.
 
 Read-only or pending workspace contexts cannot register/derive authorization or admit a business command. After activation, preserved migration scope is checked at execution-capsule creation and before/after admission revalidation. A fresh grant does not reset retained attempt authority. Original profile/account/approval files remain archived evidence, while new permission still needs the independently selected current identity, exact input lineage and reviewed scope.
+
+For public prepared FP/UG input, a captured finalization blocked solely by the support permission gate may derive the existing complete support approval through registered input lineage, then rerun local finalization on those exact approved bytes. Missing write/mint actions and unrelated blockers remain pending. This adds no permission, extends no expiry and cannot replay a consumed scope.
