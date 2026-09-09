@@ -89,8 +89,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: 28482d809280d093edefac8f8e9367411a59e6da
-lastReviewedNote: "Reviewed for Foundry #136: strict release-only 0.1.4 projection from qualified source 28482d8, including the real-verified numeric OIDC timestamp correction. Only package, verifier and descriptor versions advance; dependency/runtime/authorization contracts and full release qualification remain required and unchanged."
+lastReviewedCommit: d29c885a5beccbf9cda04b1a868902d8a4f73a5e
+lastReviewedNote: "Reviewed for Foundry #138: exact-tag recovery accepts only the inert diagnostic default false while all source/tag overrides and enabled diagnostics remain rejected. Real default-input failure has a focused RED/GREEN regression; immutable 0.1.4 recovery uses a complete original main-event rerun with verified existing npm bytes and fresh attempt-bound artifacts."
 ---
 
 # Workspace Project Map
