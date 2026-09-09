@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-10
-lastReviewedCommit: 66fa756cac351ad9cff282141ef7fafe63dfb6e2
-lastReviewedNote: "Reviewed for Foundry #151: executable managed actions retain the verified CLI manager launch and fresh IPC qualification. The original public0.1.6 failure is reproduced; the fixed installed candidate and full1390-test gates pass. Runtime/cache/task/identity ownership, no-replay, dependency pins and publication requirements remain unchanged."
+lastReviewedCommit: 063016979fec5d4879f562c417b42b73b158aafe
+lastReviewedNote: "Reviewed for Foundry #153: strict0.1.7 version projection from qualified managed-action source0630169 and unchanged verified CLI0.1.13/toolchain/dependency inputs. All source/native action gates passed before preparation; complete owning release and independent public successor verification remain required."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

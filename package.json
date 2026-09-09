@@ -1,6 +1,6 @@
 {
   "name": "@tiangong-lca/foundry",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "type": "module",
   "description": "Control plane for TianGong LCA external dataset import and TIDAS authoring work.",
   "repository": {
