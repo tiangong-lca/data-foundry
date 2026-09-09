@@ -121,10 +121,27 @@ async function requestNpmOidcResponse(
   return boundedJson(response, 256 * 1024, "npm OIDC exchange");
 }
 
+function npmOidcTimestamp(value: unknown): { milliseconds: number; encoding: string } {
+  if (typeof value === "string")
+    return { milliseconds: Date.parse(value), encoding: "date-string" };
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+    return { milliseconds: NaN, encoding: "invalid" };
+  // Contemporary Unix seconds and milliseconds have disjoint magnitudes. The
+  // freshness and maximum-lifetime checks below still own credential admission.
+  const seconds = value < 100_000_000_000;
+  const milliseconds = seconds ? value * 1000 : value;
+  return {
+    milliseconds: Number.isSafeInteger(milliseconds) ? milliseconds : NaN,
+    encoding: seconds ? "epoch-seconds" : "epoch-milliseconds",
+  };
+}
+
 /** Fixed validation facts only: never retain a token or any raw response field. */
 export function inspectFoundryNpmOidcResponse(value: Record<string, unknown>, now: number) {
-  const created = typeof value.created === "string" ? Date.parse(value.created) : NaN;
-  const expires = typeof value.expires === "string" ? Date.parse(value.expires) : NaN;
+  const creation = npmOidcTimestamp(value.created),
+    expiration = npmOidcTimestamp(value.expires);
+  const created = creation.milliseconds,
+    expires = expiration.milliseconds;
   const tokenShape =
     typeof value.token === "string" &&
     value.token.length > 0 &&
@@ -153,6 +170,8 @@ export function inspectFoundryNpmOidcResponse(value: Record<string, unknown>, no
     token_shape_valid: tokenShape,
     created_kind: kind(value.created),
     expires_kind: kind(value.expires),
+    created_encoding: creation.encoding,
+    expires_encoding: expiration.encoding,
     created_age_ms: Number.isFinite(created) ? now - created : null,
     remaining_ms: Number.isFinite(expires) ? expires - now : null,
     lifetime_ms: Number.isFinite(created) && Number.isFinite(expires) ? expires - created : null,
@@ -205,7 +224,7 @@ export async function exchangeFoundryNpmOidcToken(
     throw new Error("npm OIDC exchange returned no fresh short-lived credential.");
   return Object.freeze({
     token: value.token as string,
-    expiresAt: Date.parse(value.expires as string),
+    expiresAt: npmOidcTimestamp(value.expires).milliseconds,
   });
 }
 

@@ -57,7 +57,7 @@ test("OIDC diagnostics identify rejected fields without retaining response value
   for (const [field, value, reason] of [
     ["token_type", "private-type", "token_type"],
     ["token", "private credential", "token_shape"],
-    ["created", 123, "created_time"],
+    ["created", false, "created_time"],
     ["expires", "private-invalid-date", "expires_time"],
     ["created", new Date(now - 600000).toISOString(), "created_freshness"],
     ["expires", new Date(now + 30000).toISOString(), "remaining_lifetime"],
@@ -71,6 +71,60 @@ test("OIDC diagnostics identify rejected fields without retaining response value
     assert.ok(result.reasons.includes(reason));
     assert.doesNotMatch(JSON.stringify(result), /private/u);
   }
+});
+
+test("the publisher accepts fresh numeric epoch timestamps returned by the real registry", async () => {
+  for (const scale of [1, 1000])
+    for (const offset of [0, 123]) {
+      let requests = 0;
+      const result = await exchangeFoundryNpmOidcToken(
+        context,
+        environment(),
+        async () => {
+          requests++;
+          return requests === 1
+            ? Response.json({ value: "unit.fixture.jwt" })
+            : Response.json(
+                {
+                  token_type: "oidc",
+                  token: "private-credential",
+                  created: (now + offset) / scale,
+                  expires: (now + 3600000 + offset) / scale,
+                },
+                { status: 201 },
+              );
+        },
+        now,
+      );
+      assert.equal(requests, 2);
+      assert.equal(result.expiresAt, now + 3600000 + offset);
+    }
+});
+
+test("numeric OIDC timestamps keep the original freshness and lifetime bounds", () => {
+  for (const scale of [1, 1000])
+    for (const [created, expires] of [
+      [now - 600000, now + 3600000],
+      [now + 600000, now + 3600000],
+      [now, now - 1000],
+      [now, now + 30000],
+      [now, now + 10800000],
+      [NaN, now + 3600000],
+      [now, Infinity],
+      [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+    ]) {
+      const result = inspectFoundryNpmOidcResponse(
+        {
+          token_type: "oidc",
+          token: "private-credential",
+          created: created / scale,
+          expires: expires / scale,
+        },
+        now,
+      );
+      assert.equal(result.accepted, false);
+      assert.doesNotMatch(JSON.stringify(result), /private/u);
+    }
 });
 
 test("the explicit CI diagnostic discards the exchanged credential and never invokes publication", async () => {

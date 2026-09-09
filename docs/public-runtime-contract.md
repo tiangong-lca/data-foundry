@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: 72e2c5a40c696ec8dfd14ef371e40d39f4d4dacd
-lastReviewedNote: "Reviewed for Foundry #134: explicit workflow-only OIDC diagnosis reports fixed validation facts and discards credentials without publishing. Shared response checks retain existing acceptance, full release gates and runtime/account boundaries. Real response diagnosis and any evidence-backed correction remain tracked before the next immutable release."
+lastReviewedCommit: c89710cac58813b938353477f42dbde287347f9b
+lastReviewedNote: "Reviewed for Foundry #134 after real diagnostic34310766830: npm returns numeric creation/expiry fields; token type and shape pass. Numeric epochs normalize to safe milliseconds while the original freshness, lifetime, OIDC source and no-fallback limits remain enforced. Local numeric RED/GREEN passed; real corrected exchange and complete release qualification remain required."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
