@@ -57,7 +57,7 @@ export async function inspectFoundryNpmAvailability(
       method: "GET",
       redirect: "error",
       signal: AbortSignal.timeout(30_000),
-      headers: { accept: "application/vnd.npm.install-v1+json" },
+      headers: { accept: suffix ? "application/json" : "application/vnd.npm.install-v1+json" },
     });
     if (response.status === 200 && !suffix) {
       const value = await boundedJson(response, 8 * 1024 * 1024, "npm registry preflight");

@@ -75,6 +75,38 @@ test("registry preflight distinguishes an existing version, a new version and fi
   );
 });
 
+test("registry preflight negotiates version JSON separately from abbreviated package metadata", async () => {
+  const base = "https://registry.npmjs.org/%40tiangong-lca%2Ffoundry";
+  const calls: { url: string; accept: string | null }[] = [];
+  const registryFetch = async (url: string, init: RequestInit) => {
+    const accept = new Headers(init.headers).get("accept");
+    calls.push({ url, accept });
+    assert.equal(init.method, "GET");
+    assert.equal(init.redirect, "error");
+    assert.equal(new Headers(init.headers).has("authorization"), false);
+    if (url === `${base}/0.1.2`)
+      return Response.json({}, { status: accept === "application/json" ? 200 : 406 });
+    if (url === `${base}/0.1.3`) {
+      assert.equal(accept, "application/json");
+      return Response.json({}, { status: 404 });
+    }
+    assert.equal(url, base);
+    assert.equal(accept, "application/vnd.npm.install-v1+json");
+    return Response.json({
+      name: "@tiangong-lca/foundry",
+      "dist-tags": { latest: "0.1.2" },
+    });
+  };
+
+  assert.equal(await inspectFoundryNpmAvailability("0.1.2", registryFetch), "version-exists");
+  assert.equal(calls.length, 1);
+  assert.equal(await inspectFoundryNpmAvailability("0.1.3", registryFetch), "version-available");
+  assert.deepEqual(
+    calls.map(({ url }) => url),
+    [`${base}/0.1.2`, `${base}/0.1.3`, base],
+  );
+});
+
 test("npm exchange requires the owning workflow and returns only a fresh package-specific OIDC credential", async () => {
   const calls: string[] = [];
   const result = await exchangeFoundryNpmOidcToken(
