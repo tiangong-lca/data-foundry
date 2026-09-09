@@ -32,7 +32,7 @@
       "agent": "*",
       "full_depth": true,
       "install_command": "pnpm dlx skills@latest add https://github.com/tiangong-lca/skills --skill foundry-tidas-authoring --agent '*' --yes --full-depth",
-      "update_policy": "consume the qualified Skills-owned package and its adjacent release lock; update through skills tooling",
+      "update_policy": "consume the Skills-owned data-only semantic package on demand; update through skills tooling",
       "required_for": ["current-semantic-work-item"]
     },
     {

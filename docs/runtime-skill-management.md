@@ -19,8 +19,8 @@ checkPaths:
   - package.json
   - .agents/shared-skills.json
   - .agents/skills/**
-lastReviewedAt: 2026-09-09
-lastReviewedCommit: dab4be5ac469df554ae0e2c228ff500cb8a8c88d
+lastReviewedAt: 2026-09-10
+lastReviewedCommit: d34c8dac60f5872d6e2f7ae5d7ac05a5df21cfa2
 lastReviewedNote: "Reviewed for Foundry #144: skill packages move to Skills; exact owner and derived-route changes have bounded Golden evidence. Runtime gates, task/account authority and private operator state remain unchanged."
 related:
   - AGENTS.md
@@ -39,7 +39,7 @@ Foundry treats skills as execution surfaces, not as a place to copy reusable bus
 
 | Class | Source | Storage rule | Update rule |
 | --- | --- | --- | --- |
-| Foundry entry and on-demand authoring | canonical `tiangong-lca/skills` | installed under `.agents/skills`; ignored here | update through Skills, preserving its shipped release lock |
+| Foundry entry and on-demand authoring | canonical `tiangong-lca/skills` | installed under `.agents/skills`; ignored here | update through Skills; preserve the ordinary entry's shipped release lock |
 | TianGong LCA shared skills | sibling `tiangong-lca-skills` | installed into `.agents/skills` by `pnpm dlx skills@latest add`; ignored in this repo | update the sibling checkout, then run `pnpm skills:install:shared` or `pnpm skills:update` |
 | Source-evidence and document-extraction skills | external skill repos such as `tiangong-ai/skills` | installed or read into `.agents/skills` runtime state; ignored in this repo | resolve latest before each source-evidence run |
 
@@ -124,7 +124,7 @@ The developer checkout may use its local `.env` as described by `env-surface-pol
 | Skill | Required env | Optional env | Notes |
 | --- | --- | --- | --- |
 | `$dataset-rls-maintenance` | Current CLI OAuth identity for remote snapshot/apply/verify; official public defaults require no API key | CLI-owned session reference and explicit public OAuth configuration for another deployment; the CLI's existing explicit headless contract when selected by a trusted host | No skill-private Supabase credentials. The skill uses CLI-owned current-user RLS paths and current task authorization/commit gates. Login and legacy `FOUNDRY_*` commit flags are not task approval. |
-| `$external-dataset-curated-import` in its standalone CLI workflow | Rust `tidas` 0.2.x on `PATH` or selected by `TIDAS_BIN`; a working CLI for context/QA/curation/handoff | `TIDAS_CONFIG`, `TIDAS_MEMORY_BUDGET_MIB`, `TIDAS_QUEUE_CAPACITY`, `TIANGONG_LCA_CLI_BIN`, `TIANGONG_LCA_CLI_DIR`, `TIANGONG_LCA_SKILLS_ROOT`, `FOUNDRY_AGENT_SKILLS_ROOT`, current-user LCA account env for remote readback/write handoff | Rust tidas owns deterministic conversion and schema validation. CLI owns context, QA/curation, and remote stages; remote stages require the LCA account block above. |
+| `$external-dataset-curated-import` in its standalone CLI workflow | a qualified native `tidas` on `PATH` or selected by `TIDAS_BIN`; a working CLI for context/QA/curation/handoff | `TIDAS_CONFIG`, `TIDAS_MEMORY_BUDGET_MIB`, `TIDAS_QUEUE_CAPACITY`, `TIANGONG_LCA_CLI_BIN`, `TIANGONG_LCA_CLI_DIR`, `TIANGONG_LCA_SKILLS_ROOT`, `FOUNDRY_AGENT_SKILLS_ROOT`, current-user LCA account env for remote readback/write handoff | Rust tidas owns deterministic conversion and schema validation. CLI owns context, QA/curation, and remote stages; remote stages require the LCA account block above. |
 | `$foundry-tidas-import` | qualified Skills distribution with its adjacent release lock | current runtime-returned account intent and CLI-owned session selection | Managed Node/CLI/Foundry/TIDAS come from the verified distribution; no developer checkout or global Node/pnpm is required. |
 | `$foundry-tidas-authoring` | a current complete semantic work item and referenced context | none | Data-only on-demand role; returns decisions/patches through the public task protocol. |
 | `$source-evidence-dataset-development` | source-dependent | `TIANGONG_AI_APIKEY`, `TIANGONG_AI_API_BASE_URL`, `TIANGONG_AI_CLI`, `TIANGONG_AI_CLI_BIN`, `TIANGONG_LCA_KB_SEARCH_API_BASE_URL`, `TIANGONG_LCA_KB_SEARCH_API_KEY`, `TIANGONG_LCA_KB_SEARCH_REGION` | Source documents use `$document-granular-decompose`; SCI literature uses `$tiangong-kb-sci-search`; LCA CLI evidence-search helpers use the `TIANGONG_LCA_KB_SEARCH_*` family. |
