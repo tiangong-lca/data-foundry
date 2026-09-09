@@ -93,8 +93,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: 8bb2543be70bee7addba296418805196776fc253
-lastReviewedNote: "Reviewed for Foundry #138: exact-tag recovery accepts only the inert diagnostic default false while all source/tag overrides and enabled diagnostics remain rejected. Real default-input failure has a focused RED/GREEN regression; immutable 0.1.4 recovery uses a complete original main-event rerun with verified existing npm bytes and fresh attempt-bound artifacts."
+lastReviewedCommit: dab4be5ac469df554ae0e2c228ff500cb8a8c88d
+lastReviewedNote: "Reviewed for Foundry #145: public bootstrap work and completed proof use separate runner directories; only exact report bytes enter the signed capsule. Generic inventory, source/signature/TTL and runtime/task/auth gates remain unchanged."
 ---
 
 # Capability Ownership Policy

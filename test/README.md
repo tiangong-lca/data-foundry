@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: 8bb2543be70bee7addba296418805196776fc253
-lastReviewedNote: "Reviewed for Foundry #138: exact-tag recovery accepts only the inert diagnostic default false while all source/tag overrides and enabled diagnostics remain rejected. Real default-input failure has a focused RED/GREEN regression; immutable 0.1.4 recovery uses a complete original main-event rerun with verified existing npm bytes and fresh attempt-bound artifacts."
+lastReviewedCommit: dab4be5ac469df554ae0e2c228ff500cb8a8c88d
+lastReviewedNote: "Reviewed for Foundry #145: public bootstrap work and completed proof use separate runner directories; only exact report bytes enter the signed capsule. Generic inventory, source/signature/TTL and runtime/task/auth gates remain unchanged."
 ---
 
 # Test Layout
@@ -535,3 +535,5 @@ Full CI retains all supported platforms, canonical platform checks, native assem
 The custom CI reporter is selected by its `file:` URL rather than a native absolute path; Node ESM must not interpret a Windows drive letter as a URL scheme. The actual reporter integration exercises the same exported URL used by the shard runner.
 
 CI recovery tests cover capsule source/platform/input and certificate boundaries, original signer/caller provenance, bounded artifact discovery, actual terminal shell guards for failed/skipped/reused paths, isolated diagnostic mode selection, and upload-once registry readback with an injected clock. The full four-platform test inventory still includes newly added files. Real GitHub qualification and verified-reuse timings belong in the delivery PR; unit fixtures do not establish performance or signing acceptance.
+
+`unit/foundry-ci-workflow.test.mts` executes the public-bootstrap proof staging step against a completed report and disposable empty work/cache directories. It proves exact-byte report-only inventory, no overwrite, normal stage validation, and continued rejection of failed reports or empty directories inside the proof boundary. This credential-free regression covers the Windows success-then-seal failure without substituting for real public startup or signed recovery qualification.

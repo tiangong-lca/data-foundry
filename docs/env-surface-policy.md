@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: 8bb2543be70bee7addba296418805196776fc253
-lastReviewedNote: "Reviewed for Foundry #138: exact-tag recovery accepts only the inert diagnostic default false while all source/tag overrides and enabled diagnostics remain rejected. Real default-input failure has a focused RED/GREEN regression; immutable 0.1.4 recovery uses a complete original main-event rerun with verified existing npm bytes and fresh attempt-bound artifacts."
+lastReviewedCommit: dab4be5ac469df554ae0e2c228ff500cb8a8c88d
+lastReviewedNote: "Reviewed for Foundry #145: public bootstrap work and completed proof use separate runner directories; only exact report bytes enter the signed capsule. Generic inventory, source/signature/TTL and runtime/task/auth gates remain unchanged."
 ---
 
 # Environment Surface Policy
@@ -154,3 +154,5 @@ Public finalization, handoff and readback set `FOUNDRY_ACCOUNT_MODE` only from t
 ## Source CI recovery inputs
 
 `FOUNDRY_QUALIFICATION_CAPSULE`, `FOUNDRY_RESUME_RUN`, `FOUNDRY_CI_CAN_SEAL`, `FOUNDRY_STAGE_PASSED` and `FOUNDRY_SOURCE_PACKAGE_*` are source-workflow inputs only. They never enter the public environment example, task configuration or installed runtime. A path or success flag grants no trust: the owning job, exact current source/toolchain, signed capsule and complete payload inventory are independently checked. GitHub tokens remain process-only. Preflight returns fixed OIDC validation facts and discards credentials; native diagnostics strip OIDC and package-publishing credentials before executing the selected immutable source.
+
+The owning public-bootstrap workflow uses `BOOTSTRAP_WORK` and `BOOTSTRAP_PROOF` only to select runner-temporary work and proof directories for a filesystem staging step. The qualification command's `BOOTSTRAP_OUTPUT` selects the work directory; the stage receives only its completed report. These values are not forwarded to the installed bootstrap/application, select no runtime trust anchor and grant no authentication or business authority.

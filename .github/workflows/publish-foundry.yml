@@ -445,9 +445,23 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           EXPECTED_MANIFEST_SHA256: ${{ needs.publish-components.outputs.manifest_sha256 }}
           BOOTSTRAP_INPUT: ${{ runner.temp }}/foundry-bootstrap-public-input
-          BOOTSTRAP_OUTPUT: ${{ runner.temp }}/foundry-bootstrap-public-qualification
+          BOOTSTRAP_OUTPUT: ${{ runner.temp }}/foundry-bootstrap-public-work
         run: pnpm release:qualify-bootstrap --input "$BOOTSTRAP_INPUT" --manifest-sha256 "$EXPECTED_MANIFEST_SHA256" --output "$BOOTSTRAP_OUTPUT" --public
         if: steps.restore.outputs.reused != 'true'
+      - name: Stage completed bootstrap proof
+        if: steps.restore.outputs.reused != 'true'
+        shell: bash
+        env:
+          BOOTSTRAP_WORK: ${{ runner.temp }}/foundry-bootstrap-public-work
+          BOOTSTRAP_PROOF: ${{ runner.temp }}/foundry-bootstrap-public-qualification
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          const bytes = fs.readFileSync(path.join(process.env.BOOTSTRAP_WORK, 'bootstrap-qualification.json'));
+          fs.mkdirSync(process.env.BOOTSTRAP_PROOF, { mode: 0o700 });
+          fs.writeFileSync(path.join(process.env.BOOTSTRAP_PROOF, 'bootstrap-qualification.json'), bytes, { flag: 'wx', mode: 0o600 });
+          NODE
       - name: Seal completed bootstrap evidence
         if: steps.restore.outputs.reused != 'true'
         shell: bash
