@@ -6,6 +6,7 @@ import {
   readFoundryReleaseGit,
   type FoundryReleaseChange,
 } from "./lib/foundry-release-contract.ts";
+import { restoreStage, stageExpectation, stageArtifactName } from "./lib/foundry-ci-stage.ts";
 
 const root = path.resolve(import.meta.dirname, "..");
 function main(args: readonly string[]): void {
@@ -23,16 +24,35 @@ function main(args: readonly string[]): void {
     event === "pull_request" && reusable === undefined
       ? inspectFoundryRelease(root, process.env.FOUNDRY_CI_BASE_SHA ?? "", source)
       : { release: false, changedPaths: [] };
-  const mode = selectFoundryCiMode(event, reusable, inspection);
+  let mode: string = selectFoundryCiMode(event, reusable, inspection);
   const tests = loadFoundryTestPlan(root);
-  const result = { schema: "tiangong-foundry.ci-plan.v1", mode, source, inspection, tests };
+  let reuse: Record<string, unknown> = {};
+  let capsuleName = "";
+  if (
+    process.env.GITHUB_ACTIONS === "true" &&
+    mode === "full" &&
+    process.env.FOUNDRY_CI_CAN_SEAL === "true"
+  ) {
+    const expected = stageExpectation("source", "all");
+    capsuleName = stageArtifactName(expected);
+    const temporary = process.env.RUNNER_TEMP;
+    if (!temporary || !path.isAbsolute(temporary))
+      throw new Error("CI stage recovery requires runner temporary storage.");
+    reuse = restoreStage(
+      expected,
+      path.join(temporary, "qualified-source"),
+      process.env.FOUNDRY_RESUME_RUN || undefined,
+    );
+    if (reuse.reused === true) mode = "reused";
+  }
+  const result = { schema: "tiangong-foundry.ci-plan.v1", mode, source, inspection, tests, reuse };
   if (args.length) {
     const output = process.env.GITHUB_OUTPUT;
     if (process.env.GITHUB_ACTIONS !== "true" || !output || !path.isAbsolute(output))
       throw new Error("CI outputs require the owning GitHub job.");
     fs.appendFileSync(
       output,
-      `mode=${mode}\nsource_sha=${source}\ntest_plan_sha256=${tests.planSha256}\nshards=${JSON.stringify(tests.shards.map((shard) => shard.index))}\n`,
+      `mode=${mode}\nsource_sha=${source}\ntest_plan_sha256=${tests.planSha256}\nshards=${JSON.stringify(tests.shards.map((shard) => shard.index))}\ncapsule_name=${capsuleName}\nrun_id=${process.env.GITHUB_RUN_ID ?? ""}\nreuse_verified=${reuse.reused === true}\npackage_sha256=${String(reuse.package_sha256 ?? "")}\npackage_manifest_sha256=${String(reuse.package_manifest_sha256 ?? "")}\nsealable=${process.env.FOUNDRY_CI_CAN_SEAL === "true"}\n`,
       "utf8",
     );
   }
