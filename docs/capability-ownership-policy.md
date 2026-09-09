@@ -93,8 +93,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: 56dffbb035dc6a4e8194295fed11d5e314a3e944
-lastReviewedNote: "Reviewed for Foundry #130: exact-version npm preflight uses JSON while package metadata keeps its abbreviated media type. Real HTTP406/200 RED/GREEN and regression cover recovery and advancement; fixed origin, bounds, no-auth GET, version monotonicity, full release gates and runtime behavior remain unchanged."
+lastReviewedCommit: 46f8dd425a7a0001bb72f3fb3636d196ad89278b
+lastReviewedNote: "Reviewed for Foundry #131: release-only 0.1.3 projection from qualified source 46f8dd4 with the registry preflight fix. Only package, verifier and descriptor versions change; existing public/runtime contracts, dependency pins, authorization, full release gates and retained notices remain valid. Complete F1 publication and consumer acceptance are still required."
 ---
 
 # Capability Ownership Policy
