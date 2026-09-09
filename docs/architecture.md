@@ -152,8 +152,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-10
-lastReviewedCommit: 66fa756cac351ad9cff282141ef7fafe63dfb6e2
-lastReviewedNote: "Reviewed for Foundry #151: preserve verified managed launch context in executable next actions and require actual fresh-process qualification in source/public bootstrap proof. Public F1.6 reproduces the failure; the fixed source-free installed candidate passes. Runtime/account/task ownership, existing authorization, no-replay and dependency pins remain unchanged."
+lastReviewedCommit: 063016979fec5d4879f562c417b42b73b158aafe
+lastReviewedNote: "Reviewed for Foundry #153: strict0.1.7 version projection from qualified managed-action source0630169 and unchanged verified CLI0.1.13/toolchain/dependency inputs. All source/native action gates passed before preparation; complete owning release and independent public successor verification remain required."
 ---
 
 # Architecture
