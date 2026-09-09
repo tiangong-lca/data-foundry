@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: 46f8dd425a7a0001bb72f3fb3636d196ad89278b
-lastReviewedNote: "Reviewed for Foundry #131: release-only 0.1.3 projection from qualified source 46f8dd4 with the registry preflight fix. Only package, verifier and descriptor versions change; existing public/runtime contracts, dependency pins, authorization, full release gates and retained notices remain valid. Complete F1 publication and consumer acceptance are still required."
+lastReviewedCommit: 72e2c5a40c696ec8dfd14ef371e40d39f4d4dacd
+lastReviewedNote: "Reviewed for Foundry #134: explicit workflow-only OIDC diagnosis reports fixed validation facts and discards credentials without publishing. Shared response checks retain existing acceptance, full release gates and runtime/account boundaries. Real response diagnosis and any evidence-backed correction remain tracked before the next immutable release."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -221,6 +221,8 @@ The pinned pnpm 11.24.0 executable uploads copied, rechecked tarball/signature b
 There is one publisher invocation. Regardless of its reported success or an uncertain/failed response, independent public readback owns the outcome. Up to three bounded readback attempts accommodate registry propagation; they never repeat publication. The public tarball's byte count and SHA-512 must match the prepared artifact, in addition to all signed-source/workflow checks. A different existing version payload, missing provenance or failed readback stops the release. Existing-version verification does not establish that the account has configured future Trusted Publisher permissions.
 
 `package-artifacts/npm-publication/` contains the publication result and readable report; a successful result also preserves public metadata, attestations and verification. The workflow exports this evidence even when publication fails. `npm_published=true` is emitted only after public verification succeeds; later component/manifest stages must require it. It proves package publication only, not complete F1 runtime qualification.
+
+An explicit `workflow_dispatch` with `diagnose_npm_oidc=true` selects the separate diagnostic job in the same Trusted Publisher workflow and skips the release context and every publication continuation. `pnpm release:diagnose-npm-oidc` accepts no arguments and requires that exact GitHub-hosted diagnostic job, canonical repository/workflow, branch dispatch, matching workflow/source SHA, clean physical checkout and explicit event input. It requests one package-specific ephemeral credential through the existing bounded OIDC exchange, discards it, and reports only fixed validation reasons, field kinds, boolean token checks and numeric timing differences. No token, raw response value, credential fingerprint or account configuration is emitted or persisted. The diagnostic cannot upload packages, create tags/releases/assets or satisfy release qualification. Its shared response inspection preserves the ordinary publisher's existing credential acceptance rules; a diagnostic rejection is evidence to investigate, never permission to weaken them.
 
 ## Runtime component publication
 

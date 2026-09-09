@@ -5,6 +5,8 @@ import {
   exchangeFoundryNpmOidcToken,
   foundryNpmPublishEnvironment,
   publishOnceAndReadBack,
+  inspectFoundryNpmOidcResponse,
+  diagnoseFoundryNpmOidcExchange,
 } from "../../scripts/lib/foundry-release-publish.ts";
 import type { FoundryReleaseWorkflowContext } from "../../scripts/lib/foundry-release-workflow.ts";
 
@@ -43,6 +45,73 @@ function environment(): NodeJS.ProcessEnv {
     ACTIONS_ID_TOKEN_REQUEST_TOKEN: "unit-workflow-token",
   };
 }
+
+test("OIDC diagnostics identify rejected fields without retaining response values", () => {
+  const valid = {
+    token_type: "oidc",
+    token: "private-credential",
+    created: new Date(now).toISOString(),
+    expires: new Date(now + 3600000).toISOString(),
+  };
+  assert.equal(inspectFoundryNpmOidcResponse(valid, now).accepted, true);
+  for (const [field, value, reason] of [
+    ["token_type", "private-type", "token_type"],
+    ["token", "private credential", "token_shape"],
+    ["created", 123, "created_time"],
+    ["expires", "private-invalid-date", "expires_time"],
+    ["created", new Date(now - 600000).toISOString(), "created_freshness"],
+    ["expires", new Date(now + 30000).toISOString(), "remaining_lifetime"],
+    ["expires", new Date(now + 10800000).toISOString(), "maximum_lifetime"],
+  ] as const) {
+    const result = inspectFoundryNpmOidcResponse(
+      { ...valid, [field]: value, extra: "private-extra" },
+      now,
+    );
+    assert.equal(result.accepted, false);
+    assert.ok(result.reasons.includes(reason));
+    assert.doesNotMatch(JSON.stringify(result), /private/u);
+  }
+});
+
+test("the explicit CI diagnostic discards the exchanged credential and never invokes publication", async () => {
+  const env = {
+    ...environment(),
+    GITHUB_JOB: "diagnose-npm-oidc",
+    GITHUB_EVENT_NAME: "workflow_dispatch",
+  };
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls++;
+    return calls === 1
+      ? Response.json({ value: "private.fixture.jwt" })
+      : Response.json(
+          {
+            token_type: "oidc",
+            token: "private-credential",
+            created: 123,
+            expires: "private-date",
+          },
+          { status: 201 },
+        );
+  };
+  const result = await diagnoseFoundryNpmOidcExchange(env, fetchImpl, now);
+  assert.equal(calls, 2);
+  assert.equal(result.accepted, false);
+  assert.equal(result.created_kind, "number");
+  assert.doesNotMatch(JSON.stringify(result), /private/u);
+  for (const override of [
+    { GITHUB_JOB: "npm-package" },
+    { GITHUB_EVENT_NAME: "push" },
+    { GITHUB_REPOSITORY: "other/repo" },
+    { RUNNER_ENVIRONMENT: "self-hosted" },
+    { GITHUB_WORKFLOW_SHA: "b".repeat(40) },
+  ])
+    await assert.rejects(
+      diagnoseFoundryNpmOidcExchange({ ...env, ...override }, fetchImpl, now),
+      /diagnostic/u,
+    );
+  assert.equal(calls, 2);
+});
 
 test("registry preflight distinguishes an existing version, a new version and first-package setup", async () => {
   for (const variant of [

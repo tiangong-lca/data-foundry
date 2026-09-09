@@ -87,13 +87,10 @@ export async function inspectFoundryNpmAvailability(
   return "first-package-identity";
 }
 
-export async function exchangeFoundryNpmOidcToken(
-  context: FoundryReleaseWorkflowContext,
+async function requestNpmOidcResponse(
   environment: Readonly<NodeJS.ProcessEnv>,
-  fetchImpl: Fetch = fetch,
-  now = Date.now(),
-): Promise<{ readonly token: string; readonly expiresAt: number }> {
-  assertFoundryNpmWorkflowEnvironment(context, environment);
+  fetchImpl: Fetch,
+): Promise<Record<string, unknown>> {
   const identity = await requestFoundryGitHubOidcToken(
     environment,
     "npm:registry.npmjs.org",
@@ -121,24 +118,95 @@ export async function exchangeFoundryNpmOidcToken(
       `npm OIDC exchange failed (HTTP ${response.status}); review the exact Trusted Publisher binding before publication.`,
     );
   }
-  const value = await boundedJson(response, 256 * 1024, "npm OIDC exchange");
+  return boundedJson(response, 256 * 1024, "npm OIDC exchange");
+}
+
+/** Fixed validation facts only: never retain a token or any raw response field. */
+export function inspectFoundryNpmOidcResponse(value: Record<string, unknown>, now: number) {
   const created = typeof value.created === "string" ? Date.parse(value.created) : NaN;
   const expires = typeof value.expires === "string" ? Date.parse(value.expires) : NaN;
+  const tokenShape =
+    typeof value.token === "string" &&
+    value.token.length > 0 &&
+    value.token.length <= 16384 &&
+    !/\s/u.test(value.token);
+  const checks = {
+    token_type: value.token_type === "oidc",
+    token_shape: tokenShape,
+    created_time: Number.isFinite(created),
+    expires_time: Number.isFinite(expires),
+    created_freshness: !Number.isFinite(created) || Math.abs(now - created) <= 300000,
+    remaining_lifetime: !Number.isFinite(expires) || expires >= now + 60000,
+    lifetime_order: !Number.isFinite(created) || !Number.isFinite(expires) || expires > created,
+    maximum_lifetime:
+      !Number.isFinite(created) || !Number.isFinite(expires) || expires - created <= 7200000,
+  };
+  const reasons = Object.entries(checks)
+    .filter(([, passed]) => !passed)
+    .map(([name]) => name);
+  const kind = (entry: unknown) =>
+    entry === null ? "null" : Array.isArray(entry) ? "array" : typeof entry;
+  return Object.freeze({
+    accepted: reasons.length === 0,
+    reasons: Object.freeze(reasons),
+    token_type_is_oidc: checks.token_type,
+    token_shape_valid: tokenShape,
+    created_kind: kind(value.created),
+    expires_kind: kind(value.expires),
+    created_age_ms: Number.isFinite(created) ? now - created : null,
+    remaining_ms: Number.isFinite(expires) ? expires - now : null,
+    lifetime_ms: Number.isFinite(created) && Number.isFinite(expires) ? expires - created : null,
+  });
+}
+
+export function assertFoundryNpmOidcDiagnosticEnvironment(
+  environment: Readonly<NodeJS.ProcessEnv>,
+): void {
+  const repository = "tiangong-lca/data-foundry";
   if (
-    value.token_type !== "oidc" ||
-    typeof value.token !== "string" ||
-    !value.token ||
-    value.token.length > 16384 ||
-    /\s/u.test(value.token) ||
-    !Number.isFinite(created) ||
-    !Number.isFinite(expires) ||
-    Math.abs(now - created) > 300000 ||
-    expires < now + 60000 ||
-    expires <= created ||
-    expires - created > 7200000
+    environment.GITHUB_ACTIONS !== "true" ||
+    environment.GITHUB_JOB !== "diagnose-npm-oidc" ||
+    environment.GITHUB_EVENT_NAME !== "workflow_dispatch" ||
+    environment.RUNNER_ENVIRONMENT !== "github-hosted" ||
+    environment.GITHUB_REPOSITORY !== repository ||
+    !/^refs\/heads\/[A-Za-z0-9./_-]{1,200}$/u.test(environment.GITHUB_REF ?? "") ||
+    !/^[a-f0-9]{40}$/u.test(environment.GITHUB_SHA ?? "") ||
+    environment.GITHUB_WORKFLOW_SHA !== environment.GITHUB_SHA ||
+    environment.GITHUB_WORKFLOW_REF !==
+      `${repository}/.github/workflows/publish-foundry.yml@${environment.GITHUB_REF}` ||
+    !/^\d{1,20}$/u.test(environment.GITHUB_RUN_ID ?? "") ||
+    !/^\d{1,5}$/u.test(environment.GITHUB_RUN_ATTEMPT ?? "")
   )
+    throw new Error(
+      "npm OIDC diagnostic requires its explicit owning GitHub-hosted workflow dispatch.",
+    );
+}
+
+/** Requests one ephemeral credential for diagnosis, discards it, and cannot publish. */
+export async function diagnoseFoundryNpmOidcExchange(
+  environment: Readonly<NodeJS.ProcessEnv>,
+  fetchImpl: Fetch = fetch,
+  now = Date.now(),
+) {
+  assertFoundryNpmOidcDiagnosticEnvironment(environment);
+  const value = await requestNpmOidcResponse(environment, fetchImpl);
+  return inspectFoundryNpmOidcResponse(value, now);
+}
+
+export async function exchangeFoundryNpmOidcToken(
+  context: FoundryReleaseWorkflowContext,
+  environment: Readonly<NodeJS.ProcessEnv>,
+  fetchImpl: Fetch = fetch,
+  now = Date.now(),
+): Promise<{ readonly token: string; readonly expiresAt: number }> {
+  assertFoundryNpmWorkflowEnvironment(context, environment);
+  const value = await requestNpmOidcResponse(environment, fetchImpl);
+  if (!inspectFoundryNpmOidcResponse(value, now).accepted)
     throw new Error("npm OIDC exchange returned no fresh short-lived credential.");
-  return Object.freeze({ token: value.token, expiresAt: expires });
+  return Object.freeze({
+    token: value.token as string,
+    expiresAt: Date.parse(value.expires as string),
+  });
 }
 
 export function foundryNpmPublishEnvironment(

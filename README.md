@@ -158,8 +158,8 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: 46f8dd425a7a0001bb72f3fb3636d196ad89278b
-lastReviewedNote: "Reviewed for Foundry #131: release-only 0.1.3 projection from qualified source 46f8dd4 with the registry preflight fix. Only package, verifier and descriptor versions change; existing public/runtime contracts, dependency pins, authorization, full release gates and retained notices remain valid. Complete F1 publication and consumer acceptance are still required."
+lastReviewedCommit: 72e2c5a40c696ec8dfd14ef371e40d39f4d4dacd
+lastReviewedNote: "Reviewed for Foundry #134: explicit workflow-only OIDC diagnosis reports fixed validation facts and discards credentials without publishing. Shared response checks retain existing acceptance, full release gates and runtime/account boundaries. Real response diagnosis and any evidence-backed correction remain tracked before the next immutable release."
 ---
 
 # TianGong LCA Data Foundry
