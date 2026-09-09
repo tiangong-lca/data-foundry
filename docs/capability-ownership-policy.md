@@ -93,8 +93,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: fa219ecc833c0aad9bb6a3661265a57f8f24a814
-lastReviewedNote: "Reviewed for Foundry #147: adopt independently verified CLI 0.1.13 at b5e2092 with original permission-preserving bootstrap scripts. Exact runtime/schema/package/release expectations advance together; other dependencies, TIDAS, profile rules, task authorization and private no-replay evidence remain unchanged."
+lastReviewedCommit: 5c5cdbd9af89dcafa7a8f837bd3c4de4bd92d2d8
+lastReviewedNote: "Reviewed for Foundry #149: the strict 0.1.6 version projection uses qualified source 5c5cdbd and verified CLI 0.1.13. Runtime behavior and the frozen dependency graph are unchanged; complete owning release and independent public F1 verification remain required."
 ---
 
 # Capability Ownership Policy
