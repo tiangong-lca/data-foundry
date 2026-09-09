@@ -262,9 +262,9 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
-lastReviewedAt: 2026-09-09
-lastReviewedCommit: 5c5cdbd9af89dcafa7a8f837bd3c4de4bd92d2d8
-lastReviewedNote: "Reviewed for Foundry #149: the strict 0.1.6 version projection uses qualified source 5c5cdbd and verified CLI 0.1.13. Runtime behavior and the frozen dependency graph are unchanged; complete owning release and independent public F1 verification remain required."
+lastReviewedAt: 2026-09-10
+lastReviewedCommit: 66fa756cac351ad9cff282141ef7fafe63dfb6e2
+lastReviewedNote: "Reviewed for Foundry #151: executable managed actions retain the verified CLI manager launch and fresh IPC qualification. The original public0.1.6 failure is reproduced; the fixed installed candidate and full1390-test gates pass. Runtime/cache/task/identity ownership, no-replay, dependency pins and publication requirements remain unchanged."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

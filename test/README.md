@@ -279,9 +279,9 @@ checkPaths:
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
-lastReviewedAt: 2026-09-09
-lastReviewedCommit: 5c5cdbd9af89dcafa7a8f837bd3c4de4bd92d2d8
-lastReviewedNote: "Reviewed for Foundry #149: the strict 0.1.6 version projection uses qualified source 5c5cdbd and verified CLI 0.1.13. Runtime behavior and the frozen dependency graph are unchanged; complete owning release and independent public F1 verification remain required."
+lastReviewedAt: 2026-09-10
+lastReviewedCommit: 66fa756cac351ad9cff282141ef7fafe63dfb6e2
+lastReviewedNote: "Reviewed for Foundry #151: preserve verified managed launch context in executable next actions and require actual fresh-process qualification in source/public bootstrap proof. Public F1.6 reproduces the failure; the fixed source-free installed candidate passes. Runtime/account/task ownership, existing authorization, no-replay and dependency pins remain unchanged."
 ---
 
 # Test Layout
@@ -537,3 +537,5 @@ The custom CI reporter is selected by its `file:` URL rather than a native absol
 CI recovery tests cover capsule source/platform/input and certificate boundaries, original signer/caller provenance, bounded artifact discovery, actual terminal shell guards for failed/skipped/reused paths, isolated diagnostic mode selection, and upload-once registry readback with an injected clock. The full four-platform test inventory still includes newly added files. Real GitHub qualification and verified-reuse timings belong in the delivery PR; unit fixtures do not establish performance or signing acceptance.
 
 `unit/foundry-ci-workflow.test.mts` executes the public-bootstrap proof staging step against a completed report and disposable empty work/cache directories. It proves exact-byte report-only inventory, no overwrite, normal stage validation, and continued rejection of failed reports or empty directories inside the proof boundary. This credential-free regression covers the Windows success-then-seal failure without substituting for real public startup or signed recovery qualification.
+
+The managed package host regression executes an actual returned action in a fresh process using only its executable, argv and CWD, then requires the same task and ready runtime qualification. It reproduces the published F1.6 direct-bin failure; an existing bootstrap-only local-cleanup test could pass without covering that owner boundary. Managed action unit cases reject changed command bindings, foreign entrypoints and conflicting cached manifest bytes, preserve original arguments/launch selection, and avoid cache writes for human-only results. Source and public bootstrap qualification independently require the added task-start/returned-action phases on all four native hosts. Private real account evidence remains separate.

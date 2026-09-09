@@ -32,9 +32,9 @@ checkPaths:
   - test/scenarios/foundry-facade-request-store.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
-lastReviewedAt: 2026-09-09
-lastReviewedCommit: 5c5cdbd9af89dcafa7a8f837bd3c4de4bd92d2d8
-lastReviewedNote: "Reviewed for Foundry #149: the strict 0.1.6 version projection uses qualified source 5c5cdbd and verified CLI 0.1.13. Runtime behavior and the frozen dependency graph are unchanged; complete owning release and independent public F1 verification remain required."
+lastReviewedAt: 2026-09-10
+lastReviewedCommit: 66fa756cac351ad9cff282141ef7fafe63dfb6e2
+lastReviewedNote: "Reviewed for Foundry #151: preserve verified managed launch context in executable next actions and require actual fresh-process qualification in source/public bootstrap proof. Public F1.6 reproduces the failure; the fixed source-free installed candidate passes. Runtime/account/task ownership, existing authorization, no-replay and dependency pins remain unchanged."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -86,7 +86,7 @@ After local semantic work is ready, a further resume performs process/flow ident
 
 Preflight reuses the existing request builder, query audit, receipt-bound runner and index merger. Requests target current unwrapped payloads and retain source trace context. Remote reads finish before a local transaction registers their immutable evidence; that transaction cannot replay a remote operation. Registration rechecks current rows under the task lock. Failed reads remain visible as `needs_input` and a later resume may retry the read-only stage. Status never performs a search. Successful preflight invalidates the earlier assessment, and the next resume re-runs curation against its exact identity index. Manual review becomes dedicated identity work even for the generic profile. This read evidence supplies decision context; submitting a bound identity decision remains separate from write authorization.
 
-An executable next action contains Node/active source-or-emitted entry argv, `cwd=workspaceRoot` and purpose. Its verified binding digest covers every executable field; workspace, task and actor are explicit argv values, while task lookup revalidates the immutable revision fingerprint and current runtime/input facts before work. It has no `display` authority. A final restricted data CommandSpec still requires the W04 execution-context/identity/authorization gate; Owner execution validates it immediately before the first dispatch.
+An executable next action preserves `cwd=workspaceRoot`, the application arguments and purpose. An unmanaged source/emitted host retains its direct Node/package entry. A verified managed host instead selects its exact CLI `runtime exec` command with the original trusted manifest digest, component cache and launch id before the unchanged Foundry arguments. Its verified binding digest covers every executable field; workspace, task and actor are explicit argv values, while task lookup revalidates the immutable revision fingerprint and current runtime/input facts before work. It has no `display` authority. A final restricted data CommandSpec still requires the W04 execution-context/identity/authorization gate; Owner execution validates it immediately before the first dispatch.
 
 After ready assessment and required identity preflight, resume invokes the existing finalize owner. It preserves reference/source/contact/canonical repair, cleanup, native schema, deterministic QA, location audit, curation, dry-run, remote reference verification and mutation/handoff report ordering. Each dataset type uses its own contract pack; Unit Group and Flow Property rows use the owner's support mode separately. Finalization dispatch accepts only local checks, explicit `--dry-run` operations and read-only remote verification, never `--commit`.
 

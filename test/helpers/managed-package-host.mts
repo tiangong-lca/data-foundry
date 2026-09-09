@@ -203,6 +203,49 @@ export async function verifyManagedPackageHost(installedPackage: string, parent:
     (doctor.runtime_identity as { qualification: { status: string } }).qualification.status,
     "ready",
   );
+  const source = path.join(root, "action-source.json");
+  fs.writeFileSync(source, JSON.stringify({ contactDataSet: {} }));
+  const spec = path.join(root, "action-request.json");
+  fs.writeFileSync(
+    spec,
+    JSON.stringify({
+      schema: "tiangong-foundry.task-start.v1",
+      request_id: "managed-returned-action",
+      actor_id: "action-actor",
+      lane: "source-evidence-dataset-development",
+      profile_id: "generic",
+      target_entities: ["contact"],
+      sources: [{ path: source }],
+      seed: { path: source },
+      account_intent: null,
+      preparation: null,
+    }),
+  );
+  const started = await run(
+    "foundry",
+    ["task", "start", "--workspace", workspace, "--spec", spec, "--json"],
+    0,
+  );
+  const action = started.next_actions.find((item) => item.kind === "command");
+  assert.ok(action?.kind === "command");
+  const continued = spawnSync(action.executable, [...action.argv], {
+    cwd: action.cwd,
+    env: environment,
+    shell: false,
+    encoding: "utf8",
+    timeout: 90_000,
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  assert.equal(continued.status, 0, continued.stderr || continued.stdout);
+  assert.equal(continued.stderr, "");
+  const continuedResult = assertFoundryOperationResult(JSON.parse(continued.stdout));
+  assert.equal(continuedResult.task_id, started.task_id);
+  assert.equal(
+    (continuedResult.runtime_identity as { qualification: { status: string } }).qualification
+      .status,
+    "ready",
+    "A fresh returned-action process must retain the independent managed qualification.",
+  );
   const readOnlyWorkspace = path.join(root, "read-only-workspace");
   const denied = await run("foundry-read", init(readOnlyWorkspace), 4);
   assert.equal(denied.status, "blocked");

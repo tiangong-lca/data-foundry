@@ -37,9 +37,14 @@ export interface FoundryRuntimeCommandHost {
   readonly setExitCode?: (code: number) => void;
 }
 
-type PrepareRuntimeHost = (
-  signal: AbortSignal,
-) => Promise<Omit<FoundryRuntimeCommandHost, "signal" | "writeStdout" | "setExitCode">>;
+export type PreparedFoundryRuntimeHost = Omit<
+  FoundryRuntimeCommandHost,
+  "signal" | "writeStdout" | "setExitCode"
+> & {
+  readonly projectNextActions?: (result: FoundryOperationResult) => FoundryOperationResult;
+};
+
+type PrepareRuntimeHost = (signal: AbortSignal) => Promise<PreparedFoundryRuntimeHost>;
 
 interface ParsedPublicCommand {
   operation: FoundryPublicOperation;
@@ -556,13 +561,14 @@ export async function runFoundryRuntimeCommand(
   const setExitCode = host.setExitCode ?? ((code: number) => (process.exitCode = code));
   let result: FoundryOperationResult;
   try {
-    const prepared =
+    const prepared: PreparedFoundryRuntimeHost =
       prepareHost && !effectiveHost.signal?.aborted ? await prepareHost(effectiveHost.signal!) : {};
     result = await runPublicCommand(parsed, {
       ...effectiveHost,
       ...prepared,
       signal: effectiveHost.signal,
     });
+    if (prepared.projectNextActions) result = prepared.projectNextActions(result);
   } catch (error) {
     result = effectiveHost.signal?.aborted
       ? interruptedResult(parsed.operation, null)

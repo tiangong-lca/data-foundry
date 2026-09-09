@@ -34,9 +34,9 @@ checkPaths:
   - test/commands/foundry-release-*.test.mts
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
-lastReviewedAt: 2026-09-09
-lastReviewedCommit: 5c5cdbd9af89dcafa7a8f837bd3c4de4bd92d2d8
-lastReviewedNote: "Reviewed for Foundry #149: the strict 0.1.6 version projection uses qualified source 5c5cdbd and verified CLI 0.1.13. Runtime behavior and the frozen dependency graph are unchanged; complete owning release and independent public F1 verification remain required."
+lastReviewedAt: 2026-09-10
+lastReviewedCommit: 66fa756cac351ad9cff282141ef7fafe63dfb6e2
+lastReviewedNote: "Reviewed for Foundry #151: preserve verified managed launch context in executable next actions and require actual fresh-process qualification in source/public bootstrap proof. Public F1.6 reproduces the failure; the fixed source-free installed candidate passes. Runtime/account/task ownership, existing authorization, no-replay and dependency pins remain unchanged."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -70,7 +70,7 @@ The selected launch must use the current managed Node and exactly one declared a
 
 The host additionally validates relationships that the structural schema cannot prove: every policy uses the declared Node and installed package entry, the installed CLI/Node match their independent expectation, and the selected TIDAS file matches its declared size/hash/executable mode. Existing runtime qualification owns the TIDAS version/protocol/assets handshake when an operation requests qualification. A read policy never grants writes; explicit runtime selection still requires a qualified current writer and actor/request intent. The CLI-owned component cache and its descendants/ancestors cannot become a workspace, including migration destinations.
 
-The public command adapter accepts an optional trusted asynchronous host initializer so signal handling and the single-result envelope cover admission as well as the operation. Pre-observed cancellation skips initialization. Cancellation while waiting for IPC closes that channel and preserves the interrupted result. Unsupported managed metadata versions return `blocked`; invalid bindings return `failed` before workspace effects. The initializer cannot replace the adapter's output handlers or cancellation signal.
+The public command adapter accepts an optional trusted asynchronous host initializer so signal handling and the single-result envelope cover admission as well as the operation. Pre-observed cancellation skips initialization. Cancellation while waiting for IPC closes that channel and preserves the interrupted result. Unsupported managed metadata versions return `blocked`; invalid bindings return `failed` before workspace effects. The initializer cannot replace the adapter's output handlers or cancellation signal. Its package-owned result projector binds executable next actions to the same verified CLI manager launch, so a new process receives fresh IPC context rather than falling back to an unqualified direct bin. The original launch id retains read/write and rollback-target policy; application argv, CWD and purpose remain unchanged, and the complete command binding is recomputed.
 
 Installed-process tests use real Node, the packed Foundry candidate, public CLI APIs and genuine IPC, with separate application/native fixture components. TIDAS and predecessor-release metadata remain explicit fixtures. These tests qualify the admission mechanism; final production component assembly, real native inputs, immutable publication and complete F1 startup qualification remain separate W08 work.
 
@@ -315,3 +315,7 @@ The W10 planning extension adds the shared pure attempt leaf and bounded migrati
 The W10 transfer extension ships bounded transfer I/O and staging/audit owners plus pending-marker and receipt schemas. It still has no install lifecycle effects, no business mutation dispatcher and no automatic activation; source-free consumers can explicitly stage and audit the same v2 plans.
 
 The adoption extension ships migration planning/application/authority/scope guards, explicit read/write access, runtime selection and their strict schemas. The package descriptor lists both supported read and write schemas while retaining v1 as the default initialization schema; v2 writes additionally require the trusted host feature selection. Public CLI apply/runtime-use remain separate explicit actions, never install hooks. Source and installed packages must qualify the same behaviors; managed component publication/bootstrap remains W08.
+
+Managed continuations retain the trusted manifest bytes in an exclusive content-addressed `foundry-manifests/<sha256>.json` cache snapshot. The digest comes from verified IPC, not that file or the workspace. Existing different or linked cache bytes are rejected; no installed component is changed. Results without command actions create no snapshot. The existing CLI manager reloads the independent digest, verifies components and creates the next managed host context.
+
+Copied bootstrap qualification additionally starts a credential-free task and executes its exact returned action in a fresh process. That process must retain both the task id and ready runtime qualification. Source/recovery capsules and final public qualification require the `task-start` and `returned-action` phases on every supported platform, alongside the existing cold/warm, developer-command and tamper checks.
