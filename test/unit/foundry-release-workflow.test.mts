@@ -191,3 +191,28 @@ test("a merged fork PR remains valid evidence after its source repository is del
     );
   }
 });
+
+test("exact-tag recovery accepts only a numeric artifact locator with diagnostics disabled", () => {
+  const ref = "refs/tags/foundry-v0.1.4",
+    env = environment(ref, "workflow_dispatch");
+  const inputs = {
+    resume_run_id: "12345678",
+    diagnose_npm_oidc: false,
+    diagnose_platform: "none",
+    diagnose_tag: "",
+  };
+  const event = { repository: { full_name: repository }, inputs };
+  assert.equal(parseFoundryReleaseWorkflowEvent(env, event).head, head);
+  for (const delta of [
+    { resume_run_id: "../123" },
+    { resume_run_id: 123 },
+    { resume_run_id: "0" },
+    { resume_run_id: "123\n" },
+    { diagnose_platform: "win32-x64" },
+    { diagnose_tag: "foundry-v0.1.3" },
+    { source_sha: base },
+  ])
+    assert.throws(() =>
+      parseFoundryReleaseWorkflowEvent(env, { ...event, inputs: { ...inputs, ...delta } }),
+    );
+});

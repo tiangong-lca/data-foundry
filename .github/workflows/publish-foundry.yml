@@ -1,5 +1,4 @@
 name: Foundry Release
-
 on:
   push:
     branches:
@@ -10,14 +9,31 @@ on:
         description: Inspect redacted npm OIDC response validation only; never publish
         type: boolean
         default: false
-
+      resume_run_id:
+        description: Optional exact prior run for the same source; every stage proof is reverified
+        type: string
+        default: ""
+      diagnose_platform:
+        description: Read-only public-native diagnosis on one host; disables all publication
+        type: choice
+        default: none
+        options:
+          - none
+          - linux-x64
+          - linux-arm64
+          - darwin-arm64
+          - win32-x64
+      diagnose_tag:
+        description: Exact existing stable tag for read-only platform diagnosis
+        type: string
+        default: ""
 permissions:
   contents: read
-
+  actions: read
+  attestations: read
 concurrency:
   group: foundry-release
   cancel-in-progress: false
-
 jobs:
   diagnose-npm-oidc:
     name: Diagnose npm OIDC without publication
@@ -32,7 +48,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           runtime: node@24.19.0
           install: false
@@ -40,10 +56,9 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Report fixed validation facts and discard the credential
         run: pnpm release:diagnose-npm-oidc
-
   release-context:
     name: Exact release context
-    if: github.repository == 'tiangong-lca/data-foundry' && !(github.event_name == 'workflow_dispatch' && inputs.diagnose_npm_oidc)
+    if: github.repository == 'tiangong-lca/data-foundry' && !(github.event_name == 'workflow_dispatch' && (inputs.diagnose_npm_oidc || inputs.diagnose_platform != 'none'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -62,31 +77,34 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-
       - name: Refresh main ancestry
         run: git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
-
       - name: Set up pnpm and Node.js
-        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           runtime: node@24.19.0
           install: false
           cache: false
-
       - name: Verify event, release diff and merged PR
         id: context
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pnpm release:context --github-output
-
   release-qualification:
     name: Qualify the exact source on all supported hosts
-    needs: release-context
-    if: ${{ !cancelled() && needs.release-context.result == 'success' && needs.release-context.outputs.should_release == 'true' }}
+    needs:
+      - release-context
+      - release-preflight
+    if: ${{ !cancelled() && needs.release-context.result == 'success' && needs.release-preflight.result == 'success' && needs.release-context.outputs.should_release == 'true' }}
     uses: ./.github/workflows/quality-gate.yml
     with:
       source_sha: ${{ needs.release-context.outputs.release_head }}
-
+      resume_run_id: ${{ inputs.resume_run_id || '' }}
+    permissions:
+      contents: read
+      actions: read
+      attestations: write
+      id-token: write
   release-tag:
     name: Preserve the immutable qualified release tag
     needs:
@@ -105,22 +123,18 @@ jobs:
           ref: ${{ needs.release-context.outputs.release_head }}
           fetch-depth: 0
           persist-credentials: false
-
       - name: Refresh main ancestry
         run: git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
-
       - name: Set up pnpm and Node.js
-        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           runtime: node@24.19.0
           install: false
           cache: false
-
       - name: Revalidate source and create or verify its tag
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pnpm release:tag
-
   npm-package:
     name: Publish the verified npm package
     needs:
@@ -136,6 +150,8 @@ jobs:
       contents: read
       pull-requests: read
       id-token: write
+      actions: read
+      attestations: read
     steps:
       - name: Check out the qualified source
         uses: actions/checkout@v7
@@ -143,58 +159,48 @@ jobs:
           ref: ${{ needs.release-context.outputs.release_head }}
           fetch-depth: 0
           persist-credentials: false
-
       - name: Refresh main ancestry
         run: git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
-
       - name: Set up pnpm and Node.js
-        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           runtime: node@24.19.0
           install: false
           cache: false
-
       - name: Install frozen build and signature dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
-
       - name: Download the package verified by source qualification
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          name: foundry-ci-package-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/foundry-ci-package
-
+          name: ${{ needs.release-qualification.outputs.qualification_artifact }}
+          path: ${{ runner.temp }}/qualified-source
       - name: Sign the exact package verified by source qualification
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          FOUNDRY_CI_PACKAGE_DIR: ${{ runner.temp }}/foundry-ci-package
-          FOUNDRY_CI_PACKAGE_MANIFEST_SHA256: ${{ needs.release-qualification.outputs.package_manifest_sha256 }}
-          FOUNDRY_CI_PACKAGE_SHA256: ${{ needs.release-qualification.outputs.package_sha256 }}
+          FOUNDRY_QUALIFICATION_CAPSULE: ${{ runner.temp }}/qualified-source
+          GH_TOKEN: ${{ github.token }}
         run: pnpm release:prepare-package
-
       - name: Preserve the signed package and first-publication handoff
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: foundry-npm-${{ needs.release-context.outputs.version }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: package-artifacts/npm-release/
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
-
       - name: Publish with short-lived OIDC and verify public registry evidence
         id: publish
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pnpm release:publish-package
-
       - name: Preserve the publication result and public verification
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: foundry-publication-${{ needs.release-context.outputs.version }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: package-artifacts/npm-publication/
           if-no-files-found: warn
           retention-days: 30
-
   prepare-runtime:
     name: Prepare published runtime (${{ matrix.platform }})
     needs:
@@ -207,6 +213,7 @@ jobs:
       contents: read
       id-token: write
       attestations: write
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -226,49 +233,72 @@ jobs:
           ref: ${{ needs.release-context.outputs.release_head }}
           fetch-depth: 0
           persist-credentials: false
-
       - name: Set up pnpm and Node.js
-        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           runtime: node@24.19.0
           install: false
           cache: true
-
       - name: Install frozen release dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
-
       - name: Download the package verified by source qualification
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          name: foundry-ci-package-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/foundry-ci-package
-
+          name: ${{ needs.release-qualification.outputs.qualification_artifact }}
+          path: ${{ runner.temp }}/qualified-source
+      - name: Verify and restore native (${{ matrix.platform }})
+        id: restore
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOUNDRY_RESUME_RUN: ${{ inputs.resume_run_id }}
+          STAGE_INPUT: ${{ needs.release-qualification.outputs.package_sha256 }}
+        run: pnpm ci:stage restore --stage native --platform ${{ matrix.platform }} --directory "${{ runner.temp }}/foundry-published-runtime" --input-sha256 "$STAGE_INPUT"
       - name: Assemble and qualify actual public npm and native inputs
         env:
-          FOUNDRY_CI_PACKAGE_DIR: ${{ runner.temp }}/foundry-ci-package
-          FOUNDRY_CI_PACKAGE_MANIFEST_SHA256: ${{ needs.release-qualification.outputs.package_manifest_sha256 }}
-          FOUNDRY_CI_PACKAGE_SHA256: ${{ needs.release-qualification.outputs.package_sha256 }}
+          FOUNDRY_QUALIFICATION_CAPSULE: ${{ runner.temp }}/qualified-source
+          GH_TOKEN: ${{ github.token }}
         run: pnpm release:prepare-runtime --output "${{ runner.temp }}/foundry-published-runtime" --published
-
+        if: steps.restore.outputs.reused != 'true'
       - name: Attest exact runtime component archives
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
           subject-path: ${{ runner.temp }}/foundry-published-runtime/components/*.tar.gz
-
-      - name: Preserve the qualified published-input platform
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: steps.restore.outputs.reused != 'true'
+      - name: Seal completed native evidence
+        if: steps.restore.outputs.reused != 'true'
+        shell: bash
+        env:
+          FOUNDRY_STAGE_PASSED: "true"
+          STAGE_INPUT: ${{ needs.release-qualification.outputs.package_sha256 }}
+        run: pnpm ci:stage seal --stage native --platform ${{ matrix.platform }} --directory "${{ runner.temp }}/foundry-published-runtime" --input-sha256 "$STAGE_INPUT"
+      - name: Attest complete stage inventory
+        if: steps.restore.outputs.reused != 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
-          name: foundry-published-${{ github.run_attempt }}-${{ matrix.platform }}
+          subject-path: ${{ runner.temp }}/foundry-published-runtime/receipt.json
+      - name: Preserve verified stage and original proof
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.restore.outputs.artifact_name }}
           path: ${{ runner.temp }}/foundry-published-runtime/
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
-
+      - name: Preserve failed native diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: foundry-native-diagnostic-${{ matrix.platform }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/foundry-published-runtime/runtime-diagnostic.json
+          if-no-files-found: warn
+          retention-days: 14
   publish-components:
     name: Publish immutable runtime components
     needs:
       - release-context
       - prepare-runtime
+      - release-qualification
     if: ${{ !cancelled() && needs.release-context.result == 'success' && needs.prepare-runtime.result == 'success' }}
     runs-on: ubuntu-latest
     outputs:
@@ -278,7 +308,9 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
-      attestations: read
+      attestations: write
+      actions: read
+      id-token: write
     steps:
       - name: Checkout the qualified release source
         uses: actions/checkout@v7
@@ -286,78 +318,82 @@ jobs:
           ref: ${{ needs.release-context.outputs.release_head }}
           fetch-depth: 0
           persist-credentials: false
-
       - name: Refresh main ancestry
         run: git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
-
       - name: Set up pnpm and Node.js
-        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           runtime: node@24.19.0
           install: false
           cache: true
-
       - name: Install frozen release dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Download qualified linux-x64 from this attempt
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: foundry-published-${{ github.run_attempt }}-linux-x64
-          path: ${{ runner.temp }}/foundry-published-platforms/linux-x64
-
-      - name: Download qualified linux-arm64 from this attempt
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: foundry-published-${{ github.run_attempt }}-linux-arm64
-          path: ${{ runner.temp }}/foundry-published-platforms/linux-arm64
-
-      - name: Download qualified darwin-arm64 from this attempt
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: foundry-published-${{ github.run_attempt }}-darwin-arm64
-          path: ${{ runner.temp }}/foundry-published-platforms/darwin-arm64
-
-      - name: Download qualified win32-x64 from this attempt
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: foundry-published-${{ github.run_attempt }}-win32-x64
-          path: ${{ runner.temp }}/foundry-published-platforms/win32-x64
-
-      - name: Verify archive source attestations before publication
+      - name: Verify and restore native (linux-x64)
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_HEAD: ${{ needs.release-context.outputs.release_head }}
-        run: |
-          for archive in "$RUNNER_TEMP"/foundry-published-platforms/*/components/*.tar.gz; do
-            gh attestation verify "$archive" --repo tiangong-lca/data-foundry --signer-workflow tiangong-lca/data-foundry/.github/workflows/publish-foundry.yml --source-digest "$RELEASE_HEAD" --source-ref "$GITHUB_REF" --deny-self-hosted-runners
-          done
-
+          FOUNDRY_RESUME_RUN: ${{ inputs.resume_run_id }}
+          STAGE_INPUT: ${{ needs.release-qualification.outputs.package_sha256 }}
+        run: pnpm ci:stage restore --stage native --platform linux-x64 --directory "${{ runner.temp }}/foundry-published-platforms/linux-x64" --input-sha256 "$STAGE_INPUT" --required true
+      - name: Verify and restore native (linux-arm64)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOUNDRY_RESUME_RUN: ${{ inputs.resume_run_id }}
+          STAGE_INPUT: ${{ needs.release-qualification.outputs.package_sha256 }}
+        run: pnpm ci:stage restore --stage native --platform linux-arm64 --directory "${{ runner.temp }}/foundry-published-platforms/linux-arm64" --input-sha256 "$STAGE_INPUT" --required true
+      - name: Verify and restore native (darwin-arm64)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOUNDRY_RESUME_RUN: ${{ inputs.resume_run_id }}
+          STAGE_INPUT: ${{ needs.release-qualification.outputs.package_sha256 }}
+        run: pnpm ci:stage restore --stage native --platform darwin-arm64 --directory "${{ runner.temp }}/foundry-published-platforms/darwin-arm64" --input-sha256 "$STAGE_INPUT" --required true
+      - name: Verify and restore native (win32-x64)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOUNDRY_RESUME_RUN: ${{ inputs.resume_run_id }}
+          STAGE_INPUT: ${{ needs.release-qualification.outputs.package_sha256 }}
+        run: pnpm ci:stage restore --stage native --platform win32-x64 --directory "${{ runner.temp }}/foundry-published-platforms/win32-x64" --input-sha256 "$STAGE_INPUT" --required true
       - name: Aggregate and publish exact component assets
         id: publish
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pnpm release:publish-components
-
-      - name: Preserve component publication evidence
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - name: Seal completed components evidence
+        shell: bash
+        env:
+          FOUNDRY_STAGE_PASSED: "true"
+          STAGE_INPUT: ${{ needs.release-qualification.outputs.package_sha256 }}
+        run: pnpm ci:stage seal --stage components --platform all --directory "${{ github.workspace }}/package-artifacts/runtime-publication" --input-sha256 "$STAGE_INPUT"
+        id: seal
+      - name: Attest complete stage inventory
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
-          name: foundry-components-publication-${{ github.run_attempt }}
-          path: package-artifacts/runtime-publication/
-          if-no-files-found: warn
+          subject-path: ${{ github.workspace }}/package-artifacts/runtime-publication/receipt.json
+      - name: Preserve verified stage and original proof
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.seal.outputs.artifact_name }}
+          path: ${{ github.workspace }}/package-artifacts/runtime-publication/
+          if-no-files-found: error
           retention-days: 30
-
+          compression-level: 0
   qualify-bootstrap-public:
     name: Qualify public bootstrap (${{ matrix.platform }})
     needs:
       - release-context
       - publish-components
+      - release-qualification
     if: ${{ !cancelled() && needs.release-context.result == 'success' && needs.publish-components.result == 'success' && needs.publish-components.outputs.components_published == 'true' }}
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
       pull-requests: read
+      actions: read
+      attestations: write
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -380,18 +416,29 @@ jobs:
       - name: Refresh main ancestry
         run: git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
       - name: Set up pnpm and Node.js
-        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           runtime: node@24.19.0
           install: false
           cache: true
       - name: Install frozen qualification dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
-      - name: Download independently selected publication metadata
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: foundry-components-publication-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/foundry-bootstrap-public-input
+      - name: Verify and restore bootstrap (${{ matrix.platform }})
+        id: restore
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOUNDRY_RESUME_RUN: ${{ inputs.resume_run_id }}
+          STAGE_INPUT: ${{ needs.publish-components.outputs.manifest_sha256 }}
+        run: pnpm ci:stage restore --stage bootstrap --platform ${{ matrix.platform }} --directory "${{ runner.temp }}/foundry-bootstrap-public-qualification" --input-sha256 "$STAGE_INPUT"
+      - name: Verify and restore components (all)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOUNDRY_RESUME_RUN: ${{ inputs.resume_run_id }}
+          STAGE_INPUT: ${{ needs.release-qualification.outputs.package_sha256 }}
+        run: pnpm ci:stage restore --stage components --platform all --directory "${{ runner.temp }}/foundry-bootstrap-public-input" --input-sha256 "$STAGE_INPUT" --required true
+        if: steps.restore.outputs.reused != 'true'
       - name: Qualify actual public downloads through the original bootstrap
         shell: bash
         env:
@@ -400,25 +447,41 @@ jobs:
           BOOTSTRAP_INPUT: ${{ runner.temp }}/foundry-bootstrap-public-input
           BOOTSTRAP_OUTPUT: ${{ runner.temp }}/foundry-bootstrap-public-qualification
         run: pnpm release:qualify-bootstrap --input "$BOOTSTRAP_INPUT" --manifest-sha256 "$EXPECTED_MANIFEST_SHA256" --output "$BOOTSTRAP_OUTPUT" --public
-      - name: Preserve public native bootstrap evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: steps.restore.outputs.reused != 'true'
+      - name: Seal completed bootstrap evidence
+        if: steps.restore.outputs.reused != 'true'
+        shell: bash
+        env:
+          FOUNDRY_STAGE_PASSED: "true"
+          STAGE_INPUT: ${{ needs.publish-components.outputs.manifest_sha256 }}
+        run: pnpm ci:stage seal --stage bootstrap --platform ${{ matrix.platform }} --directory "${{ runner.temp }}/foundry-bootstrap-public-qualification" --input-sha256 "$STAGE_INPUT"
+      - name: Attest complete stage inventory
+        if: steps.restore.outputs.reused != 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
-          name: foundry-bootstrap-public-${{ github.run_attempt }}-${{ matrix.platform }}
-          path: ${{ runner.temp }}/foundry-bootstrap-public-qualification/bootstrap-qualification.json
+          subject-path: ${{ runner.temp }}/foundry-bootstrap-public-qualification/receipt.json
+      - name: Preserve verified stage and original proof
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.restore.outputs.artifact_name }}
+          path: ${{ runner.temp }}/foundry-bootstrap-public-qualification/
           if-no-files-found: error
           retention-days: 30
-
+          compression-level: 0
   publish-runtime-manifest:
     name: Publish the fully qualified runtime manifest
     needs:
       - release-context
       - publish-components
       - qualify-bootstrap-public
+      - release-qualification
     if: ${{ !cancelled() && needs.release-context.result == 'success' && needs.publish-components.result == 'success' && needs.qualify-bootstrap-public.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: read
+      actions: read
+      attestations: read
     steps:
       - name: Checkout the qualified release source
         uses: actions/checkout@v7
@@ -429,43 +492,48 @@ jobs:
       - name: Refresh main ancestry
         run: git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
       - name: Set up pnpm and Node.js
-        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           runtime: node@24.19.0
           install: false
           cache: true
       - name: Install frozen publication dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
-      - name: Download exact publication inputs
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: foundry-components-publication-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/foundry-manifest-publication-input
-
-      - name: Download linux-x64 public-bootstrap proof
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: foundry-bootstrap-public-${{ github.run_attempt }}-linux-x64
-          path: ${{ runner.temp }}/foundry-public-bootstrap-reports/linux-x64
-
-      - name: Download linux-arm64 public-bootstrap proof
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: foundry-bootstrap-public-${{ github.run_attempt }}-linux-arm64
-          path: ${{ runner.temp }}/foundry-public-bootstrap-reports/linux-arm64
-
-      - name: Download darwin-arm64 public-bootstrap proof
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: foundry-bootstrap-public-${{ github.run_attempt }}-darwin-arm64
-          path: ${{ runner.temp }}/foundry-public-bootstrap-reports/darwin-arm64
-
-      - name: Download win32-x64 public-bootstrap proof
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: foundry-bootstrap-public-${{ github.run_attempt }}-win32-x64
-          path: ${{ runner.temp }}/foundry-public-bootstrap-reports/win32-x64
-
+      - name: Verify and restore components (all)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOUNDRY_RESUME_RUN: ${{ inputs.resume_run_id }}
+          STAGE_INPUT: ${{ needs.release-qualification.outputs.package_sha256 }}
+        run: pnpm ci:stage restore --stage components --platform all --directory "${{ runner.temp }}/foundry-manifest-publication-input" --input-sha256 "$STAGE_INPUT" --required true
+      - name: Verify and restore bootstrap (linux-x64)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOUNDRY_RESUME_RUN: ${{ inputs.resume_run_id }}
+          STAGE_INPUT: ${{ needs.publish-components.outputs.manifest_sha256 }}
+        run: pnpm ci:stage restore --stage bootstrap --platform linux-x64 --directory "${{ runner.temp }}/foundry-public-bootstrap-reports/linux-x64" --input-sha256 "$STAGE_INPUT" --required true
+      - name: Verify and restore bootstrap (linux-arm64)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOUNDRY_RESUME_RUN: ${{ inputs.resume_run_id }}
+          STAGE_INPUT: ${{ needs.publish-components.outputs.manifest_sha256 }}
+        run: pnpm ci:stage restore --stage bootstrap --platform linux-arm64 --directory "${{ runner.temp }}/foundry-public-bootstrap-reports/linux-arm64" --input-sha256 "$STAGE_INPUT" --required true
+      - name: Verify and restore bootstrap (darwin-arm64)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOUNDRY_RESUME_RUN: ${{ inputs.resume_run_id }}
+          STAGE_INPUT: ${{ needs.publish-components.outputs.manifest_sha256 }}
+        run: pnpm ci:stage restore --stage bootstrap --platform darwin-arm64 --directory "${{ runner.temp }}/foundry-public-bootstrap-reports/darwin-arm64" --input-sha256 "$STAGE_INPUT" --required true
+      - name: Verify and restore bootstrap (win32-x64)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOUNDRY_RESUME_RUN: ${{ inputs.resume_run_id }}
+          STAGE_INPUT: ${{ needs.publish-components.outputs.manifest_sha256 }}
+        run: pnpm ci:stage restore --stage bootstrap --platform win32-x64 --directory "${{ runner.temp }}/foundry-public-bootstrap-reports/win32-x64" --input-sha256 "$STAGE_INPUT" --required true
       - name: Revalidate every native proof and publish the final immutable contract
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -473,9 +541,104 @@ jobs:
         run: pnpm release:publish-runtime-manifest
       - name: Preserve final manifest publication evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: foundry-runtime-manifest-publication-${{ github.run_attempt }}
           path: package-artifacts/runtime-manifest-publication/
           if-no-files-found: warn
           retention-days: 30
+  release-preflight:
+    name: Verify registry and OIDC before qualification
+    needs: release-context
+    if: ${{ needs.release-context.outputs.should_release == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+    steps:
+      - name: Check out the qualified source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-context.outputs.release_head }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Refresh main ancestry
+        run: git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
+      - name: Set up pnpm and Node.js
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
+        with:
+          runtime: node@24.19.0
+          install: false
+          cache: false
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Read public state and discard one real OIDC credential
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pnpm release:preflight
+  complete-release:
+    name: Require every selected release stage
+    needs:
+      - release-context
+      - release-preflight
+      - release-qualification
+      - release-tag
+      - npm-package
+      - prepare-runtime
+      - publish-components
+      - qualify-bootstrap-public
+      - publish-runtime-manifest
+    if: ${{ always() && !(github.event_name == 'workflow_dispatch' && (inputs.diagnose_npm_oidc || inputs.diagnose_platform != 'none')) }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - shell: bash
+        env:
+          CONTEXT: ${{ needs.release-context.result }}
+          SELECTED: ${{ needs.release-context.outputs.should_release }}
+          STAGES: ${{ toJSON(needs) }}
+        run: |
+          test "$CONTEXT" = success
+          if [ "$SELECTED" = true ]; then
+            echo "$STAGES" | jq -e 'all(.[]; .result == "success")'
+          else
+            test "$SELECTED" = false
+          fi
+  diagnose-platform:
+    name: Diagnose published native platform without publication
+    if: github.repository == 'tiangong-lca/data-foundry' && github.event_name == 'workflow_dispatch' && inputs.diagnose_platform != 'none'
+    runs-on: ${{ fromJSON('{"linux-x64":"ubuntu-latest","linux-arm64":"ubuntu-24.04-arm","darwin-arm64":"macos-latest","win32-x64":"windows-latest"}')[inputs.diagnose_platform] }}
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Check out the qualified source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Refresh main ancestry
+        run: git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
+      - name: Set up pnpm and Node.js
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
+        with:
+          runtime: node@24.19.0
+          install: false
+          cache: false
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Validate the immutable public source and execute its native preparation
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm release:diagnose-platform
+      - name: Preserve bounded redacted diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: foundry-platform-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/foundry-platform-diagnostic/**/*.json
+          if-no-files-found: warn
+          retention-days: 14

@@ -63,8 +63,10 @@ export async function qualifyFoundryRuntimeComponents(prepared: PreparedFoundryR
     status: string;
     milliseconds: number;
   }> = [];
+  let failure: Record<string, unknown> = { phase: "setup" };
   const run = async (entry: string, argv: string[], expectedExit: number, seed = false) => {
     const started = performance.now();
+    failure = { phase: "launch", entry, index: launches, expected_exit: expectedExit };
     const result = await executeRuntimeLaunch(authority.manifest, {
       cacheDir: cache,
       entry,
@@ -79,6 +81,14 @@ export async function qualifyFoundryRuntimeComponents(prepared: PreparedFoundryR
       },
     });
     launches += 1;
+    failure = {
+      ...failure,
+      observed_exit: result.status,
+      signalled: Boolean(result.signal),
+      execution_error: Boolean(result.error),
+      stderr_present: Boolean(result.stderr),
+      stdout_lines: result.stdout.trimEnd().split("\n").length,
+    };
     if (
       result.status !== expectedExit ||
       result.signal ||
@@ -203,6 +213,7 @@ export async function qualifyFoundryRuntimeComponents(prepared: PreparedFoundryR
     const receipt = path.join(path.dirname(nodeBase.root), "receipt.json");
     fs.unlinkSync(receipt);
     for (const phase of ["bootstrap-adoption", "bootstrap-warm"]) {
+      failure = { phase };
       const started = performance.now();
       const output = spawnSync(
         path.join(nodeBase.root, `bin/node${prepared.platform === "win32-x64" ? ".exe" : ""}`),
@@ -284,6 +295,20 @@ export async function qualifyFoundryRuntimeComponents(prepared: PreparedFoundryR
     });
     writeFoundryComponentFile(prepared.output, "runtime-qualification.json", json(report));
     return report;
+  } catch (error) {
+    const report = {
+      schema: "tiangong-foundry.runtime-diagnostic.v1",
+      status: "failed",
+      source: prepared.source,
+      platform: prepared.platform,
+      failure,
+      completed_checks: checks,
+      launches,
+      manager_download_calls: downloads,
+    };
+    writeFoundryComponentFile(prepared.output, "runtime-diagnostic.json", json(report));
+    process.stderr.write(`${JSON.stringify(report)}\n`);
+    throw error;
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

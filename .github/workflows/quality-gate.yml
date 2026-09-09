@@ -1,23 +1,35 @@
 name: quality-gate
-
 on:
-  pull_request:
+  pull_request: null
   workflow_dispatch:
+    inputs:
+      resume_run_id:
+        description: Optional exact same-source run with signed qualified stages
+        type: string
+        default: ""
   workflow_call:
     inputs:
       source_sha:
         description: Exact commit already admitted by the owning release workflow.
         required: true
         type: string
+      resume_run_id:
+        type: string
+        required: false
+        default: ""
     outputs:
       package_sha256:
-        value: ${{ jobs.build-package.outputs.package_sha256 }}
+        value: ${{ jobs.build-package.outputs.package_sha256 || jobs.plan.outputs.package_sha256 }}
       package_manifest_sha256:
-        value: ${{ jobs.build-package.outputs.package_manifest_sha256 }}
-
+        value: ${{ jobs.build-package.outputs.package_manifest_sha256 || jobs.plan.outputs.package_manifest_sha256 }}
+      qualification_artifact:
+        value: ${{ jobs.plan.outputs.capsule_name }}
+      qualification_run:
+        value: ${{ jobs.plan.outputs.run_id }}
 permissions:
   contents: read
-
+  actions: read
+  attestations: read
 jobs:
   plan:
     name: Select exact CI qualification
@@ -27,23 +39,40 @@ jobs:
       source_sha: ${{ steps.plan.outputs.source_sha }}
       test_plan_sha256: ${{ steps.plan.outputs.test_plan_sha256 }}
       shards: ${{ steps.plan.outputs.shards }}
+      capsule_name: ${{ steps.plan.outputs.capsule_name }}
+      run_id: ${{ steps.plan.outputs.run_id }}
+      reuse_verified: ${{ steps.plan.outputs.reuse_verified }}
+      package_sha256: ${{ steps.plan.outputs.package_sha256 }}
+      package_manifest_sha256: ${{ steps.plan.outputs.package_manifest_sha256 }}
+      sealable: ${{ steps.plan.outputs.sealable }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           runtime: node@24.19.0
           install: false
           cache: false
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - id: plan
         env:
           FOUNDRY_CI_SOURCE_SHA: ${{ inputs.source_sha }}
           FOUNDRY_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GH_TOKEN: ${{ github.token }}
+          FOUNDRY_RESUME_RUN: ${{ inputs.resume_run_id || '' }}
+          FOUNDRY_CI_CAN_SEAL: ${{ github.repository == 'tiangong-lca/data-foundry' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
         run: node scripts/ci-plan.ts --github-output
-
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.plan.outputs.capsule_name }}
+          path: ${{ runner.temp }}/qualified-source
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+        if: ${{ steps.plan.outputs.mode == 'reused' }}
   build-package:
     name: Build the source-bound package once
     needs: plan
@@ -57,7 +86,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.plan.outputs.source_sha }}
           persist-credentials: false
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           runtime: node@24.19.0
           install: false
@@ -65,14 +94,14 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - id: build
         run: node scripts/ci-build-package.ts --output "${{ runner.temp }}/foundry-ci-package" --github-output
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: foundry-ci-package-${{ github.run_attempt }}
           path: ${{ runner.temp }}/foundry-ci-package/
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
-
+    if: ${{ needs.plan.outputs.mode != 'reused' }}
   test-shards:
     name: Tests (${{ matrix.platform }} / ${{ matrix.shard }})
     needs: plan
@@ -83,7 +112,11 @@ jobs:
       fail-fast: false
       max-parallel: 16
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+        os:
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+          - macos-latest
+          - windows-latest
         shard: ${{ fromJSON(needs.plan.outputs.shards || '[1,2,3,4]') }}
         include:
           - os: ubuntu-latest
@@ -100,7 +133,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.plan.outputs.source_sha }}
           persist-credentials: false
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           runtime: node@24.19.0
           install: false
@@ -113,17 +146,18 @@ jobs:
           CI_TEST_PLAN: ${{ needs.plan.outputs.test_plan_sha256 }}
           CI_TEST_SOURCE: ${{ needs.plan.outputs.source_sha }}
         run: node scripts/ci-test-shard.ts --index "$CI_TEST_INDEX" --plan-sha256 "$CI_TEST_PLAN" --source-sha "$CI_TEST_SOURCE" --output "$RUNNER_TEMP/foundry-ci-tests"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:
           name: foundry-tests-${{ github.run_attempt }}-${{ matrix.platform }}-${{ matrix.shard }}
           path: ${{ runner.temp }}/foundry-ci-tests/
           if-no-files-found: warn
           retention-days: 7
-
   verify-tests:
     name: Verify every test shard on every platform
-    needs: [plan, test-shards]
+    needs:
+      - plan
+      - test-shards
     if: always() && needs.plan.outputs.mode == 'full'
     runs-on: ubuntu-latest
     steps:
@@ -136,13 +170,13 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.plan.outputs.source_sha }}
           persist-credentials: false
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           runtime: node@24.19.0
           install: false
           cache: true
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           pattern: foundry-tests-${{ github.run_attempt }}-*
           path: ${{ runner.temp }}/foundry-test-shards
@@ -151,16 +185,17 @@ jobs:
           CI_TEST_PLAN: ${{ needs.plan.outputs.test_plan_sha256 }}
           CI_TEST_SOURCE: ${{ needs.plan.outputs.source_sha }}
         run: node scripts/ci-verify-tests.ts --input "$RUNNER_TEMP/foundry-test-shards" --plan-sha256 "$CI_TEST_PLAN" --source-sha "$CI_TEST_SOURCE" --output "$RUNNER_TEMP/foundry-tests.json"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: foundry-tests-complete-${{ github.run_attempt }}
           path: ${{ runner.temp }}/foundry-tests.json
           if-no-files-found: error
           retention-days: 7
-
   version-pr:
     name: Verify the bounded version-only PR
-    needs: [plan, build-package]
+    needs:
+      - plan
+      - build-package
     if: needs.plan.outputs.mode == 'version-only'
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -170,7 +205,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.plan.outputs.source_sha }}
           persist-credentials: false
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           runtime: node@24.19.0
           install: false
@@ -180,10 +215,12 @@ jobs:
         env:
           FOUNDRY_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node scripts/ci-version-gate.ts
-
   quality-gate:
     name: quality-gate (${{ matrix.os }} / ${{ matrix.arch }})
-    needs: [plan, build-package, verify-tests, version-pr]
+    needs:
+      - plan
+      - build-package
+      - version-pr
     if: always()
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -210,15 +247,15 @@ jobs:
           PLAN_RESULT: ${{ needs.plan.result }}
           BUILD_RESULT: ${{ needs.build-package.result }}
           MODE: ${{ needs.plan.outputs.mode }}
-          TEST_RESULT: ${{ needs.verify-tests.result }}
           VERSION_RESULT: ${{ needs.version-pr.result }}
+          REUSE_VERIFIED: ${{ needs.plan.outputs.reuse_verified }}
         run: |
           set -euo pipefail
           test "$PLAN_RESULT" = success
-          test "$BUILD_RESULT" = success
           case "$MODE" in
-            full) test "$TEST_RESULT" = success ;;
-            version-only) test "$VERSION_RESULT" = success ;;
+            full) test "$BUILD_RESULT" = success ;;
+            version-only) test "$BUILD_RESULT" = success; test "$VERSION_RESULT" = success ;;
+            reused) test "$REUSE_VERIFIED" = true ;;
             *) exit 1 ;;
           esac
       - uses: actions/checkout@v7
@@ -227,7 +264,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.plan.outputs.source_sha }}
           persist-credentials: false
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         if: needs.plan.outputs.mode == 'full'
         with:
           runtime: node@24.19.0
@@ -238,7 +275,7 @@ jobs:
       - name: Run remaining canonical platform checks
         if: needs.plan.outputs.mode == 'full'
         run: pnpm ci:platform-checks
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         if: needs.plan.outputs.mode == 'full'
         with:
           name: foundry-ci-package-${{ github.run_attempt }}
@@ -250,7 +287,7 @@ jobs:
           FOUNDRY_CI_PACKAGE_MANIFEST_SHA256: ${{ needs.build-package.outputs.package_manifest_sha256 }}
           FOUNDRY_CI_PACKAGE_SHA256: ${{ needs.build-package.outputs.package_sha256 }}
         run: pnpm release:prepare-runtime --output "${{ runner.temp }}/foundry-runtime-candidate"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: needs.plan.outputs.mode == 'full'
         with:
           name: foundry-runtime-${{ github.run_attempt }}-${{ matrix.platform }}
@@ -258,12 +295,13 @@ jobs:
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
-
   aggregate-runtime:
     name: Verify the complete four-platform runtime set
     outputs:
       manifest_sha256: ${{ steps.aggregate.outputs.manifest_sha256 }}
-    needs: [plan, quality-gate]
+    needs:
+      - plan
+      - quality-gate
     if: ${{ !cancelled() && needs.plan.result == 'success' && needs.quality-gate.result == 'success' && needs.plan.outputs.mode == 'full' }}
     runs-on: ubuntu-latest
     steps:
@@ -273,47 +311,39 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
-
       - name: Set up pnpm and Node.js
-        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           runtime: node@24.19.0
           install: false
           cache: true
-
       - name: Install frozen aggregation dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
-
       - name: Download linux-x64 from this run attempt
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: foundry-runtime-${{ github.run_attempt }}-linux-x64
           path: ${{ runner.temp }}/foundry-platforms/linux-x64
-
       - name: Download linux-arm64 from this run attempt
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: foundry-runtime-${{ github.run_attempt }}-linux-arm64
           path: ${{ runner.temp }}/foundry-platforms/linux-arm64
-
       - name: Download darwin-arm64 from this run attempt
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: foundry-runtime-${{ github.run_attempt }}-darwin-arm64
           path: ${{ runner.temp }}/foundry-platforms/darwin-arm64
-
       - name: Download win32-x64 from this run attempt
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: foundry-runtime-${{ github.run_attempt }}-win32-x64
           path: ${{ runner.temp }}/foundry-platforms/win32-x64
-
       - name: Verify all archives and aggregate the candidate contract
         id: aggregate
         run: pnpm release:aggregate-runtime --input "${{ runner.temp }}/foundry-platforms" --output "${{ runner.temp }}/foundry-runtime-set" --candidate
-
       - name: Preserve the verified combined contract
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: foundry-runtime-set-${{ github.run_attempt }}
           path: |
@@ -322,10 +352,11 @@ jobs:
             ${{ runner.temp }}/foundry-runtime-set/bootstrap-lock.json
           if-no-files-found: error
           retention-days: 7
-
   qualify-bootstrap-cached:
     name: Verify copied bootstrap (${{ matrix.platform }})
-    needs: [plan, aggregate-runtime]
+    needs:
+      - plan
+      - aggregate-runtime
     if: ${{ !cancelled() && needs.plan.outputs.mode == 'full' && needs.aggregate-runtime.result == 'success' }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -348,7 +379,7 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
       - name: Set up pnpm and Node.js
-        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
         with:
           runtime: node@24.19.0
           install: false
@@ -356,12 +387,12 @@ jobs:
       - name: Install frozen qualification dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Download the complete verified contract
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: foundry-runtime-set-${{ github.run_attempt }}
           path: ${{ runner.temp }}/foundry-bootstrap-input
       - name: Download this native platform's archives
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: foundry-runtime-${{ github.run_attempt }}-${{ matrix.platform }}
           path: ${{ runner.temp }}/foundry-bootstrap-native
@@ -374,25 +405,22 @@ jobs:
           BOOTSTRAP_OUTPUT: ${{ runner.temp }}/foundry-bootstrap-qualification
         run: pnpm release:qualify-bootstrap --input "$BOOTSTRAP_INPUT" --manifest-sha256 "$EXPECTED_MANIFEST_SHA256" --output "$BOOTSTRAP_OUTPUT" --archives "$BOOTSTRAP_ARCHIVES"
       - name: Preserve copied-script qualification
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: foundry-bootstrap-cached-${{ github.run_attempt }}-${{ matrix.platform }}
           path: ${{ runner.temp }}/foundry-bootstrap-qualification/bootstrap-qualification.json
           if-no-files-found: error
           retention-days: 7
-
-  complete-qualification:
-    name: Require every selected qualification stage
+  qualification-gate:
+    name: Verify every selected qualification outcome
     needs:
-      [
-        plan,
-        build-package,
-        verify-tests,
-        version-pr,
-        quality-gate,
-        aggregate-runtime,
-        qualify-bootstrap-cached,
-      ]
+      - plan
+      - build-package
+      - verify-tests
+      - version-pr
+      - quality-gate
+      - aggregate-runtime
+      - qualify-bootstrap-cached
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -406,19 +434,116 @@ jobs:
           NATIVE_RESULT: ${{ needs.quality-gate.result }}
           AGGREGATE_RESULT: ${{ needs.aggregate-runtime.result }}
           BOOTSTRAP_RESULT: ${{ needs.qualify-bootstrap-cached.result }}
+          REUSE_VERIFIED: ${{ needs.plan.outputs.reuse_verified }}
         run: |
           set -euo pipefail
           test "$PLAN_RESULT" = success
-          test "$BUILD_RESULT" = success
           test "$NATIVE_RESULT" = success
           case "$MODE" in
             full)
+              test "$BUILD_RESULT" = success
               test "$TEST_RESULT" = success
               test "$AGGREGATE_RESULT" = success
               test "$BOOTSTRAP_RESULT" = success
               ;;
-            version-only)
-              test "$VERSION_RESULT" = success
-              ;;
+            version-only) test "$BUILD_RESULT" = success; test "$VERSION_RESULT" = success ;;
+            reused) test "$REUSE_VERIFIED" = true ;;
+            *) exit 1 ;;
+          esac
+  seal-qualification:
+    name: Seal complete qualification for verified reuse
+    needs:
+      - plan
+      - build-package
+      - qualification-gate
+    if: ${{ !cancelled() && needs.plan.outputs.mode == 'full' && needs.plan.outputs.sealable == 'true' && needs.qualification-gate.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.source_sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2
+        with:
+          runtime: node@24.19.0
+          install: false
+          cache: true
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: foundry-ci-package-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/source-package
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: foundry-tests-complete-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/source-tests
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: foundry-runtime-set-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/source-aggregate
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: foundry-bootstrap-cached-${{ github.run_attempt }}-linux-x64
+          path: ${{ runner.temp }}/source-bootstrap/linux-x64
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: foundry-bootstrap-cached-${{ github.run_attempt }}-linux-arm64
+          path: ${{ runner.temp }}/source-bootstrap/linux-arm64
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: foundry-bootstrap-cached-${{ github.run_attempt }}-darwin-arm64
+          path: ${{ runner.temp }}/source-bootstrap/darwin-arm64
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: foundry-bootstrap-cached-${{ github.run_attempt }}-win32-x64
+          path: ${{ runner.temp }}/source-bootstrap/win32-x64
+      - name: Validate and inventory every required qualification result
+        env:
+          FOUNDRY_STAGE_PASSED: "true"
+          FOUNDRY_SOURCE_PACKAGE_SHA256: ${{ needs.build-package.outputs.package_sha256 }}
+          FOUNDRY_SOURCE_PACKAGE_MANIFEST_SHA256: ${{ needs.build-package.outputs.package_manifest_sha256 }}
+        run: |-
+          node scripts/ci-collect-qualification.ts
+          node scripts/ci-stage.ts seal --stage source --platform all --directory "${{ runner.temp }}/qualified-source"
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
+        with:
+          subject-path: ${{ runner.temp }}/qualified-source/receipt.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ needs.plan.outputs.capsule_name }}
+          path: ${{ runner.temp }}/qualified-source
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+  complete-qualification:
+    name: Require every selected qualification stage
+    needs:
+      - plan
+      - qualification-gate
+      - seal-qualification
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require complete current or cryptographically verified prior qualification
+        env:
+          PLAN_RESULT: ${{ needs.plan.result }}
+          GATE_RESULT: ${{ needs.qualification-gate.result }}
+          MODE: ${{ needs.plan.outputs.mode }}
+          SEALABLE: ${{ needs.plan.outputs.sealable }}
+          SEAL_RESULT: ${{ needs.seal-qualification.result }}
+          REUSE_VERIFIED: ${{ needs.plan.outputs.reuse_verified }}
+        run: |
+          set -euo pipefail
+          test "$PLAN_RESULT" = success
+          test "$GATE_RESULT" = success
+          case "$MODE" in
+            full) if [ "$SEALABLE" = true ]; then test "$SEAL_RESULT" = success; fi ;;
+            reused) test "$REUSE_VERIFIED" = true ;;
+            version-only) ;;
             *) exit 1 ;;
           esac

@@ -1,3 +1,4 @@
+import { TransientFoundryReadbackError } from "./foundry-release-readback.ts";
 import { createHash, timingSafeEqual } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -367,13 +368,24 @@ export async function verifyNpmReleaseEvidence(input: {
 }
 
 async function fetchPublicBytes(url: string, limit: number): Promise<Buffer> {
-  const response = await fetch(url, {
-    redirect: "error",
-    signal: AbortSignal.timeout(30_000),
-    headers: { accept: "application/json, application/octet-stream" },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      redirect: "error",
+      signal: AbortSignal.timeout(30_000),
+      headers: { accept: "application/json, application/octet-stream" },
+    });
+  } catch {
+    throw new TransientFoundryReadbackError(
+      "Public registry transport is temporarily unavailable.",
+    );
+  }
   if (!response.ok || !response.body) {
     await response.body?.cancel();
+    if ([404, 408, 429].includes(response.status) || response.status >= 500)
+      throw new TransientFoundryReadbackError(
+        `Public npm release download failed with HTTP ${response.status}.`,
+      );
     throw new Error(`Public npm release download failed with HTTP ${response.status}.`);
   }
   const length = response.headers.get("content-length");
