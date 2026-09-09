@@ -21,14 +21,15 @@ function identifier(value: string | undefined): string {
   return value;
 }
 
-export function assertFoundryNpmWorkflowEnvironment(
+function assertFoundryReleaseOidcJob(
+  job: "npm-package" | "release-preflight",
   context: FoundryReleaseWorkflowContext,
   environment: Readonly<NodeJS.ProcessEnv>,
 ): void {
   if (!context.release) throw new Error("Foundry provenance requires a release-only source.");
   const event = context.mode === "main-push" ? "push" : "workflow_dispatch";
   if (
-    environment.GITHUB_JOB !== "npm-package" ||
+    environment.GITHUB_JOB !== job ||
     environment.RUNNER_ENVIRONMENT !== "github-hosted" ||
     environment.GITHUB_REPOSITORY !== FOUNDRY_RELEASE_REPOSITORY ||
     environment.GITHUB_SHA !== context.head ||
@@ -49,6 +50,19 @@ export function assertFoundryNpmWorkflowEnvironment(
     environment.GITHUB_RUN_ATTEMPT,
   ])
     identifier(value);
+}
+
+export function assertFoundryNpmWorkflowEnvironment(
+  context: FoundryReleaseWorkflowContext,
+  environment: Readonly<NodeJS.ProcessEnv>,
+): void {
+  assertFoundryReleaseOidcJob("npm-package", context, environment);
+}
+export function assertFoundryReleasePreflightEnvironment(
+  context: FoundryReleaseWorkflowContext,
+  environment: Readonly<NodeJS.ProcessEnv>,
+): void {
+  assertFoundryReleaseOidcJob("release-preflight", context, environment);
 }
 
 export function buildFoundryNpmProvenance(

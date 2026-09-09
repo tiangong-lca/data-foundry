@@ -1,6 +1,9 @@
 import { npmReleasePolicy } from "./foundry-release-provenance.ts";
 import { requestFoundryGitHubOidcToken } from "./foundry-release-oidc.ts";
-import { assertFoundryNpmWorkflowEnvironment } from "./foundry-release-signing.ts";
+import {
+  assertFoundryNpmWorkflowEnvironment,
+  assertFoundryReleasePreflightEnvironment,
+} from "./foundry-release-signing.ts";
 import type { FoundryReleaseWorkflowContext } from "./foundry-release-workflow.ts";
 
 type Fetch = (url: string, init: RequestInit) => Promise<Response>;
@@ -210,6 +213,17 @@ export async function diagnoseFoundryNpmOidcExchange(
   assertFoundryNpmOidcDiagnosticEnvironment(environment);
   const value = await requestNpmOidcResponse(environment, fetchImpl);
   return inspectFoundryNpmOidcResponse(value, now);
+}
+
+/** Real exchange before expensive qualification; returns only fixed validation facts. */
+export async function preflightFoundryNpmOidcExchange(
+  context: FoundryReleaseWorkflowContext,
+  environment: Readonly<NodeJS.ProcessEnv>,
+  fetchImpl: Fetch = fetch,
+  now = Date.now(),
+) {
+  assertFoundryReleasePreflightEnvironment(context, environment);
+  return inspectFoundryNpmOidcResponse(await requestNpmOidcResponse(environment, fetchImpl), now);
 }
 
 export async function exchangeFoundryNpmOidcToken(

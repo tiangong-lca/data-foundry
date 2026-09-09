@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -9,24 +8,22 @@ import { verifyFoundryPackage } from "../verify-foundry-package.ts";
 import { assertFoundryPackage, type FoundryPackageDescriptor } from "./foundry-package-contract.ts";
 import { extractFoundryNpmTarball } from "./foundry-release-extract.ts";
 import { readFoundryReleaseArtifact } from "./foundry-release-prepared.ts";
-import { readFoundryReleaseGit as git } from "./foundry-release-contract.ts";
-import { sameFoundryReleaseDirectory } from "./foundry-release-root.ts";
-import { resolvePackageManagerCommand } from "./package-manager-command.ts";
 import { freezeFoundryReleaseValue } from "./foundry-release-component-io.ts";
+import {
+  readVerifiedCapsule,
+  assertVerifiedCapsule,
+  currentCapsuleIdentity,
+  currentCapsuleOrigin,
+  capsuleIdentity,
+  canonicalCapsuleJson,
+} from "./foundry-ci-capsule.ts";
 
 const hash = (value: Uint8Array) => createHash("sha256").update(value).digest("hex");
 const digest = /^[0-9a-f]{64}$/u;
-export interface FoundryCiBuildContext {
-  readonly source: Readonly<{ commit: string; tree: string }>;
-  readonly package: Readonly<{ name: "@tiangong-lca/foundry"; version: string }>;
-  readonly toolchain: Readonly<{
-    node: string;
-    pnpm: string;
-    typescript: string;
-    lock_sha256: string;
-  }>;
-  readonly run: Readonly<{ id: string; attempt: string; workflow_ref: string }> | null;
-}
+export { captureFoundryCiBuildContext } from "./foundry-ci-identity.ts";
+export type { FoundryCiBuildContext } from "./foundry-ci-identity.ts";
+import { captureFoundryCiBuildContext, type FoundryCiBuildContext } from "./foundry-ci-identity.ts";
+
 interface Artifact {
   readonly file: string;
   readonly bytes: number;
@@ -94,85 +91,6 @@ export function verifyFoundryCiPackageBytes(
   });
 }
 
-export function captureFoundryCiBuildContext(
-  environment: NodeJS.ProcessEnv = process.env,
-): FoundryCiBuildContext {
-  const root = foundryPackageRepoRoot;
-  if (
-    !sameFoundryReleaseDirectory(root, git(root, ["rev-parse", "--show-toplevel"]).trim()) ||
-    git(root, ["status", "--porcelain", "--untracked-files=all"]).trim()
-  )
-    throw new Error("CI package reuse requires the owning clean source checkout.");
-  const manifest = object(
-    JSON.parse(
-      readFoundryReleaseArtifact(path.join(root, "package.json"), 2 * 1024 * 1024).toString("utf8"),
-    ),
-  );
-  const compiler = object(
-    JSON.parse(
-      readFoundryReleaseArtifact(
-        path.join(root, "node_modules/typescript/package.json"),
-        2 * 1024 * 1024,
-      ).toString("utf8"),
-    ),
-  );
-  const dev = object(manifest.devDependencies);
-  const node = fs.readFileSync(path.join(root, ".nvmrc"), "utf8").trim().replace(/^v/u, "");
-  const manager = String(manifest.packageManager).match(/^pnpm@(\d+\.\d+\.\d+)$/u)?.[1];
-  if (
-    manifest.name !== "@tiangong-lca/foundry" ||
-    typeof manifest.version !== "string" ||
-    !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u.test(manifest.version) ||
-    node !== process.versions.node ||
-    !manager ||
-    typeof compiler.version !== "string" ||
-    compiler.version !== dev.typescript
-  )
-    throw new Error("CI package build requires the exact owning package and toolchain.");
-  const invocation = resolvePackageManagerCommand("pnpm", ["--version"]);
-  const version = spawnSync(invocation.executable, invocation.argv, {
-    cwd: root,
-    encoding: "utf8",
-    timeout: 30000,
-    shell: false,
-  });
-  if (version.status !== 0 || version.stdout.trim() !== manager)
-    throw new Error("CI package pnpm executable differs from its source pin.");
-  const source = {
-    commit: git(root, ["rev-parse", "HEAD"]).trim(),
-    tree: git(root, ["rev-parse", "HEAD^{tree}"]).trim(),
-  };
-  let run: FoundryCiBuildContext["run"] = null;
-  if (environment.GITHUB_ACTIONS === "true") {
-    const id = environment.GITHUB_RUN_ID,
-      attempt = environment.GITHUB_RUN_ATTEMPT,
-      workflow = environment.GITHUB_WORKFLOW_REF;
-    if (
-      !id ||
-      !/^[1-9]\d*$/u.test(id) ||
-      !attempt ||
-      !/^[1-9]\d*$/u.test(attempt) ||
-      !workflow ||
-      workflow.includes("\n")
-    )
-      throw new Error("CI package workflow binding is missing.");
-    run = { id, attempt, workflow_ref: workflow };
-  }
-  return freezeFoundryReleaseValue({
-    source,
-    package: { name: "@tiangong-lca/foundry", version: manifest.version },
-    toolchain: {
-      node,
-      pnpm: manager,
-      typescript: compiler.version,
-      lock_sha256: hash(
-        readFoundryReleaseArtifact(path.join(root, "pnpm-lock.yaml"), 16 * 1024 * 1024),
-      ),
-    },
-    run,
-  });
-}
-
 export function buildFoundryCiPackage(
   output: string,
 ): FoundryCiPackageManifest & FoundryCiPackageDigests {
@@ -222,6 +140,13 @@ export function readVerifiedFoundryCiPackage(
   input: string,
   expected: FoundryCiPackageDigests,
 ): VerifiedFoundryCiPackage {
+  return readPackageSnapshot(input, expected, captureFoundryCiBuildContext());
+}
+function readPackageSnapshot(
+  input: string,
+  expected: FoundryCiPackageDigests,
+  artifactContext: FoundryCiBuildContext,
+): VerifiedFoundryCiPackage {
   if (
     !path.isAbsolute(input) ||
     !fs.lstatSync(input).isDirectory() ||
@@ -240,7 +165,7 @@ export function readVerifiedFoundryCiPackage(
     1024 * 1024,
   );
   const bytes = readFoundryReleaseArtifact(path.join(input, archiveName), 64 * 1024 * 1024);
-  const manifest = verifyFoundryCiPackageBytes(manifestBytes, bytes, expected, context);
+  const manifest = verifyFoundryCiPackageBytes(manifestBytes, bytes, expected, artifactContext);
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-ci-package-"));
   try {
     const extracted = extractFoundryNpmTarball(bytes, path.join(temporary, "package"));
@@ -284,6 +209,53 @@ export function materializeVerifiedFoundryCiPackage(
 export function selectedFoundryCiPackage(
   environment: NodeJS.ProcessEnv = process.env,
 ): VerifiedFoundryCiPackage | undefined {
+  const capsuleDirectory = environment.FOUNDRY_QUALIFICATION_CAPSULE;
+  if (capsuleDirectory !== undefined) {
+    if (
+      environment.FOUNDRY_CI_PACKAGE_DIR ||
+      environment.FOUNDRY_CI_PACKAGE_MANIFEST_SHA256 ||
+      environment.FOUNDRY_CI_PACKAGE_SHA256
+    )
+      throw new Error("CI package selection must use one verified authority.");
+    const identity = currentCapsuleIdentity(),
+      origin = currentCapsuleOrigin();
+    const capsule = readVerifiedCapsule(capsuleDirectory, {
+      stage: "source",
+      platform: "all",
+      identity,
+      input_sha256: capsuleIdentity(identity),
+      purpose: origin.workflow.endsWith("/publish-foundry.yml") ? "release" : "ci",
+    });
+    const context = captureFoundryCiBuildContext();
+    const originalContext: FoundryCiBuildContext = {
+      ...context,
+      run: {
+        id: capsule.receipt.origin.run,
+        attempt: capsule.receipt.origin.attempt,
+        workflow_ref: `tiangong-lca/data-foundry/${capsule.receipt.origin.workflow}@${capsule.receipt.origin.ref}`,
+      },
+    };
+    if (
+      canonicalCapsuleJson(originalContext.source) !==
+      canonicalCapsuleJson(capsule.receipt.identity.source)
+    )
+      throw new Error("Qualified package source differs.");
+    const file = (name: string) => {
+      const value = capsule.receipt.files.find((file) => file.path === `package/${name}`);
+      if (!value) throw new Error("Qualified source capsule has no package artifact.");
+      return value.sha256;
+    };
+    const snapshot = readPackageSnapshot(
+      path.join(capsuleDirectory, "package"),
+      {
+        manifestSha256: file("build-manifest.json"),
+        archiveSha256: file(`tiangong-lca-foundry-${identity.package.version}.tgz`),
+      },
+      originalContext,
+    );
+    assertVerifiedCapsule(capsule);
+    return snapshot;
+  }
   const input = environment.FOUNDRY_CI_PACKAGE_DIR;
   const manifestSha256 = environment.FOUNDRY_CI_PACKAGE_MANIFEST_SHA256;
   const archiveSha256 = environment.FOUNDRY_CI_PACKAGE_SHA256;

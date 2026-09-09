@@ -148,7 +148,11 @@
     "ci:build-package": "node scripts/ci-build-package.ts",
     "ci:test": "node scripts/ci-test-shard.ts",
     "ci:verify-tests": "node scripts/ci-verify-tests.ts",
-    "ci:version-gate": "node scripts/ci-version-gate.ts"
+    "ci:version-gate": "node scripts/ci-version-gate.ts",
+    "ci:stage": "node scripts/ci-stage.ts",
+    "ci:collect-qualification": "node scripts/ci-collect-qualification.ts",
+    "release:preflight": "node scripts/release-preflight.ts",
+    "release:diagnose-platform": "node scripts/release-diagnose-platform.ts"
   },
   "engines": {
     "node": ">=24.19.0 <25",
