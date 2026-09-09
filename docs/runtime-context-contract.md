@@ -41,8 +41,8 @@ checkPaths:
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: c89710cac58813b938353477f42dbde287347f9b
-lastReviewedNote: "Reviewed for Foundry #134 after real diagnostic34310766830: npm returns numeric creation/expiry fields; token type and shape pass. Numeric epochs normalize to safe milliseconds while the original freshness, lifetime, OIDC source and no-fallback limits remain enforced. Local numeric RED/GREEN passed; real corrected exchange and complete release qualification remain required."
+lastReviewedCommit: 28482d809280d093edefac8f8e9367411a59e6da
+lastReviewedNote: "Reviewed for Foundry #136: strict release-only 0.1.4 projection from qualified source 28482d8, including the real-verified numeric OIDC timestamp correction. Only package, verifier and descriptor versions advance; dependency/runtime/authorization contracts and full release qualification remain required and unchanged."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
