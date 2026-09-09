@@ -117,6 +117,40 @@ test("manual recovery uses the dispatched tag and never accepts an alternate che
   );
 });
 
+test("the disabled diagnostic default is inert in exact-tag release recovery", () => {
+  const ref = "refs/tags/foundry-v0.1.4";
+  const event = { repository: { full_name: repository }, ref: "foundry-v0.1.4" };
+  for (const inputs of [{}, { diagnose_npm_oidc: false }, { diagnose_npm_oidc: "false" }])
+    assert.deepEqual(
+      parseFoundryReleaseWorkflowEvent(environment(ref, "workflow_dispatch"), { ...event, inputs }),
+      {
+        mode: "tag-recovery",
+        ref,
+        base: null,
+        head,
+      },
+    );
+  for (const inputs of [
+    { diagnose_npm_oidc: true },
+    { diagnose_npm_oidc: "true" },
+    { diagnose_npm_oidc: 0 },
+    { diagnose_npm_oidc: null },
+    { diagnose_npm_oidc: "False" },
+    { diagnose_npm_oidc: "false " },
+    { diagnose_npm_oidc: false, source: head },
+    { diagnose_npm_oidc: "false", tag: "foundry-v0.1.4" },
+    { unknown: false },
+  ])
+    assert.throws(
+      () =>
+        parseFoundryReleaseWorkflowEvent(environment(ref, "workflow_dispatch"), {
+          ...event,
+          inputs,
+        }),
+      /accepts no alternate source or tag input/u,
+    );
+});
+
 test("release source requires one merged canonical main PR with the exact merge commit", () => {
   const proof = validateMergedFoundryReleasePr([pull()], head);
   assert.deepEqual(proof, { number: 123, url: pull().html_url, head: pull().head.sha });

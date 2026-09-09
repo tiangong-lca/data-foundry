@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: 28482d809280d093edefac8f8e9367411a59e6da
-lastReviewedNote: "Reviewed for Foundry #136: strict release-only 0.1.4 projection from qualified source 28482d8, including the real-verified numeric OIDC timestamp correction. Only package, verifier and descriptor versions advance; dependency/runtime/authorization contracts and full release qualification remain required and unchanged."
+lastReviewedCommit: d29c885a5beccbf9cda04b1a868902d8a4f73a5e
+lastReviewedNote: "Reviewed for Foundry #138: exact-tag recovery accepts only the inert diagnostic default false while all source/tag overrides and enabled diagnostics remain rejected. Real default-input failure has a focused RED/GREEN regression; immutable 0.1.4 recovery uses a complete original main-event rerun with verified existing npm bytes and fresh attempt-bound artifacts."
 ---
 
 # Test Layout
@@ -329,6 +329,8 @@ W05 facade coverage is split similarly. `unit/foundry-operation-result.test.mts`
 `unit/foundry-release-contract.test.mts` rejects mixed version/source changes, partial projections, non-review document edits and file-mode drift. `commands/foundry-release-inspect.test.mts` exercises the actual command against disposable Git commits, including exact tree binding, inherited Git redirection, unchanged-version large-blob skipping and invalid UTF-8 byte comparisons. `unit/foundry-release-provenance.test.mts` checks fixed npm identities/URLs, canonical integrity and signed-statement policy, including source, workflow/ref, signer, event, hosted builder and run binding. These deterministic tests do not mock cryptographic success or contact the registry; release qualification separately runs `release:verify-npm` against actual public artifacts and rejects tampering of the real signed bundle.
 
 `unit/foundry-release-workflow.test.mts` checks canonical event/workflow/source identity, exact-tag recovery and unique merged-main-PR evidence. The release inspection command suite also exercises real clean/dirty Git checkouts, main ancestry, changed tag targets and the actual unchanged-version workflow command without a token or network lookup. Static validation of the owning and reusable workflow checks their YAML, contexts and call inputs; four native hosts still run the canonical gate in CI.
+
+The recovery input regression reproduces the declared diagnostic flag's disabled default that previously caused a real tag-dispatch failure. Empty inputs and only canonical boolean/string false retain the same exact tag/source result. True, noncanonical falsy values, unknown fields and source/tag overrides still fail before checkout selection or publication. This parser correction does not modify immutable old workflows; their original main-push run can be rerun completely with fresh attempt-bound evidence after public readback is verified.
 
 The Git command suite also qualifies filesystem case aliases while rejecting a different or nested root. `helpers/foundry-runtime-manifest.mts` derives its default current-host version from the local repository package manifest. Migration adoption and runtime rollback retain explicit older/untrusted fixtures, so a coherent package version bump preserves the same compatibility rejection cases instead of leaving positive cases bound to the original `0.1.0` candidate.
 

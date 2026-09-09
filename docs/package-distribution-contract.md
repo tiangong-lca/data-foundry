@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: 28482d809280d093edefac8f8e9367411a59e6da
-lastReviewedNote: "Reviewed for Foundry #136: strict release-only 0.1.4 projection from qualified source 28482d8, including the real-verified numeric OIDC timestamp correction. Only package, verifier and descriptor versions advance; dependency/runtime/authorization contracts and full release qualification remain required and unchanged."
+lastReviewedCommit: d29c885a5beccbf9cda04b1a868902d8a4f73a5e
+lastReviewedNote: "Reviewed for Foundry #138: exact-tag recovery accepts only the inert diagnostic default false while all source/tag overrides and enabled diagnostics remain rejected. Real default-input failure has a focused RED/GREEN regression; immutable 0.1.4 recovery uses a complete original main-event rerun with verified existing npm bytes and fresh attempt-bound artifacts."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -179,6 +179,10 @@ CLI provenance is restricted to `tiangong-lca/tiangong-cli` and `.github/workflo
 `pnpm release:context [--github-output]` admits only the canonical GitHub Actions event and workflow definition at the event's exact commit. A normal push must update main without creating, deleting or force-updating it. Manual recovery has no alternate-source inputs: it must dispatch the existing stable `foundry-v<version>` tag, with matching event/ref/workflow/source identity. The checked-out source must be clean, match the event commit and remain an ancestor of fetched `origin/main`; recovery additionally proves the exact local tag and its release-only first-parent diff.
 
 An ordinary unchanged-version main push exits without a GitHub PR lookup. A release requires one PR merged into the canonical repository's main branch whose merge commit exactly matches the source; wrong-target, open, unmerged, ambiguous, incomplete or mismatched evidence fails. A merged fork PR remains valid even after its source fork is deleted: the canonical main commit and merged PR record own the source proof. The bounded read-only GitHub API lookup uses only the workflow-provided token and emits the PR identity, never credentials. This proves the source relationship; it does not replace required review or platform qualification.
+
+Exact-tag recovery permits an empty dispatch-input object or only `diagnose_npm_oidc` with the canonical disabled value `false` or `"false"`. This default has no effect on the selected source or release mode. Enabled diagnostics, noncanonical values, unknown keys and all source/tag overrides remain rejected by the recovery context gate. The diagnostic workflow job remains a separate explicit branch dispatch.
+
+The immutable `foundry-v0.1.4` workflow predates this default-input correction. To continue that release, completely rerun its original qualified main-push run `34314765464`; that preserved event has no dispatch inputs. Every required source and publication stage runs again with fresh attempt-bound artifacts, and the existing public npm release is independently verified without another upload. Do not move the old tag or mix artifacts from different attempts. A successful package upload whose immediate public readback failed must first be independently verified before choosing this recovery.
 
 `.github/workflows/publish-foundry.yml` connects that context gate to the existing four-native-host canonical gate through `workflow_call`. The reusable quality workflow checks out the admitted SHA, retains its ordinary PR/manual triggers, and does not persist checkout credentials. These source qualification jobs have read-only permissions.
 
