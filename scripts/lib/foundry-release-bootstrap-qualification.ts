@@ -303,6 +303,57 @@ export async function qualifyFoundryBootstrap(request: {
     throw new Error(
       "Copied bootstrap runtime identity or cache differs from the qualified release.",
     );
+  const source = path.join(workspace, "action-source.json");
+  const spec = path.join(workspace, "action-request.json");
+  fs.writeFileSync(source, json({ contactDataSet: {} }), { flag: "wx", mode: 0o600 });
+  fs.writeFileSync(
+    spec,
+    json({
+      schema: "tiangong-foundry.task-start.v1",
+      request_id: "public-returned-action",
+      actor_id: "public-qualifier",
+      lane: "source-evidence-dataset-development",
+      profile_id: "generic",
+      target_entities: ["contact"],
+      sources: [{ path: source }],
+      seed: { path: source },
+      account_intent: null,
+      preparation: null,
+    }),
+    { flag: "wx", mode: 0o600 },
+  );
+  const task = assertFoundryOperationResult(
+    JSON.parse(
+      run("task-start", ["task", "start", "--workspace", workspace, "--spec", spec, "--json"], 0)
+        .stdout,
+    ),
+  );
+  const action = task.next_actions.find((item) => item.kind === "command");
+  if (task.status !== "ready" || !task.task_id || action?.kind !== "command")
+    throw new Error("Copied public runtime did not return a bound task continuation.");
+  const actionStart = performance.now();
+  const continued = spawnSync(action.executable, [...action.argv], {
+    cwd: action.cwd,
+    env: environment,
+    shell: false,
+    encoding: "utf8",
+    timeout: 120_000,
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  if (continued.status !== 0 || continued.error || continued.signal || continued.stderr)
+    throw new Error("The exact returned public action could not retain its managed runtime.");
+  const actionResult = assertFoundryOperationResult(JSON.parse(continued.stdout));
+  if (
+    actionResult.status !== "ready" ||
+    actionResult.task_id !== task.task_id ||
+    object(object(actionResult.runtime_identity).qualification).status !== "ready"
+  )
+    throw new Error("The returned action lost the selected task or runtime qualification.");
+  checks.push({
+    phase: "returned-action",
+    exit: continued.status,
+    milliseconds: Math.round(performance.now() - actionStart),
+  });
   const unknown = assertFoundryOperationResult(
     JSON.parse(
       run("developer-command-rejected", ["profiles-list", "--workspace", workspace, "--json"], 2)

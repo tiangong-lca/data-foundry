@@ -40,9 +40,9 @@ checkPaths:
   - test/scenarios/runtime-workspace.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
-lastReviewedAt: 2026-09-09
-lastReviewedCommit: 5c5cdbd9af89dcafa7a8f837bd3c4de4bd92d2d8
-lastReviewedNote: "Reviewed for Foundry #149: the strict 0.1.6 version projection uses qualified source 5c5cdbd and verified CLI 0.1.13. Runtime behavior and the frozen dependency graph are unchanged; complete owning release and independent public F1 verification remain required."
+lastReviewedAt: 2026-09-10
+lastReviewedCommit: 66fa756cac351ad9cff282141ef7fafe63dfb6e2
+lastReviewedNote: "Reviewed for Foundry #151: preserve verified managed launch context in executable next actions and require actual fresh-process qualification in source/public bootstrap proof. Public F1.6 reproduces the failure; the fixed source-free installed candidate passes. Runtime/account/task ownership, existing authorization, no-replay and dependency pins remain unchanged."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
@@ -136,3 +136,5 @@ Prepared-support finalization explicitly selects the approved input file for its
 Workflow generation and scratch directories use task-confined cryptographic names with exclusive `mkdir`, rather than `mkdtemp` under deep task paths. This preserves distinct immutable generations on Windows when a registered task plus operation digest exceeds the Windows `mkdtemp` path limit. Workspace write access and path confinement are checked before creation; existing directories are never adopted.
 
 The native validation adapter also allocates a cryptographically named exclusive staging directory beside its selected output. This keeps atomic same-filesystem replacement and cancellation cleanup available at deep Windows task paths. Failed or cancelled validation preserves the previous output; successful validation publishes the complete new report set.
+
+Managed command continuations retain the original verified launch id through the CLI manager, preserving its workspace access and runtime-target policy in the next process. The content-addressed public manifest snapshot is recomputable cache data outside runtime/workspace roots; its path grants no trust or task permission. The existing digest, inventory, qualification, current identity, authorization and no-replay checks run again before qualified owner execution.

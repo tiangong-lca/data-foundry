@@ -9,7 +9,8 @@ import {
   type RuntimeHostContext,
   type RuntimeLaunch,
 } from "@tiangong-lca/cli/runtime";
-import type { FoundryRuntimeCommandHost } from "../runtime-entry.ts";
+import type { PreparedFoundryRuntimeHost } from "../runtime-entry.ts";
+import { createManagedFoundryActionProjector } from "./foundry-managed-actions.ts";
 import { FoundryContextError } from "./foundry-runtime-error.ts";
 import { describeFoundryRuntime } from "./foundry-runtime-paths.ts";
 import { assertFoundryPackage } from "./foundry-package-contract.ts";
@@ -20,7 +21,7 @@ export const FOUNDRY_MANAGED_RUNTIME_SCHEMA = "tiangong-foundry.managed-runtime.
 export const FOUNDRY_MANAGED_RUNTIME_PATH = "metadata/foundry-runtime.json" as const;
 
 type Reference = RuntimeLaunch["executable"];
-type PreparedHost = Omit<FoundryRuntimeCommandHost, "signal" | "writeStdout" | "setExitCode">;
+type PreparedHost = PreparedFoundryRuntimeHost;
 const identifier = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/u;
 
 function fail(message: string): never {
@@ -192,6 +193,11 @@ function prepare(context: RuntimeHostContext): PreparedHost {
   if (target.manifest.product.id !== "tiangong-foundry")
     fail("Runtime selection targets must be Foundry manifests.");
   return Object.freeze({
+    projectNextActions: createManagedFoundryActionProjector(
+      context,
+      observedCli,
+      runtime.entryPath,
+    ),
     workspaceAccess: Object.freeze({ manifest: context.manifest, access: policy.access }),
     runtimeSelection: Object.freeze({
       cliExpectation: Object.freeze(cli),

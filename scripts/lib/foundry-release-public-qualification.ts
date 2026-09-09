@@ -50,6 +50,8 @@ export function verifyFoundryPublicBootstrapReports(
   const phases = [
     ["initial", 0],
     ["warm", 0],
+    ["task-start", 0],
+    ["returned-action", 0],
     ["developer-command-rejected", 2],
     ["changed-script-rejected", 1],
     ["changed-base-index-rejected", 1],
