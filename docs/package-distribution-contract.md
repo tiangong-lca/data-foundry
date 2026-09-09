@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: 21f10ac1643798aade3bd930c99785a0e6eaf0d9
-lastReviewedNote: "Reviewed for Foundry #128: exact version-only 0.1.2 follows qualified main21f10ac via a fresh release event after the prior GitHub run could not restart. Only package identity and review metadata change; CLI0.1.12, TIDAS0.3.0, full source/public qualification, signing, first-identity handoff and final F1 acceptance remain unchanged and required."
+lastReviewedCommit: 56dffbb035dc6a4e8194295fed11d5e314a3e944
+lastReviewedNote: "Reviewed for Foundry #130: exact-version npm preflight uses JSON while package metadata keeps its abbreviated media type. Real HTTP406/200 RED/GREEN and regression cover recovery and advancement; fixed origin, bounds, no-auth GET, version monotonicity, full release gates and runtime behavior remain unchanged."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -211,6 +211,8 @@ The npm package identity and publisher configuration are account-controlled prer
 ## Registry publication
 
 After exporting the prepared artifact, the owning job runs `pnpm release:publish-package`. This command accepts no arguments and requires the exact `npm-package` job, merged release-only source, verified prepared bytes and unchanged immutable tag. An absent package identity produces a `needs-maintainer` result and stops with no upload; the already exported artifact contains the first-upload instructions. An existing exact version must pass independent public provenance/source/byte verification and is never uploaded again. A new version must advance an existing stable public `latest` tag. Registry availability and source/tag identity are refreshed before a new upload.
+
+Registry preflight requests `application/json` for the exact-version endpoint and reserves `application/vnd.npm.install-v1+json` for whole-package metadata. The npm registry rejects abbreviated metadata negotiation for an existing version with HTTP 406. That error is never treated as a missing version or permission to upload: fixed-origin, unauthenticated GET probes still accept only the existing 200/404 transitions, reject redirects and retain their timeout/body bounds.
 
 The new-version path explicitly requests GitHub OIDC audience `npm:registry.npmjs.org` and exchanges that identity at npm's fixed, package-specific endpoint. Only HTTP 201 with `token_type: oidc`, a fresh creation time, a future expiry and at most two hours of credential lifetime is accepted. Exchange failures do not reach the publisher. This uses the [official npm OIDC exchange](https://api-docs.npmjs.com/) and prevents pnpm's automatic OIDC failure handling from selecting an unrelated credential.
 

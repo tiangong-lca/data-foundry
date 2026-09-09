@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: 21f10ac1643798aade3bd930c99785a0e6eaf0d9
-lastReviewedNote: "Reviewed for Foundry #128: exact version-only 0.1.2 follows qualified main21f10ac via a fresh release event after the prior GitHub run could not restart. Only package identity and review metadata change; CLI0.1.12, TIDAS0.3.0, full source/public qualification, signing, first-identity handoff and final F1 acceptance remain unchanged and required."
+lastReviewedCommit: 56dffbb035dc6a4e8194295fed11d5e314a3e944
+lastReviewedNote: "Reviewed for Foundry #130: the registry preflight media-type correction changes only release transport negotiation. Repository ownership, public runtime/auth boundaries, orchestration, platform scope and full publication/acceptance gates remain unchanged."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

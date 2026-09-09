@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: 21f10ac1643798aade3bd930c99785a0e6eaf0d9
-lastReviewedNote: "Reviewed for Foundry #128: exact version-only 0.1.2 follows qualified main21f10ac via a fresh release event after the prior GitHub run could not restart. Only package identity and review metadata change; CLI0.1.12, TIDAS0.3.0, full source/public qualification, signing, first-identity handoff and final F1 acceptance remain unchanged and required."
+lastReviewedCommit: 56dffbb035dc6a4e8194295fed11d5e314a3e944
+lastReviewedNote: "Reviewed for Foundry #130: exact-version npm preflight uses JSON while package metadata keeps its abbreviated media type. Real HTTP406/200 RED/GREEN and regression cover recovery and advancement; fixed origin, bounds, no-auth GET, version monotonicity, full release gates and runtime behavior remain unchanged."
 ---
 
 # Test Layout
@@ -337,6 +337,8 @@ The Git command suite also qualifies filesystem case aliases while rejecting a d
 `unit/foundry-release-signing.test.mts` binds the prepared provenance to the exact hosted job/source/workflow and tests fixed-audience OIDC requests, endpoint/permission/UTF-8 response rejection and absence of static identity fallback. `unit/foundry-release-prepared.test.mts` exercises bounded regular artifact reads and independent source/version requirements; `commands/foundry-release-prepare.test.mts` checks actual preparation/publication job/argument guards and the read-only download verifier. They do not emulate successful cryptographic signing. Real public CLI provenance separately qualifies standalone signature verification and rejects tampering; actual Foundry signing remains an owning release-workflow operation. The package consumer scenario exercises the packer's direct returned path and byte-identical archive reuse.
 
 `unit/foundry-release-publish.test.mts` distinguishes registry version/identity states, rejects a public latest downgrade, checks package-specific OIDC exchange and fresh expiry bounds, rejects missing/invalid exchange responses without fallback, and verifies publication-child environment isolation. Its injected callbacks test one-attempt/readback control flow without claiming cryptographic or registry success. A separate real pnpm 11.24.0 transport experiment uses the verified public C1 tarball/signature against a loopback-only mock registry: supplied provenance and the environment-resolved credential arrive unchanged, and an HTTP 500 causes exactly one PUT with retries disabled. It performs no public npm write; actual Foundry workflow publication must still pass independent public readback.
+
+Its registry content-negotiation regression reproduces the real existing-version HTTP 406 when abbreviated packument media is requested. Exact-version probes must request ordinary JSON; the subsequent whole-package lookup retains abbreviated metadata and monotonic latest-version checks. Read-only live registry probes confirm the published 0.1.2 version and next-version availability without credentials or mutations.
 
 `unit/foundry-release-production.test.mts` projects the actual 16-package frozen production graph, matches the independently verified C1 integrity, and rejects root/snapshot/resolution drift, malformed YAML, aliases and multiple documents. `unit/foundry-release-extract.test.mts` uses real tar archives to check exact regular/empty files, duplicate names, links, prefix boundaries, corrupt bodies and existing output preservation. `unit/foundry-release-production-materialize.test.mts` verifies locked tarball integrity, manifest conformance, absent optional-peer handling, clean partial-failure removal and in-process evidence requirements. Shared archives live in the native TypeScript fixture owner `fixtures/foundry-release-production.ts`; these tests use no private operator state.
 
