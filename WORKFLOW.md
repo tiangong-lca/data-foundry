@@ -281,8 +281,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-10
-lastReviewedCommit: 063016979fec5d4879f562c417b42b73b158aafe
-lastReviewedNote: "Reviewed for Foundry #153: strict0.1.7 version projection from qualified managed-action source0630169 and unchanged verified CLI0.1.13/toolchain/dependency inputs. All source/native action gates passed before preparation; complete owning release and independent public successor verification remain required."
+lastReviewedCommit: d0d2e7819e5ff573fb427063d13f83a2cb47ba70
+lastReviewedNote: "Reviewed for Foundry #144 after merged Skills0a33db1 and qualified F1.7: retire only duplicate source skill packages and move ownership/install guidance to Skills. Preserve all current managed-action, runtime/account, no-replay and publication contracts; exact ownership Golden bounds remain enforced."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
@@ -313,6 +313,8 @@ Task ID: {{ issue.identifier }} Title: {{ issue.title }}
 Body: {{ issue.description }}
 
 ## Classify
+
+Use the Skills-owned `foundry-tidas-import` entry for an installed public task and load `foundry-tidas-authoring` only for a current semantic work item. These instructions document the underlying Foundry owner pipeline; source commands are not substitutes for the public task's registered actions.
 
 CLI-managed package execution now completes trusted host admission before workspace operations. Runtime launch policy selects workspace read/write access and an independently bound runtime target; task/actor/account intent and restricted-action permission checks remain separate. Direct installed calls without a managed host keep their existing local preparation behavior.
 

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Foundry TIDAS Authoring"
-  short_description: "Read Foundry authoring packages and write evidence-backed TIDAS patch files"
-  default_prompt: "Use $foundry-tidas-authoring when Data Foundry has AI authoring tasks, identity/classification/location decision tasks, or curation-gate packages: read the full task/package/context, write strict evidence-backed structured decisions or patches without placeholders, collect/apply them through deterministic Foundry tools, and hand off to validation without direct database writes."

@@ -119,7 +119,7 @@
     "release:verify-npm": "node scripts/release-verify-npm.ts",
     "skills:list": "pnpm dlx skills@latest list --json",
     "skills:update": "pnpm dlx skills@latest update --project --yes",
-    "skills:install:shared": "pnpm dlx skills@latest add ../tiangong-lca-skills --skill external-dataset-curated-import source-evidence-dataset-development dataset-rls-maintenance --agent '*' --yes --full-depth && pnpm dlx skills@latest add https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search document-granular-decompose --agent '*' --yes --full-depth",
+    "skills:install:shared": "pnpm dlx skills@latest add https://github.com/tiangong-lca/skills --skill foundry-tidas-import foundry-tidas-authoring --agent '*' --yes --full-depth && pnpm dlx skills@latest add ../tiangong-lca-skills --skill external-dataset-curated-import source-evidence-dataset-development dataset-rls-maintenance --agent '*' --yes --full-depth && pnpm dlx skills@latest add https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search document-granular-decompose --agent '*' --yes --full-depth",
     "skills:source-evidence:use:sci": "pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search --full-depth",
     "skills:source-evidence:use:document": "pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth",
     "skills:use": "pnpm dlx skills@latest use",

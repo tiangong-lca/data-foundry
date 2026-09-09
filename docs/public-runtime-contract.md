@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-10
-lastReviewedCommit: 063016979fec5d4879f562c417b42b73b158aafe
-lastReviewedNote: "Reviewed for Foundry #153: strict0.1.7 version projection from qualified managed-action source0630169 and unchanged verified CLI0.1.13/toolchain/dependency inputs. All source/native action gates passed before preparation; complete owning release and independent public successor verification remain required."
+lastReviewedCommit: d0d2e7819e5ff573fb427063d13f83a2cb47ba70
+lastReviewedNote: "Reviewed for Foundry #144 after merged Skills0a33db1 and qualified F1.7: retire only duplicate source skill packages and move ownership/install guidance to Skills. Preserve all current managed-action, runtime/account, no-replay and publication contracts; exact ownership Golden bounds remain enforced."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md

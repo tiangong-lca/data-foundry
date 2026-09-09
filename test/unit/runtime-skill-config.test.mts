@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { execFileSync } from "node:child_process";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 
@@ -29,6 +30,40 @@ function readJson<T>(relativePath: string): T {
 function readText(relativePath: string): string {
   return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 }
+
+test("migrated Foundry entry and authoring packages resolve to Skills without tracked local copies", () => {
+  const config = readJson<SharedSkillsConfig>(".agents/shared-skills.json");
+  const pkg = readJson<PackageConfig>("package.json");
+  const registry = readJson<{ capabilities: Array<{ id: string; owner_project: string }> }>(
+    "specs/automated-lca-capability-registry.json",
+  );
+  assert.equal(
+    registry.capabilities.find((capability) => capability.id === "foundry.skill.tidas-import")
+      ?.owner_project,
+    "tiangong-lca-skills",
+  );
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
+  );
+  for (const name of ["foundry-tidas-import", "foundry-tidas-authoring"]) {
+    assert.equal(
+      config.local_project_skills.some((entry) => entry.name === name),
+      false,
+    );
+    const shared = config.shared_runtime_skills.find((entry) => entry.name === name);
+    assert.ok(shared);
+    assert.equal(shared.source, "https://github.com/tiangong-lca/skills");
+    assert.equal(shared.source_type, "github");
+    assert.ok(shared.install_command.includes(`--skill ${name}`));
+    assert.ok(pkg.scripts["skills:install:shared"].includes(name));
+    const relative = `.agents/skills/${name}/`;
+    assert.equal(
+      execFileSync("git", ["-C", repoRoot, "ls-files", "--", relative], { env, encoding: "utf8" }),
+      "",
+    );
+    assert.ok(readText(".gitignore").split("\n").includes(relative));
+  }
+});
 
 test("document-granular-decompose is a runtime Tiangong AI skill, not a tracked Foundry skill", () => {
   const sharedSkills = readJson<SharedSkillsConfig>(".agents/shared-skills.json");

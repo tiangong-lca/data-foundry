@@ -1,7 +1,7 @@
 {
   "$schema": "schemas/capability-registry.schema.json",
   "schema_version": 2,
-  "updated_at_utc": "2026-07-27T00:00:00Z",
+  "updated_at_utc": "2026-09-09T00:00:00Z",
   "purpose": "Machine-readable registry for generic external dataset import capabilities that Foundry may route without owning shared CLI, Rust tidas, SDK, converter, or database business logic.",
   "capabilities": [
     {
@@ -18,7 +18,7 @@
     {
       "id": "foundry.skill.tidas-import",
       "class": "import-orchestration",
-      "owner_project": "tiangong-lca-data-foundry",
+      "owner_project": "tiangong-lca-skills",
       "entrypoint": "$foundry-tidas-import",
       "input_contract": "External LCA package, converted TIDAS rows, or source-document authoring task plus one Foundry workspace task directory.",
       "output_contract": "Ordered Foundry/Rust-tidas/CLI artifact chain from context, conversion or authoring, schema, QA, curation, AI semantic evidence (classification/location decision apply or patch collect/apply), post-authoring finalize report, mutation manifest, commit handoff, post-write remote verification, post-write closeout, task-level import completion report, and gated task completion.",

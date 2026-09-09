@@ -25,6 +25,7 @@ import {
   createFoundryIsolatedChildEnvironment,
 } from "./lib/foundry-runtime-environment.ts";
 import { resolvePackageManagerCommand } from "./lib/package-manager-command.ts";
+import { normalizeGoldenSkillOwnership } from "./lib/golden-skill-ownership.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -778,6 +779,8 @@ function normalizeWorldsteelProfileContract(value: JsonRecord): JsonRecord | nul
 }
 
 function normalizeKnownContractMigration(value: JsonRecord): JsonRecord {
+  const skillOwnership = normalizeGoldenSkillOwnership(value);
+  if (skillOwnership !== value) return skillOwnership;
   // #98 adds current profile-rule evidence to the fixed generic support fixture.
   // Only this exact reviewed rule digest may be omitted for the old/new comparison.
   if (

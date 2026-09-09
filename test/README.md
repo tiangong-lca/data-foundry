@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-10
-lastReviewedCommit: 063016979fec5d4879f562c417b42b73b158aafe
-lastReviewedNote: "Reviewed for Foundry #153: strict0.1.7 version projection from qualified managed-action source0630169 and unchanged verified CLI0.1.13/toolchain/dependency inputs. All source/native action gates passed before preparation; complete owning release and independent public successor verification remain required."
+lastReviewedCommit: d0d2e7819e5ff573fb427063d13f83a2cb47ba70
+lastReviewedNote: "Reviewed for Foundry #144 after merged Skills0a33db1 and qualified F1.7: retire only duplicate source skill packages and move ownership/install guidance to Skills. Preserve all current managed-action, runtime/account, no-replay and publication contracts; exact ownership Golden bounds remain enforced."
 ---
 
 # Test Layout
@@ -539,3 +539,5 @@ CI recovery tests cover capsule source/platform/input and certificate boundaries
 `unit/foundry-ci-workflow.test.mts` executes the public-bootstrap proof staging step against a completed report and disposable empty work/cache directories. It proves exact-byte report-only inventory, no overwrite, normal stage validation, and continued rejection of failed reports or empty directories inside the proof boundary. This credential-free regression covers the Windows success-then-seal failure without substituting for real public startup or signed recovery qualification.
 
 The managed package host regression executes an actual returned action in a fresh process using only its executable, argv and CWD, then requires the same task and ready runtime qualification. It reproduces the published F1.6 direct-bin failure; an existing bootstrap-only local-cleanup test could pass without covering that owner boundary. Managed action unit cases reject changed command bindings, foreign entrypoints and conflicting cached manifest bytes, preserve original arguments/launch selection, and avoid cache writes for human-only results. Source and public bootstrap qualification independently require the added task-start/returned-action phases on all four native hosts. Private real account evidence remains separate.
+
+Skill migration regression checks the canonical Skills sources/install commands, absence of both old tracked skill copies, explicit ignored installation paths and the capability owner. Golden comparison binds the complete reviewed old/new import capability and its derived route through four exact SHA-256 values. Changed gate text, contract fields, owners, route status or capability membership remain differences; ownership normalization does not apply to other capabilities or task behavior.

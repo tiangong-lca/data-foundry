@@ -4,30 +4,37 @@
   "skill_root": ".agents/skills",
   "skills_cli_package": "skills@latest",
   "default_agent": "*",
-  "local_project_skills": [
-    {
-      "name": "foundry-tidas-authoring",
-      "owner": "tiangong-lca-data-foundry",
-      "path": ".agents/skills/foundry-tidas-authoring",
-      "tracked": true,
-      "purpose": "Foundry-local curation package and AI patch orchestration."
-    },
-    {
-      "name": "foundry-tidas-import",
-      "owner": "tiangong-lca-data-foundry",
-      "path": ".agents/skills/foundry-tidas-import",
-      "tracked": true,
-      "purpose": "Foundry-local end-to-end import orchestration."
-    }
-  ],
+  "local_project_skills": [],
   "package_commands": {
     "list_installed": "pnpm dlx skills@latest list --json",
     "update_project": "pnpm dlx skills@latest update --project --yes",
     "use_sci_runtime_skill": "pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search --full-depth",
     "use_document_runtime_skill": "pnpm dlx skills@latest use https://github.com/tiangong-ai/skills --skill document-granular-decompose --full-depth",
-    "install_all_shared_runtime": "pnpm dlx skills@latest add ../tiangong-lca-skills --skill external-dataset-curated-import source-evidence-dataset-development dataset-rls-maintenance --agent '*' --yes --full-depth && pnpm dlx skills@latest add https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search document-granular-decompose --agent '*' --yes --full-depth"
+    "install_all_shared_runtime": "pnpm dlx skills@latest add https://github.com/tiangong-lca/skills --skill foundry-tidas-import foundry-tidas-authoring --agent '*' --yes --full-depth && pnpm dlx skills@latest add ../tiangong-lca-skills --skill external-dataset-curated-import source-evidence-dataset-development dataset-rls-maintenance --agent '*' --yes --full-depth && pnpm dlx skills@latest add https://github.com/tiangong-ai/skills --skill tiangong-kb-sci-search document-granular-decompose --agent '*' --yes --full-depth"
   },
   "shared_runtime_skills": [
+    {
+      "name": "foundry-tidas-import",
+      "source": "https://github.com/tiangong-lca/skills",
+      "source_type": "github",
+      "source_ref": "refs/heads/main",
+      "agent": "*",
+      "full_depth": true,
+      "install_command": "pnpm dlx skills@latest add https://github.com/tiangong-lca/skills --skill foundry-tidas-import --agent '*' --yes --full-depth",
+      "update_policy": "consume the qualified Skills-owned package and its adjacent release lock; update through skills tooling",
+      "required_for": ["external-dataset-curated-import", "source-evidence-dataset-development"]
+    },
+    {
+      "name": "foundry-tidas-authoring",
+      "source": "https://github.com/tiangong-lca/skills",
+      "source_type": "github",
+      "source_ref": "refs/heads/main",
+      "agent": "*",
+      "full_depth": true,
+      "install_command": "pnpm dlx skills@latest add https://github.com/tiangong-lca/skills --skill foundry-tidas-authoring --agent '*' --yes --full-depth",
+      "update_policy": "consume the qualified Skills-owned package and its adjacent release lock; update through skills tooling",
+      "required_for": ["current-semantic-work-item"]
+    },
     {
       "name": "external-dataset-curated-import",
       "source": "../tiangong-lca-skills",
