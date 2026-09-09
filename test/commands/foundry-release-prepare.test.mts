@@ -7,6 +7,29 @@ import test from "node:test";
 
 const source = path.resolve(import.meta.dirname, "../..");
 
+test("OIDC diagnostic refuses ordinary processes and caller arguments without disclosing inputs", () => {
+  for (const args of [[], ["--publish", "private-input"]]) {
+    const result = spawnSync(
+      process.execPath,
+      [path.join(source, "scripts/release-diagnose-npm-oidc.ts"), ...args],
+      {
+        cwd: os.tmpdir(),
+        encoding: "utf8",
+        timeout: 30_000,
+        env: {
+          GITHUB_JOB: "ordinary",
+          GITHUB_EVENT_PATH: "private-event",
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: "private-token",
+        },
+      },
+    );
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, /diagnostic could not complete; no publication attempted/u);
+    assert.doesNotMatch(result.stderr, /private/u);
+  }
+});
+
 test("package preparation rejects other jobs and caller arguments before inspecting source", () => {
   for (const script of ["release-prepare-package.ts", "release-publish-package.ts"])
     for (const [job, args] of [

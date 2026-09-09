@@ -113,6 +113,7 @@
     "release:prepare-package": "node scripts/release-prepare-package.ts",
     "release:verify-prepared": "node scripts/release-verify-prepared.ts",
     "release:publish-package": "node scripts/release-publish-package.ts",
+    "release:diagnose-npm-oidc": "node scripts/release-diagnose-npm-oidc.ts",
     "release:prepare-production": "node scripts/release-prepare-production.ts",
     "release:prepare-native": "node scripts/release-prepare-native.ts",
     "release:verify-npm": "node scripts/release-verify-npm.ts",

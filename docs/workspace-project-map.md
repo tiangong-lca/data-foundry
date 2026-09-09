@@ -89,8 +89,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: 46f8dd425a7a0001bb72f3fb3636d196ad89278b
-lastReviewedNote: "Reviewed for Foundry #131: release-only 0.1.3 projection from qualified source 46f8dd4 with the registry preflight fix. Only package, verifier and descriptor versions change; existing public/runtime contracts, dependency pins, authorization, full release gates and retained notices remain valid. Complete F1 publication and consumer acceptance are still required."
+lastReviewedCommit: c89710cac58813b938353477f42dbde287347f9b
+lastReviewedNote: "Reviewed for Foundry #134 after real diagnostic34310766830: npm returns numeric creation/expiry fields; token type and shape pass. Numeric epochs normalize to safe milliseconds while the original freshness, lifetime, OIDC source and no-fallback limits remain enforced. Local numeric RED/GREEN passed; real corrected exchange and complete release qualification remain required."
 ---
 
 # Workspace Project Map
