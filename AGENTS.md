@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: 56dffbb035dc6a4e8194295fed11d5e314a3e944
-lastReviewedNote: "Reviewed for Foundry #130: the registry preflight media-type correction changes only release transport negotiation. Repository ownership, public runtime/auth boundaries, orchestration, platform scope and full publication/acceptance gates remain unchanged."
+lastReviewedCommit: 46f8dd425a7a0001bb72f3fb3636d196ad89278b
+lastReviewedNote: "Reviewed for Foundry #131: release-only 0.1.3 projection from qualified source 46f8dd4 with the registry preflight fix. Only package, verifier and descriptor versions change; existing public/runtime contracts, dependency pins, authorization, full release gates and retained notices remain valid. Complete F1 publication and consumer acceptance are still required."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry

@@ -54,7 +54,7 @@ export const foundryPackageStaticFiles = Object.freeze([
 ] as const);
 
 const packageName = "@tiangong-lca/foundry";
-const packageVersion = "0.1.2";
+const packageVersion = "0.1.3";
 const packageDescription =
   "Control plane for TianGong LCA external dataset import and TIDAS authoring work.";
 const cliPackageName = "@tiangong-lca/cli";
