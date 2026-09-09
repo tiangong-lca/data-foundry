@@ -89,9 +89,14 @@ export function parseFoundryReleaseWorkflowEvent(
   if (
     event.inputs !== undefined &&
     event.inputs !== null &&
-    Object.entries(record(event.inputs, "recovery inputs")).some(
-      ([key, value]) => key !== "diagnose_npm_oidc" || (value !== false && value !== "false"),
-    )
+    Object.entries(record(event.inputs, "recovery inputs")).some(([key, value]) => {
+      if (key === "diagnose_npm_oidc") return value !== false && value !== "false";
+      if (key === "resume_run_id")
+        return typeof value !== "string" || (value !== "" && !/^[1-9]\d{0,19}$/u.test(value));
+      if (key === "diagnose_platform") return value !== "none";
+      if (key === "diagnose_tag") return value !== "";
+      return true;
+    })
   )
     throw new Error("Foundry release recovery accepts no alternate source or tag input.");
   return Object.freeze({ mode: "tag-recovery", ref, base: null, head });

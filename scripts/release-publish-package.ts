@@ -1,3 +1,4 @@
+import { readBackWithBudget } from "./lib/foundry-release-readback.ts";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
@@ -72,15 +73,16 @@ async function main(args: readonly string[]): Promise<void> {
     )
       throw new Error("Package publication source or immutable tag changed.");
   };
-  const readback = async () => {
-    const result = await verifyPublicNpmRelease({ ...expected, package: "foundry" });
-    if (
-      result.evidence.tarball.sha512 !== prepared.tarball.sha512 ||
-      result.evidence.tarball.bytes !== prepared.tarball.bytes
-    )
-      throw new Error("Published package bytes differ from the qualified prepared artifact.");
-    return result;
-  };
+  const readback = () =>
+    readBackWithBudget(async () => {
+      const result = await verifyPublicNpmRelease({ ...expected, package: "foundry" });
+      if (
+        result.evidence.tarball.sha512 !== prepared.tarball.sha512 ||
+        result.evidence.tarball.bytes !== prepared.tarball.bytes
+      )
+        throw new Error("Published package bytes differ from the qualified prepared artifact.");
+      return result;
+    });
   let recorded = false;
   try {
     await revalidateSource();
@@ -168,39 +170,27 @@ async function main(args: readonly string[]): Promise<void> {
             ],
             { environment },
           );
-          outcome = await publishOnceAndReadBack(
-            async () => {
-              if (Date.now() >= credential.expiresAt - 30_000)
-                throw new Error("The short-lived publishing credential expired before dispatch.");
-              const result = spawnSync(invocation.executable, invocation.argv, {
-                cwd: temporary,
-                env: foundryNpmPublishEnvironment(
-                  process.env,
-                  userConfig,
-                  globalConfig,
-                  credential.token,
-                ),
-                shell: false,
-                encoding: "utf8",
-                timeout: 180_000,
-                killSignal: "SIGKILL",
-                maxBuffer: 2 * 1024 * 1024,
-                stdio: ["ignore", "pipe", "pipe"],
-              });
-              if (result.error || result.status !== 0)
-                throw new Error("The pnpm publication response was unsuccessful or uncertain.");
-            },
-            async () => {
-              for (let attempt = 0; ; attempt++) {
-                try {
-                  return await readback();
-                } catch (error) {
-                  if (attempt >= 2) throw error;
-                  await new Promise<void>((resolve) => setTimeout(resolve, (attempt + 1) * 5000));
-                }
-              }
-            },
-          );
+          outcome = await publishOnceAndReadBack(async () => {
+            if (Date.now() >= credential.expiresAt - 30_000)
+              throw new Error("The short-lived publishing credential expired before dispatch.");
+            const result = spawnSync(invocation.executable, invocation.argv, {
+              cwd: temporary,
+              env: foundryNpmPublishEnvironment(
+                process.env,
+                userConfig,
+                globalConfig,
+                credential.token,
+              ),
+              shell: false,
+              encoding: "utf8",
+              timeout: 180_000,
+              killSignal: "SIGKILL",
+              maxBuffer: 2 * 1024 * 1024,
+              stdio: ["ignore", "pipe", "pipe"],
+            });
+            if (result.error || result.status !== 0)
+              throw new Error("The pnpm publication response was unsuccessful or uncertain.");
+          }, readback);
         }
       } finally {
         fs.rmSync(temporary, { recursive: true, force: true });

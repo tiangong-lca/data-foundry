@@ -41,7 +41,7 @@ checkPaths:
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: d29c885a5beccbf9cda04b1a868902d8a4f73a5e
+lastReviewedCommit: 00d4b8afa427a3b5261268a70a6b06aef20f5ccd
 lastReviewedNote: "Reviewed for Foundry #138: exact-tag recovery accepts only the inert diagnostic default false while all source/tag overrides and enabled diagnostics remain rejected. Real default-input failure has a focused RED/GREEN regression; immutable 0.1.4 recovery uses a complete original main-event rerun with verified existing npm bytes and fresh attempt-bound artifacts."
 related:
   - docs/architecture.md

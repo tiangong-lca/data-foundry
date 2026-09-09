@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  preflightFoundryNpmOidcExchange,
   inspectFoundryNpmAvailability,
   exchangeFoundryNpmOidcToken,
   foundryNpmPublishEnvironment,
@@ -376,4 +377,28 @@ test("readback failure never replays publication or becomes a successful result"
     /public evidence/u,
   );
   assert.equal(writes, 1);
+});
+
+test("preflight exchanges a real credential but returns only redacted facts and cannot sign or publish", async () => {
+  let requests = 0;
+  const fetch = async () =>
+    ++requests === 1
+      ? Response.json({ value: "unit.fixture.jwt" })
+      : Response.json(
+          {
+            token_type: "oidc",
+            token: "private-credential",
+            created: now,
+            expires: now + 3600000,
+          },
+          { status: 201 },
+        );
+  const env = { ...environment(), GITHUB_JOB: "release-preflight" };
+  const report = await preflightFoundryNpmOidcExchange(context, env, fetch, now);
+  assert.equal(report.accepted, true);
+  assert.equal(requests, 2);
+  assert.doesNotMatch(JSON.stringify(report), /private-credential/u);
+  await assert.rejects(exchangeFoundryNpmOidcToken(context, env, fetch, now));
+  await assert.rejects(preflightFoundryNpmOidcExchange(context, environment(), fetch, now));
+  assert.equal(requests, 2);
 });
