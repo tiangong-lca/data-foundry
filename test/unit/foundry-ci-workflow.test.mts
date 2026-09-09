@@ -1,10 +1,16 @@
 import { spawnSync } from "node:child_process";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { parseDocument } from "yaml";
 import { foundryCiPlatforms } from "../../scripts/lib/foundry-ci-results.ts";
+import {
+  inventoryCapsuleFiles,
+  type CapsuleExpectation,
+} from "../../scripts/lib/foundry-ci-capsule.ts";
+import { validateStageEvidence } from "../../scripts/lib/foundry-ci-stage.ts";
 
 const root = path.resolve(import.meta.dirname, "../..");
 function object(value: unknown): Record<string, unknown> {
@@ -23,6 +29,91 @@ function steps(job: Record<string, unknown>): Record<string, unknown>[] {
   assert.ok(Array.isArray(job.steps));
   return job.steps.map(object);
 }
+
+test("public bootstrap seals only its completed proof and keeps disposable directories outside the capsule", (t) => {
+  const job = object(object(workflow("publish-foundry.yml").jobs)["qualify-bootstrap-public"]);
+  const selected = steps(job);
+  const staging = selected.find((step) => step.name === "Stage completed bootstrap proof");
+  assert.ok(staging, "Public bootstrap needs a separate proof boundary before sealing.");
+  const qualify = selected.find((step) => String(step.run).includes("release:qualify-bootstrap"));
+  assert.ok(qualify);
+  assert.equal(object(qualify.env).BOOTSTRAP_OUTPUT, object(staging.env).BOOTSTRAP_WORK);
+  assert.notEqual(object(staging.env).BOOTSTRAP_WORK, object(staging.env).BOOTSTRAP_PROOF);
+  assert.equal(staging.if, "steps.restore.outputs.reused != 'true'");
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "bootstrap-proof-"));
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const work = path.join(temporary, "qualification work"),
+    proof = path.join(temporary, "proof");
+  fs.mkdirSync(path.join(work, "home", "empty"), { recursive: true });
+  const expected: CapsuleExpectation = {
+    stage: "bootstrap",
+    platform: "win32-x64",
+    purpose: "release",
+    input_sha256: "f".repeat(64),
+    identity: {
+      repository: { id: "123", owner_id: "456" },
+      source: { commit: "a".repeat(40), tree: "b".repeat(40) },
+      package: { name: "@tiangong-lca/foundry", version: "0.1.5" },
+      toolchain: {
+        node: "24.19.0",
+        pnpm: "11.24.0",
+        typescript: "7.0.2",
+        lock_sha256: "c".repeat(64),
+      },
+      runtime_inputs_sha256: "d".repeat(64),
+      test_plan_sha256: "e".repeat(64),
+    },
+  };
+  const report = {
+    schema: "tiangong-foundry.bootstrap-qualification.v1",
+    status: "passed",
+    source: {
+      repository: "https://github.com/tiangong-lca/data-foundry",
+      ...expected.identity.source,
+    },
+    platform: expected.platform,
+    mode: "public",
+    manifest_sha256: expected.input_sha256,
+    cache_status: "ready",
+    initial_cache: "empty",
+    checks: [
+      ["initial", 0],
+      ["warm", 0],
+      ["developer-command-rejected", 2],
+      ["changed-script-rejected", 1],
+      ["changed-base-index-rejected", 1],
+    ].map(([phase, exit]) => ({ phase, exit, milliseconds: 1 })),
+  };
+  const bytes = Buffer.from(JSON.stringify(report));
+  fs.writeFileSync(path.join(work, "bootstrap-qualification.json"), bytes);
+  assert.throws(() => inventoryCapsuleFiles(work), /empty capsule directory/u);
+  const execute = () =>
+    spawnSync("bash", ["-eu", "-c", String(staging.run)], {
+      encoding: "utf8",
+      timeout: 30_000,
+      env: {
+        PATH: process.env.PATH,
+        SystemRoot: process.env.SystemRoot,
+        BOOTSTRAP_WORK: work,
+        BOOTSTRAP_PROOF: proof,
+      },
+    });
+  const result = execute();
+  assert.ifError(result.error);
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(fs.readdirSync(proof), ["bootstrap-qualification.json"]);
+  assert.deepEqual(fs.readFileSync(path.join(proof, "bootstrap-qualification.json")), bytes);
+  assert.equal(inventoryCapsuleFiles(proof).length, 1);
+  validateStageEvidence(proof, expected);
+  assert.notEqual(execute().status, 0, "Existing completed evidence must not be overwritten.");
+  fs.writeFileSync(
+    path.join(proof, "bootstrap-qualification.json"),
+    JSON.stringify({ ...report, status: "failed" }),
+  );
+  assert.throws(() => validateStageEvidence(proof, expected), /Incomplete or failed bootstrap/u);
+  fs.mkdirSync(path.join(proof, "unexpected-empty"));
+  assert.throws(() => inventoryCapsuleFiles(proof), /empty capsule directory/u);
+});
 
 test("full CI runs all platforms with independent tests and native qualification before their final join", () => {
   const jobs = object(workflow("quality-gate.yml").jobs);
