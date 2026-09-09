@@ -302,8 +302,7 @@ jobs:
     needs:
       - plan
       - quality-gate
-      - verify-tests
-    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.quality-gate.result == 'success' && needs.verify-tests.result == 'success' && needs.plan.outputs.mode == 'full' }}
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.quality-gate.result == 'success' && needs.plan.outputs.mode == 'full' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the same qualified source

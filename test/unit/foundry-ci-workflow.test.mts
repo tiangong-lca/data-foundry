@@ -47,7 +47,8 @@ test("full CI runs all platforms with independent tests and native qualification
   for (const requirement of ["plan", "build-package", "version-pr"])
     assert.ok(native.needs.includes(requirement));
   assert.ok(!native.needs.includes("verify-tests"));
-  assert.ok((object(jobs["aggregate-runtime"]).needs as string[]).includes("verify-tests"));
+  assert.ok(!(object(jobs["aggregate-runtime"]).needs as string[]).includes("verify-tests"));
+  assert.ok((object(jobs["qualification-gate"]).needs as string[]).includes("verify-tests"));
   const guard = steps(native)[0];
   assert.equal(guard.shell, "bash");
   const script = String(guard.run);
