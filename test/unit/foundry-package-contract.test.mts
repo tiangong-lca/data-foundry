@@ -88,7 +88,7 @@ test("Foundry package metadata exposes only the reviewed public closure", () => 
     },
   });
   assert.deepEqual(manifest.files, packageFiles);
-  assert.deepEqual(manifest.dependencies, { "@tiangong-lca/cli": "0.1.12" });
+  assert.deepEqual(manifest.dependencies, { "@tiangong-lca/cli": "0.1.13" });
   assert.equal((manifest.devDependencies as Record<string, string>).ajv, "8.20.0");
   for (const lifecycle of ["preinstall", "install", "postinstall", "prepare"]) {
     assert.equal(Object.hasOwn(manifest.scripts as object, lifecycle), false, lifecycle);

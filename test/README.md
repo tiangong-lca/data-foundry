@@ -280,8 +280,8 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: dab4be5ac469df554ae0e2c228ff500cb8a8c88d
-lastReviewedNote: "Reviewed for Foundry #145: public bootstrap work and completed proof use separate runner directories; only exact report bytes enter the signed capsule. Generic inventory, source/signature/TTL and runtime/task/auth gates remain unchanged."
+lastReviewedCommit: fa219ecc833c0aad9bb6a3661265a57f8f24a814
+lastReviewedNote: "Reviewed for Foundry #147: adopt independently verified CLI 0.1.13 at b5e2092 with original permission-preserving bootstrap scripts. Exact runtime/schema/package/release expectations advance together; other dependencies, TIDAS, profile rules, task authorization and private no-replay evidence remain unchanged."
 ---
 
 # Test Layout

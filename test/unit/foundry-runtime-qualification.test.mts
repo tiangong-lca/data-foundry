@@ -77,7 +77,7 @@ test("runtime qualification binds exact public CLI and isolated TIDAS observatio
     assert.equal(Object.isFrozen(qualification), true);
     assert.equal(Object.isFrozen(qualification.tidas.expectation.validation.protocols), true);
     const identity = foundryRuntimeQualificationIdentity(context, qualification);
-    assert.equal(identity.cli.package_version, "0.1.12");
+    assert.equal(identity.cli.package_version, "0.1.13");
     assert.equal(identity.tidas.binary_version, "0.2.7");
     assert.match(identity.qualification_sha256, /^[0-9a-f]{64}$/u);
     const described = createFoundryRuntime(context, qualification).describe();

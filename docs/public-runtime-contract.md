@@ -33,8 +33,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
 lastReviewedAt: 2026-09-09
-lastReviewedCommit: dab4be5ac469df554ae0e2c228ff500cb8a8c88d
-lastReviewedNote: "Reviewed for Foundry #145: public bootstrap work and completed proof use separate runner directories; only exact report bytes enter the signed capsule. Generic inventory, source/signature/TTL and runtime/task/auth gates remain unchanged."
+lastReviewedCommit: fa219ecc833c0aad9bb6a3661265a57f8f24a814
+lastReviewedNote: "Reviewed for Foundry #147: adopt independently verified CLI 0.1.13 at b5e2092 with original permission-preserving bootstrap scripts. Exact runtime/schema/package/release expectations advance together; other dependencies, TIDAS, profile rules, task authorization and private no-replay evidence remain unchanged."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -177,7 +177,7 @@ Every facade revision also rechecks all retained predecessors in its request cha
 
 ## Runtime selection and migration seam
 
-The public facade accepts CLI/TIDAS expectations only through its process-local host interface. Ordinary argv, task specs, `.env` and ambient `TIDAS_BIN`/expectation variables cannot select trust anchors. Without a host selection, doctor, start, status and local resume work and report `qualification.required`; child-required work must return the runtime qualification action. The managed bin now obtains this selection from the CLI IPC context and its verified component metadata. The final immutable production product manifest remains a W08 deliverable. The current exact CLI 0.1.12 constraint remains explicit rather than silently accepting a future version.
+The public facade accepts CLI/TIDAS expectations only through its process-local host interface. Ordinary argv, task specs, `.env` and ambient `TIDAS_BIN`/expectation variables cannot select trust anchors. Without a host selection, doctor, start, status and local resume work and report `qualification.required`; child-required work must return the runtime qualification action. The managed bin now obtains this selection from the CLI IPC context and its verified component metadata. The final immutable production product manifest remains a W08 deliverable. The current exact CLI 0.1.13 constraint remains explicit rather than silently accepting a future version.
 
 `workspace migrate --dry-run` recursively inventories only regular files/directories, rejects links and returns `tiangong-foundry.workspace-migration-plan.v1` as an inline content-bound artifact. It classifies control, local-preparation, terminal-success, attempted/unknown, authorization/account and unclassified paths. The public envelope is bounded to 10,000 entries and 64 directory levels. The total hashed inventory is bounded to 256 MiB. Files larger than 64 MiB and recognized credential/session files retain path/size/classification facts with `sha256=null`; their contents are not read by this inventory. The tree digest binds this observational inventory, not an atomic filesystem snapshot, so W10 must re-read and verify every selected source immediately before apply. It writes nothing. W10 owns application, rollback and detailed old-schema mapping.
 

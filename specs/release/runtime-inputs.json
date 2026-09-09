@@ -2,21 +2,21 @@
   "schema": "tiangong-foundry.release-runtime-inputs.v1",
   "cli": {
     "package": "@tiangong-lca/cli",
-    "version": "0.1.12",
-    "source_commit": "6df087b0dda2544a0fd68f2a143559e81d20d60b",
+    "version": "0.1.13",
+    "source_commit": "b5e209259d3bb06205b9af131b1c0edc3fba6da2",
     "repository": "https://github.com/tiangong-lca/tiangong-cli",
-    "tag": "cli-v0.1.12",
-    "source_date": "2026-09-08T08:45:02.000Z",
+    "tag": "cli-v0.1.13",
+    "source_date": "2026-09-09T12:00:08.000Z",
     "bootstrap": {
       "posix": {
-        "source_url": "https://raw.githubusercontent.com/tiangong-lca/tiangong-cli/6df087b0dda2544a0fd68f2a143559e81d20d60b/scripts/bootstrap/tiangong-runtime-bootstrap.sh",
-        "sha256": "a7055855e89d6f0781b1d44ac4d05c71053a14855906fa5e0c7e7e3ebf5867f5",
-        "bytes": 11741
+        "source_url": "https://raw.githubusercontent.com/tiangong-lca/tiangong-cli/b5e209259d3bb06205b9af131b1c0edc3fba6da2/scripts/bootstrap/tiangong-runtime-bootstrap.sh",
+        "bytes": 11742,
+        "sha256": "7aa826448f7b0e1d25f59a19a6f8c906621a82f0ee956124d9f93484885b9fac"
       },
       "powershell": {
-        "source_url": "https://raw.githubusercontent.com/tiangong-lca/tiangong-cli/6df087b0dda2544a0fd68f2a143559e81d20d60b/scripts/bootstrap/tiangong-runtime-bootstrap.ps1",
-        "sha256": "a797bc5269386a0f45fbc5bebb7d634b37fc8a164500aaaa4905be5e61bf8f65",
-        "bytes": 13126
+        "source_url": "https://raw.githubusercontent.com/tiangong-lca/tiangong-cli/b5e209259d3bb06205b9af131b1c0edc3fba6da2/scripts/bootstrap/tiangong-runtime-bootstrap.ps1",
+        "bytes": 13126,
+        "sha256": "a797bc5269386a0f45fbc5bebb7d634b37fc8a164500aaaa4905be5e61bf8f65"
       }
     }
   },

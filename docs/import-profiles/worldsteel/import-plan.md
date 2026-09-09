@@ -1,7 +1,7 @@
 ---
-lastReviewedAt: 2026-09-08
-lastReviewedCommit: 2c1a449c0af751067d5c05363128353e288b1126
-lastReviewedNote: "Reviewed for Foundry #123: adopt independently verified CLI0.1.12 at immutable6df087b, including the corrected original Windows HTTP bootstrap. Exact package/runtime expectations, release input/source/script hashes and current examples advance together; Node/TIDAS pins, profile semantics, authorization and retained private-case evidence are unchanged. Final F1 publication remains separate."
+lastReviewedAt: 2026-09-09
+lastReviewedCommit: fa219ecc833c0aad9bb6a3661265a57f8f24a814
+lastReviewedNote: "Reviewed for Foundry #147: adopt independently verified CLI 0.1.13 at b5e2092 with original permission-preserving bootstrap scripts. Exact runtime/schema/package/release expectations advance together; other dependencies, TIDAS, profile rules, task authorization and private no-replay evidence remain unchanged."
 title: worldsteel EF3.1 ILCD Import Plan
 docType: plan
 scope: import-profile/worldsteel
@@ -331,7 +331,7 @@ The vast majority of those exchanges point at EF3.1 reference flows that will re
 
 ## 9. Risk register (consolidated gotchas)
 
-- **Use the project-installed CLI** — leave `TIANGONG_LCA_CLI_BIN` blank so Foundry resolves exact `@tiangong-lca/cli@0.1.12`; an override is only for an explicit local test binary. Credential-scoped execution still goes through the receipt-gated `pnpm account:run` wrapper.
+- **Use the project-installed CLI** — leave `TIANGONG_LCA_CLI_BIN` blank so Foundry resolves exact `@tiangong-lca/cli@0.1.13`; an override is only for an explicit local test binary. Credential-scoped execution still goes through the receipt-gated `pnpm account:run` wrapper.
 - **Don't copy BAFU/USLCI profile wholesale** — Worldsteel reuses every canonical row by UUID, caps the R3 elementary tail, and enables R5 only for materialized FP/UG canonical-cache misses behind the full account-local support gates.
 - **`databaseFallbackSourceConfig` silently inherits BAFU** for any unknown profile → ✅ worldsteel branch added.
 - **`source_contact_rewrites` gated to bafu/uslci** → ✅ widened to include `worldsteel`.
