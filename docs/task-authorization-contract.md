@@ -30,8 +30,8 @@ checkPaths:
   - test/unit/task-profile-authority.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
 lastReviewedAt: 2026-09-11
-lastReviewedCommit: fd348f2c0d4391974f2fd894e2939f677cae618d
-lastReviewedNote: "Reviewed for Foundry #119: explicit native insert selection, indexed control snapshot, exact command/report bindings and no-replay recovery. CLI retains native execution ownership; existing authorization and environment boundaries remain mandatory."
+lastReviewedCommit: abc7672f3b3a806caa4219ab5b797f1d92421926
+lastReviewedNote: "Reviewed for #122: explicit task reference snapshots, CLI 0.1.14 QA/intent transport, sealed admission/readback evidence and no-replay recovery. Existing profile, permission, environment and historical delivery boundaries remain enforced."
 related:
   - docs/architecture.md
   - docs/safety-policy.md
@@ -129,3 +129,5 @@ This contract does not edit old locks, task inputs, checkpoints, sealed attempts
 Read-only or pending workspace contexts cannot register/derive authorization or admit a business command. After activation, preserved migration scope is checked at execution-capsule creation and before/after admission revalidation. A fresh grant does not reset retained attempt authority. Original profile/account/approval files remain archived evidence, while new permission still needs the independently selected current identity, exact input lineage and reviewed scope.
 
 For public prepared FP/UG input, a captured finalization blocked solely by the support permission gate may derive the existing complete support approval through registered input lineage, then rerun local finalization on those exact approved bytes. Missing write/mint actions and unrelated blockers remain pending. This adds no permission, extends no expiry and cannot replay a consumed scope.
+
+Explicit reference inputs and their review files are control evidence, not authorization or QA waivers. A new selection invalidates the finalization projection; prepared/consumed scopes cannot replace it. Admission requires the same independently selected intent, passing precommit report and review-file facts in both CommandSpecs, alongside final rows and any native contract. Readback rechecks this evidence even when the mutation response is unavailable.

@@ -14,6 +14,28 @@
     "test/scenarios/foundry-public-dependent-source.test.mts": 124.441,
     "test/scenarios/foundry-public-dependent-flowproperty.test.mts": 510.735,
     "test/scenarios/foundry-public-workflow.test.mts": 248.961,
-    "test/scenarios/foundry-package-consumer.test.mts": 853.824
+    "test/scenarios/foundry-package-consumer.test.mts": 853.824,
+    "test/scenarios/foundry-public-native-insert.test.mts": 230.68,
+    "test/scenarios/foundry-public-native-reuse.test.mts": 242.822,
+    "test/scenarios/foundry-public-native-lost.test.mts": 177.858,
+    "test/scenarios/foundry-public-native-missing.test.mts": 196.334,
+    "test/scenarios/foundry-public-native-unknown.test.mts": 215.675,
+    "test/scenarios/foundry-public-reference-input.test.mts": 265,
+    "test/scenarios/foundry-public-reference-recovery.test.mts": 330,
+    "test/scenarios/foundry-public-reference-qa.test.mts": 45
+  },
+  "additional_baselines": [
+    {
+      "run": 34520209609,
+      "job": 103015642293,
+      "platform": "win32-x64",
+      "files": "foundry-public-native-{insert,reuse,lost,missing,unknown}.test.mts",
+      "basis": "Unchanged cases split from one file; successful per-case elapsed seconds rounded up to milliseconds."
+    }
+  ],
+  "estimated_weights": {
+    "test/scenarios/foundry-public-reference-input.test.mts": "Estimated from native insert Windows case with extra reference selection/refinalization. Replace after first hosted measurement.",
+    "test/scenarios/foundry-public-reference-recovery.test.mts": "Estimated from current-rows Windows case with extra reference selection/refinalization. Replace after first hosted measurement.",
+    "test/scenarios/foundry-public-reference-qa.test.mts": "Estimated from local 6.78-second Process public selection/owner QA transport; replace after first hosted measurement."
   }
 }

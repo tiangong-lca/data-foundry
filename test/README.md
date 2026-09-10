@@ -279,9 +279,9 @@ checkPaths:
   - AGENTS.md
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
-lastReviewedAt: 2026-09-10
-lastReviewedCommit: d0d2e7819e5ff573fb427063d13f83a2cb47ba70
-lastReviewedNote: "Reviewed for Foundry #144 after merged Skills0a33db1 and qualified F1.7: retire only duplicate source skill packages and move ownership/install guidance to Skills. Preserve all current managed-action, runtime/account, no-replay and publication contracts; exact ownership Golden bounds remain enforced."
+lastReviewedAt: 2026-09-11
+lastReviewedCommit: abc7672f3b3a806caa4219ab5b797f1d92421926
+lastReviewedNote: "Reviewed for #122: explicit task reference snapshots, CLI 0.1.14 QA/intent transport, sealed admission/readback evidence and no-replay recovery. Existing profile, permission, environment and historical delivery boundaries remain enforced."
 ---
 
 # Test Layout
@@ -541,3 +541,7 @@ CI recovery tests cover capsule source/platform/input and certificate boundaries
 The managed package host regression executes an actual returned action in a fresh process using only its executable, argv and CWD, then requires the same task and ready runtime qualification. It reproduces the published F1.6 direct-bin failure; an existing bootstrap-only local-cleanup test could pass without covering that owner boundary. Managed action unit cases reject changed command bindings, foreign entrypoints and conflicting cached manifest bytes, preserve original arguments/launch selection, and avoid cache writes for human-only results. Source and public bootstrap qualification independently require the added task-start/returned-action phases on all four native hosts. Private real account evidence remains separate.
 
 Skill migration regression checks the canonical Skills sources/install commands, absence of both old tracked skill copies, explicit ignored installation paths and the capability owner. Golden comparison binds the complete reviewed old/new import capability and its derived route through four exact SHA-256 values. Changed gate text, contract fields, owners, route status or capability membership remain differences; ownership normalization does not apply to other capabilities or task behavior.
+
+Reference-input regressions cover strict descriptor parsing, public task snapshots, actual installed-owner Process QA forwarding, native execution/readback and unknown-response recovery without replay. The Process transport case deliberately invokes the finalization owner on the registered public task without an account; it does not claim remote policy qualification. Native and recovery cases use controlled remote reports; public CLI release probes separately qualify the actual reference-intent policy.
+
+The five native execution cases are separate files so the existing four-way scheduler can balance them. Their weights come from successful Windows run 34520209609, job 103015642293. New reference-case weights are explicitly marked estimates in `specs/ci/test-durations.json` until hosted measurements replace them. No cases, assertions, platforms or gates are removed.

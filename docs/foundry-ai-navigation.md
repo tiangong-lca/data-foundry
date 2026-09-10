@@ -143,9 +143,9 @@ checkPaths:
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-09-09
-lastReviewedCommit: fa219ecc833c0aad9bb6a3661265a57f8f24a814
-lastReviewedNote: "Reviewed for Foundry #147: adopt independently verified CLI 0.1.13 at b5e2092 with original permission-preserving bootstrap scripts. Exact runtime/schema/package/release expectations advance together; other dependencies, TIDAS, profile rules, task authorization and private no-replay evidence remain unchanged."
+lastReviewedAt: 2026-09-11
+lastReviewedCommit: abc7672f3b3a806caa4219ab5b797f1d92421926
+lastReviewedNote: "Reviewed for #122: explicit task reference snapshots, CLI 0.1.14 QA/intent transport, sealed admission/readback evidence and no-replay recovery. Existing profile, permission, environment and historical delivery boundaries remain enforced."
 ---
 
 # Foundry AI Navigation
@@ -393,3 +393,5 @@ git diff --check
 ```
 
 Golden diff protects CLI JSON compatibility for the key command set. The full test suite protects workflow-specific artifact and proof behavior. Toolchain tests protect the pnpm/TS7 graph and migration ledger. Command metadata tests protect AI navigation.
+
+Explicit reference selection starts at `scripts/lib/foundry-reference-input.ts` and the public `--reference-input` descriptor. The indexed snapshots feed `foundry-workflow-finalize.ts`; `finalize-reference-inputs.ts`, `handoff-reference-intent.ts` and `reference-intent-closeout.ts` own flat-input validation, precommit evidence transport and readback binding. The public runtime contract defines the boundary; CLI 0.1.14 owns reference eligibility and unit-aware QA.

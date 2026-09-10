@@ -35,8 +35,8 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-11
-lastReviewedCommit: fd348f2c0d4391974f2fd894e2939f677cae618d
-lastReviewedNote: "Reviewed for Foundry #119: explicit native insert selection, indexed control snapshot, exact command/report bindings and no-replay recovery. CLI retains native execution ownership; existing authorization and environment boundaries remain mandatory."
+lastReviewedCommit: abc7672f3b3a806caa4219ab5b797f1d92421926
+lastReviewedNote: "Reviewed for #122: explicit task reference snapshots, CLI 0.1.14 QA/intent transport, sealed admission/readback evidence and no-replay recovery. Existing profile, permission, environment and historical delivery boundaries remain enforced."
 ---
 
 # Environment Surface Policy
@@ -156,3 +156,5 @@ Public finalization, handoff and readback set `FOUNDRY_ACCOUNT_MODE` only from t
 `FOUNDRY_QUALIFICATION_CAPSULE`, `FOUNDRY_RESUME_RUN`, `FOUNDRY_CI_CAN_SEAL`, `FOUNDRY_STAGE_PASSED` and `FOUNDRY_SOURCE_PACKAGE_*` are source-workflow inputs only. They never enter the public environment example, task configuration or installed runtime. A path or success flag grants no trust: the owning job, exact current source/toolchain, signed capsule and complete payload inventory are independently checked. GitHub tokens remain process-only. Preflight returns fixed OIDC validation facts and discards credentials; native diagnostics strip OIDC and package-publishing credentials before executing the selected immutable source.
 
 The owning public-bootstrap workflow uses `BOOTSTRAP_WORK` and `BOOTSTRAP_PROOF` only to select runner-temporary work and proof directories for a filesystem staging step. The qualification command's `BOOTSTRAP_OUTPUT` selects the work directory; the stage receives only its completed report. These values are not forwarded to the installed bootstrap/application, select no runtime trust anchor and grant no authentication or business authority.
+
+Public reference selection introduces no environment variable. It uses explicit descriptor/file digests and credential/session-path guards, retains task snapshots, and forwards the resulting paths through the existing credential-free QA and authenticated read-only verification child policies.
