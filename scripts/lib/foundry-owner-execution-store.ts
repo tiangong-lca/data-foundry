@@ -412,7 +412,36 @@ export function inspectOwnerExecutions(
         );
       const native =
         commandSpecOptionValue(item.request.content.commit, "--execution-contract") !== null;
+      const referenceSpec = parseFoundryCommandSpec(item.request.content.verify);
+      const referenceSelected =
+        commandSpecOptionValue(referenceSpec, "--reference-intent-file") !== null;
+      const referenceFacts = referenceSelected ? proof.reference_evidence : [];
+      const expectedReferenceFacts = referenceSpec.binding.artifacts.filter((fact) =>
+        ["reference_intent", "reference_precommit", "reference_review"].includes(fact.role),
+      );
+      if (
+        !Array.isArray(referenceFacts) ||
+        (referenceSelected &&
+          (expectedReferenceFacts.length < 3 ||
+            referenceFacts.length !== expectedReferenceFacts.length ||
+            !expectedReferenceFacts.every((bound) =>
+              referenceFacts.some((raw) => {
+                const fact = workflowObject(raw);
+                return (
+                  typeof fact.path === "string" &&
+                  path.resolve(context.assetRoot, bound.path) === path.resolve(fact.path) &&
+                  bound.sha256 === fact.sha256 &&
+                  bound.bytes === fact.bytes
+                );
+              }),
+            )))
+      )
+        throw new FoundryContextError(
+          "execution_result_invalid",
+          "Reference-intent completion requires every bound reference evidence fact.",
+        );
       for (const raw of [
+        ...referenceFacts,
         proof.input,
         proof.report,
         proof.checks,

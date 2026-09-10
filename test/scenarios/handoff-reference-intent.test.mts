@@ -158,3 +158,89 @@ test("an explicitly marked finalization cannot lose its precommit intent and fal
   await assert.rejects(f.run(), /reference-intent-file/u);
   assert.equal(fs.existsSync(path.join(f.root, "handoff")), false);
 });
+
+test("full closeout cannot accept plain root proof for an intent-bound handoff", async (t) => {
+  const f = fixture(t);
+  const handoff = await f.run();
+  assert.equal((handoff as Record<string, unknown>).status, "ready_for_explicit_commit");
+  const row = JSON.parse(fs.readFileSync(f.rows, "utf8"))[0] as Record<string, unknown>;
+  const commitFile = path.join(f.root, "commit.json"),
+    verifyFile = path.join(f.root, "verify.json"),
+    checksFile = path.join(f.root, "checks.jsonl");
+  write(commitFile, {
+    status: "completed_process_save_draft",
+    mode: "commit",
+    commit: true,
+    input_path: f.rows,
+    counts: { executed: 1, failed: 0 },
+  });
+  fs.writeFileSync(
+    checksFile,
+    JSON.stringify({
+      role: "root",
+      table: "processes",
+      id: "11111111-1111-4111-8111-111111111111",
+      version: "00.00.001",
+      row_index: 0,
+      path: "/processDataSet#readback",
+      status: "ok",
+      local_payload_sha256: sha256Json(row),
+      remote_payload_sha256: sha256Json(row),
+      remote_user_id: targetUserId,
+      remote_state_code: 0,
+    }) + "\n",
+  );
+  const verify = {
+    status: "passed_remote_verification",
+    input_path: f.rows,
+    counts: { blockers: 0, root_readback_checks: 1, root_payload_mismatches: 0 },
+    blockers: [],
+    files: { checks: checksFile },
+  };
+  write(verifyFile, verify);
+  const app = createFoundryApplication({ repoRoot });
+  const close = (out: string) =>
+    app.execute("dataset-post-write-closeout", {
+      handoffPlan: path.join(f.root, "handoff/dataset-commit-handoff-plan.json"),
+      commitReport: commitFile,
+      postWriteVerifyReport: verifyFile,
+      outDir: path.join(f.root, out),
+    });
+  const rejected = (await close("missing-reference-proof")) as Record<string, unknown>;
+  assert.equal(rejected.status, "blocked", JSON.stringify(rejected));
+  assert.ok(
+    (rejected.blockers as Array<{ code: string }>).some(
+      (blocker) => blocker.code === "reference_intent_evidence_invalid",
+    ),
+  );
+  const precommit = JSON.parse(fs.readFileSync(f.precommitFile, "utf8")) as Record<string, unknown>;
+  write(verifyFile, { ...verify, reference_intent: precommit.reference_intent });
+  const accepted = (await close("matching-reference-proof")) as Record<string, unknown>;
+  assert.equal(accepted.status, "completed", JSON.stringify(accepted));
+  for (const mode of ["hash", "actor", "consumers", "reviews"] as const) {
+    const changed = structuredClone(precommit.reference_intent) as Record<string, unknown>;
+    if (mode === "hash") (changed.file as Record<string, unknown>).sha256 = "0".repeat(64);
+    if (mode === "actor") changed.actor_user_id = "other-actor";
+    if (mode === "consumers") changed.consumers = [];
+    if (mode === "reviews") changed.review_files = [];
+    write(verifyFile, { ...verify, reference_intent: changed });
+    const invalid = (await close(`changed-${mode}`)) as Record<string, unknown>;
+    assert.equal(invalid.status, "blocked", mode);
+    assert.ok(
+      (invalid.blockers as Array<{ code: string }>).some(
+        (blocker) => blocker.code === "reference_intent_evidence_invalid",
+      ),
+    );
+  }
+  const planFile = path.join(f.root, "handoff/dataset-commit-handoff-plan.json");
+  const unbound = JSON.parse(fs.readFileSync(planFile, "utf8")) as Record<string, unknown>;
+  delete unbound.reference_intent;
+  write(planFile, unbound);
+  write(verifyFile, verify);
+  const lostBinding = (await close("lost-binding")) as Record<string, unknown>;
+  assert.equal(
+    lostBinding.status,
+    "blocked",
+    "an explicit command flag cannot silently lose its handoff binding",
+  );
+});

@@ -5,6 +5,7 @@ import { normalizeAllowedTraceHashDifference } from "../remote-verification-acce
 import { canonicalPayloadSha256, validateUniqueRootReadbacks } from "../post-write-root-proof.ts";
 import type { IntendedRoot, RootReadbackCheck } from "../post-write-root-proof.ts";
 import { validateNativeInsertCloseout } from "./native-insert-closeout.ts";
+import { validateReferenceIntentReadback } from "./reference-intent-closeout.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -273,6 +274,7 @@ export function createPostWriteCloseoutCommands({
 
   function validatePostWriteVerifyForCloseout({
     verifyReport,
+    handoffPlan,
     verifyReportPath,
     finalRowsFile,
     expectedRows,
@@ -283,6 +285,7 @@ export function createPostWriteCloseoutCommands({
     blockers,
   }: {
     verifyReport: ReportValue;
+    handoffPlan?: ReportValue;
     verifyReportPath: string;
     finalRowsFile: string;
     expectedRows: number;
@@ -292,10 +295,29 @@ export function createPostWriteCloseoutCommands({
     allowTraceHashOnlyNormalization: boolean;
     blockers: JsonRecord[];
   }): {
+    referenceArtifacts?: FoundryArtifactFact[];
     checksFile: string | null;
     readbackChecks: RootReadbackCheck[];
     uniqueReadbackCount: number;
   } {
+    let referenceArtifacts: FoundryArtifactFact[] = [];
+    try {
+      referenceArtifacts = validateReferenceIntentReadback({
+        handoff: handoffPlan ?? {},
+        report: verifyReport,
+        rowsFile: finalRowsFile,
+        datasetType: asText(handoffPlan?.dataset_type),
+        targetUserId,
+        resolveFile: resolveRepoPath,
+        relativePath: repoRelativePath,
+      });
+    } catch {
+      blockers.push({
+        code: "reference_intent_evidence_invalid",
+        message:
+          "Post-write verification must retain the same current consumer, intent, precommit and review evidence as its handoff.",
+      });
+    }
     const inputPath = resolveRepoPath(reportInputPath(verifyReport));
     const counts = verifyReport.counts ?? {};
     const blockerCount = Number(
@@ -426,6 +448,7 @@ export function createPostWriteCloseoutCommands({
       checksFile,
       readbackChecks,
       uniqueReadbackCount: uniqueProof.uniqueReadbackCount,
+      ...(referenceArtifacts.length ? { referenceArtifacts } : {}),
     };
   }
 
@@ -871,6 +894,7 @@ export function createPostWriteCloseoutCommands({
       });
       rootProof = validatePostWriteVerifyForCloseout({
         verifyReport: verifyArtifact.value,
+        handoffPlan,
         verifyReportPath: verifyArtifact.path,
         finalRowsFile,
         expectedRows,
