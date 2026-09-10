@@ -7,6 +7,8 @@ import path from "node:path";
 import test from "node:test";
 import { CLI_RUNTIME_EXPECTATION_SCHEMA, describeCliRuntime } from "@tiangong-lca/cli/runtime";
 import { createFileArtifactFact, createFoundryCommandSpec } from "@tiangong-lca/cli/command-spec";
+import { runFoundryTaskOperation } from "../../scripts/lib/foundry-task-store.ts";
+import { sha256Json } from "../../scripts/lib/identity-preflight-proof.ts";
 import { createFoundryRuntime } from "../../scripts/foundry-runtime.ts";
 import {
   FOUNDRY_TIDAS_EXPECTATION_SCHEMA,
@@ -232,6 +234,109 @@ test("serialized child context rehydrates only through fresh runtime, identity, 
     hasCode("runtime_qualification_required"),
   );
   const capsule = await runtime.createExecutionCapsule(identity, executionOptions);
+  const referenceRoot = path.join(context.taskRoot!, "outputs", "reference-admission");
+  const intentFile = path.join(referenceRoot, "intent.json"),
+    reviewFile = path.join(referenceRoot, "review.json"),
+    precommitFile = path.join(referenceRoot, "precommit.json");
+  const refFact = (file: string) => ({
+    path: file,
+    sha256: sha(file),
+    bytes: fs.statSync(file).size,
+  });
+  const payload = JSON.parse(fs.readFileSync(finalRows, "utf8").trim()) as Record<string, unknown>;
+  const consumers = [
+    {
+      row_index: 0,
+      table: "unitgroups",
+      id: "22222222-2222-4222-8222-222222222222",
+      version: "00.00.001",
+      payload_sha256: sha256Json(payload),
+    },
+  ];
+  await runFoundryTaskOperation(
+    context,
+    { command: "dataset-workflow-finalize", options: { case: "reference-admission" } },
+    (operation) => {
+      operation.writeJson(intentFile, {
+        schema_version: "dataset-exact-reference-intent.v1",
+        consumers,
+      });
+      operation.writeJson(reviewFile, { decision: "use_selected_exact" });
+      operation.writeJson(precommitFile, {
+        status: "passed_remote_verification",
+        input_path: finalRows,
+        blockers: [],
+        counts: { rows: 1, blockers: 0 },
+        reference_intent: {
+          file: refFact(intentFile),
+          actor_user_id: accountIntent.userId,
+          project_ref: accountIntent.projectRef,
+          consumers,
+          references: [{ review: { file: refFact(reviewFile) } }],
+          review_files: [refFact(reviewFile)],
+        },
+      });
+      const result = { status: "completed" };
+      operation.writeJson(path.join(referenceRoot, "result.json"), result);
+      return result;
+    },
+  );
+  const referenceArtifacts = [
+    ["reference_intent", intentFile],
+    ["reference_precommit", precommitFile],
+    ["reference_review", reviewFile],
+  ].map(([role, file]) => createFileArtifactFact({ role, path: file, filePath: file }));
+  const referenceContext = createFoundryRuntimeContext({
+    ...contextOptions,
+    inputs: [
+      ...contextOptions.inputs,
+      ...[intentFile, precommitFile, reviewFile].map(captureFoundryInput),
+    ],
+  });
+  const referenceQualification = qualify(referenceContext);
+  const referenceRuntime = createFoundryRuntime(referenceContext, referenceQualification);
+  const referenceIdentity = referenceRuntime.verifyIdentity({ mode: "oauth" });
+  const referenceSpec = createFoundryCommandSpec({
+    executable: spec.executable,
+    argv: [...spec.argv],
+    binding: { artifacts: [finalRowsArtifact, ...referenceArtifacts] },
+  });
+  await assert.rejects(
+    runtime.createExecutionCapsule(identity, { ...executionOptions, commandSpec: referenceSpec }),
+    hasCode("input_not_selected"),
+  );
+  const referenceCapsule = await referenceRuntime.createExecutionCapsule(referenceIdentity, {
+    ...executionOptions,
+    commandSpec: referenceSpec,
+  });
+  const referenceAdmission = await referenceRuntime.rehydrateExecution(referenceIdentity, {
+    capsuleFile: referenceCapsule.capsule_file,
+    commandSpec: referenceSpec,
+  });
+  assert.equal(
+    (await referenceRuntime.admitExecution(referenceIdentity, referenceAdmission)).sha256,
+    referenceSpec.sha256,
+  );
+  for (const artifacts of [
+    [referenceArtifacts[0]],
+    [referenceArtifacts[0], referenceArtifacts[1]],
+    [...referenceArtifacts, { ...referenceArtifacts[2], role: "unreviewed_extra" }],
+  ]) {
+    const invalid = createFoundryCommandSpec({
+      executable: spec.executable,
+      argv: [...spec.argv],
+      binding: { artifacts: [finalRowsArtifact, ...artifacts] },
+    });
+    await assert.rejects(
+      referenceRuntime.createExecutionCapsule(referenceIdentity, {
+        ...executionOptions,
+        commandSpec: invalid,
+      }),
+      (error) =>
+        hasCode("execution_reference_evidence_unbound")(error) ||
+        hasCode("execution_final_rows_unbound")(error),
+    );
+  }
   const childContext = createFoundryRuntimeContext(contextOptions);
   const childQualification = qualify(childContext);
   const childIdentity = verifyFoundryRuntimeIdentity(

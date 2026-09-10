@@ -10,6 +10,7 @@ export {
 import fs from "node:fs";
 import path from "node:path";
 import { readNativeInsertHandoff } from "./finalize-owners/native-insert-handoff.ts";
+import { readHandoffReferenceEvidence } from "./finalize-owners/handoff-reference-intent.ts";
 import {
   assertFoundryCommandSpecArtifactsCurrent,
   commandSpecOptionValue,
@@ -112,9 +113,12 @@ function commandSpec(
   const contractArtifacts = spec.binding.artifacts.filter(
     (item) => item.role === "execution_contract",
   );
+  const referenceArtifacts = spec.binding.artifacts.filter((item) =>
+    ["reference_intent", "reference_precommit", "reference_review"].includes(item.role),
+  );
   if (
     rowArtifacts.length !== 1 ||
-    spec.binding.artifacts.length !== (nativeFile ? 2 : 1) ||
+    spec.binding.artifacts.length !== (nativeFile ? 2 : 1) + referenceArtifacts.length ||
     contractArtifacts.length !== (nativeFile ? 1 : 0)
   )
     fail(
@@ -201,6 +205,60 @@ function commandSpec(
         "execution_native_contract_unbound",
         "Native contract or final rows changed during execution admission.",
       );
+  }
+  if (referenceArtifacts.length) {
+    const intents = referenceArtifacts.filter((item) => item.role === "reference_intent");
+    const precommits = referenceArtifacts.filter((item) => item.role === "reference_precommit");
+    if (intents.length !== 1 || precommits.length !== 1 || referenceArtifacts.length < 3)
+      fail(
+        "execution_reference_evidence_unbound",
+        "Execution requires exactly one intent, one precommit and its review evidence.",
+      );
+    for (const artifact of referenceArtifacts) {
+      const fact = selected(context, artifact.path);
+      if (fact.bytes !== artifact.bytes || fact.sha256 !== artifact.sha256)
+        fail(
+          "execution_reference_evidence_unbound",
+          "Reference artifacts differ from the current host selection.",
+        );
+      readFoundryInput(context, fact.path);
+    }
+    try {
+      const reference = readHandoffReferenceEvidence({
+        finalize: {
+          files: { remote_verify_report: resolveSpecArtifact(context, precommits[0].path) },
+          reference_intent_file: resolveSpecArtifact(context, intents[0].path),
+        },
+        options: { referenceIntentFile: resolveSpecArtifact(context, intents[0].path) },
+        rowsFile: finalRows.path,
+        datasetType: datasetType ?? group,
+        targetUserId: context.accountIntent?.userId ?? "",
+        projectRef: context.accountIntent?.projectRef ?? "",
+        resolveFile: (value) =>
+          typeof value === "string" ? resolveSpecArtifact(context, value) : null,
+        relativePath: (file) => file,
+      });
+      if (
+        !reference ||
+        reference.rows_sha256 !== finalRows.sha256 ||
+        reference.artifacts.length !== referenceArtifacts.length ||
+        !reference.artifacts.every((expected) =>
+          referenceArtifacts.some(
+            (bound) =>
+              bound.role === expected.role &&
+              resolveSpecArtifact(context, bound.path) === expected.path &&
+              bound.sha256 === expected.sha256 &&
+              bound.bytes === expected.bytes,
+          ),
+        )
+      )
+        throw new Error("Reference binding mismatch");
+    } catch {
+      fail(
+        "execution_reference_evidence_unbound",
+        "Execution must retain the exact current consumer, intent, precommit and review evidence.",
+      );
+    }
   }
   const isDatasetSave =
     group === "dataset" &&
