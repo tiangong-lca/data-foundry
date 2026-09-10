@@ -14,7 +14,9 @@ import {
   taskAuthorizationFixture,
 } from "../fixtures/task-authorizations.ts";
 import { validateTaskAuthorization } from "../../scripts/lib/task-authorization.ts";
-import { parseArgs } from "../../scripts/lib/foundry-args.ts";
+import { parseArgs, parseScalar } from "../../scripts/lib/foundry-args.ts";
+import { createFoundryRuntimeUtils } from "../../scripts/lib/foundry-runtime-utils.ts";
+import { createFoundryCommandSpec } from "../../scripts/lib/foundry-command-spec.ts";
 import { sha256Json } from "../../scripts/lib/identity-preflight-proof.ts";
 import { validateNativeInsertCloseout } from "../../scripts/lib/finalize-owners/native-insert-closeout.ts";
 
@@ -358,6 +360,41 @@ test("explicit native insert handoff binds each supported payload and contract w
           relativePath: (file) => relativeTo(root, file),
         });
       assert.equal(validateNative(nativeReport), true);
+      const equivalentHandoff = structuredClone(report);
+      for (const key of ["commit", "post_write_verify"] as const) {
+        const source = report.commands[key]!;
+        const equivalent = createFoundryCommandSpec({
+          executable: source.executable,
+          argv: source.argv,
+          binding: {
+            artifacts: source.binding.artifacts.map((fact) => {
+              const file = path.resolve(root, fact.path);
+              return {
+                ...fact,
+                path: `${path.dirname(file)}${path.sep}.${path.sep}${path.basename(file)}`,
+              };
+            }),
+          },
+        });
+        (equivalentHandoff.commands as Record<string, unknown>)[key] = equivalent;
+      }
+      const runtime = createFoundryRuntimeUtils({ repoRoot: root, parseScalar });
+      assert.equal(
+        validateNativeInsertCloseout({
+          handoff: equivalentHandoff,
+          report: nativeReport,
+          rowsFile: fixture.rows,
+          datasetType: type,
+          targetUserId: "owner-1",
+          stateCode: "0",
+          expectedRows: 1,
+          resolveFile: runtime.resolveRepoPath,
+          relativePath: runtime.repoRelativePath,
+        }),
+        true,
+        "equivalent absolute artifact paths must resolve before native evidence comparison",
+      );
+
       const invalidReports: Array<(value: typeof nativeReport) => void> = [
         (value) => {
           value.schema_version = 1;

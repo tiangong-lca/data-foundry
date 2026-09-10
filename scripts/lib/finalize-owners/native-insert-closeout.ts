@@ -1,3 +1,4 @@
+import path from "node:path";
 import { parseFoundryCommandSpec } from "../foundry-command-spec.ts";
 import { sha256Json } from "../identity-preflight-proof.ts";
 import { readNativeInsertHandoff } from "./native-insert-handoff.ts";
@@ -24,13 +25,17 @@ export function validateNativeInsertCloseout(input: {
   resolveFile: (value: unknown) => string | null;
   relativePath: (file: string) => string;
 }): boolean {
+  const resolveFile = (value: unknown): string | null => {
+    const file = input.resolveFile(value);
+    return file ? path.resolve(file) : null;
+  };
   if (!Object.hasOwn(input.handoff, "execution_contract")) {
     requireEvidence(!Object.hasOwn(input.report, "execution_contract"));
     return false;
   }
   const binding = object(input.handoff.execution_contract);
   const artifact = object(binding.artifact);
-  const contractFile = input.resolveFile(artifact.path);
+  const contractFile = resolveFile(artifact.path);
   requireEvidence(contractFile && binding.operation === "insert");
   const native = readNativeInsertHandoff({
     contractFile,
@@ -54,7 +59,7 @@ export function validateNativeInsertCloseout(input: {
     const spec = parseFoundryCommandSpec(commands[key]);
     for (const expected of [artifact, rowsArtifact]) {
       const matching = spec.binding.artifacts.filter(
-        (fact) => input.resolveFile(fact.path) === input.resolveFile(expected.path),
+        (fact) => resolveFile(fact.path) === resolveFile(expected.path),
       );
       requireEvidence(
         matching.length === 1 &&
@@ -67,7 +72,7 @@ export function validateNativeInsertCloseout(input: {
         value === "--execution-contract" ? [index] : [],
       );
       requireEvidence(
-        positions.length === 1 && input.resolveFile(spec.argv[positions[0] + 1]) === contractFile,
+        positions.length === 1 && resolveFile(spec.argv[positions[0] + 1]) === contractFile,
       );
       const typeFlag = spec.argv.indexOf("--type");
       requireEvidence(
@@ -89,8 +94,8 @@ export function validateNativeInsertCloseout(input: {
       report.commit === true &&
       report.status === "completed" &&
       report.requested_type === input.datasetType &&
-      input.resolveFile(report.input_path) === input.resolveFile(input.rowsFile) &&
-      input.resolveFile(contractReport.path) === contractFile &&
+      resolveFile(report.input_path) === resolveFile(input.rowsFile) &&
+      resolveFile(contractReport.path) === contractFile &&
       contractReport.sha256 === native.canonical_sha256 &&
       contractReport.execution_id === native.contract.execution_id &&
       contractReport.target_mode === "owner_draft" &&

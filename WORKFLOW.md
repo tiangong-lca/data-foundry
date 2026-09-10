@@ -281,7 +281,7 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-11
-lastReviewedCommit: fd348f2c0d4391974f2fd894e2939f677cae618d
+lastReviewedCommit: 1b48d64af0f5d1eb41d3e9400ccf8f593c43f81d
 lastReviewedNote: "Reviewed for Foundry #119: explicit native insert selection, indexed control snapshot, exact command/report bindings and no-replay recovery. CLI retains native execution ownership; existing authorization and environment boundaries remain mandatory."
 tracker:
   kind: filesystem
