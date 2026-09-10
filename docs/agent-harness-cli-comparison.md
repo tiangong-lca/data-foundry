@@ -18,9 +18,9 @@ checkPaths:
   - .codex/hooks.json
   - .codex/hooks/run-foundry-acceptance-check.sh
   - scripts/commands/core.ts
-lastReviewedAt: 2026-09-08
-lastReviewedCommit: 81450527dd1f0b0439ed1f385fb494f9c045eb93
-lastReviewedNote: "Reviewed for Foundry #118 public classification/location tasks and bound semantic submission. Existing domain owners, task lineage, package-only composition, credential boundaries and acceptance hooks remain enforced; identity/publication work remains open."
+lastReviewedAt: 2026-09-11
+lastReviewedCommit: a69b7de2bb6aba5ce6e6db13957cf8e793ae69a6
+lastReviewedNote: "Reviewed for #122: the explicit reference-input workflow and qualified CLI 0.1.14 retain existing acceptance hooks, artifact locations and no-replay authority."
 related:
   - docs/file-organization.md
   - docs/codex-stop-hook.md
