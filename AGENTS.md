@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-10
-lastReviewedCommit: 063016979fec5d4879f562c417b42b73b158aafe
-lastReviewedNote: "Reviewed for Foundry #153: strict0.1.7 version projection from qualified managed-action source0630169 and unchanged verified CLI0.1.13/toolchain/dependency inputs. All source/native action gates passed before preparation; complete owning release and independent public successor verification remain required."
+lastReviewedCommit: d0d2e7819e5ff573fb427063d13f83a2cb47ba70
+lastReviewedNote: "Reviewed for Foundry #144 after merged Skills0a33db1 and qualified F1.7: retire only duplicate source skill packages and move ownership/install guidance to Skills. Preserve all current managed-action, runtime/account, no-replay and publication contracts; exact ownership Golden bounds remain enforced."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -290,7 +290,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - Foundry owns task routing, local manifests, import profiles, curation packages, cleanup reports, and policy checks.
 - Foundry identity-preflight adapters forward the canonical single lexical weight plus semantic weight; database and Edge repositories own search behavior.
 - Foundry does not own TIDAS schemas/YAML, package converters, dataset validators, deterministic QA engines, reusable skills, or remote write semantics.
-- `.agents/skills` is the single project-visible skill root. Foundry-owned local skills listed in `.agents/shared-skills.json` are tracked with this repository. Shared/runtime skills listed in the same config may also be installed there, but their directories and `skills-lock.json` stay untracked unless a task explicitly changes to a pinned reproducibility policy.
+- `.agents/skills` is the project-visible installation root. `foundry-tidas-import` and `foundry-tidas-authoring` are maintained in `tiangong-lca-skills`; Foundry records their canonical source and installation commands in `.agents/shared-skills.json`. Their local installations and other configured shared/runtime skills, together with `skills-lock.json`, stay untracked.
 - External source-evidence and document-extraction skills, including `tiangong-kb-sci-search` and `document-granular-decompose`, are installed or read from the `skills` registry package through `pnpm dlx skills@latest ...` at runtime before use. Do not copy their retrieval or extraction logic into Foundry.
 - Raw converted rows may preserve source-language text only, but final import/write-ready rows must include `en` for TIDAS-required multilingual fields. When source data is not English, preserve the original language variant and add an evidence-backed English translation from full task context before write planning.
 - Do not implement direct database writes in Foundry.
@@ -366,6 +366,8 @@ Full CI may execute the complete test inventory in isolated duration-balanced sh
 
 ## Default Operating Order
 
+The commands below describe the source/developer pipeline and its underlying owner stages. Ordinary installed tasks use the Skills-owned entry and `docs/public-runtime-contract.md`; the runtime returns the applicable stage actions.
+
 1. Read this file and `WORKFLOW.md`.
 2. For source-evidence or shared-skill work, read `docs/runtime-skill-management.md` before evidence retrieval.
 3. Run `pnpm doctor` before trusting local Foundry commands.
@@ -385,7 +387,7 @@ pnpm exec tiangong-lca dataset context-pack \
 8. Run `node scripts/foundry.ts dataset-tidas-validate` for deterministic schema validation, then `pnpm exec tiangong-lca qa <type>` for deterministic QA on converted or authored rows.
 9. Build and drive the entity-level queue with `pnpm exec tiangong-lca dataset curation-queue build/next/verify` so support, flow, and process work has stable task, lock, blocker, closure, and run-plan artifacts owned by the CLI state machine. Parallel workers are allowed only across independent queue locks and only at the configured task parallelism; passed tasks continue, blocked tasks are recorded for later support/database repair, and reruns resume from checkpoints.
 10. Run `node scripts/foundry.ts dataset-curation-gate` with the rows, schema report, QA report, profile, full contract context files, and any generated classification/location authoring queues.
-11. Use `$foundry-tidas-import` as the Foundry-local orchestration entrypoint for external package or source-document imports. Use `$foundry-tidas-authoring` only after curation-gate authoring tasks, classification decision tasks, or location decision tasks exist and only to produce structured evidence-backed decisions or patches for curation blockers. Apply classification decisions with `dataset-classification-decisions-apply`, apply location decisions with `dataset-location-decisions-apply`, collect field patches with `dataset-authoring-patch-collect`, then after deterministic apply rerun Rust tidas validation, deterministic CLI QA, and the Foundry curation gate on the final rows before mutation manifest.
+11. Use the Skills-owned `$foundry-tidas-import` as the ordinary managed-runtime entrypoint for external package or source-document imports. Follow its current public task results and structured actions. Use `$foundry-tidas-authoring` only after curation-gate authoring tasks, classification decision tasks, or location decision tasks exist and only to produce structured evidence-backed decisions or patches for curation blockers. Apply classification decisions with `dataset-classification-decisions-apply`, apply location decisions with `dataset-location-decisions-apply`, collect field patches with `dataset-authoring-patch-collect`, then after deterministic apply rerun Rust tidas validation, deterministic CLI QA, and the Foundry curation gate on the final rows before mutation manifest.
 12. Run `node scripts/foundry.ts dataset-curation-cleanup` after source trace has been captured in authoring packages and before remote write planning. Consume `files.cleaned_rows` only when the cleanup report status is `completed`, blockers are empty, and the path is non-null. Invalid datetime metadata must return a nonzero CLI exit with blocker evidence and no cleaned rows. `dataset-post-authoring-finalize` must complete parent cleanup before nested source/contact support finalize, stop before every later stage on cleanup failure, invalidate exact stale downstream artifact roots, and still append the blocked import ledger without creating a CommandSpec.
 13. Remote commit is policy-gated rather than manually supervised by default. A task may allow automated batch commit for scopes whose finalize report, mutation manifest, commit handoff, and post-write verification all pass; human input is required for policy changes, exceptional waivers, or unresolved reference closure. Missing public canonical unit groups, flow properties, or elementary flows remain blockers unless a current input/account/task-bound authorization explicitly permits the account-local `state_code=0` candidate path with owner, unit-scale, closure, audit, and readback gates. A frozen profile alone never grants that permission.
 14. Do not treat historical `.foundry` artifacts as proof for a current task.

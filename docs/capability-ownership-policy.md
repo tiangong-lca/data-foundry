@@ -93,11 +93,13 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-10
-lastReviewedCommit: 063016979fec5d4879f562c417b42b73b158aafe
-lastReviewedNote: "Reviewed for Foundry #153: strict0.1.7 version projection from qualified managed-action source0630169 and unchanged verified CLI0.1.13/toolchain/dependency inputs. All source/native action gates passed before preparation; complete owning release and independent public successor verification remain required."
+lastReviewedCommit: d0d2e7819e5ff573fb427063d13f83a2cb47ba70
+lastReviewedNote: "Reviewed for Foundry #144 after merged Skills0a33db1 and qualified F1.7: retire only duplicate source skill packages and move ownership/install guidance to Skills. Preserve all current managed-action, runtime/account, no-replay and publication contracts; exact ownership Golden bounds remain enforced."
 ---
 
 # Capability Ownership Policy
+
+`foundry.skill.tidas-import` is the Skills-owned entry over the public Foundry runtime. Skill instruction and semantic package maintenance belong in `tiangong-lca-skills`; Foundry retains task state, deterministic gate aggregation and the runtime completion capabilities. Local installations under `.agents/skills` carry no independent ownership or task authority.
 
 Migration transfer planning is governed by [the workspace migration contract](workspace-migration-contract.md). W10 provides explicit source/queue/input staging, current-owner task adoption, audited v2 activation and separate runtime read/write selection. Preserved history blocks replay across requests and migrations; none of these records grants business permission. Operational qualification and release integration remain tracked in #108/#980.
 

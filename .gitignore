@@ -16,8 +16,10 @@ __pycache__/
 .foundry/h5py-venv/
 .foundry/cases/
 .docpact/runs/
-# Runtime-installed shared skills. Foundry-owned orchestration skills under
-# .agents/skills stay tracked by name; do not ignore the whole skill root.
+# Runtime-installed Skills-owned packages. Ignore only named installation
+# directories; task/operator evidence and unrelated source paths stay separate.
+.agents/skills/foundry-tidas-import/
+.agents/skills/foundry-tidas-authoring/
 .agents/skills/external-dataset-curated-import/
 .agents/skills/source-evidence-dataset-development/
 .agents/skills/dataset-rls-maintenance/

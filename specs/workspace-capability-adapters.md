@@ -4,13 +4,13 @@ Foundry adapters are routing records. They identify which shared command or skil
 
 The machine-readable registry is `specs/automated-lca-capability-registry.json`.
 
-The local `$foundry-tidas-import` skill is the Foundry orchestration entrypoint for these routes. It calls Rust `tidas` for deterministic import/conversion/schema validation, shared CLI commands for context/QA/curation/remote operations, and `$foundry-tidas-authoring` for AI decisions instead of copying owner logic into Foundry.
+The Skills-owned `$foundry-tidas-import` is the ordinary entry for these routes. It consumes the qualified public Foundry task protocol and returned actions; Foundry delegates deterministic conversion/validation to Rust `tidas` and context/QA/curation/remote operations to the CLI. `$foundry-tidas-authoring` produces data-only semantic decisions for current work items.
 
 ## Core Classes
 
 | Class | Purpose |
 | --- | --- |
-| `import-orchestration` | Foundry-local skill entrypoint that orders shared CLI, curation, AI patch, dry-run, commit, and readback steps without owning database or converter internals. |
+| `import-orchestration` | Skills-owned entry over the public Foundry task protocol; runtime-owned gates order CLI, curation, semantic apply, dry-run, commit and readback. |
 | `tidas-contract-context` | Fetch SDK-backed schema, methodology YAML, runtime ruleset, and AI context artifacts. |
 | `external-lca-package-conversion` | Convert supported packaged LCA data through unified Rust `tidas import`. |
 | `source-document-authoring` | Extract source documents and prepare target context packs for AI authoring. |

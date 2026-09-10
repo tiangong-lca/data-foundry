@@ -663,5 +663,7 @@
       "tracked": true,
       "notes": "Structural managed-host metadata contract. Current trusted manifest, installed package, platform, file bytes and launch/target relationships are revalidated by the package host before workspace operations."
     }
-  ]
+  ],
+  "lastReviewedCommit": "dab4be5ac469df554ae0e2c228ff500cb8a8c88d",
+  "lastReviewedNote": "Reviewed for Foundry #144: canonical skill packages are recorded by .agents/shared-skills.json and maintained in Skills; local installations are ignored. Existing file-location entries remain valid and no private operator path moves."
 }
