@@ -1411,6 +1411,14 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
       let current: ReturnType<typeof createFoundryRuntimeContext> | null = null;
       try {
         assertNotInterrupted(options.signal);
+        if (
+          input.referenceInputFile !== undefined &&
+          (typeof input.referenceInputFile !== "string" || !input.referenceInputFile.trim())
+        )
+          throw new FoundryContextError(
+            "reference_input_invalid",
+            "An explicit reference input requires one nonempty file path.",
+          );
         current = base();
         assertFoundryWorkspaceWrite(current);
         const record = loadFoundryFacadeTaskRecord(current, input.taskId, input.actorId);

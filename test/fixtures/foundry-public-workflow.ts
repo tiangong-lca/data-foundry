@@ -1337,6 +1337,17 @@ export async function verifyPublicIdentityWorkflow(
       JSON.stringify(preparedExecution.blockers),
     );
     assert.equal(writes, 0, "request preparation is local");
+    if (referenceInput) {
+      for (const empty of ["", "   "]) {
+        const rejected = await facade.resume({ ...invocation, referenceInputFile: empty });
+        assert.equal(
+          writes,
+          0,
+          "an empty explicit reference selector cannot dispatch a prepared write",
+        );
+        assert.equal(rejected.blockers[0]?.code, "reference_input_invalid");
+      }
+    }
     if (approvalKind === "final_rows") {
       const expiredClock = t.mock.method(
         Date,
