@@ -14,6 +14,7 @@ import {
   taskAuthorizationFixture,
 } from "../fixtures/task-authorizations.ts";
 import { validateTaskAuthorization } from "../../scripts/lib/task-authorization.ts";
+import { parseArgs } from "../../scripts/lib/foundry-args.ts";
 
 type JsonObject = Record<string, unknown>;
 
@@ -119,7 +120,7 @@ function withoutAccountEnvironment<T>(run: () => T): T {
   }
 }
 
-function handoffHarness(root: string) {
+function handoffHarness(root: string, onArtifactRead: () => void = () => {}) {
   const traceCoverageCalls: unknown[] = [];
   const resolveRepoPath = (value: unknown) => resolveFrom(root, value);
   const commands = createCommitHandoffCommands({
@@ -141,6 +142,7 @@ function handoffHarness(root: string) {
     nowIso: () => fixedNow,
     profileFor,
     readJsonArtifactOption(value: unknown) {
+      onArtifactRead();
       const artifactPath = resolveRepoPath(value);
       if (!artifactPath || !fs.existsSync(artifactPath)) return null;
       return { path: artifactPath, value: JSON.parse(fs.readFileSync(artifactPath, "utf8")) };
@@ -197,6 +199,33 @@ function writeHandoffFixture(root: string): { finalize: string; rows: string; ro
   });
   return { finalize: relativeTo(root, finalize), rows, rowsText };
 }
+
+test("handoff rejects ambiguous or unsupported execution-contract selection before artifact reads", () => {
+  withTempRoot("handoff-contract-selection", (root) => {
+    const { commands } = handoffHarness(root, () => {
+      assert.fail("Invalid contract selection must be rejected before artifact reads.");
+    });
+    const malformed = [
+      ["--execution-contract", "missing.json"],
+      ["--execution-contract-file"],
+      ["--execution-contract-file", "true"],
+      ["--execution-contract-file", "false"],
+      ["--execution-contract-file", "123"],
+      ["--execution-contract-file", " "],
+      ["--execution-contract-file", "a.json", "--execution-contract-file", "b.json"],
+      ["--execution-contract-file", "a.json", "--execution-contract", "b.json"],
+      ["--execution-contract-mode", "insert"],
+    ];
+    for (const argv of malformed) {
+      assert.throws(
+        () => commands.runDatasetCommitHandoffPlan({ ...parseArgs(argv), outDir: "handoff" }),
+        /execution-contract-file/u,
+        argv.join(" "),
+      );
+      assert.equal(fs.existsSync(path.join(root, "handoff")), false);
+    }
+  });
+});
 
 test("mixed support handoff rechecks exact task actions against actual final rows", () => {
   withTempRoot("handoff-task-authorization", (root) =>

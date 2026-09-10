@@ -308,6 +308,18 @@ export function createCommitHandoffCommands({
   }
 
   function runDatasetCommitHandoffPlan(options: CommitHandoffOptions): JsonRecord {
+    if (
+      Object.keys(options).some(
+        (key) => key.startsWith("executionContract") && key !== "executionContractFile",
+      ) ||
+      (Object.hasOwn(options, "executionContractFile") &&
+        (typeof options.executionContractFile !== "string" ||
+          options.executionContractFile.trim().length === 0))
+    ) {
+      throw new Error(
+        "Use one --execution-contract-file <path>; unsupported execution-contract options, repeated values and empty/non-string selections are not permitted.",
+      );
+    }
     if (options.help) {
       return {
         schema_version: 1,
