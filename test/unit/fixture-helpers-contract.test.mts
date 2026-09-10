@@ -275,6 +275,7 @@ test("fixture helpers exist only as native TypeScript", () => {
 test("every direct fixture helper consumer targets the typed module", () => {
   assert.deepEqual(staticConsumers("fixture-roots"), [...expectedFixtureRootConsumers].sort());
   assert.deepEqual(staticConsumers("finalize-fixtures"), [
+    "test/scenarios/handoff-reference-intent.test.mts",
     "test/unit/fixture-helpers-contract.test.mts",
   ]);
 

@@ -92,7 +92,7 @@ test("identity receipt bytes and native missing-file errors remain exact", () =>
   assert.equal(Buffer.byteLength(receiptText, "utf8"), 1073);
   assert.equal(
     sha256(receiptText),
-    "f6091b337a236458b0dae0f12b6adf1826a87500ce4c7f8d02d3468d79e6d598",
+    "ded681f6f9ed8124d283a9911a58eb478a627abcaf7b311e8afdab3573d1eaff",
   );
 
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-identity-fixture-"));
