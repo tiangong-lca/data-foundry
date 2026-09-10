@@ -4,6 +4,7 @@ import type { FoundryArtifactFact } from "../foundry-command-spec.ts";
 import { normalizeAllowedTraceHashDifference } from "../remote-verification-accepted-diff.ts";
 import { canonicalPayloadSha256, validateUniqueRootReadbacks } from "../post-write-root-proof.ts";
 import type { IntendedRoot, RootReadbackCheck } from "../post-write-root-proof.ts";
+import { validateNativeInsertCloseout } from "./native-insert-closeout.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -169,6 +170,9 @@ export function createPostWriteCloseoutCommands({
     finalRowsFile,
     expectedRows,
     blockers,
+    handoffPlan,
+    targetUserId,
+    expectedStateCode,
   }: {
     commitReport: ReportValue;
     commitReportPath: string;
@@ -176,7 +180,33 @@ export function createPostWriteCloseoutCommands({
     finalRowsFile: string;
     expectedRows: number;
     blockers: JsonRecord[];
+    handoffPlan?: ReportValue;
+    targetUserId?: string;
+    expectedStateCode?: number | null;
   }): void {
+    try {
+      if (
+        validateNativeInsertCloseout({
+          handoff: handoffPlan ?? {},
+          report: commitReport,
+          rowsFile: finalRowsFile,
+          datasetType,
+          targetUserId: targetUserId ?? asText(handoffPlan?.target_user_id),
+          stateCode: asText(expectedStateCode ?? handoffPlan?.expected_state_code),
+          expectedRows,
+          resolveFile: resolveRepoPath,
+          relativePath: repoRelativePath,
+        })
+      )
+        return;
+    } catch {
+      blockers.push({
+        code: "native_execution_evidence_invalid",
+        message:
+          "Native contract, bound artifacts, command or exact completion evidence is missing, changed or inconsistent; mutation replay is forbidden.",
+      });
+      return;
+    }
     const inputPath = resolveRepoPath(reportInputPath(commitReport));
     const status = asText(commitReport.status);
     const mode = asText(commitReport.mode);
@@ -835,6 +865,9 @@ export function createPostWriteCloseoutCommands({
         finalRowsFile,
         expectedRows,
         blockers,
+        handoffPlan,
+        targetUserId,
+        expectedStateCode,
       });
       rootProof = validatePostWriteVerifyForCloseout({
         verifyReport: verifyArtifact.value,

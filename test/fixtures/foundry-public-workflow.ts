@@ -15,6 +15,7 @@ import childProcess from "node:child_process";
 import { syncBuiltinESMExports } from "node:module";
 import { testAuthIdentityReceipt } from "../fixtures/auth-identity-receipt.ts";
 import { canonicalPayloadSha256 } from "../../scripts/lib/post-write-root-proof.ts";
+import { sha256Json } from "../../scripts/lib/identity-preflight-proof.ts";
 import { readRows } from "../../scripts/lib/import-curation/internal/runtime-io.ts";
 import { unwrapDatasetPayload } from "../../scripts/lib/import-curation/internal/dataset-payload.ts";
 import {
@@ -176,7 +177,12 @@ export function publicIdentityTitle(scenario: PublicIdentityCase): string {
   return `public identity preflight and ${identityDecision} ${approvalKind}${trace ? " with_trace" : ""}${mixed ? " mixed_reuse" : ""}${remoteDifference ? ` ${explicitMode} ${remoteDifference}` : ""} submission preserve current scope and evidence`;
 }
 
-export async function verifyPublicIdentityWorkflow(t: TestContext, scenario: PublicIdentityCase) {
+export async function verifyPublicIdentityWorkflow(
+  t: TestContext,
+  scenario: PublicIdentityCase,
+  nativeInsert = false,
+  nativeResponse: "normal" | "lost" | "missing" | "unknown" = "normal",
+) {
   const [identityDecision, approvalKind, trace, mixed, explicitMode, remoteDifference] = scenario;
   const accountMode = explicitMode ?? "ordinary";
   const { root, workspace, facade, runtimeSelection } = workflowFixture(t);
@@ -509,6 +515,70 @@ export async function verifyPublicIdentityWorkflow(t: TestContext, scenario: Pub
             target_user_id_override: account.user_id,
             files: { report: file, success_list: success, remote_failed: failed },
           };
+          if (committing && nativeInsert) {
+            assert.deepEqual(argv.slice(1, 5), ["dataset", "save-draft", "--type", "flow"]);
+            const contractFile = argv[argv.indexOf("--execution-contract") + 1];
+            const contract = JSON.parse(fs.readFileSync(contractFile, "utf8")) as {
+              execution_id: string;
+              actions: Array<{
+                action_id: string;
+                desired_sha256: string;
+                id: string;
+                version: string;
+                table: string;
+              }>;
+            };
+            report = {
+              schema_version: 2,
+              status: "completed",
+              mode: "commit",
+              commit: true,
+              requested_type: "flow",
+              input_path: input,
+              counts: {
+                selected: 1,
+                executed: 1,
+                attempts_consumed: 1,
+                failed: 0,
+                unknown: 0,
+                blocked: 0,
+              },
+              files: { summary_json: file },
+              execution_contract: {
+                path: contractFile,
+                sha256: sha256Json(contract),
+                execution_id: contract.execution_id,
+                target_mode: "owner_draft",
+              },
+              rows: contract.actions.map((action, index) => ({
+                ...action,
+                index,
+                type: "flow",
+                status: "executed",
+                operation: "insert",
+                attempt_consumed: true,
+                replayed: false,
+                readback: "desired_exact",
+              })),
+            };
+          }
+        }
+        if (committing && nativeInsert && nativeResponse !== "normal") {
+          if (nativeResponse !== "missing") {
+            const summary = path.join(outDir, "outputs", "dataset-save-draft", "summary.json");
+            fs.mkdirSync(path.dirname(summary), { recursive: true });
+            report.files = { summary_json: summary };
+            if (nativeResponse === "unknown") report.status = "completed_with_unknowns";
+            fs.writeFileSync(summary, JSON.stringify(report));
+          }
+          return {
+            status: null,
+            signal: "SIGTERM",
+            stdout: "",
+            stderr: "response lost",
+            pid: 1,
+            output: [],
+          };
         }
         fs.writeFileSync(file, JSON.stringify(report));
         return {
@@ -799,6 +869,7 @@ export async function verifyPublicIdentityWorkflow(t: TestContext, scenario: Pub
       report: string;
       authorization_inputs: Array<{
         input_kind: string;
+        file: string;
         sha256: string;
         binding: Record<string, string>;
       }>;
@@ -904,6 +975,33 @@ export async function verifyPublicIdentityWorkflow(t: TestContext, scenario: Pub
     };
     const writeApproval = (value = grant, finalizationSha = finalizeArtifact.sha256) => {
       fs.writeFileSync(grantFile, JSON.stringify(value));
+      const nativeFile = path.join(root, "selected-native-insert.json");
+      if (nativeInsert) {
+        const rows = readRows(input.file);
+        fs.writeFileSync(
+          nativeFile,
+          JSON.stringify({
+            schema_version: "dataset-save-draft-execution-contract.v1",
+            execution_id: "native-public-case",
+            project_ref: account.project_ref,
+            target_mode: "owner_draft",
+            owner: { user_id: account.user_id, email: "fixture@example.invalid", state_code: 0 },
+            actions: rows.map((row, index) => {
+              const identity = datasetIdentity(row, index, "flow");
+              return {
+                action_id: `insert-${index}`,
+                expected_operation: "insert",
+                table: "flows",
+                id: identity.id,
+                version: identity.version,
+                desired_sha256: sha256Json(identity.payload),
+                before_sha256: null,
+                dependency_action_ids: [],
+              };
+            }),
+          }),
+        );
+      }
       fs.writeFileSync(
         approvalFile,
         JSON.stringify({
@@ -915,6 +1013,9 @@ export async function verifyPublicIdentityWorkflow(t: TestContext, scenario: Pub
           input_kind: approvalKind,
           input_sha256: input.sha256,
           expected_previous_sha256: null,
+          ...(nativeInsert
+            ? { execution_contract: { file: nativeFile, sha256: digestFile(nativeFile) } }
+            : {}),
           grant: { file: grantFile, sha256: digestFile(grantFile) },
           evidence: [
             {
@@ -1037,10 +1138,12 @@ export async function verifyPublicIdentityWorkflow(t: TestContext, scenario: Pub
       "sealed intent is retained without dispatch",
     );
     const authCount = authCalls;
-    assert.deepEqual(
-      (await facade.resume({ ...invocation, authorizationInputFile: acceptedApproval })).artifacts,
-      approved.artifacts,
-    );
+    const reusedApproval = await facade.resume({
+      ...invocation,
+      authorizationInputFile: acceptedApproval,
+    });
+    assert.ok(reusedApproval.artifacts.length > 0, JSON.stringify(reusedApproval.blockers));
+    assert.deepEqual(reusedApproval.artifacts, approved.artifacts);
     assert.equal(authCalls, authCount, "identical approval is a read-only reuse");
     let stdout = "",
       exitCode = -1;
@@ -1077,6 +1180,7 @@ export async function verifyPublicIdentityWorkflow(t: TestContext, scenario: Pub
       "granted",
     );
     assert.equal(exitCode, 2, "sealed execution still requires the subsequent execution stage");
+    if (nativeInsert) fs.unlinkSync(path.join(root, "selected-native-insert.json"));
     const preparedExecution = await facade.resume(invocation);
     assert.ok(
       preparedExecution.artifacts.some((item) => item.role === "owner-execution-request.json"),
@@ -1103,6 +1207,16 @@ export async function verifyPublicIdentityWorkflow(t: TestContext, scenario: Pub
     }
     let executed = await facade.resume(invocation);
     assert.equal(writes, 1, JSON.stringify(executed.blockers));
+    if (nativeResponse === "missing" || nativeResponse === "unknown") {
+      for (let retry = 0; retry < 2; retry++) {
+        assert.equal(executed.status, "needs_input", JSON.stringify(executed.blockers));
+        executed = await facade.resume(invocation);
+        assert.equal(writes, 1, "missing native receipt must never replay mutation");
+      }
+      assert.equal(executed.status, "needs_input", JSON.stringify(executed.blockers));
+      if (childFailure) throw childFailure;
+      return;
+    }
     if (
       remoteDifference &&
       (accountMode === "production-test" || remoteDifference === "other_field")
@@ -1168,9 +1282,13 @@ export async function verifyPublicIdentityWorkflow(t: TestContext, scenario: Pub
       );
     }
     const proof = JSON.parse(fs.readFileSync(executionReport.path, "utf8")) as {
-      readback: { checks: { path: string } };
+      readback: { checks: { path: string }; commit_report?: { path: string } };
     };
-    fs.appendFileSync(proof.readback.checks.path, "{}\n");
+    const evidencePath = nativeInsert
+      ? proof.readback.commit_report?.path
+      : proof.readback.checks.path;
+    assert.ok(evidencePath, "native completion retains its execution report fact");
+    fs.appendFileSync(evidencePath, "{}\n");
     assert.equal(
       (await facade.resume(invocation)).status,
       "blocked",

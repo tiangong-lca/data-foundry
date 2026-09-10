@@ -90,9 +90,9 @@ checkPaths:
   - test/unit/identity-preflight-run-command-factory.test.mts
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
-lastReviewedAt: 2026-09-07
-lastReviewedCommit: 3db019d9a30d6b0458eb97da3d54ced7aa147be2
-lastReviewedNote: "Reviewed for Foundry #112 adoption of qualified public TIDAS0.3.0: full source-bound native notices and reviewed 0.2/0.3 runtime protocol admission. Source release helpers remain outside the public compiler closure; workspace/task/account authorization, no-replay and final F1 publication gates retain their existing owners."
+lastReviewedAt: 2026-09-11
+lastReviewedCommit: fd348f2c0d4391974f2fd894e2939f677cae618d
+lastReviewedNote: "Reviewed for Foundry #119: explicit native insert selection, indexed control snapshot, exact command/report bindings and no-replay recovery. CLI retains native execution ownership; existing authorization and environment boundaries remain mandatory."
 ---
 
 # Foundry Command Surface
@@ -158,7 +158,7 @@ Every command must have `workflowEntry.status: "active"` and at least one key be
 
 `dataset-topology-convergence-compose` is a `workflow-internal` offline F/P/D planner. Its contract lives in `docs/topology-convergence-contract.md`; it validates a fresh census and exact candidate closure, reconstructs exchanges by source number plus occurrence, preserves approved multilingual nodes, emits separate flow-create/process-save contracts, and leaves obsolete flows behind a later all-visible zero-inbound delete barrier. It has no network, database, CLI, or DML dispatch and never grants production authority.
 
-`dataset-commit-handoff-plan` emits authoritative `tiangong-foundry.command-spec.v1` objects for commit and post-write verify. Each spec carries a strict executable/argv contract, reader-only display, SHA-256, and the exact final-row artifact fact. Batch runners reject malformed specs, duplicate critical flags, or artifact drift before spawning without a shell.
+`dataset-commit-handoff-plan` emits authoritative `tiangong-foundry.command-spec.v1` objects for commit and post-write verify. Each spec carries a strict executable/argv contract, reader-only display, SHA-256, and the exact final-row artifact fact. Batch runners reject malformed specs, duplicate critical flags, or artifact drift before spawning without a shell. Its optional `--execution-contract-file` selects the qualified CLI native insert contract for finalized Flow, Process or Source owner drafts. Both specs bind that exact file alongside final rows; handoff uses `dataset save-draft --execution-contract` and a fresh output directory. Unsupported, repeated or empty execution-contract options fail before artifact reads. Native closeout requires matching v2 action/attempt evidence; see the [public selection and recovery contract](public-runtime-contract.md#authorization-input) for task use.
 
 ## Navigation Contract
 

@@ -8,7 +8,7 @@ import {
   type BatchEvent,
   type BatchJsonValue,
 } from "@tiangong-lca/cli/batch";
-import { parseFoundryCommandSpec } from "@tiangong-lca/cli/command-spec";
+import { parseFoundryCommandSpec, commandSpecOptionValue } from "@tiangong-lca/cli/command-spec";
 import { createScopeAttemptLedgerService } from "./batch-orchestration/scope-attempt-ledger.ts";
 import {
   captureFoundryInput,
@@ -410,7 +410,14 @@ export function inspectOwnerExecutions(
           "execution_result_invalid",
           "Execution result has no verified readback.",
         );
-      for (const raw of [proof.input, proof.report, proof.checks]) {
+      const native =
+        commandSpecOptionValue(item.request.content.commit, "--execution-contract") !== null;
+      for (const raw of [
+        proof.input,
+        proof.report,
+        proof.checks,
+        ...(native ? [proof.commit_report] : []),
+      ]) {
         const fact = workflowObject(raw);
         if (typeof fact.path !== "string")
           throw new FoundryContextError(

@@ -104,6 +104,32 @@ export async function readbackFoundryOwner(
     fs.writeFileSync(path.join(output, "stdout.json"), result.stdout ?? "");
     fs.writeFileSync(path.join(output, "stderr.log"), result.stderr ?? "");
     const blockers: Record<string, unknown>[] = [];
+    const native = commandSpecOptionValue(request.content.commit, "--execution-contract") !== null;
+    let commitFact: ReturnType<typeof captureFoundryInput> | null = null;
+    if (native) {
+      try {
+        const commitOutput = commandSpecOptionValue(request.content.commit, "--out-dir");
+        if (!commitOutput) throw new Error("Native output is missing.");
+        const candidate = resolveFoundryOutput(
+          context,
+          commitReport ?? path.join(commitOutput, "outputs", "dataset-save-draft", "summary.json"),
+        );
+        if (
+          path.relative(commitOutput, candidate).startsWith("..") ||
+          !fs.lstatSync(candidate).isFile() ||
+          fs.lstatSync(candidate).isSymbolicLink()
+        )
+          throw new Error("Native receipt must be contained and regular.");
+        commitFact = captureFoundryInput(candidate);
+        commitReport = candidate;
+      } catch {
+        blockers.push({
+          code: "native_execution_report_required",
+          message:
+            "Native insert recovery requires the original matching CLI execution report; root readback alone cannot prove contract consumption.",
+        });
+      }
+    }
     let report: Record<string, unknown> = {},
       reportFile: string | null = null,
       checksFile: string | null = null;
@@ -217,21 +243,31 @@ export async function readbackFoundryOwner(
         }),
       );
       if (commitReport) {
-        const closed = workflowObject(
-          owners.closeout.runDatasetPostWriteCloseout({
-            handoffPlan: request.handoff_file,
-            commitReport,
-            postWriteVerifyReport: reportFile,
-            rowsFile: request.content.input.path,
-            finalizeReport: request.finalize_file,
-            mutationManifest: request.mutation_file,
-            outDir: path.join(output, "closeout"),
-            targetUserId: request.policy.user_id,
-            stateCode: "0",
-          }),
-        );
-        if (closed.status !== "completed")
-          blockers.push({ code: "owner_closeout_blocked", report: closed });
+        try {
+          const closed = workflowObject(
+            owners.closeout.runDatasetPostWriteCloseout({
+              handoffPlan: request.handoff_file,
+              commitReport,
+              postWriteVerifyReport: reportFile,
+              rowsFile: request.content.input.path,
+              finalizeReport: request.finalize_file,
+              mutationManifest: request.mutation_file,
+              outDir: path.join(output, "closeout"),
+              targetUserId: request.policy.user_id,
+              stateCode: "0",
+            }),
+          );
+          if (closed.status !== "completed")
+            blockers.push({ code: "owner_closeout_blocked", report: closed });
+          if (commitFact && captureFoundryInput(commitReport).sha256 !== commitFact.sha256)
+            throw new Error("Native receipt changed during verification.");
+        } catch (error) {
+          if (!native) throw error;
+          blockers.push({
+            code: "native_execution_evidence_invalid",
+            message: "Native execution receipt could not be verified.",
+          });
+        }
       }
     }
     readFoundryInput(context, request.content.input.path);
@@ -243,6 +279,7 @@ export async function readbackFoundryOwner(
       command: spec,
       report: reportFile ? captureFoundryInput(reportFile) : null,
       checks: checksFile ? captureFoundryInput(checksFile) : null,
+      ...(native ? { commit_report: commitFact } : {}),
       original_verification: original,
       acceptance,
       blockers,

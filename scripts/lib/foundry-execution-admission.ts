@@ -9,6 +9,7 @@ export {
 } from "./foundry-execution-context-format.ts";
 import fs from "node:fs";
 import path from "node:path";
+import { readNativeInsertHandoff } from "./finalize-owners/native-insert-handoff.ts";
 import {
   assertFoundryCommandSpecArtifactsCurrent,
   commandSpecOptionValue,
@@ -106,12 +107,21 @@ function commandSpec(
   const spec = assertFoundryCommandSpecArtifactsCurrent(value, (artifactPath) =>
     resolveSpecArtifact(context, artifactPath),
   );
-  if (spec.binding.artifacts.length !== 1 || spec.binding.artifacts[0]?.role !== "final_rows")
+  const nativeFile = commandSpecOptionValue(spec, "--execution-contract");
+  const rowArtifacts = spec.binding.artifacts.filter((item) => item.role === "final_rows");
+  const contractArtifacts = spec.binding.artifacts.filter(
+    (item) => item.role === "execution_contract",
+  );
+  if (
+    rowArtifacts.length !== 1 ||
+    spec.binding.artifacts.length !== (nativeFile ? 2 : 1) ||
+    contractArtifacts.length !== (nativeFile ? 1 : 0)
+  )
     fail(
       "execution_final_rows_unbound",
-      "Restricted execution requires one exact final_rows artifact binding.",
+      "Restricted execution requires exact final rows and only explicitly selected native contract evidence.",
     );
-  const artifact = spec.binding.artifacts[0];
+  const artifact = rowArtifacts[0];
   if (
     resolveSpecArtifact(context, artifact.path) !== finalRows.path ||
     artifact.bytes !== finalRows.bytes ||
@@ -151,11 +161,53 @@ function commandSpec(
     );
   const [group, operation] = spec.argv.slice(1, 3);
   const datasetType = commandSpecOptionValue(spec, "--type");
+  const nativeSave = Boolean(
+    nativeFile &&
+    group === "dataset" &&
+    operation === "save-draft" &&
+    datasetType &&
+    ["flow", "process", "source"].includes(datasetType),
+  );
+  if (nativeFile) {
+    if (!nativeSave)
+      fail(
+        "execution_command_unadmitted",
+        "Native insert contracts require the reviewed dataset save-draft operation.",
+      );
+    const fact = selected(context, nativeFile);
+    const bound = contractArtifacts[0];
+    if (
+      resolveSpecArtifact(context, bound.path) !== fact.path ||
+      bound.bytes !== fact.bytes ||
+      bound.sha256 !== fact.sha256
+    )
+      fail(
+        "execution_native_contract_unbound",
+        "Native contract must bind the independently selected current bytes.",
+      );
+    readFoundryInput(context, fact.path, 8 * 1024 * 1024);
+    readFoundryInput(context, finalRows.path);
+    const native = readNativeInsertHandoff({
+      contractFile: fact.path,
+      rowsFile: finalRows.path,
+      datasetType: datasetType!,
+      targetUserId: context.accountIntent?.userId ?? "",
+      verifiedProjectRef: context.accountIntent?.projectRef ?? "",
+      stateCode: "0",
+      relativePath: (file) => path.relative(context.workspaceRoot, file),
+    });
+    if (native.rows_sha256 !== finalRows.sha256 || native.artifact.sha256 !== fact.sha256)
+      fail(
+        "execution_native_contract_unbound",
+        "Native contract or final rows changed during execution admission.",
+      );
+  }
   const isDatasetSave =
     group === "dataset" &&
     operation === "save-draft" &&
     datasetType !== null &&
-    ["auto", "contact", "source", "unitgroup", "flowproperty"].includes(datasetType);
+    (["auto", "contact", "source", "unitgroup", "flowproperty"].includes(datasetType) ||
+      nativeSave);
   const isProcessSave = group === "process" && operation === "save-draft" && !datasetType;
   const isLifecycleSave = group === "lifecyclemodel" && operation === "save-draft" && !datasetType;
   const isFlowPublish = group === "flow" && operation === "publish-version" && !datasetType;
@@ -170,7 +222,9 @@ function commandSpec(
     (datasetType === "flowproperty" && !has("flowproperty_write")) ||
     (has("unitgroup_write") && !["unitgroup", "auto"].includes(datasetType ?? "")) ||
     (has("flowproperty_write") && !["flowproperty", "auto"].includes(datasetType ?? "")) ||
-    ((has("elementary_flow_write") || has("elementary_flow_create_new")) && !isFlowPublish) ||
+    ((has("elementary_flow_write") || has("elementary_flow_create_new")) &&
+      !isFlowPublish &&
+      !(nativeSave && datasetType === "flow")) ||
     (has("elementary_flow_create_new") && !has("elementary_flow_write")) ||
     (has("canonical_support_local_mint") && !has("unitgroup_write") && !has("flowproperty_write"))
   )

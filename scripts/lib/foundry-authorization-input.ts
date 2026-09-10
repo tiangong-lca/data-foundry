@@ -9,6 +9,8 @@ import {
 import { assertNotFoundrySessionFile, migrationCredentialPath } from "./foundry-private-path.ts";
 import { readSelectedSemanticBytes } from "./foundry-semantic-input.ts";
 import { workflowObject } from "./foundry-workflow-state.ts";
+import { runFoundryTaskOperation } from "./foundry-task-store.ts";
+import type { ArtifactEntry } from "./foundry-task-types.ts";
 
 export const FOUNDRY_AUTHORIZATION_INPUT_SCHEMA =
   "tiangong-foundry.authorization-input.v1" as const;
@@ -21,6 +23,7 @@ export interface FoundryAuthorizationInput {
   input_kind: "current_rows" | "final_rows";
   input_sha256: string;
   expected_previous_sha256: string | null;
+  execution_contract?: { file: string; sha256: string };
   grant: { file: string; sha256: string };
   evidence: readonly {
     id: string;
@@ -34,6 +37,8 @@ export interface SelectedAuthorizationInput {
   readonly descriptor: FoundryInputFact;
   readonly grant: FoundryInputFact;
   readonly evidence: readonly FoundryInputFact[];
+  readonly executionContract?: FoundryInputFact;
+  readonly executionContractSource?: FoundryInputFact;
 }
 const sha = /^[0-9a-f]{64}$/u;
 const identifier = /^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,255}$/u;
@@ -70,6 +75,7 @@ export function parseFoundryAuthorizationInput(value: unknown): FoundryAuthoriza
     "expected_previous_sha256",
     "grant",
     "evidence",
+    ...(Object.hasOwn(data, "execution_contract") ? ["execution_contract"] : []),
   ]);
   if (
     data.schema !== FOUNDRY_AUTHORIZATION_INPUT_SCHEMA ||
@@ -104,6 +110,17 @@ export function parseFoundryAuthorizationInput(value: unknown): FoundryAuthoriza
     );
   const grant = workflowObject(data.grant);
   exact(grant, ["file", "sha256"]);
+  let executionContract: { file: string; sha256: string } | undefined;
+  if (Object.hasOwn(data, "execution_contract")) {
+    if (
+      data.input_kind !== "final_rows" ||
+      !["flow", "process", "source"].includes(data.dataset_type)
+    )
+      invalid("Native insert contracts require finalized Flow, Process or Source rows.");
+    const selected = workflowObject(data.execution_contract);
+    exact(selected, ["file", "sha256"]);
+    executionContract = Object.freeze(fileReference(selected));
+  }
   const evidence = data.evidence.map((raw) => {
     const item = workflowObject(raw);
     exact(item, ["id", "kind", "file", "sha256"]);
@@ -131,6 +148,7 @@ export function parseFoundryAuthorizationInput(value: unknown): FoundryAuthoriza
     expected_previous_sha256: data.expected_previous_sha256,
     grant: Object.freeze(fileReference(grant)),
     evidence: Object.freeze(evidence),
+    ...(executionContract ? { execution_contract: executionContract } : {}),
   });
 }
 export function selectFoundryAuthorizationInput(
@@ -175,11 +193,15 @@ export function selectFoundryAuthorizationInput(
     invalid("The selected grant must be a complete JSON object.");
   }
   Object.freeze(spec.evidence);
+  const executionContract = spec.execution_contract ? select(spec.execution_contract.file) : null;
+  if (executionContract && executionContract.sha256 !== spec.execution_contract!.sha256)
+    invalid("Native execution contract bytes differ from the selected digest.");
   const result = Object.freeze({
     spec,
     descriptor,
     grant: selected[0],
     evidence: Object.freeze(selected.slice(1)),
+    ...(executionContract ? { executionContract } : {}),
   });
   selections.add(result);
   return result;
@@ -187,6 +209,72 @@ export function selectFoundryAuthorizationInput(
 export function assertSelectedAuthorizationInput(value: SelectedAuthorizationInput): void {
   if (!selections.has(value))
     invalid("Approval input must be independently selected by the current host.");
-  for (const fact of [value.descriptor, value.grant, ...value.evidence])
+  for (const fact of [
+    value.descriptor,
+    value.grant,
+    ...value.evidence,
+    ...(value.executionContract ? [value.executionContract] : []),
+    ...(value.executionContractSource ? [value.executionContractSource] : []),
+  ])
     readSelectedSemanticBytes(fact);
+}
+
+export async function snapshotFoundryAuthorizationContract(
+  context: FoundryRuntimeContext,
+  selected: SelectedAuthorizationInput,
+  entries: readonly ArtifactEntry[],
+): Promise<SelectedAuthorizationInput> {
+  assertSelectedAuthorizationInput(selected);
+  if (!selected.executionContract) return selected;
+  if (!context.taskRoot) invalid("A native contract snapshot requires the current task.");
+  const file = path.join(
+    context.taskRoot,
+    "outputs",
+    "native-contracts",
+    `${selected.executionContract.sha256}.json`,
+  );
+  const indexed = entries.find((entry) => path.resolve(context.taskRoot!, entry.path) === file);
+  if (!indexed) {
+    await runFoundryTaskOperation(
+      context,
+      {
+        command: "dataset-workflow-native-contract",
+        options: {
+          contract: selected.executionContract,
+          task: selected.spec.task_id,
+          input: selected.spec.input_sha256,
+          finalization: selected.spec.finalization_sha256,
+        },
+        validateCurrent: () => assertSelectedAuthorizationInput(selected),
+      },
+      (operation) => {
+        operation.writeText(file, readSelectedSemanticBytes(selected.executionContract!));
+        const result = {
+          status: "staged",
+          artifact: captureFoundryInput(file),
+          grants_permission: false,
+        };
+        operation.writeJson(`${file}.snapshot.json`, result);
+        return result;
+      },
+    );
+  } else if (
+    indexed.sha256 !== selected.executionContract.sha256 ||
+    indexed.bytes !== selected.executionContract.bytes
+  ) {
+    invalid("Indexed native contract differs from the selected content.");
+  }
+  const snapshot = Object.freeze({
+    ...selected,
+    executionContractSource: selected.executionContractSource ?? selected.executionContract,
+    executionContract: Object.freeze(captureFoundryInput(file)),
+  });
+  if (
+    snapshot.executionContract.sha256 !== selected.executionContract.sha256 ||
+    snapshot.executionContract.bytes !== selected.executionContract.bytes
+  )
+    invalid("Native contract snapshot differs from the independently selected bytes.");
+  selections.add(snapshot);
+  assertSelectedAuthorizationInput(snapshot);
+  return snapshot;
 }

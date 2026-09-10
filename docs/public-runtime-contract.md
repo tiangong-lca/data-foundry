@@ -32,9 +32,9 @@ checkPaths:
   - test/scenarios/foundry-facade-request-store.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
-lastReviewedAt: 2026-09-10
-lastReviewedCommit: d0d2e7819e5ff573fb427063d13f83a2cb47ba70
-lastReviewedNote: "Reviewed for Foundry #144 after merged Skills0a33db1 and qualified F1.7: retire only duplicate source skill packages and move ownership/install guidance to Skills. Preserve all current managed-action, runtime/account, no-replay and publication contracts; exact ownership Golden bounds remain enforced."
+lastReviewedAt: 2026-09-11
+lastReviewedCommit: fd348f2c0d4391974f2fd894e2939f677cae618d
+lastReviewedNote: "Reviewed for Foundry #119: explicit native insert selection, indexed control snapshot, exact command/report bindings and no-replay recovery. CLI retains native execution ownership; existing authorization and environment boundaries remain mandatory."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md
@@ -100,7 +100,9 @@ Before the first dispatch, the batch attempt-start event durably registers an im
 
 Each owner command is dispatched once as executable plus argv with explicit authentication and `shell=false`. Commit stdout must match its contained report. A confirmed success requires the existing closeout checks and fresh independent root, owner, state, payload and reference verification. Lost or unknown responses and narrowly recognized same-identity conflicts use independent readback; known business failures remain unresolved. Recovery does not require the old write grant to remain unexpired and cannot change the original request. The CLI batch item's verified/recovered result determines success; aggregate batch completion alone is insufficient.
 
-Every readback gets a fresh output directory. A verified result binds the exact input, report and JSONL check hashes. Completed scopes preserve their final rows while dependent scopes are finalized again after new verified progress. Reference-only partitions use the separate canonical verification stage below; semantic changes cannot replace consumed scope rows.
+Explicit native insert handoffs additionally require a matching CLI v2 execution report: exact contract canonical digest, execution id, ordered action/row identities and desired payload digests, consumed insert attempts, and successful exact readback for every action. Failed, unknown, blocked, replayed or incomplete rows cannot close the scope. After a lost response, recovery may read the original bound output's `outputs/dataset-save-draft/summary.json`; absent or invalid native evidence remains unresolved even when roots match. Recovery never dispatches another mutation or retrofits a legacy report into native consumption.
+
+Every readback gets a fresh output directory. A verified result binds the exact input, report and JSONL check hashes, plus the native execution report when selected; later status checks rehash each fact. Completed scopes preserve their final rows while dependent scopes are finalized again after new verified progress. Reference-only partitions use the separate canonical verification stage below; semantic changes cannot replace consumed scope rows.
 
 ## Canonical reference verification
 
@@ -115,6 +117,8 @@ Status performs local evidence verification only. Failed verification exposes `r
 ## Authorization input
 
 `--authorization-input` selects a strict `tiangong-foundry.authorization-input.v1` descriptor separately from semantic input. It binds task, actor, current finalization SHA-256, dataset type, `input_kind` (`current_rows` or `final_rows`), input SHA-256 and expected previous authorization-pointer SHA-256 (null for initial registration). It separately selects a grant file and unique user-decision/source-model evidence files with hashes. At least one user-decision item is required; each file is bounded to 8 MiB and the selection to 64 MiB. Credential and linked-file inputs are rejected. The grant's evidence references must use the selected canonical absolute paths, as required by the existing registration contract.
+
+For `input_kind=final_rows` with Flow, Process or Source, the descriptor may also select `execution_contract: { "file": "<path>", "sha256": "<64 lowercase hex>" }`. This is the CLI's `dataset-save-draft-execution-contract.v1` insert-only contract, with owner draft state 0, the current project/account, and exactly the ordered final rows and desired payload digests. It grants no permission. The runtime captures a content-addressed task-owned snapshot through the existing artifact transaction before admission; later execution uses that indexed snapshot even if the original selected file is removed. The contract shares the descriptor's file/privacy/size checks. Both command bindings retain final rows and contract bytes; the CLI's canonical parsed-contract digest is recorded separately from the raw file hash. Invalid explicit selection never falls back to a legacy writer. Other dataset types and prepared-row selection cannot use this field.
 
 Finalization exposes per-scope `authorization_inputs` with independently computed bindings and input digests. These are review metadata, not grants. The trusted caller must select approval evidence from actual current user authorization; task output or grant text alone cannot supply approval. The existing validator checks the grant, current CLI identity and scope; registration rechecks current finalization while holding the task lock and uses the existing compare-and-swap pointer. Concurrent distinct initial grants cannot both activate.
 

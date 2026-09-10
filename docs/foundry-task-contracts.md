@@ -28,9 +28,9 @@ checkPaths:
   - specs/schemas/execution-context.schema.json
   - specs/import-profiles.json
   - tasks/**
-lastReviewedAt: 2026-09-09
-lastReviewedCommit: fa219ecc833c0aad9bb6a3661265a57f8f24a814
-lastReviewedNote: "Reviewed for Foundry #147: adopt independently verified CLI 0.1.13 at b5e2092 with original permission-preserving bootstrap scripts. Exact runtime/schema/package/release expectations advance together; other dependencies, TIDAS, profile rules, task authorization and private no-replay evidence remain unchanged."
+lastReviewedAt: 2026-09-11
+lastReviewedCommit: fd348f2c0d4391974f2fd894e2939f677cae618d
+lastReviewedNote: "Reviewed for Foundry #119: explicit native insert selection, indexed control snapshot, exact command/report bindings and no-replay recovery. CLI retains native execution ownership; existing authorization and environment boundaries remain mandatory."
 related:
   - AGENTS.md
   - WORKFLOW.md

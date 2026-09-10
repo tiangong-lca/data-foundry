@@ -29,9 +29,9 @@ checkPaths:
   - test/unit/task-authorization.test.mts
   - test/unit/task-profile-authority.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
-lastReviewedAt: 2026-09-09
-lastReviewedCommit: fa219ecc833c0aad9bb6a3661265a57f8f24a814
-lastReviewedNote: "Reviewed for Foundry #147: adopt independently verified CLI 0.1.13 at b5e2092 with original permission-preserving bootstrap scripts. Exact runtime/schema/package/release expectations advance together; other dependencies, TIDAS, profile rules, task authorization and private no-replay evidence remain unchanged."
+lastReviewedAt: 2026-09-11
+lastReviewedCommit: fd348f2c0d4391974f2fd894e2939f677cae618d
+lastReviewedNote: "Reviewed for Foundry #119: explicit native insert selection, indexed control snapshot, exact command/report bindings and no-replay recovery. CLI retains native execution ownership; existing authorization and environment boundaries remain mandatory."
 related:
   - docs/architecture.md
   - docs/safety-policy.md
@@ -56,7 +56,7 @@ The extended public workflow may authenticate for read-only identity preflight a
 
 The public facade accepts explicit approval selection through `--authorization-input`, whose descriptor/schema is owned by `public-runtime-contract.md`. Finalization supplies reviewable bindings and current input digests, never an issued grant. Registration uses an internal current-state check under its metadata lock before activation, so an approval for an older finalization cannot replace current state. The existing expected-previous-pointer compare-and-swap remains mandatory.
 
-Ready final-row approval rebuilds the existing commit handoff and seals a capsule without dispatching it. Host evidence selections remain independent of grant text, and evidence paths are canonical. Prepared-row approval is continued through current-grant re-finalization and the existing derived-grant helper. Activation uses its returned pointer guard; sealing retains the original approved ancestor. Interrupted post-activation capture verifies the active grant against that original approval before recovering. A registered or sealed report does not relax fresh identity/admission checks or clear consumed attempts.
+Ready final-row approval rebuilds the existing commit handoff and seals a capsule without dispatching it. Host evidence selections remain independent of grant text, and evidence paths are canonical. Prepared-row approval is continued through current-grant re-finalization and the existing derived-grant helper. Activation uses its returned pointer guard; sealing retains the original approved ancestor. Interrupted post-activation capture verifies the active grant against that original approval before recovering. A registered or sealed report does not relax fresh identity/admission checks or clear consumed attempts. An optional native execution contract selected for final Flow, Process or Source rows is an independently hashed control input, not a grant. Handoff and admission bind its immutable task snapshot alongside final rows and recheck insert-only owner/project/state/action intent. The qualified CLI retains native attempt and transaction ownership; completion requires its matching execution receipt plus independent root verification.
 
 The exact v1 binding contains `workspace_id`, `task_id`, `actor_id`, `project_ref`, `user_id`, `profile_id`, `profile_sha256`, and `input_scope_sha256`. The profile digest is the stable, key-sorted JSON digest of the selected raw rule profile. Input scope is independently frozen by the task host; it must prove current source bytes and downstream lineage, rather than copying the digest from the grant. At a row-consuming permission boundary it is the SHA-256 of that exact input file; commit handoff checks the final-row artifact bytes again. A transformed row file needs a newly bound grant supported by the retained task approval and verified lineage, never silent reuse of the old digest. A binding mismatch invalidates every exception in that grant.
 
