@@ -7,6 +7,7 @@ import { commandSpecOptionValue } from "@tiangong-lca/cli/command-spec";
 import {
   captureFoundryInput,
   FoundryContextError,
+  readFoundryInput,
   resolveFoundryOutput,
   writeFoundryArtifact,
   type FoundryRuntimeContext,
@@ -237,6 +238,11 @@ export async function executeFoundryOwnerScope(
               finalRowsFile: request.content.input.path,
               expectedRows: readRows(request.content.input.path).length,
               blockers: commitBlockers,
+              handoffPlan: JSON.parse(
+                readFoundryInput(context, request.handoff_file).toString("utf8"),
+              ) as Record<string, unknown>,
+              targetUserId: request.policy.user_id,
+              expectedStateCode: 0,
             });
           }
           const disposition =

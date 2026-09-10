@@ -40,9 +40,9 @@ checkPaths:
   - test/scenarios/runtime-workspace.test.mts
   - test/scenarios/foundry-execution-admission.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
-lastReviewedAt: 2026-09-10
-lastReviewedCommit: d0d2e7819e5ff573fb427063d13f83a2cb47ba70
-lastReviewedNote: "Reviewed for Foundry #144 after merged Skills0a33db1 and qualified F1.7: retire only duplicate source skill packages and move ownership/install guidance to Skills. Preserve all current managed-action, runtime/account, no-replay and publication contracts; exact ownership Golden bounds remain enforced."
+lastReviewedAt: 2026-09-11
+lastReviewedCommit: fd348f2c0d4391974f2fd894e2939f677cae618d
+lastReviewedNote: "Reviewed for Foundry #119: explicit native insert selection, indexed control snapshot, exact command/report bindings and no-replay recovery. CLI retains native execution ownership; existing authorization and environment boundaries remain mandatory."
 related:
   - docs/architecture.md
   - docs/task-authorization-contract.md
@@ -68,7 +68,7 @@ The public workflow selects derived row/context facts from the current verified 
 
 The TIDAS expectation admits only `linux-x64`, `linux-arm64`, `darwin-arm64` and `win32-x64`; `darwin-x64` cannot enter the schema or runtime context. `tidas-runtime-expectation.schema.json` is the reviewed machine shape. Qualification creation performs the isolated version/protocol/assets handshake once. Every later assertion reopens and hashes the selected executable and rejects any byte drift before child admission; identical immutable bytes do not replay the handshake. This keeps the original observed behavior bound to exact content while avoiding repeated child-process creation inside one admission call.
 
-`execution-context.schema.json` describes the content-addressed child handoff stored under `evidence/executions/`. It is distinct from the older offline `foundry-execution-capsule-stage.v1` admission ledger: the older contract proves immutable staged evidence and attempt state, while `tiangong-foundry.execution-context.v1` binds a current task invocation. Rehydration requires a fresh process-local context, qualification and identity; exact workspace/task/actor, approved source ancestry, current final-row bytes, active authorization and QA waivers, installed owner CLI, owner-draft argv semantics, task-contained output root and CommandSpec digest are rechecked. The action list must match the CLI operation. Serialized admissions, unrelated CLI commands and changed capsule/spec/input bytes fail closed.
+`execution-context.schema.json` describes the content-addressed child handoff stored under `evidence/executions/`. It is distinct from the older offline `foundry-execution-capsule-stage.v1` admission ledger: the older contract proves immutable staged evidence and attempt state, while `tiangong-foundry.execution-context.v1` binds a current task invocation. Rehydration requires a fresh process-local context, qualification and identity; exact workspace/task/actor, approved source ancestry, current final-row bytes, active authorization and QA waivers, installed owner CLI, owner-draft argv semantics, task-contained output root and CommandSpec digest are rechecked. The action list must match the CLI operation. A native insert selection admits exactly the final-row and execution-contract artifacts, with the contract independently selected from the current task index. The internal `dataset-workflow-native-contract` operation records the control snapshot without changing source-row ancestry. Native Flow/Process/Source admission revalidates the contract against the current owner, project, state 0 and ordered rows before invoking the public CLI `dataset save-draft --execution-contract`; arbitrary extra artifacts remain invalid. Serialized admissions, unrelated CLI commands and changed capsule/spec/input bytes fail closed.
 
 ## Root ownership
 

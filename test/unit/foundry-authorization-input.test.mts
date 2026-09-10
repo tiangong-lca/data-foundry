@@ -48,6 +48,26 @@ test("approval input selects grant and evidence independently and freezes its in
   );
 });
 
+test("native execution selection is explicit, content-bound and limited to finalized insert types", () => {
+  const execution_contract = { file: "review/insert.json", sha256: "f".repeat(64) };
+  for (const dataset_type of ["flow", "process", "source"]) {
+    const parsed = parseFoundryAuthorizationInput({ ...input(), dataset_type, execution_contract });
+    assert.deepEqual(parsed.execution_contract, execution_contract);
+    assert.ok(Object.isFrozen(parsed.execution_contract));
+  }
+  for (const change of [
+    { input_kind: "current_rows" },
+    { dataset_type: "unitgroup" },
+    { dataset_type: "contact" },
+    { execution_contract: { file: "review/insert.json", sha256: "latest" } },
+    { execution_contract: { ...execution_contract, optional: true } },
+  ])
+    assert.throws(() =>
+      parseFoundryAuthorizationInput({ ...input(), execution_contract, ...change }),
+    );
+  assert.equal(Object.hasOwn(parseFoundryAuthorizationInput(input()), "execution_contract"), false);
+});
+
 test("approval schema and parser reject missing user evidence and unsupported scope selectors", () => {
   const Ajv = Ajv2020 as unknown as new (options: { strict: boolean }) => {
     compile: (schema: unknown) => (value: unknown) => boolean;
@@ -61,6 +81,18 @@ test("approval schema and parser reject missing user evidence and unsupported sc
     ),
   );
   assert.equal(validate(input()), true);
+  const native = {
+    ...input(),
+    execution_contract: { file: "insert.json", sha256: "f".repeat(64) },
+  };
+  for (const dataset_type of ["flow", "process", "source"])
+    assert.equal(validate({ ...native, dataset_type }), true);
+  for (const change of [
+    { input_kind: "current_rows" },
+    { dataset_type: "contact" },
+    { execution_contract: { file: "insert.json", sha256: "latest" } },
+  ])
+    assert.equal(validate({ ...native, ...change }), false);
   for (const change of [
     { input_kind: "any_rows" },
     { finalization_sha256: "latest" },

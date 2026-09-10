@@ -70,7 +70,10 @@ import {
 import { selectFoundrySemanticInput } from "./lib/foundry-semantic-input.ts";
 import { runFoundryWorkflowIdentity } from "./lib/foundry-workflow-identity.ts";
 import { finalizeFoundryWorkflow } from "./lib/foundry-workflow-finalize.ts";
-import { selectFoundryAuthorizationInput } from "./lib/foundry-authorization-input.ts";
+import {
+  selectFoundryAuthorizationInput,
+  snapshotFoundryAuthorizationContract,
+} from "./lib/foundry-authorization-input.ts";
 import { authorizeFoundryWorkflow } from "./lib/foundry-workflow-authorization.ts";
 import { continueFoundryPreparedApproval } from "./lib/foundry-workflow-approval-continuation.ts";
 import type { FoundryAuthentication } from "./lib/foundry-runtime-identity.ts";
@@ -1468,17 +1471,38 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
               "runtime_unqualified",
               "Approval admission requires qualified runtime owners.",
             );
-          const submission = selectFoundryAuthorizationInput(context, input.authorizationInputFile);
-          if (execution.completed.has(submission.spec.dataset_type))
+          const supplied = selectFoundryAuthorizationInput(context, input.authorizationInputFile);
+          if (execution.completed.has(supplied.spec.dataset_type))
             throw new FoundryContextError(
               "execution_scope_completed",
               "A verified scope cannot receive new write approval.",
             );
+          const submission = supplied.executionContract
+            ? await snapshotFoundryAuthorizationContract(
+                taskContext(
+                  options,
+                  current,
+                  record,
+                  before.artifacts.map((artifact) => ({
+                    path: path.join(context.taskRoot!, artifact.path),
+                    bytes: artifact.bytes,
+                    sha256: artifact.sha256,
+                  })),
+                ),
+                supplied,
+                before.artifacts,
+              )
+            : supplied;
           const facts = before.artifacts.map((artifact) => ({
             path: path.join(context.taskRoot!, artifact.path),
             bytes: artifact.bytes,
             sha256: artifact.sha256,
           }));
+          if (
+            submission.executionContract &&
+            !facts.some((fact) => fs.realpathSync(fact.path) === submission.executionContract!.path)
+          )
+            facts.push(submission.executionContract);
           const selected = taskContext(options, current, record, facts);
           await authorizeFoundryWorkflow(
             selected,

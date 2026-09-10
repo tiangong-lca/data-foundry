@@ -12,6 +12,7 @@ import {
   captureFoundryInput,
   resolveFoundryOutput,
   type FoundryRuntimeContext,
+  type FoundryInputFact,
 } from "./foundry-runtime-context.ts";
 import {
   assertQualifiedFoundryRuntime,
@@ -36,6 +37,7 @@ import { createFoundryCommandSpec, createFileArtifactFact } from "./foundry-comm
 import { parseFoundryCommandSpec } from "@tiangong-lca/cli/command-spec";
 import type { ValidatedTaskAuthorization } from "./task-authorization.ts";
 import type { ArtifactEntry } from "./foundry-task-types.ts";
+import { readNativeInsertHandoff } from "./finalize-owners/native-insert-handoff.ts";
 
 export async function authorizeFoundryWorkflow(
   context: FoundryRuntimeContext,
@@ -77,6 +79,24 @@ export async function authorizeFoundryWorkflow(
       "Final-row approval requires a ready owner scope.",
     );
   const identity = verifyFoundryRuntimeIdentity(context, authentication, process.env, qualified);
+  if (selected.executionContract) {
+    try {
+      readNativeInsertHandoff({
+        contractFile: selected.executionContract.path,
+        rowsFile: inputFile,
+        datasetType: spec.dataset_type,
+        targetUserId: context.accountIntent!.userId,
+        verifiedProjectRef: context.accountIntent!.projectRef,
+        stateCode: "0",
+        relativePath: (file) => path.relative(context.workspaceRoot, file),
+      });
+    } catch {
+      throw new FoundryContextError(
+        "authorization_execution_contract_invalid",
+        "Native insert contract must bind the current final rows, owner, project and draft state before authorization.",
+      );
+    }
+  }
   const grant = JSON.parse(readSelectedSemanticBytes(selected.grant).toString("utf8"));
   const current = (index: readonly ArtifactEntry[]) => {
     assertSelectedAuthorizationInput(selected);
@@ -120,6 +140,7 @@ export async function authorizeFoundryWorkflow(
       inputKind: spec.input_kind,
       registration,
       submissionSha256: selected.descriptor.sha256,
+      ...(selected.executionContract ? { executionContract: selected.executionContract } : {}),
       validateCurrent: current,
       operationOptions: {
         submission: selected.descriptor,
@@ -127,6 +148,7 @@ export async function authorizeFoundryWorkflow(
         evidence: selected.evidence,
         finalization: spec.finalization_sha256,
         authorization: registration.authorization_sha256,
+        ...(selected.executionContract ? { execution_contract: selected.executionContract } : {}),
       },
     },
   );
@@ -147,6 +169,7 @@ export async function recordFoundryWorkflowAuthorization(
     inputKind: "current_rows" | "final_rows";
     registration: { authorization_sha256: string; pointer_sha256: string };
     submissionSha256: string;
+    executionContract?: FoundryInputFact;
     operationOptions: Record<string, unknown>;
     validateCurrent: (index: readonly ArtifactEntry[]) => void;
   },
@@ -184,6 +207,9 @@ export async function recordFoundryWorkflowAuthorization(
           taskAuthorization: authorization,
           taskAuthorizationBinding: authorization.binding,
           profile: authorization.binding.profile_id,
+          ...(request.executionContract
+            ? { executionContractFile: request.executionContract.path }
+            : {}),
         }),
       );
       const commands = workflowObject(handoff.commands);
@@ -196,6 +222,12 @@ export async function recordFoundryWorkflowAuthorization(
           binding: {
             artifacts: [
               createFileArtifactFact({ role: "final_rows", path: inputFile, filePath: inputFile }),
+              ...command.binding.artifacts
+                .filter((artifact) => artifact.role !== "final_rows")
+                .map((artifact) => ({
+                  ...artifact,
+                  path: path.resolve(context.assetRoot, artifact.path),
+                })),
             ],
           },
         });

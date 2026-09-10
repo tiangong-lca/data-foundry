@@ -115,6 +115,43 @@
         }
       },
       "minContains": 1
+    },
+    "execution_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256"],
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "pattern": "^[^\\u0000\\r\\n]+$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["execution_contract"],
+        "properties": {
+          "execution_contract": {}
+        }
+      },
+      "then": {
+        "properties": {
+          "input_kind": {
+            "const": "final_rows"
+          },
+          "dataset_type": {
+            "enum": ["flow", "process", "source"]
+          }
+        }
+      }
+    }
+  ]
 }

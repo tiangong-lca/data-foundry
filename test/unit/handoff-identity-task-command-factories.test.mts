@@ -15,6 +15,8 @@ import {
 } from "../fixtures/task-authorizations.ts";
 import { validateTaskAuthorization } from "../../scripts/lib/task-authorization.ts";
 import { parseArgs } from "../../scripts/lib/foundry-args.ts";
+import { sha256Json } from "../../scripts/lib/identity-preflight-proof.ts";
+import { validateNativeInsertCloseout } from "../../scripts/lib/finalize-owners/native-insert-closeout.ts";
 
 type JsonObject = Record<string, unknown>;
 
@@ -120,10 +122,15 @@ function withoutAccountEnvironment<T>(run: () => T): T {
   }
 }
 
-function handoffHarness(root: string, onArtifactRead: () => void = () => {}) {
+function handoffHarness(
+  root: string,
+  onArtifactRead: () => void = () => {},
+  executionEnvironment: NodeJS.ProcessEnv = process.env,
+) {
   const traceCoverageCalls: unknown[] = [];
   const resolveRepoPath = (value: unknown) => resolveFrom(root, value);
   const commands = createCommitHandoffCommands({
+    executionEnvironment,
     appendOption(args: string[], name: string, value: unknown) {
       const text = asText(value);
       if (text) args.push(name, text);
@@ -225,6 +232,247 @@ test("handoff rejects ambiguous or unsupported execution-contract selection befo
       assert.equal(fs.existsSync(path.join(root, "handoff")), false);
     }
   });
+});
+
+test("explicit native insert handoff binds each supported payload and contract without legacy fallback", () => {
+  for (const type of ["flow", "process", "source"]) {
+    withTempRoot(`native-${type}-handoff`, (root) => {
+      const fixture = writeHandoffFixture(root);
+      const id = "11111111-1111-4111-8111-111111111111";
+      const version = "00.00.001";
+      const payload = {
+        [`${type}DataSet`]: {
+          [`${type}Information`]: { dataSetInformation: { "common:UUID": id } },
+          ...(type === "flow"
+            ? { modellingAndValidation: { LCIMethod: { typeOfDataSet: "Product flow" } } }
+            : {}),
+          administrativeInformation: {
+            publicationAndOwnership: { "common:dataSetVersion": version },
+          },
+        },
+      };
+      writeJsonLines(fixture.rows, [payload]);
+      const contract = path.join(root, "insert-contract.json");
+      writeJson(contract, {
+        schema_version: "dataset-save-draft-execution-contract.v1",
+        execution_id: `insert-${type}`,
+        project_ref: "abcdefghijklmnopqrst",
+        target_mode: "owner_draft",
+        owner: { user_id: "owner-1", email: "synthetic@example.invalid", state_code: 0 },
+        actions: [
+          {
+            action_id: "create-one",
+            desired_sha256: sha256Json(payload),
+            expected_operation: "insert",
+            table: type === "process" ? "processes" : `${type}s`,
+            id,
+            version,
+            before_sha256: null,
+            dependency_action_ids: [],
+          },
+        ],
+      });
+      const contractValue = JSON.parse(fs.readFileSync(contract, "utf8")) as {
+        schema_version: string;
+        project_ref: string;
+        owner: { user_id: string; state_code: number };
+        actions: Array<Record<string, unknown>>;
+      };
+      const { commands } = handoffHarness(root, () => {}, {
+        FOUNDRY_VERIFIED_PROJECT_REF: "abcdefghijklmnopqrst",
+        FOUNDRY_VERIFIED_USER_ID: "owner-1",
+      });
+      const report = commands.runDatasetCommitHandoffPlan({
+        finalizeReport: fixture.finalize,
+        type,
+        executionContractFile: contract,
+        outDir: "native-handoff",
+      }) as HandoffReport;
+      assert.equal(report.status, "ready_for_explicit_commit");
+      const argv = report.commands.commit!.argv;
+      assert.deepEqual(argv.slice(0, 5), [
+        "/installed/tiangong-lca.js",
+        "dataset",
+        "save-draft",
+        "--type",
+        type,
+      ]);
+      assert.equal(argv[argv.indexOf("--execution-contract") + 1], contract);
+      assert.equal(argv.includes("--target-user-id"), false);
+      for (const spec of [report.commands.commit, report.commands.post_write_verify]) {
+        assert.ok(
+          spec!.binding.artifacts.some(
+            (a) =>
+              a.role === "execution_contract" && a.sha256 === sha256(fs.readFileSync(contract)),
+          ),
+        );
+      }
+      const nativeReport = {
+        schema_version: 2,
+        mode: "commit",
+        commit: true,
+        status: "completed",
+        requested_type: type,
+        input_path: fixture.rows,
+        counts: {
+          selected: 1,
+          executed: 1,
+          attempts_consumed: 1,
+          failed: 0,
+          unknown: 0,
+          blocked: 0,
+        },
+        execution_contract: {
+          path: contract,
+          sha256: sha256Json(contractValue),
+          execution_id: `insert-${type}`,
+          target_mode: "owner_draft",
+        },
+        rows: [
+          {
+            index: 0,
+            type,
+            table: type === "process" ? "processes" : `${type}s`,
+            id,
+            version,
+            action_id: "create-one",
+            desired_sha256: sha256Json(payload),
+            status: "executed",
+            operation: "insert",
+            attempt_consumed: true,
+            replayed: false,
+            readback: "desired_exact",
+          },
+        ],
+      };
+      const validateNative = (value: unknown) =>
+        validateNativeInsertCloseout({
+          handoff: report,
+          report: value as JsonObject,
+          rowsFile: fixture.rows,
+          datasetType: type,
+          targetUserId: "owner-1",
+          stateCode: "0",
+          expectedRows: 1,
+          resolveFile: (v) => resolveFrom(root, v),
+          relativePath: (file) => relativeTo(root, file),
+        });
+      assert.equal(validateNative(nativeReport), true);
+      const invalidReports: Array<(value: typeof nativeReport) => void> = [
+        (value) => {
+          value.schema_version = 1;
+        },
+        (value) => {
+          value.status = "completed_with_unknowns";
+        },
+        (value) => {
+          value.counts.unknown = 1;
+        },
+        (value) => {
+          value.counts.blocked = 1;
+        },
+        (value) => {
+          value.counts.attempts_consumed = 0;
+        },
+        (value) => {
+          value.execution_contract.sha256 = sha256(fs.readFileSync(contract));
+        },
+        (value) => {
+          value.execution_contract.execution_id = "other-execution";
+        },
+        (value) => {
+          value.execution_contract.path = "another-contract.json";
+        },
+        (value) => {
+          value.rows[0].action_id = "another-action";
+        },
+        (value) => {
+          value.rows[0].operation = "save_draft";
+        },
+        (value) => {
+          value.rows[0].readback = "not_performed";
+        },
+        (value) => {
+          value.rows[0].replayed = true;
+        },
+      ];
+      for (const mutate of invalidReports) {
+        const value = structuredClone(nativeReport);
+        mutate(value);
+        assert.throws(() => validateNative(value));
+      }
+      const recorded = fs.readFileSync(
+        path.join(root, "native-handoff/dataset-commit-handoff-plan.json"),
+      );
+      assert.throws(
+        () =>
+          commands.runDatasetCommitHandoffPlan({
+            finalizeReport: fixture.finalize,
+            type,
+            executionContractFile: contract,
+            outDir: "native-handoff",
+          }),
+        /fresh handoff output directory/u,
+      );
+      assert.deepEqual(
+        fs.readFileSync(path.join(root, "native-handoff/dataset-commit-handoff-plan.json")),
+        recorded,
+      );
+      const invalid: Array<(value: typeof contractValue) => void> = [
+        (value) => {
+          value.schema_version = "unknown";
+        },
+        (value) => {
+          value.project_ref = "wrong-project";
+        },
+        (value) => {
+          value.owner.user_id = "wrong-owner";
+        },
+        (value) => {
+          value.owner.state_code = 100;
+        },
+        (value) => {
+          value.actions[0].expected_operation = "save_draft";
+        },
+        (value) => {
+          value.actions[0].before_sha256 = "a".repeat(64);
+        },
+        (value) => {
+          value.actions[0].id = "wrong-id";
+        },
+        (value) => {
+          value.actions[0].version = "00.00.002";
+        },
+        (value) => {
+          value.actions[0].desired_sha256 = "a".repeat(64);
+        },
+        (value) => {
+          value.actions[0].dependency_action_ids = ["unselected-action"];
+        },
+        (value) => {
+          value.actions.push(value.actions[0]);
+        },
+      ];
+      for (const [index, mutate] of invalid.entries()) {
+        const value = structuredClone(contractValue);
+        mutate(value);
+        const file = path.join(root, `invalid-${index}.json`);
+        writeJson(file, value);
+        const output = `invalid-output-${index}`;
+        assert.throws(
+          () =>
+            commands.runDatasetCommitHandoffPlan({
+              finalizeReport: fixture.finalize,
+              type,
+              executionContractFile: file,
+              outDir: output,
+            }),
+          /execution-contract-file/u,
+        );
+        assert.equal(fs.existsSync(path.join(root, output)), false);
+      }
+    });
+  }
 });
 
 test("mixed support handoff rechecks exact task actions against actual final rows", () => {

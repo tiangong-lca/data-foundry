@@ -1187,13 +1187,19 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       "finalize report",
       "location audit evidence",
       "current task authorization for restricted final rows or QA exceptions",
+      "optional explicit native insert execution-contract file for Flow, Process or Source",
     ],
     outputs: [
       "commit handoff plan JSON report",
       "authoritative commit and post-write verify CommandSpecs with executable, argv, display, binding, and SHA-256",
       "final rows artifact facts with exact path, bytes, and SHA-256",
+      "conditional native execution-contract raw artifact and normalized owner report binding",
     ],
     keyTests: [
+      nodeTest(
+        "test/scenarios/native-insert-closeout.test.mts",
+        "native closeout rejects a completed report from a different contract despite exact root readback",
+      ),
       nodeTest(
         "test/unit/handoff-identity-task-command-factories.test.mts",
         "mixed support handoff rechecks exact task actions against actual final rows",
@@ -1216,9 +1222,19 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
     category: "workflow-internal",
     ownerModule: "scripts/commands/post-write-closeout.ts",
     ownerExport: "createPostWriteCloseoutCommands().runDatasetPostWriteCloseout",
-    inputs: ["final rows", "write result", "trace queues", "readback/verify evidence"],
+    inputs: [
+      "final rows",
+      "write result",
+      "trace queues",
+      "readback/verify evidence",
+      "native handoff contract binding when selected",
+    ],
     outputs: ["post-write-closeout-report.json"],
     keyTests: [
+      nodeTest(
+        "test/scenarios/native-insert-closeout.test.mts",
+        "native closeout accepts exact consumed insert/readback evidence and still requires unique roots",
+      ),
       nodeTest(
         "test/scenarios/full-context-completion-closeout.test.mts",
         "post-write closeout requires common:other trace queues to match final rows",

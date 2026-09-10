@@ -262,8 +262,8 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
-lastReviewedAt: 2026-09-10
-lastReviewedCommit: d0d2e7819e5ff573fb427063d13f83a2cb47ba70
+lastReviewedAt: 2026-09-11
+lastReviewedCommit: fd348f2c0d4391974f2fd894e2939f677cae618d
 lastReviewedNote: "Reviewed for Foundry #144 after merged Skills0a33db1 and qualified F1.7: retire only duplicate source skill packages and move ownership/install guidance to Skills. Preserve all current managed-action, runtime/account, no-replay and publication contracts; exact ownership Golden bounds remain enforced."
 ---
 
@@ -276,6 +276,8 @@ The explicit workspace runtime is defined by `docs/runtime-context-contract.md`:
 The installable package boundary is defined by `docs/package-distribution-contract.md`. Only `scripts/package-entry.ts` and `scripts/public-api.ts` seed the package compiler graph. Pack from the generated sanitized `package-stage/`, never the repository root; do not add lifecycle scripts, source maps, internal command/case owners, credentials, task state or private evidence to the public allowlist. W06 candidates are local artifacts until W08 publishes an exact reviewed release. Managed package launches must finish public CLI IPC admission and inventory-bound runtime binding before workspace operations. The manager cache is excluded from every workspace and migration destination; read/write launch policy grants no business permission.
 
 Import profiles distribute source rules only. Historical BAFU/USLCI/Worldsteel account overrides, QA waivers and the Worldsteel full-context relaxation grant no permission to a new task. `docs/task-authorization-contract.md` owns the separate workspace/task/actor/account/profile/input binding and exact action evidence. Local candidate preparation and checked public-reference proofs remain available; current final-row hashes, task permissions and all content/closure/no-replay gates are required before a restricted write handoff.
+
+Explicit native insert selection for final Flow, Process or Source rows follows `docs/public-runtime-contract.md`. Bind both the indexed contract snapshot and exact final rows; a lost response requires the matching CLI execution receipt plus independent root readback. Never close native consumption from root equality alone or replay a consumed command to manufacture evidence. CLI retains transaction and native attempt ownership.
 
 This repository is the local control plane for external LCA data import and TIDAS authoring work.
 

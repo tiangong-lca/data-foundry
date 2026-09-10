@@ -9,6 +9,11 @@ import {
 import { datasetIdentity, detectDatasetType } from "../import-curation/internal/dataset-payload.ts";
 import { readRows } from "../import-curation/internal/runtime-io.ts";
 import { flowPrewriteIdentityBlockers } from "../import-curation/internal/workflow-identity-preflight.ts";
+import {
+  assertExecutionContractSelection,
+  readNativeInsertHandoff,
+  reserveNativeHandoffDirectory,
+} from "./native-insert-handoff.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -308,18 +313,7 @@ export function createCommitHandoffCommands({
   }
 
   function runDatasetCommitHandoffPlan(options: CommitHandoffOptions): JsonRecord {
-    if (
-      Object.keys(options).some(
-        (key) => key.startsWith("executionContract") && key !== "executionContractFile",
-      ) ||
-      (Object.hasOwn(options, "executionContractFile") &&
-        (typeof options.executionContractFile !== "string" ||
-          options.executionContractFile.trim().length === 0))
-    ) {
-      throw new Error(
-        "Use one --execution-contract-file <path>; unsupported execution-contract options, repeated values and empty/non-string selections are not permitted.",
-      );
-    }
+    assertExecutionContractSelection(options);
     if (options.help) {
       return {
         schema_version: 1,
@@ -328,6 +322,7 @@ export function createCommitHandoffCommands({
         usage: [
           "node scripts/foundry.ts dataset-commit-handoff-plan --finalize-report <dataset-post-authoring-finalize-report.json> --out-dir <handoff-dir>",
           "node scripts/foundry.ts dataset-commit-handoff-plan --finalize-report <dataset-post-authoring-finalize-report.json> --state-code <expected-state-code> --out-dir <handoff-dir>",
+          "node scripts/foundry.ts dataset-commit-handoff-plan --finalize-report <report.json> --execution-contract-file <native-insert-contract.json> --out-dir <new-handoff-dir>",
         ],
         purpose:
           "Build a read-only explicit commit handoff plan from a ready post-authoring finalize report. It never writes the database.",
@@ -380,7 +375,25 @@ export function createCommitHandoffCommands({
     const explicitStateCode = asText(options.stateCode ?? options.expectedStateCode);
     const stateCode = explicitStateCode || "0";
     const stateCodeSource = explicitStateCode ? "explicit_option" : "default_draft_write_state";
-    const commitSupportsTargetUserId = ["flow", "process"].includes(datasetType);
+    const contractFile =
+      typeof options.executionContractFile === "string"
+        ? resolveRepoPath(options.executionContractFile)
+        : null;
+    if (contractFile && fileExists(outDir))
+      throw new Error("--execution-contract-file requires a fresh handoff output directory.");
+    const native =
+      contractFile && finalRowsFile
+        ? readNativeInsertHandoff({
+            contractFile,
+            rowsFile: finalRowsFile,
+            datasetType,
+            targetUserId,
+            verifiedProjectRef,
+            stateCode,
+            relativePath: repoRelativePath,
+          })
+        : null;
+    const commitSupportsTargetUserId = !native && ["flow", "process"].includes(datasetType);
     const blockers: JsonRecord[] = [];
 
     if (finalizeReport.status !== "ready_for_remote_write") {
@@ -549,21 +562,40 @@ export function createCommitHandoffCommands({
       [...requiredSupportActions].every((action) =>
         taskAuthorizationAllows(handoffProfile?.authorization, action),
       );
-    const commitArgs = finalRowsFile
-      ? commitCommandForDatasetType(datasetType, finalRowsFile, outDir, {
-          appendOption,
-          resolveTiangongLcaCliCommand,
-          resolveTiangongLcaCliBin,
-          targetUserId,
-          allowAccountLocalSupportAndElementary,
-        })
-      : [];
+    const legacyCommitArgs =
+      finalRowsFile && !native
+        ? commitCommandForDatasetType(datasetType, finalRowsFile, outDir, {
+            appendOption,
+            resolveTiangongLcaCliCommand,
+            resolveTiangongLcaCliBin,
+            targetUserId,
+            allowAccountLocalSupportAndElementary,
+          })
+        : [];
     const cliPrefix = resolveTiangongLcaCliCommand
       ? (() => {
           const cli = resolveTiangongLcaCliCommand();
           return [cli.command, ...cli.args];
         })()
       : [resolveTiangongLcaCliBin()];
+    const commitArgs =
+      native && finalRowsFile && contractFile
+        ? [
+            ...cliPrefix,
+            "dataset",
+            "save-draft",
+            "--type",
+            datasetType,
+            "--input",
+            finalRowsFile,
+            "--out-dir",
+            path.join(outDir, "commit", `${datasetType}-save-draft`),
+            "--execution-contract",
+            contractFile,
+            "--commit",
+            "--json",
+          ]
+        : legacyCommitArgs;
     const verifyArgs: string[] = finalRowsFile
       ? [
           ...cliPrefix,
@@ -594,6 +626,8 @@ export function createCommitHandoffCommands({
           })
         : null;
     const requestedAuthorization = options.taskAuthorization;
+    if (native && native.rows_sha256 !== finalRowsArtifact?.sha256)
+      throw new Error("--execution-contract-file final rows changed during handoff admission.");
     if (
       taskAuthorizationMatches(requestedAuthorization, options.taskAuthorizationBinding) &&
       requestedAuthorization.binding.input_scope_sha256 !== finalRowsArtifact?.sha256
@@ -640,6 +674,9 @@ export function createCommitHandoffCommands({
       blockers,
     });
     const readyForExplicitCommit = blockers.length === 0;
+    const boundArtifacts = finalRowsArtifact
+      ? [finalRowsArtifact, ...(native ? [native.artifact] : [])]
+      : [];
     const report = {
       schema_version: 1,
       generated_at_utc: nowIso(),
@@ -663,17 +700,32 @@ export function createCommitHandoffCommands({
       account_mode: accountMode,
       expected_state_code: stateCode || null,
       expected_state_code_source: stateCodeSource,
+      ...(native
+        ? {
+            execution_contract: {
+              artifact: native.artifact,
+              canonical_sha256: native.canonical_sha256,
+              execution_id: native.contract.execution_id,
+              project_ref: native.contract.project_ref,
+              operation: "insert",
+            },
+          }
+        : {}),
       account_write_guard: {
         target_user_id_required: true,
         target_user_id: targetUserId || null,
         commit_command_supports_target_user_id: commitSupportsTargetUserId,
-        commit_account_binding: commitSupportsTargetUserId
-          ? "target_user_id_cli_argument"
-          : "current_cli_auth_session",
+        commit_account_binding: native
+          ? "native_execution_contract"
+          : commitSupportsTargetUserId
+            ? "target_user_id_cli_argument"
+            : "current_cli_auth_session",
         verify_account_binding: "target_user_id_cli_argument",
-        execution_precondition: commitSupportsTargetUserId
-          ? "Run the commit command with the target-user-id argument emitted in this plan."
-          : "Run the commit command only in a CLI session authenticated as the recorded target_user_id; this published CLI commit command does not accept --target-user-id.",
+        execution_precondition: native
+          ? "Run only the exact native execution contract under its matching owner/project session; the CLI owns persistent attempt and readback-only recovery."
+          : commitSupportsTargetUserId
+            ? "Run the commit command with the target-user-id argument emitted in this plan."
+            : "Run the commit command only in a CLI session authenticated as the recorded target_user_id; this published CLI commit command does not accept --target-user-id.",
       },
       policy: {
         commit_boundary:
@@ -709,7 +761,7 @@ export function createCommitHandoffCommands({
             ? createFoundryCommandSpec({
                 executable: commitArgs[0],
                 argv: commitArgs.slice(1),
-                binding: { artifacts: [finalRowsArtifact] },
+                binding: { artifacts: boundArtifacts },
               })
             : null,
         post_write_verify:
@@ -717,7 +769,7 @@ export function createCommitHandoffCommands({
             ? createFoundryCommandSpec({
                 executable: verifyArgs[0],
                 argv: verifyArgs.slice(1),
-                binding: { artifacts: [finalRowsArtifact] },
+                binding: { artifacts: boundArtifacts },
               })
             : null,
       },
@@ -728,6 +780,7 @@ export function createCommitHandoffCommands({
       },
     };
     const reportPath = path.join(outDir, "dataset-commit-handoff-plan.json");
+    if (native) reserveNativeHandoffDirectory(outDir);
     writeJson(reportPath, report);
     return {
       ...report,
