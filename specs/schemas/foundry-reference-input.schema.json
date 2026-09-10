@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Foundry Reference Input v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "task_id",
+    "actor_id",
+    "rows_manifest_sha256",
+    "dataset_type",
+    "qa_reference_rows",
+    "intent",
+    "review_files"
+  ],
+  "properties": {
+    "schema": {
+      "const": "tiangong-foundry.reference-input.v1"
+    },
+    "task_id": {
+      "type": "string",
+      "pattern": "^task-[0-9a-f]{64}-r[0-9]{4}$"
+    },
+    "actor_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,255}$"
+    },
+    "rows_manifest_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "dataset_type": {
+      "enum": [
+        "process",
+        "flow",
+        "source",
+        "contact",
+        "lifecyclemodel",
+        "unitgroup",
+        "flowproperty"
+      ]
+    },
+    "qa_reference_rows": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "$ref": "#/$defs/file"
+      }
+    },
+    "intent": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/file"
+        }
+      ]
+    },
+    "review_files": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "$ref": "#/$defs/file"
+      }
+    }
+  },
+  "$defs": {
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256"],
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "pattern": "^[^\\u0000\\r\\n]+$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "qa_reference_rows": {
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": ["qa_reference_rows"]
+      },
+      "then": {
+        "properties": {
+          "dataset_type": {
+            "const": "process"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "intent": {
+            "type": "null"
+          }
+        },
+        "required": ["intent"]
+      },
+      "then": {
+        "properties": {
+          "qa_reference_rows": {
+            "minItems": 1,
+            "type": "array"
+          },
+          "review_files": {
+            "maxItems": 0,
+            "type": "array"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "review_files": {
+            "minItems": 1,
+            "type": "array"
+          }
+        }
+      }
+    }
+  ]
+}

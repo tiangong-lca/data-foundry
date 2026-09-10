@@ -74,6 +74,7 @@
             "tiangong-foundry.task-start.v1",
             "tiangong-foundry.semantic-input.v1",
             "tiangong-foundry.authorization-input.v1",
+            "tiangong-foundry.reference-input.v1",
             "tiangong-foundry.facade-request-index.v1",
             "tiangong-foundry.workspace-migration-plan.v1",
             "tiangong-foundry.workspace-migration-transfer-plan.v2",

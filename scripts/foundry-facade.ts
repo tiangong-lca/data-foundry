@@ -71,6 +71,10 @@ import { selectFoundrySemanticInput } from "./lib/foundry-semantic-input.ts";
 import { runFoundryWorkflowIdentity } from "./lib/foundry-workflow-identity.ts";
 import { finalizeFoundryWorkflow } from "./lib/foundry-workflow-finalize.ts";
 import {
+  selectFoundryReferenceInput,
+  recordFoundryReferenceInput,
+} from "./lib/foundry-reference-input.ts";
+import {
   selectFoundryAuthorizationInput,
   snapshotFoundryAuthorizationContract,
 } from "./lib/foundry-authorization-input.ts";
@@ -1402,6 +1406,7 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
       actorId: string;
       semanticInputFile?: string;
       authorizationInputFile?: string;
+      referenceInputFile?: string;
     }): Promise<FoundryOperationResult> {
       let current: ReturnType<typeof createFoundryRuntimeContext> | null = null;
       try {
@@ -1422,10 +1427,15 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
           before,
           runtimeIdentity(context, qualified),
         );
+        if (input.referenceInputFile && existing.status === "completed")
+          throw new FoundryContextError(
+            "execution_scope_completed",
+            "A completed task cannot replace its reference evidence.",
+          );
         if (existing.status === "completed" || existing.status === "blocked") return existing;
         const execution = completedOwnerScopes(context, before.artifacts);
         if (execution.pending.length) {
-          if (input.authorizationInputFile || input.semanticInputFile)
+          if (input.authorizationInputFile || input.semanticInputFile || input.referenceInputFile)
             throw new FoundryContextError(
               "execution_recovery_required",
               "Recover the consumed request before submitting changes.",
@@ -1452,6 +1462,42 @@ export function createFoundryFacade(options: FoundryFacadeOptions) {
             execution.pending[0],
             options.authentication,
           );
+          return taskProjection(
+            "task.resume",
+            context,
+            record,
+            await runtime.inspectTask(),
+            runtimeIdentity(context, qualified),
+          );
+        }
+        if (input.referenceInputFile) {
+          if (input.authorizationInputFile || input.semanticInputFile || record.spec.preparation)
+            throw new FoundryContextError(
+              "reference_input_invalid",
+              "Select reference evidence separately from approval, semantic input or explicit cleanup.",
+            );
+          const submission = selectFoundryReferenceInput(context, input.referenceInputFile);
+          if (
+            execution.completed.has(submission.spec.dataset_type) ||
+            execution.requests.some(
+              (item) => item.request.policy.dataset_type === submission.spec.dataset_type,
+            )
+          )
+            throw new FoundryContextError(
+              "execution_scope_frozen",
+              "A prepared or consumed owner scope cannot replace its reference evidence.",
+            );
+          const selected = taskContext(
+            options,
+            current,
+            record,
+            before.artifacts.map((entry) => ({
+              path: path.join(context.taskRoot!, entry.path),
+              bytes: entry.bytes,
+              sha256: entry.sha256,
+            })),
+          );
+          await recordFoundryReferenceInput(selected, before.artifacts, submission);
           return taskProjection(
             "task.resume",
             context,

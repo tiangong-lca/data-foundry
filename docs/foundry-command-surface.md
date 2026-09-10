@@ -193,3 +193,5 @@ pnpm build
 ```
 
 New command tests belong in `test/commands/` when they exercise one command's report or artifact contract. Multi-command workflow coverage belongs in `test/scenarios/`, and shared setup belongs in `test/fixtures/`. The same gates must pass after a frozen install in a clean arbitrary worktree, without another checkout's dependencies or ignored runtime artifacts.
+
+`dataset-post-authoring-finalize` accepts explicit repeated `--qa-reference-rows` files for Process QA and `--reference-intent-file` only with remote verification selected. Invalid/missing selections fail before output creation. The latter is preserved through passing precommit evidence into handoff; a handoff flag can only assert the same selection. Both CommandSpecs bind intent/precommit/review facts, and post-write closeout rejects mismatched reference evidence even with exact root readback. Public tasks use the bounded `--reference-input` descriptor described in `public-runtime-contract.md`.

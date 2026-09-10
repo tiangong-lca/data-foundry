@@ -1148,6 +1148,7 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       "queue artifacts",
       "schema/context files",
       "decision/patch evidence",
+      "optional explicit Process QA reference rows and verified reference intent",
     ],
     outputs: [
       "post-authoring-finalize report (always)",
@@ -1158,6 +1159,10 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       "cleanup-blocked: every pre-existing stale artifact is preserved and reported",
     ],
     keyTests: [
+      nodeTest(
+        "test/scenarios/finalize-reference-inputs.test.mts",
+        "explicit reference selections fail before finalizer outputs or owner CLI calls",
+      ),
       goldenDiff,
       postAuthoringFinalizeCommandContract,
       nodeTest(
@@ -1194,8 +1199,13 @@ export const commandMetadata: Record<string, FoundryCommandMetadata> = {
       "authoritative commit and post-write verify CommandSpecs with executable, argv, display, binding, and SHA-256",
       "final rows artifact facts with exact path, bytes, and SHA-256",
       "conditional native execution-contract raw artifact and normalized owner report binding",
+      "conditional reference intent, precommit and review artifact bindings",
     ],
     keyTests: [
+      nodeTest(
+        "test/scenarios/handoff-reference-intent.test.mts",
+        "handoff automatically retains the passing reference intent and all evidence in both command specs",
+      ),
       nodeTest(
         "test/scenarios/native-insert-closeout.test.mts",
         "native closeout rejects a completed report from a different contract despite exact root readback",
