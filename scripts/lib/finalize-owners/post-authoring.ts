@@ -2044,6 +2044,9 @@ export function createPostAuthoringFinalizeCommands({
       schema_version: 1,
       started_at_utc: finalizeStartedAtUtc,
       generated_at_utc: nowIso(),
+      ...(referenceInputs.intentFile
+        ? { reference_intent_file: repoRelativePath(referenceInputs.intentFile) }
+        : {}),
       status,
       dataset_type: datasetType,
       profile: mutationManifest.profile || String(options.profile || "generic"),
