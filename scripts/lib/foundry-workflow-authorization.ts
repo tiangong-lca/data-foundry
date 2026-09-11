@@ -22,6 +22,7 @@ import { currentWorkflowState, workflowObject } from "./foundry-workflow-state.t
 import { runFoundryTaskOperation } from "./foundry-task-store.ts";
 import {
   verifyFoundryRuntimeIdentity,
+  assertVerifiedFoundryIdentity,
   type FoundryAuthentication,
   type VerifiedFoundryIdentity,
 } from "./foundry-runtime-identity.ts";
@@ -246,7 +247,20 @@ export async function recordFoundryWorkflowAuthorization(
                 action === "canonical_support_local_mint"
               : false,
         );
-        capsule = await createFoundryExecutionCapsule(context, qualified, identity, {
+        let sealingIdentity = identity;
+        try {
+          assertVerifiedFoundryIdentity(context, sealingIdentity, qualified);
+        } catch (error) {
+          if (!(error instanceof FoundryContextError) || error.code !== "identity_receipt_stale")
+            throw error;
+          sealingIdentity = verifyFoundryRuntimeIdentity(
+            context,
+            authentication,
+            process.env,
+            qualified,
+          );
+        }
+        capsule = await createFoundryExecutionCapsule(context, qualified, sealingIdentity, {
           command: "dataset-commit-handoff-plan",
           approvedInputFile: request.approvedInputFile,
           finalRowsFile: inputFile,

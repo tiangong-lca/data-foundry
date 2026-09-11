@@ -183,6 +183,7 @@ export async function verifyPublicIdentityWorkflow(
   nativeInsert = false,
   nativeResponse: "normal" | "lost" | "missing" | "unknown" = "normal",
   referenceInput = false,
+  expireIdentityDuringHandoff = false,
 ) {
   const [identityDecision, approvalKind, trace, mixed, explicitMode, remoteDifference] = scenario;
   const accountMode = explicitMode ?? "ordinary";
@@ -1247,7 +1248,34 @@ export async function verifyPublicIdentityWorkflow(
           "the exact derived grant activated before interrupted capture",
         );
       }
+      let forcedExpiry = false;
+      if (expireIdentityDuringHandoff) {
+        const originalNow = Date.now;
+        const originalWrite = fs.writeFileSync;
+        let clockOffset = 0;
+        t.mock.method(Date, "now", () => originalNow() + clockOffset);
+        t.mock.method(fs, "writeFileSync", (...args: Parameters<typeof fs.writeFileSync>) => {
+          const result = Reflect.apply(originalWrite, fs, args);
+          if (
+            !forcedExpiry &&
+            path.basename(String(args[0])) === "dataset-commit-handoff-plan.json"
+          ) {
+            clockOffset = 61_000;
+            forcedExpiry = true;
+          }
+          return result;
+        });
+        syncBuiltinESMExports();
+      }
+      const authBeforeSeal = authCalls;
       approved = await facade.resume(invocation);
+      if (expireIdentityDuringHandoff) {
+        assert.equal(forcedExpiry, true, "the local handoff crosses the identity freshness window");
+        assert.ok(
+          authCalls >= authBeforeSeal + 2,
+          "sealing obtains a fresh owner identity after the old receipt expires",
+        );
+      }
     }
     assert.equal(approved.permissions.state, "granted", JSON.stringify(approved.blockers));
     assert.equal(
