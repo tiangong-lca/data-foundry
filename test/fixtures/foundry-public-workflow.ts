@@ -183,10 +183,11 @@ export async function verifyPublicIdentityWorkflow(
   nativeInsert = false,
   nativeResponse: "normal" | "lost" | "missing" | "unknown" = "normal",
   referenceInput = false,
-  expireIdentityDuringHandoff = false,
+  expireIdentityDuringLocalWork = false,
 ) {
   const [identityDecision, approvalKind, trace, mixed, explicitMode, remoteDifference] = scenario;
   const accountMode = explicitMode ?? "ordinary";
+  let forcedAdmissionExpiry = false;
   const { root, workspace, facade, runtimeSelection } = workflowFixture(t);
   const id = "77777777-7777-4777-8777-777777777777";
   const basic = flowRow(id);
@@ -1249,7 +1250,7 @@ export async function verifyPublicIdentityWorkflow(
         );
       }
       let forcedExpiry = false;
-      if (expireIdentityDuringHandoff) {
+      if (expireIdentityDuringLocalWork) {
         const originalNow = Date.now;
         const originalWrite = fs.writeFileSync;
         let clockOffset = 0;
@@ -1265,11 +1266,29 @@ export async function verifyPublicIdentityWorkflow(
           }
           return result;
         });
+        const originalFreeze = Object.freeze;
+        t.mock.method(Object, "freeze", (...args: Parameters<typeof Object.freeze>) => {
+          const result = Reflect.apply(originalFreeze, Object, args);
+          const value = args[0];
+          if (
+            !forcedAdmissionExpiry &&
+            value &&
+            typeof value === "object" &&
+            Object.hasOwn(value, "capsule_file") &&
+            Object.hasOwn(value, "command_spec") &&
+            Object.hasOwn(value, "authorization") &&
+            Object.hasOwn(value, "capsule")
+          ) {
+            clockOffset += 61_000;
+            forcedAdmissionExpiry = true;
+          }
+          return result;
+        });
         syncBuiltinESMExports();
       }
       const authBeforeSeal = authCalls;
       approved = await facade.resume(invocation);
-      if (expireIdentityDuringHandoff) {
+      if (expireIdentityDuringLocalWork) {
         assert.equal(forcedExpiry, true, "the local handoff crosses the identity freshness window");
         assert.ok(
           authCalls >= authBeforeSeal + 2,
@@ -1394,7 +1413,12 @@ export async function verifyPublicIdentityWorkflow(
       assert.equal(writes, 0);
       assert.ok(!expired.artifacts.some((item) => item.role === "consumed.json"));
     }
+    const authBeforeDispatch = authCalls;
     let executed = await facade.resume(invocation);
+    if (expireIdentityDuringLocalWork) {
+      assert.equal(forcedAdmissionExpiry, true, "the first admission crosses the receipt window");
+      assert.ok(authCalls >= authBeforeDispatch + 2, JSON.stringify(executed.blockers));
+    }
     assert.equal(writes, 1, JSON.stringify(executed.blockers));
     if (nativeResponse === "missing" || nativeResponse === "unknown") {
       for (let retry = 0; retry < 2; retry++) {

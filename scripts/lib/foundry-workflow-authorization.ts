@@ -247,19 +247,18 @@ export async function recordFoundryWorkflowAuthorization(
                 action === "canonical_support_local_mint"
               : false,
         );
-        let sealingIdentity = identity;
         try {
-          assertVerifiedFoundryIdentity(context, sealingIdentity, qualified);
+          assertVerifiedFoundryIdentity(context, identity, qualified);
         } catch (error) {
           if (!(error instanceof FoundryContextError) || error.code !== "identity_receipt_stale")
             throw error;
-          sealingIdentity = verifyFoundryRuntimeIdentity(
-            context,
-            authentication,
-            process.env,
-            qualified,
-          );
         }
+        const sealingIdentity = verifyFoundryRuntimeIdentity(
+          context,
+          authentication,
+          process.env,
+          qualified,
+        );
         capsule = await createFoundryExecutionCapsule(context, qualified, sealingIdentity, {
           command: "dataset-commit-handoff-plan",
           approvedInputFile: request.approvedInputFile,

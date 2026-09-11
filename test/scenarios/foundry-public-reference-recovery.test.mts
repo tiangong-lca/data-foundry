@@ -4,5 +4,5 @@ import {
   verifyPublicIdentityWorkflow,
 } from "../fixtures/foundry-public-workflow.ts";
 
-test("public reference input refreshes expired identity before sealing and preserves no-replay readback", (t) =>
+test("public reference input renews identity across local stages and preserves no-replay readback", (t) =>
   verifyPublicIdentityWorkflow(t, publicIdentityCases[2], false, "normal", true, true));
