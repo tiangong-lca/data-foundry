@@ -135,6 +135,13 @@ export function readNativeInsertHandoff(input: {
     artifact,
     contract,
     canonical_sha256: sha256Json(contract),
+    metadata: {
+      artifact,
+      canonical_sha256: sha256Json(contract),
+      execution_id: contract.execution_id,
+      project_ref: contract.project_ref,
+      operation: "insert",
+    },
     rows_sha256: sha256Text(rowsText),
   };
 }
@@ -142,4 +149,28 @@ export function readNativeInsertHandoff(input: {
 export function reserveNativeHandoffDirectory(directory: string): void {
   fs.mkdirSync(path.dirname(directory), { recursive: true });
   fs.mkdirSync(directory);
+}
+
+export function nativeInsertCommitArguments(
+  prefix: readonly string[],
+  datasetType: string,
+  rowsFile: string,
+  outDir: string,
+  contractFile: string,
+): string[] {
+  return [
+    ...prefix,
+    "dataset",
+    "save-draft",
+    "--type",
+    datasetType,
+    "--input",
+    rowsFile,
+    "--out-dir",
+    path.join(outDir, "commit", `${datasetType}-save-draft`),
+    "--execution-contract",
+    contractFile,
+    "--commit",
+    "--json",
+  ];
 }

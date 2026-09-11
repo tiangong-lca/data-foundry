@@ -18,9 +18,9 @@ checkPaths:
   - .codex/hooks/run-foundry-acceptance-check.sh
   - package.json
   - scripts/commands/core.ts
-lastReviewedAt: 2026-09-08
-lastReviewedCommit: 81450527dd1f0b0439ed1f385fb494f9c045eb93
-lastReviewedNote: "Reviewed for Foundry #118 public classification/location tasks and bound semantic submission. Existing domain owners, task lineage, package-only composition, credential boundaries and acceptance hooks remain enforced; identity/publication work remains open."
+lastReviewedAt: 2026-09-11
+lastReviewedCommit: abc7672f3b3a806caa4219ab5b797f1d92421926
+lastReviewedNote: "Reviewed for #122: explicit task reference snapshots, CLI 0.1.14 QA/intent transport, sealed admission/readback evidence and no-replay recovery. Existing profile, permission, environment and historical delivery boundaries remain enforced."
 ---
 
 # Codex Stop Hook

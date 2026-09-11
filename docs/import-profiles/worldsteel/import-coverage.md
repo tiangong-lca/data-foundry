@@ -1,7 +1,7 @@
 ---
-lastReviewedAt: 2026-09-09
-lastReviewedCommit: fa219ecc833c0aad9bb6a3661265a57f8f24a814
-lastReviewedNote: "Reviewed for Foundry #147: adopt independently verified CLI 0.1.13 at b5e2092 with original permission-preserving bootstrap scripts. Exact runtime/schema/package/release expectations advance together; other dependencies, TIDAS, profile rules, task authorization and private no-replay evidence remain unchanged."
+lastReviewedAt: 2026-09-11
+lastReviewedCommit: abc7672f3b3a806caa4219ab5b797f1d92421926
+lastReviewedNote: "Reviewed for #122: explicit task reference snapshots, CLI 0.1.14 QA/intent transport, sealed admission/readback evidence and no-replay recovery. Existing profile, permission, environment and historical delivery boundaries remain enforced."
 title: worldsteel EF3.1 Import Coverage Evidence
 docType: report
 scope: import-profile/worldsteel

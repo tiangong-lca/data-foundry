@@ -165,6 +165,7 @@ export async function readbackFoundryOwner(
       checks: checksFile ? captureFoundryInput(checksFile) : null,
     };
     let acceptance: ReturnType<typeof captureFoundryInput> | null = null;
+    let referenceFacts: ReturnType<typeof captureFoundryInput>[] = [];
     if (
       !blockers.length &&
       reportFile &&
@@ -222,7 +223,10 @@ export async function readbackFoundryOwner(
         environment,
         tidasExecutable: qualified.tidas.executable_path,
       });
-      owners.closeout.validatePostWriteVerifyForCloseout({
+      const rootProof = owners.closeout.validatePostWriteVerifyForCloseout({
+        handoffPlan: JSON.parse(
+          readFoundryInput(context, request.handoff_file).toString("utf8"),
+        ) as Record<string, unknown>,
         verifyReport: report,
         verifyReportPath: reportFile,
         finalRowsFile: request.content.input.path,
@@ -233,6 +237,11 @@ export async function readbackFoundryOwner(
         allowTraceHashOnlyNormalization: request.policy.account_mode !== "production-test",
         blockers,
       });
+      referenceFacts = (rootProof.referenceArtifacts ?? []).map(({ path, sha256, bytes }) => ({
+        path,
+        sha256,
+        bytes,
+      }));
       blockers.push(
         ...buildReferenceClosureBlockers({
           repoRoot: context.assetRoot,
@@ -270,6 +279,14 @@ export async function readbackFoundryOwner(
         }
       }
     }
+    for (const fact of referenceFacts) {
+      const current = captureFoundryInput(fact.path);
+      if (current.sha256 !== fact.sha256 || current.bytes !== fact.bytes)
+        blockers.push({
+          code: "reference_intent_evidence_invalid",
+          message: "Reference evidence changed during owner readback.",
+        });
+    }
     readFoundryInput(context, request.content.input.path);
     const proof = {
       schema: "tiangong-foundry.owner-readback.v1",
@@ -280,6 +297,7 @@ export async function readbackFoundryOwner(
       report: reportFile ? captureFoundryInput(reportFile) : null,
       checks: checksFile ? captureFoundryInput(checksFile) : null,
       ...(native ? { commit_report: commitFact } : {}),
+      ...(referenceFacts.length ? { reference_evidence: referenceFacts } : {}),
       original_verification: original,
       acceptance,
       blockers,

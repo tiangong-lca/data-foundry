@@ -1,4 +1,9 @@
 import path from "node:path";
+import fs from "node:fs";
+import {
+  assertReferenceIntentSelection,
+  readHandoffReferenceEvidence,
+} from "./handoff-reference-intent.ts";
 import process from "node:process";
 import { createFileArtifactFact, createFoundryCommandSpec } from "../foundry-command-spec.ts";
 import {
@@ -13,6 +18,7 @@ import {
   assertExecutionContractSelection,
   readNativeInsertHandoff,
   reserveNativeHandoffDirectory,
+  nativeInsertCommitArguments,
 } from "./native-insert-handoff.ts";
 
 type JsonRecord = Record<string, unknown>;
@@ -314,6 +320,7 @@ export function createCommitHandoffCommands({
 
   function runDatasetCommitHandoffPlan(options: CommitHandoffOptions): JsonRecord {
     assertExecutionContractSelection(options);
+    assertReferenceIntentSelection(options);
     if (options.help) {
       return {
         schema_version: 1,
@@ -393,6 +400,18 @@ export function createCommitHandoffCommands({
             relativePath: repoRelativePath,
           })
         : null;
+    const reference = readHandoffReferenceEvidence({
+      finalize: finalizeReport,
+      options,
+      rowsFile: finalRowsFile,
+      datasetType,
+      targetUserId,
+      projectRef: verifiedProjectRef,
+      resolveFile: resolveRepoPath,
+      relativePath: repoRelativePath,
+    });
+    if (reference && fs.existsSync(outDir))
+      throw new Error("--reference-intent-file requires a fresh handoff output directory.");
     const commitSupportsTargetUserId = !native && ["flow", "process"].includes(datasetType);
     const blockers: JsonRecord[] = [];
 
@@ -580,21 +599,7 @@ export function createCommitHandoffCommands({
       : [resolveTiangongLcaCliBin()];
     const commitArgs =
       native && finalRowsFile && contractFile
-        ? [
-            ...cliPrefix,
-            "dataset",
-            "save-draft",
-            "--type",
-            datasetType,
-            "--input",
-            finalRowsFile,
-            "--out-dir",
-            path.join(outDir, "commit", `${datasetType}-save-draft`),
-            "--execution-contract",
-            contractFile,
-            "--commit",
-            "--json",
-          ]
+        ? nativeInsertCommitArguments(cliPrefix, datasetType, finalRowsFile, outDir, contractFile)
         : legacyCommitArgs;
     const verifyArgs: string[] = finalRowsFile
       ? [
@@ -625,6 +630,11 @@ export function createCommitHandoffCommands({
             filePath: finalRowsFile,
           })
         : null;
+    if (reference) {
+      verifyArgs.push("--reference-intent-file", reference.intentFile);
+      if (reference.rows_sha256 !== finalRowsArtifact?.sha256)
+        throw new Error("--reference-intent-file consumer bytes changed during handoff.");
+    }
     const requestedAuthorization = options.taskAuthorization;
     if (native && native.rows_sha256 !== finalRowsArtifact?.sha256)
       throw new Error("--execution-contract-file final rows changed during handoff admission.");
@@ -675,7 +685,7 @@ export function createCommitHandoffCommands({
     });
     const readyForExplicitCommit = blockers.length === 0;
     const boundArtifacts = finalRowsArtifact
-      ? [finalRowsArtifact, ...(native ? [native.artifact] : [])]
+      ? [finalRowsArtifact, ...(native ? [native.artifact] : []), ...(reference?.artifacts ?? [])]
       : [];
     const report = {
       schema_version: 1,
@@ -700,17 +710,8 @@ export function createCommitHandoffCommands({
       account_mode: accountMode,
       expected_state_code: stateCode || null,
       expected_state_code_source: stateCodeSource,
-      ...(native
-        ? {
-            execution_contract: {
-              artifact: native.artifact,
-              canonical_sha256: native.canonical_sha256,
-              execution_id: native.contract.execution_id,
-              project_ref: native.contract.project_ref,
-              operation: "insert",
-            },
-          }
-        : {}),
+      ...(native ? { execution_contract: native.metadata } : {}),
+      ...(reference ? { reference_intent: reference.metadata } : {}),
       account_write_guard: {
         target_user_id_required: true,
         target_user_id: targetUserId || null,
@@ -780,7 +781,7 @@ export function createCommitHandoffCommands({
       },
     };
     const reportPath = path.join(outDir, "dataset-commit-handoff-plan.json");
-    if (native) reserveNativeHandoffDirectory(outDir);
+    if (native || reference) reserveNativeHandoffDirectory(outDir);
     writeJson(reportPath, report);
     return {
       ...report,

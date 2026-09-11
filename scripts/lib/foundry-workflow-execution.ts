@@ -108,6 +108,9 @@ export async function executeFoundryOwnerScope(
           capsuleFile: request.content.capsule.path,
           commandSpec: request.content.commit,
         });
+        // Local rehydration can consume the receipt window; the final full pass
+        // must begin with a freshly verified current account, before any attempt.
+        identity = verifyFoundryRuntimeIdentity(context, authentication, process.env, qualified);
         await assertFoundryExecutionAdmission(context, qualified, identity, admission);
         if (observation)
           throw new FoundryContextError(

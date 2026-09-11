@@ -1,7 +1,7 @@
 {
   "$schema": "../specs/schemas/file-location-registry.schema.json",
   "schema_version": 1,
-  "updated_at_utc": "2026-09-10T18:32:10Z",
+  "updated_at_utc": "2026-09-10T22:57:35Z",
   "policy_doc": "docs/file-organization.md",
   "entries": [
     {
@@ -689,6 +689,57 @@
       "sensitivity": "non-sensitive consumer orchestration source; contains no credentials or task payloads",
       "tracked": true,
       "notes": "Validates matching native CLI v2 execution receipts against handoff contracts and exact actions; independent root verification remains mandatory."
+    },
+    {
+      "id": "finalize-reference-inputs",
+      "status": "active",
+      "classification": "reference-evidence-adapter",
+      "current_path": "scripts/lib/finalize-owners/finalize-reference-inputs.ts",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": ["scripts/lib/finalize-owners/post-authoring.ts"],
+      "sensitivity": "non-sensitive runtime source; no credentials or task payloads",
+      "tracked": true,
+      "notes": "Validates explicit local reference selections before output and delegates scientific eligibility to CLI."
+    },
+    {
+      "id": "handoff-reference-intent",
+      "status": "active",
+      "classification": "reference-evidence-adapter",
+      "current_path": "scripts/lib/finalize-owners/handoff-reference-intent.ts",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": [
+        "scripts/lib/finalize-owners/commit-handoff.ts",
+        "scripts/lib/foundry-execution-admission.ts"
+      ],
+      "sensitivity": "non-sensitive runtime source; no credentials or task payloads",
+      "tracked": true,
+      "notes": "Binds passing CLI consumer/intent/precommit/review evidence without owning reference eligibility."
+    },
+    {
+      "id": "reference-intent-closeout",
+      "status": "active",
+      "classification": "reference-evidence-adapter",
+      "current_path": "scripts/lib/finalize-owners/reference-intent-closeout.ts",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": ["scripts/lib/finalize-owners/post-write-closeout.ts"],
+      "sensitivity": "non-sensitive runtime source; no credentials or task payloads",
+      "tracked": true,
+      "notes": "Requires matching reference readback and complete current handoff evidence."
+    },
+    {
+      "id": "foundry-reference-input",
+      "status": "active",
+      "classification": "reference-evidence-adapter",
+      "current_path": "scripts/lib/foundry-reference-input.ts",
+      "previous_paths": [],
+      "owner": "tiangong-lca-data-foundry",
+      "referenced_by": ["scripts/foundry-facade.ts"],
+      "sensitivity": "non-sensitive runtime source; no credentials or task payloads",
+      "tracked": true,
+      "notes": "Parses explicit public reference input and records immutable indexed control snapshots."
     }
   ],
   "lastReviewedCommit": "dab4be5ac469df554ae0e2c228ff500cb8a8c88d",

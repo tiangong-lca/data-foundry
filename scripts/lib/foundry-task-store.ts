@@ -406,6 +406,7 @@ export async function runFoundryTaskOperation(
       | "dataset-workflow-finalize"
       | "dataset-workflow-authorization"
       | "dataset-workflow-native-contract"
+      | "dataset-workflow-reference-input"
       | "dataset-workflow-execution-prepare"
       | "dataset-workflow-execution-result"
       | "dataset-workflow-execution-consume"

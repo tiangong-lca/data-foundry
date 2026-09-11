@@ -57,6 +57,43 @@ export async function finalizeFoundryWorkflow(
       "workflow_assessment_required",
       "Assess the current rows before finalization.",
     );
+  const referenceOptions = new Map<
+    string,
+    { qaReferenceRows?: string[]; referenceIntentFile?: string }
+  >();
+  for (const set of rows.value.sets) {
+    if (executionProgress?.scopes.has(set.type)) continue;
+    const selection = state.referenceInputs.get(set.type);
+    if (!selection) continue;
+    const intended = workflowObject(selection.value.input),
+      current = captureFoundryInput(set.file);
+    if (current.sha256 !== intended.sha256 || current.bytes !== intended.bytes)
+      throw new FoundryContextError(
+        "reference_input_stale",
+        "Select reference evidence for the current dataset rows before finalization.",
+      );
+    const paths = (raw: unknown) => {
+      if (!Array.isArray(raw))
+        throw new FoundryContextError(
+          "reference_input_invalid",
+          "Registered reference file facts are invalid.",
+        );
+      return raw.map((value) => {
+        const fact = workflowObject(value);
+        if (typeof fact.path !== "string")
+          throw new FoundryContextError("reference_input_invalid", "Reference path is missing.");
+        readFoundryInput(context, fact.path);
+        return fact.path;
+      });
+    };
+    const qa = paths(selection.value.qa_files);
+    paths(selection.value.review_files);
+    const intent = selection.value.intent === null ? [] : paths([selection.value.intent]);
+    referenceOptions.set(set.type, {
+      ...(qa.length ? { qaReferenceRows: qa } : {}),
+      ...(intent.length ? { referenceIntentFile: intent[0] } : {}),
+    });
+  }
   const profile = await withFoundryTaskMetadata(context, (task, index) => {
     if (currentWorkflowState(context, index).rows?.entry.sha256 !== rows.entry.sha256)
       throw new FoundryContextError(
@@ -238,6 +275,7 @@ export async function finalizeFoundryWorkflow(
           owners.finalize.runDatasetPostAuthoringFinalize({
             type: ["unitgroup", "flowproperty"].includes(set.type) ? "support" : set.type,
             rowsFile: set.file,
+            ...referenceOptions.get(set.type),
             outDir: path.join(output, set.type),
             profile,
             ...(approval?.datasetType === set.type && authorization
@@ -344,12 +382,26 @@ export async function finalizeFoundryWorkflow(
       context,
       {
         command: "dataset-workflow-finalize",
-        options: { nonce, rows_report: rows.file },
+        options: {
+          nonce,
+          rows_report: rows.file,
+          ...(state.referenceInputsSha256
+            ? { reference_inputs_sha256: state.referenceInputsSha256 }
+            : {}),
+        },
         validateCurrent(index) {
           if (currentWorkflowState(context, index).rows?.entry.sha256 !== rows.entry.sha256)
             throw new FoundryContextError(
               "workflow_rows_changed",
               "Rows changed during finalization.",
+            );
+          if (
+            currentWorkflowState(context, index).referenceInputsSha256 !==
+            state.referenceInputsSha256
+          )
+            throw new FoundryContextError(
+              "reference_input_changed",
+              "Reference selection changed during finalization.",
             );
           if (
             authorization &&
@@ -370,6 +422,9 @@ export async function finalizeFoundryWorkflow(
           schema: "tiangong-foundry.finalize-stage.v1",
           status: blockers.length ? "blocked" : "ready_for_authorization",
           rows_report: rows.file,
+          ...(state.referenceInputsSha256
+            ? { reference_inputs_sha256: state.referenceInputsSha256 }
+            : {}),
           assessment_report: state.assessment!.file,
           owner_base: context.assetRoot,
           approval_source_sha256: approval?.sourceSha256 ?? null,

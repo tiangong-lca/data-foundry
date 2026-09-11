@@ -199,7 +199,7 @@ async function runPublicCommand(
         : parsed.operation === "task.start"
           ? ["spec"]
           : parsed.operation === "task.resume"
-            ? ["task", "actor", "semanticInput", "authorizationInput"]
+            ? ["task", "actor", "semanticInput", "authorizationInput", "referenceInput"]
             : parsed.operation === "task.status"
               ? ["task", "actor"]
               : []),
@@ -467,6 +467,8 @@ async function runPublicCommand(
             taskId,
             actorId,
             semanticInputFile: option(parsed.args.semanticInput, "--semantic-input") ?? undefined,
+            referenceInputFile:
+              option(parsed.args.referenceInput, "--reference-input") ?? undefined,
             authorizationInputFile:
               option(parsed.args.authorizationInput, "--authorization-input") ?? undefined,
           });

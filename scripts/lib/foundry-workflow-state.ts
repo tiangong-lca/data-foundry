@@ -190,6 +190,36 @@ export function currentWorkflowState(
       }
     }
   }
+  const referenceInputs = new Map<string, WorkflowArtifact<Record<string, unknown>>>();
+  for (const entry of entries) {
+    if (
+      entry.command !== "dataset-workflow-reference-input" ||
+      path.basename(entry.path) !== "foundry-reference-input.json"
+    )
+      continue;
+    const found = readWorkflowArtifact(context, entry);
+    if (
+      found.value.schema !== "tiangong-foundry.reference-selection.v1" ||
+      found.value.status !== "selected" ||
+      typeof found.value.dataset_type !== "string"
+    )
+      throw new FoundryContextError(
+        "reference_input_invalid",
+        "Registered reference selection is invalid.",
+      );
+    referenceInputs.set(found.value.dataset_type, found);
+  }
+  const referenceInputsSha256 = referenceInputs.size
+    ? createHash("sha256")
+        .update(
+          JSON.stringify(
+            [...referenceInputs]
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([type, found]) => [type, found.entry.sha256]),
+          ),
+        )
+        .digest("hex")
+    : null;
   let finalization: WorkflowArtifact<Record<string, unknown>> | null = null;
   if (rows && assessment) {
     for (const entry of [...entries].reverse()) {
@@ -210,7 +240,8 @@ export function currentWorkflowState(
         );
       if (
         found.value.rows_report === rows.file &&
-        found.value.assessment_report === assessment.file
+        found.value.assessment_report === assessment.file &&
+        (found.value.reference_inputs_sha256 ?? null) === referenceInputsSha256
       ) {
         finalization = found;
         break;
@@ -250,5 +281,14 @@ export function currentWorkflowState(
       }
     }
   }
-  return { rows, assessment, identity, finalization, authorization, preparedApproval };
+  return {
+    rows,
+    assessment,
+    identity,
+    finalization,
+    authorization,
+    preparedApproval,
+    referenceInputs,
+    referenceInputsSha256,
+  };
 }

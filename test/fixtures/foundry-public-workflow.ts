@@ -182,9 +182,12 @@ export async function verifyPublicIdentityWorkflow(
   scenario: PublicIdentityCase,
   nativeInsert = false,
   nativeResponse: "normal" | "lost" | "missing" | "unknown" = "normal",
+  referenceInput = false,
+  expireIdentityDuringLocalWork = false,
 ) {
   const [identityDecision, approvalKind, trace, mixed, explicitMode, remoteDifference] = scenario;
   const accountMode = explicitMode ?? "ordinary";
+  let forcedAdmissionExpiry = false;
   const { root, workspace, facade, runtimeSelection } = workflowFixture(t);
   const id = "77777777-7777-4777-8777-777777777777";
   const basic = flowRow(id);
@@ -580,6 +583,42 @@ export async function verifyPublicIdentityWorkflow(
             output: [],
           };
         }
+        if (argv.includes("--reference-intent-file")) {
+          const intentFile = argv[argv.indexOf("--reference-intent-file") + 1];
+          const intent = JSON.parse(fs.readFileSync(intentFile, "utf8")) as {
+            project_ref: string;
+            actor_user_id: string;
+            consumers: Array<{ payload_sha256: string }>;
+            references: Array<{ review: { file: string; sha256: string } }>;
+          };
+          const rows = readRows(input).map((row) => unwrapDatasetPayload(row, "flow"));
+          assert.deepEqual(
+            intent.consumers.map((item) => item.payload_sha256),
+            rows.map(sha256Json),
+            "CLI receives the reviewed final consumer payload",
+          );
+          const fact = (file: string) => ({
+            path: file,
+            bytes: fs.statSync(file).size,
+            sha256: digestFile(file),
+          });
+          const reviews = [...new Set(intent.references.map((item) => item.review.file))].map(fact);
+          report.reference_intent = {
+            file: fact(intentFile),
+            actor_user_id: intent.actor_user_id,
+            project_ref: intent.project_ref,
+            consumers: intent.consumers,
+            references: intent.references.map((item) => ({
+              ...item,
+              review: {
+                file: fact(item.review.file),
+                latest: JSON.parse(fs.readFileSync(item.review.file, "utf8")).latest,
+              },
+            })),
+            review_files: reviews,
+          };
+          report.counts = { ...(report.counts as Record<string, unknown>), rows: rows.length };
+        }
         fs.writeFileSync(file, JSON.stringify(report));
         return {
           status: report.status === "blocked_remote_verification" ? 1 : 0,
@@ -857,13 +896,126 @@ export async function verifyPublicIdentityWorkflow(
   assert.equal(finished.status, "ready", JSON.stringify(finished.blockers));
   assert.notEqual(finished.status, "completed", "local identity resolution is not final delivery");
   finalizing = true;
-  const finalized = await facade.resume(invocation);
+  let finalized = await facade.resume(invocation);
   if (childFailure) throw childFailure;
   assert.equal(finalized.status, "needs_input", JSON.stringify(finalized.blockers));
-  const finalizeArtifact = finalized.artifacts.findLast(
+  let finalizeArtifact = finalized.artifacts.findLast(
     (item) => item.role === "foundry-finalize.json",
   );
   assert.ok(finalizeArtifact?.kind === "file");
+  if (referenceInput) {
+    const initial = JSON.parse(fs.readFileSync(finalizeArtifact.path, "utf8")) as {
+      sets: Array<{ final_rows: string }>;
+    };
+    const finalPayloads = readRows(initial.sets[0].final_rows).map((row) =>
+      unwrapDatasetPayload(row, "flow"),
+    );
+    const reviewFile = path.join(root, "selected-reference-review.json"),
+      intentFile = path.join(root, "selected-reference-intent.json"),
+      referenceDescriptor = path.join(root, "reference-input.json");
+    const selected = {
+      table: "flowproperties",
+      id: "93a60a56-a3c8-11da-a746-0800200b9a66",
+      version: "03.00.003",
+      payload_sha256: "a".repeat(64),
+      user_id: account.user_id,
+      state_code: 100,
+    };
+    fs.writeFileSync(
+      reviewFile,
+      JSON.stringify({
+        schema_version: "dataset-exact-reference-review.v1",
+        decision: "use_selected_exact",
+        reason: "Explicit synthetic reviewed definition",
+        selected,
+        latest: selected,
+      }),
+    );
+    fs.writeFileSync(
+      intentFile,
+      JSON.stringify({
+        schema_version: "dataset-exact-reference-intent.v1",
+        project_ref: account.project_ref,
+        actor_user_id: account.user_id,
+        consumers: finalPayloads.map((payload, row_index) => ({
+          row_index,
+          table: "flows",
+          id,
+          version: "00.00.001",
+          payload_sha256: sha256Json(payload),
+        })),
+        references: [
+          {
+            row_index: 0,
+            path: "/flowDataSet/flowProperties/flowProperty/0/referenceToFlowPropertyDataSet",
+            selected,
+            review: { file: reviewFile, sha256: digestFile(reviewFile) },
+          },
+        ],
+      }),
+    );
+    fs.writeFileSync(
+      referenceDescriptor,
+      JSON.stringify({
+        schema: "tiangong-foundry.reference-input.v1",
+        task_id: invocation.taskId,
+        actor_id: invocation.actorId,
+        rows_manifest_sha256: manifest.sha256,
+        dataset_type: "flow",
+        qa_reference_rows: [],
+        intent: { file: intentFile, sha256: digestFile(intentFile) },
+        review_files: [{ file: reviewFile, sha256: digestFile(reviewFile) }],
+      }),
+    );
+    let selectedOutput = "";
+    await runFoundryPublicCommand(
+      [
+        process.execPath,
+        "tiangong-foundry",
+        "task",
+        "resume",
+        "--workspace",
+        workspace,
+        "--task",
+        invocation.taskId,
+        "--actor",
+        invocation.actorId,
+        "--reference-input",
+        referenceDescriptor,
+        "--json",
+      ],
+      {
+        runtimeSelection,
+        cacheBase: path.join(root, "cache"),
+        writeStdout: (value) => {
+          selectedOutput += value;
+        },
+        setExitCode: () => {},
+      },
+    );
+    const selectedResult = JSON.parse(selectedOutput) as {
+      status: string;
+      blockers: unknown[];
+      artifacts: unknown[];
+    };
+    assert.equal(selectedResult.status, "ready", JSON.stringify(selectedResult.blockers));
+    const repeated = await facade.resume({
+      ...invocation,
+      referenceInputFile: referenceDescriptor,
+    });
+    assert.deepEqual(
+      repeated.artifacts,
+      selectedResult.artifacts,
+      "identical reference selection is read-only reuse",
+    );
+    fs.unlinkSync(intentFile);
+    fs.unlinkSync(reviewFile);
+    finalized = await facade.resume(invocation);
+    finalizeArtifact = finalized.artifacts.findLast(
+      (item) => item.role === "foundry-finalize.json",
+    );
+    assert.ok(finalizeArtifact?.kind === "file", JSON.stringify(finalized.blockers));
+  }
   const finalReport = JSON.parse(fs.readFileSync(finalizeArtifact.path, "utf8")) as {
     sets: Array<{
       report: string;
@@ -1097,7 +1249,52 @@ export async function verifyPublicIdentityWorkflow(
           "the exact derived grant activated before interrupted capture",
         );
       }
+      let forcedExpiry = false;
+      if (expireIdentityDuringLocalWork) {
+        const originalNow = Date.now;
+        const originalWrite = fs.writeFileSync;
+        let clockOffset = 0;
+        t.mock.method(Date, "now", () => originalNow() + clockOffset);
+        t.mock.method(fs, "writeFileSync", (...args: Parameters<typeof fs.writeFileSync>) => {
+          const result = Reflect.apply(originalWrite, fs, args);
+          if (
+            !forcedExpiry &&
+            path.basename(String(args[0])) === "dataset-commit-handoff-plan.json"
+          ) {
+            clockOffset = 61_000;
+            forcedExpiry = true;
+          }
+          return result;
+        });
+        const originalFreeze = Object.freeze;
+        t.mock.method(Object, "freeze", (...args: Parameters<typeof Object.freeze>) => {
+          const result = Reflect.apply(originalFreeze, Object, args);
+          const value = args[0];
+          if (
+            !forcedAdmissionExpiry &&
+            value &&
+            typeof value === "object" &&
+            Object.hasOwn(value, "capsule_file") &&
+            Object.hasOwn(value, "command_spec") &&
+            Object.hasOwn(value, "authorization") &&
+            Object.hasOwn(value, "capsule")
+          ) {
+            clockOffset += 61_000;
+            forcedAdmissionExpiry = true;
+          }
+          return result;
+        });
+        syncBuiltinESMExports();
+      }
+      const authBeforeSeal = authCalls;
       approved = await facade.resume(invocation);
+      if (expireIdentityDuringLocalWork) {
+        assert.equal(forcedExpiry, true, "the local handoff crosses the identity freshness window");
+        assert.ok(
+          authCalls >= authBeforeSeal + 2,
+          "sealing obtains a fresh owner identity after the old receipt expires",
+        );
+      }
     }
     assert.equal(approved.permissions.state, "granted", JSON.stringify(approved.blockers));
     assert.equal(
@@ -1187,6 +1384,17 @@ export async function verifyPublicIdentityWorkflow(
       JSON.stringify(preparedExecution.blockers),
     );
     assert.equal(writes, 0, "request preparation is local");
+    if (referenceInput) {
+      for (const empty of ["", "   "]) {
+        const rejected = await facade.resume({ ...invocation, referenceInputFile: empty });
+        assert.equal(
+          writes,
+          0,
+          "an empty explicit reference selector cannot dispatch a prepared write",
+        );
+        assert.equal(rejected.blockers[0]?.code, "reference_input_invalid");
+      }
+    }
     if (approvalKind === "final_rows") {
       const expiredClock = t.mock.method(
         Date,
@@ -1205,7 +1413,12 @@ export async function verifyPublicIdentityWorkflow(
       assert.equal(writes, 0);
       assert.ok(!expired.artifacts.some((item) => item.role === "consumed.json"));
     }
+    const authBeforeDispatch = authCalls;
     let executed = await facade.resume(invocation);
+    if (expireIdentityDuringLocalWork) {
+      assert.equal(forcedAdmissionExpiry, true, "the first admission crosses the receipt window");
+      assert.ok(authCalls >= authBeforeDispatch + 2, JSON.stringify(executed.blockers));
+    }
     assert.equal(writes, 1, JSON.stringify(executed.blockers));
     if (nativeResponse === "missing" || nativeResponse === "unknown") {
       for (let retry = 0; retry < 2; retry++) {
@@ -1229,6 +1442,14 @@ export async function verifyPublicIdentityWorkflow(
       assert.equal(writes, 1, "strict mismatch recovery cannot replay mutation");
     } else if (remoteDifference === "trace_hash") assert.equal(getCalls, 1);
     if (approvalKind === "current_rows") {
+      if (referenceInput) {
+        const denied = await facade.resume({
+          ...invocation,
+          referenceInputFile: path.join(root, "must-not-read-new-reference.json"),
+        });
+        assert.equal(denied.blockers[0]?.code, "execution_recovery_required");
+        assert.equal(writes, 1, "new reference selection cannot reopen a consumed mutation");
+      }
       assert.equal(executed.status, "needs_input", JSON.stringify(executed));
       assert.equal(executed.blockers[0]?.code, "mutation_readback_required");
       const attemptsRoot = path.join(
@@ -1282,11 +1503,17 @@ export async function verifyPublicIdentityWorkflow(
       );
     }
     const proof = JSON.parse(fs.readFileSync(executionReport.path, "utf8")) as {
-      readback: { checks: { path: string }; commit_report?: { path: string } };
+      readback: {
+        checks: { path: string };
+        commit_report?: { path: string };
+        reference_evidence?: Array<{ path: string }>;
+      };
     };
-    const evidencePath = nativeInsert
-      ? proof.readback.commit_report?.path
-      : proof.readback.checks.path;
+    const evidencePath = referenceInput
+      ? proof.readback.reference_evidence?.[0]?.path
+      : nativeInsert
+        ? proof.readback.commit_report?.path
+        : proof.readback.checks.path;
     assert.ok(evidencePath, "native completion retains its execution report fact");
     fs.appendFileSync(evidencePath, "{}\n");
     assert.equal(

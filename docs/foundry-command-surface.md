@@ -91,8 +91,8 @@ checkPaths:
   - test/unit/post-authoring-finalize-command-factory.test.mts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-11
-lastReviewedCommit: fd348f2c0d4391974f2fd894e2939f677cae618d
-lastReviewedNote: "Reviewed for Foundry #119: explicit native insert selection, indexed control snapshot, exact command/report bindings and no-replay recovery. CLI retains native execution ownership; existing authorization and environment boundaries remain mandatory."
+lastReviewedCommit: abc7672f3b3a806caa4219ab5b797f1d92421926
+lastReviewedNote: "Reviewed for #122: explicit task reference snapshots, CLI 0.1.14 QA/intent transport, sealed admission/readback evidence and no-replay recovery. Existing profile, permission, environment and historical delivery boundaries remain enforced."
 ---
 
 # Foundry Command Surface
@@ -193,3 +193,5 @@ pnpm build
 ```
 
 New command tests belong in `test/commands/` when they exercise one command's report or artifact contract. Multi-command workflow coverage belongs in `test/scenarios/`, and shared setup belongs in `test/fixtures/`. The same gates must pass after a frozen install in a clean arbitrary worktree, without another checkout's dependencies or ignored runtime artifacts.
+
+`dataset-post-authoring-finalize` accepts explicit repeated `--qa-reference-rows` files for Process QA and `--reference-intent-file` only with remote verification selected. Invalid/missing selections fail before output creation. The latter is preserved through passing precommit evidence into handoff; a handoff flag can only assert the same selection. Both CommandSpecs bind intent/precommit/review facts, and post-write closeout rejects mismatched reference evidence even with exact root readback. Public tasks use the bounded `--reference-input` descriptor described in `public-runtime-contract.md`.

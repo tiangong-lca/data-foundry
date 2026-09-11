@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { taskAuthorizationAllows } from "../task-authorization.ts";
 import { readOnlyStageContract } from "../stage-contract.ts";
+import { selectFinalizeReferenceInputs } from "./finalize-reference-inputs.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -1030,6 +1031,12 @@ export function createPostAuthoringFinalizeCommands({
       throw new Error("--rows-file is required and must point to patched or authored TIDAS rows.");
     }
 
+    const referenceInputs = selectFinalizeReferenceInputs({
+      options,
+      datasetType,
+      verifyRemote: booleanOption(options.verifyRemote || options.precommitVerifyRemote),
+      resolveFile: resolveRepoPath,
+    });
     const outDir = resolveRepoPath(
       options.outDir || `.foundry/workspaces/${datasetType}-post-authoring-finalize`,
     )!;
@@ -1491,6 +1498,7 @@ export function createPostAuthoringFinalizeCommands({
             cleanedRowsFile,
             "--out-dir",
             qaOutDir,
+            ...referenceInputs.qaFiles.flatMap((file) => ["--reference-rows-file", file]),
             "--json",
           ])
         : {
@@ -1743,6 +1751,8 @@ export function createPostAuthoringFinalizeCommands({
         String(options.remoteRootPolicy || options.rootPolicy || "candidate"),
         "--json",
       ];
+      if (referenceInputs.intentFile)
+        remoteArgs.push("--reference-intent-file", referenceInputs.intentFile);
       if (booleanOption(options.compareRootPayload || options.remoteCompareRootPayload)) {
         remoteArgs.push("--compare-root-payload");
       }
@@ -2034,6 +2044,9 @@ export function createPostAuthoringFinalizeCommands({
       schema_version: 1,
       started_at_utc: finalizeStartedAtUtc,
       generated_at_utc: nowIso(),
+      ...(referenceInputs.intentFile
+        ? { reference_intent_file: repoRelativePath(referenceInputs.intentFile) }
+        : {}),
       status,
       dataset_type: datasetType,
       profile: mutationManifest.profile || String(options.profile || "generic"),
