@@ -62,7 +62,7 @@
     "workflow_state_markers": [
       {
         "id": "foundry-runtime",
-        "pattern": "(?<!\\b(?:metal|iron|steel|brass|bronze|aluminium|aluminum)\\s)\\bFoundry\\b(?!\\s+(?:moulds?|molds?|sand|works?|goods|industry|industries)\\b)",
+        "pattern": "\\bFoundry[\\s\\p{Pd}_:]+(?:runtimes?|workspaces?)\\b|(?<!\\b(?:metal|iron|steel|brass|bronze|aluminium|aluminum|alloys?|castings?)[\\s\\p{Pd}]+)\\bFoundry\\b(?![\\s\\p{Pd}]+(?:alloys?|castings?|moulds?|molds?|sand|works?|goods|industry|industries)\\b)",
         "flags": "iu"
       },
       {

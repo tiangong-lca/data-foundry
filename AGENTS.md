@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-11
-lastReviewedCommit: fd348f2c0d4391974f2fd894e2939f677cae618d
-lastReviewedNote: "Reviewed for Foundry #144 after merged Skills0a33db1 and qualified F1.7: retire only duplicate source skill packages and move ownership/install guidance to Skills. Preserve all current managed-action, runtime/account, no-replay and publication contracts; exact ownership Golden bounds remain enforced."
+lastReviewedCommit: 1ff2d62d47f06dfcbed3d26f58cb7d0e0dac1455
+lastReviewedNote: "Reviewed for #126: industrial foundry/alloy/casting collocations and explicit runtime/workspace precedence retain the existing per-leaf content gate, ownership, permissions and no-replay boundaries."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
