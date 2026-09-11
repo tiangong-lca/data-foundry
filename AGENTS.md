@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-11
-lastReviewedCommit: 1ff2d62d47f06dfcbed3d26f58cb7d0e0dac1455
-lastReviewedNote: "Reviewed for #126: industrial foundry/alloy/casting collocations and explicit runtime/workspace precedence retain the existing per-leaf content gate, ownership, permissions and no-replay boundaries."
+lastReviewedCommit: abedf975f3a0e3b11fe6714dcd8d9d6b192db904
+lastReviewedNote: "Reviewed for #159: Foundry 0.1.8 changes only the three version projections after merged #119/#122/#126. CLI 0.1.14, Node/TIDAS, dependency locks, runtime/permission behavior and release workflow stay unchanged; public qualification and consumer/root completion remain required."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
