@@ -89,8 +89,8 @@ checkPaths:
   - scripts/lib/import-curation/mutation-manifest.ts
   - test/commands/*.test.mts
 lastReviewedAt: 2026-09-11
-lastReviewedCommit: 1b48d64af0f5d1eb41d3e9400ccf8f593c43f81d
-lastReviewedNote: "Reviewed for Foundry #119: explicit native insert selection, indexed control snapshot, exact command/report bindings and no-replay recovery. CLI retains native execution ownership; existing authorization and environment boundaries remain mandatory."
+lastReviewedCommit: 483f468e958c90c6190e3da1ef8a66b8dbe7efee
+lastReviewedNote: "Reviewed for #126: local industrial foundry/alloy/casting collocations are accepted while explicit runtime/workspace markers take precedence. Existing evaluator paths, independent workflow markers, schema/QA/authorization and payload-preservation boundaries are unchanged."
 ---
 
 # Workspace Project Map
