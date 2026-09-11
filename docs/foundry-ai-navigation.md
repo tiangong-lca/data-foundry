@@ -395,3 +395,5 @@ git diff --check
 Golden diff protects CLI JSON compatibility for the key command set. The full test suite protects workflow-specific artifact and proof behavior. Toolchain tests protect the pnpm/TS7 graph and migration ledger. Command metadata tests protect AI navigation.
 
 Explicit reference selection starts at `scripts/lib/foundry-reference-input.ts` and the public `--reference-input` descriptor. The indexed snapshots feed `foundry-workflow-finalize.ts`; `finalize-reference-inputs.ts`, `handoff-reference-intent.ts` and `reference-intent-closeout.ts` own flat-input validation, precommit evidence transport and readback binding. The public runtime contract defines the boundary; CLI 0.1.14 owns reference eligibility and unit-aware QA.
+
+For industrial `foundry` terminology, start at `specs/prewrite-content-policy.json` and `test/unit/foundry-industrial-terminology.test.mts`. The existing evaluator in `import-curation/internal/workflow-identity-preflight.ts` retains per-leaf findings and independent markers. The command-surface contract documents local collocations and explicit runtime/workspace precedence; do not add a whole-field or task-specific exemption.
