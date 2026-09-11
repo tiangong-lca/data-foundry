@@ -281,8 +281,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - test/README.md
 lastReviewedAt: 2026-09-11
-lastReviewedCommit: 483f468e958c90c6190e3da1ef8a66b8dbe7efee
-lastReviewedNote: "Reviewed for #126: local industrial foundry/alloy/casting collocations are accepted while explicit runtime/workspace markers take precedence. Existing evaluator paths, independent workflow markers, schema/QA/authorization and payload-preservation boundaries are unchanged."
+lastReviewedCommit: abedf975f3a0e3b11fe6714dcd8d9d6b192db904
+lastReviewedNote: "Reviewed for #159: Foundry 0.1.8 changes only the three version projections after merged #119/#122/#126. CLI 0.1.14, Node/TIDAS, dependency locks, runtime/permission behavior and release workflow stay unchanged; public qualification and consumer/root completion remain required."
 tracker:
   kind: filesystem
   inbox: tasks/inbox
