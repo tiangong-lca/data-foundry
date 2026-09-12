@@ -184,7 +184,7 @@ export function inspectFoundryNpmOidcResponse(value: Record<string, unknown>, no
 export function assertFoundryNpmOidcDiagnosticEnvironment(
   environment: Readonly<NodeJS.ProcessEnv>,
 ): void {
-  const repository = "tiangong-lca/data-foundry";
+  const repository = "tiangong-lca/foundry";
   if (
     environment.GITHUB_ACTIONS !== "true" ||
     environment.GITHUB_JOB !== "diagnose-npm-oidc" ||

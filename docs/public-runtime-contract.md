@@ -32,9 +32,9 @@ checkPaths:
   - test/scenarios/foundry-facade-request-store.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
   - docs/public-runtime-contract.md
-lastReviewedAt: 2026-09-11
-lastReviewedCommit: abedf975f3a0e3b11fe6714dcd8d9d6b192db904
-lastReviewedNote: "Reviewed for #159: Foundry 0.1.8 changes only the three version projections after merged #119/#122/#126. CLI 0.1.14, Node/TIDAS, dependency locks, runtime/permission behavior and release workflow stay unchanged; public qualification and consumer/root completion remain required."
+lastReviewedAt: 2026-09-13
+lastReviewedCommit: abac241b9dd9a302c4dc9a985f798d0eb77f62f3
+lastReviewedNote: "Reviewed for Foundry #161: repository and release metadata now use canonical foundry identity. npm history retains version-bound source verification; package/runtime pins, golden behavior and task/account permission gates are unchanged."
 related:
   - docs/runtime-context-contract.md
   - docs/task-authorization-contract.md

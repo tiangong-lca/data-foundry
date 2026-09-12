@@ -13,9 +13,9 @@ const head = "a".repeat(40),
 const context: FoundryReleaseWorkflowContext = {
   schema: "tiangong-foundry.release-workflow-context.v1",
   release: true,
-  currentVersion: "0.1.0",
-  version: "0.1.1",
-  tag: "foundry-v0.1.1",
+  currentVersion: "0.1.8",
+  version: "0.1.9",
+  tag: "foundry-v0.1.9",
   changedPaths: ["package.json"],
   mode: "main-push",
   ref: "refs/heads/main",
@@ -28,15 +28,15 @@ function environment(): NodeJS.ProcessEnv {
     GITHUB_ACTIONS: "true",
     GITHUB_JOB: "npm-package",
     RUNNER_ENVIRONMENT: "github-hosted",
-    GITHUB_REPOSITORY: "tiangong-lca/data-foundry",
+    GITHUB_REPOSITORY: "tiangong-lca/foundry",
     GITHUB_REF: "refs/heads/main",
     GITHUB_SHA: head,
     GITHUB_WORKFLOW_REF:
-      "tiangong-lca/data-foundry/.github/workflows/publish-foundry.yml@refs/heads/main",
+      "tiangong-lca/foundry/.github/workflows/publish-foundry.yml@refs/heads/main",
     GITHUB_WORKFLOW_SHA: head,
     GITHUB_EVENT_NAME: "push",
-    GITHUB_REPOSITORY_ID: "123",
-    GITHUB_REPOSITORY_OWNER_ID: "456",
+    GITHUB_REPOSITORY_ID: "1260957221",
+    GITHUB_REPOSITORY_OWNER_ID: "327771381",
     GITHUB_RUN_ID: "789",
     GITHUB_RUN_ATTEMPT: "1",
     ACTIONS_ID_TOKEN_REQUEST_URL:
@@ -49,15 +49,18 @@ test("prepared npm provenance describes exact hosted source and package bytes", 
   const statement = buildFoundryNpmProvenance(context, sha512, environment());
   const result = validateNpmProvenanceStatement(
     statement,
-    { package: "foundry", version: "0.1.1", gitHead: head },
+    { package: "foundry", version: "0.1.9", gitHead: head },
     sha512,
-    "https://github.com/tiangong-lca/data-foundry/.github/workflows/publish-foundry.yml@refs/heads/main",
+    "https://github.com/tiangong-lca/foundry/.github/workflows/publish-foundry.yml@refs/heads/main",
   );
   assert.equal(
     result.invocationId,
-    "https://github.com/tiangong-lca/data-foundry/actions/runs/789/attempts/1",
+    "https://github.com/tiangong-lca/foundry/actions/runs/789/attempts/1",
   );
-  assert.equal(statement.predicate.buildDefinition.internalParameters.github.repository_id, "123");
+  assert.equal(
+    statement.predicate.buildDefinition.internalParameters.github.repository_id,
+    "1260957221",
+  );
 });
 
 test("provenance preparation rejects alternate jobs, identities, hosts and static token input", () => {
@@ -85,12 +88,12 @@ test("provenance preparation rejects alternate jobs, identities, hosts and stati
 });
 
 test("exact-tag recovery retains its own workflow ref in the prepared provenance", () => {
-  const ref = "refs/tags/foundry-v0.1.1";
+  const ref = "refs/tags/foundry-v0.1.9";
   const value = buildFoundryNpmProvenance({ ...context, mode: "tag-recovery", ref }, sha512, {
     ...environment(),
     GITHUB_REF: ref,
     GITHUB_EVENT_NAME: "workflow_dispatch",
-    GITHUB_WORKFLOW_REF: `tiangong-lca/data-foundry/.github/workflows/publish-foundry.yml@${ref}`,
+    GITHUB_WORKFLOW_REF: `tiangong-lca/foundry/.github/workflows/publish-foundry.yml@${ref}`,
   });
   assert.equal(value.predicate.buildDefinition.externalParameters.workflow.ref, ref);
   assert.equal(

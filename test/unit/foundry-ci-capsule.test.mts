@@ -13,6 +13,7 @@ import {
   type VerifiedCapsule,
   type CapsuleReceipt,
 } from "../../scripts/lib/foundry-ci-capsule.ts";
+import { currentCapsuleRepositoryIdentity } from "../../scripts/lib/foundry-ci-capsule.ts";
 
 const identity = {
   repository: { id: "1234", owner_id: "123" },
@@ -85,16 +86,16 @@ test("capsule provenance policy reads certificate identity instead of a forged p
   const cert = {
     issuer: "https://token.actions.githubusercontent.com",
     runnerEnvironment: "github-hosted",
-    sourceRepositoryURI: "https://github.com/tiangong-lca/data-foundry",
+    sourceRepositoryURI: "https://github.com/tiangong-lca/foundry",
     sourceRepositoryDigest: identity.source.commit,
     sourceRepositoryIdentifier: identity.repository.id,
     sourceRepositoryOwnerIdentifier: identity.repository.owner_id,
-    buildConfigURI: `https://github.com/tiangong-lca/data-foundry/${origin.workflow}@${origin.ref}`,
+    buildConfigURI: `https://github.com/tiangong-lca/foundry/${origin.workflow}@${origin.ref}`,
     buildConfigDigest: identity.source.commit,
     buildSignerDigest: identity.source.commit,
     sourceRepositoryRef: origin.ref,
-    buildSignerURI: `https://github.com/tiangong-lca/data-foundry/${origin.workflow}@${origin.ref}`,
-    runInvocationURI: "https://github.com/tiangong-lca/data-foundry/actions/runs/123/attempts/1",
+    buildSignerURI: `https://github.com/tiangong-lca/foundry/${origin.workflow}@${origin.ref}`,
+    runInvocationURI: "https://github.com/tiangong-lca/foundry/actions/runs/123/attempts/1",
   };
   const verification = (certificate: unknown) => [
     {
@@ -137,4 +138,22 @@ test("capsule inventory rejects links and a serialized receipt cannot grant mate
       ),
     /verified/u,
   );
+});
+
+test("capsule identity generation uses current ids and is never blocked by the publication floor", () => {
+  // Current organization/repository ids pass even though the candidate package
+  // version may still be 0.1.8 (the npm floor only governs publication, not capsules).
+  assert.deepEqual(currentCapsuleRepositoryIdentity("1260957221", "327771381"), {
+    id: "1260957221",
+    owner_id: "327771381",
+  });
+  assert.throws(
+    () => currentCapsuleRepositoryIdentity("1260957221", "199785309"),
+    /current source profile/u,
+  );
+  assert.throws(
+    () => currentCapsuleRepositoryIdentity("1260957222", "327771381"),
+    /current source profile/u,
+  );
+  assert.throws(() => currentCapsuleRepositoryIdentity(undefined, "327771381"), /missing/u);
 });

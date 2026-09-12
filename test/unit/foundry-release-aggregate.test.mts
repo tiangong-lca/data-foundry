@@ -12,7 +12,7 @@ import {
 const sha = (value: Uint8Array | string) => createHash("sha256").update(value).digest("hex");
 const encode = (value: unknown) => Buffer.from(JSON.stringify(value));
 const source = {
-  repository: "https://github.com/tiangong-lca/data-foundry",
+  repository: "https://github.com/tiangong-lca/foundry",
   commit: "a".repeat(40),
   tree: "b".repeat(40),
   date: "2026-09-07T00:00:00.000Z",
@@ -49,7 +49,7 @@ function samples() {
         files,
         archive: {
           format: "tar-gzip-ustar-v1" as const,
-          url: `https://github.com/tiangong-lca/data-foundry/releases/download/foundry-v0.1.0/${id}-${version}-${platform}.tar.gz`,
+          url: `https://github.com/tiangong-lca/foundry/releases/download/foundry-v0.1.0/${id}-${version}-${platform}.tar.gz`,
           bytes: 1,
           sha256: sha("x"),
         },

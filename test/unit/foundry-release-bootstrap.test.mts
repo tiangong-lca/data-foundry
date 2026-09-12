@@ -79,7 +79,7 @@ function fixtureManifest(): RuntimeManifest {
       files: selected,
       archive: {
         format: "tar-gzip-ustar-v1" as const,
-        url: `https://github.com/tiangong-lca/data-foundry/releases/download/foundry-v0.1.0/node-${inputs.node.version}-${platform}.tar.gz`,
+        url: `https://github.com/tiangong-lca/foundry/releases/download/foundry-v0.1.0/node-${inputs.node.version}-${platform}.tar.gz`,
         bytes: 100,
         sha256: sha(platform),
       },
@@ -119,7 +119,7 @@ function trust(manifest: RuntimeManifest) {
 test("bootstrap lock matches the released C1 schema and binds existing complete base components", () => {
   const trusted = trust(fixtureManifest());
   const url =
-    "https://github.com/tiangong-lca/data-foundry/releases/download/foundry-runtime-v0.1.0/runtime-manifest.json";
+    "https://github.com/tiangong-lca/foundry/releases/download/foundry-runtime-v0.1.0/runtime-manifest.json";
   const lock = createFoundryBootstrapLock(trusted, url);
   const schema = JSON.parse(
     fs.readFileSync(
@@ -162,7 +162,7 @@ test("a bootstrap lock cannot hide missing CLI bytes or a mismatched checksum in
       () =>
         createFoundryBootstrapLock(
           trust(broken),
-          "https://github.com/tiangong-lca/data-foundry/releases/download/foundry-v0.1.0/runtime-candidate.json",
+          "https://github.com/tiangong-lca/foundry/releases/download/foundry-v0.1.0/runtime-candidate.json",
         ),
       /Bootstrap/u,
     );

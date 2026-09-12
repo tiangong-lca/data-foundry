@@ -114,7 +114,7 @@ function sourceState() {
   )
     throw new Error("Runtime assembly requires its own clean source checkout.");
   return {
-    repository: "https://github.com/tiangong-lca/data-foundry",
+    repository: "https://github.com/tiangong-lca/foundry",
     commit: git(root, ["rev-parse", "HEAD"]).trim(),
     tree: git(root, ["rev-parse", "HEAD^{tree}"]).trim(),
     date: new Date(git(root, ["show", "-s", "--format=%cI", "HEAD"]).trim()).toISOString(),

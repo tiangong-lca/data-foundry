@@ -144,7 +144,7 @@ export function createFoundrySpdxDocument(
 ) {
   npmReleasePolicy({ package: "foundry", version: context.version, gitHead: context.sourceCommit });
   const namespace = new URL(
-    context.namespaceRepository ?? "https://github.com/tiangong-lca/data-foundry",
+    context.namespaceRepository ?? "https://github.com/tiangong-lca/foundry",
   );
   const creator = context.creator ?? `Tool: tiangong-foundry-release-${context.version}`;
   if (

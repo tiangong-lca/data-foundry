@@ -37,7 +37,7 @@ async function main(args: readonly string[]) {
   )
     throw new Error("Bootstrap qualification requires its own clean source checkout.");
   const source = {
-    repository: "https://github.com/tiangong-lca/data-foundry",
+    repository: "https://github.com/tiangong-lca/foundry",
     commit: git(root, ["rev-parse", "HEAD"]).trim(),
     tree: git(root, ["rev-parse", "HEAD^{tree}"]).trim(),
     date: new Date(git(root, ["show", "-s", "--format=%cI", "HEAD"]).trim()).toISOString(),

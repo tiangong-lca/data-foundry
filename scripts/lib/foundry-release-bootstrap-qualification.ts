@@ -121,7 +121,7 @@ export async function qualifyFoundryBootstrap(request: {
     throw new Error(
       "Bootstrap qualification requires exactly the archive inputs for its selected mode.",
     );
-  const url = `https://github.com/tiangong-lca/data-foundry/releases/download/foundry-v${manifest.product.version}/runtime-candidate.json`;
+  const url = `https://github.com/tiangong-lca/foundry/releases/download/foundry-v${manifest.product.version}/runtime-candidate.json`;
   const lock = createFoundryBootstrapLock(request.trusted, url);
   const shell = executable();
   const scripts = await Promise.all(

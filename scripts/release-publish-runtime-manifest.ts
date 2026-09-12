@@ -55,7 +55,7 @@ async function main(args: readonly string[]) {
     version: string;
   };
   const source = {
-    repository: "https://github.com/tiangong-lca/data-foundry",
+    repository: "https://github.com/tiangong-lca/foundry",
     commit: context.head,
     tree: context.tree,
     date: new Date(git(root, ["show", "-s", "--format=%cI", "HEAD"]).trim()).toISOString(),
@@ -84,7 +84,7 @@ async function main(args: readonly string[]) {
   );
   const parsed = reports.map((bytes) => JSON.parse(bytes.toString("utf8")) as unknown);
   const qualification = verifyFoundryPublicBootstrapReports(parsed, trusted, source);
-  const candidateUrl = `https://github.com/tiangong-lca/data-foundry/releases/download/${context.tag}/runtime-candidate.json`;
+  const candidateUrl = `https://github.com/tiangong-lca/foundry/releases/download/${context.tag}/runtime-candidate.json`;
   const publicCandidate = await fetchFoundryNativeBytes(candidateUrl, trusted.sha256);
   if (!publicCandidate.equals(manifestBytes))
     throw new Error("Public candidate manifest differs from qualified bytes.");
@@ -98,7 +98,7 @@ async function main(args: readonly string[]) {
     tags,
   );
   const tag = finalTag.ref.slice("refs/tags/".length);
-  const manifestUrl = `https://github.com/tiangong-lca/data-foundry/releases/download/${tag}/runtime-manifest.json`;
+  const manifestUrl = `https://github.com/tiangong-lca/foundry/releases/download/${tag}/runtime-manifest.json`;
   const lockBytes = json(createFoundryBootstrapLock(trusted, manifestUrl));
   const scripts = await Promise.all(
     (["posix", "powershell"] as const).map(async (kind) => {
@@ -118,7 +118,7 @@ async function main(args: readonly string[]) {
     version: context.version,
     ...qualification,
     run: {
-      repository: "tiangong-lca/data-foundry",
+      repository: "tiangong-lca/foundry",
       id: process.env.GITHUB_RUN_ID,
       attempt: process.env.GITHUB_RUN_ATTEMPT,
     },
@@ -140,7 +140,7 @@ async function main(args: readonly string[]) {
   );
   for (const asset of assets) {
     const downloaded = await fetchFoundryNativeBytes(
-      `https://github.com/tiangong-lca/data-foundry/releases/download/${tag}/${asset.name}`,
+      `https://github.com/tiangong-lca/foundry/releases/download/${tag}/${asset.name}`,
       hash(asset.bytes),
     );
     if (!downloaded.equals(asset.bytes))

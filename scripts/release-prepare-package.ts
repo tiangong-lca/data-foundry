@@ -60,7 +60,7 @@ async function main(args: readonly string[]): Promise<void> {
     status: "prepared",
     package: { name: "@tiangong-lca/foundry", version: context.version },
     source: {
-      repository: "https://github.com/tiangong-lca/data-foundry",
+      repository: "https://github.com/tiangong-lca/foundry",
       commit: context.head,
       tree: context.tree,
       tag: context.tag,

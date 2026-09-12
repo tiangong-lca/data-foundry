@@ -42,7 +42,7 @@ export function aggregateFoundryRuntimeManifests(
 ) {
   if (
     results.length !== platforms.length ||
-    expectation.source.repository !== "https://github.com/tiangong-lca/data-foundry" ||
+    expectation.source.repository !== "https://github.com/tiangong-lca/foundry" ||
     !/^[0-9a-f]{40}$/u.test(expectation.source.commit) ||
     !/^[0-9a-f]{40}$/u.test(expectation.source.tree) ||
     !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(expectation.source.date) ||
@@ -168,7 +168,7 @@ export function aggregateFoundryRuntimeManifests(
           : component.id === "node"
             ? inputs.node.version
             : inputs.tidas.version;
-      const url = `https://github.com/tiangong-lca/data-foundry/releases/download/foundry-v${expectation.version}/${component.id}-${version}-${target}.tar.gz`;
+      const url = `https://github.com/tiangong-lca/foundry/releases/download/foundry-v${expectation.version}/${component.id}-${version}-${target}.tar.gz`;
       if (
         component.platform !== target ||
         component.version !== version ||

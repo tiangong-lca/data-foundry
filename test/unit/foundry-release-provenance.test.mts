@@ -52,7 +52,11 @@ function statement(expected = cli, ref = `refs/tags/cli-v${cli.version}`) {
           workflow: { ref, repository: policy.repository, path: policy.workflow },
         },
         internalParameters: {
-          github: { event_name: ref === "refs/heads/main" ? "push" : "workflow_dispatch" },
+          github: {
+            event_name: ref === "refs/heads/main" ? "push" : "workflow_dispatch",
+            repository_id: policy.repositoryId,
+            repository_owner_id: policy.ownerId,
+          },
         },
         resolvedDependencies: [
           { uri: `git+${policy.repository}@${ref}`, digest: { gitCommit: expected.gitHead } },
@@ -153,6 +157,13 @@ test("provenance policy binds package bytes, source, workflow, signer and hosted
     },
     (value) => {
       value.predicate.buildDefinition.internalParameters.github.event_name = "pull_request";
+    },
+    (value) => {
+      value.predicate.buildDefinition.internalParameters.github.repository_id = "1194220835";
+    },
+    (value) => {
+      // The current owner id on a legacy-version statement is a mixed identity.
+      value.predicate.buildDefinition.internalParameters.github.repository_owner_id = "327771381";
     },
     (value) => {
       value.predicateType = "https://example.invalid/provenance";

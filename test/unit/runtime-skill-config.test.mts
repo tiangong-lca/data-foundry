@@ -52,7 +52,7 @@ test("migrated Foundry entry and authoring packages resolve to Skills without tr
     );
     const shared = config.shared_runtime_skills.find((entry) => entry.name === name);
     assert.ok(shared);
-    assert.equal(shared.source, "https://github.com/tiangong-lca/skills");
+    assert.equal(shared.source, "https://github.com/tiangong-lca/agent-skills");
     assert.equal(shared.source_type, "github");
     assert.ok(shared.install_command.includes(`--skill ${name}`));
     assert.ok(pkg.scripts["skills:install:shared"].includes(name));

@@ -30,7 +30,7 @@ function sourceState() {
   )
     throw new Error("Runtime aggregation requires its own clean source checkout.");
   return {
-    repository: "https://github.com/tiangong-lca/data-foundry",
+    repository: "https://github.com/tiangong-lca/foundry",
     commit: git(root, ["rev-parse", "HEAD"]).trim(),
     tree: git(root, ["rev-parse", "HEAD^{tree}"]).trim(),
     date: new Date(git(root, ["show", "-s", "--format=%cI", "HEAD"]).trim()).toISOString(),
@@ -140,7 +140,7 @@ export async function prepareFoundryRuntimeAggregate(
     const bootstrapLock = json(
       createFoundryBootstrapLock(
         trusted,
-        `https://github.com/tiangong-lca/data-foundry/releases/download/foundry-v${version}/runtime-candidate.json`,
+        `https://github.com/tiangong-lca/foundry/releases/download/foundry-v${version}/runtime-candidate.json`,
       ),
     );
     const bootstrap = writeFoundryComponentFile(output, "bootstrap-lock.json", bootstrapLock);

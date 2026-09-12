@@ -51,7 +51,7 @@ export function createFoundryBootstrapLock(
   const bytes = copyTrustedRuntimeManifestBytes(trusted);
   const manifest = trusted.manifest;
   const version = manifest.product.version;
-  const origin = "https://github.com/tiangong-lca/data-foundry/releases/download/";
+  const origin = "https://github.com/tiangong-lca/foundry/releases/download/";
   if (
     manifest.product.id !== "tiangong-foundry" ||
     !["foundry", "foundry-read"].includes(entry) ||

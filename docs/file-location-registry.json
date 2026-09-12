@@ -1,7 +1,7 @@
 {
   "$schema": "../specs/schemas/file-location-registry.schema.json",
   "schema_version": 1,
-  "updated_at_utc": "2026-09-10T22:57:35Z",
+  "updated_at_utc": "2026-09-13T00:00:00Z",
   "policy_doc": "docs/file-organization.md",
   "entries": [
     {
@@ -742,6 +742,6 @@
       "notes": "Parses explicit public reference input and records immutable indexed control snapshots."
     }
   ],
-  "lastReviewedCommit": "dab4be5ac469df554ae0e2c228ff500cb8a8c88d",
-  "lastReviewedNote": "Reviewed for Foundry #144: canonical skill packages are recorded by .agents/shared-skills.json and maintained in Skills; local installations are ignored. Existing file-location entries remain valid and no private operator path moves."
+  "lastReviewedCommit": "abac241b9dd9a302c4dc9a985f798d0eb77f62f3",
+  "lastReviewedNote": "Reviewed for Foundry #161: canonical GitHub release/CI/provenance identity moves to tiangong-lca/foundry (repository id 1260957221, owner id 327771381) with a 0.1.8 publication floor; workspace checkout owner labels continue to name the stable root-managed directories; the repository rename does not rename local paths."
 }

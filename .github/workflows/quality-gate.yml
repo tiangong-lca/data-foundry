@@ -63,7 +63,7 @@ jobs:
           FOUNDRY_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           GH_TOKEN: ${{ github.token }}
           FOUNDRY_RESUME_RUN: ${{ inputs.resume_run_id || '' }}
-          FOUNDRY_CI_CAN_SEAL: ${{ github.repository == 'tiangong-lca/data-foundry' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+          FOUNDRY_CI_CAN_SEAL: ${{ github.repository == 'tiangong-lca/foundry' && github.repository_id == '1260957221' && github.repository_owner_id == '327771381' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
         run: node scripts/ci-plan.ts --github-output
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:

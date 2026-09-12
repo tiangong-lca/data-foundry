@@ -74,7 +74,7 @@ async function main(args: readonly string[]): Promise<void> {
   const output = path.join(root, "package-artifacts", "runtime-publication");
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.mkdirSync(output, { mode: 0o700 });
-  const candidateUrl = `https://github.com/tiangong-lca/data-foundry/releases/download/${context.tag}/runtime-candidate.json`;
+  const candidateUrl = `https://github.com/tiangong-lca/foundry/releases/download/${context.tag}/runtime-candidate.json`;
   const report = {
     schema: "tiangong-foundry.runtime-component-publication.v1",
     status: "published",

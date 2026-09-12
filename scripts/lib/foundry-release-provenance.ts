@@ -4,10 +4,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { verify as verifySigstore, type Bundle } from "sigstore";
-import {
-  FOUNDRY_PUBLISH_WORKFLOW,
-  FOUNDRY_RELEASE_REPOSITORY,
-} from "./foundry-release-contract.ts";
+import { FOUNDRY_PUBLISH_WORKFLOW } from "./foundry-release-contract.ts";
+import { cliDependencyIdentity, foundryRepositoryIdentity } from "./foundry-repository-identity.ts";
 
 const registry = "https://registry.npmjs.org";
 const predicateType = "https://slsa.dev/provenance/v1";
@@ -23,8 +21,11 @@ export interface NpmReleaseExpectation {
 }
 
 interface NpmReleasePolicy {
+  readonly epoch: "legacy" | "current";
   readonly name: string;
   readonly repository: string;
+  readonly repositoryId: string;
+  readonly ownerId: string;
   readonly workflow: string;
   readonly refs: readonly string[];
 }
@@ -99,9 +100,18 @@ export function npmReleasePolicy(expected: NpmReleaseExpectation): NpmReleasePol
   if (!/^[0-9a-f]{40}$/u.test(expected.gitHead))
     throw new Error("npm release requires an exact source commit.");
   const foundry = expected.package === "foundry";
+  // One source profile per release version: published versions through the legacy
+  // ceiling keep their historical repository/owner, later versions use the current
+  // identity. Numeric repository IDs are the continuity anchors across the rename.
+  const identity = foundry
+    ? foundryRepositoryIdentity(expected.version)
+    : cliDependencyIdentity(expected.version);
   return Object.freeze({
+    epoch: identity.epoch,
     name: `@tiangong-lca/${expected.package}`,
-    repository: `https://github.com/${foundry ? FOUNDRY_RELEASE_REPOSITORY : "tiangong-lca/tiangong-cli"}`,
+    repository: `https://github.com/${identity.repository}`,
+    repositoryId: identity.repositoryId,
+    ownerId: identity.ownerId,
     workflow: foundry ? FOUNDRY_PUBLISH_WORKFLOW : ".github/workflows/publish.yml",
     refs: Object.freeze(
       foundry
@@ -215,6 +225,8 @@ export function validateNpmProvenanceStatement(
     record(build.internalParameters, "provenance internal parameters").github,
     "provenance GitHub parameters",
   );
+  if (github.repository_id !== policy.repositoryId || github.repository_owner_id !== policy.ownerId)
+    throw new Error("npm provenance repository identity does not match the source profile.");
   const events =
     expected.package === "foundry"
       ? [ref === "refs/heads/main" ? "push" : "workflow_dispatch"]
@@ -276,6 +288,19 @@ function requireProvenanceEnvelope(value: unknown): { bundle: Bundle; payload: B
   return { bundle: bundle as Bundle, payload };
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+// Fulcio's modern extensions carry DER UTF8String values. The policy values here are
+// bounded ASCII IDs/refs/SHAs, so the short-form length byte is exact.
+function certificateString(value: string): string {
+  const bytes = Buffer.from(value, "utf8");
+  if (bytes.length >= 128 || !/^[\x20-\x7e]+$/u.test(value))
+    throw new Error("certificate policy value is outside the bounded ASCII contract.");
+  return String.fromCharCode(0x0c, bytes.length) + value;
+}
+
 /** Verifies a standalone CI-produced bundle; registry publication is a separate fact. */
 export async function verifyNpmProvenanceBundle(
   bundleBytes: Buffer,
@@ -289,14 +314,46 @@ export async function verifyNpmProvenanceBundle(
   const { bundle, payload } = requireProvenanceEnvelope(
     parseJson(Buffer.from(bundleBytes), maxAttestationBytes, "provenance bundle"),
   );
-  const identities = policy.refs.map((ref) => `${policy.repository}/${policy.workflow}@${ref}`);
-  const expression = `^(?:${identities.map((identity) => identity.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")).join("|")})$`;
+  // Policy selection reads the decoded payload only. Sigstore must then prove that the
+  // certificate carries the same repository/ref/event/IDs before anything is trusted.
+  const statement = parseJson(payload, maxAttestationBytes, "provenance");
+  const build = record(
+    record(record(statement, "provenance statement").predicate, "provenance predicate")
+      .buildDefinition,
+    "provenance build definition",
+  );
+  const workflow = record(
+    record(build.externalParameters, "provenance external parameters").workflow,
+    "provenance workflow",
+  );
+  if (typeof workflow.ref !== "string" || !policy.refs.includes(workflow.ref))
+    throw new Error("npm provenance ref is outside the policy for this release version.");
+  const github = record(
+    record(build.internalParameters, "provenance internal parameters").github,
+    "provenance GitHub parameters",
+  );
+  const events =
+    expected.package === "foundry"
+      ? [workflow.ref === "refs/heads/main" ? "push" : "workflow_dispatch"]
+      : ["push", "workflow_dispatch"];
+  if (typeof github.event_name !== "string" || !events.includes(github.event_name))
+    throw new Error("npm provenance event cannot publish this package ref.");
+  const identity = `${policy.repository}/${policy.workflow}@${workflow.ref}`;
   const cache = fs.mkdtempSync(path.join(os.tmpdir(), "foundry-npm-trust-"));
   try {
     fs.chmodSync(cache, 0o700);
     const signer = await verifySigstore(bundle, {
       certificateIssuer: issuer,
-      certificateIdentityURI: expression,
+      certificateIdentityURI: `^${escapeRegExp(identity)}$`,
+      certificateOIDs: {
+        "1.3.6.1.4.1.57264.1.11": certificateString("github-hosted"),
+        "1.3.6.1.4.1.57264.1.12": certificateString(policy.repository),
+        "1.3.6.1.4.1.57264.1.13": certificateString(expected.gitHead),
+        "1.3.6.1.4.1.57264.1.14": certificateString(workflow.ref),
+        "1.3.6.1.4.1.57264.1.15": certificateString(policy.repositoryId),
+        "1.3.6.1.4.1.57264.1.17": certificateString(policy.ownerId),
+        "1.3.6.1.4.1.57264.1.20": certificateString(github.event_name),
+      },
       ctLogThreshold: 1,
       tlogThreshold: 1,
       timeout: 30_000,
@@ -306,12 +363,7 @@ export async function verifyNpmProvenanceBundle(
     const signerIdentity = signer.identity?.subjectAlternativeName;
     if (typeof signerIdentity !== "string")
       throw new Error("npm release requires a verified certificate signer identity.");
-    return validateNpmProvenanceStatement(
-      parseJson(payload, maxAttestationBytes, "provenance"),
-      expected,
-      sha512,
-      signerIdentity,
-    );
+    return validateNpmProvenanceStatement(statement, expected, sha512, signerIdentity);
   } finally {
     fs.rmSync(cache, { recursive: true, force: true });
   }

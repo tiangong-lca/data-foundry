@@ -37,7 +37,7 @@ concurrency:
 jobs:
   diagnose-npm-oidc:
     name: Diagnose npm OIDC without publication
-    if: github.repository == 'tiangong-lca/data-foundry' && github.event_name == 'workflow_dispatch' && inputs.diagnose_npm_oidc
+    if: github.repository == 'tiangong-lca/foundry' && github.repository_id == '1260957221' && github.repository_owner_id == '327771381' && github.event_name == 'workflow_dispatch' && inputs.diagnose_npm_oidc
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -58,7 +58,7 @@ jobs:
         run: pnpm release:diagnose-npm-oidc
   release-context:
     name: Exact release context
-    if: github.repository == 'tiangong-lca/data-foundry' && !(github.event_name == 'workflow_dispatch' && (inputs.diagnose_npm_oidc || inputs.diagnose_platform != 'none'))
+    if: github.repository == 'tiangong-lca/foundry' && github.repository_id == '1260957221' && github.repository_owner_id == '327771381' && !(github.event_name == 'workflow_dispatch' && (inputs.diagnose_npm_oidc || inputs.diagnose_platform != 'none'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -621,7 +621,7 @@ jobs:
           fi
   diagnose-platform:
     name: Diagnose published native platform without publication
-    if: github.repository == 'tiangong-lca/data-foundry' && github.event_name == 'workflow_dispatch' && inputs.diagnose_platform != 'none'
+    if: github.repository == 'tiangong-lca/foundry' && github.repository_id == '1260957221' && github.repository_owner_id == '327771381' && github.event_name == 'workflow_dispatch' && inputs.diagnose_platform != 'none'
     runs-on: ${{ fromJSON('{"linux-x64":"ubuntu-latest","linux-arm64":"ubuntu-24.04-arm","darwin-arm64":"macos-latest","win32-x64":"windows-latest"}')[inputs.diagnose_platform] }}
     timeout-minutes: 25
     permissions:
