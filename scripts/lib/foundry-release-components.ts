@@ -566,7 +566,9 @@ export async function prepareFoundryRuntimeComponents(
         platform,
         archive: {
           format: "tar-gzip-ustar-v1",
-          url: `${policy.repository}/releases/download/${tag}/${filename}`,
+          // Candidate artifacts belong to this producer, even while its version
+          // is inside the historical npm window. npm policy only verifies old bytes.
+          url: `${source.repository}/releases/download/${tag}/${filename}`,
           ...archive,
         },
         files: item.files,

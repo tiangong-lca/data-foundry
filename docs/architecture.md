@@ -152,8 +152,8 @@ checkPaths:
   - test/unit/lint-suppression-audit.test.mts
   - docs/incremental-change-set-contract.md
 lastReviewedAt: 2026-09-13
-lastReviewedCommit: abac241b9dd9a302c4dc9a985f798d0eb77f62f3
-lastReviewedNote: "Reviewed for Foundry #161: repository and release metadata now use canonical foundry identity. npm history retains version-bound source verification; package/runtime pins, golden behavior and task/account permission gates are unchanged."
+lastReviewedCommit: 45891ef78a2df8ef167a209f15843c64ad544576
+lastReviewedNote: "Reviewed Foundry #161 CI correction: source-candidate component URLs bind the current producer repository independently of historical npm verification. Versions, archives, task/permission and native qualification gates remain unchanged."
 ---
 
 # Architecture

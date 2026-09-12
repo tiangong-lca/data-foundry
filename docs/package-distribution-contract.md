@@ -35,8 +35,8 @@ checkPaths:
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
 lastReviewedAt: 2026-09-13
-lastReviewedCommit: abac241b9dd9a302c4dc9a985f798d0eb77f62f3
-lastReviewedNote: "Reviewed for Foundry #161: canonical producers use the new organization; historical npm verification binds the version-specific repository/owner and certificate OIDs. Publication floors preserve old artifacts, and unchanged-version source commits do not release."
+lastReviewedCommit: 45891ef78a2df8ef167a209f15843c64ad544576
+lastReviewedNote: "Reviewed Foundry #161 CI correction: source-candidate component URLs bind the current producer repository independently of historical npm verification. Versions, archives, task/permission and native qualification gates remain unchanged."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md

@@ -263,8 +263,8 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-13
-lastReviewedCommit: abac241b9dd9a302c4dc9a985f798d0eb77f62f3
-lastReviewedNote: "Reviewed for Foundry #161: canonical repository and shared-skill sources move to foundry/agent-skills; version-bound npm identity and current-owner CI capsules retain task, account and workspace completion boundaries."
+lastReviewedCommit: 45891ef78a2df8ef167a209f15843c64ad544576
+lastReviewedNote: "Reviewed Foundry #161 CI correction: source-candidate component URLs use the current producer; historical npm verification remains version-bound. Runtime, task, permission and workspace completion boundaries remain unchanged."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
