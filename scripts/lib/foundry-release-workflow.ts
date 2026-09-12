@@ -8,6 +8,12 @@ import {
   readFoundryReleaseGit as git,
   type FoundryReleaseChange,
 } from "./foundry-release-contract.ts";
+import {
+  CURRENT_OWNER_ID,
+  FOUNDRY_LEGACY_LAST_VERSION,
+  FOUNDRY_REPOSITORY_ID,
+  foundryRepositoryIdentity,
+} from "./foundry-repository-identity.ts";
 
 export interface FoundryReleaseWorkflowEvent {
   readonly mode: "main-push" | "tag-recovery";
@@ -51,6 +57,8 @@ export function parseFoundryReleaseWorkflowEvent(
   if (
     environment.GITHUB_ACTIONS !== "true" ||
     environment.GITHUB_REPOSITORY !== FOUNDRY_RELEASE_REPOSITORY ||
+    environment.GITHUB_REPOSITORY_ID !== FOUNDRY_REPOSITORY_ID ||
+    environment.GITHUB_REPOSITORY_OWNER_ID !== CURRENT_OWNER_ID ||
     record(event.repository, "event repository").full_name !== FOUNDRY_RELEASE_REPOSITORY ||
     !sha(head) ||
     typeof ref !== "string" ||
@@ -119,6 +127,15 @@ export function inspectFoundryReleaseWorkflow(
   git(root, ["merge-base", "--is-ancestor", event.head, "refs/remotes/origin/main"]);
   const base = event.base ?? git(root, ["rev-parse", `${event.head}^1`]).trim();
   const inspection = inspectFoundryRelease(root, base, event.head);
+  // Publication floor (Foundry #161): versions at or below the frozen legacy ceiling
+  // stay bound to the historical source profile and cannot be released from the
+  // current repository identity, so a lower/backport version cannot become unverifiable.
+  if (inspection.release && foundryRepositoryIdentity(inspection.version).epoch !== "current")
+    throw new Error(
+      `Foundry publication floor: version ${inspection.version} is at or below the frozen ` +
+        `legacy ceiling ${FOUNDRY_LEGACY_LAST_VERSION} and cannot be released under the ` +
+        "current repository identity.",
+    );
   if (event.mode === "tag-recovery") {
     if (
       !inspection.release ||

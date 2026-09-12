@@ -245,7 +245,7 @@ export async function prepareFoundryProductionInput(
       status: "prepared",
       scope: "npm-production-input",
       source: {
-        repository: "https://github.com/tiangong-lca/data-foundry",
+        repository: "https://github.com/tiangong-lca/foundry",
         commit: sourceCommit,
         tree: sourceTree,
         date: sourceDate,

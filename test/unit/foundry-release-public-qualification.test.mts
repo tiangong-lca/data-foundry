@@ -11,7 +11,7 @@ import { verifyFoundryPublicBootstrapReports } from "../../scripts/lib/foundry-r
 
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 const source = {
-  repository: "https://github.com/tiangong-lca/data-foundry",
+  repository: "https://github.com/tiangong-lca/foundry",
   commit: "a".repeat(40),
   tree: "b".repeat(40),
   date: "2026-09-07T00:00:00.000Z",
@@ -33,7 +33,7 @@ function fixture() {
         files: [file],
         archive: {
           format: "tar-gzip-ustar-v1" as const,
-          url: `https://github.com/tiangong-lca/data-foundry/releases/download/foundry-v0.1.0/${id}-${platform}.tar.gz`,
+          url: `https://github.com/tiangong-lca/foundry/releases/download/foundry-v0.1.0/${id}-${platform}.tar.gz`,
           bytes: 1,
           sha256: hash("archive"),
         },
@@ -98,7 +98,7 @@ function fixture() {
     cache_status: "ready",
     manifest_sha256: trusted.sha256,
     manifest_url:
-      "https://github.com/tiangong-lca/data-foundry/releases/download/foundry-v0.1.0/runtime-candidate.json",
+      "https://github.com/tiangong-lca/foundry/releases/download/foundry-v0.1.0/runtime-candidate.json",
     script_sha256: {
       posix: inputs.cli.bootstrap.posix.sha256,
       powershell: inputs.cli.bootstrap.powershell.sha256,

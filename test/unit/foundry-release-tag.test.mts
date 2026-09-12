@@ -7,8 +7,8 @@ import {
 } from "../../scripts/lib/foundry-release-tag.ts";
 
 const head = "a".repeat(40);
-const request = { version: "0.1.1", head };
-const ref = "refs/tags/foundry-v0.1.1";
+const request = { version: "0.1.9", head };
+const ref = "refs/tags/foundry-v0.1.9";
 
 test("tag creation derives one immutable ref and reuses only the same source commit", async () => {
   let value: { ref: string; head: string } | null = null;
@@ -47,7 +47,7 @@ test("a different existing tag target can never be changed by the release helper
 });
 
 test("the runtime manifest gets a distinct exact-source tag without broadening arbitrary ref access", async () => {
-  const runtimeRef = "refs/tags/foundry-runtime-v0.1.1";
+  const runtimeRef = "refs/tags/foundry-runtime-v0.1.9";
   const result = await ensureFoundryReleaseTag(
     { ...request, kind: "manifest" },
     {
@@ -60,7 +60,7 @@ test("the runtime manifest gets a distinct exact-source tag without broadening a
   );
   assert.equal(result.ref, runtimeRef);
   const store = createGitHubFoundryTagStore("test-only-token", async (url) => {
-    assert.ok(url.endsWith("git/ref/tags/foundry-runtime-v0.1.1"));
+    assert.ok(url.endsWith("git/ref/tags/foundry-runtime-v0.1.9"));
     return Response.json({ ref: runtimeRef, object: { type: "commit", sha: head } });
   });
   assert.deepEqual(await store.read(runtimeRef), { ref: runtimeRef, head });
@@ -133,17 +133,49 @@ test("invalid versions, commits and response identities fail before success", as
   );
 });
 
+test("publication floor rejects legacy versions on creation but keeps historical tags verifiable", async () => {
+  let writes = 0;
+  const store: FoundryReleaseTagStore = {
+    read: async () => null,
+    create: async () => {
+      writes++;
+      throw new Error("must not write legacy versions");
+    },
+  };
+  await assert.rejects(
+    ensureFoundryReleaseTag({ version: "0.1.8", head }, store),
+    /publication floor/iu,
+  );
+  await assert.rejects(
+    ensureFoundryReleaseTag({ version: "0.0.33", head }, store),
+    /publication floor/iu,
+  );
+  assert.equal(writes, 0);
+  // An already-existing historical tag stays verifiable through the same helper.
+  const historical: FoundryReleaseTagStore = {
+    read: async (name) => (name === "refs/tags/foundry-v0.1.8" ? { ref: name, head } : null),
+    create: async () => {
+      throw new Error("must not write");
+    },
+  };
+  assert.deepEqual(await ensureFoundryReleaseTag({ version: "0.1.8", head }, historical), {
+    status: "existing",
+    ref: "refs/tags/foundry-v0.1.8",
+    head,
+  });
+});
+
 test("GitHub tag transport peels bounded annotations and creates only exact tag refs", async () => {
   const annotation = "b".repeat(40);
   const calls: { url: string; init: RequestInit }[] = [];
   const store = createGitHubFoundryTagStore("unit-test-token", async (url, init) => {
     calls.push({ url, init });
     assert.equal(init.redirect, "error");
-    if (url.endsWith(`git/ref/tags/foundry-v0.1.1`))
+    if (url.endsWith(`git/ref/tags/foundry-v0.1.9`))
       return Response.json({ ref, object: { type: "tag", sha: annotation } });
     if (url.endsWith(`git/tags/${annotation}`))
       return Response.json({ sha: annotation, object: { type: "commit", sha: head } });
-    assert.equal(url, "https://api.github.com/repos/tiangong-lca/data-foundry/git/refs");
+    assert.equal(url, "https://api.github.com/repos/tiangong-lca/foundry/git/refs");
     assert.equal(init.method, "POST");
     assert.deepEqual(JSON.parse(String(init.body)), { ref, sha: head });
     return Response.json({ ref, object: { type: "commit", sha: head } }, { status: 201 });

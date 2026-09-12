@@ -23,7 +23,7 @@ import { loadFoundryTestPlan } from "./foundry-ci-plan.ts";
 import { readVerifiedFoundryCiPackage } from "./foundry-ci-package.ts";
 import { readFoundryReleaseGit } from "./foundry-release-contract.ts";
 
-const repo = "tiangong-lca/data-foundry";
+const repo = "tiangong-lca/foundry";
 const root = path.resolve(import.meta.dirname, "../..");
 function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))

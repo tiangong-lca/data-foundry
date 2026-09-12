@@ -36,11 +36,11 @@ async function main() {
     env.GITHUB_JOB !== "diagnose-platform" ||
     env.RUNNER_ENVIRONMENT !== "github-hosted" ||
     env.GITHUB_EVENT_NAME !== "workflow_dispatch" ||
-    env.GITHUB_REPOSITORY !== "tiangong-lca/data-foundry" ||
+    env.GITHUB_REPOSITORY !== "tiangong-lca/foundry" ||
     !/^refs\/heads\/[A-Za-z0-9./_-]{1,200}$/u.test(env.GITHUB_REF ?? "") ||
     env.GITHUB_WORKFLOW_SHA !== env.GITHUB_SHA ||
     env.GITHUB_WORKFLOW_REF !==
-      `tiangong-lca/data-foundry/.github/workflows/publish-foundry.yml@${env.GITHUB_REF}` ||
+      `tiangong-lca/foundry/.github/workflows/publish-foundry.yml@${env.GITHUB_REF}` ||
     git(root, ["rev-parse", "HEAD"]).trim() !== env.GITHUB_SHA ||
     git(root, ["status", "--porcelain", "--untracked-files=all"]).trim()
   )

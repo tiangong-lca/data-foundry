@@ -105,10 +105,10 @@ function expectedPackageManifest() {
     description: packageDescription,
     repository: {
       type: "git",
-      url: "git+https://github.com/tiangong-lca/data-foundry.git",
+      url: "git+https://github.com/tiangong-lca/foundry.git",
     },
-    homepage: "https://github.com/tiangong-lca/data-foundry#readme",
-    bugs: { url: "https://github.com/tiangong-lca/data-foundry/issues" },
+    homepage: "https://github.com/tiangong-lca/foundry#readme",
+    bugs: { url: "https://github.com/tiangong-lca/foundry/issues" },
     publishConfig: { access: "public", registry: "https://registry.npmjs.org/" },
     types: `./${packageTypes}`,
     bin: { "tiangong-foundry": `./${packageBin}` },

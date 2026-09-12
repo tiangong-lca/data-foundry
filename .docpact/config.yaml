@@ -1,3 +1,4 @@
+# Review note, 2026-09-13: Foundry #161 moves the canonical release/CI identity to tiangong-lca/foundry (repository id 1260957221, owner id 327771381) with version-bound provenance profiles, certificate OID binding and a 0.1.8 publication floor; the legacy profile (tiangong-lca/data-foundry / owner id 199785309) stays bound to published versions through 0.1.8 and no runtime or task authority changes.
 version: 1
 layout: repo
 # Review note, 2026-09-06: #112 extends the existing package distribution rule to source-only version/Git/provenance/workflow admission, their tests and the reusable four-platform qualification workflows. No additional rule, document owner, registry-write or runtime permission is introduced.
@@ -22,14 +23,15 @@ layout: repo
 # Review note, 2026-08-29: Issue #70 also re-reviews the Worldsteel profile family after its operational CLI-version update. The machine profile timestamp and all four governed documents move together; R1-R5, retained counts, cache-miss policy, support ordering, and production authority remain unchanged.
 # Review note, 2026-08-29: Issue #70 replaces the remaining manual scope claim loop with a 166-line Foundry adapter over public CLI batch/run-lock. Existing orchestration rules now cover contract projection, family resource FIFO, pause/stop/drain, the 1,898-line owner, focused boundary cases, and unchanged semantic ledger/report authority.
 # Review note, 2026-08-29: Issue #70 makes the batch public owner a five-line facade and moves the 1,649-line composition root to an explicitly named/budgeted lib path. This preserves the same three exports, help, profile adapters, semantic modules, CLI delegation, and authority while keeping residual composition density visible.
-lastReviewedAt: "2026-09-11"
-lastReviewedCommit: "abedf975f3a0e3b11fe6714dcd8d9d6b192db904"
+lastReviewedAt: "2026-09-13"
+lastReviewedCommit: "abac241b9dd9a302c4dc9a985f798d0eb77f62f3"
+lastReviewedNote: "Reviewed for Foundry #161: canonical identity moves to tiangong-lca/foundry (repository id 1260957221, owner id 327771381) across release guards, CI capsule sealing, package metadata and the provenance verifier with certificate OID binding and a 0.1.8 publication floor; package name/version, CLI/TIDAS pins, historical tags/assets and runtime authorization stay unchanged."
 
 catalog:
   repos:
     - id: data-foundry
       path: .
-      canonicalRepo: tiangong-lca/data-foundry
+      canonicalRepo: tiangong-lca/foundry
       entryDoc: AGENTS.md
       workflowDocs:
         - README.md

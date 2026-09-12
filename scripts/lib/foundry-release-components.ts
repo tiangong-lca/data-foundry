@@ -114,7 +114,7 @@ function sourceState() {
   )
     throw new Error("Runtime assembly requires its own clean source checkout.");
   return {
-    repository: "https://github.com/tiangong-lca/data-foundry",
+    repository: "https://github.com/tiangong-lca/foundry",
     commit: git(root, ["rev-parse", "HEAD"]).trim(),
     tree: git(root, ["rev-parse", "HEAD^{tree}"]).trim(),
     date: new Date(git(root, ["show", "-s", "--format=%cI", "HEAD"]).trim()).toISOString(),
@@ -566,7 +566,9 @@ export async function prepareFoundryRuntimeComponents(
         platform,
         archive: {
           format: "tar-gzip-ustar-v1",
-          url: `${policy.repository}/releases/download/${tag}/${filename}`,
+          // Candidate artifacts belong to this producer, even while its version
+          // is inside the historical npm window. npm policy only verifies old bytes.
+          url: `${source.repository}/releases/download/${tag}/${filename}`,
           ...archive,
         },
         files: item.files,

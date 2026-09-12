@@ -56,7 +56,7 @@ export function verifyFoundryPublicBootstrapReports(
     ["changed-script-rejected", 1],
     ["changed-base-index-rejected", 1],
   ] as const;
-  const expectedUrl = `https://github.com/tiangong-lca/data-foundry/releases/download/foundry-v${trusted.manifest.product.version}/runtime-candidate.json`;
+  const expectedUrl = `https://github.com/tiangong-lca/foundry/releases/download/foundry-v${trusted.manifest.product.version}/runtime-candidate.json`;
   for (const value of values) {
     const report = object(value);
     const platform = report.platform;

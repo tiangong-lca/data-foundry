@@ -262,9 +262,9 @@ checkPaths:
   - test/unit/zero-javascript-ratchet.test.mts
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
-lastReviewedAt: 2026-09-11
-lastReviewedCommit: abedf975f3a0e3b11fe6714dcd8d9d6b192db904
-lastReviewedNote: "Reviewed for #159: Foundry 0.1.8 changes only the three version projections after merged #119/#122/#126. CLI 0.1.14, Node/TIDAS, dependency locks, runtime/permission behavior and release workflow stay unchanged; public qualification and consumer/root completion remain required."
+lastReviewedAt: 2026-09-13
+lastReviewedCommit: 45891ef78a2df8ef167a209f15843c64ad544576
+lastReviewedNote: "Reviewed Foundry #161 CI correction: source-candidate component URLs use the current producer; historical npm verification remains version-bound. Runtime, task, permission and workspace completion boundaries remain unchanged."
 ---
 
 # AGENTS.md - TianGong LCA Data Foundry
@@ -292,7 +292,7 @@ Receive external LCA packages or source documents, choose the correct import lan
 - Foundry owns task routing, local manifests, import profiles, curation packages, cleanup reports, and policy checks.
 - Foundry identity-preflight adapters forward the canonical single lexical weight plus semantic weight; database and Edge repositories own search behavior.
 - Foundry does not own TIDAS schemas/YAML, package converters, dataset validators, deterministic QA engines, reusable skills, or remote write semantics.
-- `.agents/skills` is the project-visible installation root. `foundry-tidas-import` and `foundry-tidas-authoring` are maintained in `tiangong-lca-skills`; Foundry records their canonical source and installation commands in `.agents/shared-skills.json`. Their local installations and other configured shared/runtime skills, together with `skills-lock.json`, stay untracked.
+- `.agents/skills` is the project-visible installation root. `foundry-tidas-import` and `foundry-tidas-authoring` are maintained in the `tiangong-lca/agent-skills` repository (workspace checkout directory `tiangong-lca-skills`); Foundry records their canonical source and installation commands in `.agents/shared-skills.json`. Their local installations and other configured shared/runtime skills, together with `skills-lock.json`, stay untracked.
 - External source-evidence and document-extraction skills, including `tiangong-kb-sci-search` and `document-granular-decompose`, are installed or read from the `skills` registry package through `pnpm dlx skills@latest ...` at runtime before use. Do not copy their retrieval or extraction logic into Foundry.
 - Raw converted rows may preserve source-language text only, but final import/write-ready rows must include `en` for TIDAS-required multilingual fields. When source data is not English, preserve the original language variant and add an evidence-backed English translation from full task context before write planning.
 - Do not implement direct database writes in Foundry.

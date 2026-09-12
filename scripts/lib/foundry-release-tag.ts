@@ -1,4 +1,8 @@
 import { FOUNDRY_RELEASE_REPOSITORY } from "./foundry-release-contract.ts";
+import {
+  FOUNDRY_LEGACY_LAST_VERSION,
+  foundryRepositoryIdentity,
+} from "./foundry-repository-identity.ts";
 
 export interface FoundryReleaseTagTarget {
   readonly ref: string;
@@ -54,6 +58,14 @@ export async function ensureFoundryReleaseTag(
     requireTarget(existing, ref, head);
     return Object.freeze({ status: "existing", ref, head });
   }
+  // Publication floor (Foundry #161): only NEW tag creation is floored. Historical
+  // tags stay immutable and their verification path is untouched.
+  if (foundryRepositoryIdentity(request.version).epoch !== "current")
+    throw new Error(
+      `Foundry publication floor: version ${request.version} is at or below the frozen ` +
+        `legacy ceiling ${FOUNDRY_LEGACY_LAST_VERSION} and cannot be tagged under the ` +
+        "current repository identity.",
+    );
   let created: FoundryReleaseTagTarget;
   try {
     created = await store.create(ref, head);

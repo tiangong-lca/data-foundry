@@ -7,11 +7,13 @@ import {
 
 const head = "a".repeat(40),
   base = "b".repeat(40);
-const repository = "tiangong-lca/data-foundry";
+const repository = "tiangong-lca/foundry";
 function environment(ref = "refs/heads/main", event = "push"): NodeJS.ProcessEnv {
   return {
     GITHUB_ACTIONS: "true",
     GITHUB_REPOSITORY: repository,
+    GITHUB_REPOSITORY_ID: "1260957221",
+    GITHUB_REPOSITORY_OWNER_ID: "327771381",
     GITHUB_SHA: head,
     GITHUB_REF: ref,
     GITHUB_EVENT_NAME: event,
@@ -53,6 +55,8 @@ test("release event binds the canonical workflow definition and exact main push"
   for (const delta of [
     { GITHUB_ACTIONS: "false" },
     { GITHUB_REPOSITORY: "other/data-foundry" },
+    { GITHUB_REPOSITORY_ID: "1260957222" },
+    { GITHUB_REPOSITORY_OWNER_ID: "199785309" },
     { GITHUB_SHA: "HEAD" },
     { GITHUB_WORKFLOW_SHA: base },
     { GITHUB_WORKFLOW_REF: `${repository}/.github/workflows/quality-gate.yml@refs/heads/main` },

@@ -5,7 +5,7 @@ import {
   projectFoundryReleaseVersion,
 } from "./foundry-release-version.ts";
 
-export const FOUNDRY_RELEASE_REPOSITORY = "tiangong-lca/data-foundry";
+export const FOUNDRY_RELEASE_REPOSITORY = "tiangong-lca/foundry";
 export const FOUNDRY_PUBLISH_WORKFLOW = ".github/workflows/publish-foundry.yml";
 
 export interface ReleaseFileChange {

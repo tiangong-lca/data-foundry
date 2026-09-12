@@ -21,7 +21,7 @@ checkPaths:
   - .agents/skills/**
 lastReviewedAt: 2026-09-10
 lastReviewedCommit: d34c8dac60f5872d6e2f7ae5d7ac05a5df21cfa2
-lastReviewedNote: "Reviewed for Foundry #144: skill packages move to Skills; exact owner and derived-route changes have bounded Golden evidence. Runtime gates, task/account authority and private operator state remain unchanged."
+lastReviewedNote: "Reviewed for Foundry #161: active shared-skill URLs use agent-skills; installed release locks and task/account authorization remain unchanged."
 related:
   - AGENTS.md
   - WORKFLOW.md
@@ -33,13 +33,13 @@ related:
 
 Foundry treats skills as execution surfaces, not as a place to copy reusable business logic.
 
-`.agents/skills` is the project-visible installation root. The ordinary `foundry-tidas-import` entry and internal `foundry-tidas-authoring` role are maintained in the canonical `https://github.com/tiangong-lca/skills` repository. Their locally installed copies are ignored, along with other shared/public runtime skills. Installation and update use the `skills` registry package through pnpm. `.agents/shared-skills.json` is a command inventory and ownership record, not a custom skill manager. Runtime-installed shared skill directories are ignored by git, and each source-evidence run records the resolved upstream ref as task evidence.
+`.agents/skills` is the project-visible installation root. The ordinary `foundry-tidas-import` entry and internal `foundry-tidas-authoring` role are maintained in the canonical `https://github.com/tiangong-lca/agent-skills` repository. Their locally installed copies are ignored, along with other shared/public runtime skills. Installation and update use the `skills` registry package through pnpm. `.agents/shared-skills.json` is a command inventory and ownership record, not a custom skill manager. Runtime-installed shared skill directories are ignored by git, and each source-evidence run records the resolved upstream ref as task evidence.
 
 ## Skill Classes
 
 | Class | Source | Storage rule | Update rule |
 | --- | --- | --- | --- |
-| Foundry entry and on-demand authoring | canonical `tiangong-lca/skills` | installed under `.agents/skills`; ignored here | update through Skills; preserve the ordinary entry's shipped release lock |
+| Foundry entry and on-demand authoring | canonical `tiangong-lca/agent-skills` | installed under `.agents/skills`; ignored here | update through Skills; preserve the ordinary entry's shipped release lock |
 | TianGong LCA shared skills | sibling `tiangong-lca-skills` | installed into `.agents/skills` by `pnpm dlx skills@latest add`; ignored in this repo | update the sibling checkout, then run `pnpm skills:install:shared` or `pnpm skills:update` |
 | Source-evidence and document-extraction skills | external skill repos such as `tiangong-ai/skills` | installed or read into `.agents/skills` runtime state; ignored in this repo | resolve latest before each source-evidence run |
 

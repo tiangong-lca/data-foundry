@@ -34,9 +34,9 @@ checkPaths:
   - test/commands/foundry-release-*.test.mts
   - test/unit/runtime-layout.test.mts
   - test/scenarios/foundry-package-consumer.test.mts
-lastReviewedAt: 2026-09-11
-lastReviewedCommit: abedf975f3a0e3b11fe6714dcd8d9d6b192db904
-lastReviewedNote: "Reviewed for #159: Foundry 0.1.8 changes only the three version projections after merged #119/#122/#126. CLI 0.1.14, Node/TIDAS, dependency locks, runtime/permission behavior and release workflow stay unchanged; public qualification and consumer/root completion remain required."
+lastReviewedAt: 2026-09-13
+lastReviewedCommit: 45891ef78a2df8ef167a209f15843c64ad544576
+lastReviewedNote: "Reviewed Foundry #161 CI correction: source-candidate component URLs bind the current producer repository independently of historical npm verification. Versions, archives, task/permission and native qualification gates remain unchanged."
 related:
   - docs/public-runtime-contract.md
   - docs/runtime-context-contract.md
@@ -123,6 +123,14 @@ The repository manifest retains developer scripts. `build-foundry-package.ts` pr
 The public protocol set advertises each shipped external task input: task-start, semantic-input and authorization-input v1. The descriptor and its structural schema agree; including an input schema file in the archive alone does not declare support for that public protocol.
 
 Verification uses regular-file, `O_NOFOLLOW`, fd size/inode/mtime and SHA checks. Missing, extra, linked, renamed, traversing, oversized or changed payloads fail before a package-backed facade context is created. Every package-entry resolution performs this check even if an extra source-like file appears; such a file is itself an unexpected payload and cannot switch the resolver into developer mode. A nested `node_modules` may be dependency storage only when it is a real directory, never a symlink. Source and ordinary developer-emitted layouts remain readable as legacy layout v1 or repository layout v2 without treating a copied name-only manifest as a package.
+
+## Repository migration identity
+
+Current release producers and CI capsules bind `tiangong-lca/foundry`, repository ID `1260957221`, and organization ID `327771381`. CI capsule identity is independent of the candidate package version, so ordinary source validation still works while the package remains `0.1.8`.
+
+npm verification chooses exactly one historical identity from the expected package version: Foundry through `0.1.8` uses `tiangong-lca/data-foundry`, and CLI through `0.1.14` uses `tiangong-lca/tiangong-cli`, both with owner ID `199785309`. Later versions use `foundry` or `cli` under organization ID `327771381`; the CLI repository ID remains `1194220834`. The verifier binds issuer, SAN, certificate repository/owner/source/ref/event extensions, signed provenance and package integrity to the same profile. Repository redirects do not establish signing authority.
+
+New Foundry publication and tag creation require a version above `0.1.8`. Existing tags and released bytes stay immutable. Unchanged-version source commits remain non-release events. Current runtime assembly emits canonical source/download URLs; pinned input manifests and archived signed metadata are not rewritten. npm Trusted Publisher configuration and any later versioned publication require separate live qualification.
 
 ## Version preparation
 

@@ -51,6 +51,7 @@ function fixture(): {
     "scripts/lib/foundry-release-version.ts",
     "scripts/lib/foundry-release-root.ts",
     "scripts/lib/foundry-release-contract.ts",
+    "scripts/lib/foundry-repository-identity.ts",
     "scripts/release-inspect.ts",
     "scripts/lib/foundry-release-workflow.ts",
     "scripts/release-workflow-context.ts",
@@ -231,7 +232,7 @@ test("workflow command skips an ordinary main commit without a token or PR looku
     fs.writeFileSync(
       eventPath,
       JSON.stringify({
-        repository: { full_name: "tiangong-lca/data-foundry" },
+        repository: { full_name: "tiangong-lca/foundry" },
         before: f.initial,
         after: head,
         ref: "refs/heads/main",
@@ -253,11 +254,13 @@ test("workflow command skips an ordinary main commit without a token or PR looku
           GITHUB_TOKEN: "",
           GITHUB_ACTIONS: "true",
           GITHUB_SHA: head,
-          GITHUB_REPOSITORY: "tiangong-lca/data-foundry",
+          GITHUB_REPOSITORY: "tiangong-lca/foundry",
+          GITHUB_REPOSITORY_ID: "1260957221",
+          GITHUB_REPOSITORY_OWNER_ID: "327771381",
           GITHUB_REF: "refs/heads/main",
           GITHUB_EVENT_NAME: "push",
           GITHUB_WORKFLOW_REF:
-            "tiangong-lca/data-foundry/.github/workflows/publish-foundry.yml@refs/heads/main",
+            "tiangong-lca/foundry/.github/workflows/publish-foundry.yml@refs/heads/main",
           GITHUB_WORKFLOW_SHA: head,
           GITHUB_EVENT_PATH: eventPath,
           GITHUB_OUTPUT: output,

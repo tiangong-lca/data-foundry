@@ -5,10 +5,11 @@ import path from "node:path";
 import { captureFoundryCiBuildContext } from "./foundry-ci-identity.ts";
 import { loadFoundryTestPlan } from "./foundry-ci-plan.ts";
 import { foundryCiPlatforms } from "./foundry-ci-results.ts";
+import { CURRENT_OWNER_ID, FOUNDRY_REPOSITORY_ID } from "./foundry-repository-identity.ts";
 import { readFoundryReleaseArtifact } from "./foundry-release-prepared.ts";
 import { freezeFoundryReleaseValue } from "./foundry-release-component-io.ts";
 
-const repository = "tiangong-lca/data-foundry";
+const repository = "tiangong-lca/foundry";
 const root = path.resolve(import.meta.dirname, "../..");
 const sha = /^[a-f0-9]{64}$/u;
 const stages = ["source", "native", "components", "bootstrap"] as const;
@@ -74,10 +75,8 @@ export function currentCapsuleIdentity(): CapsuleIdentity {
   const { source, package: pkg, toolchain } = captureFoundryCiBuildContext();
   const id = process.env.GITHUB_REPOSITORY_ID,
     owner = process.env.GITHUB_REPOSITORY_OWNER_ID;
-  if (!/^[1-9]\d{0,19}$/u.test(id ?? "") || !/^[1-9]\d{0,19}$/u.test(owner ?? ""))
-    throw new Error("Capsule repository identity is missing.");
   return freezeFoundryReleaseValue({
-    repository: { id: id!, owner_id: owner! },
+    repository: currentCapsuleRepositoryIdentity(id, owner),
     source,
     package: pkg,
     toolchain,
@@ -86,6 +85,21 @@ export function currentCapsuleIdentity(): CapsuleIdentity {
     ),
     test_plan_sha256: loadFoundryTestPlan(root).planSha256,
   });
+}
+/**
+ * The producer binds the exact current repository/owner ids for every hosted run,
+ * even when the candidate package version is still inside the legacy window; the
+ * npm publication floor never applies to capsule identity generation.
+ */
+export function currentCapsuleRepositoryIdentity(
+  id: string | undefined,
+  owner: string | undefined,
+): { readonly id: string; readonly owner_id: string } {
+  if (!/^[1-9]\d{0,19}$/u.test(id ?? "") || !/^[1-9]\d{0,19}$/u.test(owner ?? ""))
+    throw new Error("Capsule repository identity is missing.");
+  if (id !== FOUNDRY_REPOSITORY_ID || owner !== CURRENT_OWNER_ID)
+    throw new Error("Capsule repository identity is not the current source profile.");
+  return freezeFoundryReleaseValue({ id, owner_id: owner });
 }
 export function currentCapsuleOrigin(): CapsuleReceipt["origin"] {
   const env = process.env;

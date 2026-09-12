@@ -232,7 +232,7 @@ export function selectedFoundryCiPackage(
       run: {
         id: capsule.receipt.origin.run,
         attempt: capsule.receipt.origin.attempt,
-        workflow_ref: `tiangong-lca/data-foundry/${capsule.receipt.origin.workflow}@${capsule.receipt.origin.ref}`,
+        workflow_ref: `tiangong-lca/foundry/${capsule.receipt.origin.workflow}@${capsule.receipt.origin.ref}`,
       },
     };
     if (
