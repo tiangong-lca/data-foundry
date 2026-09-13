@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 const source = path.resolve(import.meta.dirname, "../..");
@@ -83,7 +84,11 @@ test("the diagnostic command returns failing exits for rejected exchanges and ne
       );
       const result = spawnSync(
         process.execPath,
-        ["--import", preload, path.join(root, "scripts/release-diagnose-npm-oidc.ts")],
+        [
+          "--import",
+          pathToFileURL(preload).href,
+          path.join(root, "scripts/release-diagnose-npm-oidc.ts"),
+        ],
         {
           cwd: temporary,
           encoding: "utf8",
