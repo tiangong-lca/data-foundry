@@ -280,7 +280,7 @@ checkPaths:
   - docs/foundry-ai-navigation.md
   - docs/foundry-command-surface.md
 lastReviewedAt: 2026-09-13
-lastReviewedCommit: 45891ef78a2df8ef167a209f15843c64ad544576
+lastReviewedCommit: 50293475ad53e104f3eb8e7c2544b0dcc725306a
 lastReviewedNote: "Reviewed Foundry #161 CI correction: source-candidate component URLs bind the current producer repository independently of historical npm verification. Versions, archives, task/permission and native qualification gates remain unchanged."
 ---
 

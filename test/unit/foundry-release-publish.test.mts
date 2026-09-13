@@ -152,6 +152,7 @@ test("the explicit CI diagnostic discards the exchanged credential and never inv
   const result = await diagnoseFoundryNpmOidcExchange(env, fetchImpl, now);
   assert.equal(calls, 2);
   assert.equal(result.accepted, false);
+  assert.ok("created_kind" in result);
   assert.equal(result.created_kind, "number");
   assert.doesNotMatch(JSON.stringify(result), /private/u);
   for (const override of [
@@ -166,6 +167,54 @@ test("the explicit CI diagnostic discards the exchanged credential and never inv
       /diagnostic/u,
     );
   assert.equal(calls, 2);
+});
+
+test("OIDC diagnostics identify failed transport stages without exposing upstream errors", async () => {
+  const env = {
+    ...environment(),
+    GITHUB_JOB: "diagnose-npm-oidc",
+    GITHUB_EVENT_NAME: "workflow_dispatch",
+  };
+  for (const failure of ["github-network", "github-http", "npm-network", "npm-http", "npm-json"]) {
+    let calls = 0;
+    const result = await diagnoseFoundryNpmOidcExchange(
+      env,
+      async () => {
+        calls++;
+        if (calls === 1) {
+          if (failure === "github-network") throw new Error("private-request-token");
+          if (failure === "github-http") return new Response("private-response", { status: 401 });
+          return Response.json({ value: "private.fixture.jwt" });
+        }
+        if (failure === "npm-network") throw new Error("private-registry-token");
+        if (failure === "npm-http") return new Response("private-registry-body", { status: 404 });
+        return new Response("private-not-json", { status: 201 });
+      },
+      now,
+    );
+    assert.equal(result.accepted, false);
+    assert.ok("failure_stage" in result);
+    assert.equal(
+      result.failure_stage,
+      failure.startsWith("github")
+        ? "github-oidc"
+        : failure === "npm-json"
+          ? "npm-response"
+          : "npm-exchange",
+    );
+    assert.equal(
+      result.http_status,
+      failure === "github-http"
+        ? 401
+        : failure === "npm-http"
+          ? 404
+          : failure === "npm-json"
+            ? 201
+            : null,
+    );
+    assert.equal(calls, failure.startsWith("github") ? 1 : 2);
+    assert.doesNotMatch(JSON.stringify(result), /private|Bearer|https:/u);
+  }
 });
 
 test("registry preflight distinguishes an existing version, a new version and first-package setup", async () => {

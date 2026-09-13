@@ -7,9 +7,12 @@ import {
   diagnoseFoundryNpmOidcExchange,
 } from "./lib/foundry-release-publish.ts";
 
+let failureStage: "admission" | "source" | "input" | "exchange" = "admission";
+
 async function main() {
   if (process.argv.length !== 2) throw new Error("OIDC diagnostic accepts no arguments.");
   assertFoundryNpmOidcDiagnosticEnvironment(process.env);
+  failureStage = "source";
   const root = path.resolve(import.meta.dirname, "..");
   const head = git(root, ["rev-parse", "HEAD"]).trim();
   if (
@@ -18,6 +21,7 @@ async function main() {
     git(root, ["status", "--porcelain", "--untracked-files=all"]).trim()
   )
     throw new Error("OIDC diagnostic requires its exact clean workflow source.");
+  failureStage = "input";
   const event = JSON.parse(
     readFoundryReleaseArtifact(process.env.GITHUB_EVENT_PATH ?? "", 1024 * 1024).toString("utf8"),
   ) as {
@@ -25,6 +29,7 @@ async function main() {
   };
   if (![true, "true"].includes(event.inputs?.diagnose_npm_oidc as boolean | string))
     throw new Error("OIDC diagnostic requires the explicit diagnostic input.");
+  failureStage = "exchange";
   const result = await diagnoseFoundryNpmOidcExchange(process.env);
   process.stdout.write(
     `${JSON.stringify({
@@ -37,11 +42,21 @@ async function main() {
       ...result,
     })}\n`,
   );
+  if (!result.accepted) process.exitCode = 1;
 }
 
 if (import.meta.main)
   main().catch(() => {
     // An unexpected dependency/network error must not expose response or credential values.
     process.stderr.write("npm OIDC diagnostic could not complete; no publication attempted.\n");
+    process.stderr.write(
+      `${JSON.stringify({
+        schema: "tiangong-foundry.npm-oidc-diagnostic.v1",
+        diagnostic_only: true,
+        publication_attempted: false,
+        accepted: false,
+        failure_stage: failureStage,
+      })}\n`,
+    );
     process.exitCode = 1;
   });
