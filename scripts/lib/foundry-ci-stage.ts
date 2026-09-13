@@ -62,7 +62,7 @@ export function stageExpectation(
     platform,
     identity,
     input_sha256: input ?? capsuleIdentity(identity),
-    purpose: origin.workflow.endsWith("/publish-foundry.yml") ? "release" : "ci",
+    purpose: origin.workflow.endsWith("/publish.yml") ? "release" : "ci",
   };
 }
 export function stageArtifactPrefix(expected: CapsuleExpectation) {
@@ -104,7 +104,7 @@ export function selectStageArtifacts(value: unknown, expected: CapsuleExpectatio
 }
 export function restoreStage(expected: CapsuleExpectation, output: string, previousRun?: string) {
   const origin = currentCapsuleOrigin();
-  if (expected.purpose !== (origin.workflow.endsWith("/publish-foundry.yml") ? "release" : "ci"))
+  if (expected.purpose !== (origin.workflow.endsWith("/publish.yml") ? "release" : "ci"))
     throw new Error("Stage purpose differs from its consuming workflow.");
   if (!path.isAbsolute(output) || fs.existsSync(output))
     throw new Error("Stage restoration needs a new absolute output.");

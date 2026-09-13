@@ -27,7 +27,7 @@ const origin = {
   run: "123",
   attempt: "1",
   ref: "refs/heads/main",
-  workflow: ".github/workflows/publish-foundry.yml",
+  workflow: ".github/workflows/publish.yml",
 };
 function receipt(): CapsuleReceipt {
   return {

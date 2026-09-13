@@ -259,8 +259,7 @@ test("workflow command skips an ordinary main commit without a token or PR looku
           GITHUB_REPOSITORY_OWNER_ID: "327771381",
           GITHUB_REF: "refs/heads/main",
           GITHUB_EVENT_NAME: "push",
-          GITHUB_WORKFLOW_REF:
-            "tiangong-lca/foundry/.github/workflows/publish-foundry.yml@refs/heads/main",
+          GITHUB_WORKFLOW_REF: "tiangong-lca/foundry/.github/workflows/publish.yml@refs/heads/main",
           GITHUB_WORKFLOW_SHA: head,
           GITHUB_EVENT_PATH: eventPath,
           GITHUB_OUTPUT: output,

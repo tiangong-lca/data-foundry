@@ -123,19 +123,17 @@ export function currentCapsuleOrigin(): CapsuleReceipt["origin"] {
     workflow: parts[0],
     ref: parts[1],
   };
-  validateOrigin(origin, origin.workflow.endsWith("/publish-foundry.yml") ? "release" : "ci");
+  validateOrigin(origin, origin.workflow.endsWith("/publish.yml") ? "release" : "ci");
   return origin;
 }
 export function capsuleSignerWorkflow(receipt: CapsuleReceipt): string {
   return receipt.stage === "source"
     ? ".github/workflows/quality-gate.yml"
-    : ".github/workflows/publish-foundry.yml";
+    : ".github/workflows/publish.yml";
 }
 function validateOrigin(origin: CapsuleReceipt["origin"], purpose: CapsuleReceipt["purpose"]) {
   const workflow =
-    purpose === "release"
-      ? ".github/workflows/publish-foundry.yml"
-      : ".github/workflows/quality-gate.yml";
+    purpose === "release" ? ".github/workflows/publish.yml" : ".github/workflows/quality-gate.yml";
   if (
     origin.workflow !== workflow ||
     !/^[1-9]\d{0,19}$/u.test(origin.run) ||

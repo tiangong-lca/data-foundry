@@ -224,7 +224,7 @@ export function selectedFoundryCiPackage(
       platform: "all",
       identity,
       input_sha256: capsuleIdentity(identity),
-      purpose: origin.workflow.endsWith("/publish-foundry.yml") ? "release" : "ci",
+      purpose: origin.workflow.endsWith("/publish.yml") ? "release" : "ci",
     });
     const context = captureFoundryCiBuildContext();
     const originalContext: FoundryCiBuildContext = {

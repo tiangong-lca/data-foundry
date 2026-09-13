@@ -40,7 +40,7 @@ async function main() {
     !/^refs\/heads\/[A-Za-z0-9./_-]{1,200}$/u.test(env.GITHUB_REF ?? "") ||
     env.GITHUB_WORKFLOW_SHA !== env.GITHUB_SHA ||
     env.GITHUB_WORKFLOW_REF !==
-      `tiangong-lca/foundry/.github/workflows/publish-foundry.yml@${env.GITHUB_REF}` ||
+      `tiangong-lca/foundry/.github/workflows/publish.yml@${env.GITHUB_REF}` ||
     git(root, ["rev-parse", "HEAD"]).trim() !== env.GITHUB_SHA ||
     git(root, ["status", "--porcelain", "--untracked-files=all"]).trim()
   )

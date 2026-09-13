@@ -31,7 +31,7 @@ function steps(job: Record<string, unknown>): Record<string, unknown>[] {
 }
 
 test("public bootstrap seals only its completed proof and keeps disposable directories outside the capsule", (t) => {
-  const job = object(object(workflow("publish-foundry.yml").jobs)["qualify-bootstrap-public"]);
+  const job = object(object(workflow("publish.yml").jobs)["qualify-bootstrap-public"]);
   const selected = steps(job);
   const staging = selected.find((step) => step.name === "Stage completed bootstrap proof");
   assert.ok(staging, "Public bootstrap needs a separate proof boundary before sealing.");
@@ -158,7 +158,7 @@ test("full CI runs all platforms with independent tests and native qualification
 
 test("publication consumes signed complete source qualification and retains every release dependency", () => {
   const quality = workflow("quality-gate.yml"),
-    publish = workflow("publish-foundry.yml");
+    publish = workflow("publish.yml");
   const caller = object(object(publish.jobs)["release-qualification"]);
   assert.equal(caller.uses, "./.github/workflows/quality-gate.yml");
   assert.equal(object(caller.with).source_sha, "${{ needs.release-context.outputs.release_head }}");
@@ -275,7 +275,7 @@ test("real shell qualification guards reject each failed, cancelled or skipped f
   );
 });
 test("publication stages restore required proofs and diagnostics have no publication credentials", () => {
-  const jobs = object(workflow("publish-foundry.yml").jobs);
+  const jobs = object(workflow("publish.yml").jobs);
   for (const id of ["publish-components", "publish-runtime-manifest"]) {
     const restore = steps(object(jobs[id])).filter((s) =>
       String(s.run).includes("ci:stage restore"),

@@ -36,8 +36,7 @@ function environment(): NodeJS.ProcessEnv {
     GITHUB_SHA: head,
     GITHUB_WORKFLOW_SHA: head,
     GITHUB_EVENT_NAME: "push",
-    GITHUB_WORKFLOW_REF:
-      "tiangong-lca/foundry/.github/workflows/publish-foundry.yml@refs/heads/main",
+    GITHUB_WORKFLOW_REF: "tiangong-lca/foundry/.github/workflows/publish.yml@refs/heads/main",
     GITHUB_REPOSITORY_ID: "1260957221",
     GITHUB_REPOSITORY_OWNER_ID: "327771381",
     GITHUB_RUN_ID: "789",
@@ -161,6 +160,10 @@ test("the explicit CI diagnostic discards the exchanged credential and never inv
     { GITHUB_REPOSITORY: "other/repo" },
     { RUNNER_ENVIRONMENT: "self-hosted" },
     { GITHUB_WORKFLOW_SHA: "b".repeat(40) },
+    {
+      GITHUB_WORKFLOW_REF:
+        "tiangong-lca/foundry/.github/workflows/publish-foundry.yml@refs/heads/main",
+    },
   ])
     await assert.rejects(
       diagnoseFoundryNpmOidcExchange({ ...env, ...override }, fetchImpl, now),

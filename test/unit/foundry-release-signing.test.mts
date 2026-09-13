@@ -31,8 +31,7 @@ function environment(): NodeJS.ProcessEnv {
     GITHUB_REPOSITORY: "tiangong-lca/foundry",
     GITHUB_REF: "refs/heads/main",
     GITHUB_SHA: head,
-    GITHUB_WORKFLOW_REF:
-      "tiangong-lca/foundry/.github/workflows/publish-foundry.yml@refs/heads/main",
+    GITHUB_WORKFLOW_REF: "tiangong-lca/foundry/.github/workflows/publish.yml@refs/heads/main",
     GITHUB_WORKFLOW_SHA: head,
     GITHUB_EVENT_NAME: "push",
     GITHUB_REPOSITORY_ID: "1260957221",
@@ -51,7 +50,7 @@ test("prepared npm provenance describes exact hosted source and package bytes", 
     statement,
     { package: "foundry", version: "0.1.9", gitHead: head },
     sha512,
-    "https://github.com/tiangong-lca/foundry/.github/workflows/publish-foundry.yml@refs/heads/main",
+    "https://github.com/tiangong-lca/foundry/.github/workflows/publish.yml@refs/heads/main",
   );
   assert.equal(
     result.invocationId,
@@ -93,7 +92,7 @@ test("exact-tag recovery retains its own workflow ref in the prepared provenance
     ...environment(),
     GITHUB_REF: ref,
     GITHUB_EVENT_NAME: "workflow_dispatch",
-    GITHUB_WORKFLOW_REF: `tiangong-lca/foundry/.github/workflows/publish-foundry.yml@${ref}`,
+    GITHUB_WORKFLOW_REF: `tiangong-lca/foundry/.github/workflows/publish.yml@${ref}`,
   });
   assert.equal(value.predicate.buildDefinition.externalParameters.workflow.ref, ref);
   assert.equal(
