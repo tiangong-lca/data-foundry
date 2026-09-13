@@ -75,6 +75,7 @@ test("npm policies carry exactly one version-bound identity across packages", ()
   assert.equal(legacyFoundry.repository, "https://github.com/tiangong-lca/data-foundry");
   assert.equal(legacyFoundry.repositoryId, "1260957221");
   assert.equal(legacyFoundry.ownerId, "199785309");
+  assert.equal(legacyFoundry.workflow, ".github/workflows/publish.yml");
   const currentFoundry = npmReleasePolicy({
     package: "foundry",
     version: "0.1.9",
@@ -83,6 +84,7 @@ test("npm policies carry exactly one version-bound identity across packages", ()
   assert.equal(currentFoundry.epoch, "current");
   assert.equal(currentFoundry.repository, "https://github.com/tiangong-lca/foundry");
   assert.equal(currentFoundry.ownerId, "327771381");
+  assert.equal(currentFoundry.workflow, ".github/workflows/publish.yml");
   const legacyCli = npmReleasePolicy({
     package: "cli",
     version: "0.1.14",

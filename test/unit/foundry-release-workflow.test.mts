@@ -17,7 +17,7 @@ function environment(ref = "refs/heads/main", event = "push"): NodeJS.ProcessEnv
     GITHUB_SHA: head,
     GITHUB_REF: ref,
     GITHUB_EVENT_NAME: event,
-    GITHUB_WORKFLOW_REF: `${repository}/.github/workflows/publish-foundry.yml@${ref}`,
+    GITHUB_WORKFLOW_REF: `${repository}/.github/workflows/publish.yml@${ref}`,
     GITHUB_WORKFLOW_SHA: head,
   };
 }

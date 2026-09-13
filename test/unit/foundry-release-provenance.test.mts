@@ -75,6 +75,40 @@ function identity(expected = cli, ref = `refs/tags/cli-v${cli.version}`): string
   return `${policy.repository}/${policy.workflow}@${ref}`;
 }
 
+test("Foundry verifier rejects the retired workflow even for legacy package versions", () => {
+  for (const [version, workflow, wrongWorkflow] of [
+    ["0.1.8", ".github/workflows/publish.yml", ".github/workflows/publish-foundry.yml"],
+    ["0.1.9", ".github/workflows/publish.yml", ".github/workflows/publish-foundry.yml"],
+  ]) {
+    const expected: NpmReleaseExpectation = {
+      package: "foundry",
+      version,
+      gitHead: "a".repeat(40),
+    };
+    const policy = npmReleasePolicy(expected);
+    assert.equal(policy.workflow, workflow);
+    const ref = "refs/heads/main";
+    validateNpmProvenanceStatement(
+      statement(expected, ref),
+      expected,
+      sha512,
+      identity(expected, ref),
+    );
+    const wrong = statement(expected, ref);
+    wrong.predicate.buildDefinition.externalParameters.workflow.path = wrongWorkflow;
+    assert.throws(
+      () =>
+        validateNpmProvenanceStatement(
+          wrong,
+          expected,
+          sha512,
+          `${policy.repository}/${wrongWorkflow}@${ref}`,
+        ),
+      /workflow/iu,
+    );
+  }
+});
+
 test("npm evidence admits only canonical package, stable version and exact source expectations", () => {
   assert.equal(npmReleasePolicy(cli).name, "@tiangong-lca/cli");
   assert.throws(() => npmReleasePolicy({ ...cli, version: "latest" }), /version/iu);

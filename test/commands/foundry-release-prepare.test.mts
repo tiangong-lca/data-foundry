@@ -104,7 +104,7 @@ test("the diagnostic command returns failing exits for rejected exchanges and ne
             GITHUB_SHA: head,
             GITHUB_WORKFLOW_SHA: head,
             GITHUB_WORKFLOW_REF:
-              "tiangong-lca/foundry/.github/workflows/publish-foundry.yml@refs/heads/main",
+              "tiangong-lca/foundry/.github/workflows/publish.yml@refs/heads/main",
             GITHUB_RUN_ID: "12345",
             GITHUB_RUN_ATTEMPT: "1",
             GITHUB_EVENT_PATH: event,

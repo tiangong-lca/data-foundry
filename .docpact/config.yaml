@@ -511,7 +511,7 @@ rules:
         kind: source-ci-test-partition
       - path: test/unit/foundry-ci-*.test.mts
         kind: source-ci-policy-test
-      - path: .github/workflows/publish-foundry.yml
+      - path: .github/workflows/publish.yml
         kind: source-release-workflow
       - path: .github/workflows/quality-gate.yml
         kind: release-platform-qualification

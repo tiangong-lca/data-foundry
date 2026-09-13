@@ -206,7 +206,7 @@ export function assertFoundryNpmOidcDiagnosticEnvironment(
     !/^[a-f0-9]{40}$/u.test(environment.GITHUB_SHA ?? "") ||
     environment.GITHUB_WORKFLOW_SHA !== environment.GITHUB_SHA ||
     environment.GITHUB_WORKFLOW_REF !==
-      `${repository}/.github/workflows/publish-foundry.yml@${environment.GITHUB_REF}` ||
+      `${repository}/.github/workflows/publish.yml@${environment.GITHUB_REF}` ||
     !/^\d{1,20}$/u.test(environment.GITHUB_RUN_ID ?? "") ||
     !/^\d{1,5}$/u.test(environment.GITHUB_RUN_ATTEMPT ?? "")
   )
