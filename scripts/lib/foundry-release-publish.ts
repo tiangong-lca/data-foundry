@@ -9,6 +9,8 @@ import type { FoundryReleaseWorkflowContext } from "./foundry-release-workflow.t
 type Fetch = (url: string, init: RequestInit) => Promise<Response>;
 const registry = "https://registry.npmjs.org";
 const packagePath = encodeURIComponent("@tiangong-lca/foundry");
+type OidcStage = "github-oidc" | "npm-exchange" | "npm-response";
+type ObserveOidcStage = (stage: OidcStage, status?: number) => void;
 
 async function boundedJson(
   response: Response,
@@ -93,12 +95,19 @@ export async function inspectFoundryNpmAvailability(
 async function requestNpmOidcResponse(
   environment: Readonly<NodeJS.ProcessEnv>,
   fetchImpl: Fetch,
+  observe?: ObserveOidcStage,
 ): Promise<Record<string, unknown>> {
+  observe?.("github-oidc");
   const identity = await requestFoundryGitHubOidcToken(
     environment,
     "npm:registry.npmjs.org",
-    fetchImpl,
+    async (url, init) => {
+      const response = await fetchImpl(url, init);
+      observe?.("github-oidc", response.status);
+      return response;
+    },
   );
+  observe?.("npm-exchange");
   let response: Response;
   try {
     response = await fetchImpl(`${registry}/-/npm/v1/oidc/token/exchange/package/${packagePath}`, {
@@ -115,12 +124,14 @@ async function requestNpmOidcResponse(
   } catch {
     throw new Error("npm OIDC exchange failed; publication did not start.");
   }
+  observe?.("npm-exchange", response.status);
   if (response.status !== 201) {
     await response.body?.cancel();
     throw new Error(
       `npm OIDC exchange failed (HTTP ${response.status}); review the exact Trusted Publisher binding before publication.`,
     );
   }
+  observe?.("npm-response", response.status);
   return boundedJson(response, 256 * 1024, "npm OIDC exchange");
 }
 
@@ -211,8 +222,26 @@ export async function diagnoseFoundryNpmOidcExchange(
   now = Date.now(),
 ) {
   assertFoundryNpmOidcDiagnosticEnvironment(environment);
-  const value = await requestNpmOidcResponse(environment, fetchImpl);
-  return inspectFoundryNpmOidcResponse(value, now);
+  let failureStage: OidcStage = "github-oidc";
+  let httpStatus: number | null = null;
+  try {
+    const value = await requestNpmOidcResponse(environment, fetchImpl, (stage, status) => {
+      failureStage = stage;
+      httpStatus =
+        typeof status === "number" && Number.isInteger(status) && status >= 100 && status <= 599
+          ? status
+          : null;
+    });
+    return inspectFoundryNpmOidcResponse(value, now);
+  } catch {
+    // Fixed facts only; dependency errors and response bodies may contain credentials.
+    return Object.freeze({
+      accepted: false,
+      reasons: Object.freeze(["request-failed"]),
+      failure_stage: failureStage,
+      http_status: httpStatus,
+    });
+  }
 }
 
 /** Real exchange before expensive qualification; returns only fixed validation facts. */

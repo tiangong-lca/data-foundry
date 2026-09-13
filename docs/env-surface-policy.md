@@ -35,7 +35,7 @@ checkPaths:
   - test/scenarios/foundry-package-consumer.test.mts
   - test/unit/foundry-runtime-environment.test.mts
 lastReviewedAt: 2026-09-13
-lastReviewedCommit: 45891ef78a2df8ef167a209f15843c64ad544576
+lastReviewedCommit: 50293475ad53e104f3eb8e7c2544b0dcc725306a
 lastReviewedNote: "Reviewed Foundry #161 CI correction: source-candidate component URLs bind the current producer repository independently of historical npm verification. Versions, archives, task/permission and native qualification gates remain unchanged."
 ---
 
@@ -113,7 +113,7 @@ The account wrapper reads only public OAuth configuration, an absolute private C
 
 ## Internal Credential-Free Child Policy
 
-The explicit npm OIDC diagnostic is confined to its owning GitHub-hosted release workflow dispatch. It uses only the Actions identity endpoint for the intended npm package and discards the exchanged credential after reporting fixed validation facts and timing differences. Raw response fields, credential values and account configuration never enter output or child processes. The input selects diagnostic execution only and disables every release continuation; it is not an installed-runtime environment option or publication authorization.
+The explicit npm OIDC diagnostic is confined to its owning GitHub-hosted release workflow dispatch. It uses only the Actions identity endpoint for the intended npm package and discards the exchanged credential after reporting fixed validation facts and timing differences. Failure output contains only fixed stage identifiers and, when available, a bounded HTTP status; rejected validation or request failures exit nonzero. Raw errors, response fields, credential values and account configuration never enter output or child processes. The input selects diagnostic execution only and disables every release continuation; it is not an installed-runtime environment option or publication authorization.
 
 `FOUNDRY_RUNTIME_ENV_FILE_POLICY=disabled` is an internal child-process binding, not a user-configurable `.env.example` variable. The Golden harness sets it only inside an explicit allowlisted environment shared byte-for-byte by baseline and current commands. Both sides run in isolated source snapshots: candidate files come only from Git-visible tracked/untracked source, excluding ignored operator inputs, credentials, task state and prior reports. That environment replaces HOME, temp, XDG, npm, git and Corepack state with task-local directories, preserves only required platform launcher keys, accepts only `TIANGONG_LCA_CLI_BIN` and `TIDAS_BIN` as caller overrides, and drops ambient `NODE_OPTIONS`, tokens, keys, passwords, sessions, credential URLs and other configuration injection. The legacy developer entry keeps explicit CLI startup behavior for repository maintenance. The explicit workspace runtime never loads `.env`, and user-workspace commands do not fall back to the developer path. Tests seed only temporary environment files and intercept operator-state access before it can occur.
 

@@ -263,7 +263,7 @@ checkPaths:
   - test/unit/foundry-cli-spine.test.mts
   - specs/**
 lastReviewedAt: 2026-09-13
-lastReviewedCommit: 45891ef78a2df8ef167a209f15843c64ad544576
+lastReviewedCommit: 50293475ad53e104f3eb8e7c2544b0dcc725306a
 lastReviewedNote: "Reviewed Foundry #161 CI correction: source-candidate component URLs use the current producer; historical npm verification remains version-bound. Runtime, task, permission and workspace completion boundaries remain unchanged."
 ---
 
